@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createPaymentRequest, listPaymentMethods, paymentMethodQr } from "@/api/endpoints";
+import { createPaymentRequest, listPaymentMethods, openPaymentCheckout, paymentMethodQr } from "@/api/endpoints";
 import type { PayMethod } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
@@ -110,6 +110,19 @@ export function PayRequestT2Screen() {
 
   async function submit() {
     if (!method) return;
+    if (method.gateway) {
+      // **الوسيطُ الآليّ** (المرحلة ٣) — صفحتُه ثمّ العودةُ إلى `/wallet/pay/return` تسأل عن الحال؛ **ولا وعدَ قبل أن يقول الوسيط**
+      setBusy(true);
+      setError(null);
+      try {
+        const opened = await openPaymentCheckout({ methodId: method.id, purpose: "wallet_topup", amount });
+        window.location.assign(opened.checkout_url);
+      } catch (caught) {
+        setError(caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع — أعد المحاولة");
+        setBusy(false);
+      }
+      return;
+    }
     setBusy(true);
     setError(null);
     setProgress(null);
@@ -182,14 +195,18 @@ export function PayRequestT2Screen() {
                 <span className="t2-m-chan-main">
                   <span className="t2-m-chan-title">{row.name}</span>
                   <span className="t2-m-chan-hint">
-                    {row.requires_receipt ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة" : "ادفع ثمّ يُضاف بعد المراجعة"}
+                    {row.gateway
+                      ? "ادفع بالبطاقة في صفحة الوسيط — يُضاف فورَ تأكيده"
+                      : row.requires_receipt
+                        ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة"
+                        : "ادفع ثمّ يُضاف بعد المراجعة"}
                   </span>
                 </span>
               </button>
             ))}
           </div>
 
-          {method ? (
+          {method && !method.gateway ? (
             <section className="t2-m-card t2-m-gap t2-pr-dest" aria-label="إلى أين تدفع">
               {method.account_number ? (
                 <div className="t2-pr-line">
@@ -274,7 +291,7 @@ export function PayRequestT2Screen() {
               aria-busy={busy}
               onClick={submit}
             >
-              <BusyLabel busy={busy}>أرسل للمراجعة</BusyLabel>
+              <BusyLabel busy={busy}>{method?.gateway ? "ادفع في صفحة الوسيط" : "أرسل للمراجعة"}</BusyLabel>
             </button>
           </div>
         </>

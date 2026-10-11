@@ -705,6 +705,9 @@ export type ProviderKey =
   | "firebase_auth"
   | "cliq_acquirer"
   | "payout"
+  // **وسيطا الجزائر** (SPEC §٧٣-هـ المرحلة ٣) — لكلِّ دولة، ويُعرضان بطريقتهما في «نظام الدفع»
+  | "chargily"
+  | "sofizpay"
   // **و`email` في الخلفية ولا يعرفها هذا الاتحاد** (أُضيفت 2026-09-07):
   // صفحةُ العقود تعرض المزوّدين، **ومزوّدٌ لا يعرفه الاتحادُ لا يُرسم**.
   | "email";
@@ -2483,7 +2486,11 @@ export interface AdminPayMethod {
   instructions: string | null;
   has_qr: boolean;
   sort_order: number;
+  fee_bearer: GatewayFeeBearer;
 }
+
+/** **من يحمل رسومَ الوسيط الآليّ** (`GatewayFeeBearer`) — TAXO افتراضاً. */
+export type GatewayFeeBearer = "taxo" | "user" | "split";
 
 /** **حقولُ الإنشاء** — النوعُ والمعرّفُ والسوقُ لا تتغيّر بعده. */
 export interface AdminPayMethodInput {
@@ -2496,6 +2503,7 @@ export interface AdminPayMethodInput {
   bank_name: string | null;
   instructions: string | null;
   sort_order: number;
+  fee_bearer: GatewayFeeBearer;
 }
 
 /** **طلبُ الدفع في طابور الموظّف الماليّ**. */

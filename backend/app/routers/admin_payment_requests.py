@@ -53,6 +53,7 @@ def method_admin_out(provider: PayMethod) -> AdminPaymentMethodOut:
         instructions=provider.instructions,
         has_qr=provider.qr_image_path is not None,
         sort_order=provider.sort_order,
+        fee_bearer=provider.fee_bearer,
         updated_at=provider.updated_at,
     )
 
@@ -69,6 +70,25 @@ def _require_destination(provider: PayMethod) -> None:
         raise InvalidInput("طريقةُ تحويلٍ بلا رقمِ حسابٍ ولا رمزِ QR لا تُفعَّل", field="enabled")
 
 
+async def _require_gateway_ready(session, provider: PayMethod) -> None:
+    """**الوسيطُ الآليُّ لا يُفعَّل بلا عقده في سوقه** — طريقةٌ تُعرض ثمّ تردّ «غيرُ متاح» عند الضغط بابٌ بلا زرٍّ مقلوباً؛ **ومن يحمل
+    الرسوم ما يقبله الوسيطُ بوثائقه** (`FEE_BEARERS`)، **والطريقةُ اليدويّةُ لا رسومَ وسيطٍ لها** (TAXO افتراضاً).
+    """
+    from app.services import payment_gateways
+    from app.services.providers import credentials as credentials_service
+
+    if provider.integration is None:
+        if provider.fee_bearer != "taxo":
+            raise InvalidInput("الطريقةُ اليدويّةُ لا رسومَ وسيطٍ لها", field="fee_bearer")
+        return
+    if provider.fee_bearer not in payment_gateways.FEE_BEARERS.get(provider.integration, frozenset()):
+        raise InvalidInput("هذا الوسيطُ لا يوثّق تحميلَ رسومه بهذا الشكل — اتركها على TAXO", field="fee_bearer")
+    if provider.enabled and not await credentials_service.provider_is_active(
+        session, payment_gateways.PROVIDER_KEYS[provider.integration], provider.country_code
+    ):
+        raise InvalidInput("فعّل عقدَ الوسيط لهذه الدولة في «عقود مزوّدي API» أوّلاً", field="enabled")
+
+
 @router.get("/payment-methods", response_model=list[AdminPaymentMethodOut])
 async def list_methods(
     _reader: ListReader,
@@ -82,8 +102,10 @@ async def list_methods(
 async def create_method(
     payload: AdminPaymentMethodCreate, admin: SettingsWriter, session: DbSession
 ) -> AdminPaymentMethodOut:
-    provider = PayMethod(**payload.model_dump())
+    provider = PayMethod(**payload.model_dump(mode="python"))
+    provider.fee_bearer = payload.fee_bearer.value
     _require_destination(provider)
+    await _require_gateway_ready(session, provider)
     session.add(provider)
     try:
         await session.flush()
@@ -109,8 +131,12 @@ async def update_method(
 ) -> AdminPaymentMethodOut:
     """**يُدقَّق كلُّ تغييرٍ بقبله وبعده** — ورقمُ الحساب أوّلُها."""
     provider = await payment_requests.get_provider(session, provider_id, for_update=True)
-    changes = audit.apply_changes(provider, payload.model_dump(exclude_unset=True))
+    fields = payload.model_dump(exclude_unset=True)
+    if "fee_bearer" in fields and fields["fee_bearer"] is not None:
+        fields["fee_bearer"] = str(fields["fee_bearer"].value if hasattr(fields["fee_bearer"], "value") else fields["fee_bearer"])
+    changes = audit.apply_changes(provider, fields)
     _require_destination(provider)
+    await _require_gateway_ready(session, provider)
     if changes:
         await audit.record(
             session,

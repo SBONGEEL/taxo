@@ -53,7 +53,10 @@ class PayMethod(UUIDMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "payment_providers"
-    __table_args__ = (UniqueConstraint("country_code", "code"),)
+    __table_args__ = (
+        UniqueConstraint("country_code", "code"),
+        CheckConstraint("fee_bearer IN ('taxo', 'user', 'split')", name="payment_provider_fee_bearer_valid"),
+    )
 
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False, index=True
@@ -85,6 +88,10 @@ class PayMethod(UUIDMixin, TimestampMixin, Base):
     qr_content_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
     sort_order: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default=text("0")
+    )
+    #: **من يحمل رسومَ الوسيط الآليّ** (`GatewayFeeBearer`) — نصٌّ بقيدٍ في القاعدة؛ ولا معنى له في طريقةٍ يدويّة
+    fee_bearer: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="taxo", server_default=text("'taxo'")
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي

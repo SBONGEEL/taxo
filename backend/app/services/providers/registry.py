@@ -381,6 +381,32 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             MOCK_FIELD,
         ),
     ),
+    # **وسيطا الجزائر** (SPEC §٧٣-هـ المرحلة ٣) — لكلِّ دولة، **ولا `feature_key`**: الطريقةُ المفعَّلةُ في «نظام الدفع» هي ما يعرضهما
+    ProviderKey.CHARGILY: ProviderSpec(
+        key=ProviderKey.CHARGILY,
+        label="Chargily Pay — الذهبية وCIB",
+        fields=(
+            ProviderField(key="secret_key", label="المفتاح السرّيّ (sk)"),
+            ProviderField(
+                kind="toggle", key="test_mode", label="وضع الاختبار (test)", secret=False, required=False
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
+    ProviderKey.SOFIZPAY: ProviderSpec(
+        key=ProviderKey.SOFIZPAY,
+        label="SofizPay — CIB",
+        fields=(
+            # **حسابُ التاجر لا سرّ** — يُرسل في كلِّ طلبٍ ويُقارن بحساب الوجهة في الفحص
+            ProviderField(key="account", label="حساب SofizPay (المفتاح العامّ)", secret=False),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (sandbox)", secret=False, required=False
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     ProviderKey.PAYOUT: ProviderSpec(
         key=ProviderKey.PAYOUT,
         label="مزود التحويلات الآلية للسحوبات",

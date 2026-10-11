@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -221,33 +222,35 @@ async def _driver_of(session: AsyncSession, user: User) -> Driver:
     return driver
 
 
-async def create(
+@dataclass(frozen=True, slots=True)
+class Prepared:
+    provider: PayMethod
+    owner_type: WalletOwnerType
+    amount: Decimal
+    plan_id: uuid.UUID | None
+
+
+async def _prepare(
     session: AsyncSession,
     *,
-    request_id: uuid.UUID,
     owner: User,
     provider_id: uuid.UUID,
     purpose: PaymentRequestPurpose,
     amount: Decimal,
-    reference: str | None,
     plan_id: uuid.UUID | None,
-    receipt_path: str | None,
-    receipt_content_type: str | None,
-    receipt_sha256: str | None,
-    declared: WalletOwnerType | None = None,
-) -> PaymentRequest:
-    """**طلبٌ يفتحه صاحبُه** بعد أن يدفع — معلَّقاً حتى يعتمده موظّفٌ ماليّ.
-
-    **وكلُّ حارسٍ في الشحن اليدويّ القائم هنا بترتيبه** (`topups.create_request`): حسابُ التجربة لا يُدخل مالاً حقيقيّاً، والحسابُ
-    المحدود لا يشحن، والمحفظةُ مفعَّلةٌ وغيرُ مجمَّدة، **والمبلغُ بخانات عملته ومضاعفٌ لوحدة §٧٠** — وكسرُ الدينار الجزائريّ يُردّ.
-    """
+    declared: WalletOwnerType | None,
+    gateway: bool,
+) -> Prepared:
+    """**حرّاسُ كلِّ طلبٍ قبل أن يُكتب** — يدويّاً كان أو عند وسيط: بابٌ واحدٌ فلا يفترق الطريقان أوّلَ شرطٍ يُضاف."""
     test_accounts.require_real_money(
         owner, "حسابُ التجربة لا يُشحن بدفعٍ حقيقيّ — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
     )
     await require_enabled(session, owner.country_code)
     provider = await available_provider(session, provider_id, owner.country_code)
 
-    if provider.integration is not None:
+    if gateway and provider.integration is None:
+        raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")
+    if not gateway and provider.integration is not None:
         raise InvalidInput("هذه الطريقةُ تُدفع من صفحة الوسيط لا بطلبٍ يُعتمد", field="provider_id")
     if provider.kind is PaymentProviderKind.PURCHASE_CODE:
         raise InvalidInput("بطاقاتُ الشحن تُدخل برمزها", field="provider_id")
@@ -270,14 +273,6 @@ async def create(
         raise InvalidInput("المبلغُ يجب أن يكون أكبرَ من صفر", field="amount")
     await rounding.require_multiple_in(session, owner.country_code, amount)
 
-    clean_reference = (reference or "").strip()[:120] or None
-    if requires_receipt(provider):
-        if receipt_path is None:
-            raise InvalidInput("صورةُ الإيصال مطلوبة", field="receipt")
-        # **والمرجعُ كذلك** (§٧٣-هـ/٦): صورتان مختلفتان للإيصال نفسِه تُفلتان من بصمة الصورة، ولا تُفلتان من رقمه
-        if clean_reference is None:
-            raise InvalidInput("رقمُ التحويل كما في الإيصال مطلوب", field="reference")
-
     if purpose is PaymentRequestPurpose.SUBSCRIPTION:
         if plan_id is None:
             raise InvalidInput("اختر خطةَ الاشتراك", field="plan_id")
@@ -295,6 +290,41 @@ async def create(
             )
     else:
         plan_id = None
+    return Prepared(provider=provider, owner_type=owner_type, amount=amount, plan_id=plan_id)
+
+
+async def create(
+    session: AsyncSession,
+    *,
+    request_id: uuid.UUID,
+    owner: User,
+    provider_id: uuid.UUID,
+    purpose: PaymentRequestPurpose,
+    amount: Decimal,
+    reference: str | None,
+    plan_id: uuid.UUID | None,
+    receipt_path: str | None,
+    receipt_content_type: str | None,
+    receipt_sha256: str | None,
+    declared: WalletOwnerType | None = None,
+) -> PaymentRequest:
+    """**طلبٌ يفتحه صاحبُه** بعد أن يدفع — معلَّقاً حتى يعتمده موظّفٌ ماليّ.
+
+    **وكلُّ حارسٍ في الشحن اليدويّ القائم هنا بترتيبه** (`topups.create_request`): حسابُ التجربة لا يُدخل مالاً حقيقيّاً، والحسابُ
+    المحدود لا يشحن، والمحفظةُ مفعَّلةٌ وغيرُ مجمَّدة، **والمبلغُ بخانات عملته ومضاعفٌ لوحدة §٧٠** — وكسرُ الدينار الجزائريّ يُردّ.
+    """
+    prepared = await _prepare(
+        session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
+        declared=declared, gateway=False,
+    )
+    provider, owner_type, amount, plan_id = prepared.provider, prepared.owner_type, prepared.amount, prepared.plan_id
+    clean_reference = (reference or "").strip()[:120] or None
+    if requires_receipt(provider):
+        if receipt_path is None:
+            raise InvalidInput("صورةُ الإيصال مطلوبة", field="receipt")
+        # **والمرجعُ كذلك** (§٧٣-هـ/٦): صورتان مختلفتان للإيصال نفسِه تُفلتان من بصمة الصورة، ولا تُفلتان من رقمه
+        if clean_reference is None:
+            raise InvalidInput("رقمُ التحويل كما في الإيصال مطلوب", field="reference")
 
     request = PaymentRequest(
         id=request_id,
@@ -516,7 +546,102 @@ async def refund(
     return request
 
 
+# ------------------------------------------------------------------ الوسيطُ الآليّ (المرحلة ٣)
+
+
+async def start_checkout(
+    session: AsyncSession,
+    *,
+    owner: User,
+    provider_id: uuid.UUID,
+    purpose: PaymentRequestPurpose,
+    amount: Decimal,
+    plan_id: uuid.UUID | None,
+    declared: WalletOwnerType | None,
+    opened_from: str,
+) -> tuple[PaymentRequest, str]:
+    """**صفحةُ دفعٍ عند الوسيط** — طلبٌ معلَّقٌ بمعرّفه عنده، ويُحسم بجوابه المباشر (الـwebhook يوقظ، و`refresh` يسأل).
+
+    **والحرّاسُ حرّاسُ الطلب اليدويّ نفسُها** (`_prepare`)؛ **ونداءُ الوسيط بلا قفلِ صفّ** — لا صفَّ مقفولاً هنا أصلاً، والطلبُ يُكتب
+    ويُختم معرّفُه في معاملةٍ واحدة: فشلُ الوسيط لا يترك طلباً بلا صفحة.
+    """
+    from app.services import payment_gateways
+
+    prepared = await _prepare(
+        session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
+        declared=declared, gateway=True,
+    )
+    provider = prepared.provider
+    gateway = await payment_gateways.gateway_for(session, provider.integration or "", owner.country_code)
+    request = PaymentRequest(
+        user_id=owner.id,
+        owner_type=prepared.owner_type,
+        country_code=owner.country_code,
+        currency=currency_for_country(owner.country_code),
+        provider_id=provider.id,
+        kind=provider.kind,
+        purpose=purpose,
+        plan_id=prepared.plan_id,
+        amount=prepared.amount,
+        status=PaymentRequestStatus.PENDING,
+    )
+    session.add(request)
+    await session.flush()
+    checkout = await gateway.checkout(
+        amount=prepared.amount,
+        description=f"TAXO {'اشتراك' if purpose is PaymentRequestPurpose.SUBSCRIPTION else 'شحن رصيد'}",
+        return_url=payment_gateways.return_url(str(request.id), opened_from=opened_from),
+        webhook_url=payment_gateways.webhook_url(provider.integration or ""),
+        fee_bearer=provider.fee_bearer,
+        customer=payment_gateways.CheckoutCustomer(
+            full_name=owner.name or "", phone=owner.phone or "", email=getattr(owner, "email", None)
+        ),
+    )
+    request.external_id = checkout.external_id
+    request.reference = checkout.external_id[:120]
+    await session.flush()
+    return request, checkout.checkout_url
+
+
+async def refresh(session: AsyncSession, *, request_id: uuid.UUID) -> PaymentRequest:
+    """**يسأل الوسيطَ عن طلبٍ معلَّق ويطبّق جوابَه** — حين تأخّر الإشعار أو ضاع."""
+    row, _ = await settle_from_gateway(session, request_id=request_id)
+    return row
+
+
+async def settle_from_gateway(session: AsyncSession, *, request_id: uuid.UUID) -> tuple[PaymentRequest, bool]:
+    """**السؤالُ قبل القفل** (لا قفلَ عبر نداء شبكة)، والتطبيقُ بعده بالباب نفسِه الذي يطبّق به الإشعار — **و«أحَسمَه هذا النداء؟»
+    يُحكم تحت القفل**: ثلاثةُ إشعاراتٍ متزامنةٍ يقرأ كلٌّ منها «معلَّق» قبل القفل، **وواحدٌ وحدَه يجده معلَّقاً بعده** (قِيس: عدُّ ما
+    قبل القفل قال «حُسم» ثلاثاً لقيدٍ واحد)."""
+    from app.services import payment_gateways
+
+    row = await get_request(session, request_id)
+    provider = row.provider
+    if row.status is not PaymentRequestStatus.PENDING or provider.integration is None or row.external_id is None:
+        return row, False
+    gateway = await payment_gateways.gateway_for(session, provider.integration, row.country_code)
+    event = await gateway.check(row.external_id)
+    if event is None:
+        return row, False
+    locked = await get_request(session, request_id, for_update=True)
+    if locked.status is not PaymentRequestStatus.PENDING:
+        return locked, False
+    settled = await apply_gateway_outcome(
+        session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason
+    )
+    return settled, settled.status is not PaymentRequestStatus.PENDING
+
+
 # ------------------------------------------------------------------ الوسيطُ الآليّ (الـwebhook الموحّد)
+
+
+async def find_external(session: AsyncSession, *, integration: str, external_id: str) -> PaymentRequest | None:
+    """**الطلبُ بمعرّفه عند الوسيط بلا قفل** — يُقرأ ليُسأل الوسيطُ عنه **قبل** أن يُقفل (`refresh`)."""
+    return await session.scalar(
+        select(PaymentRequest)
+        .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
+        .where(PayMethod.integration == integration, PaymentRequest.external_id == external_id)
+    )
 
 
 async def request_for_external(
@@ -551,7 +676,18 @@ async def apply_gateway_outcome(
     if request.status is not PaymentRequestStatus.PENDING:
         return request
     if outcome is PaymentRequestStatus.APPROVED:
-        return await approve(session, request=request, actor=None, credited=amount)
+        # **مبلغٌ مختلفٌ عمّا فُتح به الطلب لا يُقيَّد بتخمين** — كقاعدة شحن كليك وTelr: يسقط الطلبُ بسببه، وللمالية أن تعالجه
+        if amount is not None and as_money(amount) != request.amount:
+            return await reject(
+                session,
+                request=request,
+                actor=None,
+                reason=(
+                    f"مبلغُ الوسيط ({amount_text(amount, request.currency)}) لا يطابق مبلغَ الطلب "
+                    f"({amount_text(request.amount, request.currency)})"
+                ),
+            )
+        return await approve(session, request=request, actor=None, credited=request.amount)
     if outcome is PaymentRequestStatus.REJECTED:
         return await reject(session, request=request, actor=None, reason=reason or "رفضه الوسيط")
     if outcome is PaymentRequestStatus.CANCELLED:

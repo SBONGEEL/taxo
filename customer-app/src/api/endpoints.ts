@@ -7,7 +7,13 @@
 
 import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { MyPaymentRequest, PayMethods, PaymentRequestPurpose, TaxoCardRedeemed } from "@/api/types";
+import type {
+  MyPaymentRequest,
+  PayMethods,
+  PaymentCheckout,
+  PaymentRequestPurpose,
+  TaxoCardRedeemed,
+} from "@/api/types";
 import type {
   Airport,
   MapPlaceSpot,
@@ -805,3 +811,22 @@ export const cancelPaymentRequest = (requestId: string) =>
 /** **رمزُ بطاقة TAXO يشحن المحفظةَ مرّةً واحدة** (SPEC §٧٣-هـ المرحلة ٢) — والمحاولاتُ الخاطئةُ مسقوفةٌ في الخادم. */
 export const redeemTaxoCard = (code: string) =>
   api.post<TaxoCardRedeemed>("/taxo-cards/redeem", { code, wallet: "rider" });
+
+/** **صفحةُ الوسيط** (المرحلة ٣) — يُفتح رابطُها ثمّ يعود التطبيقُ إلى `/wallet/pay/return?r=…`. */
+export const openPaymentCheckout = (body: {
+  methodId: string;
+  purpose: PaymentRequestPurpose;
+  amount: string;
+  planId?: string;
+}) =>
+  api.post<PaymentCheckout>("/payment-requests/checkout", {
+    provider_id: body.methodId,
+    purpose: body.purpose,
+    amount: body.amount,
+    plan_id: body.planId ?? null,
+    wallet: "rider",
+  });
+
+/** **يسأل الوسيطَ عن طلبي المعلَّق** — صفحةُ العودة تناديه حتى يُحسم. */
+export const refreshPaymentRequest = (requestId: string) =>
+  api.post<MyPaymentRequest>(`/payment-requests/${requestId}/refresh`, {});

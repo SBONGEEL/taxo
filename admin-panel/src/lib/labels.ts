@@ -21,6 +21,7 @@
 
 import type {
   CardShopPaymentMode,
+  GatewayFeeBearer,
   PaymentProviderKind,
   PaymentRequestPurpose,
   PaymentRequestStatus,
@@ -299,6 +300,13 @@ export const PAYMENT_PROVIDER_KIND_LABEL: Record<PaymentProviderKind, string> = 
   bank_transfer: "تحويل (بنك · CCP · BaridiMob · QR)",
   purchase_code: "رمز شراء",
   phone_number: "رقم هاتف",
+};
+
+/** **من يحمل رسومَ الوسيط** — بلغة الموظّف. */
+export const GATEWAY_FEE_BEARER_LABEL: Record<GatewayFeeBearer, string> = {
+  taxo: "على TAXO — يدفع المستخدمُ ما كتبه",
+  user: "على المستخدم — تُضاف إلى ما يدفعه",
+  split: "مناصفةً",
 };
 
 export const PAYMENT_REQUEST_PURPOSE_LABEL: Record<PaymentRequestPurpose, string> = {

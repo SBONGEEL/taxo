@@ -32,6 +32,7 @@ import type {
   AdminPayMethod,
   AdminPaymentRequest,
   CountryCode,
+  GatewayFeeBearer,
   PaymentProviderKind,
   PaymentRequestStatus,
 } from "@/api/types";
@@ -46,6 +47,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import {
+  GATEWAY_FEE_BEARER_LABEL,
   PAYMENT_PROVIDER_KIND_LABEL,
   PAYMENT_REQUEST_PURPOSE_LABEL,
   PAYMENT_REQUEST_STATUS_LABEL,
@@ -391,6 +393,14 @@ function ActionModal({
 
 const KINDS: PaymentProviderKind[] = ["bank_transfer", "cash", "phone_number"];
 
+/** **الوسيطان الآليّان** (المرحلة ٣) — مفتاحُ كلٍّ منهما في صفحة العقود، **وما يقبله كلٌّ من «من يحمل الرسوم»** كما تقول وثائقُه:
+    Chargily يقبل الثلاثة، وSofizPay لا يوثّق خياراً فتحملها TAXO وحدَها. والخادمُ يرفض غيرَ ذلك بنصّ. */
+type Integration = "chargily" | "sofizpay";
+const GATEWAYS: { key: Integration; label: string; bearers: GatewayFeeBearer[] }[] = [
+  { key: "chargily", label: "Chargily — الذهبية وCIB", bearers: ["taxo", "user", "split"] },
+  { key: "sofizpay", label: "SofizPay — CIB", bearers: ["taxo"] },
+];
+
 function MethodsTab({
   country,
   isAdmin,
@@ -512,6 +522,9 @@ function MethodModal({
   const [bank, setBank] = useState(method?.bank_name ?? "");
   const [instructions, setInstructions] = useState(method?.instructions ?? "");
   const [order, setOrder] = useState(String(method?.sort_order ?? 0));
+  const [integration, setIntegration] = useState<Integration | "">((method?.integration as Integration | null) ?? "");
+  const [feeBearer, setFeeBearer] = useState<GatewayFeeBearer>(method?.fee_bearer ?? "taxo");
+  const gateway = GATEWAYS.find((row) => row.key === integration) ?? null;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -528,10 +541,12 @@ function MethodModal({
       bank_name: bank.trim() || null,
       instructions: instructions.trim() || null,
       sort_order: Number(order) || 0,
+      // **طريقةٌ يدويّةٌ لا رسومَ وسيطٍ عليها** — والخادمُ يرفض غيرَ «على TAXO» لها
+      fee_bearer: gateway ? feeBearer : ("taxo" as GatewayFeeBearer),
     };
     try {
       if (method) await updatePayMethod(method.id, fields);
-      else await createPayMethod({ ...fields, country_code: country, kind, code: code.trim() });
+      else await createPayMethod({ ...fields, country_code: country, kind, code: code.trim(), integration: integration || null });
       onDone(method ? "حُفظت الطريقة — وسُجّل التغيير في التدقيق" : "أُضيفت الطريقة");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
@@ -552,8 +567,45 @@ function MethodModal({
             ))}
           </Select>
           <Field label="المعرّف (لاتينيّ ثابت)" name="code" dir="ltr" value={code} onChange={(event) => setCode(event.target.value)} />
+          <Select
+            label="كيف تُؤكَّد الدفعة"
+            name="integration"
+            value={integration}
+            onChange={(event) => {
+              const next = event.target.value as Integration | "";
+              setIntegration(next);
+              setFeeBearer("taxo");
+            }}
+          >
+            <option value="">يدويّاً — يراجعها موظّفٌ ماليّ</option>
+            {GATEWAYS.map((row) => (
+              <option key={row.key} value={row.key}>
+                آليّاً عبر {row.label}
+              </option>
+            ))}
+          </Select>
         </div>
       )}
+      {gateway ? (
+        <div className="mb-12 grid gap-12 sm:grid-cols-2">
+          <Select
+            label="رسومُ الوسيط على من"
+            name="fee_bearer"
+            value={feeBearer}
+            onChange={(event) => setFeeBearer(event.target.value as GatewayFeeBearer)}
+          >
+            {gateway.bearers.map((key) => (
+              <option key={key} value={key}>
+                {GATEWAY_FEE_BEARER_LABEL[key]}
+              </option>
+            ))}
+          </Select>
+          <p className="self-end text-11 leading-note text-muted">
+            مفتاحُ الوسيط يُكتب في «العقود» لهذه الدولة، والطريقةُ لا تُفعَّل قبله. والدفعةُ تُضاف حين يؤكّدها الوسيط نفسُه — لا حين
+            يعود المستخدم.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-12 sm:grid-cols-2">
         <Field label="الاسم كما يراه المستخدم" name="name" value={name} onChange={(event) => setName(event.target.value)} />
         <Field label="الترتيب" name="sort_order" dir="ltr" inputMode="numeric" value={order} onChange={(event) => setOrder(event.target.value.replace(/\D/g, ""))} />

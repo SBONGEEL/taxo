@@ -20,14 +20,11 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     PaymentProviderKind,
-    PaymentRequestStatus,
     WalletTransactionType,
 )
 from app.models.feature_flag import FeatureFlag
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.wallet import WalletTransaction
-from app.services import payment_gateways
-from app.services.payment_gateways import GatewayEvent, WebhookSignatureInvalid
 from tests.helpers import DRIVER, RIDER, auth, ensure_plan, register, rider_session
 from tests.money_format import offenders
 
@@ -353,64 +350,7 @@ async def test_a_purchase_that_fails_leaves_the_money_in_the_wallet(
 
 
 # ------------------------------------------------------------------ الـwebhook الموحّد
-
-
-class _FakeGateway:
-    """**محوِّلٌ للاختبار وحدَه** — توقيعُه ترويسةٌ ثابتة، وأحداثُه في الجسم."""
-
-    name = "fakepay"
-
-    async def parse_webhook(self, *, headers: dict[str, str], body: bytes) -> list[GatewayEvent]:
-        if headers.get("x-fake-signature") != "ok":
-            raise WebhookSignatureInvalid()
-        external, outcome, amount = body.decode().split("|")
-        return [GatewayEvent(external_id=external, outcome=PaymentRequestStatus(outcome),
-                             amount=Decimal(amount) if amount else None)]
-
-
-@pytest.fixture
-def fake_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(payment_gateways.REGISTRY, "fakepay", _FakeGateway())
-
-
-async def _gateway_request(session_factory, user_id: str, external_id: str) -> uuid.UUID:
-    """طلبٌ فتحه وسيطٌ آليّ — يُكتب مباشرةً لأن فتحَ الدفع عند الوسيط يُبنى في المرحلة ٣."""
-    async with session_factory() as session:
-        provider = PayMethod(country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code="fakepay",
-                                   name="وسيطُ الاختبار", integration="fakepay", enabled=True)
-        session.add(provider)
-        await session.flush()
-        from app.models.enums import Currency, PaymentRequestPurpose, WalletOwnerType
-
-        row = PaymentRequest(user_id=uuid.UUID(user_id), owner_type=WalletOwnerType.RIDER, country_code=CountryCode.DZ,
-                             currency=Currency.DZD, provider_id=provider.id, kind=provider.kind,
-                             purpose=PaymentRequestPurpose.WALLET_TOPUP, amount=Decimal("3000"), external_id=external_id)
-        session.add(row)
-        await session.commit()
-        return row.id
-
-
-async def test_the_unified_webhook_checks_the_signature_and_applies_once(
-    client: AsyncClient, session_factory, fake_gateway
-) -> None:
-    await algeria_market(session_factory)
-    algerian = await rider_session(client, ALGERIAN_RIDER)
-    await _gateway_request(session_factory, algerian["user"]["id"], "ext-1")
-
-    assert (await client.post("/payment-requests/webhook/nopay", content=b"x")).status_code == 404
-    forged = await client.post("/payment-requests/webhook/fakepay", content=b"ext-1|approved|3000",
-                               headers={"x-fake-signature": "no"})
-    assert forged.status_code == 401
-    assert await balance(client, algerian["headers"]) == "0"
-
-    for _ in range(2):
-        delivered = await client.post("/payment-requests/webhook/fakepay", content=b"ext-1|approved|3000",
-                                      headers={"x-fake-signature": "ok"})
-        assert delivered.status_code == 200
-    assert await balance(client, algerian["headers"]) == "3000"
-    unknown = await client.post("/payment-requests/webhook/fakepay", content=b"ext-404|approved|1",
-                                headers={"x-fake-signature": "ok"})
-    assert unknown.status_code == 200 and unknown.json()["applied"] == 0
+# **مقيسٌ في `test_payment_gateways.py`** على المحوِّلَين الحقيقيَّين بشبكةٍ مزيّفة (المرحلة ٣) — كان هنا وسيطٌ مزيَّفٌ في سجلٍّ أُزيل
 
 
 # ------------------------------------------------------------------ اللوحة: الطرقُ وصلاحيّاتُها
@@ -482,5 +422,7 @@ async def test_the_receipt_reaches_finance_as_uploaded(
     assert receipt.headers["content-type"] == "image/png"
 
 
-def test_the_service_refuses_a_gateway_outcome_it_does_not_know() -> None:
+def test_the_signature_error_is_an_app_error() -> None:
+    from app.services.payment_gateways import WebhookSignatureInvalid
+
     assert issubclass(WebhookSignatureInvalid, AppError)

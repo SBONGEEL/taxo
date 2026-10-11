@@ -1592,6 +1592,8 @@ export interface PayMethod {
   has_qr: boolean;
   /** **الإيصالُ ورقمُ التحويل إجباريّان** — والخادمُ يرفض من دونهما */
   requires_receipt: boolean;
+  /** **وسيطٌ آليّ** (المرحلة ٣) — يُدفع في صفحته ويُضاف فورَ تأكيده */
+  gateway: boolean;
 }
 
 export interface PayMethods {
@@ -1622,4 +1624,10 @@ export interface TaxoCardRedeemed {
   serial: string;
   amount: string;
   currency: Currency;
+}
+
+/** **صفحةُ دفعٍ عند وسيطٍ آليّ** (SPEC §٧٣-هـ المرحلة ٣) — الطلبُ معلَّقٌ حتى يقول الوسيط. */
+export interface PaymentCheckout {
+  request: MyPaymentRequest;
+  checkout_url: string;
 }

@@ -151,6 +151,12 @@ const CliqSubscriptionScreen = lazy(() =>
 );
 // **الدفعُ بطرق السوق** (SPEC §٧٣-هـ) — شحنُ المحفظة ودفعُ الاشتراك، حيث `payment_requests_enabled` مشتعلٌ وحدَه
 // **بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢)
+// **العودةُ من صفحة الوسيط** (SPEC §٧٣-هـ المرحلة ٣)
+const PayReturnT2Screen = lazy(() =>
+  import("@/screens/t2/PayReturnT2").then((m) => ({
+    default: m.PayReturnT2Screen,
+  })),
+);
 const CardRedeemT2Screen = lazy(() =>
   import("@/screens/t2/CardRedeemT2").then((m) => ({
     default: m.CardRedeemT2Screen,
@@ -677,6 +683,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CliqSubscriptionScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/wallet/pay/return"
+                          element={
+                            <Guarded>
+                              <PayReturnT2Screen />
                             </Guarded>
                           }
                         />

@@ -8,12 +8,14 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import (
     CountryCode,
     Currency,
+    GatewayFeeBearer,
     PaymentProviderKind,
     PaymentRequestPurpose,
     PaymentRequestStatus,
@@ -37,6 +39,8 @@ class PaymentMethodOut(BaseModel):
     has_qr: bool
     #: **الإيصالُ ورقمُ التحويل إجباريّان** — يقرؤهما التطبيقُ ليطلبهما، والخادمُ يرفض من دونهما (§٧٣-هـ/٢)
     requires_receipt: bool
+    #: **وسيطٌ آليّ** (المرحلة ٣) — يُدفع في صفحته ويُضاف فورَ تأكيده، لا طلبٌ يُراجَع
+    gateway: bool
 
 
 class PaymentMethodsOut(BaseModel):
@@ -63,6 +67,23 @@ class MyPaymentRequestOut(BaseModel):
     created_at: datetime
 
 
+class PaymentCheckoutIn(BaseModel):
+    """**صفحةُ دفعٍ عند وسيطٍ آليّ** (المرحلة ٣) — المبلغُ بخانات عملته، والاشتراكُ بخطّته."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider_id: uuid.UUID
+    purpose: PaymentRequestPurpose
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+    plan_id: uuid.UUID | None = None
+    wallet: WalletOwnerType | None = None
+
+
+class PaymentCheckoutOut(BaseModel):
+    request: MyPaymentRequestOut
+    checkout_url: str
+
+
 class AdminPaymentMethodOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,6 +102,7 @@ class AdminPaymentMethodOut(BaseModel):
     instructions: str | None
     has_qr: bool
     sort_order: int
+    fee_bearer: GatewayFeeBearer
     updated_at: datetime
 
 
@@ -99,6 +121,9 @@ class AdminPaymentMethodCreate(BaseModel):
     bank_name: str | None = Field(default=None, max_length=120)
     instructions: str | None = Field(default=None, max_length=2000)
     sort_order: int = Field(default=0, ge=0, le=999)
+    #: **الوسيطُ الآليّ** (المرحلة ٣) — `None` لطريقةٍ يدويّة؛ ويُختار عند الإنشاء ولا يتغيّر بعده
+    integration: Literal["chargily", "sofizpay"] | None = None
+    fee_bearer: GatewayFeeBearer = GatewayFeeBearer.TAXO
 
 
 class AdminPaymentMethodUpdate(BaseModel):
@@ -115,6 +140,7 @@ class AdminPaymentMethodUpdate(BaseModel):
     bank_name: str | None = Field(default=None, max_length=120)
     instructions: str | None = Field(default=None, max_length=2000)
     sort_order: int | None = Field(default=None, ge=0, le=999)
+    fee_bearer: GatewayFeeBearer | None = None
 
 
 class AdminPaymentRequestOut(BaseModel):

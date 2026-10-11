@@ -20,13 +20,12 @@ from app.models.payment_request import PaymentRequest
 from app.models.wallet import WalletTransaction
 from app.services import wallet
 from tests.helpers import rider_session
+from tests.payment_fakes import ChargilyFake, add_gateway_method, install_transport
 from tests.test_payment_requests import (
     ALGERIAN_RIDER,
     PNG_OTHER,
     SECOND_ALGERIAN,
-    _gateway_request,
     algeria_market,
-    fake_gateway,  # noqa: F401 — فكسچر
     submit,
 )
 
@@ -104,28 +103,31 @@ async def test_an_approval_and_a_rejection_interleaved_leave_a_coherent_request(
 
 
 async def test_two_gateway_deliveries_at_once_credit_once(
-    client: AsyncClient, session_factory, fake_gateway  # noqa: F811
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """**ثلاثةُ إشعاراتٍ موقَّعةٍ معاً لدفعةٍ واحدةٍ قال الوسيطُ إنها دُفعت** — قيدٌ واحد، **ونجاحٌ واحدٌ يُحسب** والباقيان يجدانها محسومة."""
     await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
     algerian = await rider_session(client, ALGERIAN_RIDER)
-    request_id = await _gateway_request(session_factory, algerian["user"]["id"], "ext-race")
+    opened = await client.post(
+        "/payment-requests/checkout",
+        json={"provider_id": str(method_id), "purpose": "wallet_topup", "amount": "3000"},
+        headers=algerian["headers"],
+    )
+    request_id = opened.json()["request"]["id"]
+    chargily.status["chk_0001"] = "paid"
+    body, headers = ChargilyFake.signed("chk_0001")
 
     responses = await asyncio.wait_for(
         asyncio.gather(
-            *(
-                client.post(
-                    "/payment-requests/webhook/fakepay",
-                    content=b"ext-race|approved|3000",
-                    headers={"x-fake-signature": "ok"},
-                )
-                for _ in range(3)
-            )
+            *(client.post("/payment-requests/webhook/chargily", content=body, headers=headers) for _ in range(3))
         ),
         timeout=30,
     )
     assert [r.status_code for r in responses] == [200, 200, 200]
     assert sum(r.json()["applied"] for r in responses) == 1
-    assert await _entries(session_factory, str(request_id)) == 1
+    assert await _entries(session_factory, request_id) == 1
     async with session_factory() as session:
         total = await session.scalar(
             select(func.coalesce(func.sum(WalletTransaction.amount), 0)).where(

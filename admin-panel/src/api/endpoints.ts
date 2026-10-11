@@ -2043,7 +2043,13 @@ export const listPayMethods = (country: CountryCode) =>
 
 /** **إنشاءُ طريقة** — `settings.write`؛ وطريقةُ تحويلٍ مفعَّلةٌ بلا رقمٍ ولا رمزٍ تُرفض في الخادم. */
 export const createPayMethod = (
-  body: AdminPayMethodInput & { country_code: CountryCode; kind: PaymentProviderKind; code: string },
+  body: AdminPayMethodInput & {
+    country_code: CountryCode;
+    kind: PaymentProviderKind;
+    code: string;
+    /** **الوسيطُ الآليّ** (المرحلة ٣) — `null` لطريقةٍ يدويّة، ولا يتغيّر بعد الإنشاء */
+    integration: "chargily" | "sofizpay" | null;
+  },
 ) => api.post<AdminPayMethod>("/admin/payment-methods", body);
 
 /** **ما تغيّر وحدَه** — ويُدقَّق كلُّ تغييرٍ بقبله وبعده في الخادم (رقمُ الحساب أوّلُها). */

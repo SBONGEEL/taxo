@@ -12,11 +12,14 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
+import html
+
 import anyio
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from app.core import storage
+from app.core.config import settings
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
@@ -25,6 +28,8 @@ from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
     MyPaymentRequestOut,
     PaymentCancelIn,
+    PaymentCheckoutIn,
+    PaymentCheckoutOut,
     PaymentMethodOut,
     PaymentMethodsOut,
 )
@@ -46,6 +51,7 @@ def method_out(provider: PayMethod) -> PaymentMethodOut:
         instructions=provider.instructions,
         has_qr=provider.qr_image_path is not None,
         requires_receipt=payment_requests.requires_receipt(provider),
+        gateway=provider.integration is not None,
     )
 
 
@@ -87,8 +93,8 @@ async def list_methods(
     providers = await payment_requests.providers_for(session, user.country_code, purpose)
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
-        # **والوسيطُ الآليُّ لا يُعرض قبل أن يُبنى** (المرحلة ٣)؛ **وبطاقاتُ TAXO تُعرض** — تُدخل برمزها (`/taxo-cards/redeem`)
-        methods=[method_out(p) for p in providers if p.integration is None],
+        # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها
+        methods=[method_out(p) for p in providers],
     )
 
 
@@ -179,34 +185,80 @@ async def cancel_mine(
     return mine_out(request)
 
 
+@router.post("/checkout", response_model=PaymentCheckoutOut, status_code=status.HTTP_201_CREATED)
+async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: DbSession) -> PaymentCheckoutOut:
+    """**صفحةُ دفعٍ عند وسيطٍ آليّ** (المرحلة ٣) — يفتحها التطبيقُ ثمّ يعود إلى صفحة العودة ويسأل عن الحال (`/refresh`).
+
+    **والتطبيقُ الذي فتحها يُعرف من المحفظة المعلَنة** — الاشتراكُ والمحفظةُ الكبتنُ يعودان إلى تطبيق الكبتن، وما عداهما إلى الراكب.
+    """
+    opened_from = (
+        "driver"
+        if payload.purpose is PaymentRequestPurpose.SUBSCRIPTION or payload.wallet is WalletOwnerType.DRIVER
+        else "rider"
+    )
+    request, url = await payment_requests.start_checkout(
+        session,
+        owner=user,
+        provider_id=payload.provider_id,
+        purpose=payload.purpose,
+        amount=payload.amount,
+        plan_id=payload.plan_id,
+        declared=payload.wallet,
+        opened_from=opened_from,
+    )
+    await session.commit()
+    await session.refresh(request, attribute_names=["provider"])
+    return PaymentCheckoutOut(request=mine_out(request), checkout_url=url)
+
+
+@router.post("/{request_id}/refresh", response_model=MyPaymentRequestOut)
+async def refresh_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSession, redis: RedisDep) -> MyPaymentRequestOut:
+    """**يسأل الوسيطَ عن طلبي المعلَّق** — صفحةُ العودة تناديه؛ وطلبُ غيري ٤٠٤ لا ٤٠٣."""
+    row = await payment_requests.get_request(session, request_id)
+    if row.user_id != user.id:
+        raise NotFound("طلبُ الدفع غيرُ موجود")
+    before = row.status
+    row = await payment_requests.refresh(session, request_id=request_id)
+    await session.commit()
+    if row.status is not before:
+        await cancellation.announce_settled_for_debtor(session, redis, user=user)
+    await session.refresh(row, attribute_names=["provider"])
+    return mine_out(row)
+
+
 @router.post("/webhook/{integration}")
 async def gateway_webhook(
     integration: str, request: Request, session: DbSession, redis: RedisDep
 ) -> dict[str, object]:
-    """**الـwebhook الموحّد للوسطاء الآليّين** (§٧٣-هـ/١٠) — **التوقيعُ قبل أيِّ قراءة**، ثمّ يطبَّق ما قاله الوسيطُ بالأبواب نفسِها.
+    """**الـwebhook الموحّد للوسطاء الآليّين** (§٧٣-هـ/١٠) — **الحمولةُ إشارةُ استيقاظٍ لا مصدرُ حقيقة** (قاعدةُ `card_gateway`).
 
-    **ومعرّفٌ لا طلبَ له يُسجَّل ولا يُرفض بغير ٢٠٠**: الوسيطُ يعيد ما لم يرَ له ٢٠٠ إلى ما لا نهاية، وإعادتُه لا تجعل المعرّفَ معروفاً.
+    التوقيعُ يُتحقَّق حيث يوثّقه الوسيط، **على كلِّ عقدٍ مفعَّلٍ له** (الإشعارُ لا يقول سوقَه)؛ ثمّ **يُسأل الوسيطُ مباشرةً** عن كلِّ معرّف
+    (`refresh`) — قبل القفل — ويُطبَّق جوابُه. **ومعرّفٌ لا طلبَ له يُسجَّل ولا يُرفض بغير ٢٠٠**: الوسيطُ يعيد ما لم يرَ له ٢٠٠.
     """
-    gateway = payment_gateways.gateway_for(integration)
-    if gateway is None:
-        raise NotFound("لا وسيطَ بهذا الاسم")
+    gateways = await payment_gateways.webhook_gateways(session, integration)
+    if not gateways:
+        raise NotFound("لا وسيطَ مفعَّلٌ بهذا الاسم")
     body = await request.body()
-    events = await gateway.parse_webhook(headers={k.lower(): v for k, v in request.headers.items()}, body=body)
+    headers = {k.lower(): v for k, v in request.headers.items()}
+    ids: list[str] | None = None
+    for gateway in gateways:
+        try:
+            ids = gateway.webhook_ids(headers, body)
+            break
+        except payment_gateways.WebhookSignatureInvalid:
+            continue
+    if ids is None:
+        raise payment_gateways.WebhookSignatureInvalid()
+
     applied = 0
     owners = []
-    for event in events:
-        try:
-            row = await payment_requests.request_for_external(
-                session, integration=integration, external_id=event.external_id
-            )
-        except NotFound:
-            logger.error("إشعارُ وسيط %s لمعرّفٍ لا طلبَ له: %s", integration, event.external_id)
+    for external_id in ids:
+        row = await payment_requests.find_external(session, integration=integration, external_id=external_id)
+        if row is None:
+            logger.error("إشعارُ وسيط %s لمعرّفٍ لا طلبَ له: %s", integration, external_id)
             continue
-        before = row.status
-        row = await payment_requests.apply_gateway_outcome(
-            session, request=row, outcome=event.outcome, amount=event.amount, reason=event.reason
-        )
-        if row.status is not before:
+        row, settled = await payment_requests.settle_from_gateway(session, request_id=row.id)
+        if settled:
             applied += 1
             owners.append(row.user_id)
     await session.commit()
@@ -217,3 +269,36 @@ async def gateway_webhook(
         if owner is not None:
             await cancellation.announce_settled_for_debtor(session, redis, user=owner)
     return {"ok": True, "applied": applied}
+
+
+# ------------------------------------------------------------------ صفحةُ الوسيط الوهميّ (التطوير والاختبار وحدَهما)
+
+
+def _require_mock_allowed() -> None:
+    if settings.is_production:
+        raise NotFound()
+
+
+@router.get("/mock/{external_id}", response_class=HTMLResponse, include_in_schema=False)
+async def mock_page(external_id: str) -> HTMLResponse:
+    """**«صفحةُ الدفع» الوهميّة** — زرّان، **وممنوعةٌ في الإنتاج** (`404`)."""
+    _require_mock_allowed()
+    safe = html.escape(external_id)
+    return HTMLResponse(
+        "<!doctype html><html lang=ar dir=rtl><meta charset=utf-8><title>وسيطٌ وهميّ</title>"
+        f"<body style='font-family:sans-serif;padding:24px'><h1>وسيطٌ وهميّ</h1><p dir=ltr>{safe}</p>"
+        f"<form method=post action='{safe}/paid'><button style='padding:12px 24px'>نجح الدفع</button></form><br>"
+        f"<form method=post action='{safe}/failed'><button style='padding:12px 24px'>فشل الدفع</button></form></body></html>"
+    )
+
+
+@router.post("/mock/{external_id}/{outcome}", include_in_schema=False)
+async def mock_settle(external_id: str, outcome: str) -> RedirectResponse:
+    _require_mock_allowed()
+    if outcome not in ("paid", "failed"):
+        raise NotFound()
+    from app.services.payment_gateways import mock
+
+    back = await mock.return_url_of(external_id)
+    await mock.settle(external_id, outcome)
+    return RedirectResponse(back or "/", status_code=303)
