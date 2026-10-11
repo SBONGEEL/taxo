@@ -363,6 +363,7 @@ async def get_my_driver_wallet(
         pending_compensation=await cancellation.pending_for_driver(session, driver.id),
         carrier_dues=await cancellation.carrier_dues_of(session, driver.id),
         available_for_withdrawal=available,
+        withdrawal_methods=list(withdrawals.methods_for(user.country_code)),
         # **الحدُّ كما يُفرض** (`withdrawals.minimum_withdrawal`): مشتعلاً مقرَّباً للأعلى إلى الوحدة، فبلاطةُ «الحد الأدنى» مضاعفٌ
         # يُكتب ولا يُردّ (مراجعةُ المال البند ١٢). ومطفأً الإعدادُ حرفاً
         min_withdrawal_amount=(
@@ -408,7 +409,13 @@ async def request_withdrawal(
 ) -> WithdrawalOut:
     """طلب سحب — للكباتن وحدهم؛ الراكب يشحن ولا يسحب (SPEC القسم 7)."""
     request = await withdrawals.create_request(
-        session, driver=driver, user=user, amount=payload.amount, method=payload.method
+        session,
+        driver=driver,
+        user=user,
+        amount=payload.amount,
+        method=payload.method,
+        payout_account=payload.payout_account,
+        payout_holder=payload.payout_holder,
     )
     await session.commit()
     return WithdrawalOut.model_validate(request)

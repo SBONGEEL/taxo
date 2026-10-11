@@ -135,6 +135,12 @@ export function WithdrawalsScreen() {
                       {digits(when.day)} ·{" "}
                       <span dir="ltr">{digits(when.time)}</span> ·{" "}
                       {WITHDRAWAL_METHOD_LABEL[request.method]}
+                      {request.payout_account ? (
+                        <>
+                          {" · "}
+                          <span dir="ltr">{request.payout_account}</span>
+                        </>
+                      ) : null}
                     </span>
                   </span>
                   <span className={`t2-chip ${tone}`}>

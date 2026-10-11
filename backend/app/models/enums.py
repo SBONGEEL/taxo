@@ -1070,8 +1070,15 @@ class PaymentRequestPurpose(StrEnum):
 
 
 class WithdrawalMethod(StrEnum):
+    """**قناةُ صرف السحب** — كليك والبنكُ للأردن وليبيا كما كانا، **والجزائرُ بقنواتها** (SPEC §٧٣-هـ المرحلة ٤):
+    حسابُ CCP، وBaridiMob برقم RIP، والحسابُ البنكيُّ برقم RIB، **والكاشُ يُستلم من المكتب**. **وأيُّها يُقبل في أيِّ سوق**
+    `withdrawals.METHODS_BY_COUNTRY` — فلا كليكَ في الجزائر ولا CCP في الأردن."""
+
     CLIQ = "cliq"
     BANK = "bank"
+    CCP = "ccp"
+    BARIDIMOB = "baridimob"
+    CASH_OFFICE = "cash_office"
 
 
 class WithdrawalStatus(StrEnum):

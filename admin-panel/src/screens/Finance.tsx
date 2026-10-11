@@ -50,6 +50,7 @@ import { Pills, Table, TableSearch } from "@/components/Table";
 import {
   TOPUP_STATUS_LABEL,
   TOPUP_STATUS_TONE,
+  WITHDRAWAL_METHOD_LABEL,
 } from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
@@ -273,8 +274,17 @@ export function FinanceScreen() {
                 <span className="font-semibold text-ink">
                   {digits(row.amount)}
                 </span>
-                <span className="text-muted">
-                  {row.method === "cliq" ? "كليك" : "حوالة بنكية"}
+                <span className="min-w-0 text-muted">
+                  {WITHDRAWAL_METHOD_LABEL[row.method]}
+                  {/* **وجهةُ الصرف المجمَّدة** (الجزائر) — يُحوَّل إليها لا إلى غيرها */}
+                  {row.payout_account ? (
+                    <span dir="ltr" className="block truncate text-10.5">
+                      {row.payout_account}
+                    </span>
+                  ) : null}
+                  {row.payout_holder ? (
+                    <span className="block truncate text-10.5">{row.payout_holder}</span>
+                  ) : null}
                 </span>
                 <span className="text-muted">{when(row.created_at)}</span>
                 <span
@@ -737,11 +747,26 @@ function PayoutModal({
           </span>
         </div>
 
+        {/* **إلى أين يُحوَّل** (الجزائر، SPEC §٧٣-هـ المرحلة ٤) — الوجهةُ المجمَّدةُ على الطلب، **ويدُ الموظّف تقرؤها هنا قبل أن تحوّل** */}
+        {request.payout_account || request.method === "cash_office" ? (
+          <div className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12 text-12.5">
+            <span className="block text-muted">{WITHDRAWAL_METHOD_LABEL[request.method]}</span>
+            {request.payout_account ? (
+              <span dir="ltr" className="block font-semibold text-ink">
+                {request.payout_account}
+              </span>
+            ) : (
+              <span className="block text-ink">يُسلَّم نقداً في المكتب بعد التحقّق من هويّة الكبتن</span>
+            )}
+            {request.payout_holder ? <span className="block text-ink">{request.payout_holder}</span> : null}
+          </div>
+        ) : null}
+
         <Field
-          label="مرجع التحويل"
+          label={request.method === "cash_office" ? "رقم وصل الاستلام" : "مرجع التحويل"}
           name="reference"
           dir="ltr"
-          placeholder="CLIQ-…"
+          placeholder={request.method === "cliq" || request.method === "bank" ? "CLIQ-…" : ""}
           value={reference}
           maxLength={64}
           onChange={(event) => setReference(event.target.value)}

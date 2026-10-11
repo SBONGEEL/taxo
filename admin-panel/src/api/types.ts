@@ -320,7 +320,8 @@ export interface TopupRequest {
   created_at: string;
 }
 
-export type WithdrawalMethod = "cliq" | "bank";
+/** **قناةُ الصرف** — كليك والبنكُ للأردن وليبيا، **وقنواتُ الجزائر** (SPEC §٧٣-هـ المرحلة ٤): CCP وBaridiMob والبنكُ وكاشُ المكتب. */
+export type WithdrawalMethod = "cliq" | "bank" | "ccp" | "baridimob" | "cash_office";
 export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
 
 export interface Withdrawal {
@@ -341,6 +342,9 @@ export interface Withdrawal {
   status: WithdrawalStatus;
   reference: string | null;
   note: string | null;
+  /** **وجهةُ الصرف مجمَّدةً على الطلب** (الجزائر، SPEC §٧٣-هـ المرحلة ٤) — يُحوَّل إليها لا إلى غيرها */
+  payout_account: string | null;
+  payout_holder: string | null;
   transaction_id: string | null;
   processed_at: string | null;
   created_at: string;

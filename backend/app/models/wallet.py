@@ -262,6 +262,13 @@ class WithdrawalRequest(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "withdrawal_requests"
     __table_args__ = (
         CheckConstraint("amount > 0", name="withdrawal_amount_positive"),
+        # **قناةٌ تُصرف إلى حسابٍ لا تُكتب بلا حسابٍ وصاحبه** (SPEC §٧٣-هـ المرحلة ٤) — CCP وBaridiMob؛ والبنكيُّ الجزائريُّ
+        # يُفرض في الخدمة لأن البنكيَّ الأردنيَّ يُكتب بلا وجهةٍ منذ المرحلة ٥ (والقيدُ لا يعرف السوق)
+        CheckConstraint(
+            "method::text NOT IN ('ccp', 'baridimob') "
+            "OR (payout_account IS NOT NULL AND payout_holder IS NOT NULL)",
+            name="withdrawal_payout_destination",
+        ),
     )
 
     driver_id: Mapped[uuid.UUID] = mapped_column(
@@ -282,6 +289,10 @@ class WithdrawalRequest(UUIDMixin, TimestampMixin, Base):
     )
     reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # **وجهةُ الصرف مجمَّدةً على الطلب** (SPEC §٧٣-هـ المرحلة ٤): رقمُ CCP أو RIP أو RIB، واسمُ صاحبه — **يُنسخ لحظةَ الطلب**،
+    # فما يعتمده الموظّفُ هو ما يُصرف إليه، ولا يحرفه تعديلٌ بعده. وفارغان للأردن وليبيا (كليكُ وجهتُه `drivers.cliq_alias`)
+    payout_account: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    payout_holder: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     processed_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

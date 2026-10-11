@@ -126,6 +126,9 @@ class TopupRequestOut(BaseModel):
 class WithdrawalCreate(BaseModel):
     amount: Decimal = Money
     method: WithdrawalMethod
+    # **وجهةُ الصرف الجزائريّة** (SPEC §٧٣-هـ المرحلة ٤) — رقمُ CCP أو RIP أو RIB وصاحبُه؛ ويُتجاهلان للأردن وليبيا
+    payout_account: str | None = Field(default=None, max_length=48)
+    payout_holder: str | None = Field(default=None, max_length=160)
 
 
 class WithdrawalOut(BaseModel):
@@ -138,6 +141,8 @@ class WithdrawalOut(BaseModel):
     status: WithdrawalStatus
     reference: str | None
     note: str | None
+    payout_account: str | None = None
+    payout_holder: str | None = None
     transaction_id: uuid.UUID | None
     processed_at: datetime | None
     created_at: datetime
@@ -160,6 +165,8 @@ class DriverWalletOut(WalletOut):
     # **مجموعُ عمولة الشهر الجاري** — تقويميّاً بمِنطقة الدولة، لا ثلاثين يوماً
     # متدحرجة: من يقرأ «هذا الشهر» يعدّ من أوّله (`commission_view._month_start`)
     commission_this_month: Decimal = Decimal("0.000")
+    # **قنواتُ الصرف في سوقه بترتيب عرضها** (SPEC §٧٣-هـ المرحلة ٤) — كليكُ وحدَها تُعرض في الأردن وليبيا كما كانت
+    withdrawal_methods: list[WithdrawalMethod] = Field(default_factory=list)
 
 
 class EarningsDayOut(BaseModel):

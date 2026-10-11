@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -204,6 +205,59 @@ async def minimum_withdrawal(session: AsyncSession, country: CountryCode, settin
     return rounding.ceil_to_unit(setting, await rounding.policy_for(session, country))
 
 
+#: **قنواتُ الصرف لكلِّ سوق** (SPEC §٧٣-هـ المرحلة ٤) — **الأردنُ وليبيا بما كانا يقبلانه حرفاً** (كليك والبنك)، **والجزائرُ
+#: بقنواتها الأربع** ولا كليكَ فيها. والترتيبُ ترتيبُ عرضها في التطبيق.
+METHODS_BY_COUNTRY: dict[CountryCode, tuple[WithdrawalMethod, ...]] = {
+    CountryCode.JO: (WithdrawalMethod.CLIQ, WithdrawalMethod.BANK),
+    CountryCode.LY: (WithdrawalMethod.CLIQ, WithdrawalMethod.BANK),
+    CountryCode.DZ: (
+        WithdrawalMethod.BARIDIMOB,
+        WithdrawalMethod.CCP,
+        WithdrawalMethod.BANK,
+        WithdrawalMethod.CASH_OFFICE,
+    ),
+}
+
+
+def methods_for(country: CountryCode) -> tuple[WithdrawalMethod, ...]:
+    return METHODS_BY_COUNTRY.get(country, (WithdrawalMethod.CLIQ, WithdrawalMethod.BANK))
+
+
+def _digits(raw: str | None) -> str:
+    """**الرقمُ كما يُكتب على الورق** — بمسافاتٍ وشرَطٍ ونقاطٍ وكلمة «clé» — خاناتٍ وحدَها."""
+    text = (raw or "").lower().replace("clé", "").replace("cle", "")
+    if re.search(r"[^0-9\s.\-/]", text):
+        return ""
+    return re.sub(r"\D", "", text)
+
+
+def payout_destination(
+    country: CountryCode, method: WithdrawalMethod, account: str | None, holder: str | None
+) -> tuple[str | None, str | None]:
+    """**وجهةُ الصرف الجزائريّة مطبَّعةً ومفحوصةَ الشكل** (SPEC §٧٣-هـ المرحلة ٤) — أو `(None, None)` لما لا وجهةَ له.
+
+    **الشكلُ وحدَه يُفحص لا مفتاحُ التحقّق**: RIP وRIB عشرون خانة، وCCP رقمٌ حتى عشر خاناتٍ ومفتاحُه خانتان. **وخوارزميّةُ المفتاح
+    لم تُبنَ** — لا مصدرَ رسميٌّ قُرئ لها، **ورفضُ حسابٍ صحيحٍ بخوارزميّةٍ مخمَّنةٍ يحبس مالَ كابتن**؛ فالموظّفُ الماليُّ يرى
+    الرقمَ قبل أن يحوّل. **والأردنُ وليبيا لا وجهةَ لهما هنا** — كما كانا.
+    """
+    if country is not CountryCode.DZ or method is WithdrawalMethod.CASH_OFFICE:
+        return None, None
+    name = " ".join((holder or "").split())
+    if len(name) < 3:
+        raise InvalidInput("اكتب اسمَ صاحب الحساب كما في دفتره", field="payout_holder")
+    if len(name) > 120:
+        raise InvalidInput("اسمُ صاحب الحساب أطولُ من المسموح", field="payout_holder")
+    digits = _digits(account)
+    if method is WithdrawalMethod.CCP:
+        if not 3 <= len(digits) <= 12:
+            raise InvalidInput("رقمُ CCP: رقمُ الحساب ثمّ مفتاحُه (خانتان)", field="payout_account")
+        return f"{digits[:-2]} {digits[-2:]}", name
+    if len(digits) != 20:
+        what = "RIP" if method is WithdrawalMethod.BARIDIMOB else "RIB"
+        raise InvalidInput(f"رقمُ {what} عشرون خانة", field="payout_account")
+    return digits, name
+
+
 async def create_request(
     session: AsyncSession,
     *,
@@ -211,6 +265,8 @@ async def create_request(
     user: User,
     amount: Decimal,
     method: WithdrawalMethod,
+    payout_account: str | None = None,
+    payout_holder: str | None = None,
 ) -> WithdrawalRequest:
     """طلب سحب جديد — يُرفض إن جاوز المتاح أو نزل عن الحد الأدنى."""
     # **وكبتنُ التجربة لا يسحب** (SPEC §٦٥-ج/٢): رصيدُه تصحيحُ تجربةٍ لا مالٌ دخل — **وسحبُه يُخرج من TAXO مالاً حقيقيّاً
@@ -226,6 +282,10 @@ async def create_request(
 
     # **محفظةُ الكبتن وحدَها**: لا سحبَ من محفظة راكب أصلاً (SPEC §7)
     wallet.require_not_frozen(user, WalletOwnerType.DRIVER)
+
+    if method not in methods_for(user.country_code):
+        raise InvalidInput("طريقةُ السحب هذه لا تُتاح في بلدك", field="method")
+    account, holder = payout_destination(user.country_code, method, payout_account, payout_holder)
 
     if method == WithdrawalMethod.CLIQ and not (driver.cliq_alias or "").strip():
         raise InvalidInput("أضف alias كليك في ملفك قبل طلب السحب عبره")
@@ -247,6 +307,8 @@ async def create_request(
         amount=amount,
         method=method,
         status=WithdrawalStatus.PENDING,
+        payout_account=account,
+        payout_holder=holder,
     )
     session.add(request)
     await session.flush()

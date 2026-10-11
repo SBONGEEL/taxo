@@ -134,6 +134,9 @@ export function withdrawalTone(status: WithdrawalStatus): string {
 export const WITHDRAWAL_METHOD_LABEL: Record<WithdrawalMethod, string> = {
   cliq: "كليك",
   bank: "حوالة بنكية",
+  ccp: "حساب CCP",
+  baridimob: "بريدي موب",
+  cash_office: "كاش من المكتب",
 };
 
 /** قيدٌ يزيد الرصيد أم ينقصه — من إشارة المبلغ لا من جدولٍ ثانٍ يخالفها. */

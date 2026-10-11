@@ -571,6 +571,8 @@ export interface DriverWallet extends Wallet {
   /** مجموعُ «عمولة TAXO» في الشهر الجاري — **تقويميّاً** بمِنطقة الدولة، لا
    *  ثلاثين يوماً متدحرجة: من يقرأ «هذا الشهر» يعدّ من أوّله. */
   commission_this_month: string;
+  /** **قنواتُ الصرف في سوقه بترتيب عرضها** (SPEC §٧٣-هـ المرحلة ٤) — وفيها كليك ⇐ الورقةُ كما كانت حرفاً */
+  withdrawal_methods: WithdrawalMethod[];
 }
 
 export type WalletTransactionType =
@@ -670,7 +672,8 @@ export interface NotificationPreferences {
   marketing_push_enabled: boolean;
 }
 
-export type WithdrawalMethod = "cliq" | "bank";
+/** **قناةُ الصرف** — كليك والبنكُ للأردن وليبيا، **وقنواتُ الجزائر** (SPEC §٧٣-هـ المرحلة ٤): CCP وBaridiMob والبنكُ وكاشُ المكتب. */
+export type WithdrawalMethod = "cliq" | "bank" | "ccp" | "baridimob" | "cash_office";
 export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
 
 export interface Withdrawal {
@@ -681,6 +684,9 @@ export interface Withdrawal {
   status: WithdrawalStatus;
   reference: string | null;
   note: string | null;
+  /** **وجهةُ الصرف مجمَّدةً على الطلب** (الجزائر) — رقمُ CCP أو RIP أو RIB وصاحبُه؛ وفارغان للأردن وليبيا */
+  payout_account: string | null;
+  payout_holder: string | null;
   transaction_id: string | null;
   processed_at: string | null;
   created_at: string;

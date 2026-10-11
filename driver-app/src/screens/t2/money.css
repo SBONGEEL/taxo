@@ -101,6 +101,8 @@
 .t2-wds-blocked .t2-icon { flex: none; font-size: 17px; line-height: 1.2; }
 /* المبلغان السريعان — بلاطتا «الدفع من» في C10: حافّةٌ، والمختارُ بحافّة الحبر */
 .t2-wds-quick { display: flex; gap: 8px; margin-bottom: 14px; }
+/* **قنواتُ الصرف الجزائريّة** (SPEC §٧٣-هـ المرحلة ٤) — بلاطاتُ «الدفع من» نفسُها، اثنتين اثنتين */
+.t2-wds-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 14px; }
 .t2-wds-tile {
   flex: 1;
   min-width: 0;

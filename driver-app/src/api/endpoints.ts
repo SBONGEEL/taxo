@@ -423,8 +423,12 @@ export const listWithdrawals = (limit = 20, offset = 0) =>
   api.get<Withdrawal[]>("/wallet/me/withdrawals", { query: { limit, offset } });
 
 /** طلب سحب — للكباتن وحدهم (القسم 7)، ولا قيد في الدفتر قبل `paid`. */
-export const requestWithdrawal = (amount: string, method: WithdrawalMethod) =>
-  api.post<Withdrawal>("/wallet/me/withdrawals", { amount, method });
+export const requestWithdrawal = (
+  amount: string,
+  method: WithdrawalMethod,
+  /** **وجهةُ الصرف الجزائريّة** (SPEC §٧٣-هـ المرحلة ٤) — والأردنُ لا يرسلها */
+  destination?: { payout_account: string; payout_holder: string },
+) => api.post<Withdrawal>("/wallet/me/withdrawals", { amount, method, ...destination });
 
 export const getMySubscription = () =>
   api.get<MySubscription>("/subscriptions/me");

@@ -14,6 +14,11 @@
  *
  * و`alias` كليك شرطُ الخلفية (`withdrawals.create_request`)، فمن لا alias له يضعه من هنا بدل أن يُرسل طلباً يُرفض.
  *
+ * **وفي سوقٍ بلا كليك** (الجزائر، SPEC §٧٣-هـ المرحلة ٤) تعرض الورقةُ **قنواتِ سوقه** كما تنشرها الخلفية (`withdrawal_methods`): BaridiMob
+ * برقم RIP، وCCP برقمه ومفتاحه، والبنكُ برقم RIB، **وكاشُ المكتب بلا وجهة** — **والوجهةُ تُكتب مع الطلب وتُجمَّد عليه**. **والشكلُ يُفحص
+ * في الخلفية لا هنا**: الحقلُ يقبل ما يُكتب على الورق (مسافاتٌ و«clé»)، والخلفيةُ تطبّعه أو تردّه بنصّه. **وسوقٌ فيها كليك ترى الورقةَ
+ * كما كانت حرفاً.**
+ *
  * **ولغتُها أوراقُ الكبتن** (C07: سطحٌ بحافّةٍ علويةٍ وزاوية ٣٠ ومقبض)، **والبلاطتان بلاطتا «الدفع من» في C10** — بالرموز وحدَها،
  * **فلا تحتاج جسرَ الألوان القائمة** (`.t2-legacy`) الذي كان يلفّها في C09.
  */
@@ -22,11 +27,12 @@ import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { requestWithdrawal, updateDriver } from "@/api/endpoints";
-import type { DriverWallet } from "@/api/types";
+import type { DriverWallet, WithdrawalMethod } from "@/api/types";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import { currencyDecimals, digits, zeroAmount } from "@/lib/utils";
+import { WITHDRAWAL_METHOD_LABEL } from "@/lib/walletFormat";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/fields.css";
@@ -40,6 +46,13 @@ interface Props {
   onDone: () => void;
   onClose: () => void;
 }
+
+/** **حقلُ الوجهة لكلِّ قناةٍ جزائريّة** — اسمُه وتلميحُه ومثالُه؛ وكاشُ المكتب بلا حقل. */
+const DESTINATION: Partial<Record<WithdrawalMethod, { label: string; hint: string; placeholder: string }>> = {
+  baridimob: { label: "رقم RIP", hint: "عشرون خانة كما في تطبيق بريدي موب.", placeholder: "00799999…" },
+  ccp: { label: "رقم CCP ومفتاحه", hint: "رقمُ الحساب ثمّ المفتاح (خانتان) كما في دفتر الصكوك البريديّة.", placeholder: "0012345678 90" },
+  bank: { label: "رقم RIB", hint: "عشرون خانة كما في كشف حسابك البنكيّ.", placeholder: "…" },
+};
 
 /** المبلغ كما يكتبه الكبتن: خاناتٌ ونقطةٌ واحدة، بلا `Number` ولا تقريب — **وبخانات عملته** (ثلاثٌ للأردنيّ كما كانت، ولا نقطةَ
  *  للجزائريّ — SPEC §٧٣-ج/١٢). */
@@ -74,10 +87,33 @@ export function WithdrawSheet({
   const unitError = notMultipleMessage(amount, unit, currencyLabel);
 
   const hasAlias = (cliqAlias ?? "").trim().length > 0;
+  // **سوقٌ بلا كليك** (الجزائر) — ومن لا تصله القائمةُ يبقى على كليك كما كان
+  const methods = wallet.withdrawal_methods ?? [];
+  const local = methods.length > 0 && !methods.includes("cliq");
+  const [method, setMethod] = useState<WithdrawalMethod>(local ? methods[0] : "cliq");
+  const [account, setAccount] = useState("");
+  const [holder, setHolder] = useState("");
+  const field = DESTINATION[method];
+  const destinationMissing = local && field !== undefined && (account.trim().length === 0 || holder.trim().length < 3);
 
   async function submit() {
     setBusy(true);
     setError(null);
+    if (local) {
+      try {
+        await requestWithdrawal(
+          amount,
+          method,
+          field ? { payout_account: account.trim(), payout_holder: holder.trim() } : undefined,
+        );
+        onDone();
+      } catch (caught) {
+        setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       if (!hasAlias) {
         const driver = await updateDriver({ cliq_alias: alias.trim() });
@@ -108,8 +144,9 @@ export function WithdrawSheet({
           طلب سحب
         </h2>
         <p className="t2-wds-lead">
-          يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند
-          الطلب.
+          {local
+            ? "يصلك بالطريقة التي تختارها بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب."
+            : "يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب."}
         </p>
 
         {/* **حين يعلو الحدُّ الأدنى على المتاح**: البلاطتان كلتاهما تؤدّيان إلى ٤٠٩ — «الحد الأدنى» أكبرُ من رصيده، و«كل
@@ -168,7 +205,62 @@ export function WithdrawSheet({
           <p className="t2-fld-hint">{unitHint(unit, currencyLabel)}</p>
         ) : null}
 
-        {hasAlias ? (
+        {local ? (
+          <>
+            <p className="t2-fld-label">كيف يصلك</p>
+            <div className="t2-wds-methods" role="radiogroup" aria-label="طريقة السحب">
+              {methods.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={method === key}
+                  aria-pressed={method === key}
+                  className="t2-wds-tile"
+                  onClick={() => {
+                    setMethod(key);
+                    setAccount("");
+                  }}
+                >
+                  <span className="t2-wds-tile-k">{WITHDRAWAL_METHOD_LABEL[key]}</span>
+                </button>
+              ))}
+            </div>
+            {field ? (
+              <div className="t2-wds-aliasfield">
+                <label className="t2-fld-label" htmlFor="withdraw-account">
+                  {field.label}
+                </label>
+                <input
+                  id="withdraw-account"
+                  className="t2-fld on-card"
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder={field.placeholder}
+                  value={account}
+                  onChange={(event) => setAccount(event.target.value)}
+                />
+                <p className="t2-fld-hint">{field.hint}</p>
+                <label className="t2-fld-label" htmlFor="withdraw-holder">
+                  اسم صاحب الحساب
+                </label>
+                <input
+                  id="withdraw-holder"
+                  className="t2-fld on-card"
+                  autoComplete="name"
+                  value={holder}
+                  onChange={(event) => setHolder(event.target.value)}
+                />
+                <p className="t2-fld-hint">كما هو مكتوب في الحساب — الحوالةُ إلى غير صاحبه تُردّ.</p>
+              </div>
+            ) : (
+              <p className="t2-wds-alias">
+                تستلم المبلغ نقداً من مكتب TAXO بعد موافقة الإدارة — احمل بطاقة هويّتك.
+              </p>
+            )}
+          </>
+        ) : hasAlias ? (
           <p className="t2-wds-alias">
             التحويل عبر كليك إلى <b dir="ltr">{cliqAlias}</b>
           </p>
@@ -206,7 +298,8 @@ export function WithdrawSheet({
             blocked ||
             !amount ||
             unitError !== null ||
-            (!hasAlias && alias.trim().length === 0)
+            destinationMissing ||
+            (!local && !hasAlias && alias.trim().length === 0)
           }
           onClick={() => void submit()}
         >

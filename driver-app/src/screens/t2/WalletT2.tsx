@@ -285,7 +285,10 @@ export function WalletT2Screen() {
                 <span className="t2-icon" aria-hidden="true">
                   south_west
                 </span>
-                سحب عبر CliQ
+                {/* **وفي سوقٍ بلا كليك** (الجزائر) يُقال «طلب سحب» — والقناةُ تُختار في الورقة */}
+                {(wallet.withdrawal_methods ?? []).length > 0 && !wallet.withdrawal_methods.includes("cliq")
+                  ? "طلب سحب"
+                  : "سحب عبر CliQ"}
               </button>
             )}
           </div>

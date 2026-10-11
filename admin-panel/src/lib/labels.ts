@@ -27,6 +27,7 @@ import type {
   PaymentRequestStatus,
   TaxoCardBatchStatus,
   TaxoCardStatus,
+  WithdrawalMethod,
 } from "@/api/types";
 import type { Tone } from "@/components/ui/Badge";
 import type {
@@ -295,6 +296,15 @@ export const PAYMENT_REQUEST_STATUS_TONE: Record<PaymentRequestStatus, string> =
 };
 
 /** **الأنواعُ الأربعة بلغة الموظّف** — وBaridiMob وCCP والتحويلُ البنكيُّ ورمزُ QR كلُّها «تحويل» (§٧٣-هـ/٢). */
+/** **قناةُ صرف السحب** — والجزائريّةُ معها (SPEC §٧٣-هـ المرحلة ٤). */
+export const WITHDRAWAL_METHOD_LABEL: Record<WithdrawalMethod, string> = {
+  cliq: "كليك",
+  bank: "حوالة بنكية",
+  ccp: "حساب CCP",
+  baridimob: "بريدي موب",
+  cash_office: "كاش من المكتب",
+};
+
 export const PAYMENT_PROVIDER_KIND_LABEL: Record<PaymentProviderKind, string> = {
   cash: "كاش",
   bank_transfer: "تحويل (بنك · CCP · BaridiMob · QR)",
