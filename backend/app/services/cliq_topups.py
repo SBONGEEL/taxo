@@ -24,7 +24,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import amount_text, currency_for_country
 from app.core.exceptions import FeatureDisabled, InvalidInput, NotFound
 from app.models.enums import (
     FeatureKey,
@@ -185,7 +185,10 @@ async def apply_state(
     # تُفتح عليه واقعةُ نزاع، والشحنُ بما لم يُطلب يجعل الدفتر يقول غير ما
     # جرى. يسقط الطلب برسالته، وللإدارة أن تشحن المبلغ الواصل يدوياً (القسم 7)
     if state.amount is not None and state.amount != order.amount:
-        reason = f"مبلغ المزود ({state.amount}) لا يطابق مبلغ الطلب ({order.amount})"
+        reason = (
+            f"مبلغ المزود ({amount_text(state.amount, order.currency)}) "
+            f"لا يطابق مبلغ الطلب ({amount_text(order.amount, order.currency)})"
+        )
         logger.error("تعارض مبلغ في شحن كليك %s: %s", order.cart_id, reason)
         order.status = ProviderOrderStatus.FAILED
         order.failure_reason = reason[:255]

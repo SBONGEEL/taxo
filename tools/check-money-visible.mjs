@@ -42,6 +42,7 @@ import { join } from "node:path";
 import { exit } from "node:process";
 import { createRequire } from "node:module";
 import { certify } from "./certify.mjs";
+import { moneyVocabulary } from "./money-vocabulary.mjs";
 
 /** **مُحلِّلٌ من حزمة تطبيقٍ لا من الجذر** — لا `node_modules` في جذر
  *  المستودع، وهي قاعدةُ `check:money-math` نفسُها. **وغيابُه وقوفٌ لا سلامة.** */
@@ -108,25 +109,12 @@ const DELIBERATE = {
 
 // ── مفرداتُ المال من بيتها الواحد ───────────────────────────────────────
 function vocabulary() {
-  const text = readFileSync(VOCAB, "utf8");
-  // **`endsWith("SUFFIXES")` كان خطأً صامتاً**: الاسمُ المُمرَّر
-  // `"MONEY_SUFFIXES ="` ينتهي بـ`=` لا بـ`SUFFIXES` — فكان الحارسُ يقرأ
-  // **كتلةَ الأسماء مكانَ اللواحق**، فلا يعرف `_fee` لاحقةً ويمرّ أخضرَ على
-  // كلِّ رسمٍ ينتهي بها. **ولم يكشفه إلا القياسُ في الاتجاه الثاني** — وشجرةٌ
-  // سليمةٌ كانت تُخرجه أخضرَ ٢٧ حقلاً، وهو رقمٌ يُطمئن ولا يعني شيئاً.
-  const block = (name) => {
-    const at = text.indexOf(name);
-    if (at < 0) throw new Error(`لم يوجد ${name} في ${VOCAB}`);
-    const list = name.includes("SUFFIXES");
-    const open = text.indexOf(list ? "(" : "{", at);
-    const close = text.indexOf(list ? ")" : "}", open);
-    return [...text.slice(open, close).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  };
-  return {
-    suffixes: block("MONEY_SUFFIXES ="),
-    names: new Set(block("MONEY_NAMES =")),
-    notMoney: new Set(block("NOT_MONEY =")),
-  };
+  // **بالقارئ الواحد** (`money-vocabulary.mjs`): كان هنا قطعٌ عند أوّل `)` — فتعليقُ «(§٦٢-ب/٥٢)» أغلق كتلةَ
+  // اللواحق قبل `_revenue` وبقي الحارسُ أخضرَ عليه (`STATE.md` §٧٣، البندُ ١). **وقبله خطأٌ أخوه** (`endsWith`)
+  // قرأ كتلةَ الأسماء مكانَ اللواحق — قارئان منسوخان، عطبان.
+  const vocab = moneyVocabulary(VOCAB);
+  if (!vocab) throw new Error(`لم تُقرأ مفرداتُ المال كاملةً من ${VOCAB}`);
+  return vocab;
 }
 
 const { suffixes, names, notMoney } = vocabulary();

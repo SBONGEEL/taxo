@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from fastapi import APIRouter, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import amount_text
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.models.enums import PaymentMethod, PaymentStatus
 from app.models.payment import Payment
@@ -420,7 +421,7 @@ async def declare_cliq_paid(
             message=PushMessage(
                 title="حوالةُ كليك بانتظار تأكيدك",
                 body=(
-                    f"{user.name} يقول إنه حوّل {order.amount} "
+                    f"{user.name} يقول إنه حوّل {amount_text(order.amount, order.currency)} "
                     f"{order.currency.value} — المرجع {order.cart_id}"
                 ),
                 data=cliq_claims.declared_notice(order),

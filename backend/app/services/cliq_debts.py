@@ -30,7 +30,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import amount_text, currency_for_country
 from app.core.exceptions import InvalidInput, InvalidStatusTransition, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -180,7 +180,8 @@ async def confirm_payment(
     if applied < credited and returned is None:
         # **الفرقُ يُكتب حيث يُقرأ** — `failure_reason` حقلُ «ما لم يمضِ»
         order.failure_reason = (
-            f"وصل {credited} وطُبّق {applied} — الزائد {credited - applied} "
+            f"وصل {amount_text(credited, order.currency)} وطُبّق {amount_text(applied, order.currency)} "
+            f"— الزائد {amount_text(credited - applied, order.currency)} "
             f"لا يقيَّد في جدول الدَّين"
         )
 

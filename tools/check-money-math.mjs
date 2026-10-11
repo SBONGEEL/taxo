@@ -32,6 +32,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { certify } from "./certify.mjs";
+import { moneyVocabulary as readVocabulary } from "./money-vocabulary.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APPS = ["customer-app", "driver-app", "admin-panel"];
@@ -56,21 +57,8 @@ const ts = loadTypeScript();
 /** مفرداتُ المال — **تُقرأ من بيتها الواحد** لا تُكتب هنا. */
 function moneyVocabulary() {
   // **بيتُها انتقل إلى التشغيل** (SPEC §٧٣-ج/٥): صيغةُ المال على السلك تحتاجها، والاختبارُ يستوردها من هناك
-  const source = readFileSync(
-    join(ROOT, "backend/app/core/money_wire.py"),
-    "utf8",
-  );
-  const block = (name) => {
-    const start = source.indexOf(`${name} = `);
-    if (start < 0) return [];
-    const body = source.slice(start, source.indexOf(")", start));
-    return [...body.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
-  };
-  const suffixes = block("MONEY_SUFFIXES");
-  const names = block("MONEY_NAMES");
-  const notMoney = new Set(block("NOT_MONEY"));
-  if (suffixes.length === 0 || names.length === 0) return null;
-  return { suffixes, names: new Set(names), notMoney };
+  // **بالقارئ الواحد** (`money-vocabulary.mjs`): كان هنا قطعٌ عند أوّل `)` فأعماه تعليقٌ فيه قوس عن `_revenue`
+  return readVocabulary(join(ROOT, "backend/app/core/money_wire.py"));
 }
 
 /** `ملف:سطر` ← علّةُ قبوله. **ولا تُقبل فجوةٌ بلا نصّ.**

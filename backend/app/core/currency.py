@@ -98,3 +98,15 @@ def money_text(amount: Decimal, currency: Currency | str) -> str:
     if is_precise(value, currency):
         return f"{value.quantize(step_of(currency)):f}"
     return f"{value.quantize(STORAGE_STEP):f}"
+
+
+def amount_text(amount: Decimal, currency: Currency | str) -> str:
+    """**مبلغٌ داخل جملةٍ يقرؤها إنسان** — سببُ رفضٍ، أو إشعار، أو حدّ — **بخانات عملته**.
+
+    **وفي عملةٍ بخانات التخزين هو `f"{amount}"` كما كان حرفاً**: نصُّ الأردنيّ والليبيّ لا يتغيّر بايتاً (§٧٣-ب)، ولو جاء
+    المبلغُ من مزوّدٍ بغير ثلاث خانات. **وفي ما خاناتُه أقلّ يُكتب بها** (`money_text`) — فلا يقرأ مشرفٌ «150.000» لجزائريّ
+    (`STATE.md` §٧٣، البندُ المفتوح ٣).
+    """
+    if decimals_of(currency) >= STORAGE_DECIMALS:
+        return f"{amount}"
+    return money_text(amount, currency)

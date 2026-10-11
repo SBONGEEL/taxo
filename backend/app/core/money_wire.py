@@ -22,8 +22,8 @@ import json
 import re
 from typing import Any
 
-from app.core.currency import CURRENCY_DECIMALS, STORAGE_DECIMALS
-from app.models.enums import Currency
+from app.core.currency import COUNTRY_CURRENCY, CURRENCY_DECIMALS, STORAGE_DECIMALS
+from app.models.enums import CountryCode, Currency
 
 # أسماءُ المال — وتُطابَق على **الاسم الكامل أو نهايته**، لا بالاحتواء المجرّد:
 # `discount_value` نسبةٌ لا مبلغ، و`rating_avg` تقييم.
@@ -65,6 +65,9 @@ MONEY_NAMES = frozenset(
         "available_for_withdrawal",
         "min_withdrawal_amount",
         "withdrawal_reserve_amount",
+        # **`hourly_rate` أُضيف ٢٠٢٦-١٠-١١** (§٧٣، البندُ المفتوح ٤): سعرُ الساعة يُدفع كما هو — «500» للجزائريّ — **ولم تكن
+        # المفرداتُ تعدّه مالاً** فخرج «500.000». **ولا تُضاف `_rate` لاحقةً**: `cancellation_rate` نسبةٌ لا مبلغ
+        "hourly_rate",
     }
 )
 
@@ -79,8 +82,12 @@ DECIMAL_TEXT = re.compile(r"^-?\d+(\.\d+)?$")
 _SHORT: dict[str, int] = {
     currency.value: places for currency, places in CURRENCY_DECIMALS.items() if places < STORAGE_DECIMALS
 }
-#: **ما يفتح الوسيطُ الجسمَ لأجله** — رمزُ عملةٍ منها نصّاً بين علامتي تنصيص
-MARKERS: tuple[bytes, ...] = tuple(f'"{code}"'.encode() for code in _SHORT)
+#: **ودولُها** — صفٌّ يحمل دولتَه بلا عملة (إعداداتُ السوق في اللوحة) يُصاغ بعملة دولته
+_SHORT_COUNTRIES: tuple[str, ...] = tuple(
+    country.value for country, currency in COUNTRY_CURRENCY.items() if currency.value in _SHORT
+)
+#: **ما يفتح الوسيطُ الجسمَ لأجله** — رمزُ عملةٍ منها أو دولتِها نصّاً بين علامتي تنصيص
+MARKERS: tuple[bytes, ...] = tuple(f'"{code}"'.encode() for code in (*_SHORT, *_SHORT_COUNTRIES))
 
 
 def is_money_key(key: str) -> bool:
@@ -90,7 +97,11 @@ def is_money_key(key: str) -> bool:
 
 
 def currency_in(mapping: dict) -> str | None:
-    """عملةُ الكائن نفسِه — `currency` أوّلاً ثمّ أيُّ `…_currency` — أو `None`."""
+    """عملةُ الكائن نفسِه — `currency` أوّلاً ثمّ أيُّ `…_currency` **ثمّ عملةُ `country_code`** — أو `None`.
+
+    **والدولةُ آخرُ ما يُقرأ**: صفُّ إعداداتِ سوقٍ (سعرُ الساعة، حدودُ المحفظة) يحمل دولتَه وحدَها، وعملتُه من بيتها
+    (`COUNTRY_CURRENCY`) لا من شرط — **فيُصاغ «500» لصفِّ الجزائر**، وصفُّ الأردن وليبيا بثلاث خاناته كما كان.
+    """
     value = mapping.get("currency")
     if isinstance(value, str) and value in Currency._value2member_map_:
         return value
@@ -98,6 +109,9 @@ def currency_in(mapping: dict) -> str | None:
         if isinstance(key, str) and key.endswith("_currency") and isinstance(value, str):
             if value in Currency._value2member_map_:
                 return value
+    country = mapping.get("country_code")
+    if isinstance(country, str) and country in CountryCode._value2member_map_:
+        return COUNTRY_CURRENCY[CountryCode(country)].value
     return None
 
 

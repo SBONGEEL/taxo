@@ -24,6 +24,7 @@ from decimal import Decimal
 from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import amount_text, currency_for_country
 from app.core.exceptions import (
     AccountDeleted,
     FeatureDisabled,
@@ -379,7 +380,8 @@ async def _check_transfer_limits(
     daily = await _transferred_since(session, sender.id, now - TRANSFER_DAILY_WINDOW)
     if daily + amount > limits.transfer_daily_limit:
         raise WalletLimitExceeded(
-            f"تجاوزت حد التحويل اليومي ({limits.transfer_daily_limit})"
+            f"تجاوزت حد التحويل اليومي "
+            f"({amount_text(limits.transfer_daily_limit, currency_for_country(sender.country_code))})"
         )
 
     monthly = await _transferred_since(
@@ -387,7 +389,8 @@ async def _check_transfer_limits(
     )
     if monthly + amount > limits.transfer_monthly_limit:
         raise WalletLimitExceeded(
-            f"تجاوزت حد التحويل الشهري ({limits.transfer_monthly_limit})"
+            f"تجاوزت حد التحويل الشهري "
+            f"({amount_text(limits.transfer_monthly_limit, currency_for_country(sender.country_code))})"
         )
 
 

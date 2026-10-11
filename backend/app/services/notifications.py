@@ -47,6 +47,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.driver import Driver, DriverDocument
+from app.core.currency import amount_text
 from app.models.enums import Currency, DocumentReviewStatus, DocumentType
 from app.models.payment import Payment
 from app.models.ride import Ride, RideStop
@@ -434,7 +435,7 @@ async def publish_cliq_transfer(
         message=PushMessage(
             title="حوالة كليك بانتظار تأكيدك",
             body=(
-                f"{payment.amount} {payment.currency.value} — "
+                f"{amount_text(payment.amount, payment.currency)} {payment.currency.value} — "
                 f"مرجع الحوالة {payment.cliq_transfer_reference}"
             ),
             data={
@@ -494,7 +495,7 @@ async def publish_cliq_confirmation_expired(
         message=PushMessage(
             title="انقضت مهلة تأكيد الحوالة",
             body=(
-                f"{payment.amount} {payment.currency.value} — "
+                f"{amount_text(payment.amount, payment.currency)} {payment.currency.value} — "
                 "صارت الدفعة نزاعاً وتفصل فيها الإدارة."
             ),
             data=data,
@@ -508,7 +509,7 @@ async def publish_cliq_confirmation_expired(
         message=PushMessage(
             title="لم يؤكّد الكبتن حوالتك",
             body=(
-                f"{payment.amount} {payment.currency.value} — "
+                f"{amount_text(payment.amount, payment.currency)} {payment.currency.value} — "
                 "انتقلت الدفعة إلى الإدارة للفصل فيها."
             ),
             data=data,

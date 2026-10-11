@@ -31,6 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.currency import amount_text
 from app.core.exceptions import InvalidInput, InvalidStatusTransition, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -177,8 +178,8 @@ async def confirm_payment(
         # **`failure_reason` هو حقلُ «لماذا لم يمضِ» في هذا الجدول** — ولا
         # يُضاف عمودٌ جديدٌ لما له بيت
         order.failure_reason = (
-            f"وصل {credited} من {order.amount} — ينقص "
-            f"{order.amount - credited} {order.currency.value}"
+            f"وصل {amount_text(credited, order.currency)} من {amount_text(order.amount, order.currency)} — ينقص "
+            f"{amount_text(order.amount - credited, order.currency)} {order.currency.value}"
         )
     else:
         order.status = ProviderOrderStatus.PAID

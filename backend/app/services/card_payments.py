@@ -38,7 +38,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import amount_text, currency_for_country
 from app.core.exceptions import (
     AmbiguousRole,
     FeatureDisabled,
@@ -550,7 +550,8 @@ async def _mark_amount_mismatch(
     provider_amount: Decimal,
 ) -> ProviderOrder:
     reason = (
-        f"مبلغ المزود ({provider_amount}) لا يطابق مبلغ الطلب ({order.amount})"
+        f"مبلغ المزود ({amount_text(provider_amount, order.currency)}) "
+        f"لا يطابق مبلغ الطلب ({amount_text(order.amount, order.currency)})"
     )
     logger.error("تعارض مبلغ في طلب الدفع %s: %s", order.cart_id, reason)
     order.status = ProviderOrderStatus.FAILED

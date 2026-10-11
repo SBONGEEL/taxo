@@ -23,6 +23,7 @@ from app.core.currency import (
     CURRENCY_DECIMALS,
     CURRENCY_LABEL,
     CURRENCY_NAME,
+    amount_text,
     money_text,
     round_to_currency,
 )
@@ -191,6 +192,40 @@ def test_the_money_guard_knows_the_currency() -> None:
     # **والعملةُ تُورث من الأصل**
     assert offenders({"currency": "DZD", "rows": [{"amount": "20.000"}]})
     assert offenders({"currency": "DZD", "rows": [{"amount": "20"}]}) == []
+
+
+# ------------------------------------------------------------------ المرحلة ٠ من الأمر الثاني: البندان المفتوحان ٣ و٤ من STATE §٧٣
+
+
+def test_amount_text_is_python_text_for_jordan_and_libya_and_whole_dinars_for_algeria() -> None:
+    """**نصُّ الأردنيّ والليبيّ هو `f"{amount}"` حرفاً** — ولو جاء المبلغُ من مزوّدٍ بغير ثلاث خانات (`1.5`)؛ والجزائريُّ بلا كسور."""
+    rng = random.Random(7311)
+    values = [Decimal(f"{rng.randint(0, 99_999)}.{rng.randint(0, 999):03d}") for _ in range(2000)]
+    values += [Decimal("1.5"), Decimal("0"), Decimal("10"), Decimal("-2.250"), Decimal("12.3456")]
+    for currency in (Currency.JOD, Currency.LYD):
+        for value in values:
+            assert amount_text(value, currency) == f"{value}"
+    assert amount_text(Decimal("150.000"), Currency.DZD) == "150"
+    assert amount_text(Decimal("150"), Currency.DZD) == "150"
+    # **والكسرُ يُرى ولا يُبتلع** — نصُّ رفضٍ يخفي الكسرَ الذي رُفض لأجله يكذب على المشرف
+    assert amount_text(Decimal("150.500"), Currency.DZD) == "150.500"
+
+
+def test_a_market_row_carrying_only_its_country_is_shaped_by_that_countrys_currency() -> None:
+    """**صفُّ إعداداتِ سوقٍ يحمل دولتَه وحدَها** — سعرُ ساعتِه «500» للجزائر، والمعدّلُ بدقّته، وصفُّ الأردن هو نفسُه."""
+    algeria = {"country_code": "DZ", "hourly_rate": "500.000", "price_per_min": "5.250"}
+    jordan = {"country_code": "JO", "hourly_rate": "5.000", "price_per_min": "0.150"}
+    libya = {"country_code": "LY", "hourly_rate": "20.000"}
+    shaped = money_wire.normalize([algeria, jordan, libya])
+    assert shaped[0]["hourly_rate"] == "500"
+    assert shaped[0]["price_per_min"] == "5.250"  # **المعدّلُ ليس مبلغاً يُدفع** (§٧٣-ج/١٣)
+    assert shaped[1] is jordan and shaped[2] is libya
+    assert offenders(shaped) == []
+    assert offenders([algeria])  # **والحارسُ يمسك سعرَ ساعةٍ جزائريّاً بثلاث خانات** — يعرف العملةَ من الدولة
+    assert money_wire.is_money_key("hourly_rate") and not money_wire.is_money_key("cancellation_rate")
+    # **والوسيطُ يفتح جسماً يذكر الدولةَ نفسَها** — لا عملتَها وحدَها
+    assert b'"DZ"' in money_wire.MARKERS and b'"DZD"' in money_wire.MARKERS
+    assert not any(marker in b'{"country_code":"JO","currency":"JOD","x":"LY"}' for marker in money_wire.MARKERS)
 
 
 # ------------------------------------------------------------------ المدخلات
