@@ -152,6 +152,12 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — سحبُ الكابتن الجزائريّ (SPEC §٧٣-هـ المرحلة ٤، 2026-10-11)
+    "WithdrawalOut": (
+        "بانٍ واحد: `WithdrawalOut.model_validate(request)` من صفِّ `withdrawal_requests` في الأبواب الخمسة (طلبُ الكبتن وقائمتُه، "
+        "واعتمادُ اللوحة ورفضُها وتعليمُ الدفع). **وفراغُ `payout_account` و`payout_holder` حالٌ لا نسيان**: طلبٌ أردنيٌّ أو ليبيٌّ "
+        "(كليك والبنكُ بلا وجهةٍ هنا)، أو كاشٌ من المكتب"
+    ),
     # ✅ بانٍ واحد — فئاتُ الرحلة (SPEC §٦٧، 2026-10-10)
     "VehicleOut": (
         "بانٍ واحد: `VehicleOut.model_validate(vehicle)` من صفِّ `vehicles` في كلِّ باب (`from_attributes`). **وفراغُ `body_type` و`fuel` "
