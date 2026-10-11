@@ -191,10 +191,24 @@ REQUIRED_SECRETS: tuple[tuple[str, str], ...] = (
     ("database_url", "DATABASE_URL"),
 )
 
+#: **أسرارٌ يقف بدونها الإنتاجُ وحدَه** (قرارُ المالك 2026-10-11) — والتطويرُ والاختبارُ يُقلعان بلاها، فغيابُها هناك يُبقي
+#: بابَها `503` كما بُني. **وعلّةُ الإنتاج**: سرُّ البصمة إن غاب هناك لا تُصدر بطاقةٌ ولا تُستعمل، **ولا يظهر ذلك إلا يومَ تُباع
+#: أوّلُ بطاقة** — فيقف الإقلاعُ ويسمّيه بدل أن يصمت. **والطولُ شرطٌ معه**: سرٌّ قصيرٌ يُخمَّن، و٣٢ حرفاً أدنى ما يُقبل
+#: (يُولَّد بـ`openssl rand -hex 32` — ٦٤ حرفاً).
+REQUIRED_IN_PRODUCTION: tuple[tuple[str, str, int], ...] = (
+    ("taxo_card_code_pepper", "TAXO_CARD_CODE_PEPPER", 32),
+)
+
 
 def _require_secrets(values: Settings) -> Settings:
     """يقف ويسمّي — **ولا يطبع قيمةً**، فالرسالةُ تُقرأ في سجلٍّ لا يُنظَّف."""
     missing = [env for attr, env in REQUIRED_SECRETS if not getattr(values, attr, "")]
+    if values.is_production:
+        missing += [
+            f"{env} (≥{size} حرفاً)"
+            for attr, env, size in REQUIRED_IN_PRODUCTION
+            if len(getattr(values, attr, None) or "") < size
+        ]
     if missing:
         raise RuntimeError(
             "بيئةٌ ناقصة — لا إقلاعَ بلا: "
