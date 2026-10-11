@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import uuid
 from collections import Counter
 from datetime import UTC, datetime
@@ -38,6 +39,26 @@ from tests.helpers import (
 
 WOMEN = FeatureKey.WOMEN_SERVICE_ENABLED.value
 CODE = FeatureKey.RIDE_CODE_ENABLED.value
+
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
+
+
+def _exposes(code: str, payload: object) -> bool:
+    """**أيحمل الجوابُ الرمزَ قيمةً أو كلمة؟** — لا «أيقع نصُّه في أيِّ موضع» (٢٠٢٦-١٠-١١).
+
+    **أربعُ خاناتٍ عشوائيّةٌ تقع صدفةً** داخل معرّفٍ أو ختمِ وقتٍ أو إحداثيّة: سقط CI `38124849494` بـ`2613` في جوابِ قبولٍ لا رمزَ فيه.
+    فيُمشى على القيم — **المعرّفُ وختمُ الوقت يُتركان** (لا يحملان رمزاً بحال) — ويُبحث في كلِّ قيمةٍ غيرِهما عن الرمز **كلمةً قائمةً
+    بذاتها** لا جزءاً من رقمٍ أطول أو كسرٍ عشريّ. **ويُقاس في الاتجاهين** في الاختبار نفسِه: حقلٌ يحمله، وجملةٌ تحمله.
+    """
+    if isinstance(payload, dict):
+        return any(_exposes(code, value) for value in payload.values())
+    if isinstance(payload, list):
+        return any(_exposes(code, value) for value in payload)
+    text = str(payload)
+    if _UUID.fullmatch(text) or _STAMP.match(text):
+        return False
+    return re.search(rf"(?<![0-9A-Za-z.]){re.escape(code)}(?![0-9A-Za-z.])", text) is not None
 
 
 async def _female_captain(client: AsyncClient, session_factory) -> dict:
@@ -99,9 +120,10 @@ async def test_a_women_ride_gets_a_code_only_its_rider_can_read(
     assert len(code) == 4 and code.isdigit()
 
     # **ولا في أيِّ ما تقرؤه الكبتنة** — جوابُ القبول، وقراءةُ الرحلة، وبابُ الرمز نفسُه
-    assert code not in str(ride)
+    assert _exposes(code, {"start_code": code}) and _exposes(code, {"message": f"رمزك {code}"})  # المقياسُ يرى التسريبَ حين يقع
+    assert not _exposes(code, ride)
     seen = await client.get(f"/rides/{ride['id']}", headers=driver["headers"])
-    assert seen.status_code == 200 and code not in seen.text
+    assert seen.status_code == 200 and not _exposes(code, seen.json())
     assert (await client.get(f"/rides/{ride['id']}/start-code", headers=driver["headers"])).status_code in (403, 404)
 
     # **ولا لراكبٍ غيرها** — ٤٠٤: وجودُ الرمز نفسُه ليس معلومةً له
