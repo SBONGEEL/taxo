@@ -18,7 +18,7 @@ from app.core import storage
 from app.core.deps import DbSession, FinanceManager, ListReader, RedisDep, SettingsWriter
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.enums import AuditAction, CountryCode, PaymentRequestStatus
-from app.models.payment_request import PaymentProvider, PaymentRequest
+from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.user import User
 from app.schemas.payment_request import (
     AdminPaymentMethodCreate,
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 _QR_TYPES = ("image/png", "image/jpeg", "image/webp")
 
 
-def method_admin_out(provider: PaymentProvider) -> AdminPaymentMethodOut:
+def method_admin_out(provider: PayMethod) -> AdminPaymentMethodOut:
     return AdminPaymentMethodOut(
         id=provider.id,
         country_code=provider.country_code,
@@ -57,7 +57,7 @@ def method_admin_out(provider: PaymentProvider) -> AdminPaymentMethodOut:
     )
 
 
-def _require_destination(provider: PaymentProvider) -> None:
+def _require_destination(provider: PayMethod) -> None:
     """**لا طريقةَ تحويلٍ مفعَّلةً بلا حسابٍ يستقبل** (قرارُ المالك ٢٠٢٦-٠٨-٢٩ في كليك، حرفاً): شاشةٌ تطلب تحويلاً ولا تقول إلى أين
     **تُنتج حوالةً ضائعة**، وهي أسوأُ من غياب الطريقة."""
     if (
@@ -82,7 +82,7 @@ async def list_methods(
 async def create_method(
     payload: AdminPaymentMethodCreate, admin: SettingsWriter, session: DbSession
 ) -> AdminPaymentMethodOut:
-    provider = PaymentProvider(**payload.model_dump())
+    provider = PayMethod(**payload.model_dump())
     _require_destination(provider)
     session.add(provider)
     try:

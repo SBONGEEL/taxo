@@ -10,6 +10,15 @@ import type {
   AdminPayMethod,
   AdminPayMethodInput,
   AdminPaymentRequest,
+  CardBatch,
+  CardBatchCreated,
+  CardDenomination,
+  CardGuessAlert,
+  CardShop,
+  CardShopInput,
+  CardShopReport,
+  TaxoCardLimits,
+  TaxoCardRow,
   PaymentProviderKind,
   PaymentRequestStatus,
 } from "@/api/types";
@@ -2081,3 +2090,60 @@ export const refundPaymentRequest = (id: string, reason: string) =>
 
 export const cancelPaymentRequest = (id: string, reason: string) =>
   api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/cancel`, { reason });
+
+// ------------------------------------------------------------ بطاقاتُ شحن TAXO (SPEC §٧٣-هـ المرحلة ٢)
+
+export const listCardDenominations = (country: CountryCode) =>
+  api.get<CardDenomination[]>("/admin/taxo-cards/denominations", { query: { country } });
+
+export const addCardDenomination = (country: CountryCode, amount: string) =>
+  api.post<CardDenomination>("/admin/taxo-cards/denominations", { country_code: country, amount });
+
+export const setCardDenominationActive = (id: string, isActive: boolean) =>
+  api.patch<CardDenomination>(`/admin/taxo-cards/denominations/${id}`, { is_active: isActive });
+
+export const listCardShops = (country: CountryCode) =>
+  api.get<CardShop[]>("/admin/taxo-cards/shops", { query: { country } });
+
+export const createCardShop = (country: CountryCode, body: CardShopInput) =>
+  api.post<CardShop>("/admin/taxo-cards/shops", { ...body, country_code: country });
+
+export const updateCardShop = (id: string, body: Partial<CardShopInput> & { is_active?: boolean }) =>
+  api.patch<CardShop>(`/admin/taxo-cards/shops/${id}`, body);
+
+export const listCardBatches = (country: CountryCode) =>
+  api.get<CardBatch[]>("/admin/taxo-cards/batches", { query: { country } });
+
+/** **الرموزُ في الردّ مرّةً واحدة** — تُحفظ ملفاً للطباعة الآن. */
+export const createCardBatch = (body: {
+  country_code: CountryCode;
+  denomination_id: string;
+  quantity: number;
+  shop_id: string | null;
+  valid_from: string;
+  expires_at: string;
+}) => api.post<CardBatchCreated>("/admin/taxo-cards/batches", body);
+
+export const cancelCardBatch = (id: string, reason: string) =>
+  api.post<CardBatch>(`/admin/taxo-cards/batches/${id}/cancel`, { reason });
+
+export const findTaxoCards = (country: CountryCode, serial: string) =>
+  api.get<TaxoCardRow[]>("/admin/taxo-cards/cards", { query: { country, serial } });
+
+export const cancelTaxoCard = (id: string, reason: string) =>
+  api.post<TaxoCardRow>(`/admin/taxo-cards/cards/${id}/cancel`, { reason });
+
+export const cardShopReport = (country: CountryCode) =>
+  api.get<CardShopReport[]>("/admin/taxo-cards/report/shops", { query: { country } });
+
+export const listCardAlerts = (country: CountryCode) =>
+  api.get<CardGuessAlert[]>("/admin/taxo-cards/alerts", { query: { country } });
+
+export const reviewCardAlert = (id: string) =>
+  api.post<CardGuessAlert>(`/admin/taxo-cards/alerts/${id}/review`, {});
+
+export const getCardLimits = (country: CountryCode) =>
+  api.get<TaxoCardLimits>("/admin/taxo-cards/limits", { query: { country } });
+
+export const saveCardLimits = (country: CountryCode, body: TaxoCardLimits) =>
+  api.put<TaxoCardLimits>("/admin/taxo-cards/limits", { ...body, country_code: country });

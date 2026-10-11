@@ -41,7 +41,7 @@ from app.models.enums import (
     WalletOwnerType,
     WalletTransactionType,
 )
-from app.models.payment_request import PaymentProvider, PaymentRequest
+from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.user import User
 from app.services import (
     admin_search,
@@ -76,7 +76,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def requires_receipt(provider: PaymentProvider) -> bool:
+def requires_receipt(provider: PayMethod) -> bool:
     """**التحويلُ اليدويُّ إيصالُه إجباريّ** — والوسيطُ الآليُّ يشهد له الـwebhook لا الصورة."""
     return provider.integration is None and provider.kind in TRANSFER_KINDS
 
@@ -89,7 +89,8 @@ def reference_key(reference: str | None) -> str | None:
     return key or None
 
 
-def _reason(text: str | None, *, field: str) -> str:
+def written_reason(text: str | None, *, field: str) -> str:
+    """**سببٌ مكتوبٌ يقرؤه صاحبُ الدفعة أو البطاقة** — ثلاثةُ أحرفٍ على الأقل، وخمسُمئةٍ على الأكثر (بيتٌ واحدٌ لنظام الدفع وبطاقاته)."""
     value = (text or "").strip()
     if len(value) < MIN_REASON:
         raise InvalidInput("اكتب السببَ كما سيقرؤه صاحبُ الدفعة", field=field)
@@ -111,33 +112,33 @@ async def require_enabled(session: AsyncSession, country: CountryCode) -> None:
 
 async def providers_for(
     session: AsyncSession, country: CountryCode, purpose: PaymentRequestPurpose | None = None
-) -> list[PaymentProvider]:
+) -> list[PayMethod]:
     """طرقُ الدفع **المفعَّلة** لسوقٍ ولغرضٍ — بترتيب اللوحة."""
-    stmt = select(PaymentProvider).where(
-        PaymentProvider.country_code == country, PaymentProvider.enabled.is_(True)
+    stmt = select(PayMethod).where(
+        PayMethod.country_code == country, PayMethod.enabled.is_(True)
     )
     if purpose is PaymentRequestPurpose.WALLET_TOPUP:
-        stmt = stmt.where(PaymentProvider.for_topup.is_(True))
+        stmt = stmt.where(PayMethod.for_topup.is_(True))
     elif purpose is PaymentRequestPurpose.SUBSCRIPTION:
-        stmt = stmt.where(PaymentProvider.for_subscription.is_(True))
-    stmt = stmt.order_by(PaymentProvider.sort_order, PaymentProvider.name)
+        stmt = stmt.where(PayMethod.for_subscription.is_(True))
+    stmt = stmt.order_by(PayMethod.sort_order, PayMethod.name)
     return list((await session.scalars(stmt)).all())
 
 
-async def all_providers(session: AsyncSession, country: CountryCode | None) -> list[PaymentProvider]:
+async def all_providers(session: AsyncSession, country: CountryCode | None) -> list[PayMethod]:
     """كلُّ الطرق — للّوحة، مفعَّلةً وموقوفة."""
-    stmt = select(PaymentProvider).order_by(
-        PaymentProvider.country_code, PaymentProvider.sort_order, PaymentProvider.name
+    stmt = select(PayMethod).order_by(
+        PayMethod.country_code, PayMethod.sort_order, PayMethod.name
     )
     if country is not None:
-        stmt = stmt.where(PaymentProvider.country_code == country)
+        stmt = stmt.where(PayMethod.country_code == country)
     return list((await session.scalars(stmt)).all())
 
 
 async def get_provider(
     session: AsyncSession, provider_id: uuid.UUID, *, for_update: bool = False
-) -> PaymentProvider:
-    stmt = select(PaymentProvider).where(PaymentProvider.id == provider_id)
+) -> PayMethod:
+    stmt = select(PayMethod).where(PayMethod.id == provider_id)
     if for_update:
         stmt = stmt.with_for_update().execution_options(populate_existing=True)
     provider = await session.scalar(stmt)
@@ -146,7 +147,7 @@ async def get_provider(
     return provider
 
 
-async def available_provider(session: AsyncSession, provider_id: uuid.UUID, country: CountryCode) -> PaymentProvider:
+async def available_provider(session: AsyncSession, provider_id: uuid.UUID, country: CountryCode) -> PayMethod:
     """**طريقةٌ مفعَّلةٌ في سوق السائل** — ومن سوقٍ آخر ٤٠٤ لا ٤٠٣: ليست معلومةً يستحقّها من يجرّب المعرّفات."""
     provider = await get_provider(session, provider_id)
     if provider.country_code != country or not provider.enabled:
@@ -426,7 +427,7 @@ async def reject(
     if request.status is not PaymentRequestStatus.PENDING:
         raise InvalidStatusTransition()
     request.status = PaymentRequestStatus.REJECTED
-    request.rejection_reason = _reason(reason, field="reason")
+    request.rejection_reason = written_reason(reason, field="reason")
     request.reviewed_by = actor.id if actor is not None else None
     request.reviewed_at = _now()
     await audit.record(
@@ -455,7 +456,7 @@ async def cancel(
         raise NotFound("طلبُ الدفع غيرُ موجود")
     request.status = PaymentRequestStatus.CANCELLED
     request.cancel_reason = (
-        (reason or "").strip()[:500] or "ألغاه صاحبُه" if by_owner else _reason(reason, field="reason")
+        (reason or "").strip()[:500] or "ألغاه صاحبُه" if by_owner else written_reason(reason, field="reason")
     )
     request.cancelled_by = actor.id
     request.cancelled_at = _now()
@@ -479,7 +480,7 @@ async def refund(
     """
     if request.status is not PaymentRequestStatus.APPROVED:
         raise InvalidStatusTransition()
-    clean = _reason(reason, field="reason")
+    clean = written_reason(reason, field="reason")
     owner = await session.get(User, request.user_id)
     if owner is None:  # pragma: no cover
         raise NotFound("صاحبُ الدفعة غيرُ موجود")
@@ -524,8 +525,8 @@ async def request_for_external(
     """**الطلبُ بمعرّفه عند الوسيط — مقفلاً** — والوسيطُ يُعرف باسم محوِّله لا بسوقه: طلبٌ واحدٌ لا يُشارك معرّفَه طلباً آخر."""
     stmt = (
         select(PaymentRequest)
-        .join(PaymentProvider, PaymentProvider.id == PaymentRequest.provider_id)
-        .where(PaymentProvider.integration == integration, PaymentRequest.external_id == external_id)
+        .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
+        .where(PayMethod.integration == integration, PaymentRequest.external_id == external_id)
         .with_for_update(of=PaymentRequest)
         .execution_options(populate_existing=True)
     )

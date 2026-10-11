@@ -935,6 +935,9 @@ class WalletTransactionType(StrEnum):
     INTERCITY_EARNING = "intercity_earning"
     #: **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
     CASHBACK = "cashback"
+    #: **شحنٌ ببطاقة TAXO** (SPEC §٧٣-هـ المرحلة ٢/٩) — يُقرأ «شحن ببطاقة TAXO» في سجلّ المحفظة، **دائنٌ**: ثمنُها دفعه مشتريها في المحلّ،
+    #: والمحلُّ يدفعه لـTAXO بشروطه — خارجَ هذا الدفتر
+    TAXO_CARD = "taxo_card"
     #: **فرقُ تقريبٍ قيداً صريحاً** (SPEC §٧٠-ج/٦) — **بالإشارتين** كالتصحيح: الزائدُ من «ادفع الدَّين كلَّه» مقرَّباً للأعلى يُردّ
     #: إلى محفظة الكبتن به **ولا يُبتلع**. **ولا تكتبه الرحلة**: فرقُها سطرُ أجرةٍ وصفٌّ في `money_roundings`
     ROUNDING = "rounding"
@@ -1022,6 +1025,28 @@ class PaymentRequestStatus(StrEnum):
     REJECTED = "rejected"
     REFUNDED = "refunded"
     CANCELLED = "cancelled"
+
+
+class TaxoCardStatus(StrEnum):
+    """**حالُ بطاقة شحن TAXO** (SPEC §٧٣-هـ المرحلة ٢/٥) — ثلاثٌ مخزَّنة؛ و«لم تبدأ بعد» و«انتهت» **تُشتقّان من نافذة الدفعة** لحظةَ الاستعمال."""
+
+    ACTIVE = "active"
+    REDEEMED = "redeemed"
+    CANCELLED = "cancelled"
+
+
+class TaxoCardBatchStatus(StrEnum):
+    """**حالُ الدفعة** — قائمةٌ أو ملغاةٌ كلُّها بسببٍ مكتوب (§٧٣-هـ/٢-٦)."""
+
+    ACTIVE = "active"
+    CANCELLED = "cancelled"
+
+
+class CardShopPaymentMode(StrEnum):
+    """**متى يدفع المحلُّ قيمةَ البطاقات** (§٧٣-أ/٧): قبل أن يستلمها، أو بعد أن يبيعها — والمبيعُ يُقرأ مُستعمَلاً (§٧٣-هـ/٢-٤)."""
+
+    BEFORE_RECEIPT = "before_receipt"
+    AFTER_SALE = "after_sale"
 
 
 class PaymentRequestPurpose(StrEnum):

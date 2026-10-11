@@ -59,8 +59,9 @@ export function PayRequestT2Screen() {
   useEffect(() => {
     listPaymentMethods("wallet_topup")
       .then((body) => {
-        setMethods(body.methods);
-        setMethodId((current) => current || body.methods[0]?.id || "");
+        // **بطاقةُ TAXO تُدخل برمزها في صفحتها** (`/wallet/card`) — لا طلبَ يُراجَع
+        setMethods(body.methods.filter((row) => row.kind !== "purchase_code"));
+        setMethodId((current) => current || body.methods.find((row) => row.kind !== "purchase_code")?.id || "");
       })
       .catch((caught: unknown) => {
         setMethods([]);

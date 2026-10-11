@@ -1091,7 +1091,9 @@ export type WalletTransactionType =
   | "cashback"
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّينُ بكليك أو السلفة) يعود إلى محفظة الكبتن قيداً صريحاً، **ومعه صفٌّ في سجلّ
   // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
-  | "rounding";
+  | "rounding"
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — شحنٌ برمز بطاقةٍ مطبوعة، دائنٌ يُقرأ «شحن ببطاقة TAXO»
+  | "taxo_card";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -2519,4 +2521,113 @@ export interface AdminPaymentRequest {
   subscription_id: string | null;
   reviewed_at: string | null;
   created_at: string;
+}
+
+// ------------------------------------------------------------ بطاقاتُ شحن TAXO (SPEC §٧٣-هـ المرحلة ٢)
+
+/** **حالُ البطاقة** (`TaxoCardStatus`) — و«لم تبدأ» و«انتهت» تُشتقّان من نافذة الدفعة. */
+export type TaxoCardStatus = "active" | "redeemed" | "cancelled";
+
+/** **حالُ الدفعة** (`TaxoCardBatchStatus`). */
+export type TaxoCardBatchStatus = "active" | "cancelled";
+
+/** **متى يدفع المحلّ** (`CardShopPaymentMode`). */
+export type CardShopPaymentMode = "before_receipt" | "after_sale";
+
+export interface CardDenomination {
+  id: string;
+  amount: string;
+  currency: Currency;
+  is_active: boolean;
+}
+
+export interface CardShop {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  discount_percent: string;
+  payment_mode: CardShopPaymentMode;
+  is_active: boolean;
+  notes: string | null;
+}
+
+export interface CardShopInput {
+  name: string;
+  phone: string | null;
+  address: string | null;
+  discount_percent: string;
+  payment_mode: CardShopPaymentMode;
+  notes: string | null;
+}
+
+/** **الدفعةُ بأرقامها من الخلفية** (§14) — والمستحقُّ من المحلّ بشرطه المجمَّد. */
+export interface CardBatch {
+  id: string;
+  number: number;
+  amount: string;
+  currency: Currency;
+  quantity: number;
+  shop_name: string | null;
+  discount_percent_at_issue: string;
+  payment_mode_at_issue: CardShopPaymentMode | null;
+  valid_from: string;
+  expires_at: string;
+  status: TaxoCardBatchStatus;
+  cancel_reason: string | null;
+  created_at: string;
+  active: number;
+  redeemed: number;
+  cancelled: number;
+  redeemed_amount: string;
+  live_amount: string;
+  due_amount: string;
+}
+
+/** **الرموزُ هنا مرّةً واحدة** — ولا بابَ يعيدها. */
+export interface CardBatchCreated {
+  batch: CardBatch;
+  codes: { serial: string; code: string }[];
+}
+
+export interface TaxoCardRow {
+  id: string;
+  serial: string;
+  amount: string;
+  currency: Currency;
+  status: TaxoCardStatus;
+  batch_number: number;
+  redeemed_at: string | null;
+  redeemed_by_name: string | null;
+  cancel_reason: string | null;
+}
+
+export interface CardShopReport {
+  shop_id: string;
+  shop_name: string;
+  currency: Currency;
+  batches: number;
+  cards: number;
+  redeemed: number;
+  cancelled: number;
+  redeemed_amount: string;
+  live_amount: string;
+  due_amount: string;
+}
+
+export interface CardGuessAlert {
+  id: string;
+  scope: string;
+  user_name: string | null;
+  user_phone: string | null;
+  ip: string | null;
+  attempts: number;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
+export interface TaxoCardLimits {
+  max_wrong_per_account: number;
+  max_wrong_per_ip: number;
+  window_minutes: number;
 }

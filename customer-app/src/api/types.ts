@@ -726,7 +726,9 @@ export type WalletTransactionType =
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨): دائنٌ له **من TAXO** في اليوم الأخير من أسبوعه — لا يُخصم من كبتن
   | "cashback"
   // **التقريب** (§٧٠-ج/٦): زائدُ «سدّد كلَّه» يُردّ إلى محفظة صاحبه قيداً صريحاً — يقع للكبتن، ويُسمّى للعلّة أعلاه
-  | "rounding";
+  | "rounding"
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — شحنٌ برمز بطاقةٍ مطبوعة، دائنٌ يُقرأ «شحن ببطاقة TAXO»
+  | "taxo_card";
 
 export interface WalletTransaction {
   id: string;
@@ -1456,4 +1458,11 @@ export interface MyPaymentRequest {
   refund_reason: string | null;
   outcome_note: string | null;
   created_at: string;
+}
+
+/** **ما شحنته بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رقمُها التسلسليُّ ومبلغُها بعملته. */
+export interface TaxoCardRedeemed {
+  serial: string;
+  amount: string;
+  currency: Currency;
 }

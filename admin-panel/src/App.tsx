@@ -68,6 +68,10 @@ const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
 // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١)
+// **بطاقاتُ TAXO** (SPEC §٧٣-هـ المرحلة ٢)
+const TaxoCardsScreen = lazy(() =>
+  import("@/screens/TaxoCards").then((m) => ({ default: m.TaxoCardsScreen })),
+);
 const PaymentSystemScreen = lazy(() =>
   import("@/screens/PaymentSystem").then((m) => ({ default: m.PaymentSystemScreen })),
 );
@@ -368,6 +372,14 @@ export default function App() {
                   />
                   {/* **«المدفوعات غير المؤكدة»** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ز) — الأقدمُ أوّلاً وأفعالُه
                       الأربعة، كلٌّ بسببٍ مكتوب */}
+                  <Route
+                    path="/taxo-cards"
+                    element={
+                      <Guarded>
+                        <TaxoCardsScreen />
+                      </Guarded>
+                    }
+                  />
                   <Route
                     path="/payment-system"
                     element={

@@ -68,14 +68,23 @@ export function TopupSheet({
               key={method.id}
               type="button"
               className="t2-row t2-m-opt"
-              disabled={!valid}
-              onClick={() => navigate("/wallet/pay", { state: { amount, methodId: method.id } })}
+              // **بطاقةُ TAXO لا تحتاج مبلغاً** — قيمتُها مطبوعةٌ عليها؛ وتُدخل برمزها في صفحتها
+              disabled={method.kind === "purchase_code" ? false : !valid}
+              onClick={() =>
+                method.kind === "purchase_code"
+                  ? navigate("/wallet/card")
+                  : navigate("/wallet/pay", { state: { amount, methodId: method.id } })
+              }
             >
               <Icon name={method.kind === "cash" ? "payments" : method.kind === "phone_number" ? "smartphone" : "account_balance"} />
               <span className="t2-row-main">
                 <span className="t2-row-title">{method.name}</span>
                 <span className="t2-row-body">
-                  {method.requires_receipt ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة" : "ادفع ثمّ يُضاف بعد المراجعة"}
+                  {method.kind === "purchase_code"
+                    ? "أدخل رمز البطاقة — يُضاف فوراً"
+                    : method.requires_receipt
+                      ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة"
+                      : "ادفع ثمّ يُضاف بعد المراجعة"}
                 </span>
               </span>
               <Icon name="chevron_left" className="t2-m-opt-end go" />

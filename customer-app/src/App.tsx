@@ -89,6 +89,12 @@ const PayRequestT2Screen = lazy(() =>
     default: m.PayRequestT2Screen,
   })),
 );
+// **بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رمزٌ يشحن مرّةً واحدة
+const CardRedeemT2Screen = lazy(() =>
+  import("@/screens/t2/CardRedeemT2").then((m) => ({
+    default: m.CardRedeemT2Screen,
+  })),
+);
 const WalletTopupScreen = lazy(() =>
   import("@/screens/WalletTopup").then((m) => ({
     default: m.WalletTopupScreen,
@@ -548,6 +554,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <WalletTopupScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/card"
+                        element={
+                          <Guarded>
+                            <CardRedeemT2Screen />
                           </Guarded>
                         }
                       />

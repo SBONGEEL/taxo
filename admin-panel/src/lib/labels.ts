@@ -19,7 +19,14 @@
  * خلفيةٍ لا أسماءُ عرض.
  */
 
-import type { PaymentProviderKind, PaymentRequestPurpose, PaymentRequestStatus } from "@/api/types";
+import type {
+  CardShopPaymentMode,
+  PaymentProviderKind,
+  PaymentRequestPurpose,
+  PaymentRequestStatus,
+  TaxoCardBatchStatus,
+  TaxoCardStatus,
+} from "@/api/types";
 import type { Tone } from "@/components/ui/Badge";
 import type {
   AdminUnconfirmedState,
@@ -162,6 +169,8 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   cashback: "الاسترداد الأسبوعي",
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إلى محفظة الكبتن؛ **اسمُ الخلفية نفسُه** (`finance_summary`: «تقريب»)
   rounding: "تقريب",
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
+  taxo_card: "شحن ببطاقة TAXO",
 };
 
 /** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */
@@ -295,4 +304,22 @@ export const PAYMENT_PROVIDER_KIND_LABEL: Record<PaymentProviderKind, string> = 
 export const PAYMENT_REQUEST_PURPOSE_LABEL: Record<PaymentRequestPurpose, string> = {
   wallet_topup: "شحن محفظة",
   subscription: "اشتراك",
+};
+
+// ─────────────────────────────────────── بطاقاتُ شحن TAXO (SPEC §٧٣-هـ المرحلة ٢)
+
+export const TAXO_CARD_STATUS_LABEL: Record<TaxoCardStatus, string> = {
+  active: "قائمة",
+  redeemed: "مستعمَلة",
+  cancelled: "ملغاة",
+};
+
+export const TAXO_CARD_BATCH_STATUS_LABEL: Record<TaxoCardBatchStatus, string> = {
+  active: "قائمة",
+  cancelled: "ملغاة",
+};
+
+export const CARD_SHOP_PAYMENT_MODE_LABEL: Record<CardShopPaymentMode, string> = {
+  before_receipt: "يدفع قبل الاستلام",
+  after_sale: "يدفع بعد البيع",
 };

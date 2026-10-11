@@ -65,6 +65,8 @@ const GROUPS: {
       // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلباتُ الدفع بإيصالاتها وطرقُ الدفع لكلِّ دولة. **وبلا `adminOnly`**: القراءةُ لطاقم
       // اللوحة، والاعتمادُ يحرسه الخادم (`finance.manage`) وتحريرُ الطرق (`settings.write`)
       { label: "نظام الدفع", icon: "account_balance", to: "/payment-system" },
+      // **بطاقاتُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — جوارَ نظام الدفع: البطاقةُ طريقةٌ فيه («رمز شراء»)
+      { label: "بطاقات TAXO", icon: "confirmation_number", to: "/taxo-cards" },
       // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
       { label: "الملخّصات المالية", icon: "receipt_long", to: "/finance/summary", permission: FINANCE_SUMMARY },
       { label: "الدفعات", icon: "payments", to: "/payments" },

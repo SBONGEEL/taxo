@@ -20,8 +20,8 @@ from app.core import storage
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
-from app.models.enums import PaymentProviderKind, PaymentRequestPurpose, WalletOwnerType
-from app.models.payment_request import PaymentProvider, PaymentRequest
+from app.models.enums import PaymentRequestPurpose, WalletOwnerType
+from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
     MyPaymentRequestOut,
     PaymentCancelIn,
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 
 
-def method_out(provider: PaymentProvider) -> PaymentMethodOut:
+def method_out(provider: PayMethod) -> PaymentMethodOut:
     return PaymentMethodOut(
         id=provider.id,
         kind=provider.kind,
@@ -87,12 +87,8 @@ async def list_methods(
     providers = await payment_requests.providers_for(session, user.country_code, purpose)
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
-        # **والوسيطُ الآليُّ لا يُعرض قبل أن يُبنى** (المرحلة ٣) — ولا بطاقاتُ الشحن (المرحلة ٢)
-        methods=[
-            method_out(p)
-            for p in providers
-            if p.integration is None and p.kind is not PaymentProviderKind.PURCHASE_CODE
-        ],
+        # **والوسيطُ الآليُّ لا يُعرض قبل أن يُبنى** (المرحلة ٣)؛ **وبطاقاتُ TAXO تُعرض** — تُدخل برمزها (`/taxo-cards/redeem`)
+        methods=[method_out(p) for p in providers if p.integration is None],
     )
 
 

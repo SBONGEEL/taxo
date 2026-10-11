@@ -93,6 +93,8 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   cashback: "redeem",
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إليه، أيقونةُ الردّ كالاسترجاع
   rounding: "undo",
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
+  taxo_card: "confirmation_number",
 };
 
 export function WalletT2Screen() {

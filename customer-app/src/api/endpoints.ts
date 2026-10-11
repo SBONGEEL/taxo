@@ -7,7 +7,7 @@
 
 import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { MyPaymentRequest, PayMethods, PaymentRequestPurpose } from "@/api/types";
+import type { MyPaymentRequest, PayMethods, PaymentRequestPurpose, TaxoCardRedeemed } from "@/api/types";
 import type {
   Airport,
   MapPlaceSpot,
@@ -801,3 +801,7 @@ export const listMyPaymentRequests = (limit = 10) =>
 
 export const cancelPaymentRequest = (requestId: string) =>
   api.post<MyPaymentRequest>(`/payment-requests/${requestId}/cancel`, {});
+
+/** **رمزُ بطاقة TAXO يشحن المحفظةَ مرّةً واحدة** (SPEC §٧٣-هـ المرحلة ٢) — والمحاولاتُ الخاطئةُ مسقوفةٌ في الخادم. */
+export const redeemTaxoCard = (code: string) =>
+  api.post<TaxoCardRedeemed>("/taxo-cards/redeem", { code, wallet: "rider" });

@@ -130,6 +130,8 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   cashback: "الاسترداد الأسبوعي",
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إلى المحفظة؛ يقع للكبتن ويُسمّى للعلّة أعلاه
   rounding: "تقريب",
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
+  taxo_card: "شحن ببطاقة TAXO",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

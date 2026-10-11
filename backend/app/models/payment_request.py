@@ -43,7 +43,7 @@ from app.models.enums import (
 LIVE_STATUSES_SQL = "status IN ('pending', 'approved', 'refunded')"
 
 
-class PaymentProvider(UUIDMixin, TimestampMixin, Base):
+class PayMethod(UUIDMixin, TimestampMixin, Base):
     """**طريقةُ دفعٍ صفٌّ يُضاف ويُفعَّل من اللوحة لكلِّ دولة** (§٧٣-أ/٥).
 
     **والنوعُ يحكم ما يُطلب من المستخدم** (§٧٣-هـ/٢): التحويلُ البنكيُّ والدفعُ برقم هاتفٍ **إيصالُهما إجباريّ**، والكاشُ بلا إيصال.
@@ -88,7 +88,7 @@ class PaymentProvider(UUIDMixin, TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
-        return f"<PaymentProvider {self.country_code}/{self.code} ({self.kind})>"
+        return f"<PayMethod {self.country_code}/{self.code} ({self.kind})>"
 
 
 class PaymentRequest(UUIDMixin, TimestampMixin, Base):
@@ -219,7 +219,7 @@ class PaymentRequest(UUIDMixin, TimestampMixin, Base):
     )
     outcome_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    provider: Mapped[PaymentProvider] = relationship(PaymentProvider, lazy="joined")
+    provider: Mapped[PayMethod] = relationship(PayMethod, lazy="joined")
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<PaymentRequest {self.amount} ({self.status})>"

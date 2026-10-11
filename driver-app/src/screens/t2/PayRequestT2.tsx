@@ -56,6 +56,7 @@ export function PayRequestT2Screen() {
   const goBack = useGoBack(purpose === "subscription" ? "/subscription" : "/wallet");
 
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  const [cardMethod, setCardMethod] = useState(false);
   const [methodId, setMethodId] = useState("");
   const [amount, setAmount] = useState(handoff?.amount ?? "");
   const [reference, setReference] = useState("");
@@ -75,8 +76,11 @@ export function PayRequestT2Screen() {
   useEffect(() => {
     listPaymentMethods(purpose)
       .then((body) => {
-        setMethods(body.methods);
-        setMethodId((current) => current || body.methods[0]?.id || "");
+        // **بطاقةُ TAXO تُدخل برمزها في صفحتها** (`/wallet/card`) — بابٌ فوق الطرق لا طريقةٌ تُراجَع
+        setCardMethod(body.methods.some((row) => row.kind === "purchase_code"));
+        const reviewed = body.methods.filter((row) => row.kind !== "purchase_code");
+        setMethods(reviewed);
+        setMethodId((current) => current || reviewed[0]?.id || "");
       })
       .catch((caught: unknown) => {
         setMethods([]);
@@ -197,6 +201,17 @@ export function PayRequestT2Screen() {
             </div>
           ) : null}
 
+          {cardMethod && purpose === "wallet_topup" ? (
+            <button type="button" className="t2-wal-door t2-pr-gap" onClick={() => navigate("/wallet/card")}>
+              <span className="t2-wal-txicon" aria-hidden="true">
+                <span className="t2-icon">confirmation_number</span>
+              </span>
+              <span className="t2-wal-door-title">لديك بطاقة TAXO؟ أدخل رمزها</span>
+              <span className="t2-icon t2-wal-door-go" aria-hidden="true">
+                arrow_back
+              </span>
+            </button>
+          ) : null}
           <div className="t2-section">طريقة الدفع</div>
           <div className="t2-list" role="radiogroup" aria-label="طريقة الدفع">
             {methods.map((row) => (

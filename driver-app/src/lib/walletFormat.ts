@@ -14,6 +14,7 @@ import {
   Gift,
   Percent,
   Scale,
+  TicketCheck,
   Undo2,
   Wallet,
   type LucideIcon,
@@ -65,6 +66,8 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّين بكليك أو السلفة) يعود إلى محفظته: دفع المبلغَ مقرَّباً للأعلى، والفرقُ له.
   // **واسمُه اسمُ الخلفية** (`finance_summary`: «تقريب») — والإشارةُ على المبلغ تقول اتجاهَه
   rounding: "تقريب",
+  // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
+  taxo_card: "شحن ببطاقة TAXO",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -110,6 +113,8 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   cashback: Gift,
   // **والتقريبُ زائدُ سدادٍ يعود** — أيقونةُ الردّ كالاسترجاع
   rounding: Undo2,
+  // **بطاقةُ TAXO** — تذكرةٌ مختومة: رمزٌ مطبوعٌ صار رصيداً
+  taxo_card: TicketCheck,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

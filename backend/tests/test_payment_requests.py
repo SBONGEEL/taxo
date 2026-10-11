@@ -24,7 +24,7 @@ from app.models.enums import (
     WalletTransactionType,
 )
 from app.models.feature_flag import FeatureFlag
-from app.models.payment_request import PaymentProvider, PaymentRequest
+from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.wallet import WalletTransaction
 from app.services import payment_gateways
 from app.services.payment_gateways import GatewayEvent, WebhookSignatureInvalid
@@ -50,7 +50,7 @@ async def algeria_market(session_factory, *, enabled: bool = True) -> dict[str, 
                 country_code=CountryCode.DZ, feature_key=FeatureKey.PAYMENT_REQUESTS_ENABLED.value, enabled=enabled
             )
         )
-        baridimob = PaymentProvider(
+        baridimob = PayMethod(
             country_code=CountryCode.DZ,
             kind=PaymentProviderKind.BANK_TRANSFER,
             code="baridimob",
@@ -59,15 +59,15 @@ async def algeria_market(session_factory, *, enabled: bool = True) -> dict[str, 
             account_holder="TAXO",
             account_number="00799999000123456789",
         )
-        office = PaymentProvider(
+        office = PayMethod(
             country_code=CountryCode.DZ, kind=PaymentProviderKind.CASH, code="office_cash", name="كاش في المكتب",
             enabled=True, sort_order=1,
         )
-        dormant = PaymentProvider(
+        dormant = PayMethod(
             country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code="bank", name="تحويلٌ بنكيّ",
             enabled=False, account_number="0011",
         )
-        jordan = PaymentProvider(
+        jordan = PayMethod(
             country_code=CountryCode.JO, kind=PaymentProviderKind.CASH, code="office_cash", name="كاش", enabled=True
         )
         session.add_all([baridimob, office, dormant, jordan])
@@ -376,7 +376,7 @@ def fake_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _gateway_request(session_factory, user_id: str, external_id: str) -> uuid.UUID:
     """طلبٌ فتحه وسيطٌ آليّ — يُكتب مباشرةً لأن فتحَ الدفع عند الوسيط يُبنى في المرحلة ٣."""
     async with session_factory() as session:
-        provider = PaymentProvider(country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code="fakepay",
+        provider = PayMethod(country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code="fakepay",
                                    name="وسيطُ الاختبار", integration="fakepay", enabled=True)
         session.add(provider)
         await session.flush()
