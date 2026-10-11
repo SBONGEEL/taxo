@@ -362,7 +362,10 @@ async def test_with_the_flag_off_there_is_no_call(client: AsyncClient, session_f
 
 async def test_recording_is_off_by_default(client: AsyncClient, session_factory, admin_headers: dict) -> None:
     listed = (await client.get("/admin/settings/services", headers=admin_headers)).json()
-    assert {row["country_code"]: row["call_recording_enabled"] for row in listed} == {"LY": False, "JO": False}
+    # **في كلِّ سوقٍ من مصدره** (SPEC §٧٣-ج) — كان `{"LY": False, "JO": False}` حرفاً
+    assert {row["country_code"]: row["call_recording_enabled"] for row in listed} == {
+        c.value: False for c in CountryCode
+    }
     # **وافتراضُ العمود في القاعدة نفسِها مطفأ** — صفٌّ يُدرج بسوقه وحدَه يخرج بلا تسجيل (ولا يُلتزم)
     async with session_factory() as session:
         row = ServiceSetting(country_code=CountryCode.LY)

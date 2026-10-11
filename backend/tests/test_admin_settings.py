@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
+from app.models.enums import CountryCode
 from app.services import settings_service
 
 
@@ -124,7 +125,8 @@ async def test_feature_flags_default_to_disabled(
     assert response.status_code == 200
 
     by_country = {row["country_code"]: row["flags"] for row in response.json()}
-    assert set(by_country) == {"LY", "JO"}
+    # **والأسواقُ من مصدرها** (SPEC §٧٣-ج): كانت `{"LY", "JO"}` حرفاً فسقطت أوّلَ سوقٍ يُضاف
+    assert set(by_country) == {c.value for c in CountryCode}
 
     # غياب الصف = معطّل — لا يُفترض التفعيل أبداً... إلا لما استُثني بعلّةٍ
     # مكتوبة: حارسٌ إطفاؤه يفتح باباً (`otp_verification_enabled`)، أو صفةُ

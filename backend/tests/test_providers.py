@@ -5,8 +5,9 @@ import json
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core.currency import COUNTRY_CURRENCY
 from app.core.db import engine
-from app.models.enums import ProviderKey
+from app.models.enums import CountryCode, ProviderKey
 from app.models.provider_credential import ProviderCredential
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -251,11 +252,13 @@ async def test_config_is_public_and_hides_secrets(client: AsyncClient) -> None:
     # الدخول ثابتٌ والمُحقِّق متغيّر (المرحلة 8-ب)
     assert body["auth"]["login"] == "password"
     assert body["auth"]["verification"] == "firebase"
-    assert {c["country_code"] for c in body["countries"]} == {"LY", "JO"}
-    assert {c["country_code"]: c["currency"] for c in body["countries"]} == {
-        "LY": "LYD",
-        "JO": "JOD",
-    }
+    # **الأسواقُ وعملاتُها من مصدرها** (SPEC §٧٣-ج) — والاختبارُ يبني قاعدتَه من الهجرات
+    # بلا صفِّ إخفاء، فكلُّ سوقٍ ظاهرٌ هنا بالسكوت (§٢٤)
+    assert {c["country_code"] for c in body["countries"]} == {c.value for c in CountryCode}
+    currencies = {c["country_code"]: c["currency"] for c in body["countries"]}
+    assert currencies == {code.value: cur.value for code, cur in COUNTRY_CURRENCY.items()}
+    # **والسوقان القائمان كما كانا حرفاً** — المصدرُ لا يُصدَّق على نفسه
+    assert currencies["LY"] == "LYD" and currencies["JO"] == "JOD"
     assert body["providers"]["mapbox"] == {}  # لا عقد محفوظ بعد
 
 
