@@ -7,6 +7,13 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  AdminPayMethod,
+  AdminPayMethodInput,
+  AdminPaymentRequest,
+  PaymentProviderKind,
+  PaymentRequestStatus,
+} from "@/api/types";
+import type {
   AdminCall,
   MapPlace,
   MapPlaceCategory,
@@ -2019,3 +2026,58 @@ export const setVehicleAttributes = (
   vehicleId: string,
   payload: { body_type: VehicleBodyType | null; fuel: VehicleFuel | null; seats: number | null },
 ) => api.patch<Vehicle>(`/admin/drivers/${driverId}/vehicles/${vehicleId}/attributes`, payload);
+
+// ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)
+
+export const listPayMethods = (country: CountryCode) =>
+  api.get<AdminPayMethod[]>("/admin/payment-methods", { query: { country } });
+
+/** **إنشاءُ طريقة** — `settings.write`؛ وطريقةُ تحويلٍ مفعَّلةٌ بلا رقمٍ ولا رمزٍ تُرفض في الخادم. */
+export const createPayMethod = (
+  body: AdminPayMethodInput & { country_code: CountryCode; kind: PaymentProviderKind; code: string },
+) => api.post<AdminPayMethod>("/admin/payment-methods", body);
+
+/** **ما تغيّر وحدَه** — ويُدقَّق كلُّ تغييرٍ بقبله وبعده في الخادم (رقمُ الحساب أوّلُها). */
+export const updatePayMethod = (id: string, body: Partial<AdminPayMethodInput>) =>
+  api.patch<AdminPayMethod>(`/admin/payment-methods/${id}`, body);
+
+export const uploadPayMethodQr = (id: string, file: File) =>
+  upload<AdminPayMethod>(`/admin/payment-methods/${id}/qr`, file);
+
+/** **ملفٌّ محميٌّ يُعرض من `blob:`** — `<img>` لا يحمل ترويسة؛ ومن يفتحه يحرّره (`URL.revokeObjectURL`). */
+async function protectedBlob(path: string, failure: string): Promise<{ url: string; type: string }> {
+  const answer = await fetch(`${API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) throw new Error(failure);
+  const blob = await answer.blob();
+  return { url: URL.createObjectURL(blob), type: blob.type };
+}
+
+export const payMethodQrBlob = (id: string) =>
+  protectedBlob(`/admin/payment-methods/${id}/qr`, "تعذّر فتح الرمز");
+
+export const listPaymentRequests = (params: {
+  status?: PaymentRequestStatus;
+  country?: CountryCode;
+  q?: string;
+}) => api.get<AdminPaymentRequest[]>("/admin/payment-requests", { query: params });
+
+/** **الإيصالُ للموظّف الماليّ وحدَه** — فيه حسابُ صاحب الدفعة. */
+export const paymentReceiptBlob = (id: string) =>
+  protectedBlob(`/admin/payment-requests/${id}/receipt`, "تعذّر فتح الإيصال");
+
+/** **الاعتماد — بمبلغ الموظّف كما قرأه في كشفه**؛ وفارغاً «بمبلغه كما ادّعى». */
+export const approvePaymentRequest = (id: string, credited: string) =>
+  api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/approve`, {
+    credited_amount: credited.trim() === "" ? null : credited.trim(),
+  });
+
+export const rejectPaymentRequest = (id: string, reason: string) =>
+  api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/reject`, { reason });
+
+export const refundPaymentRequest = (id: string, reason: string) =>
+  api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/refund`, { reason });
+
+export const cancelPaymentRequest = (id: string, reason: string) =>
+  api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/cancel`, { reason });

@@ -19,9 +19,15 @@
  * «عرض المزيد» · بابُ «طلبات السحب».
  */
 
-import type { Earnings, WalletTransactionType } from "@/api/types";
+import { useEffect, useState } from "react";
+
+import { ApiError } from "@/api/client";
+import { cancelPaymentRequest, listMyPaymentRequests } from "@/api/endpoints";
+import type { Earnings, MyPaymentRequest, WalletTransactionType } from "@/api/types";
 import { WithdrawSheet } from "@/components/WithdrawSheet";
 import { Spinner } from "@/components/ui/Feedback";
+import { useCountryConfig } from "@/lib/config";
+import { PAYMENT_REQUEST_STATUS_LABEL } from "@/lib/paymentRequests";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
 import { digits, zeroAmount } from "@/lib/utils";
 import { TRANSACTION_LABEL, isDebit, unsigned } from "@/lib/walletFormat";
@@ -33,6 +39,7 @@ import { EarningsDays } from "./EarningsDays";
 
 import "@/taxo2";
 import "./t2.css";
+import "./payrequest.css";
 
 /** **عمّا تُقارَن النسبة** — النافذةُ السابقةُ المساويةُ لها حتى الساعة نفسِها (§٦٢-ج/٣٨). */
 const COMPARED_TO: Record<Earnings["period"], string> = {
@@ -91,6 +98,30 @@ const TX_ICON: Record<WalletTransactionType, string> = {
 export function WalletT2Screen() {
   const w = useWalletScreen();
   const e = useEarningsScreen();
+
+  // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبٌ خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا بابَ يُرسم**
+  const payRequests = useCountryConfig(w.profile?.user?.country_code)?.features.payment_requests_enabled === true;
+  const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!payRequests) return;
+    let cancelled = false;
+    listMyPaymentRequests(10)
+      .then((rows) => !cancelled && setRequests(rows))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [payRequests]);
+
+  async function cancelRequest(id: string) {
+    try {
+      const updated = await cancelPaymentRequest(id);
+      setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
+    } catch (caught) {
+      setRequestError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الطلب");
+    }
+  }
 
   if (!w.wallet) {
     return (
@@ -350,6 +381,61 @@ export function WalletT2Screen() {
             </p>
           )}
         </div>
+
+        {/* **بابُ الشحن بطرق السوق** (SPEC §٧٣-هـ) — حيث المفتاحُ مشتعلٌ وحدَه، **وطلباتُ الدفع تحته بحالها وسببها كما كُتب** */}
+        {payRequests ? (
+          <>
+            <button type="button" className="t2-wal-door" onClick={() => w.navigate("/wallet/pay")}>
+              <span className="t2-wal-txicon" aria-hidden="true">
+                <span className="t2-icon">add_card</span>
+              </span>
+              <span className="t2-wal-door-title">شحن الرصيد</span>
+              <span className="t2-icon t2-wal-door-go" aria-hidden="true">
+                arrow_back
+              </span>
+            </button>
+            {requestError ? (
+              <p className="t2-note danger" role="alert">
+                <span className="t2-icon" aria-hidden="true">
+                  error
+                </span>
+                {requestError}
+              </p>
+            ) : null}
+            {requests.length > 0 ? (
+              <div className="t2-list">
+                {requests.map((request) => {
+                  const reason =
+                    request.rejection_reason ?? request.refund_reason ?? request.outcome_note ??
+                    (request.status === "cancelled" ? request.cancel_reason : null);
+                  return (
+                    <div key={request.id} className="t2-row">
+                      <span className="t2-row-main">
+                        <span className="t2-row-title">
+                          {digits(request.credited_amount ?? request.amount)} {CURRENCY_LABEL[request.currency]} ·{" "}
+                          {request.provider_name}
+                        </span>
+                        <span className="t2-row-body">
+                          {request.purpose === "subscription" ? "اشتراك" : "شحن"} · {formatWhen(request.created_at)}
+                          {request.reference ? <span dir="ltr"> · {request.reference}</span> : null}
+                        </span>
+                        {reason ? <span className="t2-pr-reason">{reason}</span> : null}
+                      </span>
+                      <span className={request.status === "approved" ? "t2-chip ok" : "t2-chip"}>
+                        {PAYMENT_REQUEST_STATUS_LABEL[request.status]}
+                      </span>
+                      {request.status === "pending" ? (
+                        <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
+                          إلغاء
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </>
+        ) : null}
 
         {/* **بابُ «طلبات السحب»** — كان زرّاً في رأس الشاشة القائمة، واللوحةُ لا ترسمه */}
         <button

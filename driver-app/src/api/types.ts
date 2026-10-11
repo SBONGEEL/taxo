@@ -1566,3 +1566,51 @@ export interface RideCategoryFace {
   description: string | null;
   seats: number;
 }
+
+// ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)
+
+/** **نوعُ طريقة الدفع** — الأربعةُ بأسماء المالك (`PaymentProviderKind` في الخلفية). */
+export type PaymentProviderKind = "cash" | "bank_transfer" | "purchase_code" | "phone_number";
+
+/** **الحالاتُ الخمس** (`PaymentRequestStatus`) — ولا انتقالَ غيرُ ما في الخلفية. */
+export type PaymentRequestStatus = "pending" | "approved" | "rejected" | "refunded" | "cancelled";
+
+/** **ما تُدفع له الدفعة** (`PaymentRequestPurpose`). */
+export type PaymentRequestPurpose = "wallet_topup" | "subscription";
+
+/** **طريقةُ دفعٍ مفعَّلةٌ في سوقي** — إلى أين أدفع، وما يُطلب مني. */
+export interface PayMethod {
+  id: string;
+  kind: PaymentProviderKind;
+  name: string;
+  account_holder: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  instructions: string | null;
+  has_qr: boolean;
+  /** **الإيصالُ ورقمُ التحويل إجباريّان** — والخادمُ يرفض من دونهما */
+  requires_receipt: boolean;
+}
+
+export interface PayMethods {
+  currency: Currency;
+  methods: PayMethod[];
+}
+
+/** **دفعتي** بحالها وسببِ رفضها أو إلغائها أو ردّها كما كُتب. */
+export interface MyPaymentRequest {
+  id: string;
+  provider_name: string;
+  kind: PaymentProviderKind;
+  purpose: PaymentRequestPurpose;
+  amount: string;
+  credited_amount: string | null;
+  currency: Currency;
+  status: PaymentRequestStatus;
+  reference: string | null;
+  rejection_reason: string | null;
+  cancel_reason: string | null;
+  refund_reason: string | null;
+  outcome_note: string | null;
+  created_at: string;
+}

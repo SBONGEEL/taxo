@@ -557,6 +557,7 @@ export function ConfirmSubscriptionSheet({
   onWallet,
   onCard,
   onCliq,
+  onPayRequest,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -566,6 +567,8 @@ export function ConfirmSubscriptionSheet({
   onWallet: (plan: SubscriptionPlan) => void;
   onCard: (plan: SubscriptionPlan) => void;
   onCliq: (plan: SubscriptionPlan) => void;
+  /** **الدفعُ بطرق السوق** (SPEC §٧٣-هـ) — يُمرَّر حيث `payment_requests_enabled` مشتعلٌ وحدَه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
+  onPayRequest?: (plan: SubscriptionPlan) => void;
 }) {
   return (
     <div
@@ -636,6 +639,18 @@ export function ConfirmSubscriptionSheet({
             </p>
           ) : null}
 
+          {onPayRequest ? (
+            <Button
+              size="md"
+              variant="secondary"
+              disabled={buying !== null}
+              onClick={() => onPayRequest(plan)}
+            >
+              الدفع بتحويلٍ أو نقداً
+            </Button>
+          ) : null}
+          {onPayRequest ? null : (
+            <>
           {/* **كليك اليدويّ** — يظهر حين يكون لسوقه حسابٌ مضبوط، ويُعطَّل
               بعلّته حين لا يكون. **ولا يُدّعى أنه بوّابةٌ آلية**: الشاشةُ
               التالية تقول إن التحصيل يدويّ. */}
@@ -652,6 +667,8 @@ export function ConfirmSubscriptionSheet({
               الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.
             </p>
           ) : null}
+            </>
+          )}
           <button
             type="button"
             onClick={onClose}

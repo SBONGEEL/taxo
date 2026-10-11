@@ -19,6 +19,7 @@
  * خلفيةٍ لا أسماءُ عرض.
  */
 
+import type { PaymentProviderKind, PaymentRequestPurpose, PaymentRequestStatus } from "@/api/types";
 import type { Tone } from "@/components/ui/Badge";
 import type {
   AdminUnconfirmedState,
@@ -263,4 +264,35 @@ export const SEARCH_KIND_LABEL: Record<SearchKind, string> = {
   driver: "كبتن",
   ride: "رحلة",
   claim: "مطالبة",
+};
+
+// ─────────────────────────────────────── نظامُ الدفع الجديد (SPEC §٧٣-هـ)
+
+export const PAYMENT_REQUEST_STATUS_LABEL: Record<PaymentRequestStatus, string> = {
+  pending: "قيد المراجعة",
+  approved: "معتمَدة",
+  rejected: "مرفوضة",
+  refunded: "مردودة",
+  cancelled: "ملغاة",
+};
+
+export const PAYMENT_REQUEST_STATUS_TONE: Record<PaymentRequestStatus, string> = {
+  pending: "text-warn",
+  approved: "text-ok",
+  rejected: "text-danger",
+  refunded: "text-muted",
+  cancelled: "text-muted",
+};
+
+/** **الأنواعُ الأربعة بلغة الموظّف** — وBaridiMob وCCP والتحويلُ البنكيُّ ورمزُ QR كلُّها «تحويل» (§٧٣-هـ/٢). */
+export const PAYMENT_PROVIDER_KIND_LABEL: Record<PaymentProviderKind, string> = {
+  cash: "كاش",
+  bank_transfer: "تحويل (بنك · CCP · BaridiMob · QR)",
+  purchase_code: "رمز شراء",
+  phone_number: "رقم هاتف",
+};
+
+export const PAYMENT_REQUEST_PURPOSE_LABEL: Record<PaymentRequestPurpose, string> = {
+  wallet_topup: "شحن محفظة",
+  subscription: "اشتراك",
 };

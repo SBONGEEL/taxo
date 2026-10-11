@@ -813,6 +813,9 @@ class FeatureKey(StrEnum):
     # **أسماءُ الأماكن على الخريطة** (SPEC §٧١-د) — الأسماءُ بالتكبير بدل الخريطة الهادئة بلا أسماء، **وأماكنُ المالك** فوقها وفي أوّل
     # البحث (`map_places`). **مطفأٌ لكلِّ سوق**: مطفأً تبقى الخريطةُ كما كانت حرفاً، ولا يُقرأ جدولُ الأماكن
     MAP_PLACES_ENABLED = "map_places_enabled"
+    # **نظامُ الدفع الجديد** (SPEC §٧٣-أ/٥، §٧٣-هـ/٩) — طرقُ الدفع صفوفاً لكلِّ دولة والدفعاتُ بحالاتها الخمس. **مطفأٌ لكلِّ سوق**:
+    # مطفأً لا يُفتح طلبٌ ولا تُعرض طريقة، **وواجهتا الأردن وليبيا لا تقرآن منه شيئاً** — ويُشعله المالكُ للجزائر يومَ الإطلاق
+    PAYMENT_REQUESTS_ENABLED = "payment_requests_enabled"
 
 
 class MapPlaceCategory(StrEnum):
@@ -999,6 +1002,33 @@ class TopupRequestStatus(StrEnum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     REJECTED = "rejected"
+
+
+class PaymentProviderKind(StrEnum):
+    """**نوعُ طريقة الدفع في النظام الجديد** — الأربعةُ بأسماء المالك (SPEC §٧٣-أ/٥)، **ويحكم ما يُطلب من المستخدم** (§٧٣-هـ/٢):
+    التحويلُ البنكيُّ والدفعُ برقم هاتفٍ إيصالُهما إجباريّ، والكاشُ بلا إيصال، ورمزُ الشراء لبطاقات TAXO (المرحلة ٢)."""
+
+    CASH = "cash"
+    BANK_TRANSFER = "bank_transfer"
+    PURCHASE_CODE = "purchase_code"
+    PHONE_NUMBER = "phone_number"
+
+
+class PaymentRequestStatus(StrEnum):
+    """**الحالاتُ الخمس** (§٧٣-أ/٥): `pending ⇐ approved | rejected | cancelled`، و`approved ⇐ refunded` — ولا انتقالَ غيرُها."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    REFUNDED = "refunded"
+    CANCELLED = "cancelled"
+
+
+class PaymentRequestPurpose(StrEnum):
+    """**ما تُدفع له الدفعة** — شحنُ المحفظة، أو اشتراكُ الكبتن (شحنٌ ثمّ شراءٌ بالمحفظة في المعاملة نفسِها، §٧٣-هـ/٧)."""
+
+    WALLET_TOPUP = "wallet_topup"
+    SUBSCRIPTION = "subscription"
 
 
 class WithdrawalMethod(StrEnum):

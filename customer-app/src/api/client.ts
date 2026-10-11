@@ -433,11 +433,22 @@ export function upload<T>(
 ): Promise<T> {
   const form = new FormData();
   form.append("file", file);
+  return sendForm<T>("PUT", path, form, options);
+}
+
+/** **نموذجٌ بأجزاءٍ متعدّدةٍ بفعلٍ يُسمّى** — الرفعُ نفسُه (النسبةُ والإلغاءُ وكاشفُ الركود) لطلبٍ يحمل حقولاً مع ملفّه:
+ * طلبُ الدفع بإيصاله (SPEC §٧٣-هـ المرحلة ١). **و`upload` غلافٌ له بـ`PUT` وملفٍّ واحد** — فلا بابان يفترقان أوّلَ تعديل. */
+export function sendForm<T>(
+  method: "PUT" | "POST",
+  path: string,
+  form: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
   const access = tokens.access();
 
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open("PUT", `${API_URL}${path}`);
+    request.open(method, `${API_URL}${path}`);
     if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
 
     // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج **من

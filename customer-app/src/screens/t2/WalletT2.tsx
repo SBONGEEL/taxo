@@ -22,13 +22,29 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getWallet, listSavedCards, listTopups, listTransactions } from "@/api/endpoints";
-import type { SavedCard, TopupRequest, Wallet, WalletTransaction, WalletTransactionType } from "@/api/types";
+import {
+  cancelPaymentRequest,
+  getWallet,
+  listMyPaymentRequests,
+  listPaymentMethods,
+  listSavedCards,
+  listTopups,
+  listTransactions,
+} from "@/api/endpoints";
+import type {
+  MyPaymentRequest,
+  PayMethod,
+  SavedCard,
+  TopupRequest,
+  Wallet,
+  WalletTransaction,
+  WalletTransactionType,
+} from "@/api/types";
 import { TopupSheet } from "@/components/wallet/TopupSheet";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { roundingUnit } from "@/lib/rounding";
-import { TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
+import { PAYMENT_REQUEST_STATUS_LABEL, TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatMoney } from "@/lib/utils";
 
@@ -37,6 +53,7 @@ import { byMonth, startOfToday, whenParts } from "./when";
 
 import "@/taxo2";
 import "./t2.css";
+import "./payrequest.css";
 
 /** أيقونةُ كلِّ نوعٍ بمفردات اللوحة — **وما لم تُرسم أيقونتُه فبأيقونة المحفظة**. */
 const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
@@ -104,6 +121,33 @@ export function WalletT2Screen() {
   }, [cardEnabled]);
   const card = cards?.find((row) => row.is_default) ?? cards?.[0] ?? null;
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
+  // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
+  const payRequests = country?.features.payment_requests_enabled === true;
+  const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
+  useEffect(() => {
+    if (!payRequests) return;
+    let cancelled = false;
+    Promise.all([listPaymentMethods("wallet_topup"), listMyPaymentRequests(10)])
+      .then(([body, mine]) => {
+        if (cancelled) return;
+        setMethods(body.methods);
+        setRequests(mine);
+      })
+      .catch(() => !cancelled && setMethods([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [payRequests]);
+
+  async function cancelRequest(id: string) {
+    try {
+      const updated = await cancelPaymentRequest(id);
+      setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الطلب");
+    }
+  }
 
   if (loading) {
     return (
@@ -185,6 +229,49 @@ export function WalletT2Screen() {
                     </span>
                   </span>
                   <span className="t2-chip warn">{TOPUP_STATUS_LABEL[request.status]}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* **طلباتُ الدفع** (SPEC §٧٣-هـ) — بحالها، **وسببُ رفضها أو إلغائها أو ردّها كما كتبه الموظّف** تحتها، وإلغاءُ المعلَّق بيد صاحبه */}
+      {payRequests && requests.length > 0 ? (
+        <section>
+          <div className="t2-section">طلبات الدفع</div>
+          <div className="t2-list">
+            {requests.map((request) => {
+              const when = whenParts(request.created_at, today);
+              const reason =
+                request.rejection_reason ?? request.refund_reason ?? request.outcome_note ??
+                (request.status === "cancelled" ? request.cancel_reason : null);
+              return (
+                <div key={request.id} className="t2-tx">
+                  <span className="t2-tx-icon">
+                    <span className="t2-icon" aria-hidden="true">
+                      {request.status === "pending" ? "hourglass_top" : request.status === "approved" ? "check_circle" : "info"}
+                    </span>
+                  </span>
+                  <span className="t2-tx-main">
+                    <span className="t2-tx-title">
+                      {formatMoney(request.credited_amount ?? request.amount, request.currency)} · {request.provider_name}
+                    </span>
+                    <span className="t2-tx-sub">
+                      {when.day} · <span dir="ltr">{request.reference ?? when.time}</span>
+                    </span>
+                    {reason ? <span className="t2-pr-reason">{reason}</span> : null}
+                  </span>
+                  <span className="t2-tx-end">
+                    <span className={request.status === "approved" ? "t2-chip ok" : request.status === "pending" ? "t2-chip warn" : "t2-chip"}>
+                      {PAYMENT_REQUEST_STATUS_LABEL[request.status]}
+                    </span>
+                    {request.status === "pending" ? (
+                      <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
+                        إلغاء
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
               );
             })}
@@ -298,6 +385,7 @@ export function WalletT2Screen() {
           unit={roundingUnit(country)}
           cardEnabled={cardEnabled}
           cliqEnabled={cliqEnabled}
+          methods={payRequests ? (methods ?? []) : undefined}
           onClose={() => setTopupOpen(false)}
         />
       ) : null}

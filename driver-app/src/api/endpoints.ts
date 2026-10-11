@@ -6,7 +6,8 @@
 
 import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
-import { API_URL, ApiError, api, tokens, upload } from "@/api/client";
+import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
+import type { MyPaymentRequest, PayMethods, PaymentRequestPurpose } from "@/api/types";
 import type {
   CallAnswer,
   MapPlaceSpot,
@@ -825,3 +826,42 @@ export async function uploadCallRecording(callId: string, recording: Blob): Prom
 
 /** **أماكنُ الخريطة لسوق الكبتن** (SPEC §٧١-د) — فارغةٌ حين مفتاحُها مطفأ. */
 export const mapPlaces = () => api.get<MapPlaceSpot[]>("/map-places");
+
+// ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)
+
+/** **طرقُ الدفع المفعَّلة في سوقي لهذا الغرض** — يُنادى حيث `payment_requests_enabled` مشتعلٌ وحدَه. */
+export const listPaymentMethods = (purpose: PaymentRequestPurpose) =>
+  api.get<PayMethods>("/payment-requests/methods", { query: { purpose } });
+
+/** **صورةُ رمز QR للطريقة** — بجلسة صاحبها، فتُقرأ `Blob` لا رابطاً عارياً. */
+export const paymentMethodQr = (methodId: string) => api.blob(`/payment-requests/methods/${methodId}/qr`);
+
+/** **طلبٌ بعد الدفع بإيصاله** — نموذجٌ بأجزاءٍ متعدّدة؛ ومعلَّقٌ حتى يعتمده موظّفٌ ماليّ. */
+export function createPaymentRequest(
+  input: {
+    methodId: string;
+    purpose: PaymentRequestPurpose;
+    amount: string;
+    reference?: string;
+    planId?: string;
+    wallet?: "rider" | "driver";
+    receipt?: File | null;
+  },
+  options: UploadOptions = {},
+) {
+  const form = new FormData();
+  form.append("provider_id", input.methodId);
+  form.append("purpose", input.purpose);
+  form.append("amount", input.amount);
+  if (input.reference) form.append("reference", input.reference);
+  if (input.planId) form.append("plan_id", input.planId);
+  if (input.wallet) form.append("wallet", input.wallet);
+  if (input.receipt) form.append("receipt", input.receipt);
+  return sendForm<MyPaymentRequest>("POST", "/payment-requests", form, options);
+}
+
+export const listMyPaymentRequests = (limit = 10) =>
+  api.get<MyPaymentRequest[]>("/payment-requests/me", { query: { limit } });
+
+export const cancelPaymentRequest = (requestId: string) =>
+  api.post<MyPaymentRequest>(`/payment-requests/${requestId}/cancel`, {});

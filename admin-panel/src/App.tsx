@@ -67,6 +67,10 @@ const PaymentsScreen = lazy(() =>
 const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
+// **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١)
+const PaymentSystemScreen = lazy(() =>
+  import("@/screens/PaymentSystem").then((m) => ({ default: m.PaymentSystemScreen })),
+);
 const UnconfirmedPaymentsScreen = lazy(() =>
   import("@/screens/UnconfirmedPayments").then((m) => ({ default: m.UnconfirmedPaymentsScreen })),
 );
@@ -364,6 +368,14 @@ export default function App() {
                   />
                   {/* **«المدفوعات غير المؤكدة»** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ز) — الأقدمُ أوّلاً وأفعالُه
                       الأربعة، كلٌّ بسببٍ مكتوب */}
+                  <Route
+                    path="/payment-system"
+                    element={
+                      <Guarded>
+                        <PaymentSystemScreen />
+                      </Guarded>
+                    }
+                  />
                   <Route
                     path="/payments/unconfirmed"
                     element={

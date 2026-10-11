@@ -83,6 +83,12 @@ const RideDetailsScreen = lazy(() =>
 const PaymentScreen = lazy(() =>
   import("@/screens/Payment").then((m) => ({ default: m.PaymentScreen })),
 );
+// **الشحنُ بطرق السوق** (SPEC §٧٣-هـ) — يُبلغ من ورقة الشحن حيث `payment_requests_enabled` مشتعلٌ وحدَه
+const PayRequestT2Screen = lazy(() =>
+  import("@/screens/t2/PayRequestT2").then((m) => ({
+    default: m.PayRequestT2Screen,
+  })),
+);
 const WalletTopupScreen = lazy(() =>
   import("@/screens/WalletTopup").then((m) => ({
     default: m.WalletTopupScreen,
@@ -542,6 +548,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <WalletTopupScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/pay"
+                        element={
+                          <Guarded>
+                            <PayRequestT2Screen />
                           </Guarded>
                         }
                       />

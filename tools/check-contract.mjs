@@ -116,6 +116,13 @@ function appCalls(dir) {
         });
       }
 
+      // **نموذجٌ بفعلٍ يُسمّى** — `sendForm<T>("POST", "/x", form)` (SPEC §٧٣-هـ): الفعلُ في النداء نفسِه، **فيُقاس كأيِّ نداء**
+      // لا يمرّ لأنه خارج `api.*` — وهي العلّةُ نفسُها التي أوقعت الرفعَ بـ`POST` على مسارٍ يقبل `PUT` (رأسُ الملفّ)
+      const form = /\bsendForm\s*(?:<[^>]*>)?\s*\(\s*["']([A-Z]+)["']\s*,\s*([`"'])([^`"']*)\2/g;
+      while ((m = form.exec(src)) !== null) {
+        calls.push({ verb: m[1], raw: m[3], file: rel, line: lineOf(src, m.index), note: "نموذج" });
+      }
+
       // عنوانٌ يُبنى بيدٍ: `${API_URL}/x`
       const direct = /\$\{API_URL\}([^`"']*)/g;
       while ((m = direct.exec(src)) !== null) {
@@ -145,6 +152,9 @@ function uploadVerb(appDir) {
   for (const rel of ["src/api/client.ts", "src/api/upload.ts"]) {
     try {
       const src = readFileSync(join(ROOT, appDir, rel), "utf-8");
+      // **`upload` غلافٌ لـ`sendForm` بفعلٍ يُسمّى** (SPEC §٧٣-هـ): الفعلُ في نداء الغلاف لا في `request.open(method…)`
+      const wrapped = src.match(/function upload[\s\S]*?sendForm\s*(?:<[^>]*>)?\s*\(\s*["']([A-Z]+)["']/);
+      if (wrapped) return wrapped[1];
       const m = src.match(/request\.open\(\s*["']([A-Z]+)["']/);
       if (m) return m[1];
     } catch {

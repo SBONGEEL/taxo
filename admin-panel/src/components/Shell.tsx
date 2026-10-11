@@ -62,6 +62,9 @@ const GROUPS: {
     label: "المالية",
     items: [
       { label: "المحافظ والسحب", icon: "account_balance_wallet", to: "/finance" },
+      // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلباتُ الدفع بإيصالاتها وطرقُ الدفع لكلِّ دولة. **وبلا `adminOnly`**: القراءةُ لطاقم
+      // اللوحة، والاعتمادُ يحرسه الخادم (`finance.manage`) وتحريرُ الطرق (`settings.write`)
+      { label: "نظام الدفع", icon: "account_balance", to: "/payment-system" },
       // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
       { label: "الملخّصات المالية", icon: "receipt_long", to: "/finance/summary", permission: FINANCE_SUMMARY },
       { label: "الدفعات", icon: "payments", to: "/payments" },

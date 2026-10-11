@@ -489,6 +489,8 @@ export type FeatureKey =
   | "ride_calls_enabled"
   // **أسماءُ الأماكن على الخريطة** (SPEC §٧١-د) — الأسماءُ بالتكبير وأماكنُ المالك فوقها وفي أوّل البحث
   | "map_places_enabled"
+  // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طرقُ الدفع صفوفاً لكلِّ دولة وطابورُ الموظّف الماليّ
+  | "payment_requests_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -2450,4 +2452,71 @@ export interface AdminCall {
   /** **أثمّة ملفٌّ يُستمع إليه الآن** — والاستماعُ بابٌ بصلاحيته وتدقيقه لا هذا الحقل */
   has_recording: boolean;
   recording_expires_at: string | null;
+}
+
+// ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)
+
+/** **نوعُ طريقة الدفع** — الأربعةُ بأسماء المالك (`PaymentProviderKind`). */
+export type PaymentProviderKind = "cash" | "bank_transfer" | "purchase_code" | "phone_number";
+
+/** **الحالاتُ الخمس** (`PaymentRequestStatus`). */
+export type PaymentRequestStatus = "pending" | "approved" | "rejected" | "refunded" | "cancelled";
+
+/** **ما تُدفع له الدفعة** (`PaymentRequestPurpose`). */
+export type PaymentRequestPurpose = "wallet_topup" | "subscription";
+
+/** **طريقةُ دفعٍ في اللوحة** — مفعَّلةً وموقوفة، بحسابها ورمزها. */
+export interface AdminPayMethod {
+  id: string;
+  kind: PaymentProviderKind;
+  code: string;
+  name: string;
+  integration: string | null;
+  enabled: boolean;
+  for_topup: boolean;
+  for_subscription: boolean;
+  account_holder: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  instructions: string | null;
+  has_qr: boolean;
+  sort_order: number;
+}
+
+/** **حقولُ الإنشاء** — النوعُ والمعرّفُ والسوقُ لا تتغيّر بعده. */
+export interface AdminPayMethodInput {
+  name: string;
+  enabled: boolean;
+  for_topup: boolean;
+  for_subscription: boolean;
+  account_holder: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  instructions: string | null;
+  sort_order: number;
+}
+
+/** **طلبُ الدفع في طابور الموظّف الماليّ**. */
+export interface AdminPaymentRequest {
+  id: string;
+  user_name: string | null;
+  user_phone: string | null;
+  owner_type: "rider" | "driver";
+  currency: Currency;
+  provider_name: string;
+  purpose: PaymentRequestPurpose;
+  amount: string;
+  credited_amount: string | null;
+  status: PaymentRequestStatus;
+  reference: string | null;
+  external_id: string | null;
+  has_receipt: boolean;
+  rejection_reason: string | null;
+  cancel_reason: string | null;
+  refund_reason: string | null;
+  outcome_note: string | null;
+  transaction_id: string | null;
+  subscription_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
 }

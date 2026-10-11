@@ -453,6 +453,17 @@ export async function upload<T>(
   // فتصير `date` غيرَ صالحةٍ ويرتدّ الرفعُ كلُّه بـ422 — والوثيقةُ التي لا
   // تنتهي (صورةُ المركبة) خانتُها فارغةٌ بحقّ.
   if (options.expiresOn) form.append("expires_on", options.expiresOn);
+  return sendForm<T>("PUT", path, form, options);
+}
+
+/** **نموذجٌ بأجزاءٍ متعدّدةٍ بفعلٍ يُسمّى** — الرفعُ نفسُه (النسبةُ والإلغاء) لطلبٍ يحمل حقولاً مع ملفّه: طلبُ الدفع بإيصاله
+ * (SPEC §٧٣-هـ المرحلة ١). **و`upload` غلافٌ له بـ`PUT`** — فلا بابان يفترقان أوّلَ تعديل. */
+export function sendForm<T>(
+  method: "PUT" | "POST",
+  path: string,
+  form: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
   const access = tokens.access();
 
   // **`XMLHttpRequest` لا `fetch`، ولسببٍ واحدٍ لا بديلَ عنه**: `fetch` **لا
@@ -466,7 +477,7 @@ export async function upload<T>(
   // الذي يُصلحه عقدُ الأخطاء**، فالمخرجُ بيد صاحبها لا بيد عدّاد.
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open("PUT", `${API_URL}${path}`);
+    request.open(method, `${API_URL}${path}`);
     if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
 
     // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج من قرّر

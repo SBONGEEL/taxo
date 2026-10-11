@@ -109,6 +109,7 @@ from app.models.subscription_offer import SubscriptionOffer, SubscriptionOfferGr
 from app.models.tip import Tip
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.models.payment_request import PaymentProvider, PaymentRequest  # noqa: F401
 from app.models.wallet import (
     WalletTopupRequest,
     WalletTransaction,

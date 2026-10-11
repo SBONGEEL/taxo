@@ -45,6 +45,8 @@ from app.routers import (
     admin_users,
     admin_verification_campaigns,
     admin_wallets,
+    admin_payment_requests,
+    payment_requests,
     account,
     auth,
     card_payments,
@@ -122,6 +124,9 @@ api_router.include_router(admin_referrals.router)
 api_router.include_router(admin_releases.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
+# **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١) — طرقُ الدفع لكلِّ دولة وطابورُ الموظّف الماليّ، ووجهُه للراكب والكبتن والـwebhook
+api_router.include_router(admin_payment_requests.router)
+api_router.include_router(payment_requests.router)
 api_router.include_router(admin_payments.router)
 # **طابورُ المدفوعات غير المؤكَّدة** (SPEC §٦٤-ج) — موجّهٌ في ملفِّه لا ثانٍ في `admin_payments` (`check:contract`)
 api_router.include_router(admin_unconfirmed_payments.router)

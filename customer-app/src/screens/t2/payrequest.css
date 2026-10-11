@@ -1,0 +1,83 @@
+/* الشحنُ بطرق السوق — نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)، **فوق قطع المال في `money.css`** لا بدلَها.
+ *
+ * **كلُّ اسمٍ يبدأ بـ`t2-pr-`** — ملفٌّ يُحمَّل مع `t2.css` و`money.css` لا يصطدم بأسمائهما (`check:t2-css` يقرأ الملفَّ الواحد).
+ * **والرموزُ وحدَها** (`var(--t2-…)`) فتعمل في الفاتح والداكن والنسائيّ، **وكلُّ ما يُلمس ٤٤ على الأقل**.
+ */
+
+/* ── إلى أين تدفع: سطورٌ بتسميةٍ وقيمة، والرقمُ بخطِّ الأرقام وزرُّ نسخه ─────────────────────────────── */
+.t2-pr-dest { display: flex; flex-direction: column; gap: 10px; }
+.t2-pr-line { display: flex; flex-direction: column; gap: 2px; }
+.t2-pr-value { display: flex; align-items: center; gap: 8px; }
+.t2-pr-number {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--t2-text);
+  font-family: var(--t2-font-num);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.t2-pr-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--t2-line);
+  border-radius: 14px;
+  background: none;
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-pr-text { color: var(--t2-text); font-size: 15px; font-weight: 600; }
+.t2-pr-instructions { margin: 0; color: var(--t2-muted); font-size: 13.5px; line-height: 1.6; white-space: pre-line; }
+/* **الرمزُ على بياضٍ في كلِّ سِمة** — كرمز كليك (R16b): ماسحُ البنك يقرأ الأسودَ على الأبيض */
+.t2-pr-qr { display: flex; justify-content: center; padding: 12px; border-radius: 18px; background: #fff; }
+.t2-pr-qr img { display: block; width: 100%; max-width: 240px; height: auto; }
+
+/* ── الإيصال: صفٌّ يُلمس كقنوات الشحن، والحقلُ نفسُه مخفيٌّ عن العين لا عن قارئ الشاشة ───────────── */
+.t2-pr-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--t2-dash);
+  border-radius: 18px;
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-pr-file-main { display: flex; flex-direction: column; min-width: 0; }
+.t2-pr-file-title { font-size: 15px; font-weight: 700; }
+.t2-pr-file-hint { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.t2-pr-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── أرسلنا طلبك ───────────────────────────────────────────────────────────────────────────────── */
+.t2-pr-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 26px 20px; }
+.t2-pr-done-title { margin: 6px 0 0; color: var(--t2-text); font-size: 20px; font-weight: 800; }
+.t2-pr-done-text { margin: 0; color: var(--t2-muted); font-size: 14px; line-height: 1.6; }
+
+/* ── طلباتي في المحفظة: السببُ تحت الحال كما كُتب ─────────────────────────────────────────────── */
+.t2-pr-reason { display: block; margin-top: 2px; color: var(--t2-muted); font-size: 12.5px; white-space: normal; }
+.t2-pr-cancel {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

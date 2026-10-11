@@ -14,9 +14,12 @@
  */
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { SubscriptionDuration, SubscriptionPlan } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
+import { useCountryConfig } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { DISPLAY_LOCALE, digits } from "@/lib/utils";
 import {
@@ -103,6 +106,10 @@ function endsLine(until: string): string {
 
 export function SubscriptionT2Screen() {
   const s = useSubscriptionScreen();
+  const navigate = useNavigate();
+  const { profile } = useDriver();
+  // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — خيارٌ في ورقة التأكيد حيث مفتاحُه مشتعلٌ وحدَه
+  const payRequests = useCountryConfig(profile?.user?.country_code)?.features.payment_requests_enabled === true;
   const plans = s.subscription?.plans ?? [];
   const currentName = s.subscription?.current?.plan_name ?? null;
   // **المختارُ افتراضاً خطّتُه الحالية** — فالضغطةُ الأولى تجديدُ ما هو عليه، كما يقع في الشاشة القائمة
@@ -290,7 +297,9 @@ export function SubscriptionT2Screen() {
         </button>
 
         <p className="t2-sub-fine">
-          {s.cardEnabled
+          {payRequests
+            ? "الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك."
+            : s.cardEnabled
             ? "الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."
             : "الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."}
         </p>
@@ -368,6 +377,19 @@ export function SubscriptionT2Screen() {
             onWallet={s.payFromWallet}
             onCard={s.payByCard}
             onCliq={s.payByCliq}
+            onPayRequest={
+              payRequests
+                ? (chosen) =>
+                    navigate("/wallet/pay", {
+                      state: {
+                        purpose: "subscription",
+                        planId: chosen.id,
+                        planName: chosen.name,
+                        amount: chosen.price_to_pay ?? chosen.price,
+                      },
+                    })
+                : undefined
+            }
           />
         </div>
       ) : null}

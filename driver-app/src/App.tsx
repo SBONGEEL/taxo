@@ -149,6 +149,12 @@ const CliqSubscriptionScreen = lazy(() =>
     default: m.CliqSubscriptionScreen,
   })),
 );
+// **الدفعُ بطرق السوق** (SPEC §٧٣-هـ) — شحنُ المحفظة ودفعُ الاشتراك، حيث `payment_requests_enabled` مشتعلٌ وحدَه
+const PayRequestT2Screen = lazy(() =>
+  import("@/screens/t2/PayRequestT2").then((m) => ({
+    default: m.PayRequestT2Screen,
+  })),
+);
 const WithdrawalsScreen = lazy(() =>
   import("@/screens/Withdrawals").then((m) => ({
     default: m.WithdrawalsScreen,
@@ -665,6 +671,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CliqSubscriptionScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/wallet/pay"
+                          element={
+                            <Guarded>
+                              <PayRequestT2Screen />
                             </Guarded>
                           }
                         />

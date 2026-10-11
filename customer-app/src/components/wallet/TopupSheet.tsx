@@ -9,6 +9,8 @@
  */
 
 import { useState } from "react";
+
+import type { PayMethod } from "@/api/types";
 import { useNavigate } from "react-router-dom";
 
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
@@ -22,6 +24,7 @@ export function TopupSheet({
   unit,
   cardEnabled,
   cliqEnabled,
+  methods,
   onClose,
 }: {
   currency: string | undefined;
@@ -29,10 +32,13 @@ export function TopupSheet({
   unit: string | null;
   cardEnabled: boolean;
   cliqEnabled: boolean;
+  /** **طرقُ نظام الدفع الجديد** (SPEC §٧٣-هـ) — تُمرَّر حيث `payment_requests_enabled` مشتعلٌ وحدَه، و`undefined` في غيره:
+   *  فورقةُ الأردن وليبيا هي هي حرفاً. **ومعها لا مبالغَ مقترحة** — اقتراحُها لسوقٍ جديدٍ أرقامٌ لم يضعها المالك */
+  methods?: PayMethod[];
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const [amount, setAmount] = useState("10");
+  const [amount, setAmount] = useState(methods ? "" : "10");
   const unitError = notMultipleMessage(amount, unit, currency);
   const valid = Number(amount) > 0 && unitError === null;
 
@@ -42,17 +48,42 @@ export function TopupSheet({
       <p className="t2-m-sheet-sub">اختر المبلغ ثم طريقة الشحن.</p>
 
       <AmountCardT2 id="topup-sheet-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
-        <QuickAmountsT2
-          amounts={QUICK_TOPUP_AMOUNTS}
-          value={amount}
-          onPick={setAmount}
-          label={(value) => formatMoney(value, currency)}
-        />
+        {methods ? null : (
+          <QuickAmountsT2
+            amounts={QUICK_TOPUP_AMOUNTS}
+            value={amount}
+            onPick={setAmount}
+            label={(value) => formatMoney(value, currency)}
+          />
+        )}
       </AmountCardT2>
       <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 
       {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد».
           والقناةُ الغائبةُ لا تُرسم معطّلةً: مفتاحُها مطفأٌ في هذا السوق */}
+      {methods && methods.length > 0 ? (
+        <div className="t2-list t2-m-gap">
+          {methods.map((method) => (
+            <button
+              key={method.id}
+              type="button"
+              className="t2-row t2-m-opt"
+              disabled={!valid}
+              onClick={() => navigate("/wallet/pay", { state: { amount, methodId: method.id } })}
+            >
+              <Icon name={method.kind === "cash" ? "payments" : method.kind === "phone_number" ? "smartphone" : "account_balance"} />
+              <span className="t2-row-main">
+                <span className="t2-row-title">{method.name}</span>
+                <span className="t2-row-body">
+                  {method.requires_receipt ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة" : "ادفع ثمّ يُضاف بعد المراجعة"}
+                </span>
+              </span>
+              <Icon name="chevron_left" className="t2-m-opt-end go" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {cardEnabled || cliqEnabled ? (
         <div className="t2-list t2-m-gap">
           {cardEnabled ? (
