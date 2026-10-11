@@ -29,12 +29,18 @@ const APPS = ["customer-app", "driver-app"];
 const AR = /[؀-ۿ]/;
 const WRITE = process.argv.includes("--write");
 
-const require = createRequire(path.join(ROOT, "customer-app/package.json"));
+// **المُحلِّلُ من أيِّ تطبيقٍ ثُبّتت حزمتُه** — CI يثبّت تطبيقاً واحداً في كلِّ مهمّة (قِيس: مهمّةُ الكبتن سقطت لأن الراكبَ بلا حزم)
 let ts;
-try {
-  ts = require("typescript");
-} catch {
-  console.error("✗ لم يوجد `typescript` في customer-app — ثبّت حزمتَه. الحارسُ لا يقيس.");
+for (const app of ["customer-app", "driver-app", "admin-panel"]) {
+  try {
+    ts = createRequire(path.join(ROOT, app, "package.json"))("typescript");
+    break;
+  } catch {
+    // التالي
+  }
+}
+if (!ts) {
+  console.error("✗ لم يوجد `typescript` في أيٍّ من: customer-app · driver-app · admin-panel — ثبّت حزمةَ تطبيق. الحارسُ لا يقيس.");
   process.exit(1);
 }
 
