@@ -110,6 +110,9 @@ if [ "$SHELL_KIND" = "Git Bash" ] && [ "${TAXO_DEPLOY_DETACHED:-0}" != "1" ]; th
   {
     printf '#!/usr/bin/env bash\n'
     printf 'export TAXO_DEPLOY_DETACHED=1\n'
+    # **والهدفُ يُورَّث صراحةً** (SPEC §٧٣-هـ المرحلة ٦): العمليةُ المستقلّةُ لا تُضمن لها بيئةُ من أطلقها — وهدفٌ يسقط في
+    # الطريق يعني رفعَ نسخة الجزائر إلى خادم الأردن بالافتراض
+    printf 'export TAXO_DEPLOY_TARGET=%q\n' "${TAXO_DEPLOY_TARGET:-jordan}"
     printf 'export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.fileMode GIT_CONFIG_VALUE_0=false\n'
     printf 'exec %s' "$(printf '%q' "$HERE/deploy-here.sh")"
     for arg in "$@"; do printf ' %s' "$(printf '%q' "$arg")"; done

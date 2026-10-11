@@ -37,15 +37,17 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.enums import CountryCode
 from app.models.site import NEW_CARDS_DEFAULT, SiteSettings
 from app.services import settings_service
 
-#: **سوقُ الصفحة** — الأردنُ وحدَه بقرار المالك، ومنه تُقرأ المفاتيح.
+#: **سوقُ الصفحة** — سوقُ هذه النسخة (`default_country_code`): الأردنُ في نسخة الأردن كما كان بقرار المالك، والجزائرُ في نسختها
+#: (SPEC §٧٣-هـ المرحلة ٦). ومنه تُقرأ المفاتيح.
 #:
 #: **وثابتٌ مصرَّحٌ لا وسيطٌ من العميل**: الصفحةُ عامّةٌ بلا جلسة، ووسيطُ سوقٍ
 #: من زائرٍ يجعل «كم العمولة؟» سؤالاً يجيبه السائلُ لنفسه.
-SITE_COUNTRY = CountryCode.JO
+SITE_COUNTRY: CountryCode = settings.default_country_code
 
 #: **الوضعان، ولا ثالث** — والقائمةُ هنا هي التي يحرسها المخطَّط.
 DISTRIBUTION_MODES = ("apk", "play")

@@ -109,6 +109,11 @@ android {
             dimension "channel"
             applicationIdSuffix ".test"
         }
+        // **نسخةُ الجزائر** (SPEC §٧٣-هـ المرحلة ٦) — قناةُ `algeria` في `channels.json`، مخطَّطةٌ لا تُبنى حتى تُجهَّز نطاقاتُها
+        create("algeria") {
+            dimension "channel"
+            applicationIdSuffix ".dz"
+        }
     }
 
     buildTypes {

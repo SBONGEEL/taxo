@@ -25,7 +25,13 @@
     "الرابع (الجلسة والصلاحيات وعقد الأخطاء وسلّم التصميم) هو بعينه ما يفترق.",
     "",
     "**و`private: true` تعني: لا يُنشر على صفحة التحميل** — تطبيقُ مشرفٍ",
-    "يُثبَّت باليد، فلا يُنزّله أحدٌ ولا يُرى. ويحرسه `tools/check-apk.mjs`."
+    "يُثبَّت باليد، فلا يُنزّله أحدٌ ولا يُرى. ويحرسه `tools/check-apk.mjs`.",
+    "",
+    "**وثالثةٌ منذ 2026-10-11: الجزائر** (SPEC §٧٣-هـ المرحلة ٦) — حزمتا راكبٍ وكبتنٍ",
+    "مستقلّتان بلاحقة `.dz` تخاطبان خادمَ الجزائر، **وتتعايشان مع حزمتَي الأردن**.",
+    "**و`planned: true` تعني: مُصرَّحةٌ ولم تُجهَّز** — نطاقاتُها لم تُنشأ بعد، فلا",
+    "يسأل عنها `check-hosts` ولا يقيسها `check-apk`، **وبناؤها يُرفض بنصٍّ** حتى",
+    "تُنزع العلامةُ بعد أن تحلّ نطاقاتُها (HANDOFF، دليلُ نسخة الجزائر)."
   ],
   "channels": {
     "public": {
@@ -69,6 +75,28 @@
         }
       },
       "gradleFlavor": "trial"
+    },
+    "algeria": {
+      "label": "الجزائر",
+      "planned": true,
+      "apiBase": "https://dz-api.tajora.ly",
+      "appIdSuffix": ".dz",
+      "apps": {
+        "customer-app": {
+          "shellUrl": "https://dz-app.tajora.ly",
+          "appName": "TAXO DZ"
+        },
+        "driver-app": {
+          "shellUrl": "https://dz-driver.tajora.ly",
+          "appName": "TAXO كبتن DZ"
+        },
+        "admin-panel": {
+          "shellUrl": "https://dz-admin.tajora.ly",
+          "appName": "TAXO المشرف DZ",
+          "private": true
+        }
+      },
+      "gradleFlavor": "algeria"
     }
   },
   "baseAppId": {

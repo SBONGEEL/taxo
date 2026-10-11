@@ -38,7 +38,6 @@ from app.models.backup import (
     BackupSetting,
     BackupStatus,
 )
-from app.models.enums import CountryCode
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +75,10 @@ async def get_settings(session: AsyncSession) -> BackupSetting:
 
 
 async def _zone(session: AsyncSession) -> ZoneInfo:
-    """مِنطقةُ الأردن — **من `services/stats.py` نفسِه** لا نسخةٌ ثانية."""
+    """مِنطقةُ سوق هذه النسخة (`default_country_code` — الأردنُ في نسخته كما كان) — **من `services/stats.py` نفسِه** لا نسخةٌ ثانية."""
     from app.services.stats import _zone as stats_zone
 
-    return await stats_zone(session, CountryCode.JO)
+    return await stats_zone(session, settings.default_country_code)
 
 
 # ------------------------------------------------------------ الأخذ

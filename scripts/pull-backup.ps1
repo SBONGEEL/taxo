@@ -14,6 +14,9 @@
 #>
 [CmdletBinding()]
 param(
+  # **خادمٌ من اثنين** (SPEC §٧٣-هـ المرحلة ٦) — `jordan` كما كان، و`algeria` من `scripts/deploy-targets/algeria.conf`
+  [ValidateSet("jordan", "algeria")]
+  [string]$Target = "jordan",
   # مضيفُ SSH كما في `~/.ssh/config` أو `user@host`
   [string]$Server = $env:TAXO_BACKUP_SERVER,
   # مسارُ المشروع على الخادم (حيث `docker-compose.yml`)
@@ -25,6 +28,21 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Target -eq "algeria") {
+  # **قيمُ الجزائر من ملفِّ هدفها وحدَه** — ولا تُخلط نسخُها بنسخ الأردن (مجلّدٌ مستقلّ)
+  $targetFile = Join-Path $PSScriptRoot "deploy-targets/algeria.conf"
+  $values = @{}
+  foreach ($line in Get-Content $targetFile) {
+    if ($line -match '^(TAXO_[A-Z_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2] }
+  }
+  if (-not $values.TAXO_DEPLOY_HOST -or $values.TAXO_DEPLOY_HOST -like "*CHANGE_ME*") {
+    throw "عنوانُ خادم الجزائر غيرُ مكتوبٍ في $targetFile"
+  }
+  $Server = $values.TAXO_DEPLOY_HOST
+  if ($values.TAXO_REMOTE_PROJECT) { $RemoteProject = $values.TAXO_REMOTE_PROJECT }
+  if (-not $env:TAXO_BACKUP_DEST) { $Destination = "D:\taxo-backups-dz" }
+}
 
 if (-not $Server) {
   throw "حدّد -Server أو اضبط TAXO_BACKUP_SERVER (مثال: taxo@1.2.3.4)"

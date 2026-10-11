@@ -31,6 +31,7 @@ from decimal import Decimal
 from fastapi import APIRouter
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.currency import currency_for_country
 from app.core.deps import DbSession, RedisDep
 from app.models.enums import (
@@ -87,9 +88,10 @@ PUBLIC_AUDIENCES = (AUDIENCE_ALL, AUDIENCE_NEW_DRIVER)
 
 @router.get("/landing", response_model=LandingOut)
 async def landing(
-    session: DbSession, country_code: CountryCode = CountryCode.JO
+    session: DbSession, country_code: CountryCode | None = None
 ) -> LandingOut:
-    """أفضلُ عرضٍ عامٍّ قائمٍ الآن — أو لا شيء."""
+    """أفضلُ عرضٍ عامٍّ قائمٍ الآن — أو لا شيء. **وبلا دولةٍ فسوقُ هذه النسخة** (`default_country_code` — SPEC §٧٣-هـ المرحلة ٦)."""
+    country_code = country_code or settings.default_country_code
     if not await settings_service.is_feature_enabled(
         session, country_code, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED
     ):

@@ -1,0 +1,20 @@
+# **نسخةُ الجزائر** (SPEC §٧٣-هـ المرحلة ٦) — تُضاف **فوق** ملفَّي الإنتاج نفسيهما، فلا يُنسخ إعدادُ الإنتاج ليفترق:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.prod-tunnel.yml -f docker-compose.algeria.yml …
+#
+# **وما تغيّره وحدَه**: سوقُ النسخة (`DEFAULT_COUNTRY_CODE=DZ` — صفحةُ الموقع وجدولُ النسخ وما قبل الدخول)، ونطاقاتُها، ونفقُها.
+# **ولا يُشغَّل قبل أن يُنشأ الخادمُ والنطاقاتُ والنفق** — والدليلُ خطوةً خطوةً في HANDOFF («دليلُ نسخة الجزائر»).
+services:
+  backend:
+    environment:
+      DEFAULT_COUNTRY_CODE: DZ
+      CORS_ORIGINS: >-
+        ["https://dz-app.tajora.ly","https://dz-driver.tajora.ly","https://dz-admin.tajora.ly",
+         "capacitor://localhost"]
+      PUBLIC_API_BASE_URL: https://dz-api.tajora.ly
+      CARD_RETURN_URL: https://dz-app.tajora.ly/payments/card/return
+      CARD_RETURN_URL_DRIVER: https://dz-driver.tajora.ly/payments/card/return
+
+  cloudflared:
+    container_name: taxo-dz-tunnel
+    command: tunnel --config /etc/cloudflared/config.algeria.yml run

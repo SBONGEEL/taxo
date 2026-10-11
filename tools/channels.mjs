@@ -11,12 +11,21 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "
 
 export const TABLE = JSON.parse(readFileSync(`${ROOT}/channels.json`, "utf8"));
 
-export const CHANNEL_NAMES = Object.keys(TABLE.channels);
+// **القناةُ المخطَّطة** (`planned: true` — SPEC §٧٣-هـ المرحلة ٦): مُصرَّحةٌ ولم تُجهَّز نطاقاتُها، **فلا تدخل أيَّ قائمةٍ يقيسها حارس**
+// ولا تُبنى — `resolve` يرفضها بنصّ. وتُنزع العلامةُ بعد أن تحلّ نطاقاتُها
+export const PLANNED_CHANNELS = Object.keys(TABLE.channels).filter((name) => TABLE.channels[name].planned === true);
+export const CHANNEL_NAMES = Object.keys(TABLE.channels).filter((name) => TABLE.channels[name].planned !== true);
 export const APP_NAMES = Object.keys(TABLE.baseAppId);
 
 /** يحلّ قناةً وتطبيقاً إلى القيم الأربع — ويرمي بنصٍّ يُقرأ لا برمزِ خطأ. */
 export function resolve(channelName, app) {
   const channel = TABLE.channels[channelName];
+  if (channel?.planned === true) {
+    throw new Error(
+      `القناةُ «${channelName}» مخطَّطةٌ لم تُجهَّز — نطاقاتُها لم تُنشأ، وحزمةٌ تُبنى عليها تفتح صفحةً غيرَ موجودة.\n` +
+        `  تُنزع \`planned\` من \`channels.json\` بعد أن تحلّ نطاقاتُها (HANDOFF، دليلُ نسخة الجزائر).`,
+    );
+  }
   if (!channel) {
     throw new Error(
       `قناةٌ غيرُ معروفة: «${channelName ?? "(غيرُ مضبوطة)"}» — والمعروفُ: ${CHANNEL_NAMES.join(" · ")}.\n` +

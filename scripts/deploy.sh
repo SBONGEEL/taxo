@@ -71,6 +71,31 @@ set -euo pipefail
 bash "$(dirname "${BASH_SOURCE[0]}")/deploy-branch-gate.sh" \
   "$PWD" "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 
+# ═══ ٠-ب) الهدف — **خادمٌ من اثنين** (SPEC §٧٣-هـ المرحلة ٦)
+#
+# `TAXO_DEPLOY_TARGET=jordan` (الافتراض) **بقيمه أدناه كما كانت حرفاً**؛ و`algeria` يقرأ
+# `scripts/deploy-targets/algeria.conf` — **ويُسقط الرفعَ بنصٍّ إن بقي فيه `CHANGE_ME`**: رفعٌ إلى
+# عنوانٍ لم يُكتب يصل خادمَ الأردن بالافتراض، وهو أخطرُ ما يقع هنا.
+DEPLOY_TARGET="${TAXO_DEPLOY_TARGET:-jordan}"
+case "$DEPLOY_TARGET" in
+  jordan) ;;
+  algeria)
+    TARGET_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-targets/algeria.conf"
+    [ -f "$TARGET_FILE" ] || { printf '\n✗ لا ملفَّ هدفٍ للجزائر: %s\n' "$TARGET_FILE" >&2; exit 1; }
+    while IFS='=' read -r key value; do
+      case "$key" in TAXO_*) export "$key=$value" ;; esac
+    done < <(grep -E '^TAXO_[A-Z_]+=' "$TARGET_FILE")
+    for key in TAXO_DEPLOY_HOST TAXO_COMPOSE_FILES TAXO_FRONT_API_BASE TAXO_HEALTH_URL TAXO_SITE_URL TAXO_BACKUP_DEST; do
+      value="${!key:-}"
+      if [ -z "$value" ] || [ "$value" != "${value#*CHANGE_ME}" ]; then
+        printf '\n✗ %s غيرُ مكتوبٍ في %s — لا رفعَ إلى عنوانٍ لم يُكتب.\n' "$key" "$TARGET_FILE" >&2
+        exit 1
+      fi
+    done
+    ;;
+  *) printf '\n✗ هدفُ رفعٍ غيرُ معروف: %s — jordan أو algeria.\n' "$DEPLOY_TARGET" >&2; exit 1 ;;
+esac
+
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
 REMOTE="${TAXO_REMOTE_PROJECT:-~/taxo}"
 # **وموضعُ النسخة يُقاس لا يُفترض** (أُصلح ٢٠٢٦-٠٩-٠٦): كان `/d/taxo-backups`

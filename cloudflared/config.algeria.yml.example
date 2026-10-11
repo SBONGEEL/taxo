@@ -1,0 +1,18 @@
+# **نفقُ نسخة الجزائر** (SPEC §٧٣-هـ المرحلة ٦) — يُنسخ إلى `config.algeria.yml` بعد إنشاء النفق ويُكتب معرّفُه مكانَ TUNNEL_ID.
+# **ولا سرَّ هنا**: الاعتمادُ في `/creds/<المعرّف>.json` على الخادم وحدَه (النسخةُ الرابعة في CLAUDE.md تنسخه).
+tunnel: TUNNEL_ID
+credentials-file: /creds/TUNNEL_ID.json
+
+ingress:
+  - hostname: dz-api.tajora.ly
+    service: http://backend:8000
+  - hostname: dz-app.tajora.ly
+    service: http://customer-app:80
+  - hostname: dz-driver.tajora.ly
+    service: http://driver-app:80
+  - hostname: dz-admin.tajora.ly
+    service: http://admin-panel:80
+  - hostname: dz.tajora.ly
+    service: http://landing:80
+
+  - service: http_status:404
