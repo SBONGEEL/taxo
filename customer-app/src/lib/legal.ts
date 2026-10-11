@@ -15,5 +15,6 @@ export const LEGAL_PAGES = [
 ] as const;
 
 export function openLegal(url: string): void {
-  void AppLauncher.openUrl({ url });
+  // **وغلافٌ أقدمُ بلا `AppLauncher` لا يرسل وعداً مرفوضاً** (الشكلُ الذي أنتج بلاغَ 496)
+  void AppLauncher.openUrl({ url }).catch(() => undefined);
 }

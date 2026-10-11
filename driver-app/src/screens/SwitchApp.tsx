@@ -42,7 +42,7 @@ export function RiderNotInstalledScreen() {
           type="button"
           className="t2-ax-cta"
           onClick={() => {
-            void AppLauncher.openUrl({ url: INSTALL_PAGE });
+            void AppLauncher.openUrl({ url: INSTALL_PAGE }).catch(() => undefined);
           }}
         >
           {tr("احصل على تطبيق الراكب")}

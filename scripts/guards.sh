@@ -62,6 +62,8 @@ run "check:enum-coverage"   node tools/check-enum-coverage.mjs
 run "check:ios"             node tools/check-ios.mjs
 # **العربيّةُ لا تتغيّر بالترجمة** (SPEC §٧٣-هـ المرحلة ٥) — جردُ نصوص التطبيقين قبل اللفّ بـ`tr()`
 run "check:arabic-frozen"  node tools/check-arabic-frozen.mjs
+# **ووعدُ إضافةٍ أصليّةٍ لا يطفو بلا ماسك** (بلاغُ الإصدار 496، 2026-10-11): غلافٌ أقدمُ بلا الإضافة يرفضه فيصل تقاريرَ الأعطال
+run "check:native-calls"   node tools/check-native-calls.mjs
 # **وبوّابةُ الفرع تُقاس هنا لا تُتذكَّر** (٢٠٢٦-١٠-٠٤): شجرةُ إعادة التصميم
 # تعيش أسابيعَ بجانب `master`، **وتعديلٌ في `deploy.sh` يُزيح البوّابةَ تحت
 # أوّلِ نداءٍ للخادم لا يشكو حتى يُرفع**. مستودعاتٌ مؤقّتةٌ وشواهدُ للشبكة —
@@ -70,6 +72,9 @@ run "deploy-branch-gate"    bash scripts/tests/deploy-branch-gate.test.sh
 # **وماسحُ الأسرار يُقاس في الاتجاهين** (٢٠٢٦-١٠-٠٨): استثناءاتُه الضيّقةُ تمرّ أشكالُها، **وسرٌّ حقيقيٌّ بالشكل نفسِه
 # يُمسك** — فتوسيعُ استثناءٍ يسقط هنا قبل أن يمرّر سرّاً في رفع (`design/APPROVALS-62.md` §١٠).
 run "secret-scan"           bash scripts/tests/secret-scan.test.sh
+# **والبوّابةُ الثانيةُ تُقاس في الاتجاهين** (2026-10-11): تشغيلُ الدفع نفسِه لا أيُّ تشغيلٍ للإيداع، ورأسٌ أحمرُ لا يمرّ، وأحمرُ في
+# التاريخ يمرّ إن أُصلح وحدَه — **على GitHub مزيَّف، بلا شبكة**.
+run "deploy-ci-gate"        bash scripts/tests/deploy-ci-gate.test.sh
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

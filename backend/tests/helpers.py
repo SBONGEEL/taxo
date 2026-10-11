@@ -329,6 +329,39 @@ async def wait_for_offer(ride_id: str, driver_id: uuid.UUID | None = None) -> uu
     return await wait_until(_offered, message="لم يصل عرض الرحلة لأي كبتن")
 
 
+async def _offer_or_gave_up(
+    client: AsyncClient, rider_headers: dict, ride_id: str, driver_id: uuid.UUID
+) -> str:
+    """«offered» حين يُعرض على الكبتن، و«gave_up» حين **ينهي التوزيعُ بحثَه بلا عرض** (`no_driver_found`).
+
+    **والحالُ تُسأل كلَّ نصف ثانيةٍ لا مع كلِّ قراءةٍ للعرض** (كلَّ ٥٠ms): نداءُ HTTP في كلِّ دورةٍ حملٌ يُضاف تحت الحمل الذي
+    سبّب العطبَ أصلاً. **وغيرُهما يرتفع بحال الرحلة في نصّه** — فسقوطٌ قادمٌ يقول ماذا رأى، لا «لم يصل عرض» وحدَها.
+    """
+    redis = get_redis_client()
+    last_asked = 0.0
+
+    async def _status() -> str | None:
+        response = await client.get(f"/rides/{ride_id}", headers=rider_headers)
+        return response.json().get("status")
+
+    async def _seen() -> str | None:
+        nonlocal last_asked
+        offered = await dispatch.current_offer(redis, uuid.UUID(ride_id))
+        if offered is not None and offered == driver_id:
+            return "offered"
+        now = time.monotonic()
+        if now - last_asked >= 0.5:
+            last_asked = now
+            if await _status() == "no_driver_found":
+                return "gave_up"
+        return None
+
+    try:
+        return await wait_until(_seen, message="لم يصل عرض الرحلة لأي كبتن")
+    except AssertionError:
+        raise AssertionError(f"لم يصل عرض الرحلة لأي كبتن — والرحلةُ «{await _status()}»") from None
+
+
 async def wait_for_status(
     client: AsyncClient, headers: dict, ride_id: str, expected: str
 ) -> dict:
@@ -387,26 +420,37 @@ async def accepted_ride(
 
     **ولا تُخفي فشلاً حقيقياً**: `409` من غير `ride_offer_expired` يرتفع فوراً،
     وانقضاءُ فرص التوزيع كلِّها يظهر في `wait_for_offer` بنصِّه.
+
+    **وحين ينهي التوزيعُ بحثَه بلا عرضٍ تُطلب رحلةٌ جديدة** (قِيس 2026-10-11، CI ‎38164641410
+    عند `f17b403`): مهلةُ البحث في الاختبارات **خمسُ ثوانٍ** (`conftest`)، وتحت ستِّ مجموعاتٍ
+    متوازيةٍ على مشغّلٍ واحدٍ تجاوزتها دورتُه الأولى — فانتهت الرحلةُ `no_driver_found` والمساعدُ
+    ينتظر عشرين ثانيةً عرضاً لن يأتي. **وهذا ما يفعله راكبٌ حقيقيٌّ** (يطلب ثانيةً)، **ولا يتغيّر
+    توقيتٌ يقرؤه اختبارٌ آخر** (المهلةُ موضوعُ اختباراتٍ غيرِ هذا). **ولا يُخفي غيرَه**: حالٌ غيرُ
+    `no_driver_found` بلا عرضٍ يرتفع بنصِّه وحالِ الرحلة، **وثلاثُ رحلاتٍ تنتهي بلا عرضٍ تسقط**.
+    ومقيسٌ في `test_accepted_ride_helper.py`.
     """
-    ride = await request_ride(client, rider_headers, stops=stops)
+    for _ in range(3):
+        ride = await request_ride(client, rider_headers, stops=stops)
+        attempts = 3
+        for attempt in range(attempts):
+            outcome = await _offer_or_gave_up(
+                client, rider_headers, ride["id"], driver["driver_id"]
+            )
+            if outcome == "gave_up":
+                break  # انتهى البحثُ بلا عرض — رحلةٌ جديدة
+            accepted = await client.post(
+                f"/rides/{ride['id']}/accept", headers=driver["headers"]
+            )
+            if accepted.status_code == 200:
+                return accepted.json()
+            expired = (
+                accepted.status_code == 409
+                and accepted.json().get("code") == "ride_offer_expired"
+            )
+            if not expired or attempt == attempts - 1:
+                assert accepted.status_code == 200, accepted.text
 
-    attempts = 3
-    for attempt in range(attempts):
-        await wait_for_offer(ride["id"], driver["driver_id"])
-        accepted = await client.post(
-            f"/rides/{ride['id']}/accept", headers=driver["headers"]
-        )
-        if accepted.status_code == 200:
-            return accepted.json()
-        expired = (
-            accepted.status_code == 409
-            and accepted.json().get("code") == "ride_offer_expired"
-        )
-        if not expired or attempt == attempts - 1:
-            break
-
-    assert accepted.status_code == 200, accepted.text
-    return accepted.json()
+    raise AssertionError("أنهى التوزيعُ البحثَ بلا عرضٍ لثلاث رحلاتٍ متتالية")
 
 
 async def started_ride(

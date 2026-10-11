@@ -39,7 +39,7 @@ export function DriverNotInstalledScreen() {
         type="button"
         className="t2-button action t2-wide"
         onClick={() => {
-          void AppLauncher.openUrl({ url: INSTALL_PAGE });
+          void AppLauncher.openUrl({ url: INSTALL_PAGE }).catch(() => undefined);
         }}
       >
         <Icon name="open_in_new" />

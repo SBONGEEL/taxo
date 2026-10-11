@@ -29,7 +29,10 @@ export interface PushRegistration {
 
 /** يطلب الإذنَ ويعيد الرمز — **أو يسمّي سببَ غيابه**. */
 export async function registerNativePush(): Promise<PushRegistration> {
-  if (!Capacitor.isNativePlatform()) return { state: "unsupported", token: null };
+  // **وغلافٌ بلا الإضافة «لا يدعم»** (بلاغُ 496): حزمةٌ أقدمُ من الشاشات التي تحمّلها لا تُسأل عمّا ليس فيها
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) {
+    return { state: "unsupported", token: null };
+  }
 
   let status = await PushNotifications.checkPermissions();
   if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
@@ -47,9 +50,10 @@ export async function registerNativePush(): Promise<PushRegistration> {
       settled = true;
       resolve(value);
     };
-    void PushNotifications.addListener("registration", (item) => done(item.value));
-    void PushNotifications.addListener("registrationError", () => done(null));
-    void PushNotifications.register();
+    // **ورفضُ أيٍّ منها «لا رمز» لا وعدٌ طافٍ** — يصل تقاريرَ الأعطال ولا يقول شيئاً
+    void PushNotifications.addListener("registration", (item) => done(item.value)).catch(() => done(null));
+    void PushNotifications.addListener("registrationError", () => done(null)).catch(() => done(null));
+    void PushNotifications.register().catch(() => done(null));
     // **مهلةٌ كي لا يعلَّق الدخولُ على خدمةٍ بعيدة**
     window.setTimeout(() => done(null), 15_000);
   });
@@ -124,7 +128,7 @@ export function ringsNatively(): boolean {
 export async function listenToPush(
   received: (item: { title?: string; body?: string; data?: Record<string, string> }) => void,
 ): Promise<() => void> {
-  if (!Capacitor.isNativePlatform()) return () => undefined;
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) return () => undefined;
   const handle = await PushNotifications.addListener("pushNotificationReceived", (item) =>
     received({
       title: item.title,

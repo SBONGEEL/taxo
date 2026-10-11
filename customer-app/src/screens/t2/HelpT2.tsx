@@ -88,7 +88,7 @@ export function HelpT2Screen() {
           onClick={(event) => {
             // **الغلافُ يفتح تطبيقَ البريد** — والرابطُ يبقى رابطاً لقارئ الشاشة وللمتصفّح
             event.preventDefault();
-            void AppLauncher.openUrl({ url: mail });
+            void AppLauncher.openUrl({ url: mail }).catch(() => undefined);
           }}
         >
           <span className="t2-help-mail-icon" aria-hidden="true">

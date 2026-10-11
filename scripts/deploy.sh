@@ -506,29 +506,33 @@ say "  CI      : يُنتظر التشغيلُ لإيداع ${HEAD_SHA:0:8}…"
 [ -n "${GITHUB_TAXO_TOKEN:-}" ] || die "لا رمزَ لقراءة CI (\$GITHUB_TAXO_TOKEN) — البوّابةُ الثانيةُ لا تُقطع."
 REPO="${TAXO_GITHUB_REPO:-SBONGEEL/taxo}"
 
-ci_state() { # يطبع: <الحال> <الرابط> لتشغيل هذا الإيداع وحدَه
-  curl -sS -H "Authorization: Bearer $GITHUB_TAXO_TOKEN"        -H "Accept: application/vnd.github+json"        "https://api.github.com/repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=10"   | python3 -c "
-import json,sys
-try: runs = json.load(sys.stdin).get('workflow_runs', [])
-except Exception: runs = []
-# **التشغيلُ يُطابَق بالإيداع لا بالأحدثية**: أخضرُ لإيداعٍ آخرَ لا يقول شيئاً
-# عمّا نرفعه — وهو ما تحرسه البوّابةُ الخامسة حين تقارن إيداعَ الخادم بـCI.
-runs = [r for r in runs if r.get('name') == 'CI'] or runs
-print('' if not runs else f\"{runs[0].get('conclusion') or runs[0].get('status')} {runs[0].get('html_url','')}\")
-" 2>/dev/null
-}
-
-CI_STATE=""; CI_URL=""
-for _ in $(seq 1 120); do   # ٤٠ دقيقةً بحدٍّ أقصى — مهلةُ الوظيفتين ٣٠+٢٠
-  read -r CI_STATE CI_URL <<<"$(ci_state)"
-  case "$CI_STATE" in
-    success) break ;;
-    failure|cancelled|timed_out|action_required|startup_failure)
-      die "CI أحمرُ ($CI_STATE) — **يقف كلُّ شيءٍ هنا**. التشغيل: ${CI_URL:-<لا رابط>}" ;;
-  esac
-  sleep 20
-done
-[ "$CI_STATE" = "success" ] || die "CI لم يخضرَّ في المهلة (آخرُ حالٍ: ${CI_STATE:-<لا تشغيلَ لهذا الإيداع>}). التشغيل: ${CI_URL:-—}"
+# **والحكمُ في `scripts/deploy_ci_gate.py`** (قرارُ المالك 2026-10-11) — **ثلاثةُ أحكامٍ لا واحد**:
+#   ١) **التشغيلُ تشغيلُ هذا الدفع** — `head_branch` = الفرعُ المدفوع و`event` = `push` — **لا أحدثُ تشغيلٍ للإيداع**. **وقِيس أن
+#      القديمَ قرأ تشغيلَ `redesign` على الإيداع نفسِه** لأن تشغيلَ دفع `master` لم يكن قد أُنشئ بعد بثوانٍ، فلم يرَ مجموعةَ الإيداعات
+#      لدفعٍ يحمل خمسةَ عشرَ إيداعاً — واحمرّ ذلك التشغيلُ بعد الرفع. **وغيابُ تشغيل الدفع انتظارٌ لا مرور.**
+#   ٢) **رأسٌ أحمرُ لا يمرّ أبداً** — المجموعةُ الكاملة، والحرّاسُ وبناءُ الثلاثة، والملفّاتُ الخمسة.
+#   ٣) **وكلُّ إيداعٍ بين الإنتاج والرأس مقيس، وأحمرُه مُصلَح**: كلُّ اختبارٍ سقط عنده **قائمٌ عند الرأس بلا تخطٍّ** والمجموعةُ الكاملةُ
+#      عند الرأس خضراء. **واختبارٌ حُذف ليس إصلاحاً، وأحمرُ بلا اختبارٍ مسمّى لا يُعرف ما أُصلح فيه، وإيداعٌ لم يُقَس لا يُفترض** — يقف.
+# **والمهلةُ ثلاثُ ساعاتٍ لا أربعون دقيقة**: تشغيلُ `master` يحمل مجموعةً لكلِّ إيداعٍ في الدفعة (حتى اثنتي عشرة، ستٌّ متوازية بسقف
+# ستّين دقيقةً لكلّ) **وقِيس 2026-10-11 مئةَ دقيقة** (18:38 ⇐ 20:18Z) — **ومهلةٌ أقصرُ منه تقف على تشغيلٍ سليم**.
+# **وإيداعُ الإنتاج المجهولُ يقف هنا** (لا `--commits`): لا يُعرف ما يُرفع، فلا يُحكم على تاريخه.
+# والاختبارُ في الاتجاهين: `scripts/tests/deploy-ci-gate.test.sh` (في `guards.sh`).
+CI_COMMITS=()
+if [ -n "${REMOTE_SHA:-}" ] && git cat-file -e "$REMOTE_SHA^{commit}" 2>/dev/null; then
+  CI_COMMITS=(--commits "$(git rev-list "$REMOTE_SHA..$HEAD_SHA" | tr '\n' ' ')")
+fi
+CI_OUT="$(mktemp)"
+CI_URL=""
+if python3 "$(dirname "${BASH_SOURCE[0]}")/deploy_ci_gate.py" --repo "$REPO" --sha "$HEAD_SHA" \
+     --branch "$(git rev-parse --abbrev-ref HEAD)" ${CI_COMMITS[@]+"${CI_COMMITS[@]}"} \
+     --wait-minutes "${TAXO_CI_WAIT_MINUTES:-180}" | tee "$CI_OUT"; then
+  CI_URL="$(sed -n 's/^CI_OK //p' "$CI_OUT" | tail -1)"
+  rm -f "$CI_OUT"
+else
+  CI_URL="$(sed -nE 's/^CI_(STOP|TIMEOUT) //p' "$CI_OUT" | tail -1)"
+  rm -f "$CI_OUT"
+  die "CI لا يمرّ — **يقف كلُّ شيءٍ هنا**. التشغيل: ${CI_URL:-<لا تشغيلَ لهذا الدفع>}"
+fi
 say "  CI      : أخضر — ${CI_URL:-}"
 
 # **`STAMP` و`LOCAL` لم يكونا معرَّفَين قط** (صُحّح 2026-08-22): نصفُ البابِ

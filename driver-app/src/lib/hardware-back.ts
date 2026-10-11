@@ -24,6 +24,7 @@ import { AUTH_ROOTS, isWelcomeOpen, reopenWelcome } from "@/components/welcome/g
 export function bindHardwareBack(): () => void {
   if (!Capacitor.isNativePlatform()) return () => undefined;
 
+  // **والرفضُ يُمسك عند التعليق لا عند الفكّ** (الشكلُ الذي أنتج بلاغَ 496): وعدٌ يبقى بلا ماسكٍ حتى التنظيف يطفو
   const handle = App.addListener("backButton", () => {
     const state = window.history.state as { idx?: number } | null;
     const depth = typeof state?.idx === "number" ? state.idx : 0;
@@ -39,10 +40,10 @@ export function bindHardwareBack(): () => void {
     }
     // **الخروجُ من جذر التطبيق وحدَه**: من كان في الشاشة الأولى ولا تاريخَ
     // له، الرجوعُ عنده يعني «أغلق» — وهذا ما يتوقعه مستخدمُ أندرويد
-    void App.exitApp();
-  });
+    void App.exitApp().catch(() => undefined);
+  }).catch(() => null);
 
   return () => {
-    void handle.then((listener) => listener.remove());
+    void handle.then((listener) => listener?.remove());
   };
 }

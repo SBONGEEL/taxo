@@ -396,9 +396,12 @@ function PushRouter() {
         const to = destinationFor(data.type, data);
         if (to) navigate(to);
       },
-    }).then((off) => {
-      dispose = off;
-    });
+    })
+      .then((off) => {
+        dispose = off;
+      })
+      // **غلافٌ بلا إضافة الإشعارات** (بلاغُ 496 عند الراكب، والشكلُ نفسُه هنا): لا مستمعَ ولا وعدٌ طافٍ
+      .catch(() => undefined);
     return () => dispose?.();
   }, [navigate]);
   return null;

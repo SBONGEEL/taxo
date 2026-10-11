@@ -59,13 +59,17 @@ export function RideComms({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // **والغلافُ قد يكون بلا إضافة الإشعارات** (بلاغُ الإصدار 496، 2026-10-11): حزمةٌ بُنيت قبل `51236e4` تحمّل شاشاتٍ أحدثَ
+    // منها من الخادم — فكان هذا الوعدُ يُرفض عند كلِّ إقلاعٍ ويصل تقاريرَ الأعطال. **فيُسأل عنها أولاً، ويُمسك رفضُها إن بقي**
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) return;
     let handle: { remove: () => Promise<void> } | null = null;
     void PushNotifications.addListener("pushNotificationActionPerformed", (item) => {
       routeCommsPush((item.notification.data ?? {}) as Record<string, string>, "tap");
-    }).then((listener) => {
-      handle = listener;
-    });
+    })
+      .then((listener) => {
+        handle = listener;
+      })
+      .catch(() => undefined);
     return () => void handle?.remove();
   }, []);
 

@@ -116,7 +116,10 @@ if [ "$SHELL_KIND" = "Git Bash" ] && [ "${TAXO_DEPLOY_DETACHED:-0}" != "1" ]; th
     printf 'export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.fileMode GIT_CONFIG_VALUE_0=false\n'
     printf 'exec %s' "$(printf '%q' "$HERE/deploy-here.sh")"
     for arg in "$@"; do printf ' %s' "$(printf '%q' "$arg")"; done
-    printf ' > %s 2>&1\n' "$(printf '%q' "$LOG")"
+    # **ومدخلُه `/dev/null` لا ما ورثه** (قِيس 2026-10-11، `deploy-20261011T182955Z.log`): عميلُ ويندوز `ssh.exe` علق **سبعَ دقائق**
+    # على `git rev-parse HEAD` في البوّابة الأولى ومدخلُه موروثٌ من نافذةٍ مخفيّة لا تُغلق — وكلُّ نداءٍ في `deploy.sh` يحتاج مدخلاً
+    # يوجّهه صراحةً (`< .gitignore`، `tar … |`)، **فما لا يوجّهه يقرأ نهايةَ ملفٍّ لا نافذةً**. وأُعيد الرفعُ بهذا فخضرت الستّ.
+    printf ' < /dev/null > %s 2>&1\n' "$(printf '%q' "$LOG")"
   } >"$RUNNER"
   chmod +x "$RUNNER"
 

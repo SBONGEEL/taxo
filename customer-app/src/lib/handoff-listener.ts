@@ -51,9 +51,12 @@ async function adopt(url: string): Promise<void> {
 }
 
 export function listenForHandoff(): void {
-  void App.addListener("appUrlOpen", ({ url }) => void adopt(url));
+  // **ورفضُ الإضافة لا يطفو** (الشكلُ الذي أنتج بلاغَ 496): غلافٌ بلا `App` لا تسليمَ فيه، ولا تقريرَ عطب
+  void App.addListener("appUrlOpen", ({ url }) => void adopt(url)).catch(() => undefined);
   // **والإقلاعُ الباردُ يُسأل صراحةً** — لا يصله حدث
-  void App.getLaunchUrl().then((launch) => {
-    if (launch?.url) void adopt(launch.url);
-  });
+  void App.getLaunchUrl()
+    .then((launch) => {
+      if (launch?.url) void adopt(launch.url);
+    })
+    .catch(() => undefined);
 }

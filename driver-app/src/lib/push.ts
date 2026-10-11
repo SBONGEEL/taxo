@@ -49,7 +49,10 @@ export interface PushRegistration {
  * على شاشةٍ فارغةٍ يُرفض ثم **لا يُسأل ثانية** (قاعدةٌ مكتوبةٌ في البيان).
  */
 export async function registerNativePush(): Promise<PushRegistration> {
-  if (!Capacitor.isNativePlatform()) return { state: "unsupported", token: null };
+  // **وغلافٌ بلا الإضافة «لا يدعم»** (بلاغُ 496): حزمةٌ أقدمُ من الشاشات التي تحمّلها لا تُسأل عمّا ليس فيها
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) {
+    return { state: "unsupported", token: null };
+  }
 
   let status = await PushNotifications.checkPermissions();
   if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
@@ -66,9 +69,10 @@ export async function registerNativePush(): Promise<PushRegistration> {
       settled = true;
       resolve(value);
     };
-    void PushNotifications.addListener("registration", (item) => done(item.value));
-    void PushNotifications.addListener("registrationError", () => done(null));
-    void PushNotifications.register();
+    // **ورفضُ أيٍّ منها «لا رمز» لا وعدٌ طافٍ** — يصل تقاريرَ الأعطال ولا يقول شيئاً
+    void PushNotifications.addListener("registration", (item) => done(item.value)).catch(() => done(null));
+    void PushNotifications.addListener("registrationError", () => done(null)).catch(() => done(null));
+    void PushNotifications.register().catch(() => done(null));
     // **مهلةٌ كي لا يعلَّق الدخولُ على خدمةٍ بعيدة**: غيابُ الرمز إشعاراتٌ لا
     // تصل، وتعليقُ الجلسة عليه شاشةٌ لا تفتح
     window.setTimeout(() => done(null), 15_000);
@@ -136,7 +140,7 @@ export async function listenToPush(handlers: {
   received: (data: Record<string, string>, notice: { title?: string; body?: string }) => void;
   tapped: (data: Record<string, string>) => void;
 }): Promise<() => void> {
-  if (!Capacitor.isNativePlatform()) return () => undefined;
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) return () => undefined;
 
   const received = await PushNotifications.addListener(
     "pushNotificationReceived",
@@ -167,7 +171,7 @@ export async function listenToPush(handlers: {
  * واحد**. فالطلبُ هنا، والتسجيلُ يبقى حيث كان.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return false;
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("PushNotifications")) return false;
   let status = await PushNotifications.checkPermissions();
   if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
     status = await PushNotifications.requestPermissions();
