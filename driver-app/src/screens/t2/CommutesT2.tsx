@@ -21,27 +21,27 @@ import { Icon } from "@/taxo2";
 import { countRides } from "./count";
 
 import "./t2.css";
-import "./guarantees.css";
+import "./guarantees.css"; import { tr } from "@/lib/i18n";
 
 /** أيامُ الأسبوع **الأحدُ أوّلاً** وبتُّ كلٍّ في قناع الخلفية (ترتيبُ `weekday()`: الإثنين 1 … الأحد 64). */
 const DAYS: ReadonlyArray<{ bit: number; name: string }> = [
-  { bit: 64, name: "الأحد" },
-  { bit: 1, name: "الاثنين" },
-  { bit: 2, name: "الثلاثاء" },
-  { bit: 4, name: "الأربعاء" },
-  { bit: 8, name: "الخميس" },
-  { bit: 16, name: "الجمعة" },
-  { bit: 32, name: "السبت" },
+  { bit: 64, name: tr("الأحد") },
+  { bit: 1, name: tr("الاثنين") },
+  { bit: 2, name: tr("الثلاثاء") },
+  { bit: 4, name: tr("الأربعاء") },
+  { bit: 8, name: tr("الخميس") },
+  { bit: 16, name: tr("الجمعة") },
+  { bit: 32, name: tr("السبت") },
 ];
 
 /** «الأحد · الثلاثاء · الخميس» — **والمتتاليةُ مدىً** «الأحد إلى الخميس» (خمسةُ أسماءٍ تلتفّ سطرين في رأس البطاقة، قِيس)، و«كلَّ
  *  يوم» للسبعة. والقاعدةُ قاعدةُ تطبيق الراكب (`commuteDaysText`) — فيقرأ الطرفان الأيامَ بنصٍّ واحد. */
 function daysText(mask: number): string {
   const picked = DAYS.filter((day) => (mask & day.bit) !== 0);
-  if (picked.length === DAYS.length) return "كلَّ يوم";
+  if (picked.length === DAYS.length) return tr("كلَّ يوم");
   const first = DAYS.indexOf(picked[0]);
   const run = picked.length >= 3 && picked.every((day, index) => DAYS[first + index] === day);
-  return run ? `${picked[0].name} إلى ${picked[picked.length - 1].name}` : picked.map((day) => day.name).join(" · ");
+  return run ? tr("{0} إلى {1}", { 0: picked[0].name, 1: picked[picked.length - 1].name }) : picked.map((day) => day.name).join(" · ");
 }
 
 /** «8 أكتوبر» — **يومٌ محلّيٌّ لا لحظةٌ بتوقيتٍ عالميّ** (`new Date("2026-10-08")` منتصفُ ليلٍ بتوقيت غرينتش). */
@@ -58,14 +58,14 @@ export function CommutesT2Screen() {
     <div className="t2 t2-gu">
       <div className="t2-gu-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">مشاويرُ ثابتة</h1>
+          <h1 className="t2-title">{tr("مشاويرُ ثابتة")}</h1>
         </div>
         <p className="t2-gu-lede">
-          مشوارٌ يوميٌّ دفعه راكبُه مقدّماً لشهر. اعتمده فتصلك رحلاتُه قبل غيرك حين تكون متصلاً ومتاحاً — <b>وأجرتُها
-          تُقيَّد في محفظتك من اشتراكه</b>، فلا تستلم من الراكب شيئاً.
+          {tr("مشوارٌ يوميٌّ دفعه راكبُه مقدّماً لشهر. اعتمده فتصلك رحلاتُه قبل غيرك حين تكون متصلاً ومتاحاً —")}{" "}<b>{tr("وأجرتُها تُقيَّد في محفظتك من اشتراكه")}
+</b>{tr("، فلا تستلم من الراكب شيئاً.")}
         </p>
 
         {error ? (
@@ -86,7 +86,7 @@ export function CommutesT2Screen() {
             {lists.mine.length > 0 ? (
               <section>
                 <div className="t2-section">
-                  مشاويرُك
+                  {tr("مشاويرُك")}
                   <span className="t2-section-aside" dir="ltr">
                     {digits(String(lists.mine.length))}
                   </span>
@@ -100,7 +100,7 @@ export function CommutesT2Screen() {
                       aria-busy={busy === row.id}
                       onClick={() => release(row)}
                     >
-                      {busy === row.id ? "نرسل…" : "اعتذر عن المشوار"}
+                      {busy === row.id ? tr("نرسل…") : tr("اعتذر عن المشوار")}
                     </button>
                   </CommuteCard>
                 ))}
@@ -110,9 +110,9 @@ export function CommutesT2Screen() {
             {/* **العروضُ خلف المفتاح** — ومطفأً لا قسمَ يقول «لا عروض» عن خدمةٍ لا تعمل */}
             {enabled ? (
               <section>
-                <div className="t2-section">مشاويرُ تنتظر كبتناً</div>
+                <div className="t2-section">{tr("مشاويرُ تنتظر كبتناً")}</div>
                 {lists.offers.length === 0 ? (
-                  <p className="t2-empty">لا مشاويرَ تنتظر الآن. تظهر هنا اشتراكاتُ الركّاب في سوقك حين لا يعتمدها أحد.</p>
+                  <p className="t2-empty">{tr("لا مشاويرَ تنتظر الآن. تظهر هنا اشتراكاتُ الركّاب في سوقك حين لا يعتمدها أحد.")}</p>
                 ) : (
                   lists.offers.map((row) => {
                     const note = notes[row.id];
@@ -125,7 +125,7 @@ export function CommutesT2Screen() {
                           aria-busy={busy === row.id}
                           onClick={() => approve(row)}
                         >
-                          {busy === row.id ? "نرسل…" : "اعتمد المشوار"}
+                          {busy === row.id ? tr("نرسل…") : tr("اعتمد المشوار")}
                         </button>
                       </CommuteCard>
                     );
@@ -133,7 +133,7 @@ export function CommutesT2Screen() {
                 )}
               </section>
             ) : lists.mine.length === 0 ? (
-              <p className="t2-empty">لا مشاويرَ معتمدةً لك.</p>
+              <p className="t2-empty">{tr("لا مشاويرَ معتمدةً لك.")}</p>
             ) : null}
           </>
         )}
@@ -169,20 +169,20 @@ function CommuteCard({
       </div>
       <div className="t2-gu-route">
         <span className="t2-gu-dot" aria-hidden="true" />
-        <span className="t2-gu-place">{row.pickup_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-gu-place">{row.pickup_address ?? tr("نقطة على الخريطة")}</span>
         <span className="t2-gu-dot to" aria-hidden="true" />
-        <span className="t2-gu-place strong">{row.dropoff_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-gu-place strong">{row.dropoff_address ?? tr("نقطة على الخريطة")}</span>
       </div>
       <div className="t2-gu-money">
         <span>
-          ذهاب{" "}
+          {tr("ذهاب")}{" "}
           <b dir="ltr" className="t2-gu-time">
             {row.go_time.slice(0, 5)}
           </b>
           {row.return_time ? (
             <>
               {" "}
-              · عودة{" "}
+              {tr("· عودة")}{" "}
               <b dir="ltr" className="t2-gu-time">
                 {row.return_time.slice(0, 5)}
               </b>
@@ -190,7 +190,7 @@ function CommuteCard({
           ) : null}
         </span>
         <span className="t2-gu-fee">
-          <b dir="ltr">{digits(row.price_per_ride)}</b> {cur} للرحلة · {countRides(row.rides_total)}
+          <b dir="ltr">{digits(row.price_per_ride)}</b> {cur}{" "}{tr("للرحلة ·")}{" "}{countRides(row.rides_total)}
         </span>
       </div>
       {children}

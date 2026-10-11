@@ -21,7 +21,7 @@ import { AlertTriangle } from "lucide-react";
 import { ApiError, api } from "@/api/client";
 import { reportRiderPhoto } from "@/api/endpoints";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function RiderAvatar({
   rideId,
@@ -64,7 +64,7 @@ export function RiderAvatar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="صورة الراكب"
+        aria-label={tr("صورة الراكب")}
         className={cn(
           "pressable flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-2",
           className,
@@ -111,7 +111,7 @@ function RiderPhotoSheet({
       onClose();
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إرسال البلاغ",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إرسال البلاغ"),
       );
     } finally {
       setBusy(false);
@@ -127,7 +127,7 @@ function RiderPhotoSheet({
         className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="mb-12 text-16 font-bold text-ink">صورة الراكب</h2>
+        <h2 className="mb-12 text-16 font-bold text-ink">{tr("صورة الراكب")}</h2>
 
         <div className="mx-auto mb-14 size-150 overflow-hidden rounded-18 border border-line bg-surface-2">
           {src ? (
@@ -142,8 +142,8 @@ function RiderPhotoSheet({
             {/* **النصُّ يقول ما سيقع بالضبط** — لا «هل أنت متأكد؟»: من يقرأ
                 سؤالاً عامّاً يضغط «نعم» بلا قراءة، ومن يقرأ الأثرَ يتأمّل */}
             <p className="mb-12 mt-6 rounded-14 border border-line bg-surface-2 px-14 py-11 text-11.5 leading-note text-warn">
-              ستُحجب صورةُ هذا الراكب فوراً عن الجميع، ويُعرض البلاغُ على
-              مشرفٍ يفصل فيه. ولا يُلغى البلاغُ بعد إرساله.
+              {tr("ستُحجب صورةُ هذا الراكب فوراً عن الجميع، ويُعرض البلاغُ على مشرفٍ يفصل فيه. ولا يُلغى البلاغُ بعد إرساله.")}
+
             </p>
             <div className="flex flex-col gap-9">
               <button
@@ -152,14 +152,14 @@ function RiderPhotoSheet({
                 onClick={() => void report()}
                 className="pressable w-full rounded-16 bg-danger p-15 text-center text-14 font-bold text-white disabled:opacity-50"
               >
-                {busy ? "…" : "تأكيد البلاغ"}
+                {busy ? "…" : tr("تأكيد البلاغ")}
               </button>
               <button
                 type="button"
                 onClick={() => setAsking(false)}
                 className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
               >
-                تراجع
+                {tr("تراجع")}
               </button>
             </div>
           </>
@@ -171,14 +171,14 @@ function RiderPhotoSheet({
               className="pressable flex w-full items-center justify-center gap-8 rounded-16 border border-line p-14 text-13.5 font-semibold text-danger"
             >
               <AlertTriangle size={16} />
-              بلّغ عن هذه الصورة
+              {tr("بلّغ عن هذه الصورة")}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="pressable mt-9 w-full py-8 text-center text-12.5 font-semibold text-muted"
             >
-              إغلاق
+              {tr("إغلاق")}
             </button>
           </>
         )}

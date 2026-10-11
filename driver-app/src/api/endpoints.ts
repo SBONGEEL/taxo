@@ -81,7 +81,7 @@ import type {
   CommuteOffer,
   IntercityRoute,
   IntercityTrip,
-} from "@/api/types";
+} from "@/api/types"; import { tr } from "@/lib/i18n";
 
 // ------------------------------------------------------------ الإعدادات
 
@@ -826,7 +826,7 @@ export async function uploadCallRecording(callId: string, recording: Blob): Prom
     throw new ApiError(
       answer.status,
       String(body.code ?? "http_error"),
-      String(body.message ?? "تعذّر رفع التسجيل"),
+      String(body.message ?? tr("تعذّر رفع التسجيل")),
       undefined,
       body,
     );
@@ -898,3 +898,6 @@ export const openPaymentCheckout = (body: {
 /** **يسأل الوسيطَ عن طلبي المعلَّق** — صفحةُ العودة تناديه حتى يُحسم. */
 export const refreshPaymentRequest = (requestId: string) =>
   api.post<MyPaymentRequest>(`/payment-requests/${requestId}/refresh`, {});
+
+/** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
+export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });

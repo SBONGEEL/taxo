@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.core import validation_errors
+from app.core.i18n import language_of_header, translate
 from app.core.request_id import HEADER as REQUEST_ID_HEADER
 from app.core.request_id import request_id_of
 
@@ -677,13 +678,18 @@ def register_exception_handlers(app: FastAPI) -> None:
     الباقيةَ تخرج بشكل FastAPI، وهو **شكلٌ ثانٍ** يقرؤه العميلُ خطأً.
     """
 
+    def _lang(request: Request) -> str:
+        # **من رأس الطلب نفسِه لا من سياقه** (SPEC §٧٣-هـ المرحلة ٥): معالجُ «ما لم يتوقّعه أحد» يعمل خارج كلِّ وسيط،
+        # والسياقُ قد أُعيد قبله — والرأسُ لا يُعاد
+        return language_of_header(request.headers.get("accept-language"))
+
     @app.exception_handler(AppError)
-    async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:
+    async def _handle_app_error(request: Request, exc: AppError) -> JSONResponse:
         # **الحقلُ `message` لا `detail`** (عقدُ الأخطاء، 2026-08-18): كان
         # `detail`، وهو اسمُ FastAPI نفسِه في الـ422 حيث تكون قيمتُه **مصفوفةً
         # لا نصّاً** — فيقرأ العميلُ كائناً ويعرض `[object Object]`. اسمٌ واحدٌ
         # لمعنيين هو العطبُ نفسُه لا تسميتُه.
-        body: dict[str, object] = {"code": exc.code, "message": exc.message}
+        body: dict[str, object] = {"code": exc.code, "message": translate(exc.message, _lang(request))}
         if exc.extra:
             body |= exc.extra
         headers = {}
@@ -735,7 +741,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         first = errors[0] if errors else {}
         body: dict[str, object] = {
             "code": "validation_error",
-            "message": validation_errors.message_for(first),
+            "message": translate(validation_errors.message_for(first), _lang(request)),
         }
         field = validation_errors.field_of(first)
         if field:
@@ -744,7 +750,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             body["errors"] = [
                 {
                     "field": validation_errors.field_of(error),
-                    "message": validation_errors.message_for(error),
+                    "message": translate(validation_errors.message_for(error), _lang(request)),
                 }
                 for error in errors
             ]
@@ -752,7 +758,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(HTTPException)
     async def _handle_http_exception(
-        _: Request, exc: HTTPException
+        request: Request, exc: HTTPException
     ) -> JSONResponse:
         """ما ترفعه FastAPI/Starlette نفسُها — بشكل العقد أيضاً.
 
@@ -773,7 +779,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             logger.warning("HTTPException %s: %s", exc.status_code, exc.detail)
         return JSONResponse(
             status_code=exc.status_code,
-            content={"code": code, "message": message},
+            content={"code": code, "message": translate(message, _lang(request))},
             headers=getattr(exc, "headers", None),
         )
 

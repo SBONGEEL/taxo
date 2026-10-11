@@ -11,7 +11,7 @@
 
 import type { Currency, UserNotification } from "@/api/types";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
 export function composeBody(entry: UserNotification): string | null {
@@ -26,18 +26,18 @@ export function composeBody(entry: UserNotification): string | null {
   switch (entry.kind) {
     case "cliq_transfer_submitted":
       return money && data.transfer_reference
-        ? `${money} — مرجع الحوالة ${data.transfer_reference}`
+        ? tr("{0} — مرجع الحوالة {1}", { 0: money, 1: data.transfer_reference })
         : money;
     case "cliq_confirmation_expired":
-      return money ? `${money} — تفصل فيها الإدارة الآن.` : null;
+      return money ? tr("{0} — تفصل فيها الإدارة الآن.", { 0: money }) : null;
     case "ride_completed":
-      return money ? `أجرة الرحلة ${money}.` : null;
+      return money ? tr("أجرة الرحلة {0}.", { 0: money }) : null;
     case "document_rejected":
       return data.review_note || null;
     case "subscription_expiring":
     case "subscription_expired":
       return data.expires_at
-        ? `تغطيتك حتى ${formatWhen(data.expires_at)}.`
+        ? tr("تغطيتك حتى {0}.", { 0: formatWhen(data.expires_at) })
         : null;
     default:
       return null;

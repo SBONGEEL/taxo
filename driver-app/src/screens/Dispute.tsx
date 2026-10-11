@@ -28,14 +28,14 @@ import { Icon } from "@/taxo2";
 import { startOfToday, whenParts } from "./t2/when";
 
 import "./t2/fields.css";
-import "./t2/rides.css";
+import "./t2/rides.css"; import { tr } from "@/lib/i18n";
 
 /** **مُصدَّرةٌ لـ«ركّابٌ ينتظرون تأكيدك»** (`screens/t2/UnconfirmedT2.tsx`، §٦٤-ز): «لم تصلني» هناك بالأسباب نفسِها حرفاً —
  *  أسبابٌ تُكتب مرّتين تفترق أوّلَ تعديل، والإدارةُ تقرأ النصَّ من البابين. */
 export const CLIQ_DISPUTE_REASONS = [
-  "لم تصلني الحوالة إطلاقاً",
-  "وصلتني حوالة أقل من الأجرة",
-  "المرجع الذي أدخله الراكب لا يطابق أي حوالة وصلتني",
+  tr("لم تصلني الحوالة إطلاقاً"),
+  tr("وصلتني حوالة أقل من الأجرة"),
+  tr("المرجع الذي أدخله الراكب لا يطابق أي حوالة وصلتني"),
 ];
 
 export function DisputeScreen() {
@@ -66,7 +66,7 @@ export function DisputeScreen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الدفعة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الدفعة"),
       ),
     );
   }, [load]);
@@ -82,7 +82,7 @@ export function DisputeScreen() {
       navigate(`/rides/${rideId}`, { replace: true });
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر فتح النزاع",
+        caught instanceof ApiError ? caught.message : tr("تعذّر فتح النزاع"),
       );
     } finally {
       setBusy(false);
@@ -94,12 +94,12 @@ export function DisputeScreen() {
       <button
         type="button"
         className="t2-back"
-        aria-label="رجوع"
+        aria-label={tr("رجوع")}
         onClick={() => goBack()}
       >
         <Icon name="arrow_forward" />
       </button>
-      <h1 className="t2-title">فتح نزاع</h1>
+      <h1 className="t2-title">{tr("فتح نزاع")}</h1>
     </div>
   );
 
@@ -129,8 +129,8 @@ export function DisputeScreen() {
       {head}
 
       <p className="t2-dsp-lede">
-        افتح نزاعاً إن لم تصلك حوالة الرحلة. تفصله الإدارة: مدفوعة أو غير
-        مدفوعة.
+        {tr("افتح نزاعاً إن لم تصلك حوالة الرحلة. تفصله الإدارة: مدفوعة أو غير مدفوعة.")}
+
       </p>
 
       <div className="t2-dsp-card">
@@ -149,7 +149,7 @@ export function DisputeScreen() {
           <div className="t2-dsp-refs">
             {payment?.cliq_reference ? (
               <>
-                <span className="t2-dsp-ref-k">مرجع TAXO</span>
+                <span className="t2-dsp-ref-k">{tr("مرجع TAXO")}</span>
                 <span className="t2-dsp-ref-v" dir="ltr">
                   {payment.cliq_reference}
                 </span>
@@ -157,7 +157,7 @@ export function DisputeScreen() {
             ) : null}
             {payment?.cliq_transfer_reference ? (
               <>
-                <span className="t2-dsp-ref-k">المرجع الذي أدخله الراكب</span>
+                <span className="t2-dsp-ref-k">{tr("المرجع الذي أدخله الراكب")}</span>
                 <span className="t2-dsp-ref-v" dir="ltr">
                   {payment.cliq_transfer_reference}
                 </span>
@@ -170,15 +170,15 @@ export function DisputeScreen() {
       {payment === null ? (
         <p className="t2-note danger" role="alert">
           <Icon name="error" fill />
-          لا دفعة كليك بانتظار تأكيدك على هذه الرحلة. النزاع متاح على دفعات كليك
-          وحدها.
+          {tr("لا دفعة كليك بانتظار تأكيدك على هذه الرحلة. النزاع متاح على دفعات كليك وحدها.")}
+
         </p>
       ) : (
         <div className="t2-dsp-form">
           <div
             className="t2-dsp-reasons"
             role="radiogroup"
-            aria-label="سبب النزاع"
+            aria-label={tr("سبب النزاع")}
           >
             {CLIQ_DISPUTE_REASONS.map((option) => (
               <button
@@ -199,12 +199,12 @@ export function DisputeScreen() {
 
           <div className="t2-dsp-note">
             <label className="t2-fld-label" htmlFor="dispute-note">
-              ملاحظة
+              {tr("ملاحظة")}
             </label>
             <input
               id="dispute-note"
               className="t2-fld"
-              placeholder="أضف تفصيلاً يساعد الإدارة…"
+              placeholder={tr("أضف تفصيلاً يساعد الإدارة…")}
               value={note}
               onChange={(event) => setNote(event.target.value)}
               maxLength={200}
@@ -226,11 +226,11 @@ export function DisputeScreen() {
             disabled={reason === null || busy}
             onClick={() => void submit()}
           >
-            {busy ? "…" : "إرسال النزاع"}
+            {busy ? "…" : tr("إرسال النزاع")}
           </button>
 
           <p className="t2-dsp-fine">
-            المسار الفعلي مسجَّلٌ مع الرحلة، وتراه الإدارة حين تفصل في النزاع.
+            {tr("المسار الفعلي مسجَّلٌ مع الرحلة، وتراه الإدارة حين تفصل في النزاع.")}
           </p>
         </div>
       )}

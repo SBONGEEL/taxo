@@ -33,7 +33,7 @@ import {
 import { countDays } from "./count";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** **أيقونةُ كلِّ نوعٍ كما رسمتها اللوحة** — وصورُ المركبة (لم تُرسم) بالكاميرا: صورةٌ تُلتقط لا وثيقةٌ تُحمل. */
 const DOC_ICON: Record<DocumentType, string> = {
@@ -111,14 +111,14 @@ function viewOf(
   if (!document) {
     return {
       tone: "off",
-      sub: "لم يُرفع",
+      sub: tr("لم يُرفع"),
       valid: false,
       end: "upload",
       alarm: false,
       note: null,
     };
   }
-  const uploaded = `رُفعت ${dmyOfInstant(document.updated_at)}`;
+  const uploaded = tr("رُفعت {0}", { 0: dmyOfInstant(document.updated_at) });
   if (document.review_status === "pending") {
     return {
       tone: "off",
@@ -153,20 +153,20 @@ function viewOf(
   const left = daysUntil(document.expires_on, today);
   const date = dmyOfDate(document.expires_on);
   if (left <= 0) {
-    const since = left === 0 ? "اليوم" : `منذ ${countDays(-left, true)}`;
+    const since = left === 0 ? tr("اليوم") : tr("منذ {0}", { 0: countDays(-left, true) });
     return {
       tone: "danger",
-      sub: `انتهى في ${date}`,
+      sub: tr("انتهى في {0}", { 0: date }),
       valid: false,
       end: "upload",
       alarm: true,
-      note: `انتهت صلاحية ${DOC_LABEL[docType]} ${since} — لن تصلك طلبات حتى ترفع وثيقةً ساريةً ويعتمدها المشرف.`,
+      note: tr("انتهت صلاحية {0} {1} — لن تصلك طلبات حتى ترفع وثيقةً ساريةً ويعتمدها المشرف.", { 0: DOC_LABEL[docType], 1: since }),
     };
   }
   if (left <= EXPIRING_DAYS) {
     return {
       tone: "warn",
-      sub: `تنتهي خلال ${countDays(left, true)} · ${date}`,
+      sub: tr("تنتهي خلال {0} · {1}", { 0: countDays(left, true), 1: date }),
       valid: true,
       end: "renew",
       alarm: false,
@@ -175,7 +175,7 @@ function viewOf(
   }
   return {
     tone: "ok",
-    sub: `سارية حتى ${date}`,
+    sub: tr("سارية حتى {0}", { 0: date }),
     valid: true,
     end: "valid",
     alarm: false,
@@ -204,24 +204,24 @@ export function VehicleT2Screen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => s.goBack()}
         >
           <span className="t2-icon" aria-hidden="true">
             arrow_forward
           </span>
         </button>
-        <h1 className="t2-title">الوثائق</h1>
+        <h1 className="t2-title">{tr("الوثائق")}</h1>
       </div>
 
       {s.state ? (
         <div className="t2-vdocs-sum">
           <div className="t2-vdocs-sum-top">
             <span className="t2-vdocs-count">
-              {digits(String(valid))} من {digits(String(rows.length))} سارية
+              {digits(String(valid))}{" "}{tr("من")}{" "}{digits(String(rows.length))}{" "}{tr("سارية")}
             </span>
             {stopped ? (
-              <span className="t2-vdocs-stop">الاستقبال متوقف</span>
+              <span className="t2-vdocs-stop">{tr("الاستقبال متوقف")}</span>
             ) : null}
           </div>
           <div className="t2-vdocs-bar" aria-hidden="true">
@@ -267,12 +267,12 @@ export function VehicleT2Screen() {
 
       {/* سطرُ الاستبدال بنصّه — ثمنُ الرفع يُقال قبل الرفع */}
       <p className="t2-vdocs-fine">
-        رفعُ مستندٍ من جديد يستبدل القديم ويعيده «قيد المراجعة». وإن كان حسابك
-        معتمداً فسيعود قيد المراجعة حتى تُقبل الوثيقة الجديدة.
+        {tr("رفعُ مستندٍ من جديد يستبدل القديم ويعيده «قيد المراجعة». وإن كان حسابك معتمداً فسيعود قيد المراجعة حتى تُقبل الوثيقة الجديدة.")}
+
       </p>
 
       {/* ── المركبة: في الشاشة القائمة ولم تُرسم — بياناتُها وتعديلُها بنموذجها نفسِه ── */}
-      <div className="t2-section">المركبة</div>
+      <div className="t2-section">{tr("المركبة")}</div>
       {s.vehicle ? (
         <div className="t2-vdocs-car">
           <div className="t2-vdocs-car-top">
@@ -300,22 +300,22 @@ export function VehicleT2Screen() {
           ) : (
             <>
               <div className="t2-vdocs-pair">
-                <span>سنة الصنع</span>
+                <span>{tr("سنة الصنع")}</span>
                 <span>{digits(String(s.vehicle.year))}</span>
               </div>
               <div className="t2-vdocs-pair">
-                <span>اللون</span>
+                <span>{tr("اللون")}</span>
                 <span>{s.vehicle.color}</span>
               </div>
               {/* اللوحةُ معرّفٌ مطبوعٌ على المركبة — تُعرض كما هي */}
               <div className="t2-vdocs-pair">
-                <span>رقم اللوحة</span>
+                <span>{tr("رقم اللوحة")}</span>
                 <span dir="ltr">{s.vehicle.plate_number}</span>
               </div>
               {/* **صفاتُ المراجعة قراءةً** (SPEC §٦٧-ج/٥) — يضعها المشرف، وبها تصلك الفئاتُ الجديدة؛ ولا تُرسم ما دامت فارغة */}
               {s.vehicle.seats !== null ? (
                 <div className="t2-vdocs-pair">
-                  <span>المقاعد</span>
+                  <span>{tr("المقاعد")}</span>
                   <span>{digits(String(s.vehicle.seats))}</span>
                 </div>
               ) : null}
@@ -324,15 +324,15 @@ export function VehicleT2Screen() {
                 className="t2-more t2-vdocs-edit"
                 onClick={() => s.setEditing(true)}
               >
-                تعديل بيانات المركبة
+                {tr("تعديل بيانات المركبة")}
               </button>
               {s.reverted ? (
                 <p className="t2-note warn">
                   <span className="t2-icon" aria-hidden="true">
                     error
                   </span>
-                  غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة» حتى
-                  يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.
+                  {tr("غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة» حتى يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.")}
+
                 </p>
               ) : null}
             </>
@@ -340,7 +340,7 @@ export function VehicleT2Screen() {
         </div>
       ) : (
         <p className="t2-empty">
-          لا مركبة مسجّلة على حسابك. راجع الدعم لتسجيلها.
+          {tr("لا مركبة مسجّلة على حسابك. راجع الدعم لتسجيلها.")}
         </p>
       )}
     </div>
@@ -380,7 +380,7 @@ function DocRow({
       <button
         type="button"
         disabled={busy}
-        aria-label={`${label} — ${view.end === "upload" ? "ارفع" : "استبدال الملف"}`}
+        aria-label={`${label} — ${view.end === "upload" ? tr("ارفع") : tr("استبدال الملف")}`}
         className={
           view.alarm ? "t2-doc t2-vdocs-row alarm" : "t2-doc t2-vdocs-row"
         }
@@ -408,16 +408,16 @@ function DocRow({
           {busy ? (
             <span className="t2-vdocs-busy">…</span>
           ) : view.end === "valid" ? (
-            <span className="t2-chip ok">سارية</span>
+            <span className="t2-chip ok">{tr("سارية")}</span>
           ) : view.end === "pending" ? (
             <span className="t2-chip t2-vdocs-chip-off">
               {REVIEW_LABEL.pending.text}
             </span>
           ) : view.end === "renew" ? (
-            <span className="t2-vdocs-renew">جدّد</span>
+            <span className="t2-vdocs-renew">{tr("جدّد")}</span>
           ) : (
             <span className="t2-vdocs-upload">
-              {PHOTO.has(docType) ? "ارفع صورة" : "ارفع الوثيقة"}
+              {PHOTO.has(docType) ? tr("ارفع صورة") : tr("ارفع الوثيقة")}
             </span>
           )}
         </span>

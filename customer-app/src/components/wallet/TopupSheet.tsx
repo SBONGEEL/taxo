@@ -17,7 +17,7 @@ import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
 import { notMultipleMessage, unitHint } from "@/lib/rounding";
 import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
-import { AmountCardT2, QuickAmountsT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, QuickAmountsT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function TopupSheet({
   currency,
@@ -44,10 +44,10 @@ export function TopupSheet({
 
   return (
     <SheetModalT2 onClose={onClose}>
-      <div className="t2-m-sheet-title">شحن الرصيد</div>
-      <p className="t2-m-sheet-sub">اختر المبلغ ثم طريقة الشحن.</p>
+      <div className="t2-m-sheet-title">{tr("شحن الرصيد")}</div>
+      <p className="t2-m-sheet-sub">{tr("اختر المبلغ ثم طريقة الشحن.")}</p>
 
-      <AmountCardT2 id="topup-sheet-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
+      <AmountCardT2 id="topup-sheet-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency}>
         {methods ? null : (
           <QuickAmountsT2
             amounts={QUICK_TOPUP_AMOUNTS}
@@ -81,10 +81,10 @@ export function TopupSheet({
                 <span className="t2-row-title">{method.name}</span>
                 <span className="t2-row-body">
                   {method.kind === "purchase_code"
-                    ? "أدخل رمز البطاقة — يُضاف فوراً"
+                    ? tr("أدخل رمز البطاقة — يُضاف فوراً")
                     : method.requires_receipt
-                      ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة"
-                      : "ادفع ثمّ يُضاف بعد المراجعة"}
+                      ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
+                      : tr("ادفع ثمّ يُضاف بعد المراجعة")}
                 </span>
               </span>
               <Icon name="chevron_left" className="t2-m-opt-end go" />
@@ -104,8 +104,8 @@ export function TopupSheet({
             >
               <Icon name="credit_card" />
               <span className="t2-row-main">
-                <span className="t2-row-title">بطاقة</span>
-                <span className="t2-row-body">شحن فوري عبر صفحة الدفع الآمنة</span>
+                <span className="t2-row-title">{tr("بطاقة")}</span>
+                <span className="t2-row-body">{tr("شحن فوري عبر صفحة الدفع الآمنة")}</span>
               </span>
               <Icon name="chevron_left" className="t2-m-opt-end go" />
             </button>
@@ -119,8 +119,8 @@ export function TopupSheet({
             >
               <Icon name="smartphone" />
               <span className="t2-row-main">
-                <span className="t2-row-title">كليك</span>
-                <span className="t2-row-body">حوّل ثم يُضاف بعد التأكد</span>
+                <span className="t2-row-title">{tr("كليك")}</span>
+                <span className="t2-row-body">{tr("حوّل ثم يُضاف بعد التأكد")}</span>
               </span>
               <Icon name="chevron_left" className="t2-m-opt-end go" />
             </button>

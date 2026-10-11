@@ -34,13 +34,13 @@ import {
 import { countDays, countHours } from "./count";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** مدّةُ الخطة **كما كتبتها اللوحة** (C10). */
 const DURATION_T2: Record<SubscriptionDuration, string> = {
-  daily: "24 ساعة من لحظة الشراء",
-  weekly: "7 أيام",
-  monthly: "30 يوماً",
+  daily: tr("24 ساعة من لحظة الشراء"),
+  weekly: tr("7 أيام"),
+  monthly: tr("30 يوماً"),
 };
 
 /** **سطرُ الخطّة تحت اسمها** — مدّتُها، ثمّ عرضُها باسمه وموعده، أو ما استنفده منه (البند ٥٤). **بيتٌ واحدٌ لـC10 وC32**
@@ -49,43 +49,43 @@ export function planSubLine(row: SubscriptionPlan): string {
   const offer = row.offer_name
     ? ` · ${row.offer_name}${
         row.offer_ends_at
-          ? ` — حتى ${digits(
+          ? tr(" — حتى {0}", { 0: digits(
               new Date(row.offer_ends_at).toLocaleDateString(DISPLAY_LOCALE, {
                 day: "numeric",
                 month: "numeric",
               }),
-            )}`
+            ) })
           : ""
       }`
     : row.exhausted_offer_name
-      ? ` · استفدتَ من «${row.exhausted_offer_name}» من قبل`
+      ? tr(" · استفدتَ من «{0}» من قبل", { 0: row.exhausted_offer_name })
       : "";
   return `${DURATION_T2[row.duration_type]}${offer}`;
 }
 
 const CHIP: Record<State, { text: string; tone: string }> = {
-  active: { text: "ساري", tone: "ok" },
-  expiring: { text: "ينتهي قريباً", tone: "warn" },
-  expired: { text: "منتهٍ", tone: "danger" },
-  none: { text: "لا اشتراك", tone: "" },
+  active: { text: tr("ساري"), tone: "ok" },
+  expiring: { text: tr("ينتهي قريباً"), tone: "warn" },
+  expired: { text: tr("منتهٍ"), tone: "danger" },
+  none: { text: tr("لا اشتراك"), tone: "" },
 };
 
 /** «أسبوعي» ← «الأسبوعي» — والاسمُ المعرَّفُ يبقى كما هو. */
 function definite(name: string): string {
-  return name.startsWith("ال") ? name : `ال${name}`;
+  return name.startsWith("ال") ? name : tr("ال{0}", { 0: name });
 }
 
 /** **ما بقي حتى نهاية التغطية** — وقتٌ لا مال، ومن `coverage_until` (أقصى انتهاءٍ لا الأحدث) كما في الشاشة القائمة. */
 function remainingLine(until: string, now: number): string {
   const ms = new Date(until).getTime() - now;
-  if (ms <= 0) return "انتهى";
+  if (ms <= 0) return tr("انتهى");
   const totalHours = Math.floor(ms / 3_600_000);
   const days = Math.floor(totalHours / 24);
   const hours = totalHours % 24;
-  if (days === 0 && hours === 0) return "ينتهي خلال أقل من ساعة";
-  if (days === 0) return `باقٍ ${countHours(hours)}`;
-  if (hours === 0) return `باقٍ ${countDays(days)}`;
-  return `باقٍ ${countDays(days)} و${countHours(hours)}`;
+  if (days === 0 && hours === 0) return tr("ينتهي خلال أقل من ساعة");
+  if (days === 0) return tr("باقٍ {0}", { 0: countHours(hours) });
+  if (hours === 0) return tr("باقٍ {0}", { 0: countDays(days) });
+  return tr("باقٍ {0} و{1}", { 0: countDays(days), 1: countHours(hours) });
 }
 
 /** «ينتهي الخميس 9 أكتوبر · 23:59» — يومٌ وتاريخٌ وساعةٌ بخاناتٍ لاتينية. */
@@ -101,7 +101,7 @@ function endsLine(until: string): string {
     minute: "2-digit",
     hour12: false,
   });
-  return `ينتهي ${day} ${dm} · ${time}`;
+  return tr("ينتهي {0} {1} · {2}", { 0: day, 1: dm, 2: time });
 }
 
 export function SubscriptionT2Screen() {
@@ -156,14 +156,14 @@ export function SubscriptionT2Screen() {
           <button
             type="button"
             className="t2-back"
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
             onClick={() => s.goBack()}
           >
             <span className="t2-icon" aria-hidden="true">
               arrow_forward
             </span>
           </button>
-          <h1 className="t2-title">الاشتراك</h1>
+          <h1 className="t2-title">{tr("الاشتراك")}</h1>
         </div>
 
         {/* بطاقةُ الحال: الخطّةُ وحالُها وما بقي ومتى ينتهي — وحالُ «منتهٍ» و«لا اشتراك» بنصّ الشاشة القائمة */}
@@ -199,12 +199,12 @@ export function SubscriptionT2Screen() {
         {/* **العمولة بنصّ التصحيحات §١** — بلا نسبةٍ ولا وعدٍ مطلق */}
         <div className="t2-sub-perk">
           <span>
-            <b>عمولة</b> أقل بكثير من السوق
+            <b>{tr("عمولة")}</b>{" "}{tr("أقل بكثير من السوق")}
           </span>
         </div>
 
-        <div className="t2-section">باقتك القادمة</div>
-        <div className="t2-sub-plans" role="radiogroup" aria-label="الخطط">
+        <div className="t2-section">{tr("باقتك القادمة")}</div>
+        <div className="t2-sub-plans" role="radiogroup" aria-label={tr("الخطط")}>
           {plans.map((row) => {
             const on = row.id === picked;
             const isCurrent = currentName === row.name;
@@ -223,7 +223,7 @@ export function SubscriptionT2Screen() {
                   <span className="t2-sub-plan-name">
                     {row.name}
                     {isCurrent ? (
-                      <span className="t2-sub-current">الحالية</span>
+                      <span className="t2-sub-current">{tr("الحالية")}</span>
                     ) : null}
                   </span>
                   {/* **العرضُ اسمُه وموعدُه** (البند ٥٤) — ومن استنفده يُقال له، ومن لا يستحقّ لا يُرسم له شيء */}
@@ -276,16 +276,16 @@ export function SubscriptionT2Screen() {
           type="button"
           role="switch"
           aria-checked={s.autoRenew}
-          aria-label="التجديد التلقائي"
+          aria-label={tr("التجديد التلقائي")}
           disabled={s.savingRenew}
           className="t2-sub-renew"
           onClick={() => void s.toggleRenew()}
         >
           <span className="t2-sub-renew-main">
-            <span className="t2-sub-renew-title">التجديد التلقائي</span>
+            <span className="t2-sub-renew-title">{tr("التجديد التلقائي")}</span>
             <span className="t2-sub-renew-hint">
-              يُخصم ثمنُ خطتك من محفظتك قبل الانتهاء بيوم. لا يقع بلا رصيدٍ
-              كافٍ، ونُخبرك إن تعذّر.
+              {tr("يُخصم ثمنُ خطتك من محفظتك قبل الانتهاء بيوم. لا يقع بلا رصيدٍ كافٍ، ونُخبرك إن تعذّر.")}
+
             </span>
           </span>
           <span
@@ -298,15 +298,15 @@ export function SubscriptionT2Screen() {
 
         <p className="t2-sub-fine">
           {payRequests
-            ? "الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك."
+            ? tr("الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك.")
             : s.cardEnabled
-            ? "الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."
-            : "الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."}
+            ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")
+            : tr("الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")}
         </p>
 
         {s.history.length > 0 ? (
           <>
-            <div className="t2-section">اشتراكات سابقة</div>
+            <div className="t2-section">{tr("اشتراكات سابقة")}</div>
             <div className="t2-list">
               {s.history.map((item) => (
                 <div key={item.id} className="t2-row t2-sub-past">
@@ -318,7 +318,7 @@ export function SubscriptionT2Screen() {
                     {/* **ما وُفِّر فعلاً** — `discount_amount` كما يصل، ولا طرح */}
                     {Number(item.discount_amount) > 0 ? (
                       <span className="t2-sub-saved">
-                        وفّرتَ {digits(item.discount_amount)}{" "}
+                        {tr("وفّرتَ")}{" "}{digits(item.discount_amount)}{" "}
                         {CURRENCY_LABEL[item.currency]}
                       </span>
                     ) : null}
@@ -332,7 +332,7 @@ export function SubscriptionT2Screen() {
                         item.status === "active" ? "t2-chip ok" : "t2-chip"
                       }
                     >
-                      {item.status === "active" ? "ساري" : "منتهٍ"}
+                      {item.status === "active" ? tr("ساري") : tr("منتهٍ")}
                     </span>
                   </span>
                 </div>
@@ -352,15 +352,15 @@ export function SubscriptionT2Screen() {
           onClick={() => plan && s.setConfirming(plan)}
         >
           {plan
-            ? `اشترك ب${definite(plan.name)} — ${digits(plan.price_to_pay ?? plan.price)} ${
-                CURRENCY_LABEL[plan.currency]
-              }`
-            : "اختر خطة"}
+            ? tr("اشترك ب{0} — {1} {2}", { 0: definite(plan.name), 1: digits(plan.price_to_pay ?? plan.price), 2: CURRENCY_LABEL[plan.currency] }
+
+)
+            : tr("اختر خطة")}
         </button>
         {s.subscription?.is_active && current ? (
           <p className="t2-sub-after">
-            يبدأ بعد انتهاء {definite(current.plan_name)} الحالي، فلا يضيع منه
-            شيء.
+            {tr("يبدأ بعد انتهاء")}{" "}{definite(current.plan_name)}{" "}{tr("الحالي، فلا يضيع منه شيء.")}
+
           </p>
         ) : null}
       </div>

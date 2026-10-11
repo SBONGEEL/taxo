@@ -32,7 +32,7 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
-import { reportBoundary, sendUserReport } from "@/lib/crash-reports";
+import { reportBoundary, sendUserReport } from "@/lib/crash-reports"; import { tr } from "@/lib/i18n";
 
 interface Props {
   children: ReactNode;
@@ -95,10 +95,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="flex h-full flex-col items-center justify-center gap-14 bg-bg px-32 text-center">
-        <h1 className="text-18 font-bold text-ink">حدث خطأ في هذه الشاشة</h1>
+        <h1 className="text-18 font-bold text-ink">{tr("حدث خطأ في هذه الشاشة")}</h1>
         <p className="text-12.5 leading-note text-muted">
-          لم يقع شيءٌ على حسابك أو رحلتك — المشكلة في العرض وحده. أعد المحاولة،
-          وإن تكررت أبلغ الدعم.
+          {tr("لم يقع شيءٌ على حسابك أو رحلتك — المشكلة في العرض وحده. أعد المحاولة، وإن تكررت أبلغ الدعم.")}
+
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-10">
@@ -107,7 +107,7 @@ export class ErrorBoundary extends Component<Props, State> {
             onClick={() => this.setState({ ...EMPTY })}
             className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-ink"
           >
-            أعد المحاولة
+            {tr("أعد المحاولة")}
           </button>
           <button
             type="button"
@@ -116,7 +116,7 @@ export class ErrorBoundary extends Component<Props, State> {
             }}
             className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-muted"
           >
-            العودة للرئيسية
+            {tr("العودة للرئيسية")}
           </button>
           {this.state.sent === null && !this.state.noteOpen && (
             <button
@@ -124,7 +124,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={() => this.setState({ noteOpen: true })}
               className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-muted"
             >
-              أرسل تقريراً
+              {tr("أرسل تقريراً")}
             </button>
           )}
         </div>
@@ -136,12 +136,12 @@ export class ErrorBoundary extends Component<Props, State> {
               onChange={(event) => this.setState({ note: event.target.value })}
               maxLength={500}
               rows={3}
-              placeholder="ماذا كنت تفعل حين توقفت الشاشة؟"
+              placeholder={tr("ماذا كنت تفعل حين توقفت الشاشة؟")}
               className="w-full rounded-12 border border-line bg-bg p-12 text-12.5 text-ink"
             />
             {/* **يُقال قبل الكتابة لا بعدها** — الجملةُ تُنظَّف في الخادم */}
             <p className="text-11 leading-note text-muted">
-              لا تكتب رقمك أو رمز التحقق — تُحجب هذه تلقائياً قبل الحفظ.
+              {tr("لا تكتب رقمك أو رمز التحقق — تُحجب هذه تلقائياً قبل الحفظ.")}
             </p>
             <button
               type="button"
@@ -149,7 +149,7 @@ export class ErrorBoundary extends Component<Props, State> {
               disabled={this.state.sending}
               className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-ink disabled:opacity-50"
             >
-              {this.state.sending ? "يُرسل…" : "إرسال"}
+              {this.state.sending ? tr("يُرسل…") : tr("إرسال")}
             </button>
           </div>
         )}
@@ -157,8 +157,8 @@ export class ErrorBoundary extends Component<Props, State> {
         {this.state.sent !== null && (
           <p className="text-12.5 leading-note text-muted">
             {this.state.sent === "yes"
-              ? "وصل التقرير — شكراً لك."
-              : "سيُرسل التقرير حين تعود الشبكة."}
+              ? tr("وصل التقرير — شكراً لك.")
+              : tr("سيُرسل التقرير حين تعود الشبكة.")}
           </p>
         )}
       </div>

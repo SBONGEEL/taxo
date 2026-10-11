@@ -32,7 +32,7 @@ import {
   type WelcomeOffer,
 } from "@/lib/welcome";
 
-import "./welcome-sheet.css";
+import "./welcome-sheet.css"; import { tr } from "@/lib/i18n";
 
 export function WelcomeSheet() {
   const [open, setOpen] = useState(false);
@@ -95,8 +95,8 @@ export function WelcomeSheet() {
           <div className="t2-wsheet-offer">
             <strong>
               {offer.free
-                ? `${offer.planName} مجاناً`
-                : `${offer.planName} بـ${digits(offer.priceAfter)} ${CURRENCY_LABEL[offer.currency]}`}
+                ? tr("{0} مجاناً", { 0: offer.planName })
+                : tr("{0} بـ{1} {2}", { 0: offer.planName, 1: digits(offer.priceAfter), 2: CURRENCY_LABEL[offer.currency] })}
             </strong>
             <p>
               {offer.name}

@@ -26,7 +26,7 @@ import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useGoBack } from "@/lib/back";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function Screen({
   title,
@@ -57,7 +57,7 @@ export function Screen({
             type="button"
             onClick={goBack}
             className="pressable rounded-full p-8 text-ink transition hover:bg-surface-2"
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
           >
             <ChevronRight className="size-20" />
           </button>

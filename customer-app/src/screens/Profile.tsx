@@ -29,13 +29,13 @@ import { NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
 import { AuthChoice, Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** التفضيلُ بخياراته الثلاثة كما كان — **و«إناث» بالبرقوق**: اختيارُ الخدمة النسائية (الهوية، و«راكبة» في R03). */
 const PREFERENCES = [
-  { value: "female" as const, label: "إناث", women: true },
-  { value: "male" as const, label: "ذكور" },
-  { value: "any" as const, label: "الجميع" },
+  { value: "female" as const, label: tr("إناث"), women: true },
+  { value: "male" as const, label: tr("ذكور") },
+  { value: "any" as const, label: tr("الجميع") },
 ];
 
 export function ProfileScreen() {
@@ -73,10 +73,10 @@ export function ProfileScreen() {
       await verifyMyPhone(token);
       await refreshUser();
       setVerifying(false);
-      setDone("تم إثبات رقمك.");
+      setDone(tr("تم إثبات رقمك."));
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إثبات الرقم",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إثبات الرقم"),
       );
     } finally {
       setProving(false);
@@ -93,7 +93,7 @@ export function ProfileScreen() {
       await refreshUser();
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل",
+        caught instanceof ApiError ? caught.message : tr("تعذّر حفظ التفضيل"),
       );
     } finally {
       setSavingPreference(false);
@@ -124,7 +124,7 @@ export function ProfileScreen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="بياناتي" onBack={goBack} />
+      <SubHeadT2 title={tr("بياناتي")} onBack={goBack} />
 
       {/* **الصورةُ بجوار بياناته** (قرارُ المالك 2026-08-22): اختياريةٌ،
           بلا مراجعة، ويراها كبتنُ رحلته بعد القبول وحدَه — **والدائرةُ نفسُها صورتُه** */}
@@ -134,8 +134,8 @@ export function ProfileScreen() {
         <div className="t2-callout warn">
           <Icon name="error" fill />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">رقمك غير مُثبَت</p>
-            <p className="t2-callout-body">أثبت ملكية رقمك لتأمين حسابك — يُطلب مرةً واحدة.</p>
+            <p className="t2-callout-title">{tr("رقمك غير مُثبَت")}</p>
+            <p className="t2-callout-body">{tr("أثبت ملكية رقمك لتأمين حسابك — يُطلب مرةً واحدة.")}</p>
             {/* **خطأٌ سابقٌ لا يُرسم تحت الرمز** — صفحةُ الرمز تعرض خطأها هي (`outerError`) */}
             <button
               type="button"
@@ -145,7 +145,7 @@ export function ProfileScreen() {
                 setVerifying(true);
               }}
             >
-              أثبت رقمي الآن
+              {tr("أثبت رقمي الآن")}
             </button>
           </div>
         </div>
@@ -166,26 +166,26 @@ export function ProfileScreen() {
             <div className="t2-srow tall">
               <Icon name="person" className="t2-srow-icon" />
               <span className="t2-srow-main">
-                <span className="t2-srow-title">الجنس</span>
+                <span className="t2-srow-title">{tr("الجنس")}</span>
                 <span className="t2-srow-hint">
-                  إقرارٌ ذاتيّ أعطيتَه عند التسجيل — لا نطلب وثيقة، ولا يظهر لأي مستخدمٍ آخر. عليه تُبنى مطابقةُ تفضيلات
-                  الرحلات، ولتعديله راجع الدعم.
+                  {tr("إقرارٌ ذاتيّ أعطيتَه عند التسجيل — لا نطلب وثيقة، ولا يظهر لأي مستخدمٍ آخر. عليه تُبنى مطابقةُ تفضيلات الرحلات، ولتعديله راجع الدعم.")}
+
                 </span>
               </span>
-              <span className="t2-srow-value">{user.gender === "female" ? "أنثى" : "ذكر"}</span>
+              <span className="t2-srow-value">{user.gender === "female" ? tr("أنثى") : tr("ذكر")}</span>
             </div>
           ) : null}
           {available ? (
             <div className="t2-srow tall">
               <Icon name="local_taxi" className="t2-srow-icon" />
               <span className="t2-srow-main">
-                <span className="t2-srow-title">من يقودني افتراضياً</span>
+                <span className="t2-srow-title">{tr("من يقودني افتراضياً")}</span>
                 <span className="t2-srow-hint">
-                  يسري على كل طلبٍ لا تختارين فيه غيره — ولك تغييره لرحلةٍ واحدة من شاشة الطلب.
+                  {tr("يسري على كل طلبٍ لا تختارين فيه غيره — ولك تغييره لرحلةٍ واحدة من شاشة الطلب.")}
                 </span>
                 {/* **لا حفظان معاً** — كان الزرُّ معطّلاً ما دام الحفظُ جارياً */}
                 <AuthChoice
-                  label="من يقودني افتراضياً"
+                  label={tr("من يقودني افتراضياً")}
                   value={defaultPreference}
                   options={PREFERENCES}
                   onChange={(next) => {
@@ -217,10 +217,10 @@ export function ProfileScreen() {
             <Icon name="lock" fill />
           </span>
           <div>
-            <p className="t2-privacy-title">الخصوصية</p>
+            <p className="t2-privacy-title">{tr("الخصوصية")}</p>
             <p className="t2-privacy-body">
-              جنسُكِ لا يُعرض لأي كبتن — لا قبل القبول ولا بعده. وخريطةُ السيارات القريبة تعرض موقعاً واتجاهاً وفئةَ مركبةٍ
-              فقط، بلا اسمٍ ولا لوحةٍ ولا أي معرّفٍ يُتابَع بين الجلسات.
+              {tr("جنسُكِ لا يُعرض لأي كبتن — لا قبل القبول ولا بعده. وخريطةُ السيارات القريبة تعرض موقعاً واتجاهاً وفئةَ مركبةٍ فقط، بلا اسمٍ ولا لوحةٍ ولا أي معرّفٍ يُتابَع بين الجلسات.")}
+
             </p>
           </div>
         </section>
@@ -237,7 +237,7 @@ export function ProfileScreen() {
           navigate("/login", { replace: true });
         }}
       >
-        تسجيل الخروج
+        {tr("تسجيل الخروج")}
       </button>
     </div>
   );

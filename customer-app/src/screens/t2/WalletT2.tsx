@@ -53,7 +53,7 @@ import { byMonth, startOfToday, whenParts } from "./when";
 
 import "@/taxo2";
 import "./t2.css";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ نوعٍ بمفردات اللوحة — **وما لم تُرسم أيقونتُه فبأيقونة المحفظة**. */
 const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
@@ -102,7 +102,7 @@ export function WalletT2Screen() {
         setTopups(requests.filter((request) => request.status === "pending"));
       })
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة المحفظة"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المحفظة")),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -147,14 +147,14 @@ export function WalletT2Screen() {
       const updated = await cancelPaymentRequest(id);
       setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الطلب");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إلغاء الطلب"));
     }
   }
 
   if (loading) {
     return (
       <div className="t2 t2-page pb-nav">
-        <h1 className="t2-h1">المحفظة</h1>
+        <h1 className="t2-h1">{tr("المحفظة")}</h1>
         <Spinner />
       </div>
     );
@@ -165,13 +165,13 @@ export function WalletT2Screen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <h1 className="t2-h1">المحفظة</h1>
+      <h1 className="t2-h1">{tr("المحفظة")}</h1>
 
       <div className="t2-balance">
         <span className="t2-stripe a" aria-hidden="true" />
         <span className="t2-stripe b" aria-hidden="true" />
         {/* **«الرصيد» لا «الرصيد المتاح»** (القرار 23) — اللوحةُ تقول الثانية، والراكبُ لا محجوزَ له */}
-        <div className="t2-balance-label">الرصيد</div>
+        <div className="t2-balance-label">{tr("الرصيد")}</div>
         <div className="t2-balance-amount">
           <span dir="ltr" className="t2-num">{formatMoney(wallet?.balance)}</span>
           <span className="t2-balance-cur">{currencyLabel(wallet?.currency)}</span>
@@ -180,17 +180,17 @@ export function WalletT2Screen() {
           <div className="t2-balance-actions">
             <button type="button" className="t2-btn ember" onClick={() => setTopupOpen(true)}>
               <span className="t2-icon" aria-hidden="true">add</span>
-              شحن الرصيد
+              {tr("شحن الرصيد")}
             </button>
             {transferEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/wallet/transfer")}>
                 <span className="t2-icon" aria-hidden="true">sync_alt</span>
-                تحويل لصديق
+                {tr("تحويل لصديق")}
               </button>
             ) : null}
           </div>
         ) : (
-          <p className="t2-balance-note">المحفظة غير مفعّلة في بلدك حالياً — رصيدك محفوظ ويظهر هنا.</p>
+          <p className="t2-balance-note">{tr("المحفظة غير مفعّلة في بلدك حالياً — رصيدك محفوظ ويظهر هنا.")}</p>
         )}
       </div>
 
@@ -199,15 +199,15 @@ export function WalletT2Screen() {
         <p className="t2-note warn">
           <span className="t2-icon" aria-hidden="true">error</span>
           <span>
-            عليك رسومُ إلغاء {formatMoney(wallet?.cancellation_debt, wallet?.currency)}
-            {" "}— تُخصم تلقائياً من أول شحنٍ لمحفظتك.
+            {tr("عليك رسومُ إلغاء")}{" "}{formatMoney(wallet?.cancellation_debt, wallet?.currency)}
+            {" "}{tr("— تُخصم تلقائياً من أول شحنٍ لمحفظتك.")}
           </span>
         </p>
       ) : null}
       {wallet?.frozen ? (
         <p className="t2-note danger">
           <span className="t2-icon" aria-hidden="true">lock</span>
-          <span>محفظتك مجمّدة مؤقتاً — راجع الدعم</span>
+          <span>{tr("محفظتك مجمّدة مؤقتاً — راجع الدعم")}</span>
         </p>
       ) : null}
 
@@ -215,7 +215,7 @@ export function WalletT2Screen() {
 
       {topups.length > 0 ? (
         <section>
-          <div className="t2-section">طلبات شحن قيد المراجعة</div>
+          <div className="t2-section">{tr("طلبات شحن قيد المراجعة")}</div>
           <div className="t2-list">
             {topups.map((request) => {
               const when = whenParts(request.created_at, today);
@@ -241,7 +241,7 @@ export function WalletT2Screen() {
       {/* **طلباتُ الدفع** (SPEC §٧٣-هـ) — بحالها، **وسببُ رفضها أو إلغائها أو ردّها كما كتبه الموظّف** تحتها، وإلغاءُ المعلَّق بيد صاحبه */}
       {payRequests && requests.length > 0 ? (
         <section>
-          <div className="t2-section">طلبات الدفع</div>
+          <div className="t2-section">{tr("طلبات الدفع")}</div>
           <div className="t2-list">
             {requests.map((request) => {
               const when = whenParts(request.created_at, today);
@@ -270,7 +270,7 @@ export function WalletT2Screen() {
                     </span>
                     {request.status === "pending" ? (
                       <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
-                        إلغاء
+                        {tr("إلغاء")}
                       </button>
                     ) : null}
                   </span>
@@ -286,10 +286,10 @@ export function WalletT2Screen() {
       {cardEnabled || (cliqEnabled && walletEnabled) ? (
         <section>
           <div className="t2-section">
-            <span>طرق الدفع</span>
+            <span>{tr("طرق الدفع")}</span>
             {cardEnabled ? (
               <button type="button" className="t2-section-aside t2-paytiles-manage" onClick={() => navigate("/account/cards")}>
-                إدارة
+                {tr("إدارة")}
               </button>
             ) : null}
           </div>
@@ -302,7 +302,7 @@ export function WalletT2Screen() {
                       <span dir="ltr" className="t2-paytile-brand">
                         {(card.brand ?? card.provider).toUpperCase()}
                       </span>
-                      {card.is_default ? <span className="t2-chip ok">افتراضية</span> : null}
+                      {card.is_default ? <span className="t2-chip ok">{tr("افتراضية")}</span> : null}
                     </span>
                     <span dir="ltr" className="t2-paytile-num">
                       •••• {card.last4}
@@ -311,7 +311,7 @@ export function WalletT2Screen() {
                 ) : (
                   <>
                     <span className="t2-icon" aria-hidden="true">credit_card</span>
-                    <span className="t2-paytile-name">{cards === null ? "البطاقات" : "لا بطاقة محفوظة"}</span>
+                    <span className="t2-paytile-name">{cards === null ? tr("البطاقات") : tr("لا بطاقة محفوظة")}</span>
                   </>
                 )}
               </button>
@@ -325,7 +325,7 @@ export function WalletT2Screen() {
                 <span dir="ltr" className="t2-paytile-brand end">
                   CliQ
                 </span>
-                <span className="t2-paytile-name">كليك</span>
+                <span className="t2-paytile-name">{tr("كليك")}</span>
               </button>
             ) : null}
           </div>
@@ -334,12 +334,12 @@ export function WalletT2Screen() {
 
       <section>
         <div className="t2-section">
-          <span>الحركات</span>
+          <span>{tr("الحركات")}</span>
           {months.length > 0 ? <span className="t2-section-aside">{months[0].label}</span> : null}
         </div>
         {entries.length === 0 ? (
           // **فراغُ اللغة الجديدة لا القديم** — رماديُّ `EmptyState` قاس 4.07 على الفاتح (مرورُ الوصول ٢٠٢٦-١٠-٠٧)
-          <BlankT2 icon="account_balance_wallet" title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
+          <BlankT2 icon="account_balance_wallet" title={tr("لا عمليات بعد")} hint={tr("ستظهر هنا كل حركة على رصيدك.")} />
         ) : (
           months.map((month, index) => (
             <div key={month.label}>
@@ -370,7 +370,7 @@ export function WalletT2Screen() {
                           </span>{" "}
                           {currencyLabel(entry.currency)}
                         </span>
-                        <span className="t2-tx-after">الرصيد {formatMoney(entry.balance_after)}</span>
+                        <span className="t2-tx-after">{tr("الرصيد")}{" "}{formatMoney(entry.balance_after)}</span>
                       </span>
                     </div>
                   );

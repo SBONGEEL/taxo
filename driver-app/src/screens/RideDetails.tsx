@@ -55,7 +55,7 @@ import { Icon } from "@/taxo2";
 import { startOfToday, whenParts } from "./t2/when";
 
 import "./t2/ride.css";
-import "./t2/rides.css";
+import "./t2/rides.css"; import { tr } from "@/lib/i18n";
 
 /** **حشوُ إطار الشريط** (`.t2-rdt-map`: ١٥٠ وحافّةُ الشاشة العليا) — فوقُه شريطُ الحالة، وجانباه زرّا الرجوع والموقع، وقاعُه شعارُ
  *  Mapbox ونسبتُه (شرطُ الرخصة). **وكان ٨٠ من كلِّ جهة** — حشوُ خريطةٍ تملأ الشاشة — فيبقى للخطّ ٤٠ بكسلاً ويُرسم نقطةً (قِيس). */
@@ -63,8 +63,8 @@ const STRIP_PADDING = { top: 62, bottom: 34, left: 72, right: 72 };
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
 const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
-  paid: "فصلت الإدارة: المبلغ وصلك",
-  unpaid: "فصلت الإدارة: المبلغ لم يصلك",
+  paid: tr("فصلت الإدارة: المبلغ وصلك"),
+  unpaid: tr("فصلت الإدارة: المبلغ لم يصلك"),
 };
 
 export function RideDetailsScreen() {
@@ -94,7 +94,7 @@ export function RideDetailsScreen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الرحلة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الرحلة"),
       ),
     );
   }, [load]);
@@ -124,7 +124,7 @@ export function RideDetailsScreen() {
       await load();
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تأكيد الدفعة"),
       );
     } finally {
       setConfirming(false);
@@ -139,7 +139,7 @@ export function RideDetailsScreen() {
             <button
               type="button"
               className="t2-back"
-              aria-label="رجوع"
+              aria-label={tr("رجوع")}
               onClick={() => goBack()}
             >
               <Icon name="arrow_forward" />
@@ -205,7 +205,7 @@ export function RideDetailsScreen() {
           <button
             type="button"
             className="t2-back t2-rdt-back"
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
             onClick={() => goBack()}
           >
             <Icon name="arrow_forward" />
@@ -231,65 +231,65 @@ export function RideDetailsScreen() {
           <div className="t2-rdt-route">
             <span className="t2-rdt-dot" aria-hidden="true" />
             <span className="t2-rdt-place">
-              {ride.pickup_address ?? "نقطة الانطلاق"}
+              {ride.pickup_address ?? tr("نقطة الانطلاق")}
             </span>
             <span className="t2-rdt-link" aria-hidden="true" />
             <span />
             <span className="t2-rdt-dot to" aria-hidden="true" />
             <span className="t2-rdt-place">
-              {ride.dropoff_address ?? "الوجهة"}
+              {ride.dropoff_address ?? tr("الوجهة")}
             </span>
           </div>
 
-          <h2 className="t2-section">تفصيل السعر</h2>
+          <h2 className="t2-section">{tr("تفصيل السعر")}</h2>
           <div className="t2-rdt-grid">
-            <Row label="السعر المقدّر" value={digits(ride.estimated_fare)} />
+            <Row label={tr("السعر المقدّر")} value={digits(ride.estimated_fare)} />
             {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
             <Row
               label={
-                ride.actual_distance_km ? "المسافة الفعلية" : "المسافة المقدّرة"
+                ride.actual_distance_km ? tr("المسافة الفعلية") : tr("المسافة المقدّرة")
               }
-              value={`${trimDistance(ride.actual_distance_km ?? ride.distance_km)} كم`}
+              value={tr("{0} كم", { 0: trimDistance(ride.actual_distance_km ?? ride.distance_km) })}
             />
             <Row
-              label="المدّة المقدّرة"
-              value={`${trimDistance(ride.duration_min)} دقيقة`}
+              label={tr("المدّة المقدّرة")}
+              value={tr("{0} دقيقة", { 0: trimDistance(ride.duration_min) })}
             />
             {/* **ما وقف لأجله يُسمّى في تفصيله** (§5.10 و§5.10-ب/و): الكبتنُ يقرأ هنا لماذا صار النهائيُّ غيرَ المقدَّر، فلا يظنّ
                 نقصاً ولا يسأل الدعم. **قيمٌ تُقرأ لا تُحسب** (§14)، **وصفرٌ لا يُرسم** */}
             {Number(ride.stops_charge) > 0 ? (
               <Row
-                label={`رسم المحطات (${digits(String(ride.stops.length))})`}
+                label={tr("رسم المحطات ({0})", { 0: digits(String(ride.stops.length)) })}
                 value={digits(ride.stops_charge)}
               />
             ) : null}
             {Number(ride.waiting_charge) > 0 ? (
               <Row
-                label="رسم الانتظار عند المحطات"
+                label={tr("رسم الانتظار عند المحطات")}
                 value={digits(ride.waiting_charge)}
               />
             ) : null}
             {Number(ride.pause_charge) > 0 ? (
               <Row
-                label="رسم الوقفات أثناء الرحلة"
+                label={tr("رسم الوقفات أثناء الرحلة")}
                 value={digits(ride.pause_charge)}
               />
             ) : null}
             {/* **وفرقُ التقريب سطرٌ بذاته** (SPEC §٧٠-ج/٤): ما قبضه مقرَّباً إلى وحدة السوق، **والفرقُ له أو عليه** — يقرأ هنا لماذا
                 صار النهائيُّ غيرَ المقدَّر بعد الرسوم. **من `fare_lines` كما كتبته الخلفية**، وبلا سطرٍ لا يُرسم */}
-            {rounding !== null ? <Row label="تقريب" value={rounding} /> : null}
+            {rounding !== null ? <Row label={tr("تقريب")} value={rounding} /> : null}
             {/* **النسبةُ المجمَّدةُ على هذه الرحلة** (`commission_percent_at_ride`) — سجلٌّ لما حوسب به، لا وعدٌ تسويقيّ */}
             <Row
-              label="العمولة"
+              label={tr("العمولة")}
               value={
                 commission === 0
-                  ? "0٪ حالياً"
-                  : `${digits(String(commission))}٪`
+                  ? tr("0٪ حالياً")
+                  : tr("{0}٪", { 0: digits(String(commission)) })
               }
               tone="ok"
             />
             <Row
-              label="السعر النهائي"
+              label={tr("السعر النهائي")}
               value={digits(ride.final_fare ?? ride.current_fare)}
               strong
             />
@@ -307,7 +307,7 @@ export function RideDetailsScreen() {
               ))}
               {mine ? (
                 <>
-                  <span className="t2-rdt-k">تقييمك للراكب</span>
+                  <span className="t2-rdt-k">{tr("تقييمك للراكب")}</span>
                   <span className="t2-rdt-v">
                     <span className="t2-rdt-star">
                       <Icon name="star" fill />
@@ -327,9 +327,9 @@ export function RideDetailsScreen() {
             <p className="t2-rdt-deadline">
               <Icon name="schedule" />
               <span>
-                إن لم تؤكّد أو ترفض حتى{" "}
-                {formatWhen(disputable.cliq_confirmation_expires_at)} صارت
-                الدفعة نزاعاً تفصل فيه الإدارة.
+                {tr("إن لم تؤكّد أو ترفض حتى")}{" "}
+                {formatWhen(disputable.cliq_confirmation_expires_at)}{" "}{tr("صارت الدفعة نزاعاً تفصل فيه الإدارة.")}
+
               </span>
             </p>
           ) : null}
@@ -340,7 +340,7 @@ export function RideDetailsScreen() {
               <span>
                 {resolved.resolution
                   ? RESOLUTION_LABEL[resolved.resolution]
-                  : "فُصل النزاع"}
+                  : tr("فُصل النزاع")}
                 {resolved.resolution_note
                   ? ` — ${resolved.resolution_note}`
                   : ""}
@@ -349,7 +349,7 @@ export function RideDetailsScreen() {
           ) : disputed ? (
             <p className="t2-rdt-notice warn">
               <Icon name="balance" />
-              <span>نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.</span>
+              <span>{tr("نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.")}</span>
             </p>
           ) : null}
 
@@ -378,7 +378,7 @@ export function RideDetailsScreen() {
               disabled={confirming}
               onClick={() => void confirm(collectable.id)}
             >
-              {confirming ? "…" : "استلمت المبلغ كاش"}
+              {confirming ? "…" : tr("استلمت المبلغ كاش")}
             </button>
           ) : disputable ? (
             // **الفعلُ الإيجابي حاضرٌ مع الاعتراض**: من وصلته الحوالة يجد بابَه هنا لا في بطاقةٍ عابرة قد يكون أغلقها. وشاشةٌ
@@ -390,7 +390,7 @@ export function RideDetailsScreen() {
                 disabled={confirming}
                 onClick={() => navigate(`/rides/${ride.id}/dispute`)}
               >
-                لم تصلني
+                {tr("لم تصلني")}
               </button>
               <button
                 type="button"
@@ -403,7 +403,7 @@ export function RideDetailsScreen() {
                 ) : (
                   <>
                     <Icon name="check" />
-                    وصلتني
+                    {tr("وصلتني")}
                   </>
                 )}
               </button>
@@ -420,20 +420,20 @@ export function RideDetailsScreen() {
 function paymentStatusLabel(payment: Payment): string {
   if (payment.status === "pending") {
     return payment.method === "cash" || payment.method === "cliq"
-      ? "بانتظار تأكيدك"
-      : "بانتظار الدفع";
+      ? tr("بانتظار تأكيدك")
+      : tr("بانتظار الدفع");
   }
   return PAYMENT_STATUS_LABEL[payment.status];
 }
 
 const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "بانتظار الدفع",
-  confirmed: "مؤكدة",
-  failed: "فاشلة",
-  refunded: "مستردّة",
-  disputed: "في نزاع",
+  pending: tr("بانتظار الدفع"),
+  confirmed: tr("مؤكدة"),
+  failed: tr("فاشلة"),
+  refunded: tr("مستردّة"),
+  disputed: tr("في نزاع"),
   // **بدّل الراكبُ طريقتَها** قبل تأكيدك (§٦٤-ز) — صفٌّ باقٍ لا ينتظر منك شيئاً، والجديدةُ بحالها تحته
-  voided: "بُدِّلت طريقتُها",
+  voided: tr("بُدِّلت طريقتُها"),
 };
 
 /** صفُّ الجدول (C08): الاسمُ خافتٌ في البداية والقيمةُ في الطرف — **والمبالغُ أرقامٌ بلا عملة** كما رُسمت، فالعملةُ مع الأجرة فوق. */

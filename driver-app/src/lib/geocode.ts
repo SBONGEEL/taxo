@@ -5,7 +5,7 @@
  * **ونداءٌ لكلِّ نقرةٍ يقصدها صاحبُها** في الخريطة الموسَّعة وحدَها — لا مع كلِّ تحريكٍ للكاميرا.
  */
 
-import type { Coordinates } from "@/api/types";
+import type { Coordinates } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 const REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse";
 
@@ -25,7 +25,7 @@ function tidy(text: string | null | undefined): string | null {
     .split(/[،,]/)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
-  return parts.length > 0 ? parts.join("، ") : null;
+  return parts.length > 0 ? parts.join(tr("، ")) : null;
 }
 
 export async function reversePlace(

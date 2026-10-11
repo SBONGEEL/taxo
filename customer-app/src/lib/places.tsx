@@ -27,7 +27,7 @@ import type { ReactNode } from "react";
 
 import { listPlaces, listMyRides } from "@/api/endpoints";
 import type { Coordinates, SavedPlace } from "@/api/types";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 export interface RecentDestination {
   key: string;
@@ -104,7 +104,7 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
           seen.add(key);
           found.push({
             key,
-            address: ride.dropoff_address ?? "نقطة على الخريطة",
+            address: ride.dropoff_address ?? tr("نقطة على الخريطة"),
             point: ride.dropoff,
           });
           if (found.length === RECENT_LIMIT) break;

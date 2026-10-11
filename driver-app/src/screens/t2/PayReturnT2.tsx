@@ -17,7 +17,7 @@ import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./money.css";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **كم مرّةً تسأل وحدَها** قبل أن تترك السؤالَ لزرّ — ثلاثُ ثوانٍ بينها */
 const AUTO_TRIES = 10;
@@ -40,7 +40,7 @@ export function PayReturnT2Screen() {
       setRequest(await refreshPaymentRequest(requestId));
       setError(null);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر السؤال عن الدفعة — أعد المحاولة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر السؤال عن الدفعة — أعد المحاولة"));
     } finally {
       setBusy(false);
     }
@@ -66,43 +66,43 @@ export function PayReturnT2Screen() {
   return (
     <div className="t2 t2-clq-page scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">نتيجة الدفع</h1>
+        <h1 className="t2-title">{tr("نتيجة الدفع")}</h1>
       </div>
 
       {!requestId ? (
         <p className="t2-note danger" role="alert">
           <Icon name="error" fill />
-          لا دفعةَ في هذا الرابط — افتح المحفظة وانظر طلباتك
+          {tr("لا دفعةَ في هذا الرابط — افتح المحفظة وانظر طلباتك")}
         </p>
       ) : request && request.status === "approved" ? (
         <div className="t2-wdl-card t2-pr-done">
           <Icon name="check_circle" />
-          <h2 className="t2-pr-done-title">{subscription ? "فُعّل اشتراكك" : "شُحن رصيدك"}</h2>
+          <h2 className="t2-pr-done-title">{subscription ? tr("فُعّل اشتراكك") : tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">
             {subscription
-              ? `دُفع ${digits(credited)} ${CURRENCY_LABEL[request.currency]} وبدأ اشتراكك.`
-              : `أُضيف ${digits(credited)} ${CURRENCY_LABEL[request.currency]} إلى محفظتك.`}
+              ? tr("دُفع {0} {1} وبدأ اشتراكك.", { 0: digits(credited), 1: CURRENCY_LABEL[request.currency] })
+              : tr("أُضيف {0} {1} إلى محفظتك.", { 0: digits(credited), 1: CURRENCY_LABEL[request.currency] })}
           </p>
         </div>
       ) : request && request.status !== "pending" ? (
         <div className="t2-wdl-card t2-pr-done">
           <Icon name="error" />
-          <h2 className="t2-pr-done-title">لم تتمّ الدفعة</h2>
+          <h2 className="t2-pr-done-title">{tr("لم تتمّ الدفعة")}</h2>
           <p className="t2-pr-done-text">
-            {request.rejection_reason ?? request.cancel_reason ?? "لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى."}
+            {request.rejection_reason ?? request.cancel_reason ?? tr("لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى.")}
           </p>
         </div>
       ) : (
         <div className="t2-wdl-card t2-pr-done" aria-live="polite">
           <Icon name="hourglass_top" />
-          <h2 className="t2-pr-done-title">ننتظر تأكيد الدفع</h2>
+          <h2 className="t2-pr-done-title">{tr("ننتظر تأكيد الدفع")}</h2>
           <p className="t2-pr-done-text">
             {tries.current >= AUTO_TRIES
-              ? "لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة."
-              : "نسأل الوسيطَ عن دفعتك — لحظات."}
+              ? tr("لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة.")
+              : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
           </p>
         </div>
       )}
@@ -121,7 +121,7 @@ export function PayReturnT2Screen() {
           aria-busy={busy}
           onClick={() => void ask()}
         >
-          {busy ? "يُسأل…" : "تحقّق الآن"}
+          {busy ? tr("يُسأل…") : tr("تحقّق الآن")}
         </button>
       ) : null}
       <button
@@ -129,7 +129,7 @@ export function PayReturnT2Screen() {
         className="t2-clq-cta t2-pr-gap"
         onClick={() => navigate(subscription && request?.status === "approved" ? "/subscription" : "/wallet")}
       >
-        {subscription && request?.status === "approved" ? "إلى اشتراكي" : "إلى المحفظة"}
+        {subscription && request?.status === "approved" ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
       </button>
     </div>
   );

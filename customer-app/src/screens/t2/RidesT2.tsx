@@ -35,7 +35,7 @@ import { WomenPausedChoiceT2 } from "./WomenRideT2";
 
 import "@/taxo2";
 import "./t2.css";
-import "./women.css";
+import "./women.css"; import { tr } from "@/lib/i18n";
 
 const PAGE = 20;
 
@@ -43,17 +43,17 @@ type Filter = "all" | RideGroup | "scheduled";
 
 /** المرشّحاتُ كما رُسمت، بترتيبها. */
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "الكل" },
-  { key: "completed", label: "مكتملة" },
-  { key: "scheduled", label: "مجدولة" },
-  { key: "cancelled", label: "ملغاة" },
+  { key: "all", label: tr("الكل") },
+  { key: "completed", label: tr("مكتملة") },
+  { key: "scheduled", label: tr("مجدولة") },
+  { key: "cancelled", label: tr("ملغاة") },
 ];
 
 const EMPTY: Record<Filter, { title: string; hint?: string }> = {
-  all: { title: "لا رحلات بعد", hint: "أول رحلة تبدأ من الشاشة الرئيسية." },
-  completed: { title: "لا رحلات مكتملة بعد" },
-  scheduled: { title: "لا رحلات مجدولة" },
-  cancelled: { title: "لا رحلات ملغاة" },
+  all: { title: tr("لا رحلات بعد"), hint: tr("أول رحلة تبدأ من الشاشة الرئيسية.") },
+  completed: { title: tr("لا رحلات مكتملة بعد") },
+  scheduled: { title: tr("لا رحلات مجدولة") },
+  cancelled: { title: tr("لا رحلات ملغاة") },
 };
 
 /** **ما ينتظر موعدَه وحدَه** — ما نُفِّذ صار رحلةً في القائمة، وما فات أو أُلغي في «رحلات مجدولة». */
@@ -67,11 +67,11 @@ const ENDED_UNSERVED: RideStatus[] = ["cancelled_by_rider", "cancelled_by_driver
  *  قد يُعفى منه بعد التقدير، فالمبلغُ يُقرأ في التفاصيل لا هنا. */
 function statusChip(item: RideListItem): { text: string; tone: "ok" | "danger" | "plain" } {
   const { ride } = item;
-  if (ride.status === "completed") return { text: "مكتملة", tone: "ok" };
+  if (ride.status === "completed") return { text: tr("مكتملة"), tone: "ok" };
   if (ENDED_UNSERVED.includes(ride.status)) {
     const fee = ride.cancellation_fee;
     const free = fee === null || Number(fee) === 0;
-    return { text: free ? `${RIDE_STATUS_LABEL[ride.status]} · بلا رسوم` : RIDE_STATUS_LABEL[ride.status], tone: "danger" };
+    return { text: free ? tr("{0} · بلا رسوم", { 0: RIDE_STATUS_LABEL[ride.status] }) : RIDE_STATUS_LABEL[ride.status], tone: "danger" };
   }
   return { text: RIDE_STATUS_LABEL[ride.status], tone: "plain" };
 }
@@ -116,7 +116,7 @@ export function RidesT2Screen() {
       setMore(page.length === PAGE);
     } catch (caught) {
       if (ticket !== latest.current) return;
-      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلاتك");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة رحلاتك"));
     } finally {
       if (ticket === latest.current) setLoading(false);
     }
@@ -142,9 +142,9 @@ export function RidesT2Screen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <h1 className="t2-h1">رحلاتي</h1>
+      <h1 className="t2-h1">{tr("رحلاتي")}</h1>
 
-      <div className="t2-filters" role="tablist" aria-label="تصفية الرحلات">
+      <div className="t2-filters" role="tablist" aria-label={tr("تصفية الرحلات")}>
         {FILTERS.map(({ key, label }) => (
           <button
             key={key}
@@ -190,28 +190,28 @@ export function RidesT2Screen() {
                   <span className="t2-icon" aria-hidden="true">event_upcoming</span>
                   {/* **حلّ وقتُه وتطلبه الدورةُ في دقيقتها** — كحجزٍ اختارت له «أي كبتن» (§٦٤-ج/٤-١) */}
                   {requestingSoon(booking) ? (
-                    "نطلبها لك خلال دقيقة"
+                    tr("نطلبها لك خلال دقيقة")
                   ) : (
                     <>
-                      مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+                      {tr("مجدولة ·")}{" "}{at.day} <span dir="ltr">{at.time}</span> {at.half}
                     </>
                   )}
                 </span>
                 <span className="t2-route">
                   <span className="t2-dot" />
-                  <span className="t2-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+                  <span className="t2-place">{booking.pickup_address ?? tr("نقطة على الخريطة")}</span>
                   <span className="t2-dot to" />
-                  <span className="t2-place strong">{booking.dropoff_address ?? "وجهة على الخريطة"}</span>
+                  <span className="t2-place strong">{booking.dropoff_address ?? tr("وجهة على الخريطة")}</span>
                 </span>
                 <span className="t2-booking-foot">
                   <span>
-                    {booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category]}
+                    {booking.gender_preference === "female" ? tr("نسائية") : VEHICLE_LABEL[booking.vehicle_category]}
                     {/* **«مضمون» كلمةً هنا** (§٦٣-ج/٣) — وكبتنُه ورسمُه في «رحلات مجدولة» التي تفتحها البطاقة */}
-                    {guarantee && booking.guaranteed ? " · مضمون" : ""}
+                    {guarantee && booking.guaranteed ? tr(" · مضمون") : ""}
                   </span>
                   {fare !== null ? (
                     <span className="t2-booking-fare">
-                      {formatMoney(fare, booking.currency)} <small>تقديرياً</small>
+                      {formatMoney(fare, booking.currency)} <small>{tr("تقديرياً")}</small>
                     </span>
                   ) : null}
                 </span>
@@ -229,7 +229,7 @@ export function RidesT2Screen() {
                   const chip = statusChip(item);
                   const unserved = ENDED_UNSERVED.includes(ride.status);
                   // «نسائية» مكانَ الفئة كما في اللوحة — **وصفٌ للطلب لا لصاحبته** (`TrackingSheet`)
-                  const kind = ride.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[ride.vehicle_category];
+                  const kind = ride.gender_preference === "female" ? tr("نسائية") : VEHICLE_LABEL[ride.vehicle_category];
                   const meta = [
                     kind,
                     ride.driver?.name,
@@ -246,10 +246,10 @@ export function RidesT2Screen() {
                         </span>
                         <span className="t2-chips">
                           {/* شارةُ النزاع وحالُ السداد — **من الصفّ القائم**، والحكمُ يصل محسوباً (`settlement`) */}
-                          {has_open_dispute ? <span className="t2-chip danger">نزاع</span> : null}
+                          {has_open_dispute ? <span className="t2-chip danger">{tr("نزاع")}</span> : null}
                           {settlement === "due" || settlement === "awaiting" ? (
                             <span className="t2-chip warn">
-                              {settlement === "awaiting" ? "بانتظار التأكيد" : "لم تُدفع"}
+                              {settlement === "awaiting" ? tr("بانتظار التأكيد") : tr("لم تُدفع")}
                             </span>
                           ) : null}
                           <span className={`t2-chip ${chip.tone}`}>{chip.text}</span>
@@ -258,9 +258,9 @@ export function RidesT2Screen() {
 
                       <span className={unserved ? "t2-route off" : "t2-route"}>
                         <span className="t2-dot" />
-                        <span className="t2-place">{ride.pickup_address ?? "نقطة على الخريطة"}</span>
+                        <span className="t2-place">{ride.pickup_address ?? tr("نقطة على الخريطة")}</span>
                         <span className="t2-dot to" />
-                        <span className="t2-place">{ride.dropoff_address ?? "وجهة على الخريطة"}</span>
+                        <span className="t2-place">{ride.dropoff_address ?? tr("وجهة على الخريطة")}</span>
                       </span>
 
                       <span className="t2-ride-foot">
@@ -281,7 +281,7 @@ export function RidesT2Screen() {
 
           {more ? (
             <button type="button" className="t2-more" onClick={() => void load(rides.length, filter)}>
-              عرض المزيد
+              {tr("عرض المزيد")}
             </button>
           ) : null}
         </>
@@ -311,19 +311,19 @@ function PausedBookingT2({
     <article className="t2-booking t2-wbooking">
       <span className="t2-booking-when">
         <Icon name="event_upcoming" />
-        مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+        {tr("مجدولة ·")}{" "}{at.day} <span dir="ltr">{at.time}</span> {at.half}
       </span>
       <span className="t2-route">
         <span className="t2-dot" />
-        <span className="t2-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-place">{booking.pickup_address ?? tr("نقطة على الخريطة")}</span>
         <span className="t2-dot to" />
-        <span className="t2-place strong">{booking.dropoff_address ?? "وجهة على الخريطة"}</span>
+        <span className="t2-place strong">{booking.dropoff_address ?? tr("وجهة على الخريطة")}</span>
       </span>
       <span className="t2-booking-foot">
-        <span>نسائية</span>
+        <span>{tr("نسائية")}</span>
         {fare !== null ? (
           <span className="t2-booking-fare">
-            {formatMoney(fare, booking.currency)} <small>تقديرياً</small>
+            {formatMoney(fare, booking.currency)} <small>{tr("تقديرياً")}</small>
           </span>
         ) : null}
       </span>

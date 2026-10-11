@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { extendTailwindMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge"; import { language, tr } from "@/lib/i18n";
 
 // prettier-ignore
 const FONT_SIZES = [
@@ -112,7 +112,8 @@ export function digits(value: string | number | null | undefined): string {
  * القيمةُ التي يعتمد عليها العرضُ تُكتب صراحةً. و`-u-nu-latn` يثبّت الخانات
  * لاتينيةً ويُبقي أسماءَ الشهور عربية.
  */
-export const DISPLAY_LOCALE = "ar-u-nu-latn";
+// **وبالفرنسيّة أسماءُ شهورٍ فرنسيّة بخاناتٍ لاتينيّة** (SPEC §٧٣-هـ المرحلة ٥) — والعربيّةُ كما كانت حرفاً
+export const DISPLAY_LOCALE = language === "fr" ? "fr-u-nu-latn" : "ar-u-nu-latn";
 
 /** المبالغ نصوصٌ من الخلفية ولا تُحوَّل إلى `number` (SPEC القسم 4).
  *
@@ -138,17 +139,17 @@ export function formatDistance(km: string | number | null | undefined) {
   if (km === null || km === undefined || km === "") return "—";
   const value = Number(km);
   if (!Number.isFinite(value)) return "—";
-  return value < 1 ? `${Math.round(value * 1000)} م` : `${value.toFixed(1)} كم`;
+  return value < 1 ? tr("{0} م", { 0: Math.round(value * 1000) }) : tr("{0} كم", { 0: value.toFixed(1) });
 }
 
 export function formatDuration(minutes: string | number | null | undefined) {
   if (minutes === null || minutes === undefined || minutes === "") return "—";
   const value = Math.round(Number(minutes));
   if (!Number.isFinite(value)) return "—";
-  if (value < 60) return `${value} دقيقة`;
+  if (value < 60) return tr("{0} دقيقة", { 0: value });
   const hours = Math.floor(value / 60);
   const rest = value % 60;
-  return rest ? `${hours} س ${rest} د` : `${hours} ساعة`;
+  return rest ? tr("{0} س {1} د", { 0: hours, 1: rest }) : tr("{0} ساعة", { 0: hours });
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {

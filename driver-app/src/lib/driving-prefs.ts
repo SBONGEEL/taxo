@@ -8,8 +8,8 @@
 export type NavApp = "system" | "google" | "waze";
 
 export const NAV_APPS: { value: NavApp; label: string }[] = [
-  { value: "system", label: "اختيار النظام" },
-  { value: "google", label: "خرائط قوقل" },
+  { value: "system", label: tr("اختيار النظام") },
+  { value: "google", label: tr("خرائط قوقل") },
   { value: "waze", label: "Waze" },
 ];
 
@@ -72,3 +72,4 @@ export function setAutoAccept(on: boolean): void {
     // جهازٌ يرفض التخزين: يبقى مطفأً
   }
 }
+import { tr } from "@/lib/i18n";

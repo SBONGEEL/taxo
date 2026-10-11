@@ -10,7 +10,7 @@
  */
 
 import type { UserNotification } from "@/api/types";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
 export function composeBody(entry: UserNotification): string | null {
@@ -24,11 +24,11 @@ export function composeBody(entry: UserNotification): string | null {
 
   switch (entry.kind) {
     case "ride_completed":
-      return money ? `أجرة الرحلة ${money}.` : null;
+      return money ? tr("أجرة الرحلة {0}.", { 0: money }) : null;
     case "cliq_confirmation_expired":
-      return money ? `${money} — تفصل فيها الإدارة الآن.` : null;
+      return money ? tr("{0} — تفصل فيها الإدارة الآن.", { 0: money }) : null;
     case "topup_confirmed":
-      return money ? `أُضيف ${money} إلى رصيدك.` : null;
+      return money ? tr("أُضيف {0} إلى رصيدك.", { 0: money }) : null;
     default:
       return null;
   }

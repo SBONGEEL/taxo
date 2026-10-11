@@ -33,20 +33,20 @@ import {
   VEHICLE_MAKES,
   VEHICLE_MODELS,
   vehicleYears,
-} from "@/lib/vehicle-options";
+} from "@/lib/vehicle-options"; import { tr } from "@/lib/i18n";
 
 export const DOC_LABEL: Record<DocumentType, string> = {
-  driving_license: "رخصة القيادة",
-  national_id: "الهوية الشخصية",
-  vehicle_registration: "رخصة المركبة",
-  vehicle_photo: "صورة المركبة",
-  vehicle_front: "المركبة من الأمام",
-  vehicle_back: "المركبة من الخلف",
-  vehicle_side_right: "الجانب الأيمن",
-  vehicle_side_left: "الجانب الأيسر",
-  vehicle_interior: "من الداخل",
-  vehicle_plate: "لوحة المركبة",
-  profile_photo: "الصورة الشخصية",
+  driving_license: tr("رخصة القيادة"),
+  national_id: tr("الهوية الشخصية"),
+  vehicle_registration: tr("رخصة المركبة"),
+  vehicle_photo: tr("صورة المركبة"),
+  vehicle_front: tr("المركبة من الأمام"),
+  vehicle_back: tr("المركبة من الخلف"),
+  vehicle_side_right: tr("الجانب الأيمن"),
+  vehicle_side_left: tr("الجانب الأيسر"),
+  vehicle_interior: tr("من الداخل"),
+  vehicle_plate: tr("لوحة المركبة"),
+  profile_photo: tr("الصورة الشخصية"),
 };
 
 export const REVIEW_LABEL = {
@@ -76,7 +76,7 @@ export function useVehicleScreen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة المستندات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المستندات"),
       ),
     );
   }, [load]);
@@ -97,12 +97,12 @@ export function useVehicleScreen() {
       const shrunkNote = describeShrink(shrunk);
       setDone(
         (result.approval_reverted
-          ? "رُفع المستند — وحسابك عاد «قيد المراجعة» حتى تُراجَع الوثيقة"
-          : "رُفع المستند — بانتظار المراجعة") +
+          ? tr("رُفع المستند — وحسابك عاد «قيد المراجعة» حتى تُراجَع الوثيقة")
+          : tr("رُفع المستند — بانتظار المراجعة")) +
           (shrunkNote ? ` · ${shrunkNote}` : ""),
       );
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الرفع");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الرفع"));
     } finally {
       setBusy(null);
     }
@@ -155,12 +155,12 @@ export function VehicleScreen() {
         <button
           type="button"
           onClick={() => goBack()}
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           className="pressable text-18 text-muted"
         >
           →
         </button>
-        <h1 className="text-20 font-bold text-ink">المركبة والمستندات</h1>
+        <h1 className="text-20 font-bold text-ink">{tr("المركبة والمستندات")}</h1>
       </div>
 
       <section className="mb-12 card p-15">
@@ -188,23 +188,23 @@ export function VehicleScreen() {
             ) : (
               <>
                 <Pair
-                  label="سنة الصنع"
+                  label={tr("سنة الصنع")}
                   value={digits(String(vehicle.year))}
                 />
-                <Pair label="اللون" value={vehicle.color} />
+                <Pair label={tr("اللون")} value={vehicle.color} />
                 {/* اللوحةُ معرّفٌ مطبوعٌ على المركبة — تُعرض كما هي */}
-                <Pair label="رقم اللوحة" value={vehicle.plate_number} ltr last />
+                <Pair label={tr("رقم اللوحة")} value={vehicle.plate_number} ltr last />
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
                   className="pressable mt-11 w-full rounded-12 border border-line py-9 text-center text-12 font-semibold text-ink"
                 >
-                  تعديل بيانات المركبة
+                  {tr("تعديل بيانات المركبة")}
                 </button>
                 {reverted ? (
                   <p className="mt-9 rounded-12 border border-warn bg-surface-2 px-12 py-10 text-11 leading-note text-warn">
-                    غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة»
-                    حتى يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.
+                    {tr("غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة» حتى يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.")}
+
                   </p>
                 ) : null}
               </>
@@ -212,13 +212,13 @@ export function VehicleScreen() {
           </>
         ) : (
           <p className="text-12.5 leading-note text-muted">
-            لا مركبة مسجّلة على حسابك. راجع الدعم لتسجيلها.
+            {tr("لا مركبة مسجّلة على حسابك. راجع الدعم لتسجيلها.")}
           </p>
         )}
       </section>
 
       <h2 className="mb-10 mt-16 px-2 text-13 font-bold text-muted">
-        المستندات
+        {tr("المستندات")}
       </h2>
 
       <ErrorNote message={error} />
@@ -246,8 +246,8 @@ export function VehicleScreen() {
       </div>
 
       <p className="mt-14 text-11.5 leading-note text-muted">
-        رفعُ مستندٍ من جديد يستبدل القديم ويعيده «قيد المراجعة». وإن كان حسابك
-        معتمداً فسيعود قيد المراجعة حتى تُقبل الوثيقة الجديدة.
+        {tr("رفعُ مستندٍ من جديد يستبدل القديم ويعيده «قيد المراجعة». وإن كان حسابك معتمداً فسيعود قيد المراجعة حتى تُقبل الوثيقة الجديدة.")}
+
       </p>
     </div>
   );
@@ -284,7 +284,7 @@ function DocumentRow({
             review ? review.tone : "text-muted",
           )}
         >
-          {review ? review.text : "لم يُرفع"}
+          {review ? review.text : tr("لم يُرفع")}
         </span>
       </div>
 
@@ -309,7 +309,7 @@ function DocumentRow({
         onClick={() => input.current?.click()}
         className="pressable mt-10 w-full rounded-12 border border-dashed border-line py-10 text-center text-12 font-semibold text-muted disabled:opacity-60"
       >
-        {busy ? "…" : review ? "استبدال الملف" : "ارفع صورة"}
+        {busy ? "…" : review ? tr("استبدال الملف") : tr("ارفع صورة")}
       </button>
     </div>
   );
@@ -421,16 +421,16 @@ export function VehicleForm({
 
   return (
     <div>
-      {field("make", "الصنع")}
-      {field("model", "الطراز")}
-      {field("year", "سنة الصنع", true)}
-      {field("color", "اللون")}
-      {field("plate_number", "رقم اللوحة", true)}
+      {field("make", tr("الصنع"))}
+      {field("model", tr("الطراز"))}
+      {field("year", tr("سنة الصنع"), true)}
+      {field("color", tr("اللون"))}
+      {field("plate_number", tr("رقم اللوحة"), true)}
 
       {identityChanged && approved ? (
         <p className="mb-10 rounded-12 border border-warn bg-surface-2 px-12 py-10 text-11 leading-note text-warn">
-          هذه بياناتٌ في رخصة المركبة — حفظُها يعيد حسابك «قيد المراجعة» حتى
-          يعتمدها المشرف، ولا تصلك طلباتٌ حتى ذلك.
+          {tr("هذه بياناتٌ في رخصة المركبة — حفظُها يعيد حسابك «قيد المراجعة» حتى يعتمدها المشرف، ولا تصلك طلباتٌ حتى ذلك.")}
+
         </p>
       ) : null}
 
@@ -453,21 +453,21 @@ export function VehicleForm({
               .then((result) => onSaved(result.approval_reverted))
               .catch((caught) => {
                 setError(
-                  caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
+                  caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"),
                 );
                 setSaving(false);
               });
           }}
           className="flex-1 rounded-12 bg-brand py-10 text-center text-13 font-bold text-brand-ink disabled:opacity-60"
         >
-          حفظ
+          {tr("حفظ")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="pressable flex-1 rounded-12 border border-line py-10 text-center text-13 font-semibold text-muted"
         >
-          إلغاء
+          {tr("إلغاء")}
         </button>
       </div>
     </div>

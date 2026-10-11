@@ -37,7 +37,7 @@ import { play } from "@/lib/sound";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
 import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
-import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 // **بيتٌ واحدٌ للورقة والشاشة** — وثلاثةٌ لا أربعة (قرار 20 والتصميم)
 const QUICK_AMOUNTS = QUICK_TOPUP_AMOUNTS;
@@ -84,7 +84,7 @@ export function WalletTopupScreen() {
           window.location.assign(order.redirect_url);
           return;
         }
-        setDone("تمت العملية — سيظهر الرصيد خلال لحظات.");
+        setDone(tr("تمت العملية — سيظهر الرصيد خلال لحظات."));
         return;
       }
 
@@ -94,10 +94,10 @@ export function WalletTopupScreen() {
       }
 
       await createTopupRequest(amount, reference.trim());
-      setDone("سجّلنا طلبك — يظهر الرصيد بعد أن تؤكده الإدارة.");
+      setDone(tr("سجّلنا طلبك — يظهر الرصيد بعد أن تؤكده الإدارة."));
       setReference("");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إتمام الشحن");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إتمام الشحن"));
     } finally {
       setBusy(false);
     }
@@ -115,14 +115,14 @@ export function WalletTopupScreen() {
       // خلال لحظات» فلا تُعلَن، والطلبُ اليدويُّ ينتظر الإدارة — **ونغمةُ نجاحٍ
       // قبل أن يُقيَّد المالُ تَعِد بما لم يقع**
       if (updated.status === "paid") {
-        setDone("وصلت الحوالة — شُحن رصيدك.");
+        setDone(tr("وصلت الحوالة — شُحن رصيدك."));
         play("topup");
       }
       if (updated.status === "created") {
-        setError("لم تصل الحوالة بعد — أعد المحاولة بعد لحظات.");
+        setError(tr("لم تصل الحوالة بعد — أعد المحاولة بعد لحظات."));
       }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الاستعلام");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الاستعلام"));
     } finally {
       setBusy(false);
     }
@@ -130,20 +130,20 @@ export function WalletTopupScreen() {
 
   return (
     <div className="t2 t2-m-page">
-      <HeadT2 title="شحن الرصيد" onBack={goBack} />
+      <HeadT2 title={tr("شحن الرصيد")} onBack={goBack} />
 
       {cliq ? (
         // **صفحةُ الرمز** (R16b) — بطاقةٌ بيضاء: الرمزُ أسودُ على أبيضَ في كلِّ سِمة، ثمّ تطبيقُ البنك، ثمّ «تحقّق الآن»
         <section className="t2-m-card">
-          <h2 className="t2-m-cliq-title">حوّل عبر كليك</h2>
+          <h2 className="t2-m-cliq-title">{tr("حوّل عبر كليك")}</h2>
           <p className="t2-m-cliq-text">
-            امسح الرمز من تطبيق بنكك بمبلغ {formatMoney(cliq.amount, cliq.currency)}.
+            {tr("امسح الرمز من تطبيق بنكك بمبلغ")}{" "}{formatMoney(cliq.amount, cliq.currency)}.
           </p>
           {cliq.qr_payload ? <QrCode payload={cliq.qr_payload} /> : null}
           {cliq.deep_link ? (
             <a href={cliq.deep_link} className="t2-button secondary t2-m-open">
               <Icon name="open_in_new" />
-              افتح تطبيق البنك
+              {tr("افتح تطبيق البنك")}
             </a>
           ) : null}
 
@@ -158,29 +158,29 @@ export function WalletTopupScreen() {
               aria-busy={busy}
               onClick={recheck}
             >
-              <BusyLabel busy={busy}>حوّلتُ — تحقّق الآن</BusyLabel>
+              <BusyLabel busy={busy}>{tr("حوّلتُ — تحقّق الآن")}</BusyLabel>
             </button>
           )}
           <button type="button" className="t2-m-link" onClick={() => setCliq(null)}>
-            رجوع
+            {tr("رجوع")}
           </button>
         </section>
       ) : (
         <>
-          <AmountCardT2 id="topup-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
+          <AmountCardT2 id="topup-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency}>
             <QuickAmountsT2 amounts={QUICK_AMOUNTS} value={amount} onPick={setAmount} label={(value) => formatMoney(value)} />
           </AmountCardT2>
           <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 
-          <h2 className="t2-section">طريقة الشحن</h2>
-          <div className="t2-m-chans" role="radiogroup" aria-label="طريقة الشحن">
+          <h2 className="t2-section">{tr("طريقة الشحن")}</h2>
+          <div className="t2-m-chans" role="radiogroup" aria-label={tr("طريقة الشحن")}>
             {cliqEnabled ? (
               <ChannelOption
                 active={channel === "cliq"}
                 onSelect={() => setChannel("cliq")}
                 icon="smartphone"
-                title="كليك — رمز فوري"
-                hint="امسح الرمز من تطبيق بنكك ويُشحن رصيدك آلياً"
+                title={tr("كليك — رمز فوري")}
+                hint={tr("امسح الرمز من تطبيق بنكك ويُشحن رصيدك آلياً")}
               />
             ) : null}
 
@@ -189,8 +189,8 @@ export function WalletTopupScreen() {
                 active={channel === "card"}
                 onSelect={() => setChannel("card")}
                 icon="credit_card"
-                title="بطاقة"
-                hint="شحنٌ فوري عبر صفحة دفع آمنة"
+                title={tr("بطاقة")}
+                hint={tr("شحنٌ فوري عبر صفحة دفع آمنة")}
               />
             ) : null}
 
@@ -198,14 +198,14 @@ export function WalletTopupScreen() {
               active={channel === "manual"}
               onSelect={() => setChannel("manual")}
               icon="account_balance"
-              title="حوالة يدوية"
-              hint="حوّل ثم أدخل المرجع — تؤكده الإدارة"
+              title={tr("حوالة يدوية")}
+              hint={tr("حوّل ثم أدخل المرجع — تؤكده الإدارة")}
             />
           </div>
 
           {channel === "manual" ? (
             <div className="t2-m-gap-lg">
-              <AuthBlock label="مرجع الحوالة" htmlFor="topup-reference" hint="رقم الحوالة كما يظهر في تطبيق بنكك">
+              <AuthBlock label={tr("مرجع الحوالة")} htmlFor="topup-reference" hint={tr("رقم الحوالة كما يظهر في تطبيق بنكك")}>
                 <AuthInput
                   id="topup-reference"
                   dir="ltr"
@@ -233,7 +233,7 @@ export function WalletTopupScreen() {
               aria-busy={busy}
               onClick={submit}
             >
-              <BusyLabel busy={busy}>متابعة</BusyLabel>
+              <BusyLabel busy={busy}>{tr("متابعة")}</BusyLabel>
             </button>
           </div>
         </>

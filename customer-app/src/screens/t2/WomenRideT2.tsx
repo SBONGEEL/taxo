@@ -48,7 +48,7 @@ import { SheetT2 } from "./SheetT2";
 import "@/taxo2";
 import "./t2.css";
 import "./request.css";
-import "./women.css";
+import "./women.css"; import { tr } from "@/lib/i18n";
 
 /** **رحلةُ الخدمة النسائية** = ما طُلبت فيه كبتنة — **تفضيلُ الطلب لا جنسُ أحد**. («ذكور» ليست الخدمة النسائية.) */
 export function isWomenRide(ride: Pick<Ride, "gender_preference">): boolean {
@@ -63,7 +63,7 @@ export function WomenRequestHeadT2({ meta }: { meta: string | null }) {
     <div className="t2-wreq-head">
       <span className="t2-wchip">
         <Icon name="woman" fill />
-        رحلة نسائية
+        {tr("رحلة نسائية")}
       </span>
       {meta ? <span className="t2-pick-meta">{meta}</span> : null}
     </div>
@@ -110,8 +110,8 @@ export function WomenNoCaptainT2({
           {
             value: "widen" as const,
             icon: "search",
-            title: "انتظري، نوسّع البحث",
-            sub: "نبحث بين الكبتنات في دائرةٍ أوسع لدقائق أخرى",
+            title: tr("انتظري، نوسّع البحث"),
+            sub: tr("نبحث بين الكبتنات في دائرةٍ أوسع لدقائق أخرى"),
           },
         ]
       : []),
@@ -120,16 +120,16 @@ export function WomenNoCaptainT2({
           {
             value: "later" as const,
             icon: "event_upcoming",
-            title: "جدولي الرحلة لوقت لاحق",
-            sub: "نبدأ البحث عن كبتنة قبل موعدك بعشر دقائق.",
+            title: tr("جدولي الرحلة لوقت لاحق"),
+            sub: tr("نبدأ البحث عن كبتنة قبل موعدك بعشر دقائق."),
           },
         ]
       : []),
     {
       value: "anyCaptain",
       icon: "local_taxi",
-      title: "اطلبي رحلة عادية",
-      sub: "قد يكون السائق كبتناً رجلاً — لن نرسله إلا إن اخترتِ هذا.",
+      title: tr("اطلبي رحلة عادية"),
+      sub: tr("قد يكون السائق كبتناً رجلاً — لن نرسله إلا إن اخترتِ هذا."),
       warn: true,
     },
   ];
@@ -160,12 +160,12 @@ export function WomenNoCaptainT2({
             aria-busy={busy}
             onClick={() => void proceed()}
           >
-            {busy ? "نرسل طلبك…" : "متابعة"}
+            {busy ? tr("نرسل طلبك…") : tr("متابعة")}
           </button>
           {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
           {/* **يطوي الخاتمة** — الطلبُ انتهى في الخلفية أصلاً، فلا شيءَ يُلغى هناك ولا رسمَ عليه */}
           <button type="button" className="t2-out-later t2-wcancel" onClick={onDismiss}>
-            إلغاء الطلب
+            {tr("إلغاء الطلب")}
           </button>
         </div>
       }
@@ -175,11 +175,11 @@ export function WomenNoCaptainT2({
           <Icon name="hourglass_top" />
         </span>
         <div>
-          <h3 className="t2-out-title">لا توجد كبتنة قريبة الآن</h3>
-          <p className="t2-wno-sub">بحثنا حولك ولم نجد كبتنةً متاحة. اختاري ما يناسبك:</p>
+          <h3 className="t2-out-title">{tr("لا توجد كبتنة قريبة الآن")}</h3>
+          <p className="t2-wno-sub">{tr("بحثنا حولك ولم نجد كبتنةً متاحة. اختاري ما يناسبك:")}</p>
         </div>
       </div>
-      <div className="t2-wopts" role="radiogroup" aria-label="اختاري ما يناسبك">
+      <div className="t2-wopts" role="radiogroup" aria-label={tr("اختاري ما يناسبك")}>
         {options.map((option) => {
           const on = choice === option.value;
           return (
@@ -230,17 +230,17 @@ export function WomenPausedChoiceT2({
     <div className="t2-wpause" aria-busy={busy}>
       <p className="t2-wpause-line">
         <Icon name="woman" fill />
-        لم نطلب رحلتك — خدمةُ الكبتنات متوقّفةٌ الآن
+        {tr("لم نطلب رحلتك — خدمةُ الكبتنات متوقّفةٌ الآن")}
       </p>
       <div className="t2-wpause-actions">
         <button type="button" className="t2-cbtn grow t2-wpause-any" disabled={busy} onClick={onAnyCaptain}>
-          اطلبيها بأي كبتن
+          {tr("اطلبيها بأي كبتن")}
         </button>
         <button type="button" className="t2-cbtn grow soft" disabled={busy} onClick={onCancel}>
-          ألغي الحجز
+          {tr("ألغي الحجز")}
         </button>
       </div>
-      <p className="t2-wpause-fine">الإلغاءُ بلا رسم — لم تُطلب رحلةٌ بعد.</p>
+      <p className="t2-wpause-fine">{tr("الإلغاءُ بلا رسم — لم تُطلب رحلةٌ بعد.")}</p>
       {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
     </div>
   );
@@ -263,7 +263,7 @@ export function WomenApproachChipT2({
     return (
       <div className="t2 t2-trk-chip women">
         <Icon name="woman" fill />
-        وصلت الكبتنة
+        {tr("وصلت الكبتنة")}
       </div>
     );
   }
@@ -271,15 +271,15 @@ export function WomenApproachChipT2({
   return (
     <div className="t2 t2-trk-chip women">
       <Icon name="woman" fill />
-      الكبتنة على بعد {formatDistance(distanceKm(driverPing, ride.pickup))}
-      {minutes !== null ? ` · ${minutes} د` : ""}
+      {tr("الكبتنة على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
+      {minutes !== null ? tr(" · {0} د", { 0: minutes }) : ""}
     </div>
   );
 }
 
 /** عنوانُ ورقة RW4 — مؤنّثاً كما رُسم. */
 export function womenApproachTitle(arrived: boolean): string {
-  return arrived ? "الكبتنة تنتظرك في نقطة الانطلاق" : "الكبتنة في الطريق إليك";
+  return arrived ? tr("الكبتنة تنتظرك في نقطة الانطلاق") : tr("الكبتنة في الطريق إليك");
 }
 
 /** **رمزُ الرحلة** (RW4، §٦٢-ج/٥) — بطاقةُ البرقوق كما رُسمت: «تطلبه منك الكبتنة قبل أن تركبي» وخاناتُه الأربع.
@@ -306,10 +306,10 @@ export function RideCodeCardT2({ ride }: { ride: Ride }) {
   return (
     <div className="t2-trk-code">
       <div className="t2-trk-code-main">
-        <div className="t2-trk-code-title">رمز الرحلة</div>
-        <div className="t2-trk-code-sub">تطلبه منك الكبتنة قبل أن تركبي</div>
+        <div className="t2-trk-code-title">{tr("رمز الرحلة")}</div>
+        <div className="t2-trk-code-sub">{tr("تطلبه منك الكبتنة قبل أن تركبي")}</div>
       </div>
-      <span className="t2-trk-code-num" dir="ltr" aria-label={`رمز الرحلة ${code.split("").join(" ")}`}>
+      <span className="t2-trk-code-num" dir="ltr" aria-label={tr("رمز الرحلة {0}", { 0: code.split("").join(" ") })}>
         {code}
       </span>
     </div>
@@ -339,7 +339,7 @@ export function WomenCaptainCardT2({ ride }: { ride: Ride }) {
               <span aria-hidden="true">·</span>
             </>
           ) : null}
-          كبتنة موثّقة
+          {tr("كبتنة موثّقة")}
         </div>
       </div>
       {vehicle ? (

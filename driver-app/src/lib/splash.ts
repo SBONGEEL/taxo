@@ -8,7 +8,7 @@
  * **ونصوصُ الحال كما كانت** (قرارُ المالك 2026-08-28): ثلاثةُ نصوصٍ لثلاثةِ أشياءَ تُعرف، ولا رابعَ يُدَّعى — `offline` حقيقةٌ
  * يملكها المتصفّح، و`slow` حقيقةٌ عن الزمن لا عن السبب، و`unreachable` «تعذّر الوصول» **ومعه رمزٌ فنّيٌّ قصير** لا يُترجَم.
  */
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react"; import { tr } from "@/lib/i18n";
 
 export type SplashStatus = "slow" | "offline" | "unreachable" | null;
 
@@ -55,10 +55,10 @@ export function useSplashStatus(): State {
 /** النصُّ لكلِّ حال — **واقعةٌ لا تفسير**. */
 export function splashText(status: Exclude<SplashStatus, null>): string {
   return status === "offline"
-    ? "لا يوجد اتصال بالإنترنت"
+    ? tr("لا يوجد اتصال بالإنترنت")
     : status === "unreachable"
-      ? "تعذّر الوصول إلى الخدمة"
-      : "لم يصل الجواب بعد — جارٍ المحاولة";
+      ? tr("تعذّر الوصول إلى الخدمة")
+      : tr("لم يصل الجواب بعد — جارٍ المحاولة");
 }
 
 /** يُزيل إطارَ الإقلاع من `index.html` — **حين يُركَّب الترحيبُ فوقه بالرسم نفسِه**، فلا ومضةَ بينهما.

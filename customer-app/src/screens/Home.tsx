@@ -68,7 +68,7 @@ import {
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
 import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
-import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
+import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2"; import { tr } from "@/lib/i18n";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -327,7 +327,7 @@ export function HomeScreen() {
       return;
     }
     setDropoff(here);
-    setDropoffAddress(pickupAddress ?? pickupLine ?? "موقعي الحالي");
+    setDropoffAddress(pickupAddress ?? pickupLine ?? tr("موقعي الحالي"));
     setPhase("confirm");
     map.current?.fitBounds(point, here);
   }
@@ -356,7 +356,7 @@ export function HomeScreen() {
   function repeatRide(past: Ride) {
     pickPlace({
       id: `ride:${past.id}`,
-      name: past.dropoff_address ?? "الوجهة",
+      name: past.dropoff_address ?? tr("الوجهة"),
       address: past.dropoff_address ?? "",
       coordinates: past.dropoff,
     });
@@ -439,7 +439,7 @@ export function HomeScreen() {
       navigate("/account/bookings");
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تثبيت الحجز",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تثبيت الحجز"),
       );
     } finally {
       setRequesting(false);
@@ -505,7 +505,7 @@ export function HomeScreen() {
       endParcel();
       endHourly();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
       // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
       // الخدمةُ فيه مشتعلة يجعل كلَّ طلبٍ يرتدّ، والمفتاحُ لا يظهر لتغيّره
       // (لأن الخدمة مطفأة). فيُعرض هنا زرٌّ يعيده إلى `any` — والسببُ مكتوب
@@ -533,7 +533,7 @@ export function HomeScreen() {
       setBlockedByPreference(false);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تعديل التفضيل",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تعديل التفضيل"),
       );
     }
   }
@@ -601,7 +601,7 @@ export function HomeScreen() {
       setDismissed(null);
       setRide(created);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
     }
   }
 
@@ -629,7 +629,7 @@ export function HomeScreen() {
       setDismissed(null);
       setRide(created);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
     }
   }
 
@@ -712,7 +712,7 @@ export function HomeScreen() {
   const approachMinutes = useApproachMinutes(tracking ? ride : null, driverPing);
 
   const homeProps: RiderHomeProps = {
-    name: user?.name ?? "بك",
+    name: user?.name ?? tr("بك"),
     // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
     place: pickupAddress,
     unread: unreadNotifications,
@@ -987,7 +987,7 @@ export function HomeScreen() {
         <>
           {picking ? <PinT2 target={phase === "pick-pickup" ? "pickup" : "dropoff"} /> : null}
           <MapHeaderT2
-            initial={user?.name.slice(0, 1) ?? "؟"}
+            initial={user?.name.slice(0, 1) ?? tr("؟")}
             unread={unreadNotifications}
             dark={dark}
             onBack={confirming ? leaveConfirm : null}
@@ -1051,7 +1051,7 @@ export function HomeScreen() {
               />
             ) : picking ? (
               <PickingSheetT2
-                targetLabel={phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
+                targetLabel={phase === "pick-pickup" ? tr("نقطة الانطلاق") : tr("وجهتك")}
                 address={pinAddress}
                 loading={pinLoading}
                 onConfirm={confirmPin}
@@ -1063,7 +1063,7 @@ export function HomeScreen() {
             ) : (
               <WhereToSheetT2
                 places={places}
-                pickupLabel={pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
+                pickupLabel={pickupAddress ?? (pickup ? tr("الموقع المحدد") : tr("موقعي الحالي"))}
                 onSearch={() => setSearchOpen(true)}
                 onPickPlace={(place) =>
                   pickPlace({
@@ -1095,7 +1095,7 @@ export function HomeScreen() {
         onSkip={hourlyMode ? skipDestination : undefined}
         airports={airportPicks}
         // **«أحضر غرضي»** (§٧٢-ج/١): السؤالُ الأوّلُ عن مكان الغرض، وما بعده عن مكان التسليم
-        title={fetchItemStage ? "أين غرضك؟" : parcelMode && parcelFetch ? "إلى أين يصلك؟" : undefined}
+        title={fetchItemStage ? tr("أين غرضك؟") : parcelMode && parcelFetch ? tr("إلى أين يصلك؟") : undefined}
       />
 
     </div>

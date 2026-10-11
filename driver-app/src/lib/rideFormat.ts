@@ -13,7 +13,7 @@ import type {
   VehicleCategory, RideCategoryFace } from "@/api/types";
 import { currencyLabel, currencyName, digits,
   DISPLAY_LOCALE,
-} from "@/lib/utils";
+} from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** **يُقرأ من `currencyLabel` ولا يُكتب هنا** (2026-09-07): البيتُ نزل إلى
  *  `@/lib/utils` كي يقرأه صندوقُ اللافتات المتطابقُ بايتاً في التطبيقين،
@@ -32,14 +32,14 @@ export const CURRENCY_FULL: Record<Currency, string> = new Proxy({} as Record<Cu
 
 /** تفضيلُ جنس الركاب كما يُقرأ في الشاشات — مصدرٌ واحد للثلاث. */
 export const PREFERENCE_LABEL: Record<GenderPreference, string> = {
-  female: "النساء فقط",
-  male: "الرجال فقط",
-  any: "الجميع",
+  female: tr("النساء فقط"),
+  male: tr("الرجال فقط"),
+  any: tr("الجميع"),
 };
 
 export const CATEGORY_LABEL: Record<VehicleCategory, string> = {
-  economy: "اقتصادي",
-  comfort: "مريح",
+  economy: tr("اقتصادي"),
+  comfort: tr("مريح"),
 };
 
 /** **الفئاتُ الجديدةُ تُسمّى من `/config`** (SPEC §٦٧) — تُضاف إلى الجداول أعلاه **ولا تمسّ المدمجتين**: «اقتصادي» و«مريح» تبقيان بنصّهما
@@ -52,29 +52,29 @@ export function registerCategoryFaces(faces: RideCategoryFace[]): void {
 }
 
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "كاش",
-  wallet: "محفظة",
-  card: "بطاقة",
-  cliq: "كليك",
+  cash: tr("كاش"),
+  wallet: tr("محفظة"),
+  card: tr("بطاقة"),
+  cliq: tr("كليك"),
   // خصمُ كوبونٍ تدفعه الشركة (12-ز): يُقيَّد للكبتن كأي دفعةٍ تمرّ بالمنصة
-  promo: "خصم كوبون",
+  promo: tr("خصم كوبون"),
   // خصمُ المشاركة (12-ي) — تتحمّله الشركة، فلا يَنقص ما يقبضه الكبتن
-  share: "خصم مشاركة",
+  share: tr("خصم مشاركة"),
   // **المشوارُ الثابت** (§٦٣-ج/٦) — دفعه الراكبُ مقدّماً مع اشتراكه، ويُقيَّد للكبتن كأيِّ دفعةٍ تمرّ بالمنصة
-  commute: "اشتراك المشوار",
+  commute: tr("اشتراك المشوار"),
 };
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
-  requested: "بانتظار كبتن",
-  searching: "نبحث عن كبتن",
-  accepted: "مقبولة",
-  arrived: "الكبتن وصل",
-  at_stop: "وقوفٌ عند محطة",
-  in_progress: "جارية",
-  completed: "مكتملة",
-  cancelled_by_rider: "ألغاها الراكب",
-  cancelled_by_driver: "ألغيتَها",
-  no_driver_found: "لم يُقبل الطلب",
+  requested: tr("بانتظار كبتن"),
+  searching: tr("نبحث عن كبتن"),
+  accepted: tr("مقبولة"),
+  arrived: tr("الكبتن وصل"),
+  at_stop: tr("وقوفٌ عند محطة"),
+  in_progress: tr("جارية"),
+  completed: tr("مكتملة"),
+  cancelled_by_rider: tr("ألغاها الراكب"),
+  cancelled_by_driver: tr("ألغيتَها"),
+  no_driver_found: tr("لم يُقبل الطلب"),
 };
 
 /** لونُ الحالة — مكتملةٌ خضراء، وجاريةٌ برتقالية، وما عداها أحمر. */
@@ -102,8 +102,8 @@ export function formatWhen(iso: string): string {
   }));
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-  if (sameDay(at, today)) return `اليوم ${time}`;
-  if (sameDay(at, yesterday)) return `أمس ${time}`;
+  if (sameDay(at, today)) return tr("اليوم {0}", { 0: time });
+  if (sameDay(at, yesterday)) return tr("أمس {0}", { 0: time });
   return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${time}`;
 }
 

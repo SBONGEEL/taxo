@@ -12,7 +12,7 @@ import { Drawer } from "vaul";
 import type { ReactNode } from "react";
 
 import { DURATION, EASE } from "@/lib/motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function Sheet({
   children,
@@ -144,7 +144,7 @@ export function DrawerSheet({
               {title}
             </Drawer.Title>
           ) : (
-            <Drawer.Title className="sr-only">قائمة</Drawer.Title>
+            <Drawer.Title className="sr-only">{tr("قائمة")}</Drawer.Title>
           )}
           {/* `scr` لا `overflow-y-auto` وحدَها: شريطُ التمرير مخفيٌّ في المحمول
               (`DESIGN.md` §2.11) — وبدونه يُرسم شريطٌ رماديٌّ على حافة الورقة،

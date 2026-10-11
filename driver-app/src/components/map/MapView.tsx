@@ -49,7 +49,7 @@ import {
 import { trimRoute } from "@/lib/route-line";
 import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
 const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
@@ -768,7 +768,7 @@ export function MapView({
           className,
         )}
       >
-        {missing ?? "الخريطة غير مهيأة — راجع عقد Mapbox"}
+        {missing ?? tr("الخريطة غير مهيأة — راجع عقد Mapbox")}
       </div>
     );
   }
@@ -807,7 +807,7 @@ export function MapView({
       {/* **الوصولُ المتوقَّع** — يظهر حين يُقاس ويختفي حين لا يُقاس */}
       {!t2 && etaMinutes !== null ? (
         <div className="pointer-events-none absolute start-14 top-64 z-10 rounded-full border border-line bg-surface px-12 py-7 text-12 font-bold text-ink shadow-md">
-          {digits(String(etaMinutes))} دقيقة
+          {digits(String(etaMinutes))}{" "}{tr("دقيقة")}
         </div>
       ) : null}
 

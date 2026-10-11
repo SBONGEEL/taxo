@@ -29,19 +29,19 @@ import { DISPLAY_LOCALE, digits, ratedAverage } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 type Tone = "ok" | "warn" | "danger";
 
 /** والنوعُ `DriverStatus` لا `string`: حالٌ جديدةٌ في الخلفية تكسر البناء
  * هنا بدل أن تخرج على الشاشة سطراً فارغاً. */
 const STATUS_LINE: Record<DriverStatus, { text: string; tone: Tone; icon: string }> = {
-  approved: { text: "حساب معتمد", tone: "ok", icon: "verified" },
-  pending: { text: "قيد المراجعة — لا تصلك طلبات بعد", tone: "warn", icon: "hourglass_top" },
-  rejected: { text: "طلبك مرفوض — راجع الدعم", tone: "danger", icon: "error" },
-  suspended: { text: "حسابك موقوف — راجع الدعم", tone: "danger", icon: "error" },
+  approved: { text: tr("حساب معتمد"), tone: "ok", icon: "verified" },
+  pending: { text: tr("قيد المراجعة — لا تصلك طلبات بعد"), tone: "warn", icon: "hourglass_top" },
+  rejected: { text: tr("طلبك مرفوض — راجع الدعم"), tone: "danger", icon: "error" },
+  suspended: { text: tr("حسابك موقوف — راجع الدعم"), tone: "danger", icon: "error" },
   // **الإلغاءُ نهايةٌ لا إيقاف** — فنصُّه يقول ذلك ولا يَعِد بمراجعة
-  deactivated: { text: "حسابك مُلغى", tone: "danger", icon: "error" },
+  deactivated: { text: tr("حسابك مُلغى"), tone: "danger", icon: "error" },
 };
 
 export function AccountScreen() {
@@ -85,7 +85,7 @@ export function AccountScreen() {
   if (!profile) {
     return (
       <div className="t2 t2-acc t2-acc-loading">
-        <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+        <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
       </div>
     );
   }
@@ -98,10 +98,10 @@ export function AccountScreen() {
   const subLine = !subscription
     ? "…"
     : subscription.is_active
-      ? `ساري · باقٍ ${digits(String(subscription.days_remaining))} يوماً`
+      ? tr("ساري · باقٍ {0} يوماً", { 0: digits(String(subscription.days_remaining)) })
       : subscription.coverage_until
-        ? "منتهٍ — جدّد للعودة للتوزيع"
-        : "لا اشتراك — اشترك للبدء";
+        ? tr("منتهٍ — جدّد للعودة للتوزيع")
+        : tr("لا اشتراك — اشترك للبدء");
   // **ولا لونَ قبل الجواب**: كان الشريطُ أحمرَ حتى يصل النداء، فيُقرأ «منتهٍ» عن اشتراكٍ ساري — والنبرةُ بعده كما كانت
   const subTone: Tone | "" = !subscription
     ? ""
@@ -134,12 +134,12 @@ export function AccountScreen() {
   ).length;
   const docsNote =
     rejectedDocs > 0
-      ? `${digits(String(rejectedDocs))} مستند مرفوض — يحتاج رفعاً جديداً`
+      ? tr("{0} مستند مرفوض — يحتاج رفعاً جديداً", { 0: digits(String(rejectedDocs)) })
       : missingDocs > 0
-        ? `${digits(String(missingDocs))} مستند لم يُرفع بعد`
+        ? tr("{0} مستند لم يُرفع بعد", { 0: digits(String(missingDocs)) })
         : pendingDocs > 0
-          ? `${digits(String(pendingDocs))} مستند قيد المراجعة`
-          : "كل المستندات مقبولة";
+          ? tr("{0} مستند قيد المراجعة", { 0: digits(String(pendingDocs)) })
+          : tr("كل المستندات مقبولة");
   // **المرفوضُ أحمرُ والناقصُ كهرمانيّ** — ما ينتظر الكبتنَ يُرى، وما ينتظر الإدارةَ خافت
   const docsTone = rejectedDocs > 0 ? "danger" : missingDocs > 0 ? "warn" : "";
 
@@ -165,7 +165,7 @@ export function AccountScreen() {
         </div>
         {/* **ولا «★ 0.00» لمن لم يُقيَّم بعد** (§٦٢-ب/٤٩) */}
         {ratedAverage(driver.rating_avg) ? (
-          <span className="t2-acc-rate" aria-label={`تقييمك ${digits(driver.rating_avg)}`}>
+          <span className="t2-acc-rate" aria-label={tr("تقييمك {0}", { 0: digits(driver.rating_avg) })}>
             <Icon name="star" fill />
             <span className="t2-acc-rate-num" dir="ltr">
               {digits(driver.rating_avg)}
@@ -196,7 +196,7 @@ export function AccountScreen() {
             <Icon name="card_membership" />
           </span>
           <span className="t2-acc-state-main">
-            <span className="t2-acc-state-title">الاشتراك</span>
+            <span className="t2-acc-state-title">{tr("الاشتراك")}</span>
             <span className="t2-acc-state-sub">{subLine}</span>
           </span>
           <Icon name="chevron_left" className="t2-ax-chev" />
@@ -217,7 +217,7 @@ export function AccountScreen() {
               >
                 <Icon name={user.gender === "female" ? "woman" : "person"} />
               </span>
-              <span className="t2-acc-gender-label">الجنس</span>
+              <span className="t2-acc-gender-label">{tr("الجنس")}</span>
               <span
                 className={
                   user.gender === "female"
@@ -226,25 +226,25 @@ export function AccountScreen() {
                 }
               >
                 {user.gender === "female"
-                  ? "أنثى"
+                  ? tr("أنثى")
                   : user.gender === "male"
-                    ? "ذكر"
-                    : "غير مثبَّت"}
+                    ? tr("ذكر")
+                    : tr("غير مثبَّت")}
               </span>
             </div>
             <p className="t2-acc-gender-note">
               {user.gender_verified_at
-                ? `موثّق من الهوية بواسطة الإدارة · ${new Date(
+                ? tr("موثّق من الهوية بواسطة الإدارة · {0}", { 0: new Date(
                     user.gender_verified_at,
                   ).toLocaleDateString(DISPLAY_LOCALE, {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
-                  })}`
-                : "قبل التثبيت لا تصلك الطلبات التي تحدّد جنساً — لا كطلباتٍ مرفوضة، بل لا تُعرض أصلاً."}
+                  }) })
+                : tr("قبل التثبيت لا تصلك الطلبات التي تحدّد جنساً — لا كطلباتٍ مرفوضة، بل لا تُعرض أصلاً.")}
             </p>
             <p className="t2-acc-gender-note">
-              لا يُعدَّل من التطبيق. للتصحيح راسل الدعم.
+              {tr("لا يُعدَّل من التطبيق. للتصحيح راسل الدعم.")}
             </p>
           </div>
         </div>
@@ -253,26 +253,26 @@ export function AccountScreen() {
       <div className="t2-list">
         <Row
           icon="directions_car"
-          label="المركبة والمستندات"
+          label={tr("المركبة والمستندات")}
           sub={
             vehicle
               ? `${vehicle.make} ${vehicle.model}`
-              : "لم تُسجّل مركبة بعد"
+              : tr("لم تُسجّل مركبة بعد")
           }
           onClick={() => navigate("/account/vehicle")}
         />
         <Row
           icon="credit_card"
-          label="البطاقات المحفوظة"
-          sub="بطاقاتُ الدفع التي حفظتَها"
+          label={tr("البطاقات المحفوظة")}
+          sub={tr("بطاقاتُ الدفع التي حفظتَها")}
           onClick={() => navigate("/account/cards")}
         />
         {/* **بلا مفتاح ولا شرط**: شاشةُ حالٍ تُقرأ في أيِّ وقت — ومن
             سُحب إذنُه من إعدادات الهاتف لا يمرّ بنا ليُعرض له بابُها */}
         <Row
           icon="verified_user"
-          label="أذونات الجهاز"
-          sub="ما يمنع وصول الطلبات إليك، وما يُضعفه"
+          label={tr("أذونات الجهاز")}
+          sub={tr("ما يمنع وصول الطلبات إليك، وما يُضعفه")}
           onClick={() => navigate("/account/permissions")}
         />
         {/* **بلا مفتاح**: الدَّينُ ينشأ من العمل نفسِه لا من ميزةٍ تُشغَّل،
@@ -280,15 +280,15 @@ export function AccountScreen() {
             يجد أين يسدّد. والشاشةُ تعمل بصفر وتقول «لا مستحقّات عليك». */}
         <Row
           icon="toll"
-          label="المستحقّات"
-          sub="ما عليك من عمولة رحلات قبضتَ أجرتها نقداً"
+          label={tr("المستحقّات")}
+          sub={tr("ما عليك من عمولة رحلات قبضتَ أجرتها نقداً")}
           onClick={() => navigate("/account/debt")}
         />
         {advancesOn ? (
           <Row
             icon="request_quote"
-            label="السلفة"
-            sub="سلفةٌ تُقتطع من أرباح رحلاتك"
+            label={tr("السلفة")}
+            sub={tr("سلفةٌ تُقتطع من أرباح رحلاتك")}
             onClick={() => navigate("/account/advances")}
           />
         ) : null}
@@ -299,29 +299,29 @@ export function AccountScreen() {
         {skinsOn ? (
           <Row
             icon="garage"
-            label="مركباتي"
-            sub="مركبتك على الخريطة والمتجر"
+            label={tr("مركباتي")}
+            sub={tr("مركبتك على الخريطة والمتجر")}
             onClick={() => navigate("/account/garage")}
           />
         ) : null}
         {levelsOn ? (
           <Row
             icon="flag"
-            label="مهامّي ومستواي"
-            sub="مهامُّ الشهر وشاراتي"
+            label={tr("مهامّي ومستواي")}
+            sub={tr("مهامُّ الشهر وشاراتي")}
             onClick={() => navigate("/account/missions")}
           />
         ) : null}
         <Row
           icon="redeem"
-          label="أَحِلْ صديقك"
-          sub="رمزك ومن سجّل به"
+          label={tr("أَحِلْ صديقك")}
+          sub={tr("رمزك ومن سجّل به")}
           onClick={() => navigate("/account/referrals")}
         />
         <Row
           icon="settings"
-          label="الإعدادات"
-          sub="الإشعارات · المظهر · alias كليك"
+          label={tr("الإعدادات")}
+          sub={tr("الإشعارات · المظهر · alias كليك")}
           onClick={() => navigate("/account/settings")}
         />
         {/* **آخرُ الصفوف وأشدُّها أثراً** (البند ١٣): ما يخصّ الحساب يسكن هنا
@@ -329,8 +329,8 @@ export function AccountScreen() {
             الخروج يجد بابَه، والمراجعةُ هي ما يحمي لا صعوبةُ العثور */}
         <Row
           icon="delete"
-          label="حذف الحساب"
-          sub="يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها"
+          label={tr("حذف الحساب")}
+          sub={tr("يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها")}
           onClick={() => navigate("/account/delete")}
         />
       </div>
@@ -344,7 +344,7 @@ export function AccountScreen() {
         onClick={() => void signOut()}
         className="t2-acc-out"
       >
-        تسجيل الخروج
+        {tr("تسجيل الخروج")}
       </button>
 
       <SignOutEverywhereRow />
@@ -368,7 +368,7 @@ function SignOutEverywhereRow() {
       await signOutEverywhere();
     } catch (caught) {
       // نصُّ الخلفية كما هو (§17) — ولا عربيةَ ثانيةٌ هنا
-      setError(caught instanceof Error ? caught.message : "تعذّر إنهاء الجلسات — أعد المحاولة");
+      setError(caught instanceof Error ? caught.message : tr("تعذّر إنهاء الجلسات — أعد المحاولة"));
       setBusy(false);
     }
   }
@@ -380,7 +380,7 @@ function SignOutEverywhereRow() {
         onClick={() => setConfirming(true)}
         className="t2-acc-endall"
       >
-        إنهاء كل الجلسات
+        {tr("إنهاء كل الجلسات")}
       </button>
       {confirming ? (
         <div
@@ -396,12 +396,12 @@ function SignOutEverywhereRow() {
           >
             <div className="t2-ax-grab" aria-hidden="true" />
             <h2 id="t2-acc-endall-title" className="t2-ax-sheet-title">
-              إنهاء كل الجلسات
+              {tr("إنهاء كل الجلسات")}
             </h2>
             <p className="t2-ax-sheet-body">
-              تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل
-              إشعاراتُ حسابك ولا طلباتُ الرحلات إلى أيٍّ منها. استعمله إن ضاع
-              هاتفٌ أو حاسوب.
+              {tr("تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل إشعاراتُ حسابك ولا طلباتُ الرحلات إلى أيٍّ منها. استعمله إن ضاع هاتفٌ أو حاسوب.")}
+
+
             </p>
             {error ? (
               <p className="t2-note danger" role="alert">
@@ -416,7 +416,7 @@ function SignOutEverywhereRow() {
                 disabled={busy}
                 onClick={() => void confirm()}
               >
-                {busy ? "…" : "إنهاء كل الجلسات"}
+                {busy ? "…" : tr("إنهاء كل الجلسات")}
               </button>
               <button
                 type="button"
@@ -424,7 +424,7 @@ function SignOutEverywhereRow() {
                 disabled={busy}
                 onClick={() => setConfirming(false)}
               >
-                رجوع
+                {tr("رجوع")}
               </button>
             </div>
           </div>
@@ -488,8 +488,8 @@ function SwitchRow() {
       >
         <Icon name="swap_horiz" className="t2-srow-icon" />
         <span className="t2-srow-main">
-          <span className="t2-srow-title">تبديل إلى تطبيق الراكب</span>
-          <span className="t2-srow-hint">نفس الحساب — تنتقل جلستك بلا تسجيل دخول</span>
+          <span className="t2-srow-title">{tr("تبديل إلى تطبيق الراكب")}</span>
+          <span className="t2-srow-hint">{tr("نفس الحساب — تنتقل جلستك بلا تسجيل دخول")}</span>
         </span>
         <Icon name="chevron_left" className="t2-ax-chev" />
       </button>

@@ -44,7 +44,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/api/client";
 import type { PromoBanner, StorefrontOffer } from "@/api/types";
 import { currencyLabel, digits } from "@/lib/utils";
-import * as icons from "lucide-react";
+import * as icons from "lucide-react"; import { tr } from "@/lib/i18n";
 
 /** **أيقونةٌ زخرفيّةٌ كبيرةٌ في الطرف** — كما يرسمها التصميم (`heart` خلف
  *  عرضِ الخصم النسائيّ). */
@@ -121,13 +121,13 @@ export function OfferCard({ offer }: { offer: StorefrontOffer }) {
         <div className="min-w-0 flex-1">
           <div className="text-14 font-bold text-ink">{offer.name}</div>
           <div className="mt-3 flex flex-wrap items-baseline gap-6 text-11.5 leading-note text-muted">
-            <span>اشتراك «{offer.plan_name}»</span>
+            <span>{tr("اشتراك «")}{offer.plan_name}»</span>
             <span className="whitespace-nowrap font-bold text-ink">
               <span className="me-6 font-medium text-muted line-through">
                 {digits(offer.price)}
               </span>
               {offer.free ? (
-                "مجاناً"
+                tr("مجاناً")
               ) : (
                 <>
                   {digits(offer.price_after)}{" "}
@@ -447,7 +447,7 @@ export function PromoBanners({
           <button
             key={item.key}
             type="button"
-            aria-label={`لافتة ${index + 1}`}
+            aria-label={tr("لافتة {0}", { 0: index + 1 })}
             onClick={() => setAt(index)}
             className={skin.dot(index === current)}
           />

@@ -23,7 +23,7 @@ import { Icon, serviceIcon } from "@/taxo2";
 import { countDays } from "./count";
 
 import "./t2.css";
-import "./ride.css";
+import "./ride.css"; import { tr } from "@/lib/i18n";
 
 /** عددُ بلاطات الرئيسية — **صفّان من ثلاث** كما رُسمت C04. */
 export const HOME_TILES = 6;
@@ -98,12 +98,12 @@ export function ServiceGrid({
             className="t2-hm-tile"
             onClick={() => navigate(tile.destination!)}
             // **النقطةُ تُقال لقارئ الشاشة** — هي معنًى لا زينة
-            aria-label={dot ? `${tile.title} — وثائق تحتاج انتباهك` : undefined}
+            aria-label={dot ? tr("{0} — وثائق تحتاج انتباهك", { 0: tile.title }) : undefined}
           >
             {body}
           </button>
         ) : (
-          <button key={tile.id} type="button" className="t2-hm-tile" onClick={() => setNotice(`${tile.title} — قريباً`)}>
+          <button key={tile.id} type="button" className="t2-hm-tile" onClick={() => setNotice(tr("{0} — قريباً", { 0: tile.title }))}>
             {body}
           </button>
         );
@@ -122,8 +122,8 @@ function tileTag(
   subscription: MySubscription | null,
   progress: MyProgress | null,
 ): { text: string; tone: string; ltr?: boolean } | null {
-  if (tile.status === "soon") return { text: "قريباً", tone: "soon" };
-  if (tile.is_new) return { text: "جديد", tone: "new" };
+  if (tile.status === "soon") return { text: tr("قريباً"), tone: "soon" };
+  if (tile.is_new) return { text: tr("جديد"), tone: "new" };
   if (tile.destination === "/subscription" && subscription?.is_active) {
     return { text: countDays(subscription.days_remaining), tone: "ok" };
   }
@@ -163,12 +163,12 @@ export function ServicesT2Screen() {
     <div className="t2 t2-svc">
       <div className="t2-svc-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <span className="t2-icon" aria-hidden="true">
               arrow_forward
             </span>
           </button>
-          <h1 className="t2-title">خدماتك</h1>
+          <h1 className="t2-title">{tr("خدماتك")}</h1>
         </div>
         {storefront === null ? (
           failed ? (
@@ -176,7 +176,7 @@ export function ServicesT2Screen() {
               <span className="t2-icon" aria-hidden="true">
                 error
               </span>
-              تعذّر قراءة الخدمات
+              {tr("تعذّر قراءة الخدمات")}
             </p>
           ) : (
             <div className="t2-svc-wait" aria-busy="true">
@@ -184,7 +184,7 @@ export function ServicesT2Screen() {
             </div>
           )
         ) : storefront.tiles.length === 0 ? (
-          <p className="t2-empty">لا خدمات معروضة في سوقك الآن.</p>
+          <p className="t2-empty">{tr("لا خدمات معروضة في سوقك الآن.")}</p>
         ) : (
           <ServiceGrid
             tiles={storefront.tiles}

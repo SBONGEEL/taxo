@@ -12,7 +12,7 @@ import { Icon } from "@/taxo2";
 
 import { SheetT2 } from "./SheetT2";
 import "./t2.css";
-import "./money.css";
+import "./money.css"; import { tr } from "@/lib/i18n";
 
 /** رأسُ الشاشة الداخلية — رجوعٌ دائريٌّ والعنوان (R13 · R14). وبلا `onBack` عنوانٌ وحدَه (نتيجةُ الدفع: لا رجوعَ منها). */
 export function HeadT2({ title, onBack }: { title: string; onBack?: () => void }) {
@@ -25,7 +25,7 @@ export function HeadT2({ title, onBack }: { title: string; onBack?: () => void }
   }
   return (
     <div className="t2-head">
-      <button type="button" className="t2-back" aria-label="رجوع" onClick={onBack}>
+      <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={onBack}>
         <Icon name="arrow_forward" />
       </button>
       <h1 className="t2-title">{title}</h1>
@@ -69,7 +69,7 @@ export function SheetModalT2({
     <>
       <button
         type="button"
-        aria-label="إغلاق"
+        aria-label={tr("إغلاق")}
         className="t2 t2-m-scrim"
         disabled={!onClose}
         onClick={onClose ?? undefined}
@@ -169,7 +169,7 @@ export function BusyLabel({ busy, children }: { busy: boolean; children: ReactNo
 /** دائرةُ الانتظار — بلونَي الهوية، وتقف مع «تقليل الحركة». */
 export function WaitT2({ label }: { label?: string }) {
   return (
-    <div className="t2-m-wait" role="status" aria-live="polite" aria-label={label ? undefined : "لحظة…"}>
+    <div className="t2-m-wait" role="status" aria-live="polite" aria-label={label ? undefined : tr("لحظة…")}>
       <span className="t2-m-spin" aria-hidden="true" />
       {label ? <span>{label}</span> : null}
     </div>

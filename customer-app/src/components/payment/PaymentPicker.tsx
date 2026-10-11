@@ -18,7 +18,7 @@ import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { SheetT2 } from "@/screens/t2/SheetT2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 /** رموزُ الهوية لقنوات الدفع. */
 export const PAY_ICON_T2: Record<PayableMethod, string> = {
@@ -46,11 +46,11 @@ export function PaymentPicker({
   return createPortal(
     <>
       {/* **الظلُّ بلون الهوية** (`--t2-scrim`) — كان صنفَ اللغة السابقة (`bg-dim`) تحت ورقةٍ بلغة TAXO 2.0 */}
-      <button type="button" aria-label="إغلاق" onClick={onClose} className="t2 t2-m-scrim" />
+      <button type="button" aria-label={tr("إغلاق")} onClick={onClose} className="t2 t2-m-scrim" />
       <div className="t2-picker">
         <SheetT2>
-          <div className="t2-picker-title">طريقة الدفع</div>
-          <div className="t2-list" role="radiogroup" aria-label="طريقة الدفع">
+          <div className="t2-picker-title">{tr("طريقة الدفع")}</div>
+          <div className="t2-list" role="radiogroup" aria-label={tr("طريقة الدفع")}>
             {channels.map(({ method, hint }) => (
               <button
                 key={method}

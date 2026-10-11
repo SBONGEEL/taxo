@@ -41,14 +41,14 @@ import { aheadParts, startOfToday, whenParts } from "./when";
 import "./t2.css";
 import "./fields.css";
 import "./money.css";
-import "./unconfirmed.css";
+import "./unconfirmed.css"; import { tr } from "@/lib/i18n";
 
 /** **نصُّ الحدّ كما كتبه التصميم** (§٦ «الحدّ») — في الرئيسية وفي رأس الصفحة. */
-const LIMIT_TEXT = "لا تصلك طلباتٌ جديدةٌ حتى تؤكّد ما سبق — أكّد أو اعترض، وتعود الطلباتُ فوراً";
+const LIMIT_TEXT = tr("لا تصلك طلباتٌ جديدةٌ حتى تؤكّد ما سبق — أكّد أو اعترض، وتعود الطلباتُ فوراً");
 
 /** **«لم يدفع» على الكاش** (§٢-٣) — أسبابُ التصميم القديم لرحلة الكاش (`Dispute.tsx` يذكرها انحرافاً حين لم يكن للكاش نزاع)، **صار
  *  لها موضعٌ الآن**. والنصُّ يصل الإدارةَ كما هو، ومعه ملاحظةُ الكبتن إن كتبها. */
-const CASH_DISPUTE_REASONS = ["لم يدفع إطلاقاً", "دفع أقلَّ من الأجرة", "نزل وغادر دون أن يدفع"];
+const CASH_DISPUTE_REASONS = [tr("لم يدفع إطلاقاً"), tr("دفع أقلَّ من الأجرة"), tr("نزل وغادر دون أن يدفع")];
 
 /** هل الطريقةُ كاش؟ — **ومنها كلُّ نصٍّ في البطاقة**: «استلمت المبلغ / لم يدفع» أو «وصلتني / لم تصلني». */
 const isCash = (item: CaptainUnconfirmedItem) => item.method === "cash";
@@ -115,7 +115,7 @@ export function UnconfirmedT2Screen() {
       await run();
       setDone(message);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تنفيذ الطلب");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تنفيذ الطلب"));
     } finally {
       setBusy(null);
     }
@@ -126,7 +126,7 @@ export function UnconfirmedT2Screen() {
       <div className="t2-ucd-scroll scr">
         {/* **عنوانٌ واحدٌ بلا سهم** (§٦) — مخرجُها «لاحقاً» في القاع */}
         <div className="t2-head">
-          <h1 className="t2-title">ركّابٌ ينتظرون تأكيدك</h1>
+          <h1 className="t2-title">{tr("ركّابٌ ينتظرون تأكيدك")}</h1>
         </div>
 
         {data === null ? (
@@ -170,7 +170,7 @@ export function UnconfirmedT2Screen() {
                   void act(
                     item,
                     () => confirmUnconfirmed(owner, item.payment_id),
-                    isCash(item) ? "أكّدتَ استلام المبلغ — اكتمل دفعُ الرحلة." : "أكّدتَ وصول الحوالة — اكتمل دفعُ الرحلة.",
+                    isCash(item) ? tr("أكّدتَ استلام المبلغ — اكتمل دفعُ الرحلة.") : tr("أكّدتَ وصول الحوالة — اكتمل دفعُ الرحلة."),
                   )
                 }
                 onDispute={() => {
@@ -189,42 +189,42 @@ export function UnconfirmedT2Screen() {
         <div className="t2-ucd-push" />
         {/* **«لاحقاً» لهذه الفتحة وحدَها** — وعند الحجب «ابقَ في الرئيسية»: لا «لاحقاً» لما يوقف الطلباتِ الآن */}
         <button type="button" className="t2-button secondary t2-ucd-later" onClick={leave}>
-          {data?.blocked ? "ابقَ في الرئيسية" : "لاحقاً"}
+          {data?.blocked ? tr("ابقَ في الرئيسية") : tr("لاحقاً")}
         </button>
       </div>
 
       {disputing ? (
         <ReasonSheet
-          title={isCash(disputing) ? "لم يدفع — ما الذي وقع؟" : "لم تصلني — ما الذي وقع؟"}
+          title={isCash(disputing) ? tr("لم يدفع — ما الذي وقع؟") : tr("لم تصلني — ما الذي وقع؟")}
           note={
             isCash(disputing)
-              ? "يُسأل الراكبُ فوراً: «هل سلّمتَ المبلغ؟»، ويفصل فريقُ TAXO إن اختلفتما — ولا يُحسب عليك شيءٌ حتى الحكم."
-              : "تفصل فيه الإدارة: مدفوعة أو غير مدفوعة."
+              ? tr("يُسأل الراكبُ فوراً: «هل سلّمتَ المبلغ؟»، ويفصل فريقُ TAXO إن اختلفتما — ولا يُحسب عليك شيءٌ حتى الحكم.")
+              : tr("تفصل فيه الإدارة: مدفوعة أو غير مدفوعة.")
           }
           reasons={isCash(disputing) ? CASH_DISPUTE_REASONS : CLIQ_DISPUTE_REASONS}
-          submitLabel="إرسال النزاع"
+          submitLabel={tr("إرسال النزاع")}
           onClose={() => setDisputing(null)}
           onSubmit={async (text) => {
             const item = disputing;
             await disputeUnconfirmed(owner, item.payment_id, text);
             setDisputing(null);
-            setDone("أُرسل النزاع — يفصل فيه فريقُ TAXO.");
+            setDone(tr("أُرسل النزاع — يفصل فيه فريقُ TAXO."));
           }}
         />
       ) : null}
 
       {objecting ? (
         <ReasonSheet
-          title="لم أستلم هذا المبلغ"
-          note="لا يُعكس شيءٌ الآن — يصل اعتراضُك فريقَ TAXO ويفصل فيه، والمبلغُ كما هو حتى الحكم."
+          title={tr("لم أستلم هذا المبلغ")}
+          note={tr("لا يُعكس شيءٌ الآن — يصل اعتراضُك فريقَ TAXO ويفصل فيه، والمبلغُ كما هو حتى الحكم.")}
           reasons={null}
-          submitLabel="أرسل الاعتراض"
+          submitLabel={tr("أرسل الاعتراض")}
           onClose={() => setObjecting(null)}
           onSubmit={async (text) => {
             const item = objecting;
             await objectUnconfirmed(owner, item.payment_id, text);
             setObjecting(null);
-            setDone("أُرسل اعتراضُك — يفصل فيه فريقُ TAXO.");
+            setDone(tr("أُرسل اعتراضُك — يفصل فيه فريقُ TAXO."));
           }}
         />
       ) : null}
@@ -234,9 +234,9 @@ export function UnconfirmedT2Screen() {
 
 /** **متى يقع الحجب** — من عتبتي السوق كما أرسلتهما الخلفية (`block_count` · `block_hours`)، **لا رقمَ مكتوبٌ هنا**. */
 function limitLine(data: CaptainUnconfirmed): string {
-  const count = countOf(data.block_count, "معلَّقةٍ واحدة", "معلَّقتين", "معلَّقات", "معلَّقةً");
-  const hours = countOf(data.block_hours, "ساعة", "ساعتين", "ساعات", "ساعة");
-  return `تتوقّف الطلباتُ الجديدةُ عند ${count}، أو حين يمضي على أقدمها ${hours} — وتعود فورَ أن تؤكّد أو تعترض.`;
+  const count = countOf(data.block_count, tr("معلَّقةٍ واحدة"), tr("معلَّقتين"), tr("معلَّقات"), tr("معلَّقةً"));
+  const hours = countOf(data.block_hours, tr("ساعة"), tr("ساعتين"), tr("ساعات"), tr("ساعة"));
+  return tr("تتوقّف الطلباتُ الجديدةُ عند {0}، أو حين يمضي على أقدمها {1} — وتعود فورَ أن تؤكّد أو تعترض.", { 0: count, 1: hours });
 }
 
 /** **بطاقةُ راكبٍ واحد** — «ليلى · أمس 21:58» ثمّ «3.364 د.أ كاش» ثمّ الفعلان (§٦). */
@@ -257,7 +257,7 @@ function ItemCard({
   onDispute: () => void;
   onObject: () => void;
 }) {
-  const name = item.rider_first_name ?? "الراكب";
+  const name = item.rider_first_name ?? tr("الراكب");
   const route =
     item.pickup_address && item.dropoff_address ? `${item.pickup_address} ← ${item.dropoff_address}` : null;
 
@@ -285,17 +285,17 @@ function ItemCard({
           <div className="t2-callout warn t2-ucd-callout">
             <Icon name="receipt_long" />
             <div className="t2-callout-main">
-              <p className="t2-callout-title">عُدّ مبلغُ رحلة {name} مستلَماً بعد إقرارٍ بتسليمه بلا اعتراض</p>
+              <p className="t2-callout-title">{tr("عُدّ مبلغُ رحلة")}{" "}{name}{" "}{tr("مستلَماً بعد إقرارٍ بتسليمه بلا اعتراض")}</p>
               {item.objection_deadline ? (
                 <p className="t2-callout-body">
-                  إن لم تستلمه فاعترض قبل <Ahead iso={item.objection_deadline} today={today} />
+                  {tr("إن لم تستلمه فاعترض قبل")}{" "}<Ahead iso={item.objection_deadline} today={today} />
                 </p>
               ) : null}
             </div>
           </div>
           <div className="t2-cts-acts">
             <button type="button" className="t2-cts-no" disabled={locked} onClick={onObject}>
-              لم أستلم هذا المبلغ
+              {tr("لم أستلم هذا المبلغ")}
             </button>
           </div>
         </>
@@ -306,14 +306,14 @@ function ItemCard({
             item.declared_at ? (
               <p className="t2-ucd-line">
                 <Icon name="check_circle" />
-                أُقِرّ بالتسليم <When iso={item.declared_at} today={today} />
+                {tr("أُقِرّ بالتسليم")}{" "}<When iso={item.declared_at} today={today} />
               </p>
             ) : null
           ) : (
             // **كليك: «حوالةٌ بمرجع FT2410… · 21:47»** (§٦) — والمهلةُ المجمَّدةُ قبل أن تصير نزاعاً
             <>
               <p className="t2-ucd-line">
-                حوالةٌ بمرجع{" "}
+                {tr("حوالةٌ بمرجع")}{" "}
                 <b dir="ltr" className="t2-ucd-ref">
                   {item.cliq_transfer_reference ?? "—"}
                 </b>
@@ -327,7 +327,7 @@ function ItemCard({
               {item.cliq_confirmation_expires_at ? (
                 <p className="t2-ucd-line muted">
                   <Icon name="hourglass_top" />
-                  تصير نزاعاً <Ahead iso={item.cliq_confirmation_expires_at} today={today} />
+                  {tr("تصير نزاعاً")}{" "}<Ahead iso={item.cliq_confirmation_expires_at} today={today} />
                 </p>
               ) : null}
             </>
@@ -335,7 +335,7 @@ function ItemCard({
           <div className="t2-cts-acts">
             {/* **بحدٍّ ولونِ الخطر** كبطاقة حوالة كليك — الرفضُ فعلٌ ثقيل */}
             <button type="button" className="t2-cts-no" disabled={locked} onClick={onDispute}>
-              {isCash(item) ? "لم يدفع" : "لم تصلني"}
+              {isCash(item) ? tr("لم يدفع") : tr("لم تصلني")}
             </button>
             <button type="button" className="t2-cts-yes" disabled={locked} aria-busy={busy} onClick={onConfirm}>
               {busy ? (
@@ -343,7 +343,7 @@ function ItemCard({
               ) : (
                 <>
                   <Icon name="check" />
-                  {isCash(item) ? "استلمت المبلغ" : "وصلتني"}
+                  {isCash(item) ? tr("استلمت المبلغ") : tr("وصلتني")}
                 </>
               )}
             </button>
@@ -386,7 +386,7 @@ function ReasonSheet({
     try {
       await onSubmit(composed.slice(0, 255));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الإرسال");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الإرسال"));
     } finally {
       setBusy(false);
     }
@@ -399,7 +399,7 @@ function ReasonSheet({
         <h2 className="t2-ucd-sheet-title">{title}</h2>
         <p className="t2-ucd-sheet-note">{note}</p>
         {reasons ? (
-          <div className="t2-ucd-reasons" role="radiogroup" aria-label="السبب">
+          <div className="t2-ucd-reasons" role="radiogroup" aria-label={tr("السبب")}>
             {reasons.map((option) => (
               <button
                 key={option}
@@ -416,12 +416,12 @@ function ReasonSheet({
           </div>
         ) : null}
         <label className="t2-fld-label t2-ucd-label" htmlFor="ucd-reason">
-          {reasons ? "ملاحظة" : "ما الذي وقع؟"}
+          {reasons ? tr("ملاحظة") : tr("ما الذي وقع؟")}
         </label>
         <input
           id="ucd-reason"
           className="t2-fld"
-          placeholder={reasons ? "أضف تفصيلاً يساعد الإدارة…" : "اكتب سببَ اعتراضك…"}
+          placeholder={reasons ? tr("أضف تفصيلاً يساعد الإدارة…") : tr("اكتب سببَ اعتراضك…")}
           value={text}
           maxLength={200}
           onChange={(event) => setText(event.target.value)}
@@ -436,7 +436,7 @@ function ReasonSheet({
           {busy ? "…" : submitLabel}
         </button>
         <button type="button" className="t2-ucd-cancel" disabled={busy} onClick={onClose}>
-          تراجع
+          {tr("تراجع")}
         </button>
       </div>
     </div>
@@ -466,7 +466,7 @@ export function UnconfirmedHomeNoteT2({
         <div className="t2-callout-main">
           <p className="t2-callout-title">{LIMIT_TEXT}</p>
           <button type="button" className="t2-callout-open" onClick={onOpen}>
-            افتح ما ينتظر تأكيدك
+            {tr("افتح ما ينتظر تأكيدك")}
           </button>
         </div>
       </div>
@@ -486,18 +486,18 @@ export function UnconfirmedHomeNoteT2({
         <span className="t2-ucd-strip-text">
           <b>
             {auto.length === 1
-              ? "مبلغٌ عُدّ مستلَماً"
+              ? tr("مبلغٌ عُدّ مستلَماً")
               : auto.length === 2
-                ? "مبلغان عُدّا مستلَمَين"
-                : countOf(auto.length, "", "", "مبالغ عُدّت مستلَمة", "مبلغاً عُدّت مستلَمة")}
+                ? tr("مبلغان عُدّا مستلَمَين")
+                : countOf(auto.length, "", "", tr("مبالغ عُدّت مستلَمة"), tr("مبلغاً عُدّت مستلَمة"))}
           </b>
           <span>
             {auto.length === 1 && first.objection_deadline ? (
               <>
-                لك أن تعترض قبل <Ahead iso={first.objection_deadline} today={startOfToday()} />
+                {tr("لك أن تعترض قبل")}{" "}<Ahead iso={first.objection_deadline} today={startOfToday()} />
               </>
             ) : (
-              "لك أن تعترض على كلٍّ قبل مهلته"
+              tr("لك أن تعترض على كلٍّ قبل مهلته")
             )}
           </span>
         </span>
@@ -506,12 +506,12 @@ export function UnconfirmedHomeNoteT2({
     );
   }
   const who =
-    n === 1 ? "راكبٌ ينتظر تأكيدك" : n === 2 ? "راكبان ينتظران تأكيدك" : `${countOf(n, "", "", "ركّاب", "راكباً")} ينتظرون تأكيدك`;
+    n === 1 ? tr("راكبٌ ينتظر تأكيدك") : n === 2 ? tr("راكبان ينتظران تأكيدك") : tr("{0} ينتظرون تأكيدك", { 0: countOf(n, "", "", tr("ركّاب"), tr("راكباً")) });
   return (
     <button type="button" className="t2-ucd-strip" onClick={onOpen}>
       <Icon name="payments" />
       <span className="t2-ucd-strip-text">
-        <b>تأكيدٌ ينتظرك</b>
+        <b>{tr("تأكيدٌ ينتظرك")}</b>
         <span>{who}</span>
       </span>
       <Icon name="chevron_left" className="t2-ucd-strip-go" />

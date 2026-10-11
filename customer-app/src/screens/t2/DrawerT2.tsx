@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { Drawer } from "vaul";
 
 import "@/taxo2";
-import "./kit.css";
+import "./kit.css"; import { tr } from "@/lib/i18n";
 
 export function DrawerT2({
   open,
@@ -30,7 +30,7 @@ export function DrawerT2({
           {title ? (
             <Drawer.Title className="t2-drawer-title">{title}</Drawer.Title>
           ) : (
-            <Drawer.Title className="sr-only">قائمة</Drawer.Title>
+            <Drawer.Title className="sr-only">{tr("قائمة")}</Drawer.Title>
           )}
           {/* **منطقةُ التمرير تحت العنوان** — وما زاد عن السقف يُمرَّر لا يُقصّ (`check:sheet` يقيسها في الورقة القائمة) */}
           <div className="t2-drawer-body">{children}</div>

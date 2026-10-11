@@ -10,7 +10,7 @@
  */
 
 import type { Ride } from "@/api/types";
-import { navApp, type NavApp } from "@/lib/driving-prefs";
+import { navApp, type NavApp } from "@/lib/driving-prefs"; import { tr } from "@/lib/i18n";
 
 export type MapTarget = {
   lat: number;
@@ -31,8 +31,8 @@ export function targetFor(ride: Ride): MapTarget | null {
     return {
       lat: ride.pickup.lat,
       lng: ride.pickup.lng,
-      label: ride.pickup_address ?? "نقطة الالتقاء",
-      cta: "الاتجاه إلى نقطة الالتقاء",
+      label: ride.pickup_address ?? tr("نقطة الالتقاء"),
+      cta: tr("الاتجاه إلى نقطة الالتقاء"),
     };
   }
 
@@ -69,16 +69,16 @@ export function targetFor(ride: Ride): MapTarget | null {
       return {
         lat: next.lat,
         lng: next.lng,
-        label: next.address ?? "المحطة التالية",
-        cta: "الاتجاه إلى المحطة",
+        label: next.address ?? tr("المحطة التالية"),
+        cta: tr("الاتجاه إلى المحطة"),
       };
     }
     if (!ride.dropoff) return null;
     return {
       lat: ride.dropoff.lat,
       lng: ride.dropoff.lng,
-      label: ride.dropoff_address ?? "الوجهة",
-      cta: "الاتجاه إلى الوجهة",
+      label: ride.dropoff_address ?? tr("الوجهة"),
+      cta: tr("الاتجاه إلى الوجهة"),
     };
   }
 

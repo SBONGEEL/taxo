@@ -20,7 +20,7 @@ import { useSession } from "@/lib/session";
 import { formatDue, moneyText } from "@/screens/DeleteAccount";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
       await refreshUser();
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
     } finally {
       setBusy(false);
     }

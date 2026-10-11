@@ -41,7 +41,7 @@ import type {
 } from "@/api/types";
 import { useSession } from "@/lib/session";
 import { useFeature } from "@/lib/config";
-import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export const MIN_LEAD_MINUTES = 30;
 export const MAX_HORIZON_DAYS = 30;
@@ -137,8 +137,8 @@ export function useBookingChoice(onChanged: (next: Booking) => void) {
   return {
     busy,
     errors,
-    anyCaptain: (booking: Booking) => void run(booking, chooseAnyCaptain, "تعذّر الإرسال — حاولي ثانية"),
-    cancel: (booking: Booking) => void run(booking, cancelBooking, "تعذّر الإلغاء — حاولي ثانية"),
+    anyCaptain: (booking: Booking) => void run(booking, chooseAnyCaptain, tr("تعذّر الإرسال — حاولي ثانية")),
+    cancel: (booking: Booking) => void run(booking, cancelBooking, tr("تعذّر الإلغاء — حاولي ثانية")),
   };
 }
 
@@ -157,13 +157,13 @@ export function useCommuteService(): boolean {
 
 /** **أيامُ الأسبوع بترتيبه هنا — الأحدُ أوّلاً** — وبتُّ كلٍّ في قناع الخلفية (ترتيبُ `weekday()`: الإثنين 1 … الأحد 64). */
 export const COMMUTE_DAYS: ReadonlyArray<{ bit: number; name: string }> = [
-  { bit: 64, name: "الأحد" },
-  { bit: 1, name: "الاثنين" },
-  { bit: 2, name: "الثلاثاء" },
-  { bit: 4, name: "الأربعاء" },
-  { bit: 8, name: "الخميس" },
-  { bit: 16, name: "الجمعة" },
-  { bit: 32, name: "السبت" },
+  { bit: 64, name: tr("الأحد") },
+  { bit: 1, name: tr("الاثنين") },
+  { bit: 2, name: tr("الثلاثاء") },
+  { bit: 4, name: tr("الأربعاء") },
+  { bit: 8, name: tr("الخميس") },
+  { bit: 16, name: tr("الجمعة") },
+  { bit: 32, name: tr("السبت") },
 ];
 
 /** **الأحدُ إلى الخميس** — أسبوعُ العمل في السوقين، وأوّلُ ما تبدأ به الخطّة. */
@@ -178,25 +178,25 @@ function dayBit(date: Date): number {
  *  قِيس)، و«كلَّ يوم» للسبعة. */
 export function commuteDaysText(mask: number): string {
   const picked = COMMUTE_DAYS.filter((day) => (mask & day.bit) !== 0);
-  if (picked.length === COMMUTE_DAYS.length) return "كلَّ يوم";
+  if (picked.length === COMMUTE_DAYS.length) return tr("كلَّ يوم");
   const first = COMMUTE_DAYS.indexOf(picked[0]);
   const run = picked.length >= 3 && picked.every((day, index) => COMMUTE_DAYS[first + index] === day);
-  return run ? `${picked[0].name} إلى ${picked[picked.length - 1].name}` : picked.map((day) => day.name).join(" · ");
+  return run ? tr("{0} إلى {1}", { 0: picked[0].name, 1: picked[picked.length - 1].name }) : picked.map((day) => day.name).join(" · ");
 }
 
 /** «يومٌ واحد · يومان · 3 أيام · 7 أيام» — **العربيةُ تعدّ بالمثنّى والجمع** (قاعدةُ `hoursLabel`). */
 export function daysCount(count: number): string {
-  if (count === 1) return "يومٌ واحد";
-  if (count === 2) return "يومان";
-  return `${count} أيام`;
+  if (count === 1) return tr("يومٌ واحد");
+  if (count === 2) return tr("يومان");
+  return tr("{0} أيام", { 0: count });
 }
 
 /** «رحلة واحدة · رحلتان · 3 رحلات · 22 رحلة» — **والتمييزُ بآخر خانتين** (قاعدةُ `ridesLabel` في التتبّع). */
 export function ridesCount(count: number): string {
-  if (count === 1) return "رحلة واحدة";
-  if (count === 2) return "رحلتان";
+  if (count === 1) return tr("رحلة واحدة");
+  if (count === 2) return tr("رحلتان");
   const tail = count % 100;
-  return `${count} ${tail >= 3 && tail <= 10 ? "رحلات" : "رحلة"}`;
+  return `${count} ${tail >= 3 && tail <= 10 ? tr("رحلات") : tr("رحلة")}`;
 }
 
 /** «07:30» من «07:30:00» — **الساعةُ كما كُتبت بساعة السوق**، بخاناتٍ لاتينية (§20). */
@@ -266,7 +266,7 @@ export function useCommuteQuote(plan: CommutePlan | null): {
           if (live) setAnswer({ key, quote, error: null });
         })
         .catch((caught: unknown) => {
-          if (live) setAnswer({ key, quote: null, error: caught instanceof ApiError ? caught.message : "تعذّر حساب السعر" });
+          if (live) setAnswer({ key, quote: null, error: caught instanceof ApiError ? caught.message : tr("تعذّر حساب السعر") });
         });
     }, 400);
     return () => {
@@ -298,7 +298,7 @@ export function useCommutePurchase(): {
       .then(setBought)
       .catch((caught: unknown) =>
         setFailure({
-          message: caught instanceof ApiError ? caught.message : "تعذّر الاشتراك — حاول ثانية",
+          message: caught instanceof ApiError ? caught.message : tr("تعذّر الاشتراك — حاول ثانية"),
           topup: caught instanceof ApiError && caught.code === "insufficient_balance",
         }),
       )
@@ -341,7 +341,7 @@ export function useMyCommutes() {
         if (live) setRows(list);
       })
       .catch((caught: unknown) => {
-        if (live) setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة اشتراكاتك");
+        if (live) setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة اشتراكاتك"));
       });
     return () => {
       live = false;
@@ -360,7 +360,7 @@ export function useMyCommutes() {
       setRows((current) => (current ?? []).map((item) => (item.id === next.id ? next : item)));
       setNotes((current) => ({ ...current, [row.id]: { tone: "ok", text: done(next) } }));
     } catch (caught) {
-      const text = caught instanceof ApiError ? caught.message : "تعذّر الإرسال — حاول ثانية";
+      const text = caught instanceof ApiError ? caught.message : tr("تعذّر الإرسال — حاول ثانية");
       setNotes((current) => ({ ...current, [row.id]: { tone: "danger", text } }));
     } finally {
       setBusy(null);
@@ -377,13 +377,13 @@ export function useMyCommutes() {
       void run(
         row,
         () => suspendCommuteDay(row.id, day),
-        (next) => `علّقنا ${dayText(day)} — وامتدّ اشتراكُك إلى ${dayText(next.ends_on)}.`,
+        (next) => tr("علّقنا {0} — وامتدّ اشتراكُك إلى {1}.", { 0: dayText(day), 1: dayText(next.ends_on) }),
       ),
     /** **ما لم يُستعمل يعود رصيداً لا نقداً** — والمبلغُ في كشف المحفظة بقيده (`commute_credit`)، لا يُحسب هنا. */
     cancel: (row: Commute) =>
-      void run(row, () => cancelCommute(row.id), () => "أُلغي الاشتراك — وعاد ما لم يُستعمل رصيداً في محفظتك."),
+      void run(row, () => cancelCommute(row.id), () => tr("أُلغي الاشتراك — وعاد ما لم يُستعمل رصيداً في محفظتك.")),
     release: (row: Commute) =>
-      void run(row, () => releaseCommuteCaptain(row.id), () => "فككنا الكبتن — ونبحث لك عن كبتنٍ معتمدٍ آخر."),
+      void run(row, () => releaseCommuteCaptain(row.id), () => tr("فككنا الكبتن — ونبحث لك عن كبتنٍ معتمدٍ آخر.")),
   };
 }
 
@@ -407,10 +407,10 @@ export function seatsLeft(trip: IntercityTrip): number {
 
 /** «مقعدٌ واحد · مقعدان · 3 مقاعد · 11 مقعداً» — **العربيةُ تعدّ بالمثنّى والجمع** (قاعدةُ `ridesCount`). */
 export function seatsCount(count: number): string {
-  if (count === 1) return "مقعدٌ واحد";
-  if (count === 2) return "مقعدان";
+  if (count === 1) return tr("مقعدٌ واحد");
+  if (count === 2) return tr("مقعدان");
   const tail = count % 100;
-  return `${count} ${tail >= 3 && tail <= 10 ? "مقاعد" : "مقعداً"}`;
+  return `${count} ${tail >= 3 && tail <= 10 ? tr("مقاعد") : tr("مقعداً")}`;
 }
 
 /** «07:30» — **ساعةُ الانطلاق بتوقيت الجهاز و24 ساعة** كما يُكتب الموعدُ في كلِّ الشاشات (§20)، بخاناتٍ لاتينية. */
@@ -466,7 +466,7 @@ export function useIntercityTrips(enabled: boolean): {
         setError(null);
       })
       .catch((caught: unknown) => {
-        if (live) setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلات بين المدن");
+        if (live) setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة رحلات بين المدن"));
       });
     return () => {
       live = false;
@@ -497,7 +497,7 @@ export function useIntercityBooking(): {
       return true;
     } catch (caught) {
       setFailure({
-        message: caught instanceof ApiError ? caught.message : "تعذّر الحجز — حاول ثانية",
+        message: caught instanceof ApiError ? caught.message : tr("تعذّر الحجز — حاول ثانية"),
         topup: caught instanceof ApiError && caught.code === "insufficient_balance",
       });
       return false;
@@ -546,7 +546,7 @@ export function useMyIntercityBookings() {
         if (live) setRows(list);
       })
       .catch((caught: unknown) => {
-        if (live) setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة حجوزاتك");
+        if (live) setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة حجوزاتك"));
       });
     return () => {
       live = false;
@@ -569,12 +569,12 @@ export function useMyIntercityBookings() {
           tone: "ok",
           text:
             next.payment === "wallet"
-              ? "أُلغي الحجز — وعاد مالُك كاملاً إلى محفظتك."
-              : "أُلغي حجزُ السيارة — ولم تدفع شيئاً.",
+              ? tr("أُلغي الحجز — وعاد مالُك كاملاً إلى محفظتك.")
+              : tr("أُلغي حجزُ السيارة — ولم تدفع شيئاً."),
         },
       }));
     } catch (caught) {
-      const text = caught instanceof ApiError ? caught.message : "تعذّر الإلغاء — حاول ثانية";
+      const text = caught instanceof ApiError ? caught.message : tr("تعذّر الإلغاء — حاول ثانية");
       setNotes((current) => ({ ...current, [row.id]: { tone: "danger", text } }));
     } finally {
       setBusy(null);
@@ -628,8 +628,8 @@ export function useWeeklyCashback(): WeeklyCashback | null {
 /** «يومٌ واحد · يومان · 4 أيام · 11 يوماً» — **العربيةُ تعدّ بالمثنّى والجمع والتمييز** (قاعدةُ `seatsCount`)؛ والأيامُ حتى ١٤ هنا
  *  (`cashback_days` ٢–١٤) فالتمييزُ المفردُ يقع. */
 export function cashbackDaysText(count: number): string {
-  if (count === 1) return "يومٌ واحد";
-  if (count === 2) return "يومان";
+  if (count === 1) return tr("يومٌ واحد");
+  if (count === 2) return tr("يومان");
   const tail = count % 100;
-  return `${count} ${tail >= 3 && tail <= 10 ? "أيام" : "يوماً"}`;
+  return `${count} ${tail >= 3 && tail <= 10 ? tr("أيام") : tr("يوماً")}`;
 }

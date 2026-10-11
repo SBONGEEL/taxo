@@ -13,7 +13,7 @@
  */
 
 import type { CountryConfig } from "@/api/types";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** **وحدةُ السوق حين يكون التقريبُ مشتعلاً**، و`null` مطفأً — والمطفأُ هو الحالُ القائمُ في كلِّ سوقٍ حتى يُشعَل من اللوحة. */
 export function roundingUnit(country: CountryConfig | null | undefined): string | null {
@@ -29,7 +29,7 @@ function thousandths(text: string): number | null {
 
 /** **سطرُ الخطوات تحت حقل المبلغ** — و`null` مطفأً. */
 export function unitHint(unit: string | null, currency: string | null | undefined): string | null {
-  return unit === null ? null : `المبالغُ بخطواتِ ${formatMoney(unit, currency ?? undefined)} في بلدك`;
+  return unit === null ? null : tr("المبالغُ بخطواتِ {0} في بلدك", { 0: formatMoney(unit, currency ?? undefined) });
 }
 
 /** **«ليس مضاعفاً للوحدة»** — الرسالةُ أو `null`.
@@ -46,5 +46,5 @@ export function notMultipleMessage(
   const value = thousandths(typed);
   const step = thousandths(unit);
   if (value === null || step === null || value === 0 || step === 0) return null;
-  return value % step === 0 ? null : `المبلغُ يكون من مضاعفات ${formatMoney(unit, currency ?? undefined)}`;
+  return value % step === 0 ? null : tr("المبلغُ يكون من مضاعفات {0}", { 0: formatMoney(unit, currency ?? undefined) });
 }

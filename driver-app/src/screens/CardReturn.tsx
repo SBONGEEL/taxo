@@ -25,7 +25,7 @@ import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 const SETTLED = {
   paid: {
@@ -66,7 +66,7 @@ export function CardReturnScreen() {
 
   const check = useCallback(async () => {
     if (!cartId) {
-      setError("لا معرّف عملية في الرابط — افتح شاشة الاشتراك مجدداً.");
+      setError(tr("لا معرّف عملية في الرابط — افتح شاشة الاشتراك مجدداً."));
       setLoading(false);
       return;
     }
@@ -78,7 +78,7 @@ export function CardReturnScreen() {
       setError(
         caught instanceof ApiError
           ? caught.message
-          : "تعذّر الاستعلام عن حال الدفع",
+          : tr("تعذّر الاستعلام عن حال الدفع"),
       );
     } finally {
       setLoading(false);
@@ -98,7 +98,7 @@ export function CardReturnScreen() {
       <div className={loading ? "t2-ax-scroll" : "t2-ax-scroll has-foot"}>
         {loading ? (
           <div className="t2-ax-center">
-            <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+            <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
           </div>
         ) : (
           <div className="t2-cret-body">
@@ -106,11 +106,11 @@ export function CardReturnScreen() {
               <Icon name={settled?.icon ?? "schedule"} />
             </span>
             <h1 className="t2-cret-title">
-              {settled?.title ?? "لم يُحسم بعد"}
+              {settled?.title ?? tr("لم يُحسم بعد")}
             </h1>
             <p className="t2-cret-text">
               {settled?.body ??
-                "لم يصل جواب المزود بعد. لا تدفع مرة أخرى — أعد الاستعلام بعد لحظات."}
+                tr("لم يصل جواب المزود بعد. لا تدفع مرة أخرى — أعد الاستعلام بعد لحظات.")}
             </p>
 
             {order ? (
@@ -140,11 +140,11 @@ export function CardReturnScreen() {
               className="t2-ax-cta"
               onClick={() => navigate("/subscription", { replace: true })}
             >
-              إلى الاشتراك
+              {tr("إلى الاشتراك")}
             </button>
           ) : (
             <button type="button" className="t2-ax-cta" onClick={() => void check()}>
-              أعد الاستعلام
+              {tr("أعد الاستعلام")}
             </button>
           )}
         </div>

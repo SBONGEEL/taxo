@@ -32,7 +32,7 @@ import {
   openOverlaySettings,
   type PermissionStatus,
 } from "@/lib/offer-alert";
-import { requestNotificationPermission } from "@/lib/push";
+import { requestNotificationPermission } from "@/lib/push"; import { tr } from "@/lib/i18n";
 
 /** **ما يفعله زرُّ الخطوة** — حوارُ نظامٍ، أو فتحُ إعدادٍ لا حوارَ له. */
 export type StepKind = "dialog" | "settings";
@@ -55,10 +55,10 @@ export const WALK: WalkStep[] = [
   {
     key: "location",
     read: (s) => s.location,
-    title: "الموقع",
-    body: "بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق.",
+    title: tr("الموقع"),
+    body: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق."),
     kind: "dialog",
-    cta: "اسمح بالموقع",
+    cta: tr("اسمح بالموقع"),
     request: async () => {
       await Geolocation.requestPermissions();
     },
@@ -66,10 +66,10 @@ export const WALK: WalkStep[] = [
   {
     key: "notifications",
     read: (s) => s.notifications,
-    title: "الإشعارات",
-    body: "بغيرها لا تصلك بطاقة الطلب وأنت خارج التطبيق.",
+    title: tr("الإشعارات"),
+    body: tr("بغيرها لا تصلك بطاقة الطلب وأنت خارج التطبيق."),
     kind: "dialog",
-    cta: "اسمح بالإشعارات",
+    cta: tr("اسمح بالإشعارات"),
     request: async () => {
       await requestNotificationPermission();
     },
@@ -79,19 +79,19 @@ export const WALK: WalkStep[] = [
     // **فالزرُّ يفتح الإعداد**، والنصُّ يقول ما ينكسر بغيره.
     key: "batteryUnrestricted",
     read: (s) => s.batteryUnrestricted,
-    title: "استثناء من توفير الطاقة",
-    body: "بغيره يوقف النظام خدمة الموقع بعد دقائق من إطفاء الشاشة — فتبدو متصلاً وأنت غائب.",
+    title: tr("استثناء من توفير الطاقة"),
+    body: tr("بغيره يوقف النظام خدمة الموقع بعد دقائق من إطفاء الشاشة — فتبدو متصلاً وأنت غائب."),
     kind: "settings",
-    cta: "افتح الإعدادات",
+    cta: tr("افتح الإعدادات"),
     request: openAppSettings,
   },
   {
     key: "overlay",
     read: (s) => s.overlay,
-    title: "الرسم فوق التطبيقات",
-    body: "به تظهر بطاقة الطلب فوق أي شاشة وأنت تقود. وبدونه يظهر إشعار يملأ الشاشة بدلاً منها.",
+    title: tr("الرسم فوق التطبيقات"),
+    body: tr("به تظهر بطاقة الطلب فوق أي شاشة وأنت تقود. وبدونه يظهر إشعار يملأ الشاشة بدلاً منها."),
     kind: "settings",
-    cta: "افتح الإعدادات",
+    cta: tr("افتح الإعدادات"),
     request: openOverlaySettings,
   },
 ];
@@ -101,13 +101,13 @@ export const WALK: WalkStep[] = [
 export const BACKGROUND_STEP: WalkStep = {
   key: "backgroundLocation",
   read: (s) => s.backgroundLocation,
-  title: "TAXO يحتاج موقعك طوال الوقت",
+  title: tr("TAXO يحتاج موقعك طوال الوقت"),
   body:
-    "حين تضغط «استقبال»، يبثّ TAXO موقعك إلى خادمنا والشاشة مطفأة — ليُعرض " +
-    "عليك أقرب طلب، وليرى راكبك سيارتك على الخريطة حتى نهاية الرحلة. " +
-    "ويتوقّف فور ضغطك «إيقاف الاستقبال».",
+    tr("حين تضغط «استقبال»، يبثّ TAXO موقعك إلى خادمنا والشاشة مطفأة — ليُعرض ") +
+    tr("عليك أقرب طلب، وليرى راكبك سيارتك على الخريطة حتى نهاية الرحلة. ") +
+    tr("ويتوقّف فور ضغطك «إيقاف الاستقبال»."),
   kind: "settings",
-  cta: "افتح الإعدادات واختر «السماح طوال الوقت»",
+  cta: tr("افتح الإعدادات واختر «السماح طوال الوقت»"),
   request: openAppSettings,
 };
 

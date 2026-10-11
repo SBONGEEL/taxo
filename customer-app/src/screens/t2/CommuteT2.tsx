@@ -44,7 +44,7 @@ import { DateField, Icon, Switch } from "@/taxo2";
 
 import "./t2.css";
 import "./account.css";
-import "./commute.css";
+import "./commute.css"; import { tr } from "@/lib/i18n";
 
 interface Point {
   coordinates: Coordinates;
@@ -160,7 +160,7 @@ export function CommutePlanT2Screen() {
     setHereError(null);
     const point = await currentPosition();
     if (!point) {
-      setHereError("تعذّر تحديد موقعك — ابحث عن العنوان أو اختره من أماكنك.");
+      setHereError(tr("تعذّر تحديد موقعك — ابحث عن العنوان أو اختره من أماكنك."));
       return;
     }
     const address = token ? await reverseGeocode(token, point) : null;
@@ -172,15 +172,15 @@ export function CommutePlanT2Screen() {
     const row = purchase.bought;
     return (
       <div className="t2 t2-page t2-cm pb-nav">
-        <SubHeadT2 title="مشوارٌ ثابت" onBack={() => navigate("/account", { replace: true })} />
+        <SubHeadT2 title={tr("مشوارٌ ثابت")} onBack={() => navigate("/account", { replace: true })} />
         <div className="t2-cm-done" role="status">
           <span className="t2-cm-done-icon" aria-hidden="true">
             <Icon name="check_circle" fill />
           </span>
-          <h2 className="t2-cm-done-title">اشتركتَ في مشوارك الثابت</h2>
+          <h2 className="t2-cm-done-title">{tr("اشتركتَ في مشوارك الثابت")}</h2>
           <p className="t2-cm-done-body">
-            خُصم <b className="t2-num">{formatMoney(row.amount_paid, row.currency)}</b> من محفظتك لـ{ridesCount(row.rides_total)}،
-            تبدأ {dayText(row.starts_on)}. <b>ونبحث لك الآن عن كبتنٍ معتمدٍ</b> يعرف طريقك — تجده في «اشتراكاتي» حين يعتمده.
+            {tr("خُصم")}{" "}<b className="t2-num">{formatMoney(row.amount_paid, row.currency)}</b>{" "}{tr("من محفظتك لـ")}{ridesCount(row.rides_total)}{tr("، تبدأ")}{" "}
+{dayText(row.starts_on)}. <b>{tr("ونبحث لك الآن عن كبتنٍ معتمدٍ")}</b>{" "}{tr("يعرف طريقك — تجده في «اشتراكاتي» حين يعتمده.")}
           </p>
         </div>
         <button
@@ -188,7 +188,7 @@ export function CommutePlanT2Screen() {
           className="t2-button primary t2-wide"
           onClick={() => navigate("/account/commutes", { replace: true })}
         >
-          اشتراكاتي
+          {tr("اشتراكاتي")}
         </button>
       </div>
     );
@@ -199,18 +199,18 @@ export function CommutePlanT2Screen() {
 
   return (
     <div className="t2 t2-page t2-cm pb-nav">
-      <SubHeadT2 title="مشوارٌ ثابت" onBack={goBack} />
+      <SubHeadT2 title={tr("مشوارٌ ثابت")} onBack={goBack} />
       <p className="t2-cm-lede">
-        مشوارُك اليوميُّ بسعرٍ مجمَّدٍ لشهرٍ كامل — <b>تدفعه مقدّماً من محفظتك</b>، ويعتمده كبتنٌ يعرف طريقك.
+        {tr("مشوارُك اليوميُّ بسعرٍ مجمَّدٍ لشهرٍ كامل —")}{" "}<b>{tr("تدفعه مقدّماً من محفظتك")}</b>{tr("، ويعتمده كبتنٌ يعرف طريقك.")}
       </p>
 
       {/* **بطاقةُ المسار في ورقة الطلب** (R06) — «من» و«إلى» زرّان يفتحان المنتقي نفسَه */}
       <div className="t2-reqroute t2-cm-route">
         <span className="t2-route-from" aria-hidden="true" />
         <button type="button" className="t2-route-text t2-route-edit" onClick={() => setSearching("pickup")}>
-          <span className="t2-route-label">من</span>
+          <span className="t2-route-label">{tr("من")}</span>
           <span className={pickup ? "t2-route-value" : "t2-route-value t2-cm-unset"}>
-            {pickup ? (pickup.address ?? "موقعك على الخريطة") : "اختر نقطة الانطلاق"}
+            {pickup ? (pickup.address ?? tr("موقعك على الخريطة")) : tr("اختر نقطة الانطلاق")}
           </span>
         </button>
         <span />
@@ -219,9 +219,9 @@ export function CommutePlanT2Screen() {
         <span />
         <span className="t2-route-to" aria-hidden="true" />
         <button type="button" className="t2-route-text t2-route-edit" onClick={() => setSearching("dropoff")}>
-          <span className="t2-route-label">إلى</span>
+          <span className="t2-route-label">{tr("إلى")}</span>
           <span className={dropoff ? "t2-route-value" : "t2-route-value t2-cm-unset"}>
-            {dropoff ? (dropoff.address ?? "نقطة على الخريطة") : "اختر الوجهة"}
+            {dropoff ? (dropoff.address ?? tr("نقطة على الخريطة")) : tr("اختر الوجهة")}
           </span>
         </button>
         <span />
@@ -229,10 +229,10 @@ export function CommutePlanT2Screen() {
       {hereError ? <NoteT2 tone="warn">{hereError}</NoteT2> : null}
 
       <div className="t2-pick-head">
-        <span className="t2-pick-title">أيامُ المشوار</span>
-        <span className="t2-cm-aside">{dayTotal > 0 ? daysCount(dayTotal) : "اختر يوماً"}</span>
+        <span className="t2-pick-title">{tr("أيامُ المشوار")}</span>
+        <span className="t2-cm-aside">{dayTotal > 0 ? daysCount(dayTotal) : tr("اختر يوماً")}</span>
       </div>
-      <div className="t2-seg t2-cm-days" role="group" aria-label="أيام المشوار">
+      <div className="t2-seg t2-cm-days" role="group" aria-label={tr("أيام المشوار")}>
         {COMMUTE_DAYS.map((day) => {
           const on = (weekdays & day.bit) !== 0;
           return (
@@ -250,15 +250,15 @@ export function CommutePlanT2Screen() {
       </div>
 
       <div className="t2-pick-head">
-        <span className="t2-pick-title">الوقت</span>
+        <span className="t2-pick-title">{tr("الوقت")}</span>
       </div>
       <div className="t2-share t2-cm-times">
         <div className="t2-cm-time">
           <span className="t2-cm-time-label">
             <Icon name="route" />
-            الذهاب
+            {tr("الذهاب")}
           </span>
-          <TimeField value={goTime} onChange={setGoTime} label="وقت الذهاب" />
+          <TimeField value={goTime} onChange={setGoTime} label={tr("وقت الذهاب")} />
         </div>
         {/* **العودةُ اختياريّة** — بمفتاحٍ كصفِّ «حجزٌ مضمون»، **ورحلتان في اليوم بها** (التسعيرُ يعدّها) */}
         <button
@@ -268,8 +268,8 @@ export function CommutePlanT2Screen() {
           onClick={() => setReturnTime((current) => (current === null ? "16:30" : null))}
         >
           <span className="t2-share-main">
-            <span className="t2-share-title">رحلةُ عودة</span>
-            <span className="t2-share-body">من الوجهة إلى نقطة الانطلاق في اليوم نفسِه</span>
+            <span className="t2-share-title">{tr("رحلةُ عودة")}</span>
+            <span className="t2-share-body">{tr("من الوجهة إلى نقطة الانطلاق في اليوم نفسِه")}</span>
           </span>
           <Switch on={returnTime !== null} />
         </button>
@@ -277,23 +277,23 @@ export function CommutePlanT2Screen() {
           <div className="t2-cm-time">
             <span className="t2-cm-time-label">
               <Icon name="home" />
-              العودة
+              {tr("العودة")}
             </span>
-            <TimeField value={returnTime} onChange={setReturnTime} label="وقت العودة" />
+            <TimeField value={returnTime} onChange={setReturnTime} label={tr("وقت العودة")} />
           </div>
         ) : null}
       </div>
 
       <div className="t2-pick-head">
-        <span className="t2-pick-title">يبدأ من</span>
-        <span className="t2-cm-aside">شهرٌ من يوم البدء</span>
+        <span className="t2-pick-title">{tr("يبدأ من")}</span>
+        <span className="t2-cm-aside">{tr("شهرٌ من يوم البدء")}</span>
       </div>
       <DateField
         value={startsOn}
         onChange={(value) => {
           if (value) setStartsOn(value);
         }}
-        label="يبدأ الاشتراك من"
+        label={tr("يبدأ الاشتراك من")}
         min={tomorrow}
         max={horizon}
       />
@@ -302,23 +302,23 @@ export function CommutePlanT2Screen() {
       <div className="t2-share t2-cm-quote" aria-live="polite">
         <div className="t2-share-title">
           <Icon name="request_quote" />
-          سعرُ اشتراكك
+          {tr("سعرُ اشتراكك")}
         </div>
         {plan === null ? (
           <p className="t2-share-body">
-            {weekdays === 0 ? "اختر يوماً واحداً على الأقل." : "اختر نقطة الانطلاق والوجهة — ونحسب السعر."}
+            {weekdays === 0 ? tr("اختر يوماً واحداً على الأقل.") : tr("اختر نقطة الانطلاق والوجهة — ونحسب السعر.")}
           </p>
         ) : loading ? (
-          <p className="t2-share-body">نحسب…</p>
+          <p className="t2-share-body">{tr("نحسب…")}</p>
         ) : quote ? (
           <>
             <p className="t2-cm-quote-line">
-              <b className="t2-num">{formatMoney(quote.price_per_ride, quote.currency)}</b> للرحلة · {ridesCount(quote.rides_total)} ·
-              المجموع <b className="t2-num">{formatMoney(quote.total, quote.currency)}</b>
-              <span className="t2-cm-saved"> — وفّرتَ {percentText(quote.discount_percent)}٪</span>
+              <b className="t2-num">{formatMoney(quote.price_per_ride, quote.currency)}</b>{" "}{tr("للرحلة ·")}{" "}{ridesCount(quote.rides_total)}{" "}{tr("· المجموع")}{" "}
+<b className="t2-num">{formatMoney(quote.total, quote.currency)}</b>
+              <span className="t2-cm-saved">{" "}{tr("— وفّرتَ")}{" "}{percentText(quote.discount_percent)}{tr("٪")}</span>
             </p>
             <p className="t2-share-body">
-              من {dayText(startsOn)} إلى {dayText(quote.ends_on)} · السعرُ مجمَّدٌ للشهر كلِّه، لا ذروةَ ولا تغيّرَ في الطريق.
+              {tr("من")}{" "}{dayText(startsOn)}{" "}{tr("إلى")}{" "}{dayText(quote.ends_on)}{" "}{tr("· السعرُ مجمَّدٌ للشهر كلِّه، لا ذروةَ ولا تغيّرَ في الطريق.")}
             </p>
           </>
         ) : (
@@ -327,7 +327,7 @@ export function CommutePlanT2Screen() {
       </div>
 
       <p className="t2-sheet-fine">
-        ما لا يُستعمل من رحلاتك يعود رصيداً في محفظتك عند نهاية الشهر — لا نقداً. ولك أن تعلّق يوماً فيُرحَّل إلى ما بعد آخر يوم.
+        {tr("ما لا يُستعمل من رحلاتك يعود رصيداً في محفظتك عند نهاية الشهر — لا نقداً. ولك أن تعلّق يوماً فيُرحَّل إلى ما بعد آخر يوم.")}
       </p>
 
       {purchase.failure ? (
@@ -337,7 +337,7 @@ export function CommutePlanT2Screen() {
             <>
               {" "}
               <button type="button" className="t2-tlink accent t2-cm-topup" onClick={() => navigate("/wallet/topup")}>
-                اشحن محفظتك
+                {tr("اشحن محفظتك")}
               </button>
             </>
           ) : null}
@@ -353,7 +353,7 @@ export function CommutePlanT2Screen() {
           if (plan) purchase.buy(plan);
         }}
       >
-        <span>{purchase.busy ? "نرسل…" : "اشترك — من محفظتك"}</span>
+        <span>{purchase.busy ? tr("نرسل…") : tr("اشترك — من محفظتك")}</span>
         {quote && !loading ? <span className="t2-cta-price">{formatMoney(quote.total, quote.currency)}</span> : null}
       </button>
 
@@ -366,7 +366,7 @@ export function CommutePlanT2Screen() {
         country={country}
         near={here ?? DEFAULT_CENTER[country]}
         onPick={picked}
-        title={searching === "pickup" ? "من أين تنطلق؟" : "إلى أين؟"}
+        title={searching === "pickup" ? tr("من أين تنطلق؟") : tr("إلى أين؟")}
         onHere={searching === "pickup" ? () => void pickHere() : undefined}
       />
     </div>
@@ -376,9 +376,9 @@ export function CommutePlanT2Screen() {
 // ══════════════════════════════════════════════════════════════════ «اشتراكاتي»
 
 const STATUS: Record<Commute["status"], { text: string; chip: string }> = {
-  active: { text: "قائم", chip: "t2-chip ok" },
-  ended: { text: "انتهى", chip: "t2-chip" },
-  cancelled: { text: "أُلغي", chip: "t2-chip" },
+  active: { text: tr("قائم"), chip: "t2-chip ok" },
+  ended: { text: tr("انتهى"), chip: "t2-chip" },
+  cancelled: { text: tr("أُلغي"), chip: "t2-chip" },
 };
 
 type Asking = { kind: "suspend" | "cancel" | "release"; row: Commute };
@@ -399,7 +399,7 @@ export function CommutesT2Screen() {
 
   return (
     <div className="t2 t2-page t2-cm pb-nav">
-      <SubHeadT2 title="اشتراكاتي" onBack={goBack} />
+      <SubHeadT2 title={tr("اشتراكاتي")} onBack={goBack} />
 
       {error ? (
         <NoteT2 tone="danger" lead>
@@ -410,8 +410,8 @@ export function CommutesT2Screen() {
       {rows?.length === 0 ? (
         <BlankT2
           icon="event_repeat"
-          title="لا اشتراكاتِ بعد"
-          hint={service ? "اشترك في مشوارك اليوميّ بسعرٍ مجمَّدٍ لشهر." : undefined}
+          title={tr("لا اشتراكاتِ بعد")}
+          hint={service ? tr("اشترك في مشوارك اليوميّ بسعرٍ مجمَّدٍ لشهر.") : undefined}
         />
       ) : null}
 
@@ -430,7 +430,7 @@ export function CommutesT2Screen() {
       {service ? (
         <button type="button" className="t2-button secondary t2-wide t2-cm-new" onClick={() => navigate("/account/commute")}>
           <Icon name="add" />
-          اشترك في مشوارٍ ثابت
+          {tr("اشترك في مشوارٍ ثابت")}
         </button>
       ) : null}
 
@@ -439,15 +439,15 @@ export function CommutesT2Screen() {
         onOpenChange={(open) => {
           if (!open) close();
         }}
-        title="علّق يوماً"
+        title={tr("علّق يوماً")}
       >
         <p className="t2-drawer-text">
-          اختر يوماً قادماً — لا تُولَّد رحلتاه، <b>ويُرحَّل إلى ما بعد آخر يومٍ</b> في اشتراكك فلا تخسر رحلةً دفعتها.
+          {tr("اختر يوماً قادماً — لا تُولَّد رحلتاه،")}{" "}<b>{tr("ويُرحَّل إلى ما بعد آخر يومٍ")}</b>{" "}{tr("في اشتراكك فلا تخسر رحلةً دفعتها.")}
         </p>
         {days.length === 0 ? (
-          <p className="t2-empty t2-cm-nodays">لا يومَ قادماً من أيام مشوارك يُعلَّق الآن.</p>
+          <p className="t2-empty t2-cm-nodays">{tr("لا يومَ قادماً من أيام مشوارك يُعلَّق الآن.")}</p>
         ) : (
-          <div className="t2-cm-pick" role="radiogroup" aria-label="اليوم المعلَّق">
+          <div className="t2-cm-pick" role="radiogroup" aria-label={tr("اليوم المعلَّق")}>
             {days.map((iso) => (
               <button
                 key={iso}
@@ -472,10 +472,10 @@ export function CommutesT2Screen() {
               close();
             }}
           >
-            {day ? `علّق ${dayText(day)}` : "اختر يوماً"}
+            {day ? tr("علّق {0}", { 0: dayText(day) }) : tr("اختر يوماً")}
           </button>
           <button type="button" className="t2-button t2-quiet" onClick={close}>
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       </DrawerT2>
@@ -485,12 +485,12 @@ export function CommutesT2Screen() {
         onOpenChange={(open) => {
           if (!open) close();
         }}
-        title={asking?.kind === "release" ? "استبدل الكبتن؟" : "ألغِ الاشتراك؟"}
+        title={asking?.kind === "release" ? tr("استبدل الكبتن؟") : tr("ألغِ الاشتراك؟")}
       >
         <p className="t2-drawer-text">
           {asking?.kind === "release"
-            ? `نفكّ ${asking.row.captain_name ?? "كبتنَك"} عن مشوارك، ويعود مفتوحاً لكبتنٍ معتمدٍ آخر — ورحلاتُك تُعرض على الكباتن حتى يعتمده غيرُه.`
-            : "تُلغى رحلاتُك القادمة، ويعود ما لم يُستعمل رصيداً في محفظتك — لا نقداً."}
+            ? tr("نفكّ {0} عن مشوارك، ويعود مفتوحاً لكبتنٍ معتمدٍ آخر — ورحلاتُك تُعرض على الكباتن حتى يعتمده غيرُه.", { 0: asking.row.captain_name ?? tr("كبتنَك") })
+            : tr("تُلغى رحلاتُك القادمة، ويعود ما لم يُستعمل رصيداً في محفظتك — لا نقداً.")}
         </p>
         <div className="t2-drawer-actions">
           <button
@@ -502,10 +502,10 @@ export function CommutesT2Screen() {
               close();
             }}
           >
-            {asking?.kind === "release" ? "نعم، استبدله" : "نعم، ألغِ الاشتراك"}
+            {asking?.kind === "release" ? tr("نعم، استبدله") : tr("نعم، ألغِ الاشتراك")}
           </button>
           <button type="button" className="t2-button t2-quiet" onClick={close}>
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       </DrawerT2>
@@ -541,56 +541,56 @@ function CommuteCard({
       </div>
       <div className="t2-route">
         <span className="t2-dot" />
-        <span className="t2-place">{row.pickup_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-place">{row.pickup_address ?? tr("نقطة على الخريطة")}</span>
         <span className="t2-dot to" />
-        <span className="t2-place strong">{row.dropoff_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-place strong">{row.dropoff_address ?? tr("نقطة على الخريطة")}</span>
       </div>
       <div className="t2-cm-meta">
         <span>{commuteDaysText(row.weekdays)}</span>
         <span>
-          ذهاب <span dir="ltr">{clockOf(row.go_time)}</span>
+          {tr("ذهاب")}{" "}<span dir="ltr">{clockOf(row.go_time)}</span>
           {row.return_time ? (
             <>
               {" "}
-              · عودة <span dir="ltr">{clockOf(row.return_time)}</span>
+              {tr("· عودة")}{" "}<span dir="ltr">{clockOf(row.return_time)}</span>
             </>
           ) : null}
         </span>
       </div>
       <div className="t2-cm-facts">
         <span className="t2-cm-done-count">
-          اكتملت <b>{row.rides_done}</b> من {ridesCount(row.rides_total)}
+          {tr("اكتملت")}{" "}<b>{row.rides_done}</b>{" "}{tr("من")}{" "}{ridesCount(row.rides_total)}
         </span>
         <span>
-          <b className="t2-num">{formatMoney(row.price_per_ride, row.currency)}</b> للرحلة · دفعتَ{" "}
-          <span className="t2-num">{formatMoney(row.amount_paid, row.currency)}</span> · وفّرتَ {percentText(row.discount_percent)}٪
+          <b className="t2-num">{formatMoney(row.price_per_ride, row.currency)}</b>{" "}{tr("للرحلة · دفعتَ")}{" "}
+          <span className="t2-num">{formatMoney(row.amount_paid, row.currency)}</span>{" "}{tr("· وفّرتَ")}{" "}{percentText(row.discount_percent)}{tr("٪")}
         </span>
       </div>
       {/* **سطرُ الكبتن للقائم وحدَه** — اسمُه حين اعتمده أحد، و«نبحث…» ما دام مفتوحاً */}
       {active ? (
         <p className={row.captain_name ? "t2-cm-captain named" : "t2-cm-captain"}>
           <Icon name={row.captain_name ? "verified_user" : "search"} />
-          {row.captain_name ? `كبتنُك: ${row.captain_name}` : "نبحث لك عن كبتنٍ معتمد"}
+          {row.captain_name ? tr("كبتنُك: {0}", { 0: row.captain_name }) : tr("نبحث لك عن كبتنٍ معتمد")}
         </p>
       ) : null}
       {row.suspended_days.length > 0 ? (
         <p className="t2-cm-suspended">
-          علّقتَ: {row.suspended_days.map((iso) => dayText(iso, true)).join(" · ")}
+          {tr("علّقتَ:")}{" "}{row.suspended_days.map((iso) => dayText(iso, true)).join(" · ")}
         </p>
       ) : null}
       {note ? <NoteT2 tone={note.tone}>{note.text}</NoteT2> : null}
       {active ? (
         <div className="t2-cm-actions">
           <button type="button" className="t2-tlink" disabled={locked} onClick={() => onAsk("suspend")}>
-            علّق يوماً
+            {tr("علّق يوماً")}
           </button>
           {row.captain_name ? (
             <button type="button" className="t2-tlink" disabled={locked} onClick={() => onAsk("release")}>
-              استبدل الكبتن
+              {tr("استبدل الكبتن")}
             </button>
           ) : null}
           <button type="button" className="t2-tlink destroy" disabled={locked} onClick={() => onAsk("cancel")}>
-            ألغِ الاشتراك
+            {tr("ألغِ الاشتراك")}
           </button>
         </div>
       ) : null}

@@ -7,7 +7,7 @@
  */
 
 import { Clock, Home, User, Wallet } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react"; import { tr } from "@/lib/i18n";
 
 export interface Tab {
   to: string;
@@ -16,10 +16,10 @@ export interface Tab {
 }
 
 export const TABS: Tab[] = [
-  { to: "/", label: "الرئيسية", icon: Home },
-  { to: "/rides", label: "رحلاتي", icon: Clock },
-  { to: "/wallet", label: "المحفظة", icon: Wallet },
-  { to: "/account", label: "حسابي", icon: User },
+  { to: "/", label: tr("الرئيسية"), icon: Home },
+  { to: "/rides", label: tr("رحلاتي"), icon: Clock },
+  { to: "/wallet", label: tr("المحفظة"), icon: Wallet },
+  { to: "/account", label: tr("حسابي"), icon: User },
 ];
 
 /** الشاشاتُ التي **تغطّي** الشريطَ — والباقي يُظهره.

@@ -30,7 +30,7 @@ import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 export interface CliqClaimLike {
   id: string;
@@ -77,7 +77,7 @@ export function CliqClaimView({
     try {
       await navigator.clipboard.writeText(value);
     } catch {
-      setError("تعذّر النسخ — حدّد المرجع بإصبعك وانسخه");
+      setError(tr("تعذّر النسخ — حدّد المرجع بإصبعك وانسخه"));
       return;
     }
     setCopied(which);
@@ -95,7 +95,7 @@ export function CliqClaimView({
       setDeclaredAt(answer.declared_paid_at);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تسجيل الدفع",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تسجيل الدفع"),
       );
     } finally {
       setBusy(false);
@@ -103,16 +103,16 @@ export function CliqClaimView({
   }
 
   const statusText: Record<CliqClaimLike["status"], string> = {
-    created: declared ? "بانتظار التأكيد" : "لم يُسجَّل الدفع بعد",
+    created: declared ? tr("بانتظار التأكيد") : tr("لم يُسجَّل الدفع بعد"),
     paid: paidText,
-    failed: "مرفوض",
-    cancelled: "مُلغاة",
+    failed: tr("مرفوض"),
+    cancelled: tr("مُلغاة"),
   };
 
   return (
     <>
       <section className="t2-clq-slip">
-        <span className="t2-clq-k">المبلغ المطلوب</span>
+        <span className="t2-clq-k">{tr("المبلغ المطلوب")}</span>
         <span className="t2-clq-amount">
           <span className="t2-clq-num" dir="ltr">
             {digits(claim.amount)}
@@ -122,27 +122,27 @@ export function CliqClaimView({
 
         {/* **الرمزُ إن رُفع، وإلا سطرٌ يقول ما جرى** — ولا مربّعٌ فارغ */}
         {claim.qr_url ? (
-          <img src={claim.qr_url} alt="رمز كليك" className="t2-clq-qr" />
+          <img src={claim.qr_url} alt={tr("رمز كليك")} className="t2-clq-qr" />
         ) : (
           <p className="t2-clq-noqr">
-            لم يُرفع رمز الاستجابة بعد — حوّل إلى الحساب أدناه يدويّاً من تطبيق
-            بنكك.
+            {tr("لم يُرفع رمز الاستجابة بعد — حوّل إلى الحساب أدناه يدويّاً من تطبيق بنكك.")}
+
           </p>
         )}
 
-        <span className="t2-clq-k t2-clq-to">حوّل إلى حساب كليك</span>
+        <span className="t2-clq-k t2-clq-to">{tr("حوّل إلى حساب كليك")}</span>
         <span className="t2-clq-alias-row">
           <span dir="ltr" className="t2-clq-alias">
             {claim.alias}
           </span>
           <button
             type="button"
-            aria-label="انسخ حساب كليك"
+            aria-label={tr("انسخ حساب كليك")}
             onClick={() => void copy(claim.alias, "alias")}
             className={copied === "alias" ? "t2-clq-copy done" : "t2-clq-copy"}
           >
             <Icon name={copied === "alias" ? "check" : "content_copy"} />
-            {copied === "alias" ? "نُسخ" : "انسخ"}
+            {copied === "alias" ? tr("نُسخ") : tr("انسخ")}
           </button>
         </span>
 
@@ -150,24 +150,24 @@ export function CliqClaimView({
             لا سطرٌ تحت الحساب */}
         <div className="t2-clq-ref">
           <p className="t2-clq-ref-title">
-            اكتب هذا المرجع في خانة الملاحظة عند التحويل
+            {tr("اكتب هذا المرجع في خانة الملاحظة عند التحويل")}
           </p>
           <p dir="ltr" className="t2-clq-ref-code">
             {claim.cart_id}
           </p>
           <button
             type="button"
-            aria-label="انسخ المرجع"
+            aria-label={tr("انسخ المرجع")}
             onClick={() => void copy(claim.cart_id, "ref")}
             className={
               copied === "ref" ? "t2-clq-ref-copy done" : "t2-clq-ref-copy"
             }
           >
             <Icon name={copied === "ref" ? "check" : "content_copy"} />
-            {copied === "ref" ? "نُسخ" : "انسخ المرجع"}
+            {copied === "ref" ? tr("نُسخ") : tr("انسخ المرجع")}
           </button>
           <p className="t2-clq-ref-hint">
-            بلا هذا المرجع لا يُعرف أنّ الحوالة منك — فيتأخّر تأكيدها.
+            {tr("بلا هذا المرجع لا يُعرف أنّ الحوالة منك — فيتأخّر تأكيدها.")}
           </p>
         </div>
       </section>
@@ -181,12 +181,12 @@ export function CliqClaimView({
             disabled={!refCopied || busy}
             onClick={() => void declare()}
           >
-            {busy ? "…" : "تمّ الدفع"}
+            {busy ? "…" : tr("تمّ الدفع")}
           </button>
           {!refCopied ? (
             // **ولا زرَّ مغلقٌ صامت**: من لا يعرف لماذا أُغلق يقرؤه عطباً
             <p className="t2-clq-why">
-              انسخ المرجع أوّلاً — ثم أخبرنا أنك حوّلت.
+              {tr("انسخ المرجع أوّلاً — ثم أخبرنا أنك حوّلت.")}
             </p>
           ) : null}
         </section>
@@ -201,7 +201,7 @@ export function CliqClaimView({
 
       <section className="t2-clq-status">
         <div className="t2-clq-status-top">
-          <span className="t2-clq-status-k">حال الطلب</span>
+          <span className="t2-clq-status-k">{tr("حال الطلب")}</span>
           <span className={`t2-clq-state ${STATUS_TONE[claim.status]}`}>
             {statusText[claim.status]}
           </span>
@@ -210,9 +210,9 @@ export function CliqClaimView({
         {/* **ومدّةُ المراجعة من الحقلين لا من نصّ** — ولا تُقال قبل أن يقول إنه حوّل: من لم يحوّل لا تجري عليه مدّة */}
         {claim.status === "created" && declared ? (
           <p className="t2-clq-line">
-            سجّلنا دفعك. ستتم المراجعة خلال{" "}
-            {digits(String(claim.review_min_minutes))} إلى{" "}
-            {digits(String(claim.review_max_minutes))} دقائق.
+            {tr("سجّلنا دفعك. ستتم المراجعة خلال")}{" "}
+            {digits(String(claim.review_min_minutes))}{" "}{tr("إلى")}{" "}
+            {digits(String(claim.review_max_minutes))}{" "}{tr("دقائق.")}
           </p>
         ) : null}
 
@@ -223,8 +223,8 @@ export function CliqClaimView({
 
         {/* **يُقال إن التحصيل يدويّ** — فلا يُنتظر ما لا يأتي */}
         <p className="t2-clq-manual">
-          التحصيل يدويّ: يراجع مشرفٌ وصولَ المبلغ ثم يؤكّده، ولا يُخصم شيءٌ
-          تلقائياً. ولا تعِد التحويل — يكفي واحد، وتجد حال طلبك هنا.
+          {tr("التحصيل يدويّ: يراجع مشرفٌ وصولَ المبلغ ثم يؤكّده، ولا يُخصم شيءٌ تلقائياً. ولا تعِد التحويل — يكفي واحد، وتجد حال طلبك هنا.")}
+
         </p>
       </section>
     </>

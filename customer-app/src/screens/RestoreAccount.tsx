@@ -24,7 +24,7 @@ import { formatDateTime, formatMoney } from "@/lib/utils";
 import { NoteT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/restore.css";
+import "@/screens/t2/restore.css"; import { tr } from "@/lib/i18n";
 
 export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
       await refreshUser();
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
     } finally {
       setBusy(false);
     }

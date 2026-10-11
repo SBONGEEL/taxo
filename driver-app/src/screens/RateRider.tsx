@@ -18,7 +18,7 @@ import { rateRide } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 interface Props {
   ride: Ride;
@@ -44,7 +44,7 @@ export function useRateRider(ride: Ride, onDone: () => void) {
         return;
       }
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إرسال التقييم",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إرسال التقييم"),
       );
     } finally {
       setBusy(false);
@@ -60,17 +60,17 @@ export function RateRiderScreen({ ride, onDone }: Props) {
   return (
     <div className="flex h-full flex-col justify-center bg-bg px-28 pb-safe pt-safe text-center">
       <div className="mx-auto mb-14 flex size-60 items-center justify-center rounded-full border border-line bg-surface-2 text-19 font-bold text-ink">
-        ر
+        {tr("ر")}
       </div>
-      <h1 className="text-19 font-bold text-ink">قيّم الراكب</h1>
-      <p className="mt-4 text-12.5 text-muted">راكب هذه الرحلة</p>
+      <h1 className="text-19 font-bold text-ink">{tr("قيّم الراكب")}</h1>
+      <p className="mt-4 text-12.5 text-muted">{tr("راكب هذه الرحلة")}</p>
 
       <div dir="ltr" className="mb-30 mt-24 flex justify-center gap-8">
         {[1, 2, 3, 4, 5].map((value) => (
           <button
             key={value}
             type="button"
-            aria-label={`${value} نجوم`}
+            aria-label={tr("{0} نجوم", { 0: value })}
             onClick={() => setStars(value)}
             className={cn(
               "pressable text-32 leading-hero",
@@ -90,14 +90,14 @@ export function RateRiderScreen({ ride, onDone }: Props) {
         disabled={stars === 0}
         onClick={() => void submit()}
       >
-        إرسال
+        {tr("إرسال")}
       </Button>
       <button
         type="button"
         onClick={onDone}
         className="pressable mt-14 text-12.5 font-semibold text-muted"
       >
-        تخطي
+        {tr("تخطي")}
       </button>
     </div>
   );

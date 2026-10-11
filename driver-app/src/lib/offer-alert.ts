@@ -9,7 +9,7 @@
  * «حالٌ لا معالج» التي أرادها المالك.
  */
 
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core"; import { tr } from "@/lib/i18n";
 
 export interface PermissionStatus {
   notifications: boolean;
@@ -146,7 +146,7 @@ export async function maybeAskForOverlay(): Promise<void> {
     // تخزينٌ محجوب — **يُسأل مرّةً في هذه الجلسة ولا يُمنع السؤالُ أصلاً**
   }
   const wants = window.confirm(
-    "لتظهر لك بطاقة الطلب فوق أي شاشة وأنت تقود، يحتاج التطبيق إذن «الرسم فوق التطبيقات». بدونه سيصلك إشعار يملأ الشاشة بدلاً منها. أتفتح موضع المنح الآن؟",
+    tr("لتظهر لك بطاقة الطلب فوق أي شاشة وأنت تقود، يحتاج التطبيق إذن «الرسم فوق التطبيقات». بدونه سيصلك إشعار يملأ الشاشة بدلاً منها. أتفتح موضع المنح الآن؟"),
   );
   if (wants) await openOverlaySettings();
 }

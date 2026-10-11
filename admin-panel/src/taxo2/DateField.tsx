@@ -7,7 +7,7 @@
  * **والحقلُ الأصليُّ مخفيٌّ بصرياً لا مُزال**: قيمتُه ونطاقُه (`min`/`max`) وحدثُه كما كانت، فلا يتغيّر عقدُ الشاشة التي تستعمله.
  * والزرُّ هو ما يُعلَن لقارئ الشاشة (`aria-label` يحمل التسميةَ والقيمة).
  */
-import { useRef } from "react";
+import { useRef } from "react"; import { tr } from "@/lib/i18n";
 
 type Kind = "date" | "datetime-local";
 
@@ -28,7 +28,7 @@ export function DateField({
   kind = "date",
   min,
   max,
-  hint = kind === "date" ? "اختر التاريخ" : "اختر الموعد",
+  hint = kind === "date" ? tr("اختر التاريخ") : tr("اختر الموعد"),
   className,
 }: {
   id?: string;

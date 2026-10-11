@@ -18,20 +18,20 @@ import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import type { DocumentType, DriverDocument } from "@/api/types";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export const DOC_LABEL: Record<DocumentType, string> = {
-  driving_license: "رخصة القيادة",
-  national_id: "الهوية الشخصية",
-  vehicle_registration: "رخصة المركبة والتأمين",
-  vehicle_photo: "صورة المركبة",
-  vehicle_front: "المركبة من الأمام",
-  vehicle_back: "المركبة من الخلف",
-  vehicle_side_right: "الجانب الأيمن",
-  vehicle_side_left: "الجانب الأيسر",
-  vehicle_interior: "من الداخل",
-  vehicle_plate: "لوحة المركبة",
-  profile_photo: "الصورة الشخصية",
+  driving_license: tr("رخصة القيادة"),
+  national_id: tr("الهوية الشخصية"),
+  vehicle_registration: tr("رخصة المركبة والتأمين"),
+  vehicle_photo: tr("صورة المركبة"),
+  vehicle_front: tr("المركبة من الأمام"),
+  vehicle_back: tr("المركبة من الخلف"),
+  vehicle_side_right: tr("الجانب الأيمن"),
+  vehicle_side_left: tr("الجانب الأيسر"),
+  vehicle_interior: tr("من الداخل"),
+  vehicle_plate: tr("لوحة المركبة"),
+  profile_photo: tr("الصورة الشخصية"),
 };
 
 export const STATUS = {
@@ -71,17 +71,17 @@ export function PendingScreen() {
       />
 
       <h1 className="text-21 font-bold text-ink">
-        {rejected ? "لم يُقبل طلبك" : "طلبك قيد المراجعة"}
+        {rejected ? tr("لم يُقبل طلبك") : tr("طلبك قيد المراجعة")}
       </h1>
       <p className="mt-10 text-13 leading-note text-muted">
         {rejected
-          ? "راجع أسباب رفض مستنداتك أدناه، ثم أعد رفعها."
-          : "تراجع الإدارة مستنداتك عادةً خلال 24 ساعة."}
+          ? tr("راجع أسباب رفض مستنداتك أدناه، ثم أعد رفعها.")
+          : tr("تراجع الإدارة مستنداتك عادةً خلال 24 ساعة.")}
       </p>
 
       <div className="mt-22 rounded-14 border border-line bg-surface p-15 text-start text-12 leading-note text-muted">
-        لن تستقبل طلبات قبل الاعتماد وقبل شراء اشتراك ساري. سيصلك إشعار عند
-        اعتماد الحساب.
+        {tr("لن تستقبل طلبات قبل الاعتماد وقبل شراء اشتراك ساري. سيصلك إشعار عند اعتماد الحساب.")}
+
       </div>
 
       {documents.length > 0 ? (
@@ -131,7 +131,7 @@ export function PendingScreen() {
           className="mt-20"
           onClick={() => navigate("/register/documents")}
         >
-          {rejected ? "أعد رفع المستندات" : "أكمِل ما ينقص"}
+          {rejected ? tr("أعد رفع المستندات") : tr("أكمِل ما ينقص")}
         </Button>
       ) : null}
 
@@ -140,7 +140,7 @@ export function PendingScreen() {
         onClick={() => void signOut()}
         className="pressable mt-24 p-10 text-13 font-semibold text-danger"
       >
-        تسجيل الخروج
+        {tr("تسجيل الخروج")}
       </button>
     </div>
   );

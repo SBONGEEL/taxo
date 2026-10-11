@@ -6,13 +6,13 @@
 import type { ReactNode } from "react";
 
 import { Icon } from "@/taxo2";
-import "./kit.css";
+import "./kit.css"; import { tr } from "@/lib/i18n";
 
 /** رأسُ الشاشة الداخلية — رجوعٌ دائريٌّ ٤٤ والعنوان (R13 · R14). */
 export function SubHeadT2({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div className="t2-head">
-      <button type="button" className="t2-back" aria-label="رجوع" onClick={onBack}>
+      <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={onBack}>
         <Icon name="arrow_forward" />
       </button>
       <h1 className="t2-title">{title}</h1>
@@ -57,5 +57,5 @@ export function BlankT2({ icon, title, hint }: { icon: string; title: string; hi
 
 /** الانتظار — حلقةٌ بقوسٍ من الجمر، **تُعلَن ولا تُقرأ نصّاً** (`role="status"`). */
 export function LoaderT2({ small = false }: { small?: boolean }) {
-  return <span className={small ? "t2-loader sm" : "t2-loader"} role="status" aria-label="جارٍ التحميل" />;
+  return <span className={small ? "t2-loader sm" : "t2-loader"} role="status" aria-label={tr("جارٍ التحميل")} />;
 }

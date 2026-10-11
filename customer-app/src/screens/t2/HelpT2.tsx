@@ -19,7 +19,7 @@ import { useGoBack } from "@/lib/back";
 
 import "@/taxo2";
 import "./t2.css";
-import "./help.css";
+import "./help.css"; import { tr } from "@/lib/i18n";
 
 interface Help {
   email: string;
@@ -51,7 +51,7 @@ export function HelpT2Screen() {
     getSiteHelp()
       .then((site) => setHelp({ email: site.support_email.trim(), faq: readable(site.faq) }))
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر تحميل المساعدة"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر تحميل المساعدة")),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -63,10 +63,10 @@ export function HelpT2Screen() {
   return (
     <div className="t2 t2-page t2-account t2-help pb-nav" aria-busy={loading}>
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={goBack}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-        <h1 className="t2-title">المساعدة والدعم</h1>
+        <h1 className="t2-title">{tr("المساعدة والدعم")}</h1>
       </div>
 
       {error ? (
@@ -76,7 +76,7 @@ export function HelpT2Screen() {
             {error}
           </p>
           <button type="button" className="t2-button secondary t2-help-retry" onClick={load} disabled={loading}>
-            أعد المحاولة
+            {tr("أعد المحاولة")}
           </button>
         </>
       ) : null}
@@ -95,7 +95,7 @@ export function HelpT2Screen() {
             <span className="t2-icon fill">mail</span>
           </span>
           <span className="t2-help-mail-main">
-            <span className="t2-help-mail-title">راسل فريق الدعم</span>
+            <span className="t2-help-mail-title">{tr("راسل فريق الدعم")}</span>
             {/* **العنوانُ لاتينيٌّ يُقرأ من اليسار** — ويُملى حرفاً بحرف */}
             <span dir="ltr" className="t2-help-mail-address">
               {help!.email}
@@ -107,7 +107,7 @@ export function HelpT2Screen() {
 
       {help && help.faq.length > 0 ? (
         <>
-          <h2 className="t2-section">الأسئلة الشائعة</h2>
+          <h2 className="t2-section">{tr("الأسئلة الشائعة")}</h2>
           <div className="t2-list t2-help-faq">
             {help.faq.map((item, index) => {
               const expanded = open === index;

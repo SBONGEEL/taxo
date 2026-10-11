@@ -40,7 +40,7 @@ import { trimRoute } from "@/lib/route-line";
 import { skinImageUrl, skinSizePx } from "@/lib/skin";
 import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** **خريطةُ TAXO 2.0 هادئةٌ في المظهرين** (§٦١-د: «بلا معالمَ ولا ازدحامِ شوارع»): قاعدةُ Mapbox الأهدأ لكلِّ مظهر، ثمّ تُصبغ
  *  بلغة «TaxoMap» من رموز الهوية عند كلِّ تحميلٍ للستايل (`calmLook`) — **وفي الليل برموزه الداكنة كخريطة الكبتن**. كان الليلُ
@@ -718,7 +718,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     }
     if (!myLocationMarker.current) {
       myLocationMarker.current = new mapboxgl.Marker({
-        element: t2 ? t2MeElement("موقعي") : pulseElement("موقعي"),
+        element: t2 ? t2MeElement(tr("موقعي")) : pulseElement(tr("موقعي")),
       })
         .setLngLat([showMyLocation.lng, showMyLocation.lat])
         .addTo(instance);
@@ -741,7 +741,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     if (!searchPulse.current) {
       searchPulse.current = new mapboxgl.Marker({
         // **ونهارُ TAXO 2.0 رادارُ اللوحة** (R07): ثلاثُ حلقاتٍ واسعةٍ بالجمر ونقطةُ الانطلاق في مركزها — والليلُ نبضتُه كما كانت
-        element: t2 ? t2RadarElement("جارٍ البحث عن كبتن") : pulseElement("جارٍ البحث عن كبتن"),
+        element: t2 ? t2RadarElement(tr("جارٍ البحث عن كبتن")) : pulseElement(tr("جارٍ البحث عن كبتن")),
       })
         .setLngLat([pickup.lng, pickup.lat])
         .addTo(instance);
@@ -782,8 +782,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     };
 
     // **وفي بحث TAXO 2.0 يقف الرادارُ وحدَه على الانطلاق** (R07) — نقطتُه في مركزه، فدائرةُ الحبر تحتها نقطتان لشيءٍ واحد
-    place(pickupMarker, t2 && searching ? null : pickup, "var(--ok)", "نقطة الانطلاق", "from");
-    place(dropoffMarker, dropoff, "var(--dng)", "الوجهة", "to");
+    place(pickupMarker, t2 && searching ? null : pickup, "var(--ok)", tr("نقطة الانطلاق"), "from");
+    place(dropoffMarker, dropoff, "var(--dng)", tr("الوجهة"), "to");
   }, [pickup, dropoff, t2, searching]);
 
   useEffect(() => {
@@ -918,7 +918,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     ) : (
       <div
         className={cn("map-placeholder h-full w-full bg-bg", className)}
-        aria-label="الخريطة غير متاحة"
+        aria-label={tr("الخريطة غير متاحة")}
       />
     );
   }

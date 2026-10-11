@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from "react";
 
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** حالُ الصفّ في العرض — **أسماءُ واجهةٍ لا مرآةُ تعداد**: `uploaded` له صفٌّ لم يُرفض (منتظِرٌ أو معتمَد)، و`refused` رُفض
  *  ويُعاد رفعُه، و`missing` لا صفَّ له. ولا تقابل `DocumentReviewStatus` عمداً — فلا يُقرأ «لم يُرفع» حالاً من القاعدة. */
@@ -57,14 +57,14 @@ export function DocumentRow({
           {shrunk ? <span className="cap-doc-sub ok">{shrunk}</span> : null}
         </span>
         {percent !== null ? (
-          <span className="cap-doc-pct">{`${percent}٪`}</span>
+          <span className="cap-doc-pct">{tr("{0}٪", { 0: percent })}</span>
         ) : state === "uploaded" ? (
           <span className="cap-doc-done">
             <Icon name="check_circle" fill />
-            مرفوعة
+            {tr("مرفوعة")}
           </span>
         ) : state === "refused" ? (
-          <span className="cap-doc-redo">أعد الرفع</span>
+          <span className="cap-doc-redo">{tr("أعد الرفع")}</span>
         ) : null}
       </button>
       {children}

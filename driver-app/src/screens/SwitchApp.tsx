@@ -13,7 +13,7 @@ import { AppLauncher } from "@capacitor/app-launcher";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** صفحةُ التنزيل — **مصدرٌ واحدٌ** يقرّر بنفسه أحزمةٌ أم متجر. */
 const INSTALL_PAGE = "https://taxo.tajora.ly";
@@ -24,17 +24,17 @@ export function RiderNotInstalledScreen() {
     <div className="t2 t2-ax">
       <div className="t2-ax-scroll has-foot">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
         </div>
         <span className="t2-swap-icon" aria-hidden="true">
           <Icon name="swap_horiz" />
         </span>
-        <h1 className="t2-swap-title">تطبيق الراكب غير مثبَّت على هذا الجهاز</h1>
+        <h1 className="t2-swap-title">{tr("تطبيق الراكب غير مثبَّت على هذا الجهاز")}</h1>
         <p className="t2-swap-text">
-          حسابك واحد، وتدخل به التطبيقين بلا تسجيلٍ جديد. ثبّت تطبيق الراكب ثم
-          عد إلى هنا واضغط «تبديل» — تنتقل جلستك وحدها.
+          {tr("حسابك واحد، وتدخل به التطبيقين بلا تسجيلٍ جديد. ثبّت تطبيق الراكب ثم عد إلى هنا واضغط «تبديل» — تنتقل جلستك وحدها.")}
+
         </p>
       </div>
       <div className="t2-ax-foot">
@@ -45,7 +45,7 @@ export function RiderNotInstalledScreen() {
             void AppLauncher.openUrl({ url: INSTALL_PAGE });
           }}
         >
-          احصل على تطبيق الراكب
+          {tr("احصل على تطبيق الراكب")}
         </button>
       </div>
     </div>

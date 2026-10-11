@@ -19,7 +19,7 @@
 
 import { useBrand } from "@/lib/brand";
 
-import "@/taxo2";
+import "@/taxo2"; import { tr } from "@/lib/i18n";
 
 export function WomenModeNotice() {
   const { showNotice, dismissNotice } = useBrand();
@@ -30,8 +30,8 @@ export function WomenModeNotice() {
       <span className="t2-icon" aria-hidden="true">
         woman
       </span>
-      <span>تم تفعيل الوضع النسائي — يمكنك إطفاؤه من الإعدادات</span>
-      <button type="button" onClick={dismissNotice} aria-label="إغلاق" className="t2-snack-close">
+      <span>{tr("تم تفعيل الوضع النسائي — يمكنك إطفاؤه من الإعدادات")}</span>
+      <button type="button" onClick={dismissNotice} aria-label={tr("إغلاق")} className="t2-snack-close">
         <span className="t2-icon" aria-hidden="true">
           close
         </span>

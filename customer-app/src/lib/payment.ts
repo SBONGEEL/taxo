@@ -36,7 +36,7 @@ import type {
   RiderUnconfirmed,
   RiderUnconfirmedItem,
 } from "@/api/types";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** القنواتُ التي **تكتبها المنصّةُ عن الراكب** ولا يختارها أحد: خصمُ الكوبون
  *  (12-ز) وخصمُ المشاركة (12-ي). كلتاهما تتحمّلها الشركةُ وتُنشأ عند الإنهاء.
@@ -66,10 +66,10 @@ export interface PaymentChannel {
 
 /** الترتيب مقصود: المحفظة أولاً وكليك ثانياً (SPEC القسم 6.2). */
 export const PAYMENT_CHANNELS: PaymentChannel[] = [
-  { method: "wallet", feature: "wallet_enabled", hint: "خصمٌ فوري من رصيدك" },
-  { method: "cliq", feature: "cliq_enabled", hint: "حوّل على alias الكبتن" },
-  { method: "card", feature: "card_enabled", hint: "بطاقة أو محفظة الهاتف" },
-  { method: "cash", hint: "سلّم المبلغ للكبتن" },
+  { method: "wallet", feature: "wallet_enabled", hint: tr("خصمٌ فوري من رصيدك") },
+  { method: "cliq", feature: "cliq_enabled", hint: tr("حوّل على alias الكبتن") },
+  { method: "card", feature: "card_enabled", hint: tr("بطاقة أو محفظة الهاتف") },
+  { method: "cash", hint: tr("سلّم المبلغ للكبتن") },
 ];
 
 /** قنواتُ هذه الدولة وحدها — والقناةُ الغائبةُ لا تُرسم معطّلةً بل تختفي. */

@@ -24,7 +24,7 @@ import { confirmPayment } from "@/api/endpoints";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 export interface CliqTransfer {
   rideId: string;
@@ -46,9 +46,9 @@ interface Props {
 
 /** ما بقي من المهلة نصّاً — «٦ ساعات» أو «٤٠ دقيقة»، ولا ثوانيَ في الأخير. */
 function remainingLabel(minutes: number): string {
-  if (minutes <= 0) return "انقضت المهلة";
-  if (minutes < 60) return `${digits(String(minutes))} دقيقة`;
-  return `${digits(String(Math.floor(minutes / 60)))} ساعة`;
+  if (minutes <= 0) return tr("انقضت المهلة");
+  if (minutes < 60) return tr("{0} دقيقة", { 0: digits(String(minutes)) });
+  return tr("{0} ساعة", { 0: digits(String(Math.floor(minutes / 60))) });
 }
 
 export function CliqTransferSheet({
@@ -84,7 +84,7 @@ export function CliqTransferSheet({
       onConfirmed();
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تأكيد الدفعة"),
       );
     } finally {
       setBusy(false);
@@ -102,7 +102,7 @@ export function CliqTransferSheet({
         <div className="t2-cts-top">
           <div className="t2-cts-main">
             <p id="cts-title" className="t2-cts-caption">
-              حوالة كليك بانتظار تأكيدك
+              {tr("حوالة كليك بانتظار تأكيدك")}
             </p>
             <p className="t2-cts-amount">
               <span className="t2-cts-num" dir="ltr">
@@ -117,21 +117,21 @@ export function CliqTransferSheet({
                 <Icon name="hourglass_top" />
                 {remainingLabel(minutesLeft)}
               </span>
-              <span className="t2-cts-left-k">قبل أن تصير نزاعاً</span>
+              <span className="t2-cts-left-k">{tr("قبل أن تصير نزاعاً")}</span>
             </div>
           ) : null}
         </div>
 
         <div className="t2-cts-ref">
           <p className="t2-cts-ref-row">
-            <span>مرجع الحوالة كما أدخله الراكب</span>
+            <span>{tr("مرجع الحوالة كما أدخله الراكب")}</span>
             <span dir="ltr" className="t2-cts-ref-code">
               {transfer.transferReference || "—"}
             </span>
           </p>
           <p className="t2-cts-ref-note">
-            تأكّد من وصولها إلى حسابك قبل أن تؤكد — تأكيدُك هو ما يُثبّت الدفعة،
-            والمال يبقى معك ولا يمر بمحفظتك.
+            {tr("تأكّد من وصولها إلى حسابك قبل أن تؤكد — تأكيدُك هو ما يُثبّت الدفعة، والمال يبقى معك ولا يمر بمحفظتك.")}
+
           </p>
         </div>
 
@@ -150,7 +150,7 @@ export function CliqTransferSheet({
             disabled={busy}
             onClick={onDispute}
           >
-            لم تصلني
+            {tr("لم تصلني")}
           </button>
           <button
             type="button"
@@ -163,14 +163,14 @@ export function CliqTransferSheet({
             ) : (
               <>
                 <Icon name="check" />
-                وصلتني
+                {tr("وصلتني")}
               </>
             )}
           </button>
         </div>
 
         <button type="button" className="t2-cts-later" onClick={onDismiss}>
-          لاحقاً — تبقى في تفاصيل الرحلة
+          {tr("لاحقاً — تبقى في تفاصيل الرحلة")}
         </button>
       </div>
     </div>

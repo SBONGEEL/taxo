@@ -32,7 +32,7 @@ import { currencyLabel, digits, DISPLAY_LOCALE } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./t2.css";
-import "./guarantees.css";
+import "./guarantees.css"; import { tr } from "@/lib/i18n";
 
 /** **رفضٌ يُغلق البطاقةَ لا يُعاد بضغطةٍ ثانية** — سبقه كبتنٌ آخر، أو هو محجوب: الزرُّ بعدهما يَعِد بما لا يقع. */
 const FINAL_CODES = new Set(["guarantee_taken", "guarantee_banned"]);
@@ -44,8 +44,8 @@ function slot(iso: string): { day: string; time: string } {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
-  if (at.toDateString() === today.toDateString()) return { day: "اليوم", time };
-  if (at.toDateString() === tomorrow.toDateString()) return { day: "غداً", time };
+  if (at.toDateString() === today.toDateString()) return { day: tr("اليوم"), time };
+  if (at.toDateString() === tomorrow.toDateString()) return { day: tr("غداً"), time };
   return { day: digits(at.toLocaleDateString(DISPLAY_LOCALE, { weekday: "long", day: "numeric", month: "long" })), time };
 }
 
@@ -73,7 +73,7 @@ export function GuaranteesT2Screen() {
 
   useEffect(() => {
     if (!enabled) return;
-    load().catch((caught) => setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الحجوز المضمونة"));
+    load().catch((caught) => setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الحجوز المضمونة")));
   }, [enabled, load]);
 
   if (!enabled) return <Navigate to="/" replace />;
@@ -96,7 +96,7 @@ export function GuaranteesT2Screen() {
       setCardError((current) => ({
         ...current,
         [bookingId]: {
-          message: caught instanceof ApiError ? caught.message : "تعذّر الإرسال — حاول ثانية",
+          message: caught instanceof ApiError ? caught.message : tr("تعذّر الإرسال — حاول ثانية"),
           final: caught instanceof ApiError && FINAL_CODES.has(caught.code),
         },
       }));
@@ -108,13 +108,13 @@ export function GuaranteesT2Screen() {
   const accept = (booking: GuaranteeOffer) =>
     void act(booking.id, async () => {
       await acceptGuarantee(booking.id);
-      return "قبلتَ الحجز — تجده في «القادمة»، ونسألك قبل موعده: هل أنت في الطريق؟";
+      return tr("قبلتَ الحجز — تجده في «القادمة»، ونسألك قبل موعده: هل أنت في الطريق؟");
     });
 
   const withdraw = (booking: GuaranteeOffer) =>
     void act(booking.id, async () => {
       await withdrawGuarantee(booking.id);
-      return "اعتذرتَ عن الحجز قبل تأكيده — عاد لغيرك، بلا أثرٍ عليك.";
+      return tr("اعتذرتَ عن الحجز قبل تأكيده — عاد لغيرك، بلا أثرٍ عليك.");
     });
 
   // **«نعم» تعيد الرحلةَ نفسَها**: تُسلَّم إلى سياق الرحلة وتُفتح الرئيسيةُ عليها — والقائمةُ لا تُعاد قراءتُها (`null`)
@@ -129,13 +129,13 @@ export function GuaranteesT2Screen() {
     <div className="t2 t2-gu">
       <div className="t2-gu-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">الحجوز المضمونة</h1>
+          <h1 className="t2-title">{tr("الحجوز المضمونة")}</h1>
         </div>
         <p className="t2-gu-lede">
-          تقبل رحلةً مجدولةً قبل موعدها، وتؤكّد قبله بساعة. <b>ورسمُ الضمان لك كاملاً</b> حين تتمّ الرحلةُ معك في وقتها.
+          {tr("تقبل رحلةً مجدولةً قبل موعدها، وتؤكّد قبله بساعة.")}{" "}<b>{tr("ورسمُ الضمان لك كاملاً")}</b>{" "}{tr("حين تتمّ الرحلةُ معك في وقتها.")}
         </p>
 
         {error ? (
@@ -162,7 +162,7 @@ export function GuaranteesT2Screen() {
             {lists.mine.length > 0 ? (
               <section>
                 <div className="t2-section">
-                  القادمة
+                  {tr("القادمة")}
                   <span className="t2-section-aside" dir="ltr">
                     {digits(String(lists.mine.length))}
                   </span>
@@ -182,11 +182,11 @@ export function GuaranteesT2Screen() {
             ) : null}
 
             <section>
-              <div className="t2-section">عروضٌ تنتظرك</div>
+              <div className="t2-section">{tr("عروضٌ تنتظرك")}</div>
               {lists.offers.length === 0 ? (
                 // **الفراغُ يقول أسبابَه كلَّها** — الخلفيةُ تردّ فارغةً لمن حُجب أو بلا اشتراك أيضاً، فلا يُقرأ «لا طلبَ في السوق» وحدَه
                 <p className="t2-empty">
-                  لا عروضَ الآن. تظهر هنا الحجوزُ المضمونةُ في فئة مركبتك قبل موعدها بيومٍ تقريباً.
+                  {tr("لا عروضَ الآن. تظهر هنا الحجوزُ المضمونةُ في فئة مركبتك قبل موعدها بيومٍ تقريباً.")}
                 </p>
               ) : (
                 lists.offers.map((booking) => {
@@ -200,7 +200,7 @@ export function GuaranteesT2Screen() {
                         aria-busy={busy === booking.id}
                         onClick={() => accept(booking)}
                       >
-                        {busy === booking.id ? "نرسل…" : "اقبل الحجز"}
+                        {busy === booking.id ? tr("نرسل…") : tr("اقبل الحجز")}
                       </button>
                     </GuaranteeCard>
                   );
@@ -241,23 +241,23 @@ function GuaranteeCard({
       </div>
       <div className="t2-gu-route">
         <span className="t2-gu-dot" aria-hidden="true" />
-        <span className="t2-gu-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-gu-place">{booking.pickup_address ?? tr("نقطة على الخريطة")}</span>
         <span className="t2-gu-dot to" aria-hidden="true" />
-        <span className="t2-gu-place strong">{booking.dropoff_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-gu-place strong">{booking.dropoff_address ?? tr("نقطة على الخريطة")}</span>
       </div>
       <div className="t2-gu-money">
         <span>
           {booking.estimated_fare_at_booking ? (
             <>
-              أجرةٌ تقديراً{" "}
+              {tr("أجرةٌ تقديراً")}{" "}
               <b dir="ltr">{digits(booking.estimated_fare_at_booking)}</b> {cur}
             </>
           ) : (
-            "الأجرةُ تُحسب عند التنفيذ"
+            tr("الأجرةُ تُحسب عند التنفيذ")
           )}
         </span>
         <span className="t2-gu-fee">
-          + ضمان <b dir="ltr">{digits(booking.guarantee_fee)}</b> {cur} لك كاملاً
+          {tr("+ ضمان")}{" "}<b dir="ltr">{digits(booking.guarantee_fee)}</b> {cur}{" "}{tr("لك كاملاً")}
         </span>
       </div>
       {children}
@@ -292,15 +292,15 @@ function Upcoming({
         <div className="t2-callout t2-gu-ask" role="status">
           <Icon name="schedule" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">هل أنت في الطريق؟</p>
+            <p className="t2-callout-title">{tr("هل أنت في الطريق؟")}</p>
             <p className="t2-callout-body">
-              أكّد الآن، وإلا عاد الحجزُ لغيرك بعد دقائق — بلا أثرٍ عليك. <b>وبعد التأكيد يصير اعتذارُك إلغاءً للرحلة</b>:
-              يُؤخذ منك رسمُ الضمان للراكب ويُسجَّل إنذار.
+              {tr("أكّد الآن، وإلا عاد الحجزُ لغيرك بعد دقائق — بلا أثرٍ عليك.")}{" "}<b>{tr("وبعد التأكيد يصير اعتذارُك إلغاءً للرحلة")}</b>{tr(": يُؤخذ منك رسمُ الضمان للراكب ويُسجَّل إنذار.")}
+
             </p>
           </div>
         </div>
       ) : (
-        <p className="t2-gu-hint">يُفتح التأكيدُ قبل الموعد بساعة — نسألك حينها: هل أنت في الطريق؟</p>
+        <p className="t2-gu-hint">{tr("يُفتح التأكيدُ قبل الموعد بساعة — نسألك حينها: هل أنت في الطريق؟")}</p>
       )}
       <div className="t2-gu-actions">
         <button
@@ -310,13 +310,13 @@ function Upcoming({
           aria-busy={busy}
           onClick={onConfirm}
         >
-          {busy ? "نرسل…" : "أكّد: في الطريق"}
+          {busy ? tr("نرسل…") : tr("أكّد: في الطريق")}
         </button>
         <button type="button" className="t2-button secondary" disabled={locked} onClick={onWithdraw}>
-          اعتذر
+          {tr("اعتذر")}
         </button>
       </div>
-      <p className="t2-gu-hint center">«اعتذر» بلا أثرٍ عليك قبل التأكيد.</p>
+      <p className="t2-gu-hint center">{tr("«اعتذر» بلا أثرٍ عليك قبل التأكيد.")}</p>
     </>
   );
 }

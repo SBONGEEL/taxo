@@ -34,16 +34,16 @@ import { digits,
 } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** **النصُّ هنا والرمزُ من الخلفية** — كموانع إلغاء التفعيل تماماً. */
 const REQUIREMENT_TEXT: Record<string, string> = {
-  approved: "حسابٌ معتمد",
-  past_subscription: "اشتراكٌ أسبوعيٌّ أو شهريٌّ سابق",
-  completed_rides: "رحلاتٌ مكتملة",
-  rating: "متوسّطُ التقييم",
-  no_open_dispute: "لا نزاعَ مفتوح",
-  no_outstanding_advance: "لا سلفةَ قائمة",
+  approved: tr("حسابٌ معتمد"),
+  past_subscription: tr("اشتراكٌ أسبوعيٌّ أو شهريٌّ سابق"),
+  completed_rides: tr("رحلاتٌ مكتملة"),
+  rating: tr("متوسّطُ التقييم"),
+  no_open_dispute: tr("لا نزاعَ مفتوح"),
+  no_outstanding_advance: tr("لا سلفةَ قائمة"),
 };
 
 function Requirement({ item }: { item: AdvanceRequirement }) {
@@ -103,7 +103,7 @@ export function AdvancesScreen() {
         setAmount((current) => current || next.cap);
       })
       .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر التحميل")),
       );
   }, []);
 
@@ -116,7 +116,7 @@ export function AdvancesScreen() {
       await action();
       load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
     } finally {
       setBusy(false);
     }
@@ -124,10 +124,10 @@ export function AdvancesScreen() {
 
   const header = (
     <div className="t2-head">
-      <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+      <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
         <Icon name="arrow_forward" />
       </button>
-      <h1 className="t2-title">السلفة</h1>
+      <h1 className="t2-title">{tr("السلفة")}</h1>
     </div>
   );
 
@@ -147,7 +147,7 @@ export function AdvancesScreen() {
             errorNote
           ) : (
             <div className="t2-ax-center">
-              <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+              <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
             </div>
           )}
         </div>
@@ -168,8 +168,8 @@ export function AdvancesScreen() {
 
         {!state.offered ? (
           <section className="t2-empty t2-ax-empty">
-            <b>السلف غير متاحة</b>
-            <span>هذه الخدمة غير مفعّلة في سوقك حالياً.</span>
+            <b>{tr("السلف غير متاحة")}</b>
+            <span>{tr("هذه الخدمة غير مفعّلة في سوقك حالياً.")}</span>
           </section>
         ) : null}
 
@@ -178,19 +178,19 @@ export function AdvancesScreen() {
             className={debt.overdue ? "t2-ax-card t2-adv-debt overdue" : "t2-ax-card t2-adv-debt"}
           >
             <p className={debt.overdue ? "t2-adv-k danger" : "t2-adv-k"}>
-              {debt.overdue ? "سلفةٌ تجاوزت مهلتها" : "سلفتُك القائمة"}
+              {debt.overdue ? tr("سلفةٌ تجاوزت مهلتها") : tr("سلفتُك القائمة")}
             </p>
             <Money value={debt.remaining} currency={currency} />
             {debt.overdue ? (
               <p className="t2-adv-stop">
                 <Icon name="error" fill />
-                <span>أُوقفت الطلبات ولا يمكنك شراء اشتراكٍ يوميّ حتى تسدّد. ورحلتُك الجارية إن وُجدت تكمل.</span>
+                <span>{tr("أُوقفت الطلبات ولا يمكنك شراء اشتراكٍ يوميّ حتى تسدّد. ورحلتُك الجارية إن وُجدت تكمل.")}</span>
               </p>
             ) : (
               <p className="t2-adv-line">
-                {`تُقتطع تلقائياً من أرباح رحلاتك، ومهلتُها ${digits(
+                {tr("تُقتطع تلقائياً من أرباح رحلاتك، ومهلتُها {0}.", { 0: digits(
                   new Date(debt.advance.due_at).toLocaleDateString(DISPLAY_LOCALE),
-                )}.`}
+                ) })}
               </p>
             )}
             <button
@@ -199,7 +199,7 @@ export function AdvancesScreen() {
               disabled={busy}
               onClick={() => void run(repayAdvance)}
             >
-              {busy ? "…" : "سدّد الباقي من المحفظة"}
+              {busy ? "…" : tr("سدّد الباقي من المحفظة")}
             </button>
           </section>
         ) : null}
@@ -207,7 +207,7 @@ export function AdvancesScreen() {
         {asking ? (
           <>
             <section aria-labelledby="t2-adv-reqs">
-              <h2 id="t2-adv-reqs" className="t2-adv-reqs-label">شروطُ السلفة</h2>
+              <h2 id="t2-adv-reqs" className="t2-adv-reqs-label">{tr("شروطُ السلفة")}</h2>
               <ul className="t2-adv-reqs">
                 {state.requirements.map((item) => (
                   <Requirement key={item.key} item={item} />
@@ -216,14 +216,14 @@ export function AdvancesScreen() {
             </section>
 
             <section className="t2-ax-card t2-adv-cap">
-              <p className="t2-adv-k">سقفُك الحالي</p>
+              <p className="t2-adv-k">{tr("سقفُك الحالي")}</p>
               <Money value={state.cap} currency={currency} />
               <p className="t2-ax-hint">
-                يكبر بعد كلِّ سلفةٍ تسدّدها في مهلتها. وما فوقه يحتاج موافقة
-                الإدارة.
+                {tr("يكبر بعد كلِّ سلفةٍ تسدّدها في مهلتها. وما فوقه يحتاج موافقة الإدارة.")}
+
               </p>
               <label className="t2-ax-label" htmlFor="t2-adv-amount">
-                المبلغ
+                {tr("المبلغ")}
               </label>
               <input
                 id="t2-adv-amount"
@@ -256,7 +256,7 @@ export function AdvancesScreen() {
             disabled={busy || !state.eligible || Number(amount) <= 0 || unitError !== null}
             onClick={() => setConfirming(true)}
           >
-            {busy ? "…" : "اطلب السلفة"}
+            {busy ? "…" : tr("اطلب السلفة")}
           </button>
         </div>
       ) : null}
@@ -274,33 +274,33 @@ export function AdvancesScreen() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="t2-ax-grab" aria-hidden="true" />
-            <h2 id="t2-adv-confirm" className="t2-ax-sheet-title">تأكيد طلب السلفة</h2>
+            <h2 id="t2-adv-confirm" className="t2-ax-sheet-title">{tr("تأكيد طلب السلفة")}</h2>
             {/* **الجملةُ تقول إنه دَين، لا «سيصلك مبلغ»** */}
             <p className="t2-adv-sub">
-              هذه سلفةٌ تُسترجَع من دخلك، لا رصيدٌ يُمنح.
+              {tr("هذه سلفةٌ تُسترجَع من دخلك، لا رصيدٌ يُمنح.")}
             </p>
 
             <div className="t2-adv-box">
               <div className="t2-adv-box-row">
-                <span>المبلغ</span>
+                <span>{tr("المبلغ")}</span>
                 <Money value={amount} currency={currency} />
               </div>
               <div className="t2-adv-box-rule" />
-              <p className="t2-adv-box-title">شرطُ السداد</p>
+              <p className="t2-adv-box-title">{tr("شرطُ السداد")}</p>
               {/* **وحدٌّ أدنى صفرُه لا يُنطق شرطاً** — نفسُ قاعدة قائمة
                   الشروط أعلاه، حيث «٧ / ٠» تُخفى لأنها تخترع مقارنةً حيث لا
                   مطلوب. وهنا أسوأ: «ويبقى لك ٠٫٠٠٠ على الأقل» جملةٌ تَعِد
                   بشيءٍ وتعطي لا شيء، فيقرؤها صاحبُها ضماناً لا وجودَ له */}
               <p className="t2-adv-box-text">
-                يُقتطع {digits(String(state.deduction_percent))}٪ من كل
-                رحلةٍ يدخل مالُها محفظتَك
+                {tr("يُقتطع")}{" "}{digits(String(state.deduction_percent))}{tr("٪ من كل رحلةٍ يدخل مالُها محفظتَك")}
+
                 {Number(state.min_kept_amount) > 0
-                  ? `، ويبقى لك منها ${digits(
+                  ? tr("، ويبقى لك منها {0} {1} على الأقل.", { 0: digits(
                       state.min_kept_amount,
-                    )} ${currency} على الأقل.`
+                    ), 1: currency })
                   : "."}
                 {state.term_days
-                  ? ` والمهلةُ ${digits(String(state.term_days))} يوماً.`
+                  ? tr(" والمهلةُ {0} يوماً.", { 0: digits(String(state.term_days)) })
                   : ""}
               </p>
             </div>
@@ -315,7 +315,7 @@ export function AdvancesScreen() {
                   void run(() => requestAdvance(amount));
                 }}
               >
-                {busy ? "…" : "أوافق — اطلب السلفة"}
+                {busy ? "…" : tr("أوافق — اطلب السلفة")}
               </button>
               <button
                 type="button"
@@ -323,7 +323,7 @@ export function AdvancesScreen() {
                 disabled={busy}
                 onClick={() => setConfirming(false)}
               >
-                رجوع
+                {tr("رجوع")}
               </button>
             </div>
           </div>

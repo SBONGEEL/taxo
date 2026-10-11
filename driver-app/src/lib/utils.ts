@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { extendTailwindMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge"; import { language } from "@/lib/i18n";
 
 /** مقاساتُ الخط كما في `DESIGN.md` §6 — و`check:scale` يمنع افتراقها عنه.
  *
@@ -64,7 +64,8 @@ export function digits(value: string | number | null | undefined): string {
  * القيمةُ التي يعتمد عليها العرضُ تُكتب صراحةً. و`-u-nu-latn` يثبّت الخانات
  * لاتينيةً ويُبقي أسماءَ الشهور عربية.
  */
-export const DISPLAY_LOCALE = "ar-u-nu-latn";
+// **وبالفرنسيّة أسماءُ شهورٍ فرنسيّة بخاناتٍ لاتينيّة** (SPEC §٧٣-هـ المرحلة ٥) — والعربيّةُ كما كانت حرفاً
+export const DISPLAY_LOCALE = language === "fr" ? "fr-u-nu-latn" : "ar-u-nu-latn";
 
 /** **وجوهُ العملات من الخلفية لا من هنا** (SPEC §٧٣-ج/١٢) — علامتُها واسمُها وخاناتُها تُنشر مع كلِّ دولةٍ في `/config`
  *  (`core/currency.py`)، **ويُملأ هذا السجلُّ لحظةَ وصولها** قبل أن تُرسم شاشة (`registerCurrencies` في `lib/config.tsx`).

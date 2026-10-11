@@ -15,14 +15,14 @@ import { confirmPayment, getRidePayments } from "@/api/endpoints";
 import type { Payment, Ride } from "@/api/types";
 import { refreshAfterConfirm } from "@/lib/attention";
 import { digits } from "@/lib/utils";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** «ساعة واحدة · ساعتان · 3 ساعات · 11 ساعة» — **العربيةُ تعدّ بالمثنّى والجمع**، والخاناتُ لاتينية (§20). */
 export function hoursLabel(count: number): string {
-  if (count === 1) return "ساعة واحدة";
-  if (count === 2) return "ساعتان";
-  if (count <= 10) return `${digits(count)} ساعات`;
-  return `${digits(count)} ساعة`;
+  if (count === 1) return tr("ساعة واحدة");
+  if (count === 2) return tr("ساعتان");
+  if (count <= 10) return tr("{0} ساعات", { 0: digits(count) });
+  return tr("{0} ساعة", { 0: digits(count) });
 }
 
 /** **رحلةُ ساعاتٍ بلا وجهة** — الطلبُ أرسل نقطةَ الانطلاق نفسَها وجهةً (عقدُ `HourlyIn`)، فالوجهاتُ يقولها الراكب. */
@@ -47,10 +47,10 @@ export function HourlyPlanT2({ ride }: { ride: Ride }) {
   return (
     <div className="t2-rd-strip t2-hr-plan">
       <div className="t2-rd-strip-row">
-        <span className="t2-rd-strip-label">بالساعة</span>
+        <span className="t2-rd-strip-label">{tr("بالساعة")}</span>
         <span className="t2-rd-strip-min">
           {hoursLabel(ride.hourly_hours)}
-          {ride.hourly_included_km !== null ? ` · حتى ${digits(ride.hourly_included_km)} كم` : ""}
+          {ride.hourly_included_km !== null ? tr(" · حتى {0} كم", { 0: digits(ride.hourly_included_km) }) : ""}
         </span>
       </div>
       {ride.hourly_prepay_method ? (
@@ -58,8 +58,8 @@ export function HourlyPlanT2({ ride }: { ride: Ride }) {
           <Icon name={ride.hourly_prepay_method === "cash" ? "payments" : "account_balance_wallet"} />
           <span>
             {ride.hourly_prepay_method === "cash"
-              ? "تستلم الساعاتِ المحجوزة نقداً عند البدء"
-              : "تُدفع الساعاتُ المحجوزة من محفظة الراكب عند البدء"}
+              ? tr("تستلم الساعاتِ المحجوزة نقداً عند البدء")
+              : tr("تُدفع الساعاتُ المحجوزة من محفظة الراكب عند البدء")}
           </span>
         </p>
       ) : null}
@@ -89,21 +89,21 @@ export function HourlyMeterT2({ ride }: { ride: Ride }) {
       <div className="t2-rd-strip-row">
         {left > 0 ? (
           <>
-            <span className="t2-rd-strip-label">الوقتُ الباقي</span>
+            <span className="t2-rd-strip-label">{tr("الوقتُ الباقي")}</span>
             <span className="t2-hr-clock" dir="ltr">
               {clockText(left)}
             </span>
             <span className="t2-rd-strip-min">/ {hoursLabel(ride.hourly_hours)}</span>
           </>
         ) : (
-          <span className="t2-rd-strip-label t2-hr-over">وقتٌ زائد · {digits(over)} د</span>
+          <span className="t2-rd-strip-label t2-hr-over">{tr("وقتٌ زائد ·")}{" "}{digits(over)}{" "}{tr("د")}</span>
         )}
         {ride.hourly_included_km !== null ? (
-          <span className="t2-rd-strip-end">الكيلومترات المشمولة: {digits(ride.hourly_included_km)}</span>
+          <span className="t2-rd-strip-end">{tr("الكيلومترات المشمولة:")}{" "}{digits(ride.hourly_included_km)}</span>
         ) : null}
       </div>
       {left > 0 ? null : (
-        <p className="t2-rd-strip-warn">ما زاد على الساعات يُحسب على الراكب بالتعرفة العاديّة عند الإنهاء.</p>
+        <p className="t2-rd-strip-warn">{tr("ما زاد على الساعات يُحسب على الراكب بالتعرفة العاديّة عند الإنهاء.")}</p>
       )}
     </div>
   );
@@ -150,7 +150,7 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
       refreshAfterConfirm();
       setPending(null);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تأكيد الدفعة"));
     } finally {
       setBusy(false);
     }
@@ -162,10 +162,10 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
         <Icon name="payments" />
         {/* **الرقمُ وحدَه يسارياً** — والعلامةُ بعده في سياق السطر العربيّ: «16.000 د.أ» لا «د.أ 16.000» */}
         <span>
-          استلم <b dir="ltr">{digits(pending.amount)}</b> {currencyLabel} نقداً — الساعاتُ المحجوزة
+          {tr("استلم")}{" "}<b dir="ltr">{digits(pending.amount)}</b> {currencyLabel}{" "}{tr("نقداً — الساعاتُ المحجوزة")}
         </span>
       </div>
-      <p className="t2-hr-cash-note">يبقى معك ولا يمرّ بمحفظتك، وتأكيدُك هو ما يُثبّته. وما زاد يُحصَّل عند الإنهاء.</p>
+      <p className="t2-hr-cash-note">{tr("يبقى معك ولا يمرّ بمحفظتك، وتأكيدُك هو ما يُثبّته. وما زاد يُحصَّل عند الإنهاء.")}</p>
       {error ? (
         <p className="t2-note danger t2-rd-error">
           <Icon name="error" fill />
@@ -173,7 +173,7 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
         </p>
       ) : null}
       <button type="button" className="t2-rd-btn t2-hr-cash-btn" disabled={busy} onClick={() => void confirm()}>
-        استلمتُ {digits(pending.amount)} {currencyLabel}
+        {tr("استلمتُ")}{" "}{digits(pending.amount)} {currencyLabel}
       </button>
     </div>
   );

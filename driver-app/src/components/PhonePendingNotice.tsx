@@ -20,7 +20,7 @@
 import { ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** **مسارُ التأكيد في هذا التطبيق** — بيتٌ واحدٌ يقرؤه الحالان. */
 const CONFIRM_PATH = "/account/settings";
@@ -38,7 +38,7 @@ export function PhonePendingNotice() {
       >
         <ShieldAlert className="mt-2 size-16 shrink-0 text-danger" />
         <div className="min-w-0 flex-1">
-          <div className="text-12 font-bold text-ink">حسابك موقوف</div>
+          <div className="text-12 font-bold text-ink">{tr("حسابك موقوف")}</div>
           <p className="mt-2 text-11 leading-note text-muted">
             {user.suspension.message}
           </p>
@@ -46,7 +46,7 @@ export function PhonePendingNotice() {
             to={CONFIRM_PATH}
             className="mt-6 inline-block text-11 font-semibold text-accent underline"
           >
-            أكّده الآن
+            {tr("أكّده الآن")}
           </Link>
         </div>
       </div>
@@ -61,16 +61,16 @@ export function PhonePendingNotice() {
     >
       <ShieldAlert className="mt-2 size-16 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
-        <div className="text-12 font-bold text-ink">أكّد رقم هاتفك</div>
+        <div className="text-12 font-bold text-ink">{tr("أكّد رقم هاتفك")}</div>
         <p className="mt-2 text-11 leading-note text-muted">
-          سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا محفظةَ حتى تؤكّده،
-          ولا اعتمادَ لوثائقك.
+          {tr("سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا محفظةَ حتى تؤكّده، ولا اعتمادَ لوثائقك.")}
+
         </p>
         <Link
           to={CONFIRM_PATH}
           className="mt-6 inline-block text-11 font-semibold text-accent underline"
         >
-          أكّده الآن
+          {tr("أكّده الآن")}
         </Link>
       </div>
     </div>

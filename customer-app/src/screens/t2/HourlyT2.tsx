@@ -16,11 +16,11 @@ import { Icon } from "@/taxo2";
 
 import "./t2.css";
 import "./for-other.css";
-import "./hourly.css";
+import "./hourly.css"; import { tr } from "@/lib/i18n";
 
 const PREPAY: Array<{ value: HourlyPrepay; icon: string; label: string; hint: string }> = [
-  { value: "wallet", icon: "account_balance_wallet", label: "من المحفظة عند البدء", hint: "تُخصم كاملةً لحظةَ يبدأ الكبتن الرحلة" },
-  { value: "cash", icon: "payments", label: "نقداً للكبتن عند البدء", hint: "تسلّمها له بيدك قبل الانطلاق" },
+  { value: "wallet", icon: "account_balance_wallet", label: tr("من المحفظة عند البدء"), hint: tr("تُخصم كاملةً لحظةَ يبدأ الكبتن الرحلة") },
+  { value: "cash", icon: "payments", label: tr("نقداً للكبتن عند البدء"), hint: tr("تسلّمها له بيدك قبل الانطلاق") },
 ];
 
 /** **كتلةُ الساعات في ورقة الطلب** — العدّادُ (١ إلى سقف السوق)، وسطرُ «8.000 للساعة شاملةً 15 كم»، والمجموعُ «لـ 3 ساعات»،
@@ -44,20 +44,20 @@ export function HourlySheetT2({
   return (
     <>
       <div className="t2-pick-head">
-        <span className="t2-pick-title">بالساعة · اقتصادي</span>
+        <span className="t2-pick-title">{tr("بالساعة · اقتصادي")}</span>
       </div>
       <div className="t2-share t2-hr-box">
         <div className="t2-hr-hours">
           <span className="t2-hr-hours-label">
             <Icon name="timer" />
-            الساعات
+            {tr("الساعات")}
           </span>
           {/* **العدّادُ بين حدّين**: لا أقلَّ من ساعة، ولا فوق سقف السوق — والخلفيةُ ترفض ما خرج عنهما على أيِّ حال */}
           <div className="t2-hr-stepper">
             <button
               type="button"
               className="t2-route-add t2-hr-step"
-              aria-label="ساعةٌ أقل"
+              aria-label={tr("ساعةٌ أقل")}
               disabled={draft.hours <= 1}
               onClick={() => onChange({ ...draft, hours: draft.hours - 1 })}
             >
@@ -69,7 +69,7 @@ export function HourlySheetT2({
             <button
               type="button"
               className="t2-route-add t2-hr-step"
-              aria-label="ساعةٌ أكثر"
+              aria-label={tr("ساعةٌ أكثر")}
               disabled={max === null || draft.hours >= max}
               onClick={() => onChange({ ...draft, hours: draft.hours + 1 })}
             >
@@ -80,23 +80,23 @@ export function HourlySheetT2({
         {/* **سعرُ الساعة وكيلومتراتُها من صفِّ الإعدادات الذي يُسعَّر منه** — لا ثابتٌ هنا يفترق عنه أوّلَ تعديل */}
         <p className="t2-share-body t2-hr-rate">
           {rate !== null && km !== null
-            ? `${formatMoney(rate, currency)} للساعة شاملةً ${km} كم — وما زاد بالتعرفة العاديّة`
-            : "نقرأ سعرَ الساعة…"}
+            ? tr("{0} للساعة شاملةً {1} كم — وما زاد بالتعرفة العاديّة", { 0: formatMoney(rate, currency), 1: km })
+            : tr("نقرأ سعرَ الساعة…")}
         </p>
         <div className="t2-hr-total">
-          <span className="t2-hr-total-label">المجموع</span>
+          <span className="t2-hr-total-label">{tr("المجموع")}</span>
           {/* **ويختفي ما دام يُحسب** — رقمُ ساعاتٍ قديمٍ تحت عددٍ جديدٍ يكذب */}
           <span className="t2-hr-total-value">
-            {loading || !estimate ? "نحسب…" : `${formatMoney(estimate.estimated_fare, estimate.currency)} ${forHours(draft.hours)}`}
+            {loading || !estimate ? tr("نحسب…") : `${formatMoney(estimate.estimated_fare, estimate.currency)} ${forHours(draft.hours)}`}
           </span>
         </div>
-        {max !== null ? <p className="t2-hr-cap">حتى {hoursLabel(max)} في الطلب الواحد.</p> : null}
+        {max !== null ? <p className="t2-hr-cap">{tr("حتى")}{" "}{hoursLabel(max)}{" "}{tr("في الطلب الواحد.")}</p> : null}
       </div>
 
       <div className="t2-pick-head">
-        <span className="t2-pick-title">دفعُ الساعات المحجوزة</span>
+        <span className="t2-pick-title">{tr("دفعُ الساعات المحجوزة")}</span>
       </div>
-      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label="دفع الساعات المحجوزة">
+      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label={tr("دفع الساعات المحجوزة")}>
         {PREPAY.map((option) => {
           const on = option.value === draft.prepay;
           return (
@@ -121,7 +121,7 @@ export function HourlySheetT2({
       </div>
       {/* **علّةُ غياب «+» المحطة** — سطرٌ قصيرٌ لا زرٌّ ميّتٌ بلا سبب */}
       <p className="t2-sheet-fine">
-        بلا محطاتٍ تُضاف — تقول وجهاتِك للكبتن في الطريق. وما زاد على الساعات يُدفع في النهاية كأيِّ رحلة.
+        {tr("بلا محطاتٍ تُضاف — تقول وجهاتِك للكبتن في الطريق. وما زاد على الساعات يُدفع في النهاية كأيِّ رحلة.")}
       </p>
     </>
   );
@@ -150,8 +150,8 @@ export function HourlyTrackT2({
         <div className="t2-fo-ride-name">
           <span className="t2-icon" aria-hidden="true">timer</span>
           <span>
-            <b>بالساعة</b> · {hoursLabel(ride.hourly_hours)}
-            {ride.hourly_included_km !== null ? ` · حتى ${ride.hourly_included_km} كم` : ""}
+            <b>{tr("بالساعة")}</b> · {hoursLabel(ride.hourly_hours)}
+            {ride.hourly_included_km !== null ? tr(" · حتى {0} كم", { 0: ride.hourly_included_km }) : ""}
           </span>
         </div>
         {before && prepay ? (
@@ -159,8 +159,8 @@ export function HourlyTrackT2({
             <span className="t2-icon" aria-hidden="true">{prepay === "cash" ? "payments" : "account_balance_wallet"}</span>
             <span>
               {prepay === "cash"
-                ? "تدفع الساعاتِ المحجوزة نقداً للكبتن عند البدء"
-                : "تُدفع الساعاتُ المحجوزة من محفظتك عند البدء"}
+                ? tr("تدفع الساعاتِ المحجوزة نقداً للكبتن عند البدء")
+                : tr("تُدفع الساعاتُ المحجوزة من محفظتك عند البدء")}
             </span>
           </div>
         ) : null}
@@ -174,7 +174,7 @@ export function HourlyTrackT2({
           onClick={prepaySwitch.toggle}
         >
           <span className="t2-icon" aria-hidden="true">swap_horiz</span>
-          {other === "cash" ? "ادفع الساعاتِ نقداً بدل المحفظة" : "ادفعها من المحفظة بدل النقد"}
+          {other === "cash" ? tr("ادفع الساعاتِ نقداً بدل المحفظة") : tr("ادفعها من المحفظة بدل النقد")}
         </button>
       ) : null}
       <ErrorNote message={prepaySwitch.error} className="t2-error" />

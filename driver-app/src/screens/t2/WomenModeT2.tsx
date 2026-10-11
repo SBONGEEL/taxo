@@ -33,13 +33,13 @@ import { Icon } from "@/taxo2";
 
 import "@/taxo2";
 import "./t2.css";
-import "./women.css";
+import "./women.css"; import { tr } from "@/lib/i18n";
 
 /** **الخياراتُ الثلاثةُ القائمة** بترتيب اللوحة («راكبات فقط» أوّلاً) — **وكلُّ سطرٍ يصف المطابقةَ في الاتجاهين كما تقع** (الوضعُ أ). */
 const OPTIONS: { value: GenderPreference; title: string; sub: string }[] = [
-  { value: "female", title: "الراكبات فقط", sub: "لا تصلك إلا طلبات الراكبات." },
-  { value: "any", title: "الجميع", sub: "يصلك كل راكبٍ يقبل تفضيلُه كبتنة." },
-  { value: "male", title: "الرجال فقط", sub: "لا يصلك إلا الركّاب الرجال." },
+  { value: "female", title: tr("الراكبات فقط"), sub: tr("لا تصلك إلا طلبات الراكبات.") },
+  { value: "any", title: tr("الجميع"), sub: tr("يصلك كل راكبٍ يقبل تفضيلُه كبتنة.") },
+  { value: "male", title: tr("الرجال فقط"), sub: tr("لا يصلك إلا الركّاب الرجال.") },
 ];
 
 /** **صفُّ «الخدمة النسائية» في «الإعدادات»** (C15) — للكبتنة وحدَها، يقول اختيارَها الآن وسهمُه إلى CW1. */
@@ -51,8 +51,8 @@ export function WomenModeRowT2({ preference }: { preference: GenderPreference })
         woman
       </span>
       <span className="t2-srow-main">
-        <span className="t2-srow-title">الخدمة النسائية</span>
-        <span className="t2-srow-hint">تستقبلين: {PREFERENCE_LABEL[preference]}</span>
+        <span className="t2-srow-title">{tr("الخدمة النسائية")}</span>
+        <span className="t2-srow-hint">{tr("تستقبلين:")}{" "}{PREFERENCE_LABEL[preference]}</span>
       </span>
       <span className="t2-icon t2-wrow-go" aria-hidden="true">
         chevron_left
@@ -88,39 +88,39 @@ export function WomenModeT2Screen() {
   return (
     <div className="t2 t2-settings t2-wmode scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">الخدمة النسائية</h1>
+        <h1 className="t2-title">{tr("الخدمة النسائية")}</h1>
       </div>
 
       <section className="t2-whero">
         <span className="t2-whero-icon">
           <Icon name="woman" fill />
         </span>
-        <h2 className="t2-whero-title">استقبلي راكبات فقط.</h2>
-        <p className="t2-whero-body">حين تختارين «الراكبات فقط» لا تصلك إلا طلبات الراكبات.</p>
+        <h2 className="t2-whero-title">{tr("استقبلي راكبات فقط.")}</h2>
+        <p className="t2-whero-body">{tr("حين تختارين «الراكبات فقط» لا تصلك إلا طلبات الراكبات.")}</p>
       </section>
 
-      <div className="t2-wlabel">الشروط</div>
+      <div className="t2-wlabel">{tr("الشروط")}</div>
       <div className="t2-wconds">
         <Condition
           ok={stamped}
-          title="هويتك موثّقة"
-          wait="يثبّته المشرف من هويتك — وقبله لا تصلك طلبات من طلبت كبتنة."
+          title={tr("هويتك موثّقة")}
+          wait={tr("يثبّته المشرف من هويتك — وقبله لا تصلك طلبات من طلبت كبتنة.")}
         />
         {profile ? (
           <Condition
             ok={profile.driver.status === "approved"}
-            title="حسابك ووثائقك معتمدة"
-            wait="تصلك الطلبات بعد اعتماد حسابك."
+            title={tr("حسابك ووثائقك معتمدة")}
+            wait={tr("تصلك الطلبات بعد اعتماد حسابك.")}
           />
         ) : null}
       </div>
 
-      <div className="t2-wlabel">ما الطلبات التي تصلك؟</div>
+      <div className="t2-wlabel">{tr("ما الطلبات التي تصلك؟")}</div>
       {/* **الحفظُ بلمسة الاختيار** (`savePreference`) — ولا حفظان معاً: الخياراتُ معطّلةٌ ما دام الحفظُ جارياً */}
-      <div className="t2-wopts" role="radiogroup" aria-label="ما الطلبات التي تصلك؟">
+      <div className="t2-wopts" role="radiogroup" aria-label={tr("ما الطلبات التي تصلك؟")}>
         {OPTIONS.map((option) => {
           const on = preference === option.value;
           return (
@@ -147,9 +147,9 @@ export function WomenModeT2Screen() {
 
       {/* **شرحُ المطابقة** — يجيب «لماذا قلّت طلباتي؟»، والشرطُ ثنائيُّ الاتجاه في الخلفية (نصُّ «الإعدادات» حرفاً) */}
       <p className="t2-explain">
-        <span className="t2-explain-title">كيف تعمل المطابقة</span>
-        تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه — الاتجاهان معاً. فراكبٌ اختار «الجميع» لن تصله
-        رحلتُك إن كان تفضيلُك «النساء فقط».
+        <span className="t2-explain-title">{tr("كيف تعمل المطابقة")}</span>
+        {tr("تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه — الاتجاهان معاً. فراكبٌ اختار «الجميع» لن تصله رحلتُك إن كان تفضيلُك «النساء فقط».")}
+
       </p>
 
       <div className="t2-settings-notes">

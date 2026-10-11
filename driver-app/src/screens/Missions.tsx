@@ -24,19 +24,19 @@ import type { MissionProgress, MyProgress } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { useGoBack } from "@/lib/back";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
-export const LEVEL_LABEL = ["مبتدئ", "فضّي", "ذهبي", "ماسيّ"];
+export const LEVEL_LABEL = [tr("مبتدئ"), tr("فضّي"), tr("ذهبي"), tr("ماسيّ")];
 
 /** «كم بقي» — **أوّلُ مهمّةٍ ناقصةٍ هي الجواب**، وسردُ الثلاثة يخفي المطلوب. */
 export function nextStep(items: MissionProgress[]): string | null {
   const pending = items.find((item) => !item.done);
   if (!pending) return null;
   if (pending.mission.metric === "min_rating") {
-    return `ارفع تقييمك إلى ${digits(pending.target)}`;
+    return tr("ارفع تقييمك إلى {0}", { 0: digits(pending.target) });
   }
   const left = Number(pending.target) - Number(pending.value);
-  return `أكمل ${digits(String(left))} رحلات أخرى`;
+  return tr("أكمل {0} رحلات أخرى", { 0: digits(String(left)) });
 }
 
 export function MissionsScreen() {
@@ -48,7 +48,7 @@ export function MissionsScreen() {
     getMyProgress()
       .then(setData)
       .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة المهام"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المهام")),
       );
   }, []);
 
@@ -58,12 +58,12 @@ export function MissionsScreen() {
         <button
           type="button"
           onClick={() => goBack()}
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           className="pressable text-18 text-muted"
         >
           →
         </button>
-        <h1 className="text-20 font-bold text-ink">مهامّي ومستواي</h1>
+        <h1 className="text-20 font-bold text-ink">{tr("مهامّي ومستواي")}</h1>
       </div>
 
       <ErrorNote message={error} />
@@ -73,32 +73,32 @@ export function MissionsScreen() {
         <div className="space-y-14">
           {data.enabled ? (
             <section className="card p-16 text-center">
-              <p className="text-12 text-muted">مستواك الحالي</p>
+              <p className="text-12 text-muted">{tr("مستواك الحالي")}</p>
               <p className="mt-6 text-22 font-bold text-ink">
                 {LEVEL_LABEL[data.level] ??
-                  `المستوى ${digits(String(data.level))}`}
+                  tr("المستوى {0}", { 0: digits(String(data.level)) })}
               </p>
               {/* **الأثرُ بالأمتار — جملةٌ مقيسة لا وعد** */}
               {data.level_effect_meters > 0 ? (
                 <p className="mt-8 text-11.5 text-ok">
-                  يقرّبك من الطلبات القريبة{" "}
-                  {digits(String(data.level_effect_meters))} متراً — والأقربُ
-                  إليك يبقى الأوّلَ دائماً.
+                  {tr("يقرّبك من الطلبات القريبة")}{" "}
+                  {digits(String(data.level_effect_meters))}{" "}{tr("متراً — والأقربُ إليك يبقى الأوّلَ دائماً.")}
+
                 </p>
               ) : (
                 <p className="mt-8 text-11.5 text-muted">
-                  لا أثرَ لمستواك على ترتيب الطلبات في سوقك حالياً.
+                  {tr("لا أثرَ لمستواك على ترتيب الطلبات في سوقك حالياً.")}
                 </p>
               )}
               {/* **ومستوىً بلا «كم بقي» شارةٌ لا حافز** */}
               {nextStep(data.missions) ? (
                 <p className="mt-10 rounded-13 bg-surface-2 p-10 text-12 text-ink">
-                  للمستوى التالي: {nextStep(data.missions)}
+                  {tr("للمستوى التالي:")}{" "}{nextStep(data.missions)}
                 </p>
               ) : data.missions_total > 0 ? (
                 <p className="mt-10 text-12 text-ok">
-                  أنجزتَ مهامَّ الشهر كلَّها —{" "}
-                  {digits(String(data.missions_done))} من{" "}
+                  {tr("أنجزتَ مهامَّ الشهر كلَّها —")}{" "}
+                  {digits(String(data.missions_done))}{" "}{tr("من")}{" "}
                   {digits(String(data.missions_total))}.
                 </p>
               ) : null}
@@ -109,11 +109,11 @@ export function MissionsScreen() {
             <section>
               <h2 className="mb-8 flex items-center gap-6 text-13.5 font-bold text-ink">
                 <Target size={16} />
-                مهامُّ هذا الشهر
+                {tr("مهامُّ هذا الشهر")}
               </h2>
               {data.missions.length === 0 ? (
                 <p className="card p-16 text-center text-12.5 text-muted">
-                  لا مهامَّ هذا الشهر بعد.
+                  {tr("لا مهامَّ هذا الشهر بعد.")}
                 </p>
               ) : (
                 <Stagger className="space-y-8">
@@ -167,11 +167,11 @@ export function MissionsScreen() {
           <section>
             <h2 className="mb-8 flex items-center gap-6 text-13.5 font-bold text-ink">
               <Award size={16} />
-              شاراتي
+              {tr("شاراتي")}
             </h2>
             {data.badges.length === 0 ? (
               <p className="card p-16 text-center text-12.5 text-muted">
-                لم تُمنح شاراتٍ بعد.
+                {tr("لم تُمنح شاراتٍ بعد.")}
               </p>
             ) : (
               <Stagger className="space-y-8">

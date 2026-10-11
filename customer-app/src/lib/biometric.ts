@@ -46,7 +46,7 @@
 
 import { BiometricAuth, BiometryType } from "@aparajita/capacitor-biometric-auth";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core"; import { tr } from "@/lib/i18n";
 
 /** **المخزَّنُ الوحيد** — رمزُ تجديدٍ لا غير. */
 const SECURE_KEY = "taxo.biometric.refresh";
@@ -96,9 +96,9 @@ function kindOf(type: BiometryType): BiometryKind {
 
 /** اسمٌ يُعرض للمستخدم — **بما يملكه جهازُه لا بالعموم**. */
 export function biometryLabel(kind: BiometryKind): string {
-  if (kind === "face") return "بصمة الوجه";
-  if (kind === "fingerprint") return "بصمة الإصبع";
-  return "قفل الجهاز";
+  if (kind === "face") return tr("بصمة الوجه");
+  if (kind === "fingerprint") return tr("بصمة الإصبع");
+  return tr("قفل الجهاز");
 }
 
 function prefEnabled(): boolean {
@@ -118,10 +118,10 @@ export async function biometryStatus(): Promise<BiometryStatus> {
       // **يُسجَّل السببُ ولا يُعرض**: القارئُ يحتاج ما يفعله، والمشخِّصُ يحتاج
       // ما ردَّته المنصّة — وخلطُهما يجعل الشاشةَ تنطق برمزٍ لا يعني أحداً
       console.warn(
-        `الدخول السريع غيرُ متاح — ${check.code ?? "بلا رمز"}: ${check.reason ?? ""}` +
-          ` · قويّةٌ متاحة: ${String(check.strongBiometryIsAvailable)}` +
-          ` · الجهازُ مؤمَّن: ${String(check.deviceIsSecure)}` +
-          ` · الأنواع: ${JSON.stringify(check.biometryTypes)}`,
+        tr("الدخول السريع غيرُ متاح — {0}: {1}", { 0: check.code ?? tr("بلا رمز"), 1: check.reason ?? "" }) +
+          tr(" · قويّةٌ متاحة: {0}", { 0: String(check.strongBiometryIsAvailable) }) +
+          tr(" · الجهازُ مؤمَّن: {0}", { 0: String(check.deviceIsSecure) }) +
+          tr(" · الأنواع: {0}", { 0: JSON.stringify(check.biometryTypes) }),
       );
       return { ...UNAVAILABLE, native: true, code: check.code };
     }
@@ -206,11 +206,11 @@ export async function disableBiometric(): Promise<void> {
  */
 export async function proveBiometry(reason: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
-    throw new Error("الدخول بالبصمة على الجهاز وحده");
+    throw new Error(tr("الدخول بالبصمة على الجهاز وحده"));
   }
   await BiometricAuth.authenticate({
     reason,
-    cancelTitle: "إلغاء",
+    cancelTitle: tr("إلغاء"),
     allowDeviceCredential: false,
   });
 }
@@ -222,18 +222,18 @@ export async function proveBiometry(reason: string): Promise<void> {
  */
 export async function unlockToken(reason: string): Promise<string> {
   if (!Capacitor.isNativePlatform()) {
-    throw new Error("الدخول بالبصمة على الجهاز وحده");
+    throw new Error(tr("الدخول بالبصمة على الجهاز وحده"));
   }
   // **الترتيب مقصود**: تُطلب البصمةُ **قبل** قراءة المخزن — فقراءةٌ تسبق
   // التصديق تجعل الرمزَ في الذاكرة ولو رُفض صاحبُ الإصبع
   await BiometricAuth.authenticate({
     reason,
-    cancelTitle: "إلغاء",
+    cancelTitle: tr("إلغاء"),
     // **ولا بديلَ بقفل الجهاز** (قرارُ المالك: لا بابَ ثانياً): من لا بصمةَ
     // له يدخل بكلمة المرور — وهو البابُ الأول لا بابٌ أضعفُ منه
     allowDeviceCredential: false,
   });
   const token = await readToken();
-  if (!token) throw new Error("لا رمزَ محفوظاً على هذا الجهاز");
+  if (!token) throw new Error(tr("لا رمزَ محفوظاً على هذا الجهاز"));
   return token;
 }

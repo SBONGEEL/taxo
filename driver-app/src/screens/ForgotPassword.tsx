@@ -35,7 +35,7 @@ import {
   Icon,
 } from "@/taxo2";
 
-import "@/components/t2/captain-auth.css";
+import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
 type Step = "phone" | "verify" | "password";
 type Failure = { field: "phone" | "password" | null; message: string };
@@ -77,7 +77,7 @@ export function ForgotPasswordScreen() {
   const complete = looksComplete(phone, nationalLength);
   const short =
     touched && phone.length > 0 && !complete && dialCode !== null
-      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode })
       : null;
 
   // الخطوةُ الجديدةُ تُفتح من أعلاها لا من حيث توقّف التمرير
@@ -136,7 +136,7 @@ export function ForgotPasswordScreen() {
           if (at) document.getElementById("new-password")?.focus();
         }
       } else {
-        setFailure({ field: null, message: "تعذّر تغيير كلمة المرور — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر تغيير كلمة المرور — أعد المحاولة") });
       }
     } finally {
       setBusy(false);
@@ -166,7 +166,7 @@ export function ForgotPasswordScreen() {
               setStep("password");
             }}
             onBack={() => setStep("phone")}
-            note="هذا إثبات ملكية الرقم لا دخولاً."
+            note={tr("هذا إثبات ملكية الرقم لا دخولاً.")}
           />
         </AuthPage>
       </div>
@@ -178,11 +178,11 @@ export function ForgotPasswordScreen() {
       <div ref={page} className="cap-auth scr">
         <AuthPage>
           <AuthTop onBack={() => setStep("verify")} step={3} total={3} />
-          <AuthTitle step title="كلمة مرور جديدة" sub="بعد الحفظ تُبطل كل الجلسات الأخرى على أجهزتك." />
+          <AuthTitle step title={tr("كلمة مرور جديدة")} sub={tr("بعد الحفظ تُبطل كل الجلسات الأخرى على أجهزتك.")} />
 
           <form onSubmit={save} className="t2-auth-form" noValidate>
             <AuthBlock
-              label="كلمة المرور"
+              label={tr("كلمة المرور")}
               htmlFor="new-password"
               error={passwordError(password) ?? (failure?.field === "password" ? failure.message : null)}
             >
@@ -198,7 +198,7 @@ export function ForgotPasswordScreen() {
             </AuthBlock>
 
             <AuthBlock
-              label="تأكيد كلمة المرور"
+              label={tr("تأكيد كلمة المرور")}
               htmlFor="confirm-password"
               error={confirmError(password, confirmation)}
             >
@@ -217,7 +217,7 @@ export function ForgotPasswordScreen() {
             <div className="t2-auth-push" />
             <div className="t2-auth-actions">
               <button type="submit" className="t2-button primary" disabled={busy || !password || !confirmation}>
-                {busy ? "لحظة…" : "حفظ كلمة المرور"}
+                {busy ? tr("لحظة…") : tr("حفظ كلمة المرور")}
               </button>
             </div>
           </form>
@@ -236,26 +236,26 @@ export function ForgotPasswordScreen() {
         />
         <AuthTitle
           step
-          title="استعادة كلمة المرور"
-          sub="سنرسل رمز تحقق إلى رقمك المسجّل — هذا إثبات ملكية الرقم لا دخولاً."
+          title={tr("استعادة كلمة المرور")}
+          sub={tr("سنرسل رمز تحقق إلى رقمك المسجّل — هذا إثبات ملكية الرقم لا دخولاً.")}
         />
 
         {/* **التحقق مطلوبٌ هنا دائماً** — بلا مُحقِّقٍ مُهيأ تُقال الحقيقة بدل أن يكتب الكبتن رمزاً لمُحقِّقٍ لا وجود له ثم يرتدّ بـ503 */}
         {method === "none" ? (
           <div className="t2-auth-banner" role="alert">
             <Icon name="error" />
-            <span>استعادة كلمة المرور غير متاحة حالياً — لا مُحقِّق مُهيأ. راجع الدعم.</span>
+            <span>{tr("استعادة كلمة المرور غير متاحة حالياً — لا مُحقِّق مُهيأ. راجع الدعم.")}</span>
           </div>
         ) : (
           <form onSubmit={toVerification} className="t2-auth-form" noValidate>
             <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
             <AuthBlock
-              label="رقم الهاتف"
+              label={tr("رقم الهاتف")}
               htmlFor="phone"
               error={
                 dialCode === null
-                  ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+                  ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
                   : short ?? (failure?.field === "phone" ? failure.message : null)
               }
             >
@@ -282,7 +282,7 @@ export function ForgotPasswordScreen() {
             <div className="t2-auth-push" />
             <div className="t2-auth-actions">
               <button type="submit" className="t2-button primary" disabled={!complete}>
-                إرسال الرمز
+                {tr("إرسال الرمز")}
               </button>
             </div>
           </form>

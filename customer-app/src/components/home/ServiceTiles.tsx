@@ -14,7 +14,7 @@
 import * as icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import type { ServiceTile } from "@/api/types";
+import type { ServiceTile } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 /** **أيقونةٌ باسمها من اللوحة** — و`layout-grid` بديلٌ حين لا تُعرف.
  *
@@ -61,11 +61,11 @@ export function ServiceTiles({ tiles }: { tiles: ServiceTile[] }) {
             <span className="text-11.5 font-medium text-ink">{tile.title}</span>
             {tile.status === "soon" ? (
               <span className="rounded-6 border border-line bg-surface-2 px-6 py-2 text-9.5 font-semibold text-warn">
-                قريباً
+                {tr("قريباً")}
               </span>
             ) : tile.is_new ? (
               <span className="rounded-6 border border-brand-brd bg-brand-soft px-6 py-2 text-9.5 font-semibold text-brand">
-                جديد
+                {tr("جديد")}
               </span>
             ) : tile.subtitle ? (
               <span className="text-9.5 text-muted">{tile.subtitle}</span>

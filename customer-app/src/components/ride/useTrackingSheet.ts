@@ -8,7 +8,7 @@ import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { cancelRide } from "@/api/endpoints";
-import type { Ride } from "@/api/types";
+import type { Ride } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 export const CANCELLABLE = new Set(["requested", "searching", "accepted", "arrived"]);
 
@@ -20,14 +20,14 @@ export interface CancelReason {
 
 /** أسبابُ الإلغاء كما في التصميم — والنصُّ الحرّ يصل الإدارة كما كُتب. */
 export const CANCEL_REASONS: CancelReason[] = [
-  { label: "الكبتن تأخر" },
-  { label: "غيّرت رأيي" },
-  { label: "الكبتن ليس أنثى — عدم تطابق", code: "gender_mismatch" },
-  { label: "عنوان الالتقاء خطأ" },
+  { label: tr("الكبتن تأخر") },
+  { label: tr("غيّرت رأيي") },
+  { label: tr("الكبتن ليس أنثى — عدم تطابق"), code: "gender_mismatch" },
+  { label: tr("عنوان الالتقاء خطأ") },
 ];
 
 /** **سببُ «عدم التطابق» لطلبٍ بتفضيل «ذكور»** (§٦٢-ب/٤٧) — الخلفيةُ تقبله للتفضيلين بلا رسوم، والمرسومُ نصُّ «إناث» وحدَه. */
-const MALE_MISMATCH_LABEL = "الكبتن ليس ذكراً — عدم تطابق";
+const MALE_MISMATCH_LABEL = tr("الكبتن ليس ذكراً — عدم تطابق");
 
 /** «أرسل تفاصيل رحلتك» (SPEC القسم 11.4) — نصٌّ يُرسل عبر ورقة مشاركة النظام.
  *
@@ -46,15 +46,15 @@ export async function shareRide(ride: Ride) {
   const destination = `https://maps.google.com/?q=${ride.dropoff.lat},${ride.dropoff.lng}`;
   const vehicle = ride.driver?.vehicle;
   const lines = [
-    "أنا الآن في رحلة TAXO.",
-    ride.driver ? `الكبتن: ${ride.driver.name}` : null,
-    vehicle ? `المركبة: ${vehicle.make} ${vehicle.model} — لوحة ${vehicle.plate_number}` : null,
-    `الوجهة: ${ride.dropoff_address ?? destination}`,
+    tr("أنا الآن في رحلة TAXO."),
+    ride.driver ? tr("الكبتن: {0}", { 0: ride.driver.name }) : null,
+    vehicle ? tr("المركبة: {0} {1} — لوحة {2}", { 0: vehicle.make, 1: vehicle.model, 2: vehicle.plate_number }) : null,
+    tr("الوجهة: {0}", { 0: ride.dropoff_address ?? destination }),
   ].filter(Boolean);
 
   const text = lines.join("\n");
   if (navigator.share) {
-    await navigator.share({ title: "رحلتي على TAXO", text, url: destination }).catch(
+    await navigator.share({ title: tr("رحلتي على TAXO"), text, url: destination }).catch(
       () => undefined,
     );
     return true;
@@ -99,7 +99,7 @@ export function useTrackingSheet({
       await cancelRide(ride.id, reason?.label, reason?.code);
       onChanged();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الرحلة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إلغاء الرحلة"));
     } finally {
       setBusy(false);
       setConfirming(false);

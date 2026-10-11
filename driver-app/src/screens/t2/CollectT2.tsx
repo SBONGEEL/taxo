@@ -34,7 +34,7 @@ import { play } from "@/lib/sound";
 import { DISPLAY_LOCALE, digits } from "@/lib/utils";
 import { collectView, useCollectScreen } from "@/screens/Collect";
 import { useRateRider } from "@/screens/RateRider";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 export function CollectT2Screen({
   ride,
@@ -80,7 +80,7 @@ export function CollectT2Screen({
         play("collected");
         setConfirmedId(pending.id);
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة");
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر تأكيد الدفعة"));
         setBusy(false);
         return;
       }
@@ -91,11 +91,11 @@ export function CollectT2Screen({
   }
 
   // «سيتي مول · 10:26 ص · 6.8 كم» — الوجهةُ بأوّل مقطعٍ منها، ووقتُ الإنهاء، والمسافةُ الفعليةُ حين تُقاس
-  const place = (ride.dropoff_address ?? "الوجهة").split("،")[0];
+  const place = (ride.dropoff_address ?? tr("الوجهة")).split("،")[0];
   const time = ride.completed_at
     ? digits(new Date(ride.completed_at).toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))
     : null;
-  const sub = [place, time, ride.actual_distance_km ? `${trimDistance(ride.actual_distance_km)} كم` : null]
+  const sub = [place, time, ride.actual_distance_km ? tr("{0} كم", { 0: trimDistance(ride.actual_distance_km) }) : null]
     .filter(Boolean)
     .join(" · ");
 
@@ -107,18 +107,18 @@ export function CollectT2Screen({
   const commute = ride.commute;
   // **ومن مستلم الطرد** (§٦٣-ج/٤) — دفعتُه نقدٌ فتحه الإنهاء، ويُسلَّم عند التسليم لا من راكب
   const caption = commute
-    ? "مدفوعة من اشتراك الراكب — لا تستلم شيئاً"
+    ? tr("مدفوعة من اشتراك الراكب — لا تستلم شيئاً")
     : pending
       ? ride.payer === "recipient_cash"
-        ? "استلم من المستلم"
-        : `حصّل من الراكب ${METHOD_LABEL[pending.method]}`
+        ? tr("استلم من المستلم")
+        : tr("حصّل من الراكب {0}", { 0: METHOD_LABEL[pending.method] })
       : headline.caption;
   const creditedFirst = credited[0];
   const split =
     mixed && creditedFirst && rest
       ? creditedFirst.method === "wallet"
-        ? `دفع الراكب ${digits(creditedFirst.amount)} ${currencyLabel} من محفظته، وقُيّدت في محفظتك. والباقي ${METHOD_LABEL[rest.method]}.`
-        : `دُفع ${digits(creditedFirst.amount)} ${currencyLabel} (${METHOD_LABEL[creditedFirst.method]}) وقُيّد في محفظتك. والباقي ${METHOD_LABEL[rest.method]}.`
+        ? tr("دفع الراكب {0} {1} من محفظته، وقُيّدت في محفظتك. والباقي {2}.", { 0: digits(creditedFirst.amount), 1: currencyLabel, 2: METHOD_LABEL[rest.method] })
+        : tr("دُفع {0} {1} ({2}) وقُيّد في محفظتك. والباقي {3}.", { 0: digits(creditedFirst.amount), 1: currencyLabel, 2: METHOD_LABEL[creditedFirst.method], 3: METHOD_LABEL[rest.method] })
       : null;
 
   // **رحلةٌ لغيره يدفعها صاحبُ الطلب** (§٦٣-ج/١) — من تطبيقه بمحفظةٍ أو بطاقة، **فلا مالَ يُقبض هنا أبداً**: ما دامت دفعتُه لم
@@ -129,18 +129,18 @@ export function CollectT2Screen({
   const note =
     (commute
       ? credited.length > 0
-        ? "سعرُها المجمَّد دُفع من اشتراك الراكب وقُيّد في محفظتك — لا نقدَ ولا قناة."
-        : "سعرُها المجمَّد يُدفع من اشتراك الراكب ويُقيَّد في محفظتك — ستظهر الدفعةُ هنا وفي سجل رحلاتك."
+        ? tr("سعرُها المجمَّد دُفع من اشتراك الراكب وقُيّد في محفظتك — لا نقدَ ولا قناة.")
+        : tr("سعرُها المجمَّد يُدفع من اشتراك الراكب ويُقيَّد في محفظتك — ستظهر الدفعةُ هنا وفي سجل رحلاتك.")
       : byRequester
-      ? "يدفعها صاحبُ الطلب من تطبيقه — لا تستلم شيئاً."
+      ? tr("يدفعها صاحبُ الطلب من تطبيقه — لا تستلم شيئاً.")
       : pending
-        ? "هذا المبلغ يبقى معك ولا يمر بمحفظتك. وتأكيدك هو ما يُثبّته — إن لم يصلك فافتح نزاعاً من تفاصيل الرحلة."
+        ? tr("هذا المبلغ يبقى معك ولا يمر بمحفظتك. وتأكيدك هو ما يُثبّته — إن لم يصلك فافتح نزاعاً من تفاصيل الرحلة.")
         : headline.hand
-          ? "هذا المبلغ بقي معك ولم يمر بمحفظتك."
+          ? tr("هذا المبلغ بقي معك ولم يمر بمحفظتك.")
           : credited.length > 0
-            ? "المال وصل قبل إنهائك الرحلة — قيدُ أرباحك في المحفظة تلقائي."
-            : "لم يختر الراكب طريقة الدفع بعد — ستظهر الدفعة هنا وفي سجل رحلاتك.") +
-    (commission > 0 ? " والعمولة تُخصم من رصيد محفظتك، لا من هذا المبلغ." : "");
+            ? tr("المال وصل قبل إنهائك الرحلة — قيدُ أرباحك في المحفظة تلقائي.")
+            : tr("لم يختر الراكب طريقة الدفع بعد — ستظهر الدفعة هنا وفي سجل رحلاتك.")) +
+    (commission > 0 ? tr(" والعمولة تُخصم من رصيد محفظتك، لا من هذا المبلغ.") : "");
 
   const working = busy || rate.busy;
   const message = error ?? rate.error;
@@ -152,7 +152,7 @@ export function CollectT2Screen({
           <Icon name="check" />
         </span>
         <div>
-          <div className="t2-co-title">اكتملت الرحلة</div>
+          <div className="t2-co-title">{tr("اكتملت الرحلة")}</div>
           <div className="t2-co-sub">{sub}</div>
         </div>
       </div>
@@ -173,7 +173,7 @@ export function CollectT2Screen({
         {/* **المقدَّرُ حين يخالف النهائيَّ وحدَه** — والمساويه سطرٌ يكرّر رقماً (الشاشةُ القائمةُ تعرضهما دائماً) */}
         {ride.estimated_fare !== final ? (
           <>
-            <span className="t2-co-k">السعر المقدّر</span>
+            <span className="t2-co-k">{tr("السعر المقدّر")}</span>
             <span className="t2-co-v" dir="ltr">
               {digits(ride.estimated_fare)}
             </span>
@@ -181,13 +181,13 @@ export function CollectT2Screen({
         ) : null}
         {rounding !== null ? (
           <>
-            <span className="t2-co-k">تقريب</span>
+            <span className="t2-co-k">{tr("تقريب")}</span>
             <span className="t2-co-v" dir="ltr">
               {rounding}
             </span>
           </>
         ) : null}
-        <span className="t2-co-k">الأجرة النهائية</span>
+        <span className="t2-co-k">{tr("الأجرة النهائية")}</span>
         <span className="t2-co-v" dir="ltr">
           {digits(final)}
         </span>
@@ -195,21 +195,21 @@ export function CollectT2Screen({
           ? credited.map((payment) => (
               <Row
                 key={payment.id}
-                label={payment.method === "wallet" ? "من محفظة الراكب" : METHOD_LABEL[payment.method]}
+                label={payment.method === "wallet" ? tr("من محفظة الراكب") : METHOD_LABEL[payment.method]}
                 value={`−${digits(payment.amount)}`}
               />
             ))
           : null}
         {mixed && rest ? (
-          <Row label={`المتبقي ${METHOD_LABEL[rest.method]}`} value={digits(rest.amount)} strong />
+          <Row label={tr("المتبقي {0}", { 0: METHOD_LABEL[rest.method] })} value={digits(rest.amount)} strong />
         ) : null}
         {/* **ما قُيّد له ولا شيءَ بيده** — سطرُ الشاشة القائمة بنبرته («قُيّد في محفظتك») */}
         {!mixed && creditedFirst ? (
-          <Row label="قُيّد في محفظتك" value={digits(creditedFirst.amount)} ok />
+          <Row label={tr("قُيّد في محفظتك")} value={digits(creditedFirst.amount)} ok />
         ) : null}
         {/* **«عمولة أقل بكثير من السوق» — بلا نسبةٍ ولا رقم** (التصحيحات §١) */}
         <span className="t2-co-k">
-          عمولة<span className="t2-co-pill">أقل بكثير من السوق</span>
+          {tr("عمولة")}<span className="t2-co-pill">{tr("أقل بكثير من السوق")}</span>
         </span>
         <span />
       </div>
@@ -221,13 +221,13 @@ export function CollectT2Screen({
 
       {/* **التقييمُ اختياريّ** — ونجمةٌ تُضغط ثانيةً تُلغى. وترتيبُها ترتيبُ الصفّ العربيّ كما رُسم (الأولى في البداية) */}
       <div className="t2-co-rate">
-        <span className="t2-co-rate-title">قيّم الراكب</span>
+        <span className="t2-co-rate-title">{tr("قيّم الراكب")}</span>
         <span className="t2-co-stars">
           {[1, 2, 3, 4, 5].map((value) => (
             <button
               key={value}
               type="button"
-              aria-label={`${value} نجوم`}
+              aria-label={tr("{0} نجوم", { 0: value })}
               aria-pressed={value <= rate.stars}
               className={`t2-co-star${value <= rate.stars ? " on" : ""}`}
               onClick={() => rate.setStars(value === rate.stars ? 0 : value)}
@@ -250,11 +250,11 @@ export function CollectT2Screen({
       <button type="button" className="t2-co-btn" onClick={() => void finish()} disabled={working}>
         {pending && pending.id !== confirmedId
           ? pending.method === "cliq"
-            ? "وصلتني الحوالة"
-            : `استلمتُ ${digits(pending.amount)} ${currencyLabel}`
+            ? tr("وصلتني الحوالة")
+            : tr("استلمتُ {0} {1}", { 0: digits(pending.amount), 1: currencyLabel })
           : rate.stars > 0
-            ? "إرسال التقييم"
-            : "إنهاء"}
+            ? tr("إرسال التقييم")
+            : tr("إنهاء")}
       </button>
     </div>
   );

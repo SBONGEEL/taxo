@@ -24,50 +24,50 @@ import type {
   WalletTransactionType,
   WithdrawalMethod,
   WithdrawalStatus,
-} from "@/api/types";
+} from "@/api/types"; import { tr } from "@/lib/i18n";
 
 export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
-  topup: "شحن رصيد",
-  ride_payment: "دفع رحلة",
-  ride_earning: "أرباح رحلة",
-  commission: "عمولة المنصة",
-  transfer_in: "تحويل وارد",
-  transfer_out: "تحويل صادر",
-  withdrawal: "سحب",
-  refund: "استرجاع",
-  subscription_payment: "اشتراك",
-  adjustment: "تسوية",
+  topup: tr("شحن رصيد"),
+  ride_payment: tr("دفع رحلة"),
+  ride_earning: tr("أرباح رحلة"),
+  commission: tr("عمولة المنصة"),
+  transfer_in: tr("تحويل وارد"),
+  transfer_out: tr("تحويل صادر"),
+  withdrawal: tr("سحب"),
+  refund: tr("استرجاع"),
+  subscription_payment: tr("اشتراك"),
+  adjustment: tr("تسوية"),
   // البقشيش (12-و). و`tip_payment` لا يظهر في كشف الكبتن أبداً — هو خصمُ
   // الراكب — لكن الاتحادَ مرآةُ التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ يوماً
-  tip: "بقشيش",
-  tip_payment: "بقشيش مدفوع",
-  advance: "سلفة",
-  advance_repayment: "اقتطاع سداد سلفة",
-  cancellation_fee: "رسم إلغاء",
-  cancellation_compensation: "تعويض إلغاء",
-  referral_bonus: "مكافأة إحالة",
-  skin_purchase: "شراء مركبة",
+  tip: tr("بقشيش"),
+  tip_payment: tr("بقشيش مدفوع"),
+  advance: tr("سلفة"),
+  advance_repayment: tr("اقتطاع سداد سلفة"),
+  cancellation_fee: tr("رسم إلغاء"),
+  cancellation_compensation: tr("تعويض إلغاء"),
+  referral_bonus: tr("مكافأة إحالة"),
+  skin_purchase: tr("شراء مركبة"),
   // **الحجزُ المضمون** (§٦٣-ج/٣) — الرسمُ يصله والغرامةُ تخرج منه، والثلاثةُ الباقيةُ للراكب وتُسمّى للعلّة أعلاه
-  guarantee_fee: "رسم حجز مضمون",
-  guarantee_penalty: "غرامة اعتذار عن حجز مضمون",
-  guarantee_hold: "رسم ضمان محفوظ",
-  guarantee_refund: "ردّ رسم الضمان",
-  guarantee_compensation: "تعويض حجز مضمون",
+  guarantee_fee: tr("رسم حجز مضمون"),
+  guarantee_penalty: tr("غرامة اعتذار عن حجز مضمون"),
+  guarantee_hold: tr("رسم ضمان محفوظ"),
+  guarantee_refund: tr("ردّ رسم الضمان"),
+  guarantee_compensation: tr("تعويض حجز مضمون"),
   // **المشوارُ الثابت** (§٦٣-ج/٦) — الحافزُ يصله لكلِّ رحلةٍ يقودها معتمداً، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
-  commute_incentive: "حافزُ المشوار الثابت",
-  commute_prepay: "اشتراك المشوار الثابت",
-  commute_credit: "رصيدُ أيامٍ لم تُستعمل",
+  commute_incentive: tr("حافزُ المشوار الثابت"),
+  commute_prepay: tr("اشتراك المشوار الثابت"),
+  commute_credit: tr("رصيدُ أيامٍ لم تُستعمل"),
   // **بين المدن** (§٦٣-ج/٧) — أجرةُ رحلته من مال المقاعد المحفوظ عند الإنهاء، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
-  intercity_earning: "أجرةُ رحلةٍ بين المدن",
-  intercity_hold: "حجزُ مقعدٍ بين المدن",
-  intercity_refund: "ردُّ حجزٍ بين المدن",
+  intercity_earning: tr("أجرةُ رحلةٍ بين المدن"),
+  intercity_hold: tr("حجزُ مقعدٍ بين المدن"),
+  intercity_refund: tr("ردُّ حجزٍ بين المدن"),
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب وحدَه من TAXO، ويُسمّى للعلّة أعلاه
-  cashback: "الاسترداد الأسبوعي",
+  cashback: tr("الاسترداد الأسبوعي"),
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّين بكليك أو السلفة) يعود إلى محفظته: دفع المبلغَ مقرَّباً للأعلى، والفرقُ له.
   // **واسمُه اسمُ الخلفية** (`finance_summary`: «تقريب») — والإشارةُ على المبلغ تقول اتجاهَه
-  rounding: "تقريب",
+  rounding: tr("تقريب"),
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
-  taxo_card: "شحن ببطاقة TAXO",
+  taxo_card: tr("شحن ببطاقة TAXO"),
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -118,10 +118,10 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {
-  pending: "معلّق",
-  approved: "موافَق عليه",
-  paid: "مدفوع",
-  rejected: "مرفوض",
+  pending: tr("معلّق"),
+  approved: tr("موافَق عليه"),
+  paid: tr("مدفوع"),
+  rejected: tr("مرفوض"),
 };
 
 /** «معلّق» و«موافَق عليه» كلاهما يحجز المبلغ ولم يُدفع بعد. */
@@ -132,11 +132,11 @@ export function withdrawalTone(status: WithdrawalStatus): string {
 }
 
 export const WITHDRAWAL_METHOD_LABEL: Record<WithdrawalMethod, string> = {
-  cliq: "كليك",
-  bank: "حوالة بنكية",
-  ccp: "حساب CCP",
-  baridimob: "بريدي موب",
-  cash_office: "كاش من المكتب",
+  cliq: tr("كليك"),
+  bank: tr("حوالة بنكية"),
+  ccp: tr("حساب CCP"),
+  baridimob: tr("بريدي موب"),
+  cash_office: tr("كاش من المكتب"),
 };
 
 /** قيدٌ يزيد الرصيد أم ينقصه — من إشارة المبلغ لا من جدولٍ ثانٍ يخالفها. */

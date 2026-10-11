@@ -13,7 +13,7 @@
  * برسالتها العربية، ولا تخترع الواجهة رفضاً من عندها.
  */
 
-import type { CountryCode } from "@/api/types";
+import type { CountryCode } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 /** أسماءُ الدول **بلا أعلام**.
  *
@@ -23,12 +23,12 @@ import type { CountryCode } from "@/api/types";
  * تُرسم من خطوطه فتختلف بين جهازٍ وآخر. وتطبيقُ الكبتن واللوحةُ يكتبان الاسمَ
  * وحدَه أصلاً، فصار الثلاثةُ على قولٍ واحد. */
 export const COUNTRY_LABEL: Record<CountryCode, string> = {
-  JO: "الأردن",
-  LY: "ليبيا",
-  DZ: "الجزائر",
+  JO: tr("الأردن"),
+  LY: tr("ليبيا"),
+  DZ: tr("الجزائر"),
 };
 
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const ARABIC_DIGITS = tr("٠١٢٣٤٥٦٧٨٩");
 
 /** يحوّل الأرقام العربية-الهندية إلى لاتينية ويسقط ما ليس رقماً. */
 export function digitsOnly(input: string): string {

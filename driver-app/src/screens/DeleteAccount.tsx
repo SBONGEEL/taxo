@@ -24,7 +24,7 @@ import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, currencyLabel, digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 type Step = "intro" | "balance" | "confirm";
 
@@ -88,7 +88,7 @@ export function DeleteAccountScreen() {
     getDeletionState()
       .then(setState)
       .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر التحميل")),
       );
   }, []);
 
@@ -99,7 +99,7 @@ export function DeleteAccountScreen() {
       <button
         type="button"
         className="t2-back"
-        aria-label="رجوع"
+        aria-label={tr("رجوع")}
         onClick={() => (step === "intro" ? goBack() : setStep("intro"))}
       >
         <Icon name="arrow_forward" />
@@ -126,7 +126,7 @@ export function DeleteAccountScreen() {
             errorNote
           ) : (
             <div className="t2-ax-center">
-              <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+              <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
             </div>
           )}
         </div>
@@ -148,7 +148,7 @@ export function DeleteAccountScreen() {
       await signOut();
       navigate("/login", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
       load();
     } finally {
       setBusy(false);

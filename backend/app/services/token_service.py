@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import InvalidToken
+from app.core.i18n import current_language
 from app.core.security import (
     TokenError,
     create_access_token,
@@ -106,6 +107,10 @@ async def issue_token_pair(session: AsyncSession, user: User) -> TokenPair:
     """جلسةٌ جديدةٌ وزوجُها الأوّل — **والصفُّ يُلتزم هنا**: رمزٌ يُسلَّم لجلسةٍ لم
     تُكتب يرتدّ عند أوّل طلب. وكلُّ بابٍ يناديه التزم ما قبله أصلاً."""
     now = _second(_now())
+    # **لغةُ الحساب تتبع التطبيقَ الذي دخل منه** (SPEC §٧٣-هـ المرحلة ٥) — فتصله إشعاراتُه بما يقرؤه. **واللوحةُ ترسل `ar` صراحةً**
+    language = current_language()
+    if user.language != language:
+        user.language = language
     auth = AuthSession(
         id=uuid.uuid4(),
         user_id=user.id,

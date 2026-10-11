@@ -31,7 +31,7 @@ import { NoteT2 } from "@/screens/t2/KitT2";
 import { describeShrink, shrinkImage } from "@/lib/shrink";
 import { useSession } from "@/lib/session";
 import { digits } from "@/lib/utils";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** ما يُقبل من المعرض أو الكاميرا — والخلفيةُ تقرأ النوعَ من البايتات لا من هذا. */
 const ACCEPT = "image/*";
@@ -102,12 +102,12 @@ export function PhotoCard() {
       setUploadedUrl(URL.createObjectURL(shrunk.file));
       setPicked(null);
       setPreviewUrl(null);
-      setDone("رُفعت صورتك، وهي ظاهرةٌ الآن لكبتن رحلتك.");
+      setDone(tr("رُفعت صورتك، وهي ظاهرةٌ الآن لكبتن رحلتك."));
     } catch (caught) {
       // من ألغى يعرف أنه ألغى — ورسالةٌ حمراءُ بعده تجعله يظنّ شيئاً انكسر
       if ((caught as Error)?.name === "AbortError") return;
       // **النصُّ من الخلفية** (§17): لا تخترع الواجهةُ عربيةً لخطأٍ سمّته
-      setError(caught instanceof ApiError ? caught.message : "تعذّر رفع الصورة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر رفع الصورة"));
     } finally {
       abort.current = null;
       setBusy(null);
@@ -124,9 +124,9 @@ export function PhotoCard() {
       await refreshUser();
       setUploadedUrl(null);
       setShrunkNote(null);
-      setDone("حُذفت صورتك.");
+      setDone(tr("حُذفت صورتك."));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر حذف الصورة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر حذف الصورة"));
     } finally {
       setBusy(null);
       setConfirmClear(false);
@@ -140,7 +140,7 @@ export function PhotoCard() {
     <section className="t2-idcard">
       <div className="t2-idcard-top">
         {/* الدائرةُ بلغة R15 — **برقوقيّةٌ في السِمة الوردية** (`t2.css`) */}
-        <span className="t2-avatar">{shown ? <img src={shown} alt="" /> : (user?.name.slice(0, 1) ?? "؟")}</span>
+        <span className="t2-avatar">{shown ? <img src={shown} alt="" /> : (user?.name.slice(0, 1) ?? tr("؟"))}</span>
         <div className="t2-prof-main">
           <div className="t2-prof-name">{user?.name}</div>
           <div dir="ltr" className="t2-prof-phone">
@@ -151,7 +151,7 @@ export function PhotoCard() {
 
       {user?.email ? (
         <div className="t2-idcard-sec">
-          <p className="t2-idcard-label">البريد المُثبَت</p>
+          <p className="t2-idcard-label">{tr("البريد المُثبَت")}</p>
           <p dir="ltr" className="t2-idcard-email">
             {user.email}
           </p>
@@ -159,9 +159,9 @@ export function PhotoCard() {
       ) : null}
 
       <div className="t2-idcard-sec">
-        <p className="t2-idcard-title">صورتي</p>
+        <p className="t2-idcard-title">{tr("صورتي")}</p>
         <p className="t2-idcard-body">
-          اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها.
+          {tr("اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها.")}
         </p>
 
         {/* **حدُّ التطبيق يُقال ولا يُخفى**: لا بابَ يقرأ الصورةَ المرفوعةَ في
@@ -169,8 +169,8 @@ export function PhotoCard() {
             يجعل من رفع صورتَه أمس يقرأ الحرفَ «حُذفت صورتي» */}
         {shown ? null : (
           <p className="t2-idcard-note">
-            ما في الدائرة حرفُ اسمك لا صورتُك المرفوعة — وعرضُ الصورة الحالية في هذه الشاشة لم يُبنَ بعد. واختيارُ صورةٍ
-            جديدةٍ يحلّ محلّ ما قبلها.
+            {tr("ما في الدائرة حرفُ اسمك لا صورتُك المرفوعة — وعرضُ الصورة الحالية في هذه الشاشة لم يُبنَ بعد. واختيارُ صورةٍ جديدةٍ يحلّ محلّ ما قبلها.")}
+
           </p>
         )}
 
@@ -179,7 +179,7 @@ export function PhotoCard() {
           type="file"
           accept={ACCEPT}
           className="t2-idcard-file"
-          aria-label="اختر صورة"
+          aria-label={tr("اختر صورة")}
           onChange={(event) => {
             choose(event.target.files?.[0]);
             // **يُفرَّغ المدخل**: اختيارُ الملف نفسِه مرةً ثانيةً بعد إلغاءٍ لا
@@ -191,7 +191,7 @@ export function PhotoCard() {
         {uploading ? (
           <div className="t2-idcard-progress">
             <div className="t2-idcard-progress-top">
-              <span>جارٍ رفع الصورة</span>
+              <span>{tr("جارٍ رفع الصورة")}</span>
               <span dir="ltr" className="t2-num">
                 {digits(String(progress))}%
               </span>
@@ -199,7 +199,7 @@ export function PhotoCard() {
             <div
               className="t2-idcard-bar"
               role="progressbar"
-              aria-label="جارٍ رفع الصورة"
+              aria-label={tr("جارٍ رفع الصورة")}
               aria-valuenow={progress}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -208,23 +208,23 @@ export function PhotoCard() {
             </div>
             <button type="button" className="t2-cbtn soft full" onClick={() => abort.current?.abort()}>
               <Icon name="close" />
-              أوقف الرفع
+              {tr("أوقف الرفع")}
             </button>
           </div>
         ) : picked ? (
           <div className="t2-idcard-row">
             <button type="button" className="t2-cbtn ink grow" onClick={() => void send(picked)}>
-              ارفع هذه الصورة
+              {tr("ارفع هذه الصورة")}
             </button>
             <button type="button" className="t2-cbtn soft" onClick={discard}>
-              تراجع
+              {tr("تراجع")}
             </button>
           </div>
         ) : (
           <div className="t2-idcard-row">
             <button type="button" className="t2-cbtn soft grow" onClick={() => picker.current?.click()}>
               <Icon name="photo_camera" />
-              اختر صورة
+              {tr("اختر صورة")}
             </button>
             <button
               type="button"
@@ -233,7 +233,7 @@ export function PhotoCard() {
               onClick={() => setConfirmClear(true)}
             >
               <Icon name="delete" />
-              احذف
+              {tr("احذف")}
             </button>
           </div>
         )}
@@ -242,7 +242,7 @@ export function PhotoCard() {
             واحدةٌ على زرٍّ بجانب «اختر صورة» تقع بالخطأ */}
         {confirmClear ? (
           <div className="t2-idcard-confirm">
-            <p>ستُحذف صورتك نهائياً، ويرى كبتنُ رحلتك حرفَ اسمك بدلاً منها.</p>
+            <p>{tr("ستُحذف صورتك نهائياً، ويرى كبتنُ رحلتك حرفَ اسمك بدلاً منها.")}</p>
             <div className="t2-idcard-row">
               <button
                 type="button"
@@ -251,10 +251,10 @@ export function PhotoCard() {
                 aria-busy={busy === "clear"}
                 onClick={() => void remove()}
               >
-                نعم، احذفها
+                {tr("نعم، احذفها")}
               </button>
               <button type="button" className="t2-cbtn soft" onClick={() => setConfirmClear(false)}>
-                تراجع
+                {tr("تراجع")}
               </button>
             </div>
           </div>
@@ -266,7 +266,7 @@ export function PhotoCard() {
         {error && picked && !uploading ? (
           <div className="t2-idcard-row">
             <button type="button" className="t2-cbtn soft full" onClick={() => void send(picked)}>
-              أعد رفع الصورة نفسها
+              {tr("أعد رفع الصورة نفسها")}
             </button>
           </div>
         ) : null}

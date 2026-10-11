@@ -36,7 +36,7 @@ import { Icon } from "@/taxo2";
 
 import { startOfToday, whenParts } from "./t2/when";
 
-import "./t2/money.css";
+import "./t2/money.css"; import { tr } from "@/lib/i18n";
 
 const PAGE_SIZE = 20;
 
@@ -69,7 +69,7 @@ export function WithdrawalsScreen() {
       setMore(page.length === PAGE_SIZE);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الطلبات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الطلبات"),
       );
     } finally {
       setBusy(false);
@@ -88,12 +88,12 @@ export function WithdrawalsScreen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => goBack()}
         >
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">طلبات السحب</h1>
+        <h1 className="t2-title">{tr("طلبات السحب")}</h1>
       </div>
 
       {error ? (
@@ -111,8 +111,8 @@ export function WithdrawalsScreen() {
 
       {requests?.length === 0 ? (
         <div className="t2-empty t2-money-empty">
-          <b>لا طلبات سحب</b>
-          <span>اطلب سحباً من المحفظة، وتتبّع حاله هنا حتى يصلك المال.</span>
+          <b>{tr("لا طلبات سحب")}</b>
+          <span>{tr("اطلب سحباً من المحفظة، وتتبّع حاله هنا حتى يصلك المال.")}</span>
         </div>
       ) : null}
 
@@ -153,7 +153,7 @@ export function WithdrawalsScreen() {
                 ) : null}
                 {request.reference ? (
                   <p className="t2-wdl-ref">
-                    مرجع التحويل{" "}
+                    {tr("مرجع التحويل")}{" "}
                     <span dir="ltr" className="t2-wdl-ref-code">
                       {request.reference}
                     </span>
@@ -172,13 +172,13 @@ export function WithdrawalsScreen() {
           disabled={busy}
           onClick={() => void load(requests?.length ?? 0)}
         >
-          {busy ? "…" : "عرض المزيد"}
+          {busy ? "…" : tr("عرض المزيد")}
         </button>
       ) : null}
 
       <p className="t2-wdl-fine">
-        الطلب المعلّق يحجز مبلغه من الرصيد المتاح، وقيد السحب يُكتب عند الدفع
-        فقط.
+        {tr("الطلب المعلّق يحجز مبلغه من الرصيد المتاح، وقيد السحب يُكتب عند الدفع فقط.")}
+
       </p>
     </div>
   );

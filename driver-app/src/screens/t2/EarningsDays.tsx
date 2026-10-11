@@ -10,11 +10,11 @@
  */
 
 import type { EarningsDay } from "@/api/types";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** `getDay()`: الأحدُ صفر — **والحرفُ كما رُسم** (س ح ن ث ر خ ج). */
-const WEEKDAY_LETTER = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
-const WEEKDAY_NAME = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const WEEKDAY_LETTER = [tr("ح"), tr("ن"), tr("ث"), tr("ر"), tr("خ"), tr("ج"), tr("س")];
+const WEEKDAY_NAME = [tr("الأحد"), tr("الاثنين"), tr("الثلاثاء"), tr("الأربعاء"), tr("الخميس"), tr("الجمعة"), tr("السبت")];
 
 /** أطولُ عمودٍ بالبكسل — عمودُ «ث» المرسوم (86). */
 const BAR_MAX = 86;
@@ -44,7 +44,7 @@ export function EarningsDays({
     <div className="t2-days-card" style={{ ["--t2-days-up" as string]: `${upZone}px` }}>
       {/* **خطُّ الصفر حين يتدلّى يوم** — وبلا يومٍ سالبٍ لا خطَّ كما رُسم */}
       {down > 0 ? <span className="t2-days-zero" aria-hidden="true" /> : null}
-      <ol className={month ? "t2-days month" : "t2-days"} aria-label="صافي كلِّ يوم">
+      <ol className={month ? "t2-days month" : "t2-days"} aria-label={tr("صافي كلِّ يوم")}>
         {days.map((day, index) => {
           const date = calendarDay(day.day);
           const today = index === last;

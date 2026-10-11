@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 import { listSavedCards } from "@/api/endpoints";
 import type { SavedCard } from "@/api/types";
 import { Icon } from "@/taxo2";
-import { BusyLabel, SheetModalT2 } from "@/screens/t2/MoneyT2";
+import { BusyLabel, SheetModalT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function CardChoice({
   busy,
@@ -57,18 +57,18 @@ export function CardChoice({
               onPay(selected === null ? { save_card: save } : { saved_card_id: selected })
             }
           >
-            <BusyLabel busy={busy}>{selected === null ? "متابعة إلى صفحة الدفع" : "ادفع الآن"}</BusyLabel>
+            <BusyLabel busy={busy}>{selected === null ? tr("متابعة إلى صفحة الدفع") : tr("ادفع الآن")}</BusyLabel>
           </button>
           <button type="button" className="t2-button secondary t2-m-wide" onClick={onCancel} disabled={busy}>
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       }
     >
-      <div className="t2-m-sheet-title">الدفع بالبطاقة</div>
+      <div className="t2-m-sheet-title">{tr("الدفع بالبطاقة")}</div>
 
       {cards.length > 0 ? (
-        <div className="t2-list" role="radiogroup" aria-label="الدفع بالبطاقة">
+        <div className="t2-list" role="radiogroup" aria-label={tr("الدفع بالبطاقة")}>
           {cards.map((card) => (
             <button
               key={card.id}
@@ -82,11 +82,11 @@ export function CardChoice({
               <span className="t2-row-main">
                 <span className="t2-row-title">
                   <span dir="ltr">
-                    {card.brand ?? "بطاقة"} •••• {card.last4}
+                    {card.brand ?? tr("بطاقة")} •••• {card.last4}
                   </span>
                 </span>
                 <span className="t2-row-body">
-                  تنتهي <span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
+                  {tr("تنتهي")}{" "}<span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
                 </span>
               </span>
               {selected === card.id ? <Icon name="check" className="t2-m-opt-end check" /> : null}
@@ -101,7 +101,7 @@ export function CardChoice({
           >
             <Icon name="add" />
             <span className="t2-row-main">
-              <span className="t2-row-title">بطاقة جديدة</span>
+              <span className="t2-row-title">{tr("بطاقة جديدة")}</span>
             </span>
             {selected === null ? <Icon name="check" className="t2-m-opt-end check" /> : null}
           </button>
@@ -114,7 +114,7 @@ export function CardChoice({
           <span className="t2-m-check-box" aria-hidden="true">
             <Icon name="check" />
           </span>
-          <span>احفظ هذه البطاقة للدفع بضغطة لاحقاً</span>
+          <span>{tr("احفظ هذه البطاقة للدفع بضغطة لاحقاً")}</span>
         </label>
       ) : null}
     </SheetModalT2>

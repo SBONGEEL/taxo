@@ -28,7 +28,7 @@ import { DOC_LABEL, STATUS } from "@/screens/Pending";
 
 import "@/taxo2";
 import "./t2.css";
-import "./plans.css";
+import "./plans.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ مستندٍ بمفردات اللوحة (C12): الرخصةُ والهويةُ والمركبة — **والصورةُ الشخصيةُ بالشخص**. */
 const DOC_ICON: Record<DocumentType, string> = {
@@ -54,8 +54,8 @@ function receivedAt(iso: string): { day: string; time: string } {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const time = at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  if (at.getTime() >= today) return { day: "اليوم", time };
-  if (at.getTime() >= today - 24 * 60 * 60 * 1000) return { day: "أمس", time };
+  if (at.getTime() >= today) return { day: tr("اليوم"), time };
+  if (at.getTime() >= today - 24 * 60 * 60 * 1000) return { day: tr("أمس"), time };
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
 }
 
@@ -66,8 +66,8 @@ function appointmentAt(iso: string): { day: string; time: string } {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const day = 24 * 60 * 60 * 1000;
   const time = at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  if (at.getTime() >= today && at.getTime() < today + day) return { day: "اليوم", time };
-  if (at.getTime() >= today + day && at.getTime() < today + 2 * day) return { day: "غداً", time };
+  if (at.getTime() >= today && at.getTime() < today + day) return { day: tr("اليوم"), time };
+  if (at.getTime() >= today + day && at.getTime() < today + 2 * day) return { day: tr("غداً"), time };
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
 }
 
@@ -108,11 +108,11 @@ export function PendingT2Screen() {
         </span>
       </div>
 
-      <h1 className="t2-pending-title">{rejected ? "لم يُقبل طلبك" : "طلبك قيد المراجعة"}</h1>
+      <h1 className="t2-pending-title">{rejected ? tr("لم يُقبل طلبك") : tr("طلبك قيد المراجعة")}</h1>
       <p className="t2-pending-lede">
         {rejected
-          ? "راجع أسباب رفض مستنداتك أدناه، ثم أعد رفعها."
-          : "نراجع وثائقك عادةً خلال 24 ساعة، ونرسل لك إشعاراً فور الاعتماد."}
+          ? tr("راجع أسباب رفض مستنداتك أدناه، ثم أعد رفعها.")
+          : tr("نراجع وثائقك عادةً خلال 24 ساعة، ونرسل لك إشعاراً فور الاعتماد.")}
       </p>
 
       {/* **الخطُّ الزمنيُّ للمنتظِر وحدَه** — **و«فحص المركبة» بُنيت بقرار المالك** (§٦١-ط/٥): موعدٌ يضعه المشرف، بحالاتها الثلاث
@@ -124,7 +124,7 @@ export function PendingT2Screen() {
             <span className="t2-icon" aria-hidden="true">check</span>
           </span>
           <div>
-            <div className="t2-step-title">استلمنا طلبك</div>
+            <div className="t2-step-title">{tr("استلمنا طلبك")}</div>
             {received ? (
               <div className="t2-step-sub">
                 {received.day} · <span dir="ltr">{received.time}</span>
@@ -141,8 +141,8 @@ export function PendingT2Screen() {
             <span className="t2-step-dot now" />
           )}
           <div>
-            <div className={reviewed ? "t2-step-title" : "t2-step-title now"}>مراجعة الوثائق</div>
-            <div className={reviewed ? "t2-step-sub" : "t2-step-sub now"}>{reviewed ? "اعتُمدت وثائقُك" : "جارٍ الآن"}</div>
+            <div className={reviewed ? "t2-step-title" : "t2-step-title now"}>{tr("مراجعة الوثائق")}</div>
+            <div className={reviewed ? "t2-step-sub" : "t2-step-sub now"}>{reviewed ? tr("اعتُمدت وثائقُك") : tr("جارٍ الآن")}</div>
           </div>
           <span className={reviewed ? "t2-step-line done" : "t2-step-line"} />
           <span />
@@ -154,17 +154,17 @@ export function PendingT2Screen() {
             <span className={appointment ? "t2-step-dot now" : "t2-step-dot"} />
           )}
           <div>
-            <div className={passed ? "t2-step-title" : appointment ? "t2-step-title now" : "t2-step-title later"}>فحص المركبة</div>
+            <div className={passed ? "t2-step-title" : appointment ? "t2-step-title now" : "t2-step-title later"}>{tr("فحص المركبة")}</div>
             <div className={appointment && !passed ? "t2-step-sub now" : "t2-step-sub"}>
               {passed ? (
-                "اجتزتَ الفحص"
+                tr("اجتزتَ الفحص")
               ) : appointment ? (
                 <>
                   {appointment.day} · <span dir="ltr">{appointment.time}</span>
                   {driver?.inspection_place ? ` — ${driver.inspection_place}` : null}
                 </>
               ) : (
-                "نحدد موعدك بعد اعتماد الوثائق"
+                tr("نحدد موعدك بعد اعتماد الوثائق")
               )}
             </div>
           </div>
@@ -172,7 +172,7 @@ export function PendingT2Screen() {
           <span />
           <span className="t2-step-dot" />
           <div>
-            <div className="t2-step-title later">تفعيل الحساب</div>
+            <div className="t2-step-title later">{tr("تفعيل الحساب")}</div>
           </div>
         </div>
       )}
@@ -180,13 +180,13 @@ export function PendingT2Screen() {
       <div className="t2-hint">
         <span className="t2-icon" aria-hidden="true">info</span>
         <span>
-          لن تصلك طلبات قبل الاعتماد وتفعيل اشتراك.
+          {tr("لن تصلك طلبات قبل الاعتماد وتفعيل اشتراك.")}
           {/* **«عرض الباقات» كما رُسم آخرَ السطر** (§٦٢-ج/٣٣) — صفحةُ عرضٍ بلا شراء، **ولمن ينتظر لا لمن رُفض** */}
           {rejected ? null : (
             <>
               {" "}
               <button type="button" className="t2-hint-link" onClick={() => navigate("/subscription/plans")}>
-                عرض الباقات
+                {tr("عرض الباقات")}
               </button>
             </>
           )}
@@ -216,12 +216,12 @@ export function PendingT2Screen() {
       {/* **البابُ إلى ما ينقص** بشرطه في الشاشة القائمة — قاعدةٌ بلا بابٍ ليست قاعدة */}
       {missing.length > 0 || rejected ? (
         <button type="button" className="t2-cta" onClick={() => navigate("/register/documents")}>
-          {rejected ? "أعد رفع المستندات" : "أكمِل ما ينقص"}
+          {rejected ? tr("أعد رفع المستندات") : tr("أكمِل ما ينقص")}
         </button>
       ) : null}
 
       <button type="button" className="t2-signout" onClick={() => void signOut()}>
-        تسجيل الخروج
+        {tr("تسجيل الخروج")}
       </button>
     </div>
   );

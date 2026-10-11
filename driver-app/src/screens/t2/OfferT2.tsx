@@ -39,7 +39,7 @@ import { digits } from "@/lib/utils";
 import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { hoursLabel, noDestination } from "@/screens/t2/HourlyT2";
 import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** محيطُ الحلقة كما رُسمت: `r=25` ⇒ ٢π×٢٥ ≈ ١٥٧ (`stroke-dasharray="157"` في اللوحة). */
 const DASH = 157;
@@ -73,12 +73,12 @@ export function OfferT2({
   // **بالساعة** (§٦٣-ج/٥) — من صفِّ الرحلة لا من مفتاح السوق: طلبٌ وصل قبل الإطفاء يبقى بالساعة
   const hours = ride.ride_type === "hourly" ? ride.hourly_hours : null;
   // **«الدفع: كاش» كما يرى الفئة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — من صفِّ الرحلة، و`null` لا يُرسم شيئاً
-  const methodLabel = ride.payment_method_hint ? `الدفع: ${METHOD_LABEL[ride.payment_method_hint]}` : null;
+  const methodLabel = ride.payment_method_hint ? tr("الدفع: {0}", { 0: METHOD_LABEL[ride.payment_method_hint] }) : null;
 
   return (
     <>
       {over ? <div className="t2-of-dim" /> : null}
-      <div className={women ? "t2-of women" : "t2-of"} role="dialog" aria-label="طلب رحلة جديد">
+      <div className={women ? "t2-of women" : "t2-of"} role="dialog" aria-label={tr("طلب رحلة جديد")}>
         {/* **«نغمة + اهتزاز»** — حالُ الصوت لا زينة (الشاشةُ القائمة): من رآها ولم يسمع شيئاً عرف أنّ الصوتَ مطفأٌ في هاتفه */}
         <div className="t2-of-ring-note">
           <span className="t2-of-bars" aria-hidden="true">
@@ -87,7 +87,7 @@ export function OfferT2({
             <i />
             <i />
           </span>
-          نغمة + اهتزاز
+          {tr("نغمة + اهتزاز")}
         </div>
 
         <div className="t2-of-card">
@@ -121,7 +121,7 @@ export function OfferT2({
                 </>
               ) : (
                 <div className="t2-of-kind">
-                  طلب جديد · {categoryLabel}
+                  {tr("طلب جديد ·")}{" "}{categoryLabel}
                   {methodLabel ? ` · ${methodLabel}` : ""}
                 </div>
               )}
@@ -144,35 +144,35 @@ export function OfferT2({
 
           <div className="t2-of-near">
             <Icon name="near_me" />
-            {digits(offer.distanceKm.toFixed(1))} كم{minutes !== null ? ` · ${digits(String(minutes))} د` : ""}{" "}
+            {digits(offer.distanceKm.toFixed(1))}{" "}{tr("كم")}{minutes !== null ? tr(" · {0} د", { 0: digits(String(minutes)) }) : ""}{" "}
             {/* **«أحضر غرضي»** (§٧٢-ج/١، C1): الانطلاقُ مكانُ الغرض لا راكب */}
-            {ride.parcel_fetch ? "حتى مكان الغرض" : "حتى الراكب"}
+            {ride.parcel_fetch ? tr("حتى مكان الغرض") : tr("حتى الراكب")}
           </div>
 
           <div className="t2-of-route">
             <span className="t2-of-from" />
-            <div className="t2-of-place">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
+            <div className="t2-of-place">{ride.pickup_address ?? tr("نقطة الانطلاق")}</div>
             <span className="t2-of-link" />
             {/* **مسافةُ الرحلة وزمنُها كما قدّرتهما الخلفية** (`distance_km` · `duration_min`) — لا حسابَ هنا. **وللساعات عددُها
                 وكيلومتراتُها المشمولة** (§٦٣-ج/٥) — من الرحلة كما حسبتها الخلفية */}
             <div className="t2-of-trip">
               {hours !== null
-                ? `${hoursLabel(hours)}${ride.hourly_included_km !== null ? ` · حتى ${digits(ride.hourly_included_km)} كم` : ""}`
-                : `${trimDistance(ride.distance_km)} كم · ${digits(String(Math.round(Number(ride.duration_min))))} د`}
+                ? `${hoursLabel(hours)}${ride.hourly_included_km !== null ? tr(" · حتى {0} كم", { 0: digits(ride.hourly_included_km) }) : ""}`
+                : tr("{0} كم · {1} د", { 0: trimDistance(ride.distance_km), 1: digits(String(Math.round(Number(ride.duration_min)))) })}
             </div>
             <span className="t2-of-to" />
             <div className="t2-of-place">
-              {hours !== null && noDestination(ride) ? "الوجهاتُ يقولها الراكب" : (ride.dropoff_address ?? "الوجهة")}
+              {hours !== null && noDestination(ride) ? tr("الوجهاتُ يقولها الراكب") : (ride.dropoff_address ?? tr("الوجهة"))}
             </div>
           </div>
 
           <div className="t2-of-actions">
             <button type="button" className="t2-of-decline" onClick={onDecline} disabled={busy}>
-              رفض
+              {tr("رفض")}
             </button>
             <button type="button" className="t2-of-accept" onClick={onAccept} disabled={busy}>
               <Icon name="check" />
-              قبول
+              {tr("قبول")}
             </button>
           </div>
         </div>
@@ -206,30 +206,30 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
   return (
     <div className="t2-of-tags">
       {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — مدفوعةٌ مقدّماً من اشتراك راكبها، **فلا نقدَ يُستلم**؛ والسعرُ أعلاه مجمَّدٌ لا تقدير */}
-      {ride.commute ? <span className="t2-of-tag">مشوارٌ ثابت — مدفوعة مقدّماً</span> : null}
+      {ride.commute ? <span className="t2-of-tag">{tr("مشوارٌ ثابت — مدفوعة مقدّماً")}</span> : null}
       {/* **«طرد»** (§٦٣-ج/٤) — غرضٌ بدل راكب، **ومن صفِّ الرحلة لا من مفتاح السوق**: طلبٌ وصل قبل الإطفاء يبقى طرداً */}
-      {parcel ? <span className="t2-of-tag">{ride.parcel_fetch ? "أحضر غرضي" : "طرد"}</span> : null}
+      {parcel ? <span className="t2-of-tag">{ride.parcel_fetch ? tr("أحضر غرضي") : tr("طرد")}</span> : null}
       {/* **«بالساعة»** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ لا طريق، **ومن صفِّ الرحلة** بالحكم نفسِه */}
-      {hourly ? <span className="t2-of-tag">بالساعة</span> : null}
+      {hourly ? <span className="t2-of-tag">{tr("بالساعة")}</span> : null}
       {/* **«مطار»** (§٦٣-ج/٢) — تبدأ أو تنتهي في مطار، **ورسمُه له كاملاً في الأجرة أعلاه**. ومن صفِّ الرحلة لا من مفتاح السوق:
           الرسمُ جُمِّد عليها يومَ طُلبت، **فإطفاءُ المفتاح بعدها لا يُسقط الشارةَ عن رحلةٍ تحمله** */}
-      {ride.airport ? <span className="t2-of-tag">مطار</span> : null}
+      {ride.airport ? <span className="t2-of-tag">{tr("مطار")}</span> : null}
       {/* **«لشخص آخر»** (§٦٣-ج/١) — الراكبُ غيرُ صاحب الحساب، واسمُه ورقمُه يصلانه بعد القبول وحدَه */}
-      {ride.for_other ? <span className="t2-of-tag">لشخص آخر</span> : null}
-      {shared ? <span className="t2-of-tag">مشتركة — قد ينضم راكب ثانٍ</span> : null}
+      {ride.for_other ? <span className="t2-of-tag">{tr("لشخص آخر")}</span> : null}
+      {shared ? <span className="t2-of-tag">{tr("مشتركة — قد ينضم راكب ثانٍ")}</span> : null}
       {ride.scheduled_for ? (
-        <span className="t2-of-tag">محجوزة — {bookedTime(ride.scheduled_for)}</span>
+        <span className="t2-of-tag">{tr("محجوزة —")}{" "}{bookedTime(ride.scheduled_for)}</span>
       ) : null}
       {ride.stops.length > 0 ? (
         <span className="t2-of-tag">
           {ride.stops.length === 1
-            ? "محطة وسيطة واحدة"
-            : `${digits(String(ride.stops.length))} محطات وسيطة`}
+            ? tr("محطة وسيطة واحدة")
+            : tr("{0} محطات وسيطة", { 0: digits(String(ride.stops.length)) })}
         </span>
       ) : null}
       {carried ? (
         <span className="t2-of-tag warn">
-          تحمل {digits(ride.carried_cancellation_fee ?? "0")} {currencyLabel} لكبتنٍ آخر
+          {tr("تحمل")}{" "}{digits(ride.carried_cancellation_fee ?? "0")} {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
         </span>
       ) : null}
     </div>

@@ -37,39 +37,39 @@ import { checkForm, rulesFor } from "@/lib/validation";
 import { VEHICLE_COLORS, VEHICLE_MAKES, VEHICLE_MODELS, vehicleYears } from "@/lib/vehicle-options";
 import { AuthBlock, AuthChoice, AuthError, AuthInput, AuthPage, DateField, Icon } from "@/taxo2";
 
-import "@/components/t2/captain-auth.css";
+import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
 const DOC_LABEL: Record<DocumentType, string> = {
-  driving_license: "رخصة القيادة",
-  national_id: "الهوية الشخصية",
-  vehicle_registration: "رخصة المركبة والتأمين",
+  driving_license: tr("رخصة القيادة"),
+  national_id: tr("الهوية الشخصية"),
+  vehicle_registration: tr("رخصة المركبة والتأمين"),
   // مهجورٌ ولا يُعرض — بقي للصفوف القديمة (البند ١١)
-  vehicle_photo: "صورة المركبة",
-  vehicle_front: "المركبة من الأمام",
-  vehicle_back: "المركبة من الخلف",
-  vehicle_side_right: "الجانب الأيمن",
-  vehicle_side_left: "الجانب الأيسر",
-  vehicle_interior: "من الداخل",
-  vehicle_plate: "لوحة المركبة",
-  profile_photo: "الصورة الشخصية",
+  vehicle_photo: tr("صورة المركبة"),
+  vehicle_front: tr("المركبة من الأمام"),
+  vehicle_back: tr("المركبة من الخلف"),
+  vehicle_side_right: tr("الجانب الأيمن"),
+  vehicle_side_left: tr("الجانب الأيسر"),
+  vehicle_interior: tr("من الداخل"),
+  vehicle_plate: tr("لوحة المركبة"),
+  profile_photo: tr("الصورة الشخصية"),
 };
 
 /** **ما يُقرأ تحت اسم كل صورة**: صورةٌ تُرفض لأنها من زاويةٍ خطأ تُعاد مرتين،
  *  وسطرٌ واحدٌ يقول ما المطلوب يوفّر الدورتين. */
 const DOC_HINT: Partial<Record<DocumentType, string>> = {
   // **ويُقال إنها تُعرض** — فهذا ما يجعله يختار صورةً تليق من أول مرة
-  profile_photo: "وجهُك واضحاً — يراها الراكب قبل الرحلة",
-  vehicle_front: "الواجهة كاملةً واللوحة ظاهرة",
-  vehicle_back: "الخلف كاملاً واللوحة ظاهرة",
-  vehicle_side_right: "الجانب الأيمن كاملاً",
-  vehicle_side_left: "الجانب الأيسر كاملاً",
-  vehicle_interior: "المقاعد الأمامية والخلفية",
-  vehicle_plate: "اللوحة وحدها، واضحةَ الأرقام",
+  profile_photo: tr("وجهُك واضحاً — يراها الراكب قبل الرحلة"),
+  vehicle_front: tr("الواجهة كاملةً واللوحة ظاهرة"),
+  vehicle_back: tr("الخلف كاملاً واللوحة ظاهرة"),
+  vehicle_side_right: tr("الجانب الأيمن كاملاً"),
+  vehicle_side_left: tr("الجانب الأيسر كاملاً"),
+  vehicle_interior: tr("المقاعد الأمامية والخلفية"),
+  vehicle_plate: tr("اللوحة وحدها، واضحةَ الأرقام"),
 };
 
 const CATEGORY_LABEL: Record<VehicleCategory, string> = {
-  economy: "اقتصادي",
-  comfort: "مريح",
+  economy: tr("اقتصادي"),
+  comfort: tr("مريح"),
 };
 
 /** **الوثائقُ أولاً ثم صورُ المركبة** — قسمان لا قائمةٌ من عشرة.
@@ -257,7 +257,7 @@ export function RegisterDocumentsScreen() {
       setRetry({
         doc: docType,
         file,
-        message: caught instanceof ApiError ? caught.message : "تعذّر رفع الملف",
+        message: caught instanceof ApiError ? caught.message : tr("تعذّر رفع الملف"),
       });
     } finally {
       uploadAbort.current = null;
@@ -346,7 +346,7 @@ export function RegisterDocumentsScreen() {
         }
       } else {
         setFieldError(null);
-        setError("تعذّر الاتصال بالخادم — تحقّق من شبكتك ثم أعد المحاولة");
+        setError(tr("تعذّر الاتصال بالخادم — تحقّق من شبكتك ثم أعد المحاولة"));
       }
     } finally {
       setBusy(false);
@@ -366,9 +366,9 @@ export function RegisterDocumentsScreen() {
     // يحبسه. والقائمةُ من الخلفية لا من نسخةٍ هنا
     const tag =
       requiredAll.length > 0 && !requiredAll.includes(doc)
-        ? " · اختياري"
+        ? tr(" · اختياري")
         : required.includes(doc) && !uploaded.has(doc)
-          ? " · مطلوب"
+          ? tr(" · مطلوب")
           : null;
     const note = rejections[doc];
     return (
@@ -376,7 +376,7 @@ export function RegisterDocumentsScreen() {
         key={doc}
         label={DOC_LABEL[doc]}
         tag={tag}
-        sub={DOC_HINT[doc] ?? (state === "missing" ? "صورة أو PDF" : null)}
+        sub={DOC_HINT[doc] ?? (state === "missing" ? tr("صورة أو PDF") : null)}
         shrunk={shrunkNote[doc] ?? null}
         state={state}
         percent={uploading === doc ? progress : null}
@@ -389,7 +389,7 @@ export function RegisterDocumentsScreen() {
           <>
             <AuthError message={retry.message} />
             <button type="button" className="cap-doc-retry" onClick={() => void pick(retry.doc, retry.file)}>
-              أعد رفع «{DOC_LABEL[retry.doc]}»
+              {tr("أعد رفع «")}{DOC_LABEL[retry.doc]}»
             </button>
           </>
         ) : null}
@@ -400,7 +400,7 @@ export function RegisterDocumentsScreen() {
             <span
               className="cap-doc-bar"
               role="progressbar"
-              aria-label={`رفع ${DOC_LABEL[doc]}`}
+              aria-label={tr("رفع {0}", { 0: DOC_LABEL[doc] })}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progress}
@@ -408,7 +408,7 @@ export function RegisterDocumentsScreen() {
               <span style={{ width: `${progress}%` }} />
             </span>
             <button type="button" className="cap-doc-cancel" onClick={() => uploadAbort.current?.abort()}>
-              إلغاء
+              {tr("إلغاء")}
             </button>
           </div>
         ) : null}
@@ -417,10 +417,10 @@ export function RegisterDocumentsScreen() {
             **قبل** الرفع فيذهب معه في الطلب نفسِه — ولو مُلئ بعده لاحتاج نداءً ثانياً وبابين لشيءٍ واحد. */}
         {EXPIRING.includes(doc) ? (
           <div className="cap-doc-expiry">
-            <span aria-hidden="true">تنتهي في</span>
+            <span aria-hidden="true">{tr("تنتهي في")}</span>
             {/* **لا `<input type="date">` ظاهراً**: كان يرسم «يوم/شهر/سنة» بحروفٍ معكوسة (§٦٢/٢٠) — `DateField` */}
             <DateField
-              label={`تنتهي في — ${DOC_LABEL[doc]}`}
+              label={tr("تنتهي في — {0}", { 0: DOC_LABEL[doc] })}
               value={expiry[doc] ?? ""}
               onChange={(value) =>
                 setExpiry((current) => ({
@@ -455,7 +455,7 @@ export function RegisterDocumentsScreen() {
         <div className="cap-sec">
           <h2 className="cap-sec-title">{title}</h2>
           <span className="cap-sec-count">
-            {done} من {docs.length}
+            {done}{" "}{tr("من")}{" "}{docs.length}
           </span>
         </div>
         <div className="cap-docs">{docs.map(renderRow)}</div>
@@ -473,7 +473,7 @@ export function RegisterDocumentsScreen() {
           <RegisterTop step={2} />
 
           <form onSubmit={toDocuments} className="t2-auth-form" noValidate>
-            <AuthBlock label="الشركة" htmlFor="make" error={errorFor("make")}>
+            <AuthBlock label={tr("الشركة")} htmlFor="make" error={errorFor("make")}>
               <AuthInput
                 id="make"
                 name="make"
@@ -487,7 +487,7 @@ export function RegisterDocumentsScreen() {
 
             {/* **طُرزُ الشركة المختارة وحدَها** — ومن كتب شركةً ليست في القائمة يجد حقلَ الطراز بلا اقتراحات، **وهو يكتب فيه كما
                 يكتب اليوم**. */}
-            <AuthBlock label="الطراز" htmlFor="model" error={errorFor("model")}>
+            <AuthBlock label={tr("الطراز")} htmlFor="model" error={errorFor("model")}>
               <AuthInput
                 id="model"
                 name="model"
@@ -499,7 +499,7 @@ export function RegisterDocumentsScreen() {
               <Suggestions id={listId("model")} options={modelOptions} />
             </AuthBlock>
 
-            <AuthBlock label="سنة الصنع" htmlFor="year" error={errorFor("year")}>
+            <AuthBlock label={tr("سنة الصنع")} htmlFor="year" error={errorFor("year")}>
               <AuthInput
                 id="year"
                 name="year"
@@ -515,7 +515,7 @@ export function RegisterDocumentsScreen() {
               <Suggestions id={listId("year")} options={yearOptions} />
             </AuthBlock>
 
-            <AuthBlock label="اللون" htmlFor="color" error={errorFor("color")}>
+            <AuthBlock label={tr("اللون")} htmlFor="color" error={errorFor("color")}>
               <AuthInput
                 id="color"
                 name="color"
@@ -527,7 +527,7 @@ export function RegisterDocumentsScreen() {
               <Suggestions id={listId("color")} options={VEHICLE_COLORS} />
             </AuthBlock>
 
-            <AuthBlock label="رقم اللوحة" htmlFor="plate_number" error={errorFor("plate_number")}>
+            <AuthBlock label={tr("رقم اللوحة")} htmlFor="plate_number" error={errorFor("plate_number")}>
               <AuthInput
                 id="plate_number"
                 name="plate_number"
@@ -538,9 +538,9 @@ export function RegisterDocumentsScreen() {
               />
             </AuthBlock>
 
-            <AuthBlock label="الفئة" error={errorFor("category")}>
+            <AuthBlock label={tr("الفئة")} error={errorFor("category")}>
               <AuthChoice
-                label="الفئة"
+                label={tr("الفئة")}
                 value={category}
                 options={categories.map((value) => ({ value, label: CATEGORY_LABEL[value] }))}
                 onChange={setCategory}
@@ -550,7 +550,7 @@ export function RegisterDocumentsScreen() {
             <div className="t2-auth-push" />
             <div className="t2-auth-actions">
               <button type="submit" className="t2-button primary" disabled={!vehicleReady}>
-                التالي
+                {tr("التالي")}
               </button>
             </div>
           </form>
@@ -593,22 +593,22 @@ export function RegisterDocumentsScreen() {
               </div>
               {returning ? null : (
                 <button type="button" className="cap-car-edit" onClick={() => setChosen("vehicle")}>
-                  تعديل
+                  {tr("تعديل")}
                 </button>
               )}
             </div>
           ) : null}
 
-          {section("الوثائق المطلوبة", PAPERS)}
-          {section("صور المركبة", VEHICLE_PHOTOS)}
+          {section(tr("الوثائق المطلوبة"), PAPERS)}
+          {section(tr("صور المركبة"), VEHICLE_PHOTOS)}
 
           {returning ? null : (
             <div className="cap-alias">
               <AuthBlock
-                label="حساب CliQ للسحب"
+                label={tr("حساب CliQ للسحب")}
                 htmlFor="cliq-alias"
                 error={errorFor("cliq_alias")}
-                hint="عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك."
+                hint={tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}
               >
                 <AuthInput
                   id="cliq-alias"
@@ -640,13 +640,13 @@ export function RegisterDocumentsScreen() {
                   disabled={busy || !vehicleReady || missing.length > 0}
                   onClick={() => void submit()}
                 >
-                  {busy ? "لحظة…" : "إرسال للمراجعة"}
+                  {busy ? tr("لحظة…") : tr("إرسال للمراجعة")}
                 </button>
               </div>
               <p className="cap-after">
                 {missing.length > 0
-                  ? "أكمل الوثائق الناقصة ليتفعّل الإرسال."
-                  : "لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات."}
+                  ? tr("أكمل الوثائق الناقصة ليتفعّل الإرسال.")
+                  : tr("لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات.")}
               </p>
             </>
           )}

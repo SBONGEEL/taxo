@@ -45,7 +45,7 @@ import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { HourlyCashCardT2, HourlyMeterT2, HourlyPlanT2, noDestination } from "@/screens/t2/HourlyT2";
 import { RecipientRowT2, RefuseParcelButtonT2, RefuseParcelSheetT2 } from "@/screens/t2/ParcelT2";
 import { CommsButtonsT2 } from "@/screens/t2/CommsT2";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 interface Props {
   ride: Ride;
@@ -128,7 +128,7 @@ export function RideT2({
       : null;
 
   const shared = Number(ride.share_discount_percent) > 0;
-  const shareText = ride.share_group_id ? "رحلة مشتركة — راكبان" : "مشتركة — قد ينضم راكب ثانٍ";
+  const shareText = ride.share_group_id ? tr("رحلة مشتركة — راكبان") : tr("مشتركة — قد ينضم راكب ثانٍ");
 
   return (
     <>
@@ -150,7 +150,7 @@ export function RideT2({
                 <span className="t2-rd-nav-num" dir="ltr">
                   {digits(String(instruction.meters))}
                 </span>
-                <span className="t2-rd-nav-unit">م</span>
+                <span className="t2-rd-nav-unit">{tr("م")}</span>
               </div>
               <div className="t2-rd-nav-say">{instruction.text}</div>
             </div>
@@ -159,7 +159,7 @@ export function RideT2({
             <div className="t2-rd-nav-then">
               {then.icon ? <Icon name={then.icon} /> : null}
               <span>
-                ثم {then.text} بعد {digits(String(then.meters))} م
+                {tr("ثم")}{" "}{then.text}{" "}{tr("بعد")}{" "}{digits(String(then.meters))}{" "}{tr("م")}
               </span>
             </div>
           ) : null}
@@ -183,7 +183,7 @@ export function RideT2({
                 title={mapTarget.cta}
               >
                 <Icon name="navigation" />
-                فتح في الملاحة
+                {tr("فتح في الملاحة")}
               </button>
             ) : null}
           </div>
@@ -200,7 +200,7 @@ export function RideT2({
                 title={mapTarget.cta}
               >
                 <Icon name="navigation" />
-                فتح في الملاحة
+                {tr("فتح في الملاحة")}
               </button>
             ) : null}
             {shared ? <span className="t2-rd-chip">{shareText}</span> : null}
@@ -214,7 +214,7 @@ export function RideT2({
                 </span>
               )}
               {/* **في الطرد صاحبُ الطلب مرسلٌ لا راكب** (§٦٣-ج/٤) */}
-              {ride.parcel_fetch ? "صاحب الغرض" : ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
+              {ride.parcel_fetch ? tr("صاحب الغرض") : ride.ride_type === "parcel" ? tr("مرسل الطرد") : tr("راكب TAXO")}
             </span>
           </div>
         ) : (
@@ -227,9 +227,9 @@ export function RideT2({
             )}
             <div className="t2-rd-rider-main">
               <div className="t2-rd-rider-name">
-                {ride.parcel_fetch ? "صاحب الغرض" : ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
+                {ride.parcel_fetch ? tr("صاحب الغرض") : ride.ride_type === "parcel" ? tr("مرسل الطرد") : tr("راكب TAXO")}
               </div>
-              <div className="t2-rd-rider-sub">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
+              <div className="t2-rd-rider-sub">{ride.pickup_address ?? tr("نقطة الانطلاق")}</div>
               {shared ? <div className="t2-rd-rider-share">{shareText}</div> : null}
             </div>
             {/* **الأجرةُ المقدَّرة** — كانت تحت اسم الراكب في الورقة القائمة، وتبقى في صفّه. **ومقرَّبةً كما تنشرها الخلفية**
@@ -268,7 +268,7 @@ export function RideT2({
           <p className="t2-fo-payer warn">
             <Icon name="event_repeat" fill />
             <span>
-              مدفوعة من اشتراك الراكب — <b>لا تستلم شيئاً</b>
+              {tr("مدفوعة من اشتراك الراكب —")}{" "}<b>{tr("لا تستلم شيئاً")}</b>
             </span>
           </p>
         ) : null}
@@ -296,7 +296,7 @@ export function RideT2({
             onClick={() => (ride.open_pause ? onResume() : onPause())}
             disabled={busy}
           >
-            {ride.open_pause ? "استئناف" : "نقطة توقف"}
+            {ride.open_pause ? tr("استئناف") : tr("نقطة توقف")}
           </button>
         ) : null}
 
@@ -310,7 +310,7 @@ export function RideT2({
         {needsCode ? <RideCodeT2 code={code} onChange={setCode} error={codeError} /> : null}
 
         {riding && !waiting ? (
-          <SwipeToFinish label="اسحب لإنهاء الرحلة" busy={busy} onDone={() => onAdvance()} />
+          <SwipeToFinish label={tr("اسحب لإنهاء الرحلة")} busy={busy} onDone={() => onAdvance()} />
         ) : (
           <button
             type="button"
@@ -337,7 +337,7 @@ export function RideT2({
         {/* **لا إلغاء بعد بدء الرحلة** — الإنهاءُ مخرجُه الوحيد (SPEC القسم 5)، كما في الورقة القائمة */}
         {riding ? null : (
           <button type="button" className="t2-rd-cancel" onClick={() => setPicking(true)} disabled={busy}>
-            إلغاء الرحلة
+            {tr("إلغاء الرحلة")}
           </button>
         )}
       </div>
@@ -347,7 +347,7 @@ export function RideT2({
         <div className="t2-rd-cx-shade">
           <div className="t2-rd-cx-sheet">
             <div className="t2-rd-grab" />
-            <h2 className="t2-rd-cx-title">سبب الإلغاء</h2>
+            <h2 className="t2-rd-cx-title">{tr("سبب الإلغاء")}</h2>
             <div className="t2-rd-cx-list">
               {reasons.map((option) => (
                 <button
@@ -363,15 +363,15 @@ export function RideT2({
             </div>
             {cancelCost?.cancel_penalty ? (
               <p className="t2-rd-cx-note warn">
-                رحلةٌ مضمونةٌ أكّدتَها — إلغاؤها يأخذ من محفظتك حتى{" "}
-                <b dir="ltr">{digits(cancelCost.cancel_penalty)}</b> {currencyLabel} للراكب، ويُنقص تقييمَك ويُسجَّل عليك إنذار.
-                وبلوغُ {digits(String(cancelCost.ban_threshold))} من الاعتذارات خلال {digits(String(cancelCost.ban_days))} يوماً
-                يحجبك عن الحجوزات المضمونة.
+                {tr("رحلةٌ مضمونةٌ أكّدتَها — إلغاؤها يأخذ من محفظتك حتى")}{" "}
+                <b dir="ltr">{digits(cancelCost.cancel_penalty)}</b> {currencyLabel}{" "}{tr("للراكب، ويُنقص تقييمَك ويُسجَّل عليك إنذار. وبلوغُ")}{" "}
+{digits(String(cancelCost.ban_threshold))}{" "}{tr("من الاعتذارات خلال")}{" "}{digits(String(cancelCost.ban_days))}{" "}{tr("يوماً يحجبك عن الحجوزات المضمونة.")}
+
               </p>
             ) : null}
             {reason?.code === "gender_mismatch" ? (
               <p className="t2-rd-cx-note">
-                لن تُحتسب عليكِ رسوم إلغاء. ويُسجَّل بلاغٌ على حساب الراكب، وتكرارُ البلاغات يوسم الحساب للمراجعة.
+                {tr("لن تُحتسب عليكِ رسوم إلغاء. ويُسجَّل بلاغٌ على حساب الراكب، وتكرارُ البلاغات يوسم الحساب للمراجعة.")}
               </p>
             ) : null}
             <button
@@ -383,10 +383,10 @@ export function RideT2({
                 onCancel(reason!);
               }}
             >
-              تأكيد الإلغاء
+              {tr("تأكيد الإلغاء")}
             </button>
             <button type="button" className="t2-rd-cancel" onClick={() => setPicking(false)}>
-              تراجع
+              {tr("تراجع")}
             </button>
           </div>
         </div>
@@ -429,10 +429,10 @@ function ApproachHead({
           <span className="t2-rd-big-num" dir="ltr">
             {digits(String(approachNow.minutes))}
           </span>
-          <span className="t2-rd-big-unit">د</span>
-          <span className="t2-rd-big-unit">· {digits(approachNow.km.toFixed(1))} كم</span>
+          <span className="t2-rd-big-unit">{tr("د")}</span>
+          <span className="t2-rd-big-unit">· {digits(approachNow.km.toFixed(1))}{" "}{tr("كم")}</span>
         </div>
-        <div className="t2-rd-caption">إلى نقطة الالتقاء</div>
+        <div className="t2-rd-caption">{tr("إلى نقطة الالتقاء")}</div>
       </div>
     );
   }
@@ -443,12 +443,12 @@ function ApproachHead({
           <span className="t2-rd-big-num" dir="ltr">
             {digits(km.toFixed(1))}
           </span>
-          <span className="t2-rd-big-unit">كم</span>
+          <span className="t2-rd-big-unit">{tr("كم")}</span>
         </div>
       ) : (
         <div className="t2-rd-big-title">{title}</div>
       )}
-      {ride.status === "accepted" ? <div className="t2-rd-caption">إلى نقطة الالتقاء</div> : null}
+      {ride.status === "accepted" ? <div className="t2-rd-caption">{tr("إلى نقطة الالتقاء")}</div> : null}
     </div>
   );
 }
@@ -473,14 +473,14 @@ function TripHead({
   const left =
     meters === null
       ? null
-      : `${eta !== null ? `${digits(String(eta))} د · ` : ""}${digits((meters / 1000).toFixed(1))} كم متبقية`;
+      : tr("{0}{1} كم متبقية", { 0: eta !== null ? tr("{0} د · ", { 0: digits(String(eta)) }) : "", 1: digits((meters / 1000).toFixed(1)) });
   return (
     <div className="t2-rd-head trip">
       <div className="t2-rd-head-main">
-        <div className="t2-rd-caption">إلى</div>
+        <div className="t2-rd-caption">{tr("إلى")}</div>
         {/* **ساعاتٌ بلا وجهة** (§٦٣-ج/٥) — الطلبُ أرسل نقطةَ الانطلاق وجهةً، **والوجهاتُ يقولها الراكبُ في السيارة** */}
         <div className="t2-rd-to">
-          {ride.ride_type === "hourly" && noDestination(ride) ? "الوجهاتُ يقولها الراكب" : (ride.dropoff_address ?? "الوجهة")}
+          {ride.ride_type === "hourly" && noDestination(ride) ? tr("الوجهاتُ يقولها الراكب") : (ride.dropoff_address ?? tr("الوجهة"))}
         </div>
         {left ? <div className="t2-rd-left">{left}</div> : null}
       </div>
@@ -492,7 +492,7 @@ function TripHead({
           <span className="t2-rd-fare-cur">{currencyLabel}</span>
         </div>
         <div className="t2-rd-fare-note">
-          {Number(ride.waiting_charge) > 0 || Number(ride.pause_charge) > 0 ? "حتى الآن" : "تقديرياً"}
+          {Number(ride.waiting_charge) > 0 || Number(ride.pause_charge) > 0 ? tr("حتى الآن") : tr("تقديرياً")}
         </div>
       </div>
     </div>
@@ -516,23 +516,23 @@ function StopsT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
             <Fragment key={stop.id}>
               <span className={`t2-rd-stop-dot${done ? " done" : at ? " here" : ""}`} />
               <span className={`t2-rd-stop-name${done ? " done" : ""}`}>
-                {stop.address ?? `محطة ${digits(String(stop.sequence))}`}
+                {stop.address ?? tr("محطة {0}", { 0: digits(String(stop.sequence)) })}
               </span>
-              <span className={`t2-rd-stop-tag${at ? " here" : ""}`}>محطة {digits(String(stop.sequence))}</span>
+              <span className={`t2-rd-stop-tag${at ? " here" : ""}`}>{tr("محطة")}{" "}{digits(String(stop.sequence))}</span>
             </Fragment>
           );
         })}
       </div>
       {waiting ? (
         <div className="t2-rd-wait">
-          <span>انتظارٌ {digits(String(waitedMinutes))} دقيقة</span>
+          <span>{tr("انتظارٌ")}{" "}{digits(String(waitedMinutes))}{" "}{tr("دقيقة")}</span>
           <span>
             {digits(ride.waiting_charge)} {currencyLabel}
           </span>
         </div>
       ) : null}
       {waiting?.over_max_wait ? (
-        <p className="t2-rd-strip-warn">تجاوز الانتظارُ السقف — يمكنك إنهاء الرحلة عند هذه المحطة بدل الاستئناف.</p>
+        <p className="t2-rd-strip-warn">{tr("تجاوز الانتظارُ السقف — يمكنك إنهاء الرحلة عند هذه المحطة بدل الاستئناف.")}</p>
       ) : null}
     </div>
   );
@@ -548,14 +548,14 @@ function PauseT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
   return (
     <div className={`t2-rd-strip${pause.over_max ? " warn" : ""}`}>
       <div className="t2-rd-strip-row">
-        <span className="t2-rd-strip-label">{pause.kind === "arrival" ? "بانتظار الراكب" : "وقفة"}</span>
-        <span className="t2-rd-strip-min">{digits(String(minutes))} دقيقة</span>
+        <span className="t2-rd-strip-label">{pause.kind === "arrival" ? tr("بانتظار الراكب") : tr("وقفة")}</span>
+        <span className="t2-rd-strip-min">{digits(String(minutes))}{" "}{tr("دقيقة")}</span>
         <span className="t2-rd-strip-end">
-          {billing ? `${digits(ride.pause_charge)} ${currencyLabel}` : `مهلة ${digits(String(free))} دقائق`}
+          {billing ? `${digits(ride.pause_charge)} ${currencyLabel}` : tr("مهلة {0} دقائق", { 0: digits(String(free)) })}
         </span>
       </div>
       {pause.over_max ? (
-        <p className="t2-rd-strip-warn">تجاوز الانتظارُ حدَّه — لك أن تستأنف أو تُنهي، والقرارُ قرارك.</p>
+        <p className="t2-rd-strip-warn">{tr("تجاوز الانتظارُ حدَّه — لك أن تستأنف أو تُنهي، والقرارُ قرارك.")}</p>
       ) : null}
     </div>
   );
@@ -570,8 +570,8 @@ function PauseT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
 function RideCodeT2({ code, onChange, error }: { code: string; onChange: (next: string) => void; error: string | null }) {
   return (
     <div className={error ? "t2-rd-code wrong" : "t2-rd-code"}>
-      <div className="t2-rd-code-title">اطلبي من الراكبة رمز الرحلة</div>
-      <div className="t2-rd-code-sub">لا تبدأ الرحلة قبل أن يطابق الرمز.</div>
+      <div className="t2-rd-code-title">{tr("اطلبي من الراكبة رمز الرحلة")}</div>
+      <div className="t2-rd-code-sub">{tr("لا تبدأ الرحلة قبل أن يطابق الرمز.")}</div>
       <div className="t2-rd-code-boxes" dir="ltr">
         {[0, 1, 2, 3].map((index) => (
           <span key={index} className={index === code.length ? "t2-rd-code-box on" : "t2-rd-code-box"} aria-hidden="true">
@@ -582,7 +582,7 @@ function RideCodeT2({ code, onChange, error }: { code: string; onChange: (next: 
           className="t2-rd-code-input"
           inputMode="numeric"
           autoComplete="one-time-code"
-          aria-label="رمز الرحلة"
+          aria-label={tr("رمز الرحلة")}
           value={code}
           onChange={(event) => onChange(digitsOnly(event.target.value).slice(0, 4))}
         />

@@ -31,17 +31,17 @@ import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** **سطرُ البطاقة القائمة بنصّه**: المتبقّي حين تكون الكميّةُ محدودة، ومن اقتناها — و`null` بلا حدٍّ فلا سطر. */
 function stockLine(skin: VehicleSkin): string | null {
   if (skin.remaining !== null) {
-    return `${skin.remaining > 0 ? `متبقٍّ ${digits(String(skin.remaining))}` : "نفدت الكمية"} · ${digits(
+    return tr("{0} · {1} اقتنوها", { 0: skin.remaining > 0 ? tr("متبقٍّ {0}", { 0: digits(String(skin.remaining)) }) : tr("نفدت الكمية"), 1: digits(
       String(skin.owners_count),
-    )} اقتنوها`;
+    ) });
   }
   return skin.owners_count > 0
-    ? `${digits(String(skin.owners_count))} اقتنوها`
+    ? tr("{0} اقتنوها", { 0: digits(String(skin.owners_count)) })
     : null;
 }
 
@@ -69,7 +69,7 @@ export function GarageScreen() {
         setOpen(null);
       } catch (caught) {
         setError(
-          caught instanceof ApiError ? caught.message : "تعذّر تفعيل المركبة",
+          caught instanceof ApiError ? caught.message : tr("تعذّر تفعيل المركبة"),
         );
       } finally {
         setBusy(false);
@@ -87,7 +87,7 @@ export function GarageScreen() {
     return (
       <div className="t2 t2-ax">
         <div className="t2-ax-center">
-          <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+          <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
         </div>
       </div>
     );
@@ -99,10 +99,10 @@ export function GarageScreen() {
     <div className="t2 t2-ax">
       <div className="t2-ax-scroll">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">مركباتي</h1>
+          <h1 className="t2-title">{tr("مركباتي")}</h1>
         </div>
 
         {/* **زرُّ المتجر بارزٌ في الأعلى**: الكراجُ يمتلئ من المتجر، ومن فتح
@@ -116,8 +116,8 @@ export function GarageScreen() {
             <Icon name="storefront" />
           </span>
           <span className="t2-gar-store-main">
-            <span className="t2-gar-store-title">متجر المركبات</span>
-            <span className="t2-gar-store-sub">مركباتٌ مميزةٌ ونادرةٌ وأسطورية</span>
+            <span className="t2-gar-store-title">{tr("متجر المركبات")}</span>
+            <span className="t2-gar-store-sub">{tr("مركباتٌ مميزةٌ ونادرةٌ وأسطورية")}</span>
           </span>
           <Icon name="chevron_left" className="t2-ax-chev" />
         </button>
@@ -134,13 +134,13 @@ export function GarageScreen() {
               <Icon name="visibility_off" />
             </span>
             <span className="t2-gar-nosub-main">
-              <span className="t2-gar-nosub-title">مركبتك لا تظهر على الخريطة</span>
+              <span className="t2-gar-nosub-title">{tr("مركبتك لا تظهر على الخريطة")}</span>
               <span className="t2-gar-nosub-text">
-                بلا اشتراكٍ ساري لا تصلك طلبات ولا يراك أحد. اشترك لتستقبل
-                الطلبات.
+                {tr("بلا اشتراكٍ ساري لا تصلك طلبات ولا يراك أحد. اشترك لتستقبل الطلبات.")}
+
               </span>
             </span>
-            <span className="t2-gar-nosub-go">اشترك</span>
+            <span className="t2-gar-nosub-go">{tr("اشترك")}</span>
           </button>
         ) : null}
 
@@ -153,13 +153,13 @@ export function GarageScreen() {
 
         {skins.length === 0 ? (
           <div className="t2-empty t2-ax-empty">
-            <b>لا مركبة في كراجك بعد</b>
-            <span>أول اشتراكٍ يهديك واحدة، والمتجر فيه غيرها.</span>
+            <b>{tr("لا مركبة في كراجك بعد")}</b>
+            <span>{tr("أول اشتراكٍ يهديك واحدة، والمتجر فيه غيرها.")}</span>
           </div>
         ) : (
           <>
             <p className="t2-gar-lede">
-              المفعَّلةُ وحدَها تظهر على الخريطة — اضغط أيَّ مركبةٍ لتفعيلها.
+              {tr("المفعَّلةُ وحدَها تظهر على الخريطة — اضغط أيَّ مركبةٍ لتفعيلها.")}
             </p>
             <div className="t2-gar-grid">
               {skins.map((skin) => {
@@ -181,9 +181,9 @@ export function GarageScreen() {
                     </span>
                     {/* **المفعَّلةُ معلَّمةٌ بعلامتين لا بواحدة**: الإطارُ **والكلمة** — الإطارُ وحدَه يُقرأ «مختارة» */}
                     {skin.active ? (
-                      <span className="t2-store-tag ok">مفعّلة</span>
+                      <span className="t2-store-tag ok">{tr("مفعّلة")}</span>
                     ) : (
-                      <span className="t2-store-tag">في كراجك</span>
+                      <span className="t2-store-tag">{tr("في كراجك")}</span>
                     )}
                     {stock ? <span className="t2-store-stock">{stock}</span> : null}
                     {skin.active ? (
@@ -196,8 +196,8 @@ export function GarageScreen() {
               })}
             </div>
             <p className="t2-gar-fine">
-              مركبتك واحدةٌ لحسابك كلِّه — تظهر مهما كانت السيارة التي تقودها
-              اليوم. وأنواعُها: {Object.values(RARITY_LABEL).join(" · ")}.
+              {tr("مركبتك واحدةٌ لحسابك كلِّه — تظهر مهما كانت السيارة التي تقودها اليوم. وأنواعُها:")}{" "}
+{Object.values(RARITY_LABEL).join(" · ")}.
             </p>
           </>
         )}

@@ -29,13 +29,13 @@ import { digits, isZeroAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./t2/fields.css";
-import "./t2/money.css";
+import "./t2/money.css"; import { tr } from "@/lib/i18n";
 
 // **خريطةٌ بنوعها لا `as const`** — فمصدرٌ يُضاف في الخلفية ولا اسمَ له هنا يُسقط `check:enum-coverage` بدل أن يُرسم مفتاحُه
 const SOURCE_TEXT: Record<DriverDebtSource, string> = {
-  ride_commission: "عمولة رحلة قبضتَ أجرتها نقداً",
+  ride_commission: tr("عمولة رحلة قبضتَ أجرتها نقداً"),
   // **بين المدن** (§٦٣-ج/٧) — السيارةُ كاملةً قُبضت نقداً، وعمولتُها دَينٌ كعمولة النقد
-  intercity_commission: "عمولةُ رحلةٍ بين المدن قُبضت نقداً",
+  intercity_commission: tr("عمولةُ رحلةٍ بين المدن قُبضت نقداً"),
 };
 
 export function DebtScreen() {
@@ -60,7 +60,7 @@ export function DebtScreen() {
 
   useEffect(() => {
     load().catch((caught: unknown) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّرت القراءة"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّرت القراءة")),
     );
   }, [load]);
 
@@ -71,7 +71,7 @@ export function DebtScreen() {
       await payDebtWithCliq(amount);
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر فتح المطالبة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح المطالبة"));
     } finally {
       setBusy(false);
     }
@@ -90,12 +90,12 @@ export function DebtScreen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => goBack()}
         >
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">المستحقّات عليك</h1>
+        <h1 className="t2-title">{tr("المستحقّات عليك")}</h1>
       </div>
 
       {error ? (
@@ -113,7 +113,7 @@ export function DebtScreen() {
       {state ? (
         <>
           <section className="t2-debt-total">
-            <span className="t2-debt-k">مجموع ما عليك</span>
+            <span className="t2-debt-k">{tr("مجموع ما عليك")}</span>
             <span className="t2-debt-amount">
               <span className="t2-debt-num" dir="ltr">
                 {digits(state.total)}
@@ -123,7 +123,7 @@ export function DebtScreen() {
             {isZeroAmount(state.total) ? (
               <p className="t2-debt-clear">
                 <Icon name="check_circle" fill />
-                لا مستحقّات عليك.
+                {tr("لا مستحقّات عليك.")}
               </p>
             ) : null}
           </section>
@@ -135,29 +135,29 @@ export function DebtScreen() {
                 <span className="t2-debt-alarm-icon" aria-hidden="true">
                   <Icon name="lock" />
                 </span>
-                <h2 className="t2-debt-alarm-title">استقبال الطلبات موقوف</h2>
+                <h2 className="t2-debt-alarm-title">{tr("استقبال الطلبات موقوف")}</h2>
               </div>
               <p className="t2-debt-alarm-body">
-                عليك {digits(state.total)} {currency} من عمولة رحلات قبضتَ
-                أجرتها نقداً.
+                {tr("عليك")}{" "}{digits(state.total)} {currency}{" "}{tr("من عمولة رحلات قبضتَ أجرتها نقداً.")}
+
                 {state.cliq_alias ? (
                   <>
                     {" "}
-                    حوّل المبلغ بكليك إلى{" "}
+                    {tr("حوّل المبلغ بكليك إلى")}{" "}
                     <b dir="ltr" className="t2-debt-alias">
                       {state.cliq_alias}
                     </b>{" "}
-                    ثم أكّد من الزرّ أدناه.
+                    {tr("ثم أكّد من الزرّ أدناه.")}
                   </>
                 ) : (
-                  " تواصل مع الإدارة لسداده — لم يُضبط حساب كليك لسوقك بعد."
+                  tr(" تواصل مع الإدارة لسداده — لم يُضبط حساب كليك لسوقك بعد.")
                 )}{" "}
-                <b>ويعود العمل فور وصول السداد كاملاً.</b>
+                <b>{tr("ويعود العمل فور وصول السداد كاملاً.")}</b>
               </p>
               {/* **والجزئيُّ يُقال بعينه** فلا ينتظر رفعاً لا يأتي */}
               <p className="t2-debt-alarm-fine">
-                السداد الجزئيّ مقبول ويُنقص المبلغ، لكن الاستقبال لا يعود إلا
-                عند بلوغه صفراً.
+                {tr("السداد الجزئيّ مقبول ويُنقص المبلغ، لكن الاستقبال لا يعود إلا عند بلوغه صفراً.")}
+
               </p>
             </section>
           ) : null}
@@ -165,7 +165,7 @@ export function DebtScreen() {
           {!isZeroAmount(state.total) ? (
             <section className="t2-debt-pay">
               <label className="t2-fld-label" htmlFor="debt-amount">
-                كم تريد أن تسدّد الآن؟
+                {tr("كم تريد أن تسدّد الآن؟")}
               </label>
               {/* **«سدّد كلَّه» بلاطةُ ورقة السحب نفسُها** (`t2-wds-tile`) — حين يُشعَل التقريبُ وحدَه: رقمُها `pay_all_amount` كما
                   حسبته الخلفية (الدَّينُ مقرَّباً للأعلى)، **وتعيد الحقلَ إليه** إن عدّله. ومطفأً الحقلُ يُملأ بالمستحقّ كما كان */}
@@ -177,7 +177,7 @@ export function DebtScreen() {
                     onClick={() => setAmount(state.pay_all_amount)}
                     className="t2-wds-tile"
                   >
-                    <span className="t2-wds-tile-k">سدّد كلَّه</span>
+                    <span className="t2-wds-tile-k">{tr("سدّد كلَّه")}</span>
                     <span className="t2-wds-tile-v">
                       <span className="t2-wds-tile-num" dir="ltr">
                         {digits(state.pay_all_amount)}
@@ -204,14 +204,14 @@ export function DebtScreen() {
                 <p className="t2-fld-hint">
                   {unitHint(unit, currency)}
                   {state.pay_all_amount !== state.total
-                    ? " — و«سدّد كلَّه» مقرَّبٌ للأعلى، والفرقُ يعود إلى محفظتك قيداً صريحاً عند التأكيد."
+                    ? tr(" — و«سدّد كلَّه» مقرَّبٌ للأعلى، والفرقُ يعود إلى محفظتك قيداً صريحاً عند التأكيد.")
                     : ""}
                 </p>
               ) : null}
               <p className="t2-fld-hint">
-                تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم
-                يراجعها مشرف خلال {digits(String(state.review_min_minutes))} إلى{" "}
-                {digits(String(state.review_max_minutes))} دقائق.
+                {tr("تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم يراجعها مشرف خلال")}{" "}
+{digits(String(state.review_min_minutes))}{" "}{tr("إلى")}{" "}
+                {digits(String(state.review_max_minutes))}{" "}{tr("دقائق.")}
               </p>
               <button
                 type="button"
@@ -219,11 +219,11 @@ export function DebtScreen() {
                 onClick={() => void pay()}
                 disabled={busy || !state.cliq_alias || unitError !== null}
               >
-                {busy ? "جارٍ…" : "سدّد بكليك"}
+                {busy ? tr("جارٍ…") : tr("سدّد بكليك")}
               </button>
               {!state.cliq_alias ? (
                 <p className="t2-debt-warn">
-                  لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.
+                  {tr("لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.")}
                 </p>
               ) : null}
             </section>
@@ -231,7 +231,7 @@ export function DebtScreen() {
 
           {pending.length > 0 ? (
             <>
-              <h2 className="t2-section">مطالبة بانتظار التأكيد</h2>
+              <h2 className="t2-section">{tr("مطالبة بانتظار التأكيد")}</h2>
               <div className="t2-debt-list">
                 {pending.map((claim) => (
                   <button
@@ -247,7 +247,7 @@ export function DebtScreen() {
                       <span dir="ltr">{digits(claim.amount)}</span>{" "}
                       {CURRENCY_LABEL[claim.currency]}
                     </span>
-                    <span className="t2-debt-claim-open">افتح التفاصيل</span>
+                    <span className="t2-debt-claim-open">{tr("افتح التفاصيل")}</span>
                     <Icon name="chevron_left" className="t2-debt-claim-go" />
                   </button>
                 ))}
@@ -257,7 +257,7 @@ export function DebtScreen() {
 
           {state.rows.length > 0 ? (
             <>
-              <h2 className="t2-section">ممّ نشأت</h2>
+              <h2 className="t2-section">{tr("ممّ نشأت")}</h2>
               <div className="t2-debt-list">
                 {state.rows.map((row) => (
                   <div key={row.id} className="t2-debt-row">

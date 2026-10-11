@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 import type { Offer } from "@/lib/ride";
 import { bookedTime } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const DASH = 163;
 
@@ -76,7 +76,7 @@ export function OfferSheet({
               <span className="eqb eqb-2" />
               <span className="eqb eqb-3" />
             </span>
-            <span className="text-11 font-bold">نغمة + اهتزاز</span>
+            <span className="text-11 font-bold">{tr("نغمة + اهتزاز")}</span>
           </div>
         </div>
         <div className="rounded-26 border border-line bg-surface px-18 pb-20 pt-18 shadow-offer">
@@ -120,7 +120,7 @@ export function OfferSheet({
                 يمكن تجنّبه ببضع بكسلات. ولا تظهر على طلبٍ بلا تفضيل */}
             {offer.ride.gender_preference !== "any" ? (
               <span className="mb-4 inline-block rounded-full border border-brand-brd bg-brand-soft px-9 py-3 text-10 font-bold text-brand">
-                طلب نسائي
+                {tr("طلب نسائي")}
               </span>
             ) : null}
             {/* شارةُ الحجز (12-ط) — **بموعدها لا بكلمة «مجدولة» وحدها**: الكلمةُ
@@ -135,12 +135,12 @@ export function OfferSheet({
                 يقع أو لا يقع، ووعدٌ بشريكٍ لا يجيء يُقرأ خُلفاً */}
             {Number(offer.ride.share_discount_percent) > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
-                مشتركة — قد ينضم راكب ثانٍ
+                {tr("مشتركة — قد ينضم راكب ثانٍ")}
               </span>
             ) : null}
             {offer.ride.scheduled_for ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
-                محجوزة — {bookedTime(offer.ride.scheduled_for)}
+                {tr("محجوزة —")}{" "}{bookedTime(offer.ride.scheduled_for)}
               </span>
             ) : null}
             {/* شارةُ المحطات (12-ب) — **وهي من صنف الشارتين فوقها لا زينة**:
@@ -153,8 +153,8 @@ export function OfferSheet({
             {offer.ride.stops.length > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
                 {offer.ride.stops.length === 1
-                  ? "محطة وسيطة واحدة"
-                  : `${digits(String(offer.ride.stops.length))} محطات وسيطة`}
+                  ? tr("محطة وسيطة واحدة")
+                  : tr("{0} محطات وسيطة", { 0: digits(String(offer.ride.stops.length)) })}
               </span>
             ) : null}
             {/* مبلغٌ مستوفى لكبتنٍ آخر (`CANCELLATION-FEE.md` §6-أ) —
@@ -166,8 +166,8 @@ export function OfferSheet({
                 يقرّر. ومكانُها فوق السعر لأن السعرَ وحده لا يقول كم سيقبض */}
             {Number(offer.ride.carried_cancellation_fee ?? 0) > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-warn">
-                تحمل {digits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
-                {currencyLabel} لكبتنٍ آخر
+                {tr("تحمل")}{" "}{digits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
+                {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
               </span>
             ) : null}
             <div className="text-23 font-bold text-ink">
@@ -186,22 +186,22 @@ export function OfferSheet({
 
           <div className="text-end">
             <div className="text-15 font-bold text-ink">
-              {digits(offer.distanceKm.toFixed(1))} كم
+              {digits(offer.distanceKm.toFixed(1))}{" "}{tr("كم")}
             </div>
-            <div className="text-10.5 text-muted">حتى الراكب</div>
+            <div className="text-10.5 text-muted">{tr("حتى الراكب")}</div>
           </div>
         </div>
 
         <div className="mb-15 grid grid-cols-[12px_1fr] gap-x-10 gap-y-4">
           <span className="mx-auto mt-5 block size-8 rounded-full bg-ink" />
           <div className="text-13 text-ink">
-            {offer.ride.pickup_address ?? "نقطة الانطلاق"}
+            {offer.ride.pickup_address ?? tr("نقطة الانطلاق")}
           </div>
           <span className="mx-auto block h-12 w-2 bg-line" />
           <span />
           <span className="mx-auto mt-2 block size-8 rounded-2 bg-muted" />
           <div className="text-13 text-muted">
-            {offer.ride.dropoff_address ?? "الوجهة"}
+            {offer.ride.dropoff_address ?? tr("الوجهة")}
           </div>
         </div>
 
@@ -213,7 +213,7 @@ export function OfferSheet({
             style={{ flex: 2.5 }}
             className="pressable rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
           >
-            قبول
+            {tr("قبول")}
           </button>
           <button
             type="button"
@@ -221,7 +221,7 @@ export function OfferSheet({
             disabled={busy}
             className="pressable flex-1 rounded-15 border border-line p-15 text-center text-13 font-semibold text-muted disabled:opacity-50"
           >
-            رفض
+            {tr("رفض")}
           </button>
         </div>
         </div>

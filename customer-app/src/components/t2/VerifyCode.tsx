@@ -14,19 +14,19 @@ import type { ChallengeResponse, OtpChannel, VerificationMethod } from "@/api/ty
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { startPhoneVerification, type PhoneChallenge } from "@/lib/firebase";
 import { toE164 } from "@/lib/phone";
-import { AuthCode, AuthError, AuthPage, AuthTitle, AuthTop, Icon } from "@/taxo2";
+import { AuthCode, AuthError, AuthPage, AuthTitle, AuthTop, Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
 
 /** القناةُ التي وصل فيها الرمزُ فعلاً (12-هـ) — من الخلفية لا تُخمَّن. */
 const CHANNEL_LABEL: Record<string, string> = {
-  whatsapp_otp: "في واتساب",
-  sms_otp: "برسالة نصية",
+  whatsapp_otp: tr("في واتساب"),
+  sms_otp: tr("برسالة نصية"),
 };
 
 const FALLBACK_LABEL: Record<string, string> = {
-  whatsapp_otp: "أرسله في واتساب",
-  sms_otp: "أرسله برسالة نصية",
+  whatsapp_otp: tr("أرسله في واتساب"),
+  sms_otp: tr("أرسله برسالة نصية"),
 };
 
 function clock(seconds: number): string {
@@ -68,7 +68,7 @@ export function VerifyCode({
   onLeave,
   step,
   total,
-  submitLabel = "تحقق",
+  submitLabel = tr("تحقق"),
   outerError,
   busy = false,
 }: Props) {
@@ -96,7 +96,7 @@ export function VerifyCode({
           const firebase = firebaseConfigOf(config?.providers.firebase_auth);
           if (!firebase) {
             console.error("firebase config missing in GET /config providers");
-            throw new Error("التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل.");
+            throw new Error(tr("التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل."));
           }
           challenge.current = await startPhoneVerification(firebase, e164, RECAPTCHA_CONTAINER);
           setCooldown(60);
@@ -106,7 +106,7 @@ export function VerifyCode({
         setChannel(response.channel);
         setCooldown(response.resend_after ?? 60);
       } catch (caught) {
-        setError(caught instanceof ApiError || caught instanceof Error ? caught.message : "تعذّر إرسال رمز التحقق");
+        setError(caught instanceof ApiError || caught instanceof Error ? caught.message : tr("تعذّر إرسال رمز التحقق"));
         const next = caught instanceof ApiError ? caught.field("fallback_channel") : null;
         setFallback(next === "sms_otp" || next === "whatsapp_otp" ? next : null);
       } finally {
@@ -135,13 +135,13 @@ export function VerifyCode({
     setError(null);
     try {
       if (method === "firebase") {
-        if (!challenge.current) throw new Error("أعد إرسال الرمز أولاً");
+        if (!challenge.current) throw new Error(tr("أعد إرسال الرمز أولاً"));
         onProven(await challenge.current.confirm(code));
         return;
       }
       onProven(code);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "رمز التحقق غير صحيح أو انتهت صلاحيته");
+      setError(caught instanceof Error ? caught.message : tr("رمز التحقق غير صحيح أو انتهت صلاحيته"));
     } finally {
       setChecking(false);
     }
@@ -154,13 +154,13 @@ export function VerifyCode({
       <AuthTop onBack={onLeave ?? onBack} step={step} total={total} />
       <AuthTitle
         step
-        title="أدخل رمز التحقق"
+        title={tr("أدخل رمز التحقق")}
         sub={
           <>
-            {channel && CHANNEL_LABEL[channel] ? `أرسلنا رمزاً ${CHANNEL_LABEL[channel]} من ${digits} أرقام إلى ` : `أرسلنا رمزاً من ${digits} أرقام إلى `}
+            {channel && CHANNEL_LABEL[channel] ? tr("أرسلنا رمزاً {0} من {1} أرقام إلى ", { 0: CHANNEL_LABEL[channel], 1: digits }) : tr("أرسلنا رمزاً من {0} أرقام إلى ", { 0: digits })}
             <strong dir="ltr">{e164}</strong> ·{" "}
             <button type="button" className="t2-auth-link" onClick={onBack}>
-              تعديل الرقم
+              {tr("تعديل الرقم")}
             </button>
           </>
         }
@@ -173,11 +173,11 @@ export function VerifyCode({
           <Icon name="schedule" />
           {cooldown > 0 ? (
             <span>
-              إعادة الإرسال بعد <strong>{clock(cooldown)}</strong>
+              {tr("إعادة الإرسال بعد")}{" "}<strong>{clock(cooldown)}</strong>
             </span>
           ) : (
             <button type="button" onClick={() => void send()} disabled={sending}>
-              إعادة إرسال الرمز
+              {tr("إعادة إرسال الرمز")}
             </button>
           )}
         </div>
@@ -187,7 +187,7 @@ export function VerifyCode({
 
         <div className="t2-auth-actions">
           <button type="submit" className="t2-button primary" disabled={code.length < digits || sending || checking || busy}>
-            {checking || busy ? "لحظة…" : submitLabel}
+            {checking || busy ? tr("لحظة…") : submitLabel}
           </button>
           {fallback ? (
             <button type="button" className="t2-button secondary" onClick={() => void send(fallback)} disabled={sending}>

@@ -63,7 +63,7 @@ import {
   registerNativePush,
   type PushState,
 } from "@/lib/push";
-import { setSplashStatus } from "@/lib/splash";
+import { setSplashStatus } from "@/lib/splash"; import { tr } from "@/lib/i18n";
 
 /** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
  *  أو خطأٌ لم يمرّ بعميل HTTP أصلاً. وما عدا ذلك قاله الخادمُ عن الحساب. */
@@ -300,7 +300,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (on) {
         // **البصمةُ تُطلب عند الإشعال لا عند أوّل استعمال**: من أشعلها بلا
         // إصبعٍ يظنّها تعمل، ثمّ يكتشف يومَ يحتاجها أنها لا تفتح
-        await proveBiometry("لتفعيل الدخول بالبصمة");
+        await proveBiometry(tr("لتفعيل الدخول بالبصمة"));
         await enableBiometric(tokens.refresh());
         // **بيتٌ واحد**: يُنزع من `localStorage` بعد أن يستقرّ في المخزن الآمن
         tokens.detachFromLocalStorage();
@@ -318,7 +318,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    *  يقول إن الجلسةَ قامت — و«فُتح المخزن» ليس «دخلتَ».
    */
   const signInWithBiometry = useCallback(async () => {
-    const token = await unlockToken("لتسجيل الدخول إلى TAXO");
+    const token = await unlockToken(tr("لتسجيل الدخول إلى TAXO"));
     tokens.adoptRefresh(token);
     // التجديدُ يستهلك المفتوحَ ويُصدر زوجاً جديداً، و`tokens.save` داخله
     // يعيد كتابةَ الجديد في المخزن الآمن
@@ -327,7 +327,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // **الرمزُ المخزَّنُ ميّت** — يُمحى ولا يُترك زرّاً يفشل كلَّ مرّة
       await forgetToken();
       await refreshBiometry();
-      throw new Error("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور");
+      throw new Error(tr("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور"));
     }
     setUser(await getMe());
     await refreshBiometry();

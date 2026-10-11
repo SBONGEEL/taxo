@@ -19,7 +19,7 @@
  */
 
 import type { FieldRule } from "@/api/types";
-import { rulesFor } from "@/lib/validation";
+import { rulesFor } from "@/lib/validation"; import { tr } from "@/lib/i18n";
 
 /** قاعدةُ كلمة المرور في نموذج التسجيل — أو `null` إن لم تصل بعد. */
 export function passwordRule(): FieldRule | null {
@@ -47,11 +47,11 @@ export function passwordError(value: string): string | null {
   const min = rule.min_length;
   if (min !== undefined && value.length < min) {
     const left = min - value.length;
-    return `أقصر من المطلوب — بقيت ${left} ${left === 1 ? "خانة" : "خانات"}`;
+    return tr("أقصر من المطلوب — بقيت {0} {1}", { 0: left, 1: left === 1 ? tr("خانة") : tr("خانات") });
   }
   const max = rule.max_length;
   if (max !== undefined && value.length > max) {
-    return rule.messages.max_length ?? `أطول من المسموح (${max} خانة)`;
+    return rule.messages.max_length ?? tr("أطول من المسموح ({0} خانة)", { 0: max });
   }
   return null;
 }
@@ -63,7 +63,7 @@ export function passwordError(value: string): string | null {
  */
 export function confirmError(password: string, confirm: string): string | null {
   if (confirm.length === 0) return null;
-  return confirm === password ? null : "الكلمتان غير متطابقتين";
+  return confirm === password ? null : tr("الكلمتان غير متطابقتين");
 }
 
 /** هل الكلمتان صالحتان للإرسال؟ — نفسُ الشرطين اللذين يرسمان الخطأ.

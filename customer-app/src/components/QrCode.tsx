@@ -13,7 +13,7 @@ import QRCode from "qrcode";
 
 import { useTheme } from "@/lib/theme";
 
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 export function QrCode({
   payload,
@@ -46,7 +46,7 @@ export function QrCode({
   return (
     <div className="t2-m-qr-wrap">
       {dataUrl ? (
-        <img src={dataUrl} alt="رمز الدفع" width={size} height={size} className="t2-m-qr" />
+        <img src={dataUrl} alt={tr("رمز الدفع")} width={size} height={size} className="t2-m-qr" />
       ) : (
         <span className="t2-m-qr-wait" style={{ width: size, height: size }} aria-hidden="true" />
       )}

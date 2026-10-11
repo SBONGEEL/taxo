@@ -4,7 +4,7 @@
  * لاتينية** (`DISPLAY_LOCALE`) كقاعدة المشروع كلِّه، وساعةٍ بأربعٍ وعشرين كما في اللوحة.
  */
 
-import { DISPLAY_LOCALE } from "@/lib/utils";
+import { DISPLAY_LOCALE } from "@/lib/utils"; import { language, tr } from "@/lib/i18n";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,8 +23,8 @@ export function whenParts(iso: string, today: number): { day: string; time: stri
     hourCycle: "h23",
   });
   const ms = at.getTime();
-  if (ms >= today) return { day: "اليوم", time };
-  if (ms >= today - DAY_MS) return { day: "أمس", time };
+  if (ms >= today) return { day: tr("اليوم"), time };
+  if (ms >= today - DAY_MS) return { day: tr("أمس"), time };
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
 }
 
@@ -34,10 +34,11 @@ export function aheadParts(iso: string, today: number): { day: string; time: str
   const at = new Date(iso);
   const hours = at.getHours();
   const time = `${String(hours % 12 || 12).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
-  const half = hours < 12 ? "ص" : "م";
+  // **«م» مفتاحٌ لمعنيين** (المساءُ هنا، والمترُ في الملاحة) — فالفرنسيّةُ تُختار هنا بالسياق، **والعربيُّ كما كان حرفاً**
+  const half = hours < 12 ? (language === "fr" ? "AM" : "ص") : (language === "fr" ? "PM" : "م");
   const ms = at.getTime();
-  if (ms < today + DAY_MS) return { day: "اليوم", time, half };
-  if (ms < today + 2 * DAY_MS) return { day: "غداً", time, half };
+  if (ms < today + DAY_MS) return { day: tr("اليوم"), time, half };
+  if (ms < today + 2 * DAY_MS) return { day: tr("غداً"), time, half };
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time, half };
 }
 

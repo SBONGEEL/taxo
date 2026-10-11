@@ -16,7 +16,7 @@ import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/labels";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 /** نبرةُ الشارة بالحال — المؤكَّدُ نجاحٌ، والمنتظَرُ تنبيه، والنزاعُ والفشلُ خطأ، والمستردُّ محايد. */
 const TONE: Record<PaymentStatus, string> = {
@@ -44,7 +44,7 @@ const ICON: Record<PaymentMethod, string> = {
 export function PaymentsList({ payments }: { payments: Payment[] }) {
   return (
     <section>
-      <h2 className="t2-section">دفعات هذه الرحلة</h2>
+      <h2 className="t2-section">{tr("دفعات هذه الرحلة")}</h2>
       <div className="t2-list">
         {payments.map((payment) =>
           payment.method === "promo" ? (
@@ -67,11 +67,11 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
                 <span className="t2-m-pay-sub">{formatDateTime(payment.confirmed_at ?? payment.created_at)}</span>
                 {payment.cliq_transfer_reference ? (
                   <span className="t2-m-pay-sub">
-                    مرجع الحوالة: <b dir="ltr">{payment.cliq_transfer_reference}</b>
+                    {tr("مرجع الحوالة:")}{" "}<b dir="ltr">{payment.cliq_transfer_reference}</b>
                   </span>
                 ) : null}
                 {payment.status === "disputed" && payment.dispute_reason ? (
-                  <span className="t2-m-pay-dispute">نزاع: {payment.dispute_reason} — تفصل فيه الإدارة.</span>
+                  <span className="t2-m-pay-dispute">{tr("نزاع:")}{" "}{payment.dispute_reason}{" "}{tr("— تفصل فيه الإدارة.")}</span>
                 ) : null}
               </span>
               <span className="t2-m-pay-end">

@@ -27,7 +27,7 @@ import {
   AuthTitle,
   AuthTop,
   Icon,
-} from "@/taxo2";
+} from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 type Failure = { field: "phone" | "password" | null; message: string };
 
@@ -55,7 +55,7 @@ export function LoginScreen() {
   const complete = looksComplete(phone, nationalLength);
   const short =
     touched && phone.length > 0 && !complete && dialCode !== null
-      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode })
       : null;
 
   async function submit(event: React.FormEvent) {
@@ -70,7 +70,7 @@ export function LoginScreen() {
       const response = await login(phone, password, country);
       // **جوابان لا جواب**: حسابُ طاقمٍ يحمل عاملاً ثانياً يعود بلا توكن (12-د) — ويُقال له ذلك صراحةً
       if (response.totp_required || !response.user || !response.tokens) {
-        setFailure({ field: null, message: "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة." });
+        setFailure({ field: null, message: tr("هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.") });
         return;
       }
       signIn({ user: response.user, tokens: response.tokens });
@@ -82,7 +82,7 @@ export function LoginScreen() {
         setFailure({ field: at, message: caught.message });
         if (at) document.getElementById(at)?.focus();
       } else {
-        setFailure({ field: null, message: "تعذّر الدخول — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر الدخول — أعد المحاولة") });
       }
     } finally {
       setBusy(false);
@@ -94,14 +94,14 @@ export function LoginScreen() {
     <AuthPage>
       {/* **الرجوعُ إلى الترحيب** (R02 ← R01) — شاشةُ دخولٍ لا تاريخَ قبلها في التطبيق، فيُطلب الترحيبُ ولا يُرجَع في التاريخ */}
       <AuthTop onBack={reopenWelcome} />
-      <AuthTitle title="أهلاً من جديد" sub="ادخل برقم هاتفك وكلمة المرور." />
+      <AuthTitle title={tr("أهلاً من جديد")} sub={tr("ادخل برقم هاتفك وكلمة المرور.")} />
 
       <form onSubmit={submit} className="t2-auth-form" noValidate>
         {/* **سوقان أو أكثر ⇒ يُختار السوق** — زرّان لا قائمة: سوقان اثنان، والقائمةُ تخفي أحدَهما خلف ضغطة */}
         {countries.length > 1 ? (
-          <AuthBlock label="السوق">
+          <AuthBlock label={tr("السوق")}>
             <AuthChoice
-              label="السوق"
+              label={tr("السوق")}
               value={country}
               options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
               onChange={setCountry}
@@ -110,11 +110,11 @@ export function LoginScreen() {
         ) : null}
 
         <AuthBlock
-          label="رقم الهاتف"
+          label={tr("رقم الهاتف")}
           htmlFor="phone"
           error={
             dialCode === null
-              ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+              ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
               : short ?? (failure?.field === "phone" ? failure.message : null)
           }
         >
@@ -131,7 +131,7 @@ export function LoginScreen() {
           />
         </AuthBlock>
 
-        <AuthBlock label="كلمة المرور" htmlFor="password" error={failure?.field === "password" ? failure.message : null}>
+        <AuthBlock label={tr("كلمة المرور")} htmlFor="password" error={failure?.field === "password" ? failure.message : null}>
           <AuthSecret
             id="password"
             name="password"
@@ -144,7 +144,7 @@ export function LoginScreen() {
         </AuthBlock>
 
         <Link to="/forgot-password" className="t2-auth-link t2-auth-forgot">
-          نسيت كلمة المرور؟
+          {tr("نسيت كلمة المرور؟")}
         </Link>
 
         {failure && failure.field === null ? (
@@ -158,7 +158,7 @@ export function LoginScreen() {
 
         <div className="t2-auth-actions">
           <button type="submit" className="t2-button primary" disabled={busy || dialCode === null || !complete || password.length < 1}>
-            {busy ? "لحظة…" : "دخول"}
+            {busy ? tr("لحظة…") : tr("دخول")}
           </button>
 
           {/* **ثلاثةٌ مجتمعة**: جهازٌ أصليّ · بصمةٌ متاحة · **ورمزٌ محفوظٌ فعلاً** (`armed`) */}
@@ -174,13 +174,13 @@ export function LoginScreen() {
                   setBioBusy(true);
                   void signInWithBiometry()
                     .catch((caught: unknown) =>
-                      setFailure({ field: null, message: caught instanceof Error ? caught.message : "تعذّر الدخول بالبصمة" }),
+                      setFailure({ field: null, message: caught instanceof Error ? caught.message : tr("تعذّر الدخول بالبصمة") }),
                     )
                     .finally(() => setBioBusy(false));
                 }}
               >
                 <Icon name="fingerprint" />
-                <span>الدخول بـ{biometryLabel(biometry.kind)}</span>
+                <span>{tr("الدخول بـ")}{biometryLabel(biometry.kind)}</span>
               </button>
             </>
           ) : null}
@@ -188,7 +188,7 @@ export function LoginScreen() {
       </form>
 
       <p className="t2-auth-foot">
-        جديد على TAXO؟ <Link to="/register">أنشئ حساباً</Link>
+        {tr("جديد على TAXO؟")}{" "}<Link to="/register">{tr("أنشئ حساباً")}</Link>
       </p>
     </AuthPage>
   );

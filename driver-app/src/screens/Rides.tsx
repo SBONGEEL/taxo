@@ -36,7 +36,7 @@ import { Icon } from "@/taxo2";
 
 import { byMonth, startOfToday, whenParts } from "./t2/when";
 
-import "./t2/rides.css";
+import "./t2/rides.css"; import { tr } from "@/lib/i18n";
 
 /** حدُّ الخلفية 100، وصفحةٌ من عشرين تكفي شاشةً وتترك «المزيد» صادقاً. */
 const PAGE_SIZE = 20;
@@ -77,7 +77,7 @@ export function RidesScreen() {
       setMore(page.length === PAGE_SIZE);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة السجل",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة السجل"),
       );
     } finally {
       setBusy(false);
@@ -94,10 +94,10 @@ export function RidesScreen() {
   return (
     <div className="t2 t2-log scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">سجل الرحلات</h1>
+        <h1 className="t2-title">{tr("سجل الرحلات")}</h1>
       </div>
 
       {error ? (
@@ -115,8 +115,8 @@ export function RidesScreen() {
 
       {rides?.length === 0 ? (
         <div className="t2-empty t2-log-empty">
-          <b>لا رحلات بعد</b>
-          <span>ستظهر هنا كل رحلةٍ أنهيتَها، بأجرتها وتفصيلها.</span>
+          <b>{tr("لا رحلات بعد")}</b>
+          <span>{tr("ستظهر هنا كل رحلةٍ أنهيتَها، بأجرتها وتفصيلها.")}</span>
         </div>
       ) : null}
 
@@ -143,7 +143,7 @@ export function RidesScreen() {
           disabled={busy}
           onClick={() => void load(rides?.length ?? 0)}
         >
-          {busy ? "…" : "عرض المزيد"}
+          {busy ? "…" : tr("عرض المزيد")}
         </button>
       ) : null}
     </div>
@@ -170,11 +170,11 @@ function RideCard({
   // «نسائية» مكانَ الفئة كما في R12 — **وصفٌ للطلب لا لصاحبته**
   const kind =
     ride.gender_preference === "female"
-      ? "نسائية"
+      ? tr("نسائية")
       : CATEGORY_LABEL[ride.vehicle_category];
   const meta = [
     kind,
-    `${trimDistance(ride.actual_distance_km ?? ride.distance_km)} كم`,
+    tr("{0} كم", { 0: trimDistance(ride.actual_distance_km ?? ride.distance_km) }),
     payment_methods.length > 0
       ? payment_methods.map((method) => METHOD_LABEL[method]).join(" + ")
       : null,
@@ -197,11 +197,11 @@ function RideCard({
             // **«بانتظار تأكيدك» غيرُ «لم تُدفع»**: الأولى صفُّ دفعةٍ ينتظر ضغطتَه هو، والثانيةُ راكبٌ لم يختر بعد —
             // وعليه في الأولى عملٌ وليس عليه في الثانية شيء. وخلطُهما يجعله يفتش عن زرٍّ لا وجودَ له
             <span className="t2-chip warn">
-              {awaiting ? "بانتظار تأكيدك" : "لم تُدفع"}
+              {awaiting ? tr("بانتظار تأكيدك") : tr("لم تُدفع")}
             </span>
           ) : null}
           {has_open_dispute ? (
-            <span className="t2-chip warn">نزاع</span>
+            <span className="t2-chip warn">{tr("نزاع")}</span>
           ) : null}
           <span className={`t2-chip ${chipTone(ride.status)}`}>
             {RIDE_STATUS_LABEL[ride.status]}
@@ -212,10 +212,10 @@ function RideCard({
       <span className={off ? "t2-log-route off" : "t2-log-route"}>
         <span className="t2-log-dot" aria-hidden="true" />
         <span className="t2-log-place">
-          {ride.pickup_address ?? "نقطة الانطلاق"}
+          {ride.pickup_address ?? tr("نقطة الانطلاق")}
         </span>
         <span className="t2-log-dot to" aria-hidden="true" />
-        <span className="t2-log-place">{ride.dropoff_address ?? "الوجهة"}</span>
+        <span className="t2-log-place">{ride.dropoff_address ?? tr("الوجهة")}</span>
       </span>
 
       <span className="t2-log-foot">
@@ -240,8 +240,8 @@ function RideCard({
           <Icon name={viaCliq ? "balance" : "payments"} />
           <span className="t2-log-act-text">
             {viaCliq
-              ? "وصلتك الحوالة؟ أكّد أو اعترض"
-              : "استلمتَ المبلغ كاش؟ أكّد استلامه"}
+              ? tr("وصلتك الحوالة؟ أكّد أو اعترض")
+              : tr("استلمتَ المبلغ كاش؟ أكّد استلامه")}
           </span>
           <Icon name="chevron_left" />
         </span>

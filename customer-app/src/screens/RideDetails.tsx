@@ -34,7 +34,7 @@ import {
 } from "@/lib/utils";
 import { fareLineRows } from "@/lib/fareLines";
 import { Icon } from "@/taxo2";
-import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2";
+import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 /** **ما يغطّي الشريطَ من حوافّه** — الرجوعُ وشريطُ الحالة فوق، والورقةُ تعلو قاعَه بثلاثين: فيُضبط الإطارُ على ما يُرى منه. */
 const STRIP_PADDING = { top: 76, bottom: 54, left: 48, right: 48 };
@@ -77,7 +77,7 @@ export function RideDetailsScreen() {
         setRatings(entries);
       })
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الرحلة"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الرحلة")),
       )
       .finally(() => setLoading(false));
   }, [rideId]);
@@ -112,7 +112,7 @@ export function RideDetailsScreen() {
   /** الرجوعُ فوق الخريطة — **ثابتٌ حين تُمرَّر الصفحة** (موضعُه في R06). */
   const floatingBack = (
     <div className="t2-m-ride-top">
-      <button type="button" className="t2-mapbtn" aria-label="رجوع" onClick={goBack}>
+      <button type="button" className="t2-mapbtn" aria-label={tr("رجوع")} onClick={goBack}>
         <Icon name="arrow_forward" />
       </button>
     </div>
@@ -128,11 +128,11 @@ export function RideDetailsScreen() {
         <div className={token ? "t2-m-ride-sheet" : "t2-m-ride-sheet flat"}>
           <div className="t2-m-ride-head">
             {token ? null : (
-              <button type="button" className="t2-back" aria-label="رجوع" onClick={goBack}>
+              <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
                 <Icon name="arrow_forward" />
               </button>
             )}
-            <h1 className="t2-m-ride-title">تفاصيل الرحلة</h1>
+            <h1 className="t2-m-ride-title">{tr("تفاصيل الرحلة")}</h1>
           </div>
           <span className="t2-m-skel line" aria-hidden="true" />
           <span className="t2-m-skel card" aria-hidden="true" />
@@ -146,8 +146,8 @@ export function RideDetailsScreen() {
   if (!ride) {
     return (
       <div className="t2 t2-m-page">
-        <HeadT2 title="تفاصيل الرحلة" onBack={goBack} />
-        <BannerT2 tone="danger" message={error ?? "الرحلة غير موجودة"} />
+        <HeadT2 title={tr("تفاصيل الرحلة")} onBack={goBack} />
+        <BannerT2 tone="danger" message={error ?? tr("الرحلة غير موجودة")} />
       </div>
     );
   }
@@ -165,20 +165,20 @@ export function RideDetailsScreen() {
   const rows: { label: string; value: string }[] = lines ?? [];
   const extras: { label: string; value: string }[] = [];
   const after = lines ? extras : rows;
-  if (ride.final_fare) after.push({ label: "السعر المقدّر", value: formatMoney(ride.estimated_fare, ride.currency) });
+  if (ride.final_fare) after.push({ label: tr("السعر المقدّر"), value: formatMoney(ride.estimated_fare, ride.currency) });
   if (!lines && Number(ride.stops_charge) > 0)
-    rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
+    rows.push({ label: tr("رسم المحطات ({0})", { 0: ride.stops.length }), value: formatMoney(ride.stops_charge, ride.currency) });
   if (!lines && Number(ride.waiting_charge) > 0)
-    rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
+    rows.push({ label: tr("رسم الانتظار عند المحطات"), value: formatMoney(ride.waiting_charge, ride.currency) });
   if (!lines && Number(ride.pause_charge) > 0)
-    rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
-  if (ride.cancellation_fee) after.push({ label: "رسوم الإلغاء", value: formatMoney(ride.cancellation_fee, ride.currency) });
+    rows.push({ label: tr("رسم الوقفات أثناء الرحلة"), value: formatMoney(ride.pause_charge, ride.currency) });
+  if (ride.cancellation_fee) after.push({ label: tr("رسوم الإلغاء"), value: formatMoney(ride.cancellation_fee, ride.currency) });
 
   const stats = [
-    { label: "المسافة المقدّرة", value: formatDistance(ride.distance_km) },
-    ...(ride.actual_distance_km ? [{ label: "المسافة الفعلية", value: formatDistance(ride.actual_distance_km) }] : []),
-    { label: "المدة المقدّرة", value: formatDuration(ride.duration_min) },
-    { label: "فئة المركبة", value: VEHICLE_LABEL[ride.vehicle_category] },
+    { label: tr("المسافة المقدّرة"), value: formatDistance(ride.distance_km) },
+    ...(ride.actual_distance_km ? [{ label: tr("المسافة الفعلية"), value: formatDistance(ride.actual_distance_km) }] : []),
+    { label: tr("المدة المقدّرة"), value: formatDuration(ride.duration_min) },
+    { label: tr("فئة المركبة"), value: VEHICLE_LABEL[ride.vehicle_category] },
   ];
 
   const vehicle = ride.driver?.vehicle ?? null;
@@ -211,11 +211,11 @@ export function RideDetailsScreen() {
       <div className={token ? "t2-m-ride-sheet" : "t2-m-ride-sheet flat"}>
         <div className="t2-m-ride-head">
           {token ? null : (
-            <button type="button" className="t2-back" aria-label="رجوع" onClick={goBack}>
+            <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
               <Icon name="arrow_forward" />
             </button>
           )}
-          <h1 className="t2-m-ride-title">تفاصيل الرحلة</h1>
+          <h1 className="t2-m-ride-title">{tr("تفاصيل الرحلة")}</h1>
           <span className={chip}>{RIDE_STATUS_LABEL[ride.status]}</span>
         </div>
         <div className="t2-m-ride-when">{formatDateTime(ride.created_at)}</div>
@@ -224,7 +224,7 @@ export function RideDetailsScreen() {
             **وقبل النهائيّة تقديرُه كما سيدفعه** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
             ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤) */}
         <div className="t2-m-card t2-m-fare">
-          <div className="t2-m-label">{ride.final_fare ? "الأجرة النهائية" : "السعر المقدّر"}</div>
+          <div className="t2-m-label">{ride.final_fare ? tr("الأجرة النهائية") : tr("السعر المقدّر")}</div>
           <div className="t2-m-amount">
             <span dir="ltr" className="t2-m-num lg">
               {formatMoney(ride.final_fare ?? ride.rider_estimate)}
@@ -252,15 +252,15 @@ export function RideDetailsScreen() {
         <div className="t2-m-route t2-m-gap">
           <span className="t2-route-from" aria-hidden="true" />
           <div>
-            <div className="t2-route-label">من</div>
-            <div className="t2-m-route-value">{ride.pickup_address ?? "نقطة على الخريطة"}</div>
+            <div className="t2-route-label">{tr("من")}</div>
+            <div className="t2-m-route-value">{ride.pickup_address ?? tr("نقطة على الخريطة")}</div>
           </div>
           <span className="t2-route-join" aria-hidden="true" />
           <span />
           <span className="t2-route-to" aria-hidden="true" />
           <div>
-            <div className="t2-route-label">إلى</div>
-            <div className="t2-m-route-value">{ride.dropoff_address ?? "نقطة على الخريطة"}</div>
+            <div className="t2-route-label">{tr("إلى")}</div>
+            <div className="t2-m-route-value">{ride.dropoff_address ?? tr("نقطة على الخريطة")}</div>
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export function RideDetailsScreen() {
 
         {ride.cancelled_reason ? (
           <div className="t2-m-card t2-m-gap">
-            <div className="t2-m-label">سبب الإلغاء</div>
+            <div className="t2-m-label">{tr("سبب الإلغاء")}</div>
             <div className="t2-m-reason">{ride.cancelled_reason}</div>
           </div>
         ) : null}
@@ -321,12 +321,12 @@ export function RideDetailsScreen() {
               className="t2-button action t2-m-cta t2-m-cta-split"
               onClick={() => navigate(`/rides/${ride.id}/pay`)}
             >
-              <span>إكمال الدفع</span>
+              <span>{tr("إكمال الدفع")}</span>
               <span className="t2-m-cta-price">{formatMoney(payments!.outstanding, payments!.currency)}</span>
             </button>
           ) : ride.status === "completed" && !rated ? (
             <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${ride.id}/rate`)}>
-              قيّم هذه الرحلة
+              {tr("قيّم هذه الرحلة")}
             </button>
           ) : null}
 
@@ -349,7 +349,7 @@ export function RideDetailsScreen() {
                 })
               }
             >
-              أعد الطلب
+              {tr("أعد الطلب")}
             </button>
           ) : null}
         </div>

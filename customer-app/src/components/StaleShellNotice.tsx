@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 
-import "@/taxo2";
+import "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** **علامةُ العامل** — تُقرأ مرّةً عند تحميل الصفحة. */
 const SAVED = document.querySelector('meta[name="taxo-shell"]')?.getAttribute("content") === "saved";
@@ -53,14 +53,14 @@ export function StaleShellNotice() {
           <span className="t2-icon">schedule</span>
         </span>
         <div className="t2-notice-main">
-          <p className="t2-notice-title">{offline ? "لا يوجد اتصال بالإنترنت" : "لم يصل الجواب بعد"}</p>
+          <p className="t2-notice-title">{offline ? tr("لا يوجد اتصال بالإنترنت") : tr("لم يصل الجواب بعد")}</p>
           <p className="t2-notice-body">
             {offline
-              ? "هذه آخرُ نسخةٍ محفوظةٍ من التطبيق."
-              : "هذه آخرُ نسخةٍ محفوظةٍ من التطبيق، والجديدُ يُجلب في الخلفية."}
+              ? tr("هذه آخرُ نسخةٍ محفوظةٍ من التطبيق.")
+              : tr("هذه آخرُ نسخةٍ محفوظةٍ من التطبيق، والجديدُ يُجلب في الخلفية.")}
           </p>
         </div>
-        <button type="button" className="t2-notice-close" onClick={() => setOpen(false)} aria-label="إغلاق">
+        <button type="button" className="t2-notice-close" onClick={() => setOpen(false)} aria-label={tr("إغلاق")}>
           <span className="t2-icon" aria-hidden="true">
             close
           </span>

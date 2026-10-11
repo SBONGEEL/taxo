@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { addTip, getTipOptions, listRideRatings, rateRide } from "@/api/endpoints";
-import type { RatingTag, TipOptions } from "@/api/types";
+import type { RatingTag, TipOptions } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 /** أقلُّ عددِ نجومٍ يُسأل عنده عن بقشيش — تضييقُ واجهةٍ لا قاعدةَ خلفية. */
 export const TIP_MIN_STARS = 4;
@@ -56,7 +56,7 @@ export function useRating(rideId: string) {
       await rateRide(rideId, stars, comment, tags);
       setDone(true);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال التقييم");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال التقييم"));
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export function useRating(rideId: string) {
       const given = await addTip(rideId, amount);
       setTip((current) => (current ? { ...current, given } : current));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال البقشيش");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال البقشيش"));
     } finally {
       setTipping(null);
     }

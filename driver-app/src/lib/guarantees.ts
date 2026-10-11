@@ -26,7 +26,7 @@ import {
 } from "@/api/endpoints";
 import type { CommuteOffer, GuaranteeCancelCost, IntercityRoute, IntercityTrip } from "@/api/types";
 import { useFeature } from "@/lib/config";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** **سطرُ الغرامة في ورقة الإلغاء** (§٦٤-د، الشكلُ الثالثَ عشر: مالٌ يخرج من جيبه ولا يظهر على شاشة) — يُسأل حين تُفتح
  * الورقةُ **لرحلةٍ مجدولةٍ وحدَها** (الضمانُ حجزٌ مجدول، فلا نداءَ على كلِّ رحلة). **وبلا شرط المفتاح**: رحلةٌ مضمونةٌ قُبلت تبقى
@@ -148,7 +148,7 @@ export function useCommuteBoard() {
 
   useEffect(() => {
     load().catch((caught: unknown) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة المشاوير الثابتة"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المشاوير الثابتة")),
     );
   }, [load]);
 
@@ -169,7 +169,7 @@ export function useCommuteBoard() {
           ...current,
           [row.id]: {
             tone: "danger",
-            text: caught instanceof ApiError ? caught.message : "تعذّر الإرسال — حاول ثانية",
+            text: caught instanceof ApiError ? caught.message : tr("تعذّر الإرسال — حاول ثانية"),
             // **٤٠٩ على عرضٍ مفتوحٍ يعني أن غيرَه سبقه** — أو أنه غيرُ مشترك؛ والزرُّ بعدهما يَعِد بما لا يقع
             final: caught instanceof ApiError && caught.status === 409,
           },
@@ -188,9 +188,9 @@ export function useCommuteBoard() {
     busy,
     notes,
     approve: (row: CommuteOffer) =>
-      void run(row, () => approveCommute(row.id), "اعتمدتَ المشوار — تصلك رحلاتُه قبل موعدها حين تكون متصلاً ومتاحاً."),
+      void run(row, () => approveCommute(row.id), tr("اعتمدتَ المشوار — تصلك رحلاتُه قبل موعدها حين تكون متصلاً ومتاحاً.")),
     release: (row: CommuteOffer) =>
-      void run(row, () => releaseCommute(row.id), "اعتذرتَ عن المشوار — عاد مفتوحاً لكبتنٍ معتمدٍ آخر."),
+      void run(row, () => releaseCommute(row.id), tr("اعتذرتَ عن المشوار — عاد مفتوحاً لكبتنٍ معتمدٍ آخر.")),
   };
 }
 
@@ -239,9 +239,9 @@ export function useIntercityEntry(active: boolean): IntercityEntry | null {
 /** **أفعالُ الرحلة الثلاثة** — أبوابُ الخلفية بأسمائها. **ومفاتيحُ كائنٍ لا اتحادٌ مسمّى**: `check:enums` يقرأ كلَّ `type X = "…"`
  *  مرآةً لتعداد، وهذه أفعالٌ لا قيمُ عمود. */
 const INTERCITY_ACTIONS = {
-  cancel: { call: cancelIntercityTrip, done: "أُلغيت الرحلة — وعاد إلى كلِّ راكبٍ مالُه كاملاً." },
-  depart: { call: departIntercityTrip, done: "انطلقتَ — أرقامُ ركّابك تحت أسمائهم." },
-  complete: { call: completeIntercityTrip, done: "أنهيتَ الرحلة — أجرتُها في كشف محفظتك." },
+  cancel: { call: cancelIntercityTrip, done: tr("أُلغيت الرحلة — وعاد إلى كلِّ راكبٍ مالُه كاملاً.") },
+  depart: { call: departIntercityTrip, done: tr("انطلقتَ — أرقامُ ركّابك تحت أسمائهم.") },
+  complete: { call: completeIntercityTrip, done: tr("أنهيتَ الرحلة — أجرتُها في كشف محفظتك.") },
 };
 type IntercityAction = keyof typeof INTERCITY_ACTIONS;
 
@@ -267,7 +267,7 @@ export function useIntercityBoard() {
 
   useEffect(() => {
     load().catch((caught: unknown) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلات بين المدن"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة رحلات بين المدن")),
     );
   }, [load]);
 
@@ -278,11 +278,11 @@ export function useIntercityBoard() {
       setPosting(null);
       try {
         await postIntercityTrip(body);
-        setPosting({ tone: "ok", text: "أعلنتَ رحلتك — تظهر للركّاب في سوقك حتى موعدها." });
+        setPosting({ tone: "ok", text: tr("أعلنتَ رحلتك — تظهر للركّاب في سوقك حتى موعدها.") });
         await load();
         return true;
       } catch (caught) {
-        setPosting({ tone: "danger", text: caught instanceof ApiError ? caught.message : "تعذّر الإعلان — حاول ثانية" });
+        setPosting({ tone: "danger", text: caught instanceof ApiError ? caught.message : tr("تعذّر الإعلان — حاول ثانية") });
         return false;
       } finally {
         setBusy(null);
@@ -304,7 +304,7 @@ export function useIntercityBoard() {
       setTrips((current) => (current ?? []).map((item) => (item.id === next.id ? next : item)));
       setNotes((current) => ({ ...current, [trip.id]: { tone: "ok", text: done } }));
     } catch (caught) {
-      const text = caught instanceof ApiError ? caught.message : "تعذّر الإرسال — حاول ثانية";
+      const text = caught instanceof ApiError ? caught.message : tr("تعذّر الإرسال — حاول ثانية");
       setNotes((current) => ({ ...current, [trip.id]: { tone: "danger", text } }));
     } finally {
       setBusy(null);

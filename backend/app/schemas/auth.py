@@ -92,6 +92,8 @@ class ProfileUpdate(BaseModel):
 
     gender: Gender | None = None
     ride_gender_preference: GenderPreference | None = None
+    # **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — من إعدادات التطبيق
+    language: Literal["ar", "fr"] | None = None
 
 
 class LoginRequest(BaseModel):
@@ -196,6 +198,8 @@ class UserOut(BaseModel):
     # ينتظر شبكةً ليقول ما يمكن قولُه من الجلسة نفسِها
     roles: list[UserRole] = Field(default_factory=list, validation_alias='roles_list')
     country_code: CountryCode
+    # **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه
+    language: str = "ar"
     is_blocked: bool
     # **حسابُ تجربة** (SPEC §٦٥-ج) — **قراءةٌ وحدَها**: تقرؤه اللوحةُ فترسم شارةَ «حساب تجربة»، **ولا مخطَّطَ طلبٍ يحمله**
     # فلا يكتبه بابٌ في التطبيقات ولا في اللوحة. ويصل صاحبَه في `/me` كما يصله `is_blocked` — وسمٌ عن حسابه لا عن غيره

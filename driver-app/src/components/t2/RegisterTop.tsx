@@ -6,7 +6,7 @@
  */
 import { Fragment } from "react";
 
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const STEPS = ["الحساب", "المركبة", "الوثائق"] as const;
 
@@ -15,14 +15,14 @@ export function RegisterTop({ step, onBack }: { step: 1 | 2 | 3; onBack?: () => 
     <>
       <div className="cap-head">
         {onBack ? (
-          <button type="button" className="t2-auth-back" onClick={onBack} aria-label="رجوع">
+          <button type="button" className="t2-auth-back" onClick={onBack} aria-label={tr("رجوع")}>
             <Icon name="arrow_forward" />
           </button>
         ) : null}
-        <h1 className="cap-head-title">إنشاء حساب كبتن</h1>
+        <h1 className="cap-head-title">{tr("إنشاء حساب كبتن")}</h1>
       </div>
 
-      <div className="cap-steps" role="list" aria-label="خطوات إنشاء الحساب">
+      <div className="cap-steps" role="list" aria-label={tr("خطوات إنشاء الحساب")}>
         {STEPS.map((label, index) => {
           const number = index + 1;
           const state = number < step ? "done" : number === step ? "now" : "next";
@@ -35,7 +35,7 @@ export function RegisterTop({ step, onBack }: { step: 1 | 2 | 3; onBack?: () => 
                 </span>
                 <span className="cap-step-label">
                   {label}
-                  {state === "done" ? <span className="cap-sr"> — تمّت</span> : null}
+                  {state === "done" ? <span className="cap-sr">{" "}{tr("— تمّت")}</span> : null}
                 </span>
               </div>
             </Fragment>

@@ -25,7 +25,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { alertsAvailable, permissionStatus, type PermissionStatus } from "@/lib/offer-alert";
 import { Icon } from "@/taxo2";
-import { ROWS, type Row } from "@/lib/permission-rows";
+import { ROWS, type Row } from "@/lib/permission-rows"; import { tr } from "@/lib/i18n";
 
 export function PermissionNotice() {
   const [state, setState] = useState<PermissionStatus | null>(null);
@@ -63,7 +63,7 @@ export function PermissionNotice() {
         <section className="t2-callout danger" role="alert">
           <Icon name="error" fill />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">لا تصلك طلبات الآن</p>
+            <p className="t2-callout-title">{tr("لا تصلك طلبات الآن")}</p>
             <ul className="t2-callout-list">
               {blocking.map((row) => (
                 <NoticeRow key={row.key} row={row} />
@@ -77,7 +77,7 @@ export function PermissionNotice() {
         <section className="t2-callout warn">
           <Icon name="info" fill />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">ينقص ما يقوّي وصولَ الطلب</p>
+            <p className="t2-callout-title">{tr("ينقص ما يقوّي وصولَ الطلب")}</p>
             <ul className="t2-callout-list">
               {advisory.map((row) => (
                 <NoticeRow key={row.key} row={row} />
@@ -98,7 +98,7 @@ function NoticeRow({ row }: { row: Row }) {
       <p className="t2-callout-body">{row.why}</p>
       {row.open ? (
         <button type="button" onClick={() => void row.open?.()} className="t2-callout-open">
-          افتح الإعداد
+          {tr("افتح الإعداد")}
         </button>
       ) : null}
     </li>

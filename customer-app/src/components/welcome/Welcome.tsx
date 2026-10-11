@@ -21,16 +21,16 @@ import { removeBootFrame, retrySplash, splashText, useSplashStatus } from "@/lib
 import { useTheme } from "@/lib/theme";
 
 import "@/taxo2";
-import "./welcome.css";
+import "./welcome.css"; import { tr } from "@/lib/i18n";
 
 // ── من اللوحة حرفاً ─────────────────────────────────────────────────────────
 // مسارُ الكبتن الفعليّ من العبدلي إلى شارع الرينبو — إحداثياتُ إطار 390×844
 const HD =
   "M122.45 359.03L125.67 360.81L128.9 361.99L131.89 362.64L135.69 363.12L139.24 363.01L142.71 362.72L151.83 361.28L158.27 360.5L171.72 357.17L173.79 357.47L178.99 358.79L194.4 365.45L198.93 366.7L201.02 366.77L204.74 365.92L212.49 366.66L224.24 368.04L227.26 368.56L231.95 370.45L249.95 387.94L250.76 389.26L257.01 395.46L258.46 397.41L260.38 402.18L262.55 426.13L265.9 438.02L265.79 438.96L266.16 442.18L259.24 443.04L256.35 442.96L252.97 441.81L245.82 437.59L243.91 436.94L241.62 436.89L238.83 437.75L236.97 438.86L233.32 441.72L230.71 444.54L225.56 449.11L222.84 450.66L219.23 451.48L215.27 451.97L211.71 451.21L202.86 449.98L201.51 449.85L199.49 449.98L196.49 451.25L189.74 454.89L186.59 456.23L182.49 457.71L178.01 458.92L177.82 459.94L178.02 461.13L190.48 467.45L199.96 471.14";
 const LABELS: Array<[string, number, number]> = [
-  ["جبل عمّان", 159.5, 449.9],
-  ["اللويبدة", 222.9, 402.4],
-  ["العبدلي", 141, 353],
+  [tr("جبل عمّان"), 159.5, 449.9],
+  [tr("اللويبدة"), 222.9, 402.4],
+  [tr("العبدلي"), 141, 353],
 ];
 /** طولُ المقدّمة حتى إطارها الأخير — ما بعده في اللوحة رجوعٌ إلى أوّل الحلقة. */
 const INTRO_MS = 4200;
@@ -255,9 +255,9 @@ export function Welcome({
 
         {settled ? (
           <div className="rw-copy">
-            <h1 className="rw-rise d1">أهلاً وسهلاً</h1>
-            <p className="rw-origin rw-rise d2">حللتَ أهلاً، ووطئتَ سهلاً.</p>
-            <p className="rw-explain rw-rise d3">جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.</p>
+            <h1 className="rw-rise d1">{tr("أهلاً وسهلاً")}</h1>
+            <p className="rw-origin rw-rise d2">{tr("حللتَ أهلاً، ووطئتَ سهلاً.")}</p>
+            <p className="rw-explain rw-rise d3">{tr("جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.")}</p>
           </div>
         ) : null}
       </div>
@@ -269,7 +269,7 @@ export function Welcome({
           {splash.code ? <p className="rw-status-code" dir="ltr">{splash.code}</p> : null}
           {splash.status !== "slow" ? (
             <button type="button" onClick={retrySplash}>
-              إعادة المحاولة
+              {tr("إعادة المحاولة")}
             </button>
           ) : null}
         </div>
@@ -280,16 +280,16 @@ export function Welcome({
         © OpenStreetMap · Copernicus DEM · Open-Meteo
       </span>
 
-      {phase === "intro" ? <span className="rw-skip">المس الشاشة للتخطّي</span> : null}
+      {phase === "intro" ? <span className="rw-skip">{tr("المس الشاشة للتخطّي")}</span> : null}
 
       {settled ? (
         <div className="rw-actions rw-rise">
           <button type="button" className="rw-btn primary" onClick={() => go("/register")}>
-            <span>حساب جديد</span>
+            <span>{tr("حساب جديد")}</span>
             <ArrowBack />
           </button>
           <button type="button" className="rw-btn secondary" onClick={() => go("/login")}>
-            دخول
+            {tr("دخول")}
           </button>
         </div>
       ) : null}

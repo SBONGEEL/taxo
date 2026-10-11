@@ -87,7 +87,7 @@ import { countBookings, countCommutes, countRides, hoursClock } from "./count";
 
 import "./t2.css";
 import "./ride.css";
-import "./guarantees.css";
+import "./guarantees.css"; import { tr } from "@/lib/i18n";
 
 export function HomeT2Screen() {
   const {
@@ -230,7 +230,7 @@ export function HomeT2Screen() {
           {level !== null ? (
             <span className="t2-hm-level">
               <Icon name="workspace_premium" fill />
-              {LEVEL_LABEL[level] ?? `المستوى ${digits(String(level))}`}
+              {LEVEL_LABEL[level] ?? tr("المستوى {0}", { 0: digits(String(level)) })}
             </span>
           ) : null}
           {womenMode ? <WomenModeChipT2 onOpen={() => navigate("/account/settings/women")} /> : null}
@@ -239,13 +239,13 @@ export function HomeT2Screen() {
             type="button"
             className="t2-hm-bell"
             onClick={() => navigate("/notifications")}
-            aria-label="الإشعارات"
+            aria-label={tr("الإشعارات")}
           >
             <Icon name="notifications" />
             {unread > 0 ? <span className="t2-hm-bell-dot" /> : null}
           </button>
           <div className={womenMode ? "t2-hm-avatar women" : "t2-hm-avatar"} aria-hidden="true">
-            {(user?.name ?? "كبتن").slice(0, 1)}
+            {(user?.name ?? tr("كبتن")).slice(0, 1)}
           </div>
         </div>
       ) : null}
@@ -253,7 +253,7 @@ export function HomeT2Screen() {
       {mode === "home" ? (
         <div className="t2-hm-earn">
           {/* **«صافي اليوم» لا «أرباح اليوم»** — الرقمُ صافي ما دخل المحفظة، **ولا يُرسم صفرٌ مكانَ «لم يُعرف بعد»** */}
-          <div className="t2-hm-earn-label">صافي اليوم</div>
+          <div className="t2-hm-earn-label">{tr("صافي اليوم")}</div>
           <div className="t2-hm-earn-row">
             <span className="t2-hm-earn-num" dir="ltr">
               {earnings ? digits(earnings.net) : "—"}
@@ -273,7 +273,7 @@ export function HomeT2Screen() {
                 <span className="t2-hm-chip-num" dir="ltr">
                   {hoursClock(earnings.online_minutes)}
                 </span>
-                ساعة
+                {tr("ساعة")}
               </span>
             ) : null}
             {rating ? (
@@ -298,8 +298,8 @@ export function HomeT2Screen() {
           {/* **وفي الوضع النسائيّ تقوله الحبّةُ والشارة** (CW2) — فلا شريطَ ثانٍ بالشيء نفسِه */}
           {womenService && preference !== "any" && !womenMode ? (
             <button type="button" className="t2-hm-pref" onClick={() => navigate("/account/settings")}>
-              <span className="t2-hm-pref-text">أستقبل ركاباً: {PREFERENCE_LABEL[preference]}</span>
-              <span className="t2-hm-pref-go">تغيير</span>
+              <span className="t2-hm-pref-text">{tr("أستقبل ركاباً:")}{" "}{PREFERENCE_LABEL[preference]}</span>
+              <span className="t2-hm-pref-go">{tr("تغيير")}</span>
             </button>
           ) : null}
           <PermissionNotice />
@@ -339,10 +339,10 @@ export function HomeT2Screen() {
               type="button"
               className="t2-hm-mapchip"
               onClick={() => setOpen(!open)}
-              aria-label={open ? "إغلاق الخريطة" : undefined}
+              aria-label={open ? tr("إغلاق الخريطة") : undefined}
             >
               <Icon name={open ? "close" : "open_in_full"} />
-              {open ? null : "توسيع"}
+              {open ? null : tr("توسيع")}
             </button>
             {open ? (
               <button
@@ -350,8 +350,8 @@ export function HomeT2Screen() {
                 className={traffic ? "t2-hm-traffic on" : "t2-hm-traffic"}
                 onClick={toggleTraffic}
                 aria-pressed={traffic}
-                aria-label="طبقة الزحام"
-                title="طبقة الزحام"
+                aria-label={tr("طبقة الزحام")}
+                title={tr("طبقة الزحام")}
               >
                 <Icon name="traffic" />
               </button>
@@ -410,7 +410,7 @@ export function HomeT2Screen() {
               <span className="t2-hm-row-main">
                 <span className="t2-hm-row-title">{subscriptionLine}</span>
               </span>
-              <span className="t2-hm-row-go">جدّد</span>
+              <span className="t2-hm-row-go">{tr("جدّد")}</span>
             </button>
           ) : null}
           {vehicleLine ? (
@@ -516,13 +516,13 @@ function useMeasuredHeight(): [(element: HTMLElement | null) => void, number | n
 
 /** «9 رحلات» كما رُسمت: **الرقمُ بخطّ الأرقام والتمييزُ بالنصّ** — وصيغُ العدد من بيتها (`count.ts`: «رحلة واحدة» · «رحلتان»). */
 function RideCount({ n }: { n: number }) {
-  if (n < 3) return <>{n === 0 ? "لا رحلات" : n === 1 ? "رحلة واحدة" : "رحلتان"}</>;
+  if (n < 3) return <>{n === 0 ? tr("لا رحلات") : n === 1 ? tr("رحلة واحدة") : tr("رحلتان")}</>;
   return (
     <>
       <span className="t2-hm-chip-num" dir="ltr">
         {digits(String(n))}
       </span>
-      {n <= 10 ? "رحلات" : "رحلة"}
+      {n <= 10 ? tr("رحلات") : tr("رحلة")}
     </>
   );
 }
@@ -537,13 +537,13 @@ interface Tapped {
 /** **بطاقةُ النقر** (§٦٢-ج/٤٨، `FUTURE-FEATURES` الخرائط #٣): اسمُ النقطة وعنوانُها وبُعدُها، **و«افتح في الملاحة»** إلى تطبيق خرائطه
  *  المختار (`openIn` — بابُ «فتح في الملاحة» نفسُه). **ولا عنوانَ يُخترع**: ما لم يُقرأ يُقال «نقطة على الخريطة». */
 function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coordinates | null; onClose: () => void }) {
-  const title = tapped.place?.name ?? (tapped.reading ? "جارٍ قراءة العنوان…" : "نقطة على الخريطة");
+  const title = tapped.place?.name ?? (tapped.reading ? tr("جارٍ قراءة العنوان…") : tr("نقطة على الخريطة"));
   const km = position ? metersBetween(position, tapped.at) / 1000 : null;
-  const sub = [km !== null ? `على بعد ${digits(km.toFixed(1))} كم` : null, tapped.place?.address ?? null]
+  const sub = [km !== null ? tr("على بعد {0} كم", { 0: digits(km.toFixed(1)) }) : null, tapped.place?.address ?? null]
     .filter(Boolean)
     .join(" · ");
   return (
-    <div className="t2-hm-tapcard" role="dialog" aria-label="نقطة على الخريطة">
+    <div className="t2-hm-tapcard" role="dialog" aria-label={tr("نقطة على الخريطة")}>
       <div className="t2-hm-tapcard-text">
         <span className="t2-hm-tapcard-name">{title}</span>
         {sub ? <span className="t2-hm-tapcard-sub">{sub}</span> : null}
@@ -555,15 +555,15 @@ function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coor
           openIn({
             lat: tapped.at.lat,
             lng: tapped.at.lng,
-            label: tapped.place?.name ?? "نقطة على الخريطة",
-            cta: "افتح في الملاحة",
+            label: tapped.place?.name ?? tr("نقطة على الخريطة"),
+            cta: tr("افتح في الملاحة"),
           })
         }
       >
         <Icon name="navigation" />
-        افتح في الملاحة
+        {tr("افتح في الملاحة")}
       </button>
-      <button type="button" className="t2-hm-tapcard-close" aria-label="إغلاق" onClick={onClose}>
+      <button type="button" className="t2-hm-tapcard-close" aria-label={tr("إغلاق")} onClick={onClose}>
         <Icon name="close" />
       </button>
     </div>
@@ -597,13 +597,13 @@ function GoPill({
   const title = shown
     ? shown.title
     : online
-      ? `متصل — ${awaitedOffer ? "نفتح الطلب…" : located ? "بانتظار الطلبات" : "بانتظار إشارة الموقع"}`
+      ? tr("متصل — {0}", { 0: awaitedOffer ? tr("نفتح الطلب…") : located ? tr("بانتظار الطلبات") : tr("بانتظار إشارة الموقع") })
       : connecting
         ? goLabel
-        : "غير متصل";
+        : tr("غير متصل");
   // **«الطلب مرتفع» لغير الوضع النسائيّ** (§٦٢-ج/٤٣): العدُّ لكلِّ الطلبات، ومن لا تصلها إلا طلباتُ الراكبات يقرؤه وعداً لا يقع —
   // وسطرُها («يمكنك تغيير ذلك من الإعدادات») باقٍ في موضعه
-  const demand = !women && online && demandHigh ? "الطلب مرتفع حولك الآن" : null;
+  const demand = !women && online && demandHigh ? tr("الطلب مرتفع حولك الآن") : null;
   const sub = shown ? shown.sub : online ? demand : connecting ? null : goLabel;
   return (
     <button
@@ -612,7 +612,7 @@ function GoPill({
       onClick={onToggle}
       disabled={connecting}
       // **الفعلُ يُقال لقارئ الشاشة مع الحال** — الحبّةُ تقول «متصل»، والضغطةُ «إيقاف الاستقبال»
-      aria-label={online ? `${title}${demand ? `، ${demand}` : ""}، ${goLabel}` : undefined}
+      aria-label={online ? tr("{0}{1}، {2}", { 0: title, 1: demand ? tr("، {0}", { 0: demand }) : "", 2: goLabel }) : undefined}
     >
       <span className="t2-hm-go-dot" aria-hidden="true">
         {online ? <i className="pulse" /> : null}
@@ -637,11 +637,11 @@ function GoPill({
 /** **مدخلُ المشاوير الثابتة** (§٦٣-ج/٦) — صفُّ مدخل الحجوز نفسُه. **والعرضُ يسبق ما اعتمده**: العرضُ يأخذه غيرُه إن انتظر، وما
  *  اعتمده تصله رحلاتُه وحدَها. **والعددُ بالعربية** (`countCommutes`). */
 function CommuteEntryRow({ entry, onOpen }: { entry: CommuteEntry; onOpen: () => void }) {
-  const title = entry.offers > 0 ? "مشاويرُ ثابتةٌ تنتظر كبتناً" : "مشاويرُك الثابتة";
+  const title = entry.offers > 0 ? tr("مشاويرُ ثابتةٌ تنتظر كبتناً") : tr("مشاويرُك الثابتة");
   const sub =
     entry.offers > 0
-      ? `${countCommutes(entry.offers)} في سوقك — مدفوعةٌ مقدّماً لشهر`
-      : `لك ${countCommutes(entry.mine)} — تصلك رحلاتُها قبل موعدها`;
+      ? tr("{0} في سوقك — مدفوعةٌ مقدّماً لشهر", { 0: countCommutes(entry.offers) })
+      : tr("لك {0} — تصلك رحلاتُها قبل موعدها", { 0: countCommutes(entry.mine) });
   return (
     <div className="t2-gu-home">
       <button type="button" className="t2-hm-row t2-gu-entry" onClick={onOpen}>
@@ -660,13 +660,13 @@ function CommuteEntryRow({ entry, onOpen }: { entry: CommuteEntry; onOpen: () =>
  *  هو. **والعددُ بالعربية** (`countRides`). */
 function IntercityEntryRow({ entry, onOpen }: { entry: IntercityEntry; onOpen: () => void }) {
   const sub =
-    entry.live > 0 ? `لك ${countRides(entry.live)} لم تنتهِ — ركّابُها ينتظرونك` : "أعلن رحلتك بين مدينتين — بتصريحٍ بعد فحص مركبتك";
+    entry.live > 0 ? tr("لك {0} لم تنتهِ — ركّابُها ينتظرونك", { 0: countRides(entry.live) }) : tr("أعلن رحلتك بين مدينتين — بتصريحٍ بعد فحص مركبتك");
   return (
     <div className="t2-gu-home">
       <button type="button" className="t2-hm-row t2-gu-entry" onClick={onOpen}>
         <Icon name="route" fill />
         <span className="t2-hm-row-main">
-          <span className="t2-hm-row-title">بين المدن</span>
+          <span className="t2-hm-row-title">{tr("بين المدن")}</span>
           <div className="t2-hm-row-sub">{sub}</div>
         </span>
         <Icon name="chevron_left" className="go" />
@@ -678,12 +678,12 @@ function IntercityEntryRow({ entry, onOpen }: { entry: IntercityEntry; onOpen: (
 /** **مدخلُ الحجوز المضمونة** (§٦٣-ج/٣) — صفُّ «جدّد» نفسُه بالجمر. **والسؤالُ يسبق العرض**: حجزٌ يُسأل عنه الآن يُسحب بلا ردّ،
  *  والعروضُ تنتظر. **والعددُ بالعربية** (`countBookings`) لا «2 حجز». */
 function GuaranteeEntryRow({ entry, onOpen }: { entry: GuaranteeEntry; onOpen: () => void }) {
-  const title = entry.asking ? "هل أنت في الطريق؟" : entry.offers > 0 ? "عروضٌ تنتظرك" : "حجوزُك المضمونة القادمة";
+  const title = entry.asking ? tr("هل أنت في الطريق؟") : entry.offers > 0 ? tr("عروضٌ تنتظرك") : tr("حجوزُك المضمونة القادمة");
   const sub = entry.asking
-    ? "حجزُك المضمون قريب — أكّده الآن، وإلا عاد لغيرك"
+    ? tr("حجزُك المضمون قريب — أكّده الآن، وإلا عاد لغيرك")
     : entry.offers > 0
-      ? `${countBookings(entry.offers)} في فئة مركبتك — ورسمُ الضمان لك كاملاً`
-      : `لك ${countBookings(entry.upcoming)} — نسألك قبل الموعد بساعة`;
+      ? tr("{0} في فئة مركبتك — ورسمُ الضمان لك كاملاً", { 0: countBookings(entry.offers) })
+      : tr("لك {0} — نسألك قبل الموعد بساعة", { 0: countBookings(entry.upcoming) });
   return (
     <div className="t2-gu-home">
       <button type="button" className={entry.asking ? "t2-hm-row t2-gu-entry asking" : "t2-hm-row t2-gu-entry"} onClick={onOpen}>
@@ -719,10 +719,10 @@ function Services({
   return (
     <>
       <div className="t2-hm-svc-head">
-        <span className="t2-hm-svc-title">خدماتك</span>
+        <span className="t2-hm-svc-title">{tr("خدماتك")}</span>
         {tiles.length > HOME_TILES ? (
           <button type="button" className="t2-hm-svc-all" onClick={() => navigate("/services")}>
-            الكل
+            {tr("الكل")}
           </button>
         ) : null}
       </div>

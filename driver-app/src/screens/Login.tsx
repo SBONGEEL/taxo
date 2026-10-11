@@ -37,7 +37,7 @@ import {
   Wordmark,
 } from "@/taxo2";
 
-import "@/components/t2/captain-auth.css";
+import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
 type Failure = { field: "phone" | "password" | null; message: string };
 
@@ -59,7 +59,7 @@ export function LoginScreen() {
   const complete = looksComplete(phone, nationalLength);
   const short =
     touched && phone.length > 0 && !complete && dialCode !== null
-      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode })
       : null;
 
   async function submit(event: FormEvent) {
@@ -74,7 +74,7 @@ export function LoginScreen() {
       // يُرسل E.164 ومعه الدولة صراحةً: لا استنتاجَ ولا التباس
       // **ولا دخولَ برقمٍ بُني بمفتاحٍ غيرِ منشور**: يرتدّ «رقمٌ غير
       // مسجَّل» عن حسابٍ قائم، فيُقرأ الحسابُ محذوفاً ويُنشأ ثانٍ عليه
-      if (dialCode === null) throw new Error("مفتاح الدولة غير متاح");
+      if (dialCode === null) throw new Error(tr("مفتاح الدولة غير متاح"));
       const response = await login(toE164(phone, dialCode), password, country);
       // **جوابان لا جواب**: حسابٌ يحمل عاملاً ثانياً يعود بلا توكن (12-د).
       // ولا يُسجَّل عاملٌ إلا لحسابات اللوحة (`SecuritySelfUser`)، فهذا الجواب
@@ -83,7 +83,7 @@ export function LoginScreen() {
       if (response.totp_required || !response.user || !response.tokens) {
         setFailure({
           field: null,
-          message: "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.",
+          message: tr("هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة."),
         });
         return;
       }
@@ -95,7 +95,7 @@ export function LoginScreen() {
         setFailure({ field: at, message: caught.message });
         if (at) document.getElementById(at)?.focus();
       } else {
-        setFailure({ field: null, message: "تعذّر تسجيل الدخول — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر تسجيل الدخول — أعد المحاولة") });
       }
     } finally {
       setBusy(false);
@@ -115,24 +115,24 @@ export function LoginScreen() {
 
         <div className="cap-brand">
           {/* **الرجوعُ إلى الترحيب** — شاشةُ دخولٍ لا تاريخَ قبلها في التطبيق، فيُطلب الترحيبُ ولا يُرجَع في التاريخ */}
-          <button type="button" className="t2-auth-back" onClick={() => reopenWelcome()} aria-label="رجوع">
+          <button type="button" className="t2-auth-back" onClick={() => reopenWelcome()} aria-label={tr("رجوع")}>
             <Icon name="arrow_forward" />
           </button>
           <Wordmark size={26} />
-          <span className="cap-pill">كبتن</span>
+          <span className="cap-pill">{tr("كبتن")}</span>
         </div>
 
-        <AuthTitle title="جاهز للطريق؟" sub="ادخل لتبدأ استقبال الطلبات." />
+        <AuthTitle title={tr("جاهز للطريق؟")} sub={tr("ادخل لتبدأ استقبال الطلبات.")} />
 
         <form onSubmit={submit} className="t2-auth-form" noValidate>
           <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
           <AuthBlock
-            label="رقم الهاتف"
+            label={tr("رقم الهاتف")}
             htmlFor="phone"
             error={
               dialCode === null
-                ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+                ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
                 : short ?? (failure?.field === "phone" ? failure.message : null)
             }
           >
@@ -155,7 +155,7 @@ export function LoginScreen() {
           </AuthBlock>
 
           <AuthBlock
-            label="كلمة المرور"
+            label={tr("كلمة المرور")}
             htmlFor="password"
             error={failure?.field === "password" ? failure.message : null}
           >
@@ -170,7 +170,7 @@ export function LoginScreen() {
           </AuthBlock>
 
           <Link to="/forgot-password" className="t2-auth-link t2-auth-forgot">
-            نسيت كلمة المرور؟
+            {tr("نسيت كلمة المرور؟")}
           </Link>
 
           {failure && failure.field === null ? (
@@ -184,7 +184,7 @@ export function LoginScreen() {
 
           <div className="t2-auth-actions">
             <button type="submit" className="t2-button primary" disabled={busy || !complete || !password}>
-              {busy ? "لحظة…" : "دخول"}
+              {busy ? tr("لحظة…") : tr("دخول")}
             </button>
 
             {/* **الزرُّ لا يُرسم إلا بثلاثة مجتمعة** (قرارُ المالك): جهازٌ أصليّ ·
@@ -208,14 +208,14 @@ export function LoginScreen() {
                         // جلسةٍ منتهية، والثاني يعني «اكتب كلمتك» والأول «أعد إصبعك»
                         setFailure({
                           field: null,
-                          message: caught instanceof Error ? caught.message : "تعذّر الدخول بالبصمة",
+                          message: caught instanceof Error ? caught.message : tr("تعذّر الدخول بالبصمة"),
                         });
                       })
                       .finally(() => setBioBusy(false));
                   }}
                 >
                   <Icon name="fingerprint" />
-                  <span>{bioBusy ? "لحظة…" : `الدخول بـ${biometryLabel(biometry.kind)}`}</span>
+                  <span>{bioBusy ? tr("لحظة…") : tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}</span>
                 </button>
               </>
             ) : null}
@@ -223,8 +223,8 @@ export function LoginScreen() {
             <button type="button" className="cap-join" onClick={() => navigate("/register")}>
               <Icon name="person_add" className="cap-join-icon" />
               <span className="cap-join-main">
-                <span className="cap-join-title">كبتن جديد؟</span>
-                <span className="cap-join-sub">سجّل بياناتك، ثم مركبتك ووثائقك.</span>
+                <span className="cap-join-title">{tr("كبتن جديد؟")}</span>
+                <span className="cap-join-sub">{tr("سجّل بياناتك، ثم مركبتك ووثائقك.")}</span>
               </span>
               <Icon name="arrow_back" className="cap-join-go" />
             </button>

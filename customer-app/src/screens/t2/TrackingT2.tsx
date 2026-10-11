@@ -60,7 +60,7 @@ import { SheetT2 } from "./SheetT2";
 import { isWomenRide, RideCodeCardT2, WomenApproachChipT2, womenApproachTitle, WomenCaptainCardT2 } from "./WomenRideT2";
 import "@/taxo2";
 import "./t2.css";
-import "./tracking-count.css";
+import "./tracking-count.css"; import { tr } from "@/lib/i18n";
 
 export interface TrackingT2Props {
   ride: Ride;
@@ -80,11 +80,11 @@ export interface TrackingT2Props {
 /** «2,140 رحلة» كما رُسمت في R08 — **والتمييزُ بآخر خانتين**: «3 رحلات» و«103 رحلات»، و«11 رحلة» و«2,140 رحلة»؛ والخاناتُ
  *  لاتينيةٌ بفواصل الآلاف (`DISPLAY_LOCALE`، §20). */
 function ridesLabel(count: number): string {
-  if (count === 1) return "رحلة واحدة";
-  if (count === 2) return "رحلتان";
+  if (count === 1) return tr("رحلة واحدة");
+  if (count === 2) return tr("رحلتان");
   const tail = count % 100;
   // **مسافةٌ لا تنكسر** بين العدد ومعدوده — فلا يبقى الرقمُ آخرَ سطرٍ والتمييزُ أوّلَ تاليه
-  return `${new Intl.NumberFormat(DISPLAY_LOCALE).format(count)} ${tail >= 3 && tail <= 10 ? "رحلات" : "رحلة"}`;
+  return `${new Intl.NumberFormat(DISPLAY_LOCALE).format(count)} ${tail >= 3 && tail <= 10 ? tr("رحلات") : tr("رحلة")}`;
 }
 
 /** **عددُ رحلات الكبتن المكتملة لبطاقته في R08** — يُسأل مرّةً لكلِّ رحلةٍ ما دام الكبتنُ في الطريق أو ينتظر، **ولا يُعرض صفرٌ
@@ -130,7 +130,7 @@ function useHourlyPrepaySwitch(ride: Ride, onChanged: () => void) {
       await changeHourlyPrepay(ride.id, ride.hourly_prepay_method === "cash" ? "wallet" : "cash");
       onChanged();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تغيير طريقة الدفع");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تغيير طريقة الدفع"));
     } finally {
       setBusy(false);
     }
@@ -168,14 +168,14 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
     t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly || commute ? (
       <div className="t2-trk-badges">
         {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — رحلةٌ من اشتراكه، من الصفّ لا من المفتاح */}
-        {commute ? <span className="t2-trk-badge">مشوارٌ ثابت</span> : null}
+        {commute ? <span className="t2-trk-badge">{tr("مشوارٌ ثابت")}</span> : null}
         {/* **«طرد»** (§٦٣-ج/٤) — وصفٌ لما طُلب كأخواتها، من الصفّ لا من المفتاح */}
-        {parcel ? <span className="t2-trk-badge">{ride.parcel_fetch ? "أحضر غرضي" : "طرد"}</span> : null}
+        {parcel ? <span className="t2-trk-badge">{ride.parcel_fetch ? tr("أحضر غرضي") : tr("طرد")}</span> : null}
         {/* **«بالساعة»** (§٦٣-ج/٥) — بالحكم نفسِه */}
-        {hourly ? <span className="t2-trk-badge">بالساعة</span> : null}
-        {t.women ? <span className="t2-trk-badge women">رحلة نسائية</span> : null}
+        {hourly ? <span className="t2-trk-badge">{tr("بالساعة")}</span> : null}
+        {t.women ? <span className="t2-trk-badge women">{tr("رحلة نسائية")}</span> : null}
         {Number(ride.share_discount_percent) > 0 ? (
-          <span className="t2-trk-badge">{ride.share_group_id ? "رحلة مشتركة" : "بانتظار شريك"}</span>
+          <span className="t2-trk-badge">{ride.share_group_id ? tr("رحلة مشتركة") : tr("بانتظار شريك")}</span>
         ) : null}
       </div>
     ) : null;
@@ -188,11 +188,11 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             دقائقَه، ورقمٌ يُخمَّن هنا يفترق عمّا جُمِّد عليها */}
         {t.afterAccept
           ? hourly && ride.status === "arrived"
-            ? "الكبتن عندك — إلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة."
+            ? tr("الكبتن عندك — إلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
             : hourly
-              ? "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء، وإلغاؤك بعد وصوله يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة."
-              : "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء."
-          : "سيتوقف البحث عن كبتن. متأكد؟"}
+              ? tr("الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء، وإلغاؤك بعد وصوله يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
+              : tr("الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء.")
+          : tr("سيتوقف البحث عن كبتن. متأكد؟")}
       </p>
       {t.afterAccept ? (
         <div className="t2-trk-reasons">
@@ -208,17 +208,17 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           ))}
           {t.reason?.code === "gender_mismatch" ? (
             <p className="t2-trk-reason-note">
-              بلا رسوم إلغاء على أيٍّ من الطرفين. ويُسجَّل بلاغٌ على الحساب الآخر، وتكرارُ البلاغات يوسم الحساب للمراجعة.
+              {tr("بلا رسوم إلغاء على أيٍّ من الطرفين. ويُسجَّل بلاغٌ على الحساب الآخر، وتكرارُ البلاغات يوسم الحساب للمراجعة.")}
             </p>
           ) : null}
         </div>
       ) : null}
       <div className="t2-trk-confirm-row">
         <button type="button" className="t2-button danger" disabled={t.busy} aria-busy={t.busy} onClick={t.cancel}>
-          نعم، ألغِ الرحلة
+          {tr("نعم، ألغِ الرحلة")}
         </button>
         <button type="button" className="t2-button secondary" onClick={() => t.setConfirming(false)}>
-          تراجع
+          {tr("تراجع")}
         </button>
       </div>
     </div>
@@ -246,16 +246,16 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           confirm ?? (
             <>
               <button type="button" className="t2-trk-cancel" disabled={t.busy} onClick={() => t.setConfirming(true)}>
-                إلغاء الطلب
+                {tr("إلغاء الطلب")}
               </button>
               {/* **صدقٌ لا وعد**: الإلغاءُ مجانيٌّ قبل القبول (القسم 5) — ورسمُه بعده يُقال هناك */}
-              <p className="t2-trk-free">الإلغاء الآن مجاني.</p>
+              <p className="t2-trk-free">{tr("الإلغاء الآن مجاني.")}</p>
             </>
           )
         }
       >
         <div className="t2-trk-head">
-          <h3 className="t2-trk-title">نبحث لك عن كبتن قريب</h3>
+          <h3 className="t2-trk-title">{tr("نبحث لك عن كبتن قريب")}</h3>
           {badges}
         </div>
         {/* **سطرُ التطبيق القائم لا سطرُ اللوحة**: «عادةً أقل من دقيقة» وعدٌ بلا مصدر (§٦١-د/د). **و«6 كباتن حولك الآن» من اللوحة**
@@ -263,28 +263,28 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* **«انتظري، نوسّع البحث» اختارته هي** (§٦٤-ج/٤-٣، `search_widened`) — فالسطرُ يقول ما يقع الآن **بلا عددٍ ولا نصفِ قطر**:
             عددُ الكبتنات القريبات لم يُقَل (`APPROVALS-62` §٦-٢)، **ولا يُلحق به عددُ السيارات** ولو وصل */}
         <p className="t2-trk-sub">
-          {ride.search_widened ? "نوسّع البحث بين الكبتنات…" : "نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين"}
+          {ride.search_widened ? tr("نوسّع البحث بين الكبتنات…") : tr("نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين")}
           {/* **والعددُ لا ينفصل عن معدوده** آخرَ السطر (` `) — قِيس: «6» وحدَها آخرَ سطرٍ و«كباتن» أوّلَ تاليه */}
-          {nearby && !ride.search_widened ? `. ${nearby > 2 ? `${nearby} ` : ""}${nearbyLabel(nearby)} الآن.` : ""}
+          {nearby && !ride.search_widened ? tr(". {0}{1} الآن.", { 0: nearby > 2 ? `${nearby} ` : "", 1: nearbyLabel(nearby) }) : ""}
         </p>
         {/* **شريطٌ يتحرّك ولا يتقدّم** — «لا نعرف كم يبقى، وشريطٌ يتقدّم يَعِد بما لا نملكه» (الورقة القائمة) */}
-        <div className="t2-trk-bar" role="progressbar" aria-label="نبحث عن كبتن" aria-busy="true">
+        <div className="t2-trk-bar" role="progressbar" aria-label={tr("نبحث عن كبتن")} aria-busy="true">
           <span />
         </div>
         <div className="t2-trk-route">
           <div className="t2-trk-route-points">
             <span className="t2-trk-dot from" aria-hidden="true" />
-            <span className="t2-trk-route-text">{ride.pickup_address ?? pickupLine ?? "نقطة الانطلاق"}</span>
+            <span className="t2-trk-route-text">{ride.pickup_address ?? pickupLine ?? tr("نقطة الانطلاق")}</span>
             <span className="t2-trk-dot to" aria-hidden="true" />
             {/* **ساعاتٌ بلا وجهةٍ تقول ذلك** (§٦٣-ج/٥) — لا «الوجهة» عن نقطة الانطلاق نفسِها */}
             <span className="t2-trk-route-text">
-              {hourly && noDestination(ride) ? "بلا وجهة — تقولها للكبتن" : (ride.dropoff_address ?? "الوجهة")}
+              {hourly && noDestination(ride) ? tr("بلا وجهة — تقولها للكبتن") : (ride.dropoff_address ?? tr("الوجهة"))}
             </span>
           </div>
           <div className="t2-trk-route-fare">
             <div className="t2-trk-route-kind">
               {VEHICLE_LABEL[ride.vehicle_category]}
-              {commute ? " · مدفوعة من اشتراكك" : payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
+              {commute ? tr(" · مدفوعة من اشتراكك") : payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
             </div>
             <div className="t2-trk-route-price">
               {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
@@ -306,7 +306,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {t.women ? (
           <p className="t2-note">
             <span className="t2-icon" aria-hidden="true">schedule</span>
-            نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.
+            {tr("نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
           </p>
         ) : null}
         <ErrorNote message={t.error} className="t2-error" />
@@ -328,14 +328,14 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           onLoad={() => t.setSkinArt("ready")}
           onError={() => t.setSkinArt("broken")}
         />
-        <p>هذه المركبة التي تتحرّك على خريطتك — ابحث عنها في الشارع.</p>
+        <p>{tr("هذه المركبة التي تتحرّك على خريطتك — ابحث عنها في الشارع.")}</p>
       </div>
     ) : null;
 
   const shareRow = (
     <button type="button" className="t2-trk-rowbtn" onClick={() => void share()}>
       <span className="t2-icon" aria-hidden="true">share_location</span>
-      <span className="t2-trk-rowbtn-text">{t.copied ? "نُسخت التفاصيل" : "شارك رحلتك مع شخص تثق به"}</span>
+      <span className="t2-trk-rowbtn-text">{t.copied ? tr("نُسخت التفاصيل") : tr("شارك رحلتك مع شخص تثق به")}</span>
       <span className="t2-icon t2-trk-rowbtn-go" aria-hidden="true">chevron_left</span>
     </button>
   );
@@ -368,18 +368,18 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             clock.left > 0 ? (
               <div className="t2-trk-stat">
                 <div dir="ltr" className="t2-trk-stat-value">{clockText(clock.left)}</div>
-                <div className="t2-trk-stat-label">الوقتُ الباقي</div>
+                <div className="t2-trk-stat-label">{tr("الوقتُ الباقي")}</div>
               </div>
             ) : (
               <div className="t2-trk-stat t2-hr-over" role="status">
-                <div className="t2-trk-stat-value">وقتٌ زائد · {clock.over} د</div>
-                <div className="t2-trk-stat-label">فوق الساعات المحجوزة</div>
+                <div className="t2-trk-stat-value">{tr("وقتٌ زائد ·")}{" "}{clock.over}{" "}{tr("د")}</div>
+                <div className="t2-trk-stat-label">{tr("فوق الساعات المحجوزة")}</div>
               </div>
             )
           ) : progress ? (
             <div className="t2-trk-stat">
               <div dir="ltr" className="t2-trk-stat-value">{progress.left.toFixed(1)}</div>
-              <div className="t2-trk-stat-label">كم متبقية</div>
+              <div className="t2-trk-stat-label">{tr("كم متبقية")}</div>
             </div>
           ) : null}
           <div className="t2-trk-stat">
@@ -389,7 +389,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             <div dir="ltr" className="t2-trk-stat-value">{formatMoney(ride.rider_estimate)}</div>
             {/* **سعرُ المشوار مجمَّدٌ لا تقدير** (§٦٣-ج/٦) — دُفع مع الاشتراك */}
             <div className="t2-trk-stat-label">
-              {currencyLabel(ride.currency)} {commute ? "من اشتراكك" : "تقديرياً"}
+              {currencyLabel(ride.currency)} {commute ? tr("من اشتراكك") : tr("تقديرياً")}
             </div>
           </div>
         </div>
@@ -401,8 +401,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           <div className="t2-callout">
             <span className="t2-icon fill" aria-hidden="true">verified_user</span>
             <div className="t2-callout-main">
-              <div className="t2-callout-title">شاركي رحلتك مع من تثقين</div>
-              <p className="t2-callout-body">نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.</p>
+              <div className="t2-callout-title">{tr("شاركي رحلتك مع من تثقين")}</div>
+              <p className="t2-callout-body">{tr("نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.")}</p>
               <div className="t2-trk-hint-row">
                 <button
                   type="button"
@@ -412,10 +412,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
                     t.setShareHintClosed(true);
                   }}
                 >
-                  مشاركة
+                  {tr("مشاركة")}
                 </button>
                 <button type="button" className="t2-button secondary" onClick={() => t.setShareHintClosed(true)}>
-                  ليس الآن
+                  {tr("ليس الآن")}
                 </button>
               </div>
             </div>
@@ -433,7 +433,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {commute ? (
           <div className="t2-trk-rowbtn" role="note">
             <span className="t2-icon" aria-hidden="true">event_repeat</span>
-            <span className="t2-trk-rowbtn-text">الدفع: مدفوعة من اشتراكك</span>
+            <span className="t2-trk-rowbtn-text">{tr("الدفع: مدفوعة من اشتراكك")}</span>
           </div>
         ) : payMethod ? (
           <button
@@ -443,8 +443,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             onClick={() => setPickingPay(true)}
           >
             <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[payMethod.method]}</span>
-            <span className="t2-trk-rowbtn-text">الدفع: {PAYMENT_METHOD_LABEL[payMethod.method]}</span>
-            {channels.length > 1 ? <span className="t2-trk-change">تغيير</span> : null}
+            <span className="t2-trk-rowbtn-text">{tr("الدفع:")}{" "}{PAYMENT_METHOD_LABEL[payMethod.method]}</span>
+            {channels.length > 1 ? <span className="t2-trk-change">{tr("تغيير")}</span> : null}
           </button>
         ) : null}
         <ErrorNote message={t.error} className="t2-error" />
@@ -468,7 +468,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
                 disabled={t.busy}
                 onClick={() => t.setConfirming(true)}
               >
-                إلغاء الرحلة · قد تُطبَّق رسوم
+                {tr("إلغاء الرحلة · قد تُطبَّق رسوم")}
               </button>
             )
           : null
@@ -477,7 +477,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
       <div className="t2-trk-head2">
         <div className="t2-trk-head2-main">
           <div className="t2-trk-title2">
-            {womenRide ? womenApproachTitle(arrived) : arrived ? "الكبتن ينتظرك في نقطة الانطلاق" : "الكبتن في الطريق إليك"}
+            {womenRide ? womenApproachTitle(arrived) : arrived ? tr("الكبتن ينتظرك في نقطة الانطلاق") : tr("الكبتن في الطريق إليك")}
           </div>
           {vehicle ? (
             <div className="t2-trk-veh">
@@ -558,7 +558,7 @@ export function ApproachChipT2({
     return (
       <div className="t2 t2-trk-chip">
         <span className="t2-trk-chip-dot" aria-hidden="true" />
-        وصل الكبتن
+        {tr("وصل الكبتن")}
       </div>
     );
   }
@@ -566,8 +566,8 @@ export function ApproachChipT2({
   return (
     <div className="t2 t2-trk-chip">
       <span className="t2-trk-chip-dot" aria-hidden="true" />
-      الكبتن على بعد {formatDistance(distanceKm(driverPing, ride.pickup))}
-      {minutes !== null ? ` · ${minutes} د` : ""}
+      {tr("الكبتن على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
+      {minutes !== null ? tr(" · {0} د", { 0: minutes }) : ""}
     </div>
   );
 }
@@ -590,19 +590,19 @@ export function TripCardT2({
   return (
     <div className="t2 t2-trk-card">
       <div className="t2-trk-card-label">
-        {parcel ? (ride.parcel_fetch ? "غرضك في الطريق إليك" : "طردك في الطريق") : hourly ? `بالساعة · ${hoursLabel(ride.hourly_hours!)}` : "في الطريق إلى"}
+        {parcel ? (ride.parcel_fetch ? tr("غرضك في الطريق إليك") : tr("طردك في الطريق")) : hourly ? tr("بالساعة · {0}", { 0: hoursLabel(ride.hourly_hours!) }) : tr("في الطريق إلى")}
       </div>
       <div className="t2-trk-card-dest">
         {parcel && ride.parcel_fetch
-          ? (ride.dropoff_address ?? "إليك")
+          ? (ride.dropoff_address ?? tr("إليك"))
           : parcel && ride.recipient_name
-          ? `إلى: ${ride.recipient_name}`
+          ? tr("إلى: {0}", { 0: ride.recipient_name })
           : hourly && noDestination(ride)
-            ? "بلا وجهة — تقولها للكبتن"
-            : (ride.dropoff_address ?? "وجهتك")}
+            ? tr("بلا وجهة — تقولها للكبتن")
+            : (ride.dropoff_address ?? tr("وجهتك"))}
       </div>
       {progress ? (
-        <div className="t2-trk-progress" role="img" aria-label={`قُطع ${Math.round(progress.done * 100)}٪ من الطريق`}>
+        <div className="t2-trk-progress" role="img" aria-label={tr("قُطع {0}٪ من الطريق", { 0: Math.round(progress.done * 100) })}>
           <span className="t2-trk-progress-track" />
           <span className="t2-trk-progress-fill" style={{ width: `${progress.done * 100}%` }} />
           <span className="t2-trk-progress-from" />
@@ -626,7 +626,7 @@ export function ThemeButtonT2({ dark, low, onToggle }: { dark: boolean; low: boo
       type="button"
       className={low ? "t2 t2-mapbtn t2-trk-theme low" : "t2 t2-mapbtn t2-trk-theme"}
       onClick={onToggle}
-      aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
+      aria-label={dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
     >
       <span className="t2-icon" aria-hidden="true">{dark ? "light_mode" : "dark_mode"}</span>
     </button>

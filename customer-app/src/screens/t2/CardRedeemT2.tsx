@@ -17,7 +17,7 @@ import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
 import { BannerT2, BusyLabel, HeadT2 } from "./MoneyT2";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **الرمزُ كما يُطبع** — حروفٌ وأرقامٌ كبيرة، أربعاً أربعاً، ستّةَ عشرَ على الأكثر */
 function grouped(raw: string): string {
@@ -42,7 +42,7 @@ export function CardRedeemT2Screen() {
       // **الصوتُ مع «شُحن» لا قبله** — المالُ قُيّد في الردّ نفسِه
       play("topup");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر استعمال البطاقة — أعد المحاولة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر استعمال البطاقة — أعد المحاولة"));
     } finally {
       setBusy(false);
     }
@@ -50,22 +50,22 @@ export function CardRedeemT2Screen() {
 
   return (
     <div className="t2 t2-m-page">
-      <HeadT2 title="بطاقة TAXO" onBack={goBack} />
+      <HeadT2 title={tr("بطاقة TAXO")} onBack={goBack} />
       {done ? (
         <section className="t2-m-card t2-pr-done">
           <Icon name="check_circle" />
-          <h2 className="t2-pr-done-title">شُحن رصيدك</h2>
+          <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">
-            أُضيف {formatMoney(done.amount, done.currency)} من البطاقة{" "}
+            {tr("أُضيف")}{" "}{formatMoney(done.amount, done.currency)}{" "}{tr("من البطاقة")}{" "}
             <span dir="ltr">{done.serial}</span>.
           </p>
           <button type="button" className="t2-button primary t2-m-cta t2-m-gap" onClick={() => navigate("/wallet")}>
-            إلى المحفظة
+            {tr("إلى المحفظة")}
           </button>
         </section>
       ) : (
         <>
-          <AuthBlock label="رمز البطاقة" htmlFor="taxo-card-code" hint="ستّةَ عشرَ حرفاً كما تحت الطبقة الفضيّة">
+          <AuthBlock label={tr("رمز البطاقة")} htmlFor="taxo-card-code" hint={tr("ستّةَ عشرَ حرفاً كما تحت الطبقة الفضيّة")}>
             <AuthInput
               id="taxo-card-code"
               dir="ltr"
@@ -85,7 +85,7 @@ export function CardRedeemT2Screen() {
               aria-busy={busy}
               onClick={submit}
             >
-              <BusyLabel busy={busy}>اشحن</BusyLabel>
+              <BusyLabel busy={busy}>{tr("اشحن")}</BusyLabel>
             </button>
           </div>
         </>

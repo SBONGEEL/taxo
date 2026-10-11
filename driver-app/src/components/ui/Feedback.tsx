@@ -7,7 +7,7 @@
 
 import type { ReactNode } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 function Note({
   message,
@@ -51,7 +51,7 @@ export const SuccessNote = ({
 export function Spinner({ className }: { className?: string }) {
   return (
     <span
-      aria-label="جارٍ التحميل"
+      aria-label={tr("جارٍ التحميل")}
       role="status"
       className={cn(
         "block size-34 animate-spin rounded-full border-2 border-line border-t-ink",

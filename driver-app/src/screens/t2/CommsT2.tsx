@@ -18,17 +18,17 @@ import { callClock, useComms, type CallView, type ChatView, type CommsPeer } fro
 import { DISPLAY_LOCALE } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 import "@/taxo2";
-import "./comms.css";
+import "./comms.css"; import { tr } from "@/lib/i18n";
 
 /** **الجملةُ المُقَرّة بحرفها** — قبل رنين مكالمةٍ مسجَّلة، عند المتصل وفوق «ردّ» عند المتصَل به (§٦٦-ج/١٦). */
-const RECORDING_NOTICE = "هذه المكالمة ستُسجَّل للسلامة والجودة، وتُحفظ مدّةً محدودةً ثمّ تُحذف.";
-const CLOSED_LINE = "انتهت الرحلة، وأُغلقت المحادثة.";
+const RECORDING_NOTICE = tr("هذه المكالمة ستُسجَّل للسلامة والجودة، وتُحفظ مدّةً محدودةً ثمّ تُحذف.");
+const CLOSED_LINE = tr("انتهت الرحلة، وأُغلقت المحادثة.");
 
 const REASONS: { value: ChatReportReason; label: string }[] = [
-  { value: "abuse", label: "إساءة" },
-  { value: "harassment", label: "تحرّش" },
-  { value: "fraud", label: "احتيال" },
-  { value: "other", label: "غير ذلك" },
+  { value: "abuse", label: tr("إساءة") },
+  { value: "harassment", label: tr("تحرّش") },
+  { value: "fraud", label: tr("احتيال") },
+  { value: "other", label: tr("غير ذلك") },
 ];
 
 /** «10:42» — ساعةُ الرسالة بخاناتٍ لاتينية ولغةٍ مثبَّتة (§20). */
@@ -49,9 +49,9 @@ export function CommsButtonsT2() {
       {comms.canMessage ? (
         <button type="button" className="t2-cm-action" onClick={() => comms.openChat()}>
           <Icon name="chat" />
-          رسالة
+          {tr("رسالة")}
           {comms.unread > 0 ? (
-            <span className="t2-cm-count" aria-label={`${comms.unread} غير مقروءة`}>
+            <span className="t2-cm-count" aria-label={tr("{0} غير مقروءة", { 0: comms.unread })}>
               {comms.unread > 9 ? "9+" : comms.unread}
             </span>
           ) : null}
@@ -60,7 +60,7 @@ export function CommsButtonsT2() {
       {comms.canCall ? (
         <button type="button" className="t2-cm-action" onClick={comms.startCall}>
           <Icon name="call" />
-          اتصال
+          {tr("اتصال")}
         </button>
       ) : null}
     </div>
@@ -138,12 +138,12 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
         className="t2-cm-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="المحادثة"
+        aria-label={tr("المحادثة")}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="t2-cm-grab" aria-hidden="true" />
         <header className="t2-cm-head">
-          <button type="button" className="t2-cm-round" onClick={comms.closeChat} aria-label="إغلاق">
+          <button type="button" className="t2-cm-round" onClick={comms.closeChat} aria-label={tr("إغلاق")}>
             <Icon name="close" />
           </button>
           <PeerFace peer={peer} />
@@ -159,7 +159,7 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
           </div>
           {/* **«اتصال» في رأس المحادثة نفسِها** (§٦ البند ٧) — ويغيب بإغلاقها */}
           {current && comms.canCall && writable ? (
-            <button type="button" className="t2-cm-round accent" onClick={comms.startCall} aria-label="اتصال">
+            <button type="button" className="t2-cm-round accent" onClick={comms.startCall} aria-label={tr("اتصال")}>
               <Icon name="call" />
             </button>
           ) : null}
@@ -180,10 +180,10 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
                 <span>{chat.error}</span>
               </p>
             ) : (
-              <span className="t2-cm-loading" role="status" aria-label="جارٍ التحميل" />
+              <span className="t2-cm-loading" role="status" aria-label={tr("جارٍ التحميل")} />
             )
           ) : messages.length === 0 ? (
-            <p className="t2-cm-empty">لا رسائلَ بعد — اكتب لـ{comms.peerRole} ما يحتاج أن يعرفه.</p>
+            <p className="t2-cm-empty">{tr("لا رسائلَ بعد — اكتب لـ")}{comms.peerRole}{" "}{tr("ما يحتاج أن يعرفه.")}</p>
           ) : (
             messages.map((message) => (
               <Bubble
@@ -216,15 +216,15 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
                   className="t2-input t2-cm-input"
                   value={draft}
                   maxLength={max}
-                  placeholder="اكتب رسالة…"
-                  aria-label="الرسالة"
+                  placeholder={tr("اكتب رسالة…")}
+                  aria-label={tr("الرسالة")}
                   enterKeyHint="send"
                   onChange={(event) => {
                     setDraft(event.target.value);
                     if (error) setError(null);
                   }}
                 />
-                <button type="submit" className="t2-cm-send" disabled={!draft.trim()} aria-label="إرسال">
+                <button type="submit" className="t2-cm-send" disabled={!draft.trim()} aria-label={tr("إرسال")}>
                   <Icon name="send" />
                 </button>
               </form>
@@ -239,7 +239,7 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
             // **بعد الإغلاق**: سطرٌ مكانَ حقل الكتابة، والرسائلُ مقروءة (§٦٦-ب، `APPROVALS-DATA` §١)
             <p className="t2-cm-closed">
               <Icon name="lock" />
-              <span>{chat.live ? "المحادثةُ غيرُ متاحةٍ الآن." : CLOSED_LINE}</span>
+              <span>{chat.live ? tr("المحادثةُ غيرُ متاحةٍ الآن.") : CLOSED_LINE}</span>
             </p>
           )}
         </footer>
@@ -285,7 +285,7 @@ function Bubble({ message, read, onReport }: { message: ChatMessage; read: boole
       </div>
       <div className="t2-cm-when">
         <span dir="ltr">{timeOf(message.created_at)}</span>
-        {read ? <span className="t2-cm-read"> · قُرئت</span> : null}
+        {read ? <span className="t2-cm-read">{" "}{tr("· قُرئت")}</span> : null}
       </div>
     </div>
   );
@@ -312,26 +312,26 @@ function ReportSheetT2({ message, onClose }: { message: ChatMessage; onClose: ()
 
   return (
     <div className="t2-cm-report-shade" onClick={onClose}>
-      <div className="t2-cm-report" role="dialog" aria-modal="true" aria-label="أبلغ عن الرسالة" onClick={(e) => e.stopPropagation()}>
+      <div className="t2-cm-report" role="dialog" aria-modal="true" aria-label={tr("أبلغ عن الرسالة")} onClick={(e) => e.stopPropagation()}>
         <div className="t2-cm-grab" aria-hidden="true" />
         {sent ? (
           <>
             <p className="t2-cm-report-done">
               <Icon name="check_circle" fill />
-              <span>وصل بلاغُك، وسيراجعه فريقُ TAXO.</span>
+              <span>{tr("وصل بلاغُك، وسيراجعه فريقُ TAXO.")}</span>
             </p>
             <button type="button" className="t2-button primary t2-cm-wide" onClick={onClose}>
-              تمّ
+              {tr("تمّ")}
             </button>
           </>
         ) : (
           <>
             <h2 className="t2-cm-report-title">
               <Icon name="flag" />
-              أبلغ عن الرسالة
+              {tr("أبلغ عن الرسالة")}
             </h2>
             <blockquote className="t2-cm-quote">{message.body}</blockquote>
-            <div className="t2-cm-reasons" role="radiogroup" aria-label="السبب">
+            <div className="t2-cm-reasons" role="radiogroup" aria-label={tr("السبب")}>
               {REASONS.map((option) => (
                 <button
                   key={option.value}
@@ -349,8 +349,8 @@ function ReportSheetT2({ message, onClose }: { message: ChatMessage; onClose: ()
               className="t2-input t2-cm-note"
               value={note}
               maxLength={200}
-              placeholder="سطرٌ يوضّح ما وقع (اختياريّ)"
-              aria-label="ملاحظة"
+              placeholder={tr("سطرٌ يوضّح ما وقع (اختياريّ)")}
+              aria-label={tr("ملاحظة")}
               onChange={(event) => setNote(event.target.value)}
             />
             {error ? (
@@ -366,10 +366,10 @@ function ReportSheetT2({ message, onClose }: { message: ChatMessage; onClose: ()
               aria-busy={busy}
               onClick={() => void submit()}
             >
-              أبلغ
+              {tr("أبلغ")}
             </button>
             <button type="button" className="t2-cm-text" onClick={onClose}>
-              تراجع
+              {tr("تراجع")}
             </button>
           </>
         )}
@@ -397,23 +397,23 @@ function stageLine(call: CallView, elapsed: number): string {
   switch (call.stage) {
     case "preparing":
     case "joining":
-      return "جارٍ الاتصال…";
+      return tr("جارٍ الاتصال…");
     case "consent":
-      return "قبل أن نتّصل";
+      return tr("قبل أن نتّصل");
     case "dialing":
-      return "يرنّ…";
+      return tr("يرنّ…");
     case "incoming":
-      return "مكالمةٌ واردة — رحلتُك الحالية";
+      return tr("مكالمةٌ واردة — رحلتُك الحالية");
     case "talking":
       return callClock(elapsed);
     case "broken":
-      return call.reason ?? "تعذّر الاتصال، الشبكةُ ضعيفة.";
+      return call.reason ?? tr("تعذّر الاتصال، الشبكةُ ضعيفة.");
     case "unanswered":
-      return "لم يُجب";
+      return tr("لم يُجب");
     case "tripover":
-      return "انتهت الرحلة، فلا اتصال الآن.";
+      return tr("انتهت الرحلة، فلا اتصال الآن.");
     case "hungup":
-      return call.lasted !== null && call.lasted > 0 ? `انتهت المكالمة · ${callClock(call.lasted)}` : "انتهت المكالمة";
+      return call.lasted !== null && call.lasted > 0 ? tr("انتهت المكالمة · {0}", { 0: callClock(call.lasted) }) : tr("انتهت المكالمة");
   }
 }
 
@@ -423,10 +423,10 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
   const ongoing = call.stage === "preparing" || call.stage === "dialing" || call.stage === "joining" || call.stage === "talking";
   const failed = call.stage === "broken" || call.stage === "unanswered";
   return (
-    <div className="t2 t2-cm-call" role="dialog" aria-modal="true" aria-label={call.stage === "incoming" ? "مكالمةٌ واردة" : "المكالمة"}>
+    <div className="t2 t2-cm-call" role="dialog" aria-modal="true" aria-label={call.stage === "incoming" ? tr("مكالمةٌ واردة") : tr("المكالمة")}>
       <div className="t2-cm-call-top">
         {ongoing ? (
-          <button type="button" className="t2-cm-round" onClick={() => comms.minimize(true)} aria-label="تصغير">
+          <button type="button" className="t2-cm-round" onClick={() => comms.minimize(true)} aria-label={tr("تصغير")}>
             <Icon name="expand_more" />
           </button>
         ) : (
@@ -435,7 +435,7 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
         {call.recording && (call.stage === "talking" || call.stage === "joining" || call.stage === "dialing") ? (
           <span className="t2-cm-rec">
             <Icon name="radio_button_checked" fill />
-            مسجَّلة
+            {tr("مسجَّلة")}
           </span>
         ) : null}
       </div>
@@ -451,7 +451,7 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
         >
           {stageLine(call, elapsed)}
         </div>
-        {call.stage === "talking" && call.weak ? <div className="t2-cm-call-weak">الشبكةُ ضعيفة…</div> : null}
+        {call.stage === "talking" && call.weak ? <div className="t2-cm-call-weak">{tr("الشبكةُ ضعيفة…")}</div> : null}
       </div>
 
       {call.stage === "consent" ? (
@@ -462,10 +462,10 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
           </p>
           <div className="t2-cm-pair">
             <button type="button" className="t2-button secondary" onClick={() => comms.consent(false)}>
-              إلغاء
+              {tr("إلغاء")}
             </button>
             <button type="button" className="t2-button action" onClick={() => comms.consent(true)}>
-              متابعة
+              {tr("متابعة")}
             </button>
           </div>
         </div>
@@ -482,13 +482,13 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
               <span className="t2-cm-bigbtn-dot">
                 <Icon name="call_end" />
               </span>
-              رفض
+              {tr("رفض")}
             </button>
             <button type="button" className="t2-cm-bigbtn accept" onClick={comms.answer}>
               <span className="t2-cm-bigbtn-dot">
                 <Icon name="call" />
               </span>
-              ردّ
+              {tr("ردّ")}
             </button>
           </div>
         </div>
@@ -505,7 +505,7 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
               <span className="t2-cm-key-dot">
                 <Icon name={call.muted ? "mic_off" : "mic"} />
               </span>
-              كتم
+              {tr("كتم")}
             </button>
             {/* **مكبّرُ الصوت حيث يختار المتصفّحُ المخرج وحدَه** (`speakerReady`) — وغيابُه في الغلاف مكتوبٌ في `lib/call-session` */}
             {call.speakerReady ? (
@@ -518,20 +518,20 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
                 <span className="t2-cm-key-dot">
                   <Icon name="volume_up" />
                 </span>
-                مكبّر الصوت
+                {tr("مكبّر الصوت")}
               </button>
             ) : null}
             <button type="button" className="t2-cm-key end" onClick={comms.hangUp}>
               <span className="t2-cm-key-dot">
                 <Icon name="call_end" />
               </span>
-              إنهاء
+              {tr("إنهاء")}
             </button>
           </div>
           {comms.canMessage ? (
             <button type="button" className="t2-cm-text" onClick={() => comms.openChat(call.rideId)}>
               <Icon name="chat" />
-              رسالة
+              {tr("رسالة")}
             </button>
           ) : null}
         </div>
@@ -541,19 +541,19 @@ function CallScreenT2({ call, peer, peerRole }: { call: CallView; peer: CommsPee
             <>
               <button type="button" className="t2-button action t2-cm-wide" onClick={comms.messageInstead}>
                 <Icon name="chat" />
-                راسِله بدلاً من ذلك
+                {tr("راسِله بدلاً من ذلك")}
               </button>
               {/* **بشروط «اتصال» نفسِها** (`canCall`) — مقبسٌ ساقطٌ أو ميكروفونٌ غائبٌ لا تُعاد عليه محاولة */}
               {comms.canCall ? (
                 <button type="button" className="t2-button secondary t2-cm-wide" onClick={comms.retry}>
-                  أعد المحاولة
+                  {tr("أعد المحاولة")}
                 </button>
               ) : null}
             </>
           ) : null}
           {call.stage !== "hungup" ? (
             <button type="button" className="t2-cm-text" onClick={comms.dismissCall}>
-              إغلاق
+              {tr("إغلاق")}
             </button>
           ) : null}
         </div>
@@ -574,9 +574,9 @@ function CallStripT2({ call, peer, peerRole }: { call: CallView; peer: CommsPeer
         <span className="t2-cm-strip-time" dir={call.stage === "talking" ? "ltr" : undefined}>
           {stageLine(call, elapsed)}
         </span>
-        {call.recording ? <span className="t2-cm-strip-rec">مسجَّلة</span> : null}
+        {call.recording ? <span className="t2-cm-strip-rec">{tr("مسجَّلة")}</span> : null}
       </button>
-      <button type="button" className="t2-cm-strip-end" onClick={comms.hangUp} aria-label="إنهاء">
+      <button type="button" className="t2-cm-strip-end" onClick={comms.hangUp} aria-label={tr("إنهاء")}>
         <Icon name="call_end" />
       </button>
     </div>

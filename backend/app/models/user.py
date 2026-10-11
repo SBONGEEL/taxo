@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    CheckConstraint,
     Boolean,
     DateTime,
     Index,
@@ -55,6 +56,9 @@ class User(UUIDMixin, TimestampMixin, Base):
         server_default=text("'taxo'"),
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    #: **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — `ar` لكلِّ حسابٍ قائمٍ بالافتراض في القاعدة؛ بها تُكتب إشعاراتُه ورسائلُه،
+    #: وتُضبط من لغة التطبيق عند الدخول (`token_service.issue_token_pair`) ومن الإعدادات (`PATCH /auth/me`)
+    language: Mapped[str] = mapped_column(String(2), nullable=False, default="ar", server_default=text("'ar'"))
     role: Mapped[UserRole] = mapped_column(
         pg_enum(UserRole, "user_role"), nullable=False, default=UserRole.RIDER
     )
@@ -376,6 +380,7 @@ class User(UUIDMixin, TimestampMixin, Base):
         # **حسابا التجربة وحدَهما في الفهرس** (`0101`): السؤالُ الوحيد «من
         # الموسوم؟» وجوابُه صفّان — فلا تُحمل آلافُ `false` لا يسأل عنها أحد
         Index("ix_users_is_test", is_test, postgresql_where=text("is_test")),
+        CheckConstraint("language IN ('ar', 'fr')", name="user_language_valid"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي

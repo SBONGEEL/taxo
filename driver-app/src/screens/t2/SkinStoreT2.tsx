@@ -34,27 +34,27 @@ import { digits } from "@/lib/utils";
 import { useSkinStoreScreen } from "@/screens/SkinStore";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 type Filter = "all" | "owned" | Rarity;
 
 /** **أين تُرى وكيف تتحرّك** — من `visible_before_accept` و`map_rotates` لا من الندرة (شرطُ العقد في `lib/skins`). */
 function seenLine(skin: VehicleSkin): string {
   const where = skin.visible_before_accept
-    ? "تظهر للراكب"
-    : "تظهر لراكبك بعد قبول الرحلة";
-  return `${RARITY_LABEL[skin.rarity]} · ${where}${skin.map_rotates ? " وتتحرك مع اتجاهك" : ""}`;
+    ? tr("تظهر للراكب")
+    : tr("تظهر لراكبك بعد قبول الرحلة");
+  return `${RARITY_LABEL[skin.rarity]} · ${where}${skin.map_rotates ? tr(" وتتحرك مع اتجاهك") : ""}`;
 }
 
 /** **سطرُ البطاقة القائمة بنصّه**: المتبقّي حين تكون الكميّةُ محدودة، ومن اقتناها — و`null` بلا حدٍّ فلا سطر. */
 function stockLine(skin: VehicleSkin): string | null {
   if (skin.remaining !== null) {
-    return `${skin.remaining > 0 ? `متبقٍّ ${digits(String(skin.remaining))}` : "نفدت الكمية"} · ${digits(
+    return tr("{0} · {1} اقتنوها", { 0: skin.remaining > 0 ? tr("متبقٍّ {0}", { 0: digits(String(skin.remaining)) }) : tr("نفدت الكمية"), 1: digits(
       String(skin.owners_count),
-    )} اقتنوها`;
+    ) });
   }
   return skin.owners_count > 0
-    ? `${digits(String(skin.owners_count))} اقتنوها`
+    ? tr("{0} اقتنوها", { 0: digits(String(skin.owners_count)) })
     : null;
 }
 
@@ -104,17 +104,17 @@ export function SkinStoreT2Screen() {
           <button
             type="button"
             className="t2-store-back"
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
             onClick={() => s.goBack()}
           >
             <span className="t2-icon" aria-hidden="true">
               arrow_forward
             </span>
           </button>
-          <h1 className="t2-store-title">متجر المركبات</h1>
+          <h1 className="t2-store-title">{tr("متجر المركبات")}</h1>
           {/* **الرصيدُ في الرأس** — من يتصفّح الأسعارَ يحتاج أن يعرف ما معه */}
           {s.store ? (
-            <span className="t2-store-wallet" aria-label="رصيد محفظتك">
+            <span className="t2-store-wallet" aria-label={tr("رصيد محفظتك")}>
               <span className="t2-icon" aria-hidden="true">
                 account_balance_wallet
               </span>
@@ -134,7 +134,7 @@ export function SkinStoreT2Screen() {
             <button
               type="button"
               className="t2-store-preview t2-legacy"
-              aria-label={`تفاصيل ${selected.name}`}
+              aria-label={tr("تفاصيل {0}", { 0: selected.name })}
               onClick={() => s.setOpen(selected)}
             >
               <SkinMapPreview skin={selected} className="t2-store-map" />
@@ -144,7 +144,7 @@ export function SkinStoreT2Screen() {
                 <span className="t2-icon fill" aria-hidden="true">
                   visibility
                 </span>
-                هكذا يراك الراكب
+                {tr("هكذا يراك الراكب")}
               </span>
               <span className="t2-store-info">
                 <span className="t2-store-info-name">{selected.name}</span>
@@ -156,7 +156,7 @@ export function SkinStoreT2Screen() {
 
         {/* ── المرشِّحات: الكلُّ والندراتُ الحاضرةُ بأسمائها ومملوكة ── */}
         {s.skins.length > 0 ? (
-          <div className="t2-store-chips" role="tablist" aria-label="المركبات">
+          <div className="t2-store-chips" role="tablist" aria-label={tr("المركبات")}>
             {(["all", ...rarities, "owned"] as Filter[]).map((key) => (
               <button
                 key={key}
@@ -169,9 +169,9 @@ export function SkinStoreT2Screen() {
                 onClick={() => setFilter(key)}
               >
                 {key === "all"
-                  ? "الكل"
+                  ? tr("الكل")
                   : key === "owned"
-                    ? "مملوكة"
+                    ? tr("مملوكة")
                     : RARITY_LABEL[key]}
               </button>
             ))}
@@ -197,7 +197,7 @@ export function SkinStoreT2Screen() {
             <span className="t2-icon" aria-hidden="true">
               bolt
             </span>
-            فعّلها الآن
+            {tr("فعّلها الآن")}
           </button>
         ) : null}
         {s.activateError ? (
@@ -211,8 +211,8 @@ export function SkinStoreT2Screen() {
 
         {s.skins.length === 0 && !s.failed ? (
           <div className="t2-empty t2-store-empty">
-            <b>لا مركبات معروضةً الآن</b>
-            <span>يُضاف إلى المتجر من وقتٍ لآخر — عُد لاحقاً.</span>
+            <b>{tr("لا مركبات معروضةً الآن")}</b>
+            <span>{tr("يُضاف إلى المتجر من وقتٍ لآخر — عُد لاحقاً.")}</span>
           </div>
         ) : null}
 
@@ -245,9 +245,9 @@ export function SkinStoreT2Screen() {
                   </span>
                 </span>
                 {skin.active ? (
-                  <span className="t2-store-tag ok">مفعّلة</span>
+                  <span className="t2-store-tag ok">{tr("مفعّلة")}</span>
                 ) : skin.owned ? (
-                  <span className="t2-store-tag">مملوكة</span>
+                  <span className="t2-store-tag">{tr("مملوكة")}</span>
                 ) : skin.blocked_reason ? (
                   <span className="t2-store-tag warn">
                     <span className="t2-icon fill" aria-hidden="true">
@@ -265,7 +265,7 @@ export function SkinStoreT2Screen() {
                     </span>
                   </span>
                 ) : (
-                  <span className="t2-store-card-kind">غير معروضة للبيع</span>
+                  <span className="t2-store-card-kind">{tr("غير معروضة للبيع")}</span>
                 )}
                 {stock ? <span className="t2-store-stock">{stock}</span> : null}
                 {on ? (
@@ -291,8 +291,8 @@ export function SkinStoreT2Screen() {
         ) : null}
 
         <p className="t2-store-fine">
-          المركبةُ زينةٌ على الخريطة — لا تغيّر أجرتك ولا فئةَ سيارتك ولا
-          أولويتَك في الطلبات.
+          {tr("المركبةُ زينةٌ على الخريطة — لا تغيّر أجرتك ولا فئةَ سيارتك ولا أولويتَك في الطلبات.")}
+
         </p>
       </div>
 
@@ -314,14 +314,14 @@ export function SkinStoreT2Screen() {
             )}
             <div className="t2-store-bar-sub">
               {buyable(selected)
-                ? "تُخصم من محفظتك · تملكها دائماً"
+                ? tr("تُخصم من محفظتك · تملكها دائماً")
                 : selected.owned
                   ? selected.active
-                    ? "مفعّلة — والتبديلُ من «مركباتي»"
-                    : "في كراجك — وتفعيلُها من «مركباتي»"
+                    ? tr("مفعّلة — والتبديلُ من «مركباتي»")
+                    : tr("في كراجك — وتفعيلُها من «مركباتي»")
                   : selected.blocked_reason
                     ? BLOCKED_LABEL[selected.blocked_reason]
-                    : "غير معروضة للبيع"}
+                    : tr("غير معروضة للبيع")}
             </div>
           </div>
           {buyable(selected) ? (
@@ -335,7 +335,7 @@ export function SkinStoreT2Screen() {
               <span className="t2-icon fill" aria-hidden="true">
                 shopping_bag
               </span>
-              شراء
+              {tr("شراء")}
             </button>
           ) : selected.owned ? (
             <button
@@ -343,7 +343,7 @@ export function SkinStoreT2Screen() {
               className="t2-store-garage"
               onClick={() => navigate("/account/garage")}
             >
-              مركباتي
+              {tr("مركباتي")}
             </button>
           ) : null}
         </div>

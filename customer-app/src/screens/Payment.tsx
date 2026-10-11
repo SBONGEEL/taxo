@@ -59,7 +59,7 @@ import {
   newIdempotencyKey,
 } from "@/lib/utils";
 import { Icon } from "@/taxo2";
-import { BannerT2, BusyLabel, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
+import { BannerT2, BusyLabel, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 /** نصُّ الزرِّ والملاحظةِ لكل قناة — **وما بعد الضغط لا اسمَ القناة**.
  *
@@ -70,20 +70,20 @@ import { BannerT2, BusyLabel, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
  */
 const CTA: Record<PayableMethod, { label: string; note: string }> = {
   wallet: {
-    label: "ادفع من المحفظة",
-    note: "يُخصم المبلغ فوراً من رصيدك، وإيصالك في سجل الرحلات.",
+    label: tr("ادفع من المحفظة"),
+    note: tr("يُخصم المبلغ فوراً من رصيدك، وإيصالك في سجل الرحلات."),
   },
   card: {
-    label: "ادفع بالبطاقة",
-    note: "تُفتح صفحةُ الدفع الآمنة لدى المزوّد ثم تعود إلى هنا.",
+    label: tr("ادفع بالبطاقة"),
+    note: tr("تُفتح صفحةُ الدفع الآمنة لدى المزوّد ثم تعود إلى هنا."),
   },
   cliq: {
-    label: "ادفع عبر كليك",
-    note: "تُحوّل على alias الكبتن ثم تُدخل رقم الحوالة — ويؤكد استلامها في تطبيقه.",
+    label: tr("ادفع عبر كليك"),
+    note: tr("تُحوّل على alias الكبتن ثم تُدخل رقم الحوالة — ويؤكد استلامها في تطبيقه."),
   },
   cash: {
-    label: "سأدفع كاشاً",
-    note: "سلّم المبلغ للكبتن — سيؤكد استلامه في تطبيقه.",
+    label: tr("سأدفع كاشاً"),
+    note: tr("سلّم المبلغ للكبتن — سيؤكد استلامه في تطبيقه."),
   },
 };
 
@@ -103,19 +103,19 @@ function stopBreakdown(
   const rows: { label: string; value: string; strong: boolean }[] = [];
   if (Number(ride.stops_charge) > 0)
     rows.push({
-      label: `رسم المحطات (${ride.stops.length})`,
+      label: tr("رسم المحطات ({0})", { 0: ride.stops.length }),
       value: formatMoney(ride.stops_charge, ride.currency),
       strong: false,
     });
   if (Number(ride.waiting_charge) > 0)
     rows.push({
-      label: "رسم الانتظار عند المحطات",
+      label: tr("رسم الانتظار عند المحطات"),
       value: formatMoney(ride.waiting_charge, ride.currency),
       strong: false,
     });
   if (Number(ride.pause_charge) > 0)
     rows.push({
-      label: "رسم الوقفات أثناء الرحلة",
+      label: tr("رسم الوقفات أثناء الرحلة"),
       value: formatMoney(ride.pause_charge, ride.currency),
       strong: false,
     });
@@ -178,7 +178,7 @@ export function PaymentScreen() {
   useEffect(() => {
     load()
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة حال الدفع"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة حال الدفع")),
       )
       .finally(() => setLoading(false));
   }, [load]);
@@ -249,14 +249,14 @@ export function PaymentScreen() {
       [
         state?.final_fare
           ? {
-              label: "الأجرة النهائية",
+              label: tr("الأجرة النهائية"),
               value: formatMoney(state.final_fare, state.currency),
               strong: true,
             }
           : null,
         ride?.actual_distance_km
           ? {
-              label: "المسافة الفعلية",
+              label: tr("المسافة الفعلية"),
               value: formatDistance(ride.actual_distance_km),
               strong: false,
             }
@@ -268,7 +268,7 @@ export function PaymentScreen() {
         // العطبُ الأول: رقمٌ يُقال له إنه مدينٌ به بلا بابٍ يدفع منه
         Number(state?.cancellation_debt ?? 0) > 0
           ? {
-              label: "رسمُ إلغاءٍ سابق",
+              label: tr("رسمُ إلغاءٍ سابق"),
               value: formatMoney(state?.cancellation_debt, state?.currency),
               strong: false,
             }
@@ -310,7 +310,7 @@ export function PaymentScreen() {
         window.location.assign(redirect);
       }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تنفيذ الدفع");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تنفيذ الدفع"));
     } finally {
       setBusy(null);
     }
@@ -320,15 +320,15 @@ export function PaymentScreen() {
   if (loading) {
     return (
       <div className="t2 t2-m-stage">
-        <HeadT2 title="الدفع" onBack={goBack} />
-        <WaitT2 label="نقرأ حال الدفع…" />
+        <HeadT2 title={tr("الدفع")} onBack={goBack} />
+        <WaitT2 label={tr("نقرأ حال الدفع…")} />
       </div>
     );
   }
 
   return (
     <div className="t2 t2-m-stage">
-      <HeadT2 title="الدفع" onBack={() => navigate("/")} />
+      <HeadT2 title={tr("الدفع")} onBack={() => navigate("/")} />
 
       {/* **ما يُدفع الآن** (بطاقةُ R10): المتبقّي لا الأجرة — لأن ما يُسأل عنه الآن هو ما يُدفع الآن — والعملةُ باسمها، والقناةُ
           في حبّة R10 */}
@@ -336,7 +336,7 @@ export function PaymentScreen() {
         <div className="t2-m-due-top">
           <div>
             <div className="t2-m-label">
-              {commute ? "أجرةُ رحلتك من الاشتراك" : nothingToStart ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}
+              {commute ? tr("أجرةُ رحلتك من الاشتراك") : nothingToStart ? tr("إجمالي الأجرة") : tr("المتبقي على هذه الرحلة")}
             </div>
             <div className="t2-m-amount">
               <span dir="ltr" className="t2-m-num xl">
@@ -376,16 +376,16 @@ export function PaymentScreen() {
 
       <BannerT2 tone="danger" message={error} />
 
-      {settled && !commute ? <BannerT2 tone="ok" message="اكتمل دفع هذه الرحلة — شكراً لك." /> : null}
+      {settled && !commute ? <BannerT2 tone="ok" message={tr("اكتمل دفع هذه الرحلة — شكراً لك.")} /> : null}
 
       {/* **«مدفوعة من اشتراكك»** (§٦٣-ج/٦) — قراءةٌ لا فعل: دُفعت مقدّماً، والقيدُ في «دفعات هذه الرحلة» بقناة الاشتراك */}
       {commute ? (
         <div className="t2-callout t2-m-callout">
           <Icon name="event_repeat" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">مدفوعة من اشتراكك</p>
+            <p className="t2-callout-title">{tr("مدفوعة من اشتراكك")}</p>
             <p className="t2-callout-body">
-              سعرُها المجمَّد دُفع مقدّماً مع اشتراكك في المشوار الثابت — لا شيءَ تدفعه هنا ولا للكبتن.
+              {tr("سعرُها المجمَّد دُفع مقدّماً مع اشتراكك في المشوار الثابت — لا شيءَ تدفعه هنا ولا للكبتن.")}
             </p>
           </div>
         </div>
@@ -400,9 +400,9 @@ export function PaymentScreen() {
             <div className="t2-callout danger t2-m-callout">
               <Icon name="gavel" />
               <div className="t2-callout-main">
-                <p className="t2-callout-title">على دفعة هذه الرحلة نزاعٌ مفتوح</p>
+                <p className="t2-callout-title">{tr("على دفعة هذه الرحلة نزاعٌ مفتوح")}</p>
                 <p className="t2-callout-body">
-                  تنظر فيه الإدارة، ولا يُطلب منك دفعٌ جديدٌ الآن. يصلك الجوابُ في الإشعارات.
+                  {tr("تنظر فيه الإدارة، ولا يُطلب منك دفعٌ جديدٌ الآن. يصلك الجوابُ في الإشعارات.")}
                 </p>
               </div>
             </div>
@@ -416,10 +416,10 @@ export function PaymentScreen() {
                 <div className="t2-callout-main">
                   <p className="t2-callout-title">
                     {row.method === "cash"
-                      ? `سلّم ${formatMoney(row.amount, row.currency)} كاشاً للكبتن`
-                      : `${formatMoney(row.amount, row.currency)} بقناة ${PAYMENT_METHOD_LABEL[row.method]} بانتظار التأكيد`}
+                      ? tr("سلّم {0} كاشاً للكبتن", { 0: formatMoney(row.amount, row.currency) })
+                      : tr("{0} بقناة {1} بانتظار التأكيد", { 0: formatMoney(row.amount, row.currency), 1: PAYMENT_METHOD_LABEL[row.method] })}
                   </p>
-                  <p className="t2-callout-body">يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.</p>
+                  <p className="t2-callout-body">{tr("يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.")}</p>
                 </div>
               </div>
             ))}
@@ -434,11 +434,11 @@ export function PaymentScreen() {
           <Icon name="payments" />
           <div className="t2-callout-main">
             <p className="t2-callout-title">
-              {recipientCash ? "يدفعها المستلمُ نقداً للكبتن" : "يدفعها الراكبُ نقداً للكبتن"}
+              {recipientCash ? tr("يدفعها المستلمُ نقداً للكبتن") : tr("يدفعها الراكبُ نقداً للكبتن")}
             </p>
             <p className="t2-callout-body">
               {otherDue ? `${formatMoney(otherDue.amount, otherDue.currency)} — ` : ""}
-              لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها.
+              {tr("لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها.")}
             </p>
           </div>
         </div>
@@ -453,7 +453,7 @@ export function PaymentScreen() {
 
       {settled || nothingToStart || cashByOther || commute ? (
         <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${rideId}/rate`)}>
-          قيّم رحلتك
+          {tr("قيّم رحلتك")}
         </button>
       ) : resolved ? (
         <AnimatePresence mode="wait">
@@ -473,7 +473,7 @@ export function PaymentScreen() {
                 وعدٌ يُخلَف */}
             {available.length > 1 ? (
               <button type="button" className="t2-m-link" onClick={() => setPicking(true)}>
-                طريقة أخرى
+                {tr("طريقة أخرى")}
               </button>
             ) : null}
 

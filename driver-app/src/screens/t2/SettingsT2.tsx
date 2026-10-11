@@ -31,7 +31,8 @@ import { useCaptainSettings } from "@/screens/Settings";
 
 import { WomenModeRowT2 } from "./WomenModeT2";
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/lib/i18n";
+import { updateMyLanguage } from "@/api/endpoints";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */
 function Toggle({
@@ -83,7 +84,7 @@ function Soon({ icon, title }: { icon: string; title: string }) {
       <span className="t2-srow-main">
         <span className="t2-srow-title">{title}</span>
       </span>
-      <span className="t2-soon">قريباً</span>
+      <span className="t2-soon">{tr("قريباً")}</span>
     </div>
   );
 }
@@ -147,17 +148,17 @@ export function SettingsT2Screen() {
   return (
     <div className="t2 t2-settings scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-        <h1 className="t2-title">الإعدادات</h1>
+        <h1 className="t2-title">{tr("الإعدادات")}</h1>
       </div>
 
-      <Group label="استقبال الطلبات">
+      <Group label={tr("استقبال الطلبات")}>
         <Toggle
           icon="bolt"
-          title="قبول تلقائي للطلبات القريبة"
-          hint="أقل من 1 كم فقط — والتطبيقُ مفتوح"
+          title={tr("قبول تلقائي للطلبات القريبة")}
+          hint={tr("أقل من 1 كم فقط — والتطبيقُ مفتوح")}
           on={autoAccept}
           onToggle={() => {
             setAutoAccept(!autoAccept);
@@ -168,14 +169,14 @@ export function SettingsT2Screen() {
         {airport ? (
           <Toggle
             icon="flight_takeoff"
-            title="طلبات المطار"
-            hint="تصلك رحلاتٌ من المطار وإليه، ومعها رسمُ المطار لك كاملاً. مطفأةٌ حتى تُشعلها."
+            title={tr("طلبات المطار")}
+            hint={tr("تصلك رحلاتٌ من المطار وإليه، ومعها رسمُ المطار لك كاملاً. مطفأةٌ حتى تُشعلها.")}
             on={acceptsAirport}
             disabled={savingAirport}
             onToggle={() => void toggleAirport()}
           />
         ) : (
-          <Soon icon="flight_takeoff" title="طلبات المطار" />
+          <Soon icon="flight_takeoff" title={tr("طلبات المطار")} />
         )}
         {/* **وللكبتنة صفُّ «الخدمة النسائية» إلى CW1** (§٦٢-ج/٢٣) — والاختيارُ الثلاثيُّ نفسُه هناك */}
         {womenService && available ? <WomenModeRowT2 preference={preference} /> : null}
@@ -184,8 +185,8 @@ export function SettingsT2Screen() {
           <div className="t2-srow tall">
             <span className="t2-icon t2-srow-icon" aria-hidden="true">person</span>
             <span className="t2-srow-main">
-              <span className="t2-srow-title">من أُقلّ</span>
-              <span className="t2-srow-hint">يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.</span>
+              <span className="t2-srow-title">{tr("من أُقلّ")}</span>
+              <span className="t2-srow-hint">{tr("يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.")}</span>
               <span className="t2-seg">
                 {(
                   [
@@ -207,9 +208,9 @@ export function SettingsT2Screen() {
               </span>
               {/* **شرحُ المطابقة** — يجيب «لماذا قلّت طلباتي؟»، والشرطُ ثنائيُّ الاتجاه في الخلفية */}
               <span className="t2-explain">
-                <span className="t2-explain-title">كيف تعمل المطابقة</span>
-                تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه — الاتجاهان معاً. فراكبٌ اختار
-                «الجميع» لن تصله رحلتُك إن كان تفضيلُك «النساء فقط».
+                <span className="t2-explain-title">{tr("كيف تعمل المطابقة")}</span>
+                {tr("تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه — الاتجاهان معاً. فراكبٌ اختار «الجميع» لن تصله رحلتُك إن كان تفضيلُك «النساء فقط».")}
+
               </span>
             </span>
           </div>
@@ -217,14 +218,14 @@ export function SettingsT2Screen() {
         {/* **نغمةُ الطلب لا يُسكتها المفتاحُ العام** (قرارُ المالك §9.2) — ولذلك تسكن مع استقبال الطلبات */}
         <Toggle
           icon="notifications"
-          title="نغمة الطلب الوارد"
-          hint="تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات."
+          title={tr("نغمة الطلب الوارد")}
+          hint={tr("تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات.")}
           on={offerSound}
           onToggle={toggleOfferSound}
         />
       </Group>
 
-      <Group label="الملاحة">
+      <Group label={tr("الملاحة")}>
         <button
           type="button"
           className="t2-srow"
@@ -233,13 +234,13 @@ export function SettingsT2Screen() {
         >
           <span className="t2-icon t2-srow-icon" aria-hidden="true">navigation</span>
           <span className="t2-srow-main">
-            <span className="t2-srow-title">تطبيق الملاحة</span>
+            <span className="t2-srow-title">{tr("تطبيق الملاحة")}</span>
           </span>
           <span className="t2-srow-value">{NAV_APPS.find((app) => app.value === nav)?.label}</span>
           <span className="t2-icon t2-chev" aria-hidden="true">{picking ? "expand_more" : "chevron_left"}</span>
         </button>
         {picking ? (
-          <div className="t2-navpick" role="radiogroup" aria-label="تطبيق الملاحة">
+          <div className="t2-navpick" role="radiogroup" aria-label={tr("تطبيق الملاحة")}>
             {NAV_APPS.map((app) => (
               <button
                 key={app.value}
@@ -255,7 +256,7 @@ export function SettingsT2Screen() {
               >
                 <span className="t2-navpick-dot" aria-hidden="true" />
                 {app.label}
-                {app.value === "system" ? <span className="t2-navpick-sub">كما اليوم — يسألك الهاتف</span> : null}
+                {app.value === "system" ? <span className="t2-navpick-sub">{tr("كما اليوم — يسألك الهاتف")}</span> : null}
               </button>
             ))}
           </div>
@@ -263,8 +264,8 @@ export function SettingsT2Screen() {
         {guidanceReady ? (
           <Toggle
             icon="record_voice_over"
-            title="صوت الإرشاد"
-            hint="نغمة قصيرة قبل كل منعطف بنحو 150 م، وأنت تقود على خريطة TAXO."
+            title={tr("صوت الإرشاد")}
+            hint={tr("نغمة قصيرة قبل كل منعطف بنحو 150 م، وأنت تقود على خريطة TAXO.")}
             on={guidance}
             onToggle={() => {
               const next = !guidance;
@@ -275,47 +276,64 @@ export function SettingsT2Screen() {
             }}
           />
         ) : (
-          <Soon icon="record_voice_over" title="صوت الإرشاد" />
+          <Soon icon="record_voice_over" title={tr("صوت الإرشاد")} />
         )}
       </Group>
 
-      <Group label="التطبيق">
+      <Group label={tr("التطبيق")}>
         <button type="button" className="t2-srow" onClick={toggle}>
           <span className="t2-icon t2-srow-icon" aria-hidden="true">dark_mode</span>
           <span className="t2-srow-main">
-            <span className="t2-srow-title">المظهر</span>
+            <span className="t2-srow-title">{tr("المظهر")}</span>
           </span>
-          <span className="t2-srow-value">{choice === "dark" ? "ليلي" : "نهاري"}</span>
+          <span className="t2-srow-value">{choice === "dark" ? tr("ليلي") : tr("نهاري")}</span>
+        </button>
+        {/* **اللغة** (SPEC §٧٣-هـ المرحلة ٥) — لغتان، فالضغطُ يقلب بينهما كالمظهر؛ وتُحفظ في الحساب ثمّ يُعاد تحميلُ التطبيق */}
+        <button
+          type="button"
+          className="t2-srow"
+          onClick={() => {
+            const next = language === "ar" ? "fr" : "ar";
+            void updateMyLanguage(next)
+              .catch(() => undefined)
+              .finally(() => setLanguage(next));
+          }}
+        >
+          <span className="t2-icon t2-srow-icon" aria-hidden="true">translate</span>
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">{tr("اللغة")}</span>
+          </span>
+          <span className="t2-srow-value">{LANGUAGE_NAME[language]}</span>
         </button>
         {/* السِمةُ الوردية — **إقرارُها وحده يكفي**، ومن ليست كذلك لا ترى مفتاحاً معطّلاً */}
         {available ? (
           <Toggle
             icon="woman"
             pinkIcon
-            title="السِمة الوردية"
-            hint="هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك."
+            title={tr("السِمة الوردية")}
+            hint={tr("هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك.")}
             on={pink}
             onToggle={() => setPink(!pink)}
           />
         ) : null}
         <Toggle
           icon="volume_up"
-          title="أصوات التطبيق"
-          hint="المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب."
+          title={tr("أصوات التطبيق")}
+          hint={tr("المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب.")}
           on={sounds}
           onToggle={toggleSounds}
         />
         <Toggle
           icon="volume_up"
-          title="أصوات الرحلة والإشعارات"
-          hint="بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب."
+          title={tr("أصوات الرحلة والإشعارات")}
+          hint={tr("بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب.")}
           on={otherSounds}
           onToggle={toggleOtherSounds}
         />
         <Toggle
           icon="campaign"
-          title="إشعارات العروض والحملات"
-          hint="إطفاؤها لا يمنع إشعارات الطلبات والرحلات إطلاقاً"
+          title={tr("إشعارات العروض والحملات")}
+          hint={tr("إطفاؤها لا يمنع إشعارات الطلبات والرحلات إطلاقاً")}
           on={marketing === true}
           disabled={marketing === null}
           onToggle={() => void flipMarketing()}
@@ -324,10 +342,10 @@ export function SettingsT2Screen() {
         <div className="t2-srow">
           <span className="t2-icon t2-srow-icon" aria-hidden="true">bedtime</span>
           <span className="t2-srow-main">
-            <span className="t2-srow-title">ساعات الهدوء للعروض</span>
+            <span className="t2-srow-title">{tr("ساعات الهدوء للعروض")}</span>
             <span className="t2-srow-hint">
-              {country?.quiet_hours_timezone ? `بتوقيت ${country.quiet_hours_timezone}. ` : ""}
-              تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.
+              {country?.quiet_hours_timezone ? tr("بتوقيت {0}. ", { 0: country.quiet_hours_timezone }) : ""}
+              {tr("تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.")}
             </span>
           </span>
           {quietHours ? (
@@ -338,22 +356,22 @@ export function SettingsT2Screen() {
         </div>
         <Toggle
           icon="bug_report"
-          title="إرسال تقارير الأعطال"
-          hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
+          title={tr("إرسال تقارير الأعطال")}
+          hint={tr("تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.")}
           on={crashReports}
           onToggle={toggleCrashReports}
         />
       </Group>
 
-      <Group label="الحساب">
+      <Group label={tr("الحساب")}>
         {/* **الدخولُ السريع لمن يملكه**، وسطرٌ يقول ما يفعله من لا يملكه — **وفي المتصفّح لا سطرَ ولا مفتاح** */}
         {biometry?.native && !biometry.available ? (
           <div className="t2-srow">
             <span className="t2-icon t2-srow-icon" aria-hidden="true">verified_user</span>
             <span className="t2-srow-main">
-              <span className="t2-srow-title">الدخول السريع</span>
+              <span className="t2-srow-title">{tr("الدخول السريع")}</span>
               <span className="t2-srow-hint">
-                فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.
+                {tr("فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.")}
               </span>
             </span>
           </div>
@@ -362,8 +380,8 @@ export function SettingsT2Screen() {
           <>
             <Toggle
               icon="verified_user"
-              title={`الدخول بـ${biometryLabel(biometry.kind)}`}
-              hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
+              title={tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}
+              hint={tr("يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.")}
               on={biometry.enabled}
               onToggle={toggleBiometric}
             />
@@ -373,14 +391,14 @@ export function SettingsT2Screen() {
         <div className="t2-srow tall">
           <span className="t2-icon t2-srow-icon" aria-hidden="true">account_balance</span>
           <span className="t2-srow-main">
-            <span className="t2-srow-title">حساب CliQ للسحب</span>
-            <span className="t2-srow-hint">عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.</span>
+            <span className="t2-srow-title">{tr("حساب CliQ للسحب")}</span>
+            <span className="t2-srow-hint">{tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}</span>
             <span className="t2-alias">
               <input
                 dir="ltr"
                 className="t2-input"
                 placeholder="ABUMOHD"
-                aria-label="alias كليك"
+                aria-label={tr("alias كليك")}
                 value={alias}
                 onChange={(event) => setAlias(event.target.value)}
               />
@@ -390,7 +408,7 @@ export function SettingsT2Screen() {
                 disabled={savingAlias || alias.trim() === (profile?.driver.cliq_alias ?? "")}
                 onClick={() => void saveAlias()}
               >
-                {savingAlias ? "…" : "حفظ"}
+                {savingAlias ? "…" : tr("حفظ")}
               </button>
             </span>
           </span>

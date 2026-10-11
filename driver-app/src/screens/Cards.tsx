@@ -29,7 +29,7 @@ import type { SavedCard } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 export function CardsScreen() {
   const goBack = useGoBack();
@@ -44,7 +44,7 @@ export function CardsScreen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة البطاقات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة البطاقات"),
       ),
     );
   }, [load]);
@@ -56,7 +56,7 @@ export function CardsScreen() {
       await action();
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
     } finally {
       setBusy(null);
     }
@@ -66,10 +66,10 @@ export function CardsScreen() {
     <div className="t2 t2-ax">
       <div className="t2-ax-scroll">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">البطاقات المحفوظة</h1>
+          <h1 className="t2-title">{tr("البطاقات المحفوظة")}</h1>
         </div>
 
         {error ? (
@@ -81,14 +81,14 @@ export function CardsScreen() {
 
         {cards === null && !error ? (
           <div className="t2-ax-center">
-            <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+            <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
           </div>
         ) : null}
 
         {cards?.length === 0 ? (
           <div className="t2-empty t2-ax-empty">
-            <b>لا بطاقات محفوظة</b>
-            <span>تُحفظ البطاقة حين تدفع بها وتختار حفظها — لا من هذه الشاشة.</span>
+            <b>{tr("لا بطاقات محفوظة")}</b>
+            <span>{tr("تُحفظ البطاقة حين تدفع بها وتختار حفظها — لا من هذه الشاشة.")}</span>
           </div>
         ) : null}
 
@@ -99,7 +99,7 @@ export function CardsScreen() {
               className={card.is_default ? "t2-pcard default" : "t2-pcard"}
             >
               <div className="t2-pcard-top">
-                <span className="t2-pcard-brand">{card.brand ?? "بطاقة"}</span>
+                <span className="t2-pcard-brand">{card.brand ?? tr("بطاقة")}</span>
                 <div className="t2-pcard-main">
                   {/* ما هو مطبوعٌ على البطاقة يُعرض كما هو ليطابقها الكبتن
                       بعينه — الأرقام العربية-الهندية للكميات لا للمعرّفات */}
@@ -110,7 +110,7 @@ export function CardsScreen() {
                     {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
                   </div>
                 </div>
-                {card.is_default ? <span className="t2-chip ok">افتراضية</span> : null}
+                {card.is_default ? <span className="t2-chip ok">{tr("افتراضية")}</span> : null}
               </div>
               <div className="t2-pcard-acts">
                 {card.is_default ? null : (
@@ -122,7 +122,7 @@ export function CardsScreen() {
                     }
                     className="t2-pcard-act"
                   >
-                    اجعلها افتراضية
+                    {tr("اجعلها افتراضية")}
                   </button>
                 )}
                 <button
@@ -132,9 +132,9 @@ export function CardsScreen() {
                     void act(card.id, () => deleteSavedCard(card.id))
                   }
                   className="t2-pcard-act danger"
-                  aria-label={`حذف البطاقة •••• ${card.last4}`}
+                  aria-label={tr("حذف البطاقة •••• {0}", { 0: card.last4 })}
                 >
-                  حذف
+                  {tr("حذف")}
                 </button>
               </div>
             </div>
@@ -144,8 +144,8 @@ export function CardsScreen() {
         <p className="t2-ax-fine">
           <Icon name="lock" />
           <span>
-            لا نحتفظ برقم بطاقتك ولا برمزها السري — رمزٌ من المزوّد فقط. وتُحفظ
-            البطاقة حين تدفع بها وتختار حفظها.
+            {tr("لا نحتفظ برقم بطاقتك ولا برمزها السري — رمزٌ من المزوّد فقط. وتُحفظ البطاقة حين تدفع بها وتختار حفظها.")}
+
           </span>
         </p>
       </div>

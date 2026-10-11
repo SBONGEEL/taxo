@@ -16,7 +16,7 @@ import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import { BannerT2, BusyLabel, HeadT2 } from "./MoneyT2";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **كم مرّةً تسأل وحدَها** قبل أن تترك السؤالَ لزرّ — ثلاثُ ثوانٍ بينها */
 const AUTO_TRIES = 10;
@@ -45,7 +45,7 @@ export function PayReturnT2Screen() {
         play("topup");
       }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر السؤال عن الدفعة — أعد المحاولة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر السؤال عن الدفعة — أعد المحاولة"));
     } finally {
       setBusy(false);
     }
@@ -69,31 +69,31 @@ export function PayReturnT2Screen() {
 
   return (
     <div className="t2 t2-m-page">
-      <HeadT2 title="نتيجة الدفع" onBack={goBack} />
+      <HeadT2 title={tr("نتيجة الدفع")} onBack={goBack} />
       {!requestId ? (
-        <BannerT2 tone="danger" message="لا دفعةَ في هذا الرابط — افتح المحفظة وانظر طلباتك" />
+        <BannerT2 tone="danger" message={tr("لا دفعةَ في هذا الرابط — افتح المحفظة وانظر طلباتك")} />
       ) : request && request.status === "approved" ? (
         <section className="t2-m-card t2-pr-done">
           <Icon name="check_circle" />
-          <h2 className="t2-pr-done-title">شُحن رصيدك</h2>
-          <p className="t2-pr-done-text">أُضيف {formatMoney(credited ?? "0", request.currency)} إلى محفظتك.</p>
+          <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
+          <p className="t2-pr-done-text">{tr("أُضيف")}{" "}{formatMoney(credited ?? "0", request.currency)}{" "}{tr("إلى محفظتك.")}</p>
         </section>
       ) : request && request.status !== "pending" ? (
         <section className="t2-m-card t2-pr-done">
           <Icon name="error" />
-          <h2 className="t2-pr-done-title">لم تتمّ الدفعة</h2>
+          <h2 className="t2-pr-done-title">{tr("لم تتمّ الدفعة")}</h2>
           <p className="t2-pr-done-text">
-            {request.rejection_reason ?? request.cancel_reason ?? "لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى."}
+            {request.rejection_reason ?? request.cancel_reason ?? tr("لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى.")}
           </p>
         </section>
       ) : (
         <section className="t2-m-card t2-pr-done" aria-live="polite">
           <Icon name="hourglass_top" />
-          <h2 className="t2-pr-done-title">ننتظر تأكيد الدفع</h2>
+          <h2 className="t2-pr-done-title">{tr("ننتظر تأكيد الدفع")}</h2>
           <p className="t2-pr-done-text">
             {tries.current >= AUTO_TRIES
-              ? "لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة."
-              : "نسأل الوسيطَ عن دفعتك — لحظات."}
+              ? tr("لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة.")
+              : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
           </p>
         </section>
       )}
@@ -101,11 +101,11 @@ export function PayReturnT2Screen() {
       <div className="t2-m-actions">
         {pending && requestId ? (
           <button type="button" className="t2-button t2-m-cta" disabled={busy} aria-busy={busy} onClick={() => void ask()}>
-            <BusyLabel busy={busy}>تحقّق الآن</BusyLabel>
+            <BusyLabel busy={busy}>{tr("تحقّق الآن")}</BusyLabel>
           </button>
         ) : null}
         <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate("/wallet")}>
-          إلى المحفظة
+          {tr("إلى المحفظة")}
         </button>
       </div>
     </div>

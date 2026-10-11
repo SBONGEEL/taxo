@@ -10,7 +10,7 @@
 
 import { useRide } from "@/lib/ride";
 
-import "@/taxo2";
+import "@/taxo2"; import { tr } from "@/lib/i18n";
 
 export function Toasts() {
   const { toasts, dismissToast } = useRide();
@@ -27,7 +27,7 @@ export function Toasts() {
             <p className="t2-notice-title">{toast.title}</p>
             {toast.body ? <p className="t2-notice-body">{toast.body}</p> : null}
           </div>
-          <button type="button" className="t2-notice-close" onClick={() => dismissToast(toast.id)} aria-label="إغلاق">
+          <button type="button" className="t2-notice-close" onClick={() => dismissToast(toast.id)} aria-label={tr("إغلاق")}>
             <span className="t2-icon" aria-hidden="true">
               close
             </span>

@@ -11,7 +11,7 @@
  * الخلفية برسالتها العربية.
  */
 
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const ARABIC_DIGITS = tr("٠١٢٣٤٥٦٧٨٩");
 
 /** يحوّل الأرقام العربية-الهندية إلى لاتينية ويسقط ما ليس رقماً. */
 export function digitsOnly(input: string): string {
@@ -59,3 +59,4 @@ export function forDisplay(e164: string, dialCode: string): string {
 export function looksComplete(national: string, length: number): boolean {
   return digitsOnly(national).length === length;
 }
+import { tr } from "@/lib/i18n";

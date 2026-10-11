@@ -9,7 +9,7 @@
  * الخلفية وحدها (القسم 14).
  */
 
-import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types";
+import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 const FORWARD = "https://api.mapbox.com/search/geocode/v6/forward";
 const REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse";
@@ -38,7 +38,7 @@ function toPlace(feature: MapboxFeature, index: number): Place | null {
   if (!point) return null;
   return {
     id: properties?.mapbox_id ?? feature.id ?? `place-${index}`,
-    name: properties?.name ?? properties?.full_address ?? "موقع",
+    name: properties?.name ?? properties?.full_address ?? tr("موقع"),
     address:
       properties?.full_address ?? properties?.place_formatted ?? properties?.name ?? "",
     coordinates: { lat: point.latitude, lng: point.longitude },
@@ -168,7 +168,7 @@ export async function reverseArea(
       area: area ?? first?.name ?? null,
       // **«الشارع، المنطقة» كما رُسم** («شارع الرينبو، جبل عمّان») — من اسم النتيجة وسياقها في النداء نفسِه، **لا
       // `full_address`**: ذاك يحمل الدولةَ وفاصلةً فارغةً حيث يغيب مستوى («…رياض 7، ، عمّان، الأردن» — مقيس)
-      address: first?.name ? (area && area !== first.name ? `${first.name}، ${area}` : first.name) : null,
+      address: first?.name ? (area && area !== first.name ? tr("{0}، {1}", { 0: first.name, 1: area }) : first.name) : null,
     };
   } catch {
     return none;

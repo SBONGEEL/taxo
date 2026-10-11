@@ -17,7 +17,7 @@
  * الحارسَ الأخير.
  */
 
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** أقصى بُعدٍ بعد التصغير — بالبكسل. */
 export const MAX_EDGE = 512;
@@ -113,11 +113,11 @@ export async function shrinkImage(file: File): Promise<ShrinkResult> {
 export function describeShrink(result: ShrinkResult): string | null {
   switch (result.outcome) {
     case "shrunk":
-      return `صُغِّرت قبل الرفع: ${megabytes(result.before)} ← ${megabytes(result.after)}`;
+      return tr("صُغِّرت قبل الرفع: {0} ← {1}", { 0: megabytes(result.before), 1: megabytes(result.after) });
     case "no_gain":
-      return `رُفعت كما هي (${megabytes(result.before)}) — لا حاجة للضغط`;
+      return tr("رُفعت كما هي ({0}) — لا حاجة للضغط", { 0: megabytes(result.before) });
     case "failed":
-      return `تعذّر الضغط — رُفعت كما هي (${megabytes(result.before)})`;
+      return tr("تعذّر الضغط — رُفعت كما هي ({0})", { 0: megabytes(result.before) });
     case "not_an_image":
       return null;
   }
@@ -125,5 +125,5 @@ export function describeShrink(result: ShrinkResult): string | null {
 
 /** ميجابايت بخانةٍ عشريةٍ واحدة — ودقّةٌ أعلى لا يقرؤها أحد. */
 function megabytes(bytes: number): string {
-  return `${digits((bytes / (1024 * 1024)).toFixed(1))} م.ب`;
+  return tr("{0} م.ب", { 0: digits((bytes / (1024 * 1024)).toFixed(1)) });
 }

@@ -71,6 +71,10 @@ def known_variables() -> tuple[str, ...]:
 # كما هو في القالبين — والفرقُ بينهما من اليوم قرارُ مشرفٍ لا قرارُ شيفرة.
 _DEFAULT_BODY = "رمز تأكيد رقمك في تاكسو: {code}\nصالح {minutes} دقيقة. لا تشاركه مع أحد."
 
+#: **قالبُ الفرنسيّة** (SPEC §٧٣-هـ المرحلة ٥) — لمن يطلب الرمزَ من تطبيقٍ بالفرنسيّة. **واللوحةُ تحرّر العربيَّ وحدَه**: قالبٌ
+#: يُحرَّر بلغةٍ لا يقرؤها المشرفُ يُرسل ما لا يعرف — فالفرنسيُّ ثابتٌ هنا ويُراجَع مع ملفِّ الترجمة.
+_DEFAULT_BODY_FR = "Votre code de confirmation {app_name} : {code}\nValable {minutes} minutes. Ne le partagez avec personne."
+
 DEFAULTS: dict[str, str] = {
     OtpTemplatePurpose.REGISTRATION: _DEFAULT_BODY,
     OtpTemplatePurpose.PASSWORD_RESET: _DEFAULT_BODY,
@@ -197,6 +201,10 @@ async def body_for(session: AsyncSession, purpose: str) -> str:
     **ولا تسقط قناةُ التسجيل بنصٍّ محرَّرٍ خطأً**: صفٌّ محفوظٌ ثم عُدِّلت شروطُه
     (سقفٌ ضُيّق مثلاً) يصير مخالفاً وهو مكتوب، والقناةُ أهمُّ من احترامِ صفّ.
     """
+    from app.core.i18n import current_language
+
+    if current_language() == "fr":
+        return _DEFAULT_BODY_FR
     row = await session.scalar(
         select(OtpMessageTemplate).where(OtpMessageTemplate.purpose == purpose)
     )

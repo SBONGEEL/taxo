@@ -12,7 +12,7 @@ import { SubHeadT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** صفحةُ التنزيل — **مصدرٌ واحدٌ** يقرّر بنفسه أحزمةٌ أم متجر. */
 const INSTALL_PAGE = "https://taxo.tajora.ly";
@@ -21,17 +21,17 @@ export function DriverNotInstalledScreen() {
   const goBack = useGoBack();
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="تطبيق السائق" onBack={() => goBack()} />
+      <SubHeadT2 title={tr("تطبيق السائق")} onBack={() => goBack()} />
 
       <section className="t2-hero">
         <span className="t2-hero-stripe" aria-hidden="true" />
         <span className="t2-hero-icon">
           <Icon name="directions_car" />
         </span>
-        <p className="t2-hero-title">تطبيق السائق غير مثبَّت على هذا الجهاز</p>
+        <p className="t2-hero-title">{tr("تطبيق السائق غير مثبَّت على هذا الجهاز")}</p>
         <p className="t2-hero-body">
-          حسابك واحد، وتدخل به التطبيقين بلا تسجيلٍ جديد. ثبّت تطبيق السائق ثم عد إلى هنا واضغط «تبديل» — تنتقل جلستك
-          وحدها.
+          {tr("حسابك واحد، وتدخل به التطبيقين بلا تسجيلٍ جديد. ثبّت تطبيق السائق ثم عد إلى هنا واضغط «تبديل» — تنتقل جلستك وحدها.")}
+
         </p>
       </section>
 
@@ -43,7 +43,7 @@ export function DriverNotInstalledScreen() {
         }}
       >
         <Icon name="open_in_new" />
-        احصل على تطبيق السائق
+        {tr("احصل على تطبيق السائق")}
       </button>
     </div>
   );

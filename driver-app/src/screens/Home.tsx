@@ -85,7 +85,7 @@ import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { PermissionNotice } from "@/components/PermissionNotice";
-import { currencyLabel, currencyName, digits, ratedAverage } from "@/lib/utils";
+import { currencyLabel, currencyName, digits, ratedAverage } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** **حالُ الرئيسية وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة، وC04–C08 في `screens/t2`).
  *
@@ -379,7 +379,7 @@ export function useHomeScreen() {
       await action();
     } catch (caught) {
       setActionError(
-        caught instanceof ApiError ? caught.message : "تعذّر تنفيذ الإجراء",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تنفيذ الإجراء"),
       );
       setActionErrorCode(caught instanceof ApiError ? caught.code : null);
     } finally {
@@ -419,24 +419,24 @@ export function useHomeScreen() {
   }
 
   const goLabel = !covered
-    ? "ابدأ الاستقبال — يتطلب اشتراكاً سارياً"
+    ? tr("ابدأ الاستقبال — يتطلب اشتراكاً سارياً")
     : connecting
-      ? "جارٍ الاتصال…"
+      ? tr("جارٍ الاتصال…")
       : online
-        ? "إيقاف الاستقبال"
-        : "ابدأ الاستقبال";
+        ? tr("إيقاف الاستقبال")
+        : tr("ابدأ الاستقبال");
 
   /** سطرُ الاشتراك — **يُقال بحاله لا بوجوده**: «سارٍ حتى…» و«لا اشتراك»
    *  جملتان مختلفتان، **وبطاقةٌ صامتةٌ فوق زرٍّ لا يعمل تُقرأ عطباً**. */
   const subscriptionLine = !subscription
     ? null
     : covered
-      ? `اشتراكك ساري${
-          subscription.days_remaining <= 5
-            ? ` — يتبقّى ${digits(String(subscription.days_remaining))} أيام`
-            : ""
-        }`
-      : "لا اشتراك ساري — اشترك لتستقبل الطلبات";
+      ? tr("اشتراكك ساري{0}", { 0: subscription.days_remaining <= 5
+            ? tr(" — يتبقّى {0} أيام", { 0: digits(String(subscription.days_remaining)) })
+            : "" }
+
+)
+      : tr("لا اشتراك ساري — اشترك لتستقبل الطلبات");
 
   // **المركبةُ الأولى**: صفٌّ واحدٌ لكلِّ كبتنٍ في هذا السوق، ولو تعدّدت
   // فالمفعَّلةُ سؤالُ شاشةِ المركبة لا سؤالُ الرئيسية
@@ -609,7 +609,7 @@ export function HomeScreen() {
     <div className="relative h-full overflow-hidden bg-bg">
       {!tracking ? (
         <CaptainHome
-          name={user?.name ?? "كبتن"}
+          name={user?.name ?? tr("كبتن")}
           rating={
             profile && ratedAverage(profile.driver.rating_avg) ? Number(profile.driver.rating_avg).toFixed(1) : null
           }
@@ -651,10 +651,10 @@ export function HomeScreen() {
                     حدثٍ قادمٍ لا سؤالٌ مرةً ويأس**. وبغير هذا السطر يقرأ من
                     نقر إشعارَ طلبٍ «بانتظار الطلبات…» فيظنّ طلبَه ضاع. */}
                 {awaitedOffer
-                  ? "نفتح الطلب…"
+                  ? tr("نفتح الطلب…")
                   : position
-                    ? "بانتظار الطلبات…"
-                    : "بانتظار إشارة الموقع…"}
+                    ? tr("بانتظار الطلبات…")
+                    : tr("بانتظار إشارة الموقع…")}
               </span>
             </div>
           ) : null}
@@ -670,9 +670,9 @@ export function HomeScreen() {
                 className="pressable mb-10 flex w-full items-center justify-between rounded-14 border border-brand-brd bg-brand-soft px-14 py-12 text-start"
               >
                 <span className="text-12.5 font-semibold text-brand">
-                  أستقبل ركاباً: {PREFERENCE_LABEL[preference]}
+                  {tr("أستقبل ركاباً:")}{" "}{PREFERENCE_LABEL[preference]}
                 </span>
-                <span className="text-11.5 text-muted underline">تغيير</span>
+                <span className="text-11.5 text-muted underline">{tr("تغيير")}</span>
               </button>
             ) : null}
 

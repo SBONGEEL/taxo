@@ -6,46 +6,46 @@
  */
 
 import type { FareLine, Ride } from "@/api/types";
-import { digits, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
+import { digits, formatDistance, formatDuration, formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** اسمُ السطر بصنفه — **ما رُسم في التصميم المُقَرّ** حرفاً. */
 function fareLineLabel(line: FareLine): string {
   switch (line.kind) {
     case "base":
-      return "الأجرة الأساسية";
+      return tr("الأجرة الأساسية");
     case "distance":
-      return line.quantity ? `المسافة · ${formatDistance(line.quantity)}` : "المسافة";
+      return line.quantity ? tr("المسافة · {0}", { 0: formatDistance(line.quantity) }) : tr("المسافة");
     case "time":
-      return line.quantity ? `الوقت · ${formatDuration(line.quantity)}` : "الوقت";
+      return line.quantity ? tr("الوقت · {0}", { 0: formatDuration(line.quantity) }) : tr("الوقت");
     case "stops":
-      return line.quantity ? `رسم المحطات (${digits(Math.round(Number(line.quantity)))})` : "رسم المحطات";
+      return line.quantity ? tr("رسم المحطات ({0})", { 0: digits(Math.round(Number(line.quantity))) }) : tr("رسم المحطات");
     case "minimum":
-      return "تكملة الحدّ الأدنى";
+      return tr("تكملة الحدّ الأدنى");
     case "waiting":
-      return "رسم الانتظار عند المحطات";
+      return tr("رسم الانتظار عند المحطات");
     case "pause":
-      return "رسم الوقفات أثناء الرحلة";
+      return tr("رسم الوقفات أثناء الرحلة");
     // **رسمُ المطار** (§٦٣-ج/٢) — لا لوحةَ له بعد؛ اسمُه كما يقوله الراكبُ للكبتن
     case "airport_fee":
-      return "رسم المطار";
+      return tr("رسم المطار");
     // **رسمُ الطرد** (§٦٣-ج/٤) — كرسم المطار: للكبتن، داخلَ الأجرة سطراً مستقلاً
     case "parcel_fee":
-      return "رسم الطرد";
+      return tr("رسم الطرد");
     // **بالساعة** (§٦٣-ج/٥) — المحجوزُ بعدد ساعاته، **وما زاد عليه سطرٌ لكلٍّ بكمّيته**: الكيلومتراتُ فوق المشمولة والدقائقُ فوق
     // الساعات، كلٌّ بالتعرفة العاديّة. والكمّيةُ للتسمية وحدَها — المبلغُ كما جمّدته الخلفية
     case "hourly":
-      return line.quantity ? `الساعات المحجوزة (${digits(Math.round(Number(line.quantity)))})` : "الساعات المحجوزة";
+      return line.quantity ? tr("الساعات المحجوزة ({0})", { 0: digits(Math.round(Number(line.quantity))) }) : tr("الساعات المحجوزة");
     case "hourly_extra_km":
-      return line.quantity ? `مسافةٌ زائدة · ${formatDistance(line.quantity)}` : "مسافةٌ زائدة";
+      return line.quantity ? tr("مسافةٌ زائدة · {0}", { 0: formatDistance(line.quantity) }) : tr("مسافةٌ زائدة");
     case "hourly_extra_time":
-      return line.quantity ? `وقتٌ زائد · ${digits(Math.round(Number(line.quantity)))} د` : "وقتٌ زائد";
+      return line.quantity ? tr("وقتٌ زائد · {0} د", { 0: digits(Math.round(Number(line.quantity))) }) : tr("وقتٌ زائد");
     // **المشوارُ الثابت** (§٦٣-ج/٦) — سطرٌ واحدٌ لا تفصيلَ طريق: السعرُ جُمِّد يومَ الاشتراك ولا يتبع الطريقَ ولا الذروة
     case "commute":
-      return "سعرُ المشوار المجمَّد";
+      return tr("سعرُ المشوار المجمَّد");
     // **التقريب** (§٧٠-ج/٤) — فرقُ تقريب ما على الراكب إلى وحدة سوقه، **كتبته الخلفيةُ سطراً** فتُجمع السطورُ إلى الأجرة حرفاً.
     // **وقد يكون سالباً** (قُرِّب للأدنى) — و`formatMoney` يرسم علامتَه كما وصلت، ولا يُحسب هنا شيء
     case "rounding":
-      return "تقريب";
+      return tr("تقريب");
   }
 }
 

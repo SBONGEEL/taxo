@@ -28,7 +28,7 @@ import { LoaderT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 type Step = "intro" | "balance" | "confirm";
 
@@ -73,7 +73,7 @@ export function DeleteAccountScreen() {
     getDeletionState()
       .then(setState)
       .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر التحميل")),
       );
   }, []);
 
@@ -105,7 +105,7 @@ export function DeleteAccountScreen() {
       await signOut();
       navigate("/login", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التنفيذ"));
       load();
     } finally {
       setBusy(false);

@@ -18,7 +18,7 @@ import { deleteSavedCard, listSavedCards, setDefaultCard } from "@/api/endpoints
 import type { SavedCard } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
-import { BannerT2, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
+import { BannerT2, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function CardsScreen() {
   // **من حيث جئت، و«حسابي» لمن دخل مباشرةً** (`lib/back.ts`) — كما كان رأسُ الشاشة
@@ -31,7 +31,7 @@ export function CardsScreen() {
     listSavedCards()
       .then(setCards)
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة بطاقاتك"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة بطاقاتك")),
       )
       .finally(() => setLoading(false));
 
@@ -45,13 +45,13 @@ export function CardsScreen() {
       await action;
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تنفيذ الإجراء");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تنفيذ الإجراء"));
     }
   }
 
   return (
     <div className="t2 t2-m-page">
-      <HeadT2 title="بطاقاتي" onBack={goBack} />
+      <HeadT2 title={tr("بطاقاتي")} onBack={goBack} />
 
       {loading ? (
         <WaitT2 />
@@ -64,8 +64,8 @@ export function CardsScreen() {
               <span className="t2-m-empty-icon" aria-hidden="true">
                 <Icon name="credit_card" />
               </span>
-              <div className="t2-m-empty-title">لا بطاقات محفوظة</div>
-              <p className="t2-m-empty-hint">عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة.</p>
+              <div className="t2-m-empty-title">{tr("لا بطاقات محفوظة")}</div>
+              <p className="t2-m-empty-hint">{tr("عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة.")}</p>
             </div>
           ) : (
             <ul className="t2-m-saved">
@@ -73,30 +73,30 @@ export function CardsScreen() {
                 <li key={card.id} className="t2-m-saved-card">
                   <div className="t2-m-saved-top">
                     <span dir="ltr" className="t2-m-brand">
-                      {card.brand ?? "بطاقة"}
+                      {card.brand ?? tr("بطاقة")}
                     </span>
-                    {card.is_default ? <span className="t2-m-default">الافتراضية</span> : null}
+                    {card.is_default ? <span className="t2-m-default">{tr("الافتراضية")}</span> : null}
                   </div>
                   <div className="t2-m-saved-mid">
                     <span dir="ltr" className="t2-m-last4">
                       •••• {card.last4}
                     </span>
                     <span className="t2-m-expiry">
-                      تنتهي <span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
+                      {tr("تنتهي")}{" "}<span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
                     </span>
                   </div>
                   <div className={card.is_default ? "t2-m-saved-acts end" : "t2-m-saved-acts"}>
                     {card.is_default ? null : (
                       <button type="button" className="t2-m-make-default" onClick={() => act(setDefaultCard(card.id))}>
                         <Icon name="star" />
-                        اجعلها الافتراضية
+                        {tr("اجعلها الافتراضية")}
                       </button>
                     )}
                     <button
                       type="button"
                       className="t2-m-delete"
                       onClick={() => act(deleteSavedCard(card.id))}
-                      aria-label="حذف البطاقة"
+                      aria-label={tr("حذف البطاقة")}
                     >
                       <Icon name="delete" />
                     </button>

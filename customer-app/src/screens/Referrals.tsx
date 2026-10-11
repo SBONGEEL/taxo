@@ -32,30 +32,30 @@ import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن. والنبرةُ معناه: نجاحٌ · انتظار · تنبيه · حبر. */
 function stageOf(row: ReferralStage): { text: string; tone: "ok" | "muted" | "warn" | "ink" } {
-  if (row.rewarded) return { text: "وصلت المكافأة", tone: "ok" };
+  if (row.rewarded) return { text: tr("وصلت المكافأة"), tone: "ok" };
   if (row.referral_type === "driver") {
     if (!row.driver_approved) {
-      return { text: "حسابه قيد المراجعة", tone: "muted" };
+      return { text: tr("حسابه قيد المراجعة"), tone: "muted" };
     }
     if (!row.has_subscription) {
-      return { text: "لم يشترِ اشتراكاً بعد", tone: "muted" };
+      return { text: tr("لم يشترِ اشتراكاً بعد"), tone: "muted" };
     }
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: `أكمل ${row.rides_done} من ${row.rides_required} رحلات`,
+      text: tr("أكمل {0} من {1} رحلات", { 0: row.rides_done, 1: row.rides_required }),
       tone: "muted",
     };
   }
   // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
   if (row.over_monthly_cap) {
-    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "warn" };
+    return { text: tr("فوق سقف هذا الشهر — لن تُدفع"), tone: "warn" };
   }
-  return { text: "استحقّت — المكافأة في الطريق", tone: "ink" };
+  return { text: tr("استحقّت — المكافأة في الطريق"), tone: "ink" };
 }
 
 /** **المبلغُ بخطّين كما في R06**: الرقمُ بخطّ الأرقام، والعملةُ صغيرةً خافتة — والرقمُ من الخلفية كما وصل. */
@@ -84,7 +84,7 @@ export function ReferralsScreen() {
       .then(setData)
       .catch((caught) =>
         setError(
-          caught instanceof ApiError ? caught.message : "تعذّر قراءة الإحالات",
+          caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الإحالات"),
         ),
       );
   }, []);
@@ -117,7 +117,7 @@ export function ReferralsScreen() {
 
   async function share() {
     if (!data) return;
-    const text = `سجّل في تاكسو برمزي ${data.code}`;
+    const text = tr("سجّل في تاكسو برمزي {0}", { 0: data.code });
     if (navigator.share) {
       try {
         await navigator.share({ text });
@@ -135,7 +135,7 @@ export function ReferralsScreen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="ادعُ صديقك" onBack={goBack} />
+      <SubHeadT2 title={tr("ادعُ صديقك")} onBack={goBack} />
 
       {error ? (
         <NoteT2 tone="danger" lead>
@@ -148,25 +148,25 @@ export function ReferralsScreen() {
           <section className="t2-balance">
             <span className="t2-stripe a" aria-hidden="true" />
             <span className="t2-stripe b" aria-hidden="true" />
-            <div className="t2-balance-label">رمز الدعوة الخاص بك</div>
+            <div className="t2-balance-label">{tr("رمز الدعوة الخاص بك")}</div>
             <div dir="ltr" className="t2-code-value">
               {data.code}
             </div>
             <div className="t2-balance-actions">
               <button type="button" className="t2-btn ember" onClick={() => void copy()}>
                 <Icon name={copied ? "check" : "content_copy"} />
-                {copied ? "نُسخ" : "انسخ"}
+                {copied ? tr("نُسخ") : tr("انسخ")}
               </button>
               <button type="button" className="t2-btn ghost" onClick={() => void share()}>
                 <Icon name="ios_share" />
-                شارك
+                {tr("شارك")}
               </button>
             </div>
           </section>
 
           {pays ? (
             <>
-              <div className="t2-section">رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به</div>
+              <div className="t2-section">{tr("رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به")}</div>
               <div className="t2-list t2-sgroup">
                 {data.programs.map((program) => {
                   const active = program.enabled && Number(program.reward_amount) > 0;
@@ -177,17 +177,17 @@ export function ReferralsScreen() {
                         <Icon name={isDriver ? "local_taxi" : "person"} />
                       </span>
                       <div className="t2-prog-main">
-                        <p className="t2-prog-title">{isDriver ? "سجّل كبتناً" : "سجّل راكباً"}</p>
+                        <p className="t2-prog-title">{isDriver ? tr("سجّل كبتناً") : tr("سجّل راكباً")}</p>
                         <p className="t2-prog-cond">
                           {isDriver
-                            ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${program.required_rides} رحلات`
-                            : `يُكمل ${program.required_rides} رحلات`}
+                            ? tr("يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0} رحلات", { 0: program.required_rides })
+                            : tr("يُكمل {0} رحلات", { 0: program.required_rides })}
                         </p>
                         {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** */}
                         {isDriver && Number(program.female_bonus_amount) > 0 ? (
                           <p className="t2-prog-bonus">
-                            وإن كانت سائقةً موثَّقة: {formatMoney(program.female_total_amount, currency)} — الأساسُ وعلاوتُه
-                            معاً
+                            {tr("وإن كانت سائقةً موثَّقة:")}{" "}{formatMoney(program.female_total_amount, currency)}{" "}{tr("— الأساسُ وعلاوتُه معاً")}
+
                           </p>
                         ) : null}
                       </div>
@@ -201,26 +201,26 @@ export function ReferralsScreen() {
               {cap !== undefined ? (
                 <NoteT2 tone={left === 0 ? "warn" : "plain"}>
                   {left === 0
-                    ? `بلغتَ سقفَ هذا الشهر (${cap}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
-                    : `سقفُ هذا الشهر ${cap} دعوات — بقي لك ${left}.`}
+                    ? tr("بلغتَ سقفَ هذا الشهر ({0}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.", { 0: cap })
+                    : tr("سقفُ هذا الشهر {0} دعوات — بقي لك {1}.", { 0: cap, 1: left })}
                 </NoteT2>
               ) : null}
 
-              <NoteT2 tone="plain">مجموع ما وصلك: {formatMoney(data.total_rewarded, currency)}</NoteT2>
+              <NoteT2 tone="plain">{tr("مجموع ما وصلك:")}{" "}{formatMoney(data.total_rewarded, currency)}</NoteT2>
             </>
           ) : (
             <>
-              <div className="t2-section">كيف تعمل</div>
+              <div className="t2-section">{tr("كيف تعمل")}</div>
               <p className="t2-howto">
-                شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الدعوةُ في حسابك من الآن — والمكافأةُ تُعلن هنا متى
-                حُدِّدت.
+                {tr("شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الدعوةُ في حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.")}
+
               </p>
             </>
           )}
 
-          <div className="t2-section">من سجّل برمزك</div>
+          <div className="t2-section">{tr("من سجّل برمزك")}</div>
           {data.referrals.length === 0 ? (
-            <BlankT2 icon="group" title="لم يسجّل أحدٌ برمزك بعد" />
+            <BlankT2 icon="group" title={tr("لم يسجّل أحدٌ برمزك بعد")} />
           ) : (
             <div className="t2-list">
               {data.referrals.map((row) => {
@@ -232,7 +232,7 @@ export function ReferralsScreen() {
                     </span>
                     <div className="t2-ref-main">
                       <p className={`t2-ref-stage ${where.tone}`}>{where.text}</p>
-                      <p className="t2-ref-who">{row.referral_type === "driver" ? "كبتن" : "راكب"}</p>
+                      <p className="t2-ref-who">{row.referral_type === "driver" ? tr("كبتن") : tr("راكب")}</p>
                     </div>
                     {row.rewarded && row.reward_amount ? (
                       <Amount value={row.reward_amount} currency={row.reward_currency ?? currency ?? ""} />

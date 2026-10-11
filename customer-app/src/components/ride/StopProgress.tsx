@@ -18,7 +18,7 @@ import { Fragment, useEffect, useState } from "react";
 import type { Ride } from "@/api/types";
 import { currencyLabel, formatMoney } from "@/lib/utils";
 
-import "@/screens/t2/request.css";
+import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
 /** `mm:ss` — والمصدرُ ختمُ الخلفية لا لحظةُ فتح الشاشة. */
 function elapsed(since: string, now: number): string {
@@ -58,20 +58,20 @@ export function StopProgress({ ride }: { ride: Ride }) {
             </Fragment>
           );
         })}
-        <span className="t2-stopbar-end">وجهتك</span>
+        <span className="t2-stopbar-end">{tr("وجهتك")}</span>
       </div>
 
       {waiting ? (
         <div className="t2-meter">
           <div>
-            <p className="t2-meter-label">الكبتن واقفٌ عند المحطة {waiting.sequence}</p>
+            <p className="t2-meter-label">{tr("الكبتن واقفٌ عند المحطة")}{" "}{waiting.sequence}</p>
             {/* الوقتُ يُحسب هنا — والمالُ لا */}
             <p dir="ltr" className="t2-meter-clock">
               {elapsed(waiting.arrived_at!, now)}
             </p>
           </div>
           <div className="t2-meter-money">
-            <p className="t2-meter-label">رسم الانتظار حتى الآن</p>
+            <p className="t2-meter-label">{tr("رسم الانتظار حتى الآن")}</p>
             <p className="t2-meter-amount">
               <span dir="ltr" className="t2-num">
                 {formatMoney(ride.waiting_charge)}
@@ -85,7 +85,7 @@ export function StopProgress({ ride }: { ride: Ride }) {
       {waiting?.over_max_wait ? (
         <p className="t2-note warn">
           <span className="t2-icon" aria-hidden="true">error</span>
-          <span>تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء الرحلة هنا.</span>
+          <span>{tr("تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء الرحلة هنا.")}</span>
         </p>
       ) : null}
     </div>

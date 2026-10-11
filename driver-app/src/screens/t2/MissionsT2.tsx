@@ -27,7 +27,7 @@ import { digits } from "@/lib/utils";
 import { LEVEL_LABEL, nextStep } from "@/screens/Missions";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 export function MissionsT2Screen() {
   const [data, setData] = useState<MyProgress | null>(null);
@@ -37,7 +37,7 @@ export function MissionsT2Screen() {
     getMyProgress()
       .then(setData)
       .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة المهام"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المهام")),
       );
   }, []);
 
@@ -51,7 +51,7 @@ export function MissionsT2Screen() {
     <div className="t2 t2-missions scr">
       {/* **تبويبٌ لا صفحةٌ داخليّة** (C04، §٦٢-ب/٢٦) — فلا رجوعَ والشريطُ تحته */}
       <div className="t2-head">
-        <h1 className="t2-title">المستوى والمهام</h1>
+        <h1 className="t2-title">{tr("المستوى والمهام")}</h1>
       </div>
 
       <ErrorNote message={error} />
@@ -66,9 +66,9 @@ export function MissionsT2Screen() {
               <div className="t2-level-head">
                 <span className="t2-icon t2-level-medal" aria-hidden="true">workspace_premium</span>
                 <div>
-                  <div className="t2-level-k">مستواك</div>
+                  <div className="t2-level-k">{tr("مستواك")}</div>
                   <div className="t2-level-v">
-                    {LEVEL_LABEL[data.level] ?? `المستوى ${digits(String(data.level))}`}
+                    {LEVEL_LABEL[data.level] ?? tr("المستوى {0}", { 0: digits(String(data.level)) })}
                   </div>
                 </div>
               </div>
@@ -90,18 +90,18 @@ export function MissionsT2Screen() {
               {/* **الأثرُ بالأمتار — جملةٌ مقيسة لا وعد** (القاعدةُ الأولى في الشاشة القائمة) */}
               {data.level_effect_meters > 0 ? (
                 <p className="t2-level-note ok">
-                  يقرّبك من الطلبات القريبة {digits(String(data.level_effect_meters))} متراً — والأقربُ إليك يبقى
-                  الأوّلَ دائماً.
+                  {tr("يقرّبك من الطلبات القريبة")}{" "}{digits(String(data.level_effect_meters))}{" "}{tr("متراً — والأقربُ إليك يبقى الأوّلَ دائماً.")}
+
                 </p>
               ) : (
-                <p className="t2-level-note">لا أثرَ لمستواك على ترتيب الطلبات في سوقك حالياً.</p>
+                <p className="t2-level-note">{tr("لا أثرَ لمستواك على ترتيب الطلبات في سوقك حالياً.")}</p>
               )}
               {/* **ومستوىً بلا «كم بقي» شارةٌ لا حافز** */}
               {next ? (
-                <p className="t2-level-next">للمستوى التالي: {next}</p>
+                <p className="t2-level-next">{tr("للمستوى التالي:")}{" "}{next}</p>
               ) : data.missions_total > 0 ? (
                 <p className="t2-level-note ok">
-                  أنجزتَ مهامَّ الشهر كلَّها — {digits(String(data.missions_done))} من{" "}
+                  {tr("أنجزتَ مهامَّ الشهر كلَّها —")}{" "}{digits(String(data.missions_done))}{" "}{tr("من")}{" "}
                   {digits(String(data.missions_total))}.
                 </p>
               ) : null}
@@ -110,9 +110,9 @@ export function MissionsT2Screen() {
 
           {data.enabled ? (
             <section>
-              <div className="t2-section">مهامُّ هذا الشهر</div>
+              <div className="t2-section">{tr("مهامُّ هذا الشهر")}</div>
               {data.missions.length === 0 ? (
-                <p className="t2-empty">لا مهامَّ هذا الشهر بعد.</p>
+                <p className="t2-empty">{tr("لا مهامَّ هذا الشهر بعد.")}</p>
               ) : (
                 <div className="t2-missions-list">
                   {data.missions.map((item) => {
@@ -149,9 +149,9 @@ export function MissionsT2Screen() {
 
           {/* **الشاراتُ تُعرض ولو كان المفتاحُ مطفأً** — تقديرٌ نالَه صاحبُه (الشاشةُ القائمة) */}
           <section>
-            <div className="t2-section">شاراتي</div>
+            <div className="t2-section">{tr("شاراتي")}</div>
             {data.badges.length === 0 ? (
-              <p className="t2-empty">لم تُمنح شاراتٍ بعد.</p>
+              <p className="t2-empty">{tr("لم تُمنح شاراتٍ بعد.")}</p>
             ) : (
               <div className="t2-list">
                 {data.badges.map((row) => (

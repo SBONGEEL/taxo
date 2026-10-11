@@ -28,15 +28,15 @@ import { currencyLabel, formatDistance, formatMoney, formatTime } from "@/lib/ut
 import { fareLineRows } from "@/lib/fareLines";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** وسومُ R10 بترتيب اللوحة — **التسميةُ هنا والمفتاحُ من الخلفية** (`RatingTag`). */
 const RATING_TAGS: { tag: RatingTag; label: string }[] = [
-  { tag: "safe_driving", label: "قيادة آمنة" },
-  { tag: "clean_car", label: "سيارة نظيفة" },
-  { tag: "friendly", label: "ودود" },
-  { tag: "fast_arrival", label: "وصل بسرعة" },
-  { tag: "knows_way", label: "يعرف الطريق" },
+  { tag: "safe_driving", label: tr("قيادة آمنة") },
+  { tag: "clean_car", label: tr("سيارة نظيفة") },
+  { tag: "friendly", label: tr("ودود") },
+  { tag: "fast_arrival", label: tr("وصل بسرعة") },
+  { tag: "knows_way", label: tr("يعرف الطريق") },
 ];
 
 /** الوسومُ مديحٌ كلُّها — **تظهر من أربع نجوم** فلا يُعرض مديحٌ على تقييمٍ منخفض. */
@@ -44,9 +44,9 @@ const TAGS_MIN_STARS = 4;
 
 /** **«وصلتِ» للراكبة و«وصلتَ» للراكب** — وبلا جنسٍ معلَنٍ بلا حركة، فلا يُخمَّن. */
 function arrivedTitle(gender: string | null | undefined) {
-  if (gender === "female") return "وصلتِ بالسلامة";
-  if (gender === "male") return "وصلتَ بالسلامة";
-  return "وصلت بالسلامة";
+  if (gender === "female") return tr("وصلتِ بالسلامة");
+  if (gender === "male") return tr("وصلتَ بالسلامة");
+  return tr("وصلت بالسلامة");
 }
 
 export function RatingT2Screen() {
@@ -87,7 +87,7 @@ export function RatingT2Screen() {
     ),
   ];
   const payLabel = methods
-    .map((method) => (method === "cash" ? "كاش للكبتن" : PAYMENT_METHOD_LABEL[method]))
+    .map((method) => (method === "cash" ? tr("كاش للكبتن") : PAYMENT_METHOD_LABEL[method]))
     .join(" + ");
 
   /** سطورُ البطاقة — **تفصيلُ الأجرة كما جمّدته الخلفية** (§٦٢-د/٦): أسطرٌ مجموعُها الأجرةُ نفسُها، **وتحتها منفصلةً** ما ليس
@@ -100,22 +100,22 @@ export function RatingT2Screen() {
     for (const row of payments?.payments ?? []) {
       if ((row.method === "promo" || row.method === "share") && row.status === "confirmed")
         extras.push({
-          label: row.method === "promo" ? "خصم الكوبون" : "خصم المشاركة",
+          label: row.method === "promo" ? tr("خصم الكوبون") : tr("خصم المشاركة"),
           value: formatMoney(row.amount, payments?.currency),
         });
     }
   } else if (ride) {
-    if (ride.actual_distance_km) rows.push({ label: "المسافة الفعلية", value: formatDistance(ride.actual_distance_km) });
+    if (ride.actual_distance_km) rows.push({ label: tr("المسافة الفعلية"), value: formatDistance(ride.actual_distance_km) });
     if (Number(ride.stops_charge) > 0)
-      rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
+      rows.push({ label: tr("رسم المحطات ({0})", { 0: ride.stops.length }), value: formatMoney(ride.stops_charge, ride.currency) });
     if (Number(ride.waiting_charge) > 0)
-      rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
+      rows.push({ label: tr("رسم الانتظار عند المحطات"), value: formatMoney(ride.waiting_charge, ride.currency) });
     if (Number(ride.pause_charge) > 0)
-      rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
+      rows.push({ label: tr("رسم الوقفات أثناء الرحلة"), value: formatMoney(ride.pause_charge, ride.currency) });
   }
   if (payments && Number(payments.cancellation_debt) > 0)
     (lines ? extras : rows).push({
-      label: "رسمُ إلغاءٍ سابق",
+      label: tr("رسمُ إلغاءٍ سابق"),
       value: formatMoney(payments.cancellation_debt, payments.currency),
     });
 
@@ -132,7 +132,7 @@ export function RatingT2Screen() {
           <h1 className="t2-r10-title">{arrivedTitle(user?.gender)}</h1>
           {ride ? (
             <div className="t2-r10-sub">
-              {ride.dropoff_address ?? "وجهتك"}
+              {ride.dropoff_address ?? tr("وجهتك")}
               {ride.completed_at ? (
                 <>
                   {" · "}
@@ -144,7 +144,7 @@ export function RatingT2Screen() {
         </div>
         {r.done ? null : (
           <button type="button" className="t2-r10-skip" onClick={home}>
-            تخطّي
+            {tr("تخطّي")}
           </button>
         )}
       </div>
@@ -153,7 +153,7 @@ export function RatingT2Screen() {
         <div className="t2-r10-fare">
           <div className="t2-r10-fare-top">
             <div>
-              <div className="t2-r10-fare-label">الأجرة النهائية</div>
+              <div className="t2-r10-fare-label">{tr("الأجرة النهائية")}</div>
               <div className="t2-r10-fare-amount">
                 <span dir="ltr" className="t2-num">{formatMoney(payments.final_fare)}</span>
                 <span className="t2-r10-fare-cur">{currencyLabel(payments.currency)}</span>
@@ -184,15 +184,15 @@ export function RatingT2Screen() {
         </div>
       ) : null}
 
-      <div className="t2-r10-ask">{first ? `كيف كانت رحلتك مع ${first}؟` : "كيف كانت رحلتك مع الكبتن؟"}</div>
-      <div className="t2-r10-stars" role="radiogroup" aria-label="عدد النجوم">
+      <div className="t2-r10-ask">{first ? tr("كيف كانت رحلتك مع {0}؟", { 0: first }) : tr("كيف كانت رحلتك مع الكبتن؟")}</div>
+      <div className="t2-r10-stars" role="radiogroup" aria-label={tr("عدد النجوم")}>
         {[1, 2, 3, 4, 5].map((value) => (
           <button
             key={value}
             type="button"
             role="radio"
             aria-checked={r.stars === value}
-            aria-label={`${value} من 5`}
+            aria-label={tr("{0} من 5", { 0: value })}
             disabled={r.done}
             className={value <= r.stars ? "t2-r10-star on" : "t2-r10-star"}
             onClick={() => r.setStars(value)}
@@ -203,7 +203,7 @@ export function RatingT2Screen() {
       </div>
 
       {r.stars >= TAGS_MIN_STARS ? (
-        <div className="t2-r10-tags" role="group" aria-label="ما أعجبك في الرحلة">
+        <div className="t2-r10-tags" role="group" aria-label={tr("ما أعجبك في الرحلة")}>
           {RATING_TAGS.map(({ tag, label }) => {
             const on = r.tags.includes(tag);
             return (
@@ -229,19 +229,19 @@ export function RatingT2Screen() {
         value={r.comment}
         disabled={r.done}
         onChange={(event) => r.setComment(event.target.value)}
-        placeholder="ملاحظة (اختيارية) — ما الذي أعجبك أو يمكن تحسينه؟"
-        aria-label="ملاحظة (اختيارية)"
+        placeholder={tr("ملاحظة (اختيارية) — ما الذي أعجبك أو يمكن تحسينه؟")}
+        aria-label={tr("ملاحظة (اختيارية)")}
       />
 
       {r.tip?.given ? (
         <p className="t2-r10-thanks">
-          شكرتَ الكبتن ببقشيش {formatMoney(r.tip.given.amount, r.tip.given.currency)}.
+          {tr("شكرتَ الكبتن ببقشيش")}{" "}{formatMoney(r.tip.given.amount, r.tip.given.currency)}.
         </p>
       ) : tipShown && r.tip ? (
         <div className="t2-r10-tip">
           <div className="t2-r10-tip-head">
-            <span className="t2-r10-tip-title">بقشيش للكبتن</span>
-            <span className="t2-r10-tip-note">يصله كاملاً</span>
+            <span className="t2-r10-tip-title">{tr("بقشيش للكبتن")}</span>
+            <span className="t2-r10-tip-note">{tr("يصله كاملاً")}</span>
           </div>
           <div className="t2-r10-tip-row">
             <button
@@ -250,7 +250,7 @@ export function RatingT2Screen() {
               disabled={r.tipping !== null}
               onClick={() => r.setTip({ ...r.tip!, offered: false })}
             >
-              بدون
+              {tr("بدون")}
             </button>
             {r.tip.presets.map((amount) => (
               <button
@@ -267,7 +267,7 @@ export function RatingT2Screen() {
             ))}
           </div>
           {/* **ومن أين يُخصم يُقال** — كما في الشاشة القائمة: المحفظةُ قناتُه الوحيدة */}
-          <p className="t2-r10-tip-from">يُخصم من محفظتك ويصل الكبتن كاملاً — بلا أي خصم.</p>
+          <p className="t2-r10-tip-from">{tr("يُخصم من محفظتك ويصل الكبتن كاملاً — بلا أي خصم.")}</p>
           {r.chosenTip ? (
             <button
               type="button"
@@ -276,19 +276,19 @@ export function RatingT2Screen() {
               aria-busy={r.tipping !== null}
               onClick={() => void r.sendTip(r.chosenTip!)}
             >
-              أرسل {formatMoney(r.chosenTip, r.tip.currency)}
+              {tr("أرسل")}{" "}{formatMoney(r.chosenTip, r.tip.currency)}
             </button>
           ) : null}
         </div>
       ) : null}
 
       <ErrorNote message={r.error} className="t2-error" />
-      {r.done ? <p className="t2-note t2-r10-done">شكراً — وصلنا تقييمك.</p> : null}
+      {r.done ? <p className="t2-note t2-r10-done">{tr("شكراً — وصلنا تقييمك.")}</p> : null}
 
       <div className="t2-r10-spacer" />
       {r.done ? (
         <button type="button" className="t2-r10-cta" onClick={home}>
-          العودة للرئيسية
+          {tr("العودة للرئيسية")}
         </button>
       ) : (
         <button
@@ -298,7 +298,7 @@ export function RatingT2Screen() {
           aria-busy={r.busy}
           onClick={() => void r.submit()}
         >
-          إرسال التقييم
+          {tr("إرسال التقييم")}
         </button>
       )}
     </div>

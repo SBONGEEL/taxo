@@ -16,7 +16,7 @@
  */
 
 import { noteApi } from "@/lib/breadcrumbs";
-import { captureRequestId } from "@/lib/request-id";
+import { captureRequestId } from "@/lib/request-id"; import { language, tr } from "@/lib/i18n";
 
 /** **أصلُ الخلفية** — يُصدَّر لأن رسمات المركبات ملفاتٌ تخدمها الخلفيةُ لا
  *  الحزمة: في الإنتاج التطبيقُ على `driver.tajora.ly` والخلفيةُ على
@@ -33,8 +33,8 @@ export // **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ،
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
 if (!RAW_BASE) {
   throw new Error(
-    "VITE_API_BASE_URL غيرُ مضبوط — بُنيت هذه الحزمةُ بلا عنوانِ خلفية. " +
-      "تُبنى بـ: TAXO_CHANNEL=<public|test> node tools/build-channel.mjs <app>",
+    tr("VITE_API_BASE_URL غيرُ مضبوط — بُنيت هذه الحزمةُ بلا عنوانِ خلفية. ") +
+      tr("تُبنى بـ: TAXO_CHANNEL=<public|test> node tools/build-channel.mjs <app>"),
   );
 }
 export const BASE_URL = RAW_BASE.replace(/\/$/, "");
@@ -198,7 +198,7 @@ async function refreshSession(): Promise<boolean> {
   try {
     response = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept-Language": language },
       body: JSON.stringify({ refresh_token: token }),
     });
   } catch (error) {
@@ -287,20 +287,20 @@ function networkError(error: unknown): ApiError {
     return new ApiError(
       0,
       "network_timeout",
-      "الخادم لا يستجيب — انتهت المهلة. أعد المحاولة",
+      tr("الخادم لا يستجيب — انتهت المهلة. أعد المحاولة"),
     );
   }
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return new ApiError(
       0,
       "network_offline",
-      "لا اتصال بالإنترنت — تحقّق من شبكتك ثم أعد المحاولة",
+      tr("لا اتصال بالإنترنت — تحقّق من شبكتك ثم أعد المحاولة"),
     );
   }
   return new ApiError(
     0,
     "network_unreachable",
-    "تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل",
+    tr("تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل"),
   );
 }
 
@@ -309,7 +309,7 @@ function unexpectedResponse(): ApiError {
   return new ApiError(
     0,
     "network_unexpected",
-    "ردٌّ غير متوقَّع من الخادم — أعد المحاولة",
+    tr("ردٌّ غير متوقَّع من الخادم — أعد المحاولة"),
   );
 }
 
@@ -345,7 +345,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
 
 async function toError(response: Response): Promise<ApiError> {
   let code = "http_error";
-  let message = "تعذّر الاتصال بالخادم";
+  let message = tr("تعذّر الاتصال بالخادم");
   try {
     const body = await response.json();
     code = body.code ?? code;
@@ -370,7 +370,7 @@ async function send<T>(
   options: RequestOptions,
   retry: boolean,
 ): Promise<T> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { "Accept-Language": language };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
   const access = tokens.access();
@@ -478,7 +478,7 @@ export function sendForm<T>(
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open(method, `${API_URL}${path}`);
-    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
+    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`); request.setRequestHeader("Accept-Language", language);
 
     // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج من قرّر
     // التوقّف، والركودُ يعالج **وصلةً ماتت صامتة**. مقبسٌ يسقط أثناء الرفع لا
@@ -529,12 +529,12 @@ export function sendForm<T>(
           new ApiError(
             0,
             "network_timeout",
-            "توقّف الرفع — انقطع الاتصال. أعد المحاولة",
+            tr("توقّف الرفع — انقطع الاتصال. أعد المحاولة"),
           ),
         );
         return;
       }
-      reject(new DOMException("أُلغي الرفع", "AbortError"));
+      reject(new DOMException(tr("أُلغي الرفع"), "AbortError"));
     };
     request.onerror = () => {
       done();
@@ -546,7 +546,7 @@ export function sendForm<T>(
     request.ontimeout = () => {
       done();
       reject(
-        new ApiError(0, "network_timeout", "انتهت مهلة الرفع — أعد المحاولة"),
+        new ApiError(0, "network_timeout", tr("انتهت مهلة الرفع — أعد المحاولة")),
       );
     };
     request.onload = () => {
@@ -570,7 +570,7 @@ export function sendForm<T>(
         new ApiError(
           request.status,
           String(body.code ?? "http_error"),
-          String(body.message ?? "تعذّر رفع الملف — أعد المحاولة"),
+          String(body.message ?? tr("تعذّر رفع الملف — أعد المحاولة")),
           undefined,
           body,
         ),

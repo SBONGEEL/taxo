@@ -18,7 +18,7 @@ import type { Currency, VehicleSkin } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function BuyConfirmSheet({
   skin,
@@ -50,22 +50,22 @@ export function BuyConfirmSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="mb-4 text-16 font-bold text-ink">
-          تأكيد شراء {skin.name}
+          {tr("تأكيد شراء")}{" "}{skin.name}
         </h2>
         <p className="mb-16 text-12 leading-note text-muted">
-          يُخصم المبلغ من رصيد محفظتك فوراً، وتصير المركبة في كراجك.
+          {tr("يُخصم المبلغ من رصيد محفظتك فوراً، وتصير المركبة في كراجك.")}
         </p>
 
         <div className="mb-12 rounded-14 border border-line bg-surface-2 px-14 py-12">
           <div className="flex items-baseline justify-between">
-            <span className="text-12.5 text-muted">السعر</span>
+            <span className="text-12.5 text-muted">{tr("السعر")}</span>
             <span className="text-17 font-bold text-ink">
               {digits(skin.price ?? "")}{" "}
               <span className="text-11 font-medium text-muted">{label}</span>
             </span>
           </div>
           <div className="mt-8 flex items-baseline justify-between">
-            <span className="text-11.5 text-muted">رصيدك الآن</span>
+            <span className="text-11.5 text-muted">{tr("رصيدك الآن")}</span>
             <span className="text-12.5 font-semibold text-ink">
               {digits(balance)}{" "}
               <span className="text-10 font-medium text-muted">{label}</span>
@@ -77,22 +77,22 @@ export function BuyConfirmSheet({
             اختفت المركبةُ من المتجر لا يُستردّ له شيء — وقولُ ذلك بعد الشراء
             تبريرٌ، وقولُه قبله شرطٌ قَبِله بيده */}
         <p className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-11 text-11.5 leading-note text-warn">
-          لا استرداد بعد الشراء. وإن أُخفيت المركبة من المتجر لاحقاً فهي تبقى
-          في كراجك، ولا يُستردّ ثمنها.
+          {tr("لا استرداد بعد الشراء. وإن أُخفيت المركبة من المتجر لاحقاً فهي تبقى في كراجك، ولا يُستردّ ثمنها.")}
+
         </p>
 
         <ErrorNote message={error} />
 
         <div className="mt-10 flex flex-col gap-9">
           <Button size="md" loading={busy} onClick={onConfirm}>
-            خصم من المحفظة
+            {tr("خصم من المحفظة")}
           </Button>
           <button
             type="button"
             onClick={onClose}
             className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
           >
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       </div>

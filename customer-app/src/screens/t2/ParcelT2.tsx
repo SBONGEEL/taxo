@@ -23,7 +23,7 @@ import { PAYER_SHORT, PhoneFieldsT2, usePhoneDraft } from "./ForOtherT2";
 import { SheetModalT2 } from "./MoneyT2";
 import "./t2.css";
 import "./for-other.css";
-import "./parcel.css";
+import "./parcel.css"; import { tr } from "@/lib/i18n";
 
 /** **شارةُ الطرد في ورقة الطلب** — قبل كتابة المستلم زرٌّ يفتح ورقتَه (بطاقةُ «لشخص آخر» نفسُها)، **وبعده «إلى: الاسم»**
  *  برقمه ومن يدفع وزرِّ التعديل. **ولا زرَّ إزالة**: الطردُ طلبٌ بدأته البلاطة، والخروجُ منه سهمُ الرجوع فوق الخريطة. */
@@ -45,17 +45,17 @@ export function ParcelOptionT2({
         </span>
         <span className="t2-fo-chip-main">
           <span className="t2-fo-chip-title">
-            {fetch ? `من: ${draft.recipient_name} · ${draft.item ?? ""}` : `إلى: ${draft.recipient_name}`}
+            {fetch ? tr("من: {0} · {1}", { 0: draft.recipient_name, 1: draft.item ?? "" }) : tr("إلى: {0}", { 0: draft.recipient_name })}
           </span>
           <span className="t2-fo-chip-sub">
-            <span dir="ltr">{draft.recipient_phone}</span> · {fetch ? "تدفع أنت" : PAYER_SHORT[draft.payer]}
+            <span dir="ltr">{draft.recipient_phone}</span> · {fetch ? tr("تدفع أنت") : PAYER_SHORT[draft.payer]}
           </span>
         </span>
         <button
           type="button"
           className="t2-fo-chip-btn"
           onClick={onOpen}
-          aria-label={fetch ? "تعديل بيانات الغرض" : "تعديل بيانات الطرد"}
+          aria-label={fetch ? tr("تعديل بيانات الغرض") : tr("تعديل بيانات الطرد")}
         >
           <span className="t2-icon" aria-hidden="true">edit</span>
         </button>
@@ -67,10 +67,10 @@ export function ParcelOptionT2({
       <span className="t2-share-main">
         <span className="t2-share-title">
           <span className="t2-icon" aria-hidden="true">{fetch ? "inventory_2" : "package_2"}</span>
-          {fetch ? "بيانات الغرض" : "بيانات الطرد"}
+          {fetch ? tr("بيانات الغرض") : tr("بيانات الطرد")}
         </span>
         <span className="t2-share-body">
-          {fetch ? "اقرأ الشروط، واكتب الغرضَ ومن يسلّمه للكبتن." : "اقرأ الشروط، واكتب المستلمَ ومن يدفع."}
+          {fetch ? tr("اقرأ الشروط، واكتب الغرضَ ومن يسلّمه للكبتن.") : tr("اقرأ الشروط، واكتب المستلمَ ومن يدفع.")}
         </span>
       </span>
       <span className="t2-icon t2-fo-open-go" aria-hidden="true">chevron_left</span>
@@ -110,7 +110,7 @@ export function ParcelSheetT2({
   const [payer, setPayer] = useState<RideParcel["payer"]>(initial?.payer ?? "requester");
   const [item, setItem] = useState(initial?.item ?? "");
 
-  const phoneError = dialCode === null ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة." : null;
+  const phoneError = dialCode === null ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.") : null;
   // **حدودُ الخلفية نفسُها** (`ParcelIn`): اسمٌ بحرفين وعنوانٌ بثلاثة — وما بعدها ترفضه هي بنصّها
   const ready =
     terms !== null &&
@@ -121,12 +121,12 @@ export function ParcelSheetT2({
     (!fetch || item.trim().length >= 2);
 
   const payers: Array<{ value: RideParcel["payer"]; icon: string; label: string; hint: string }> = [
-    { value: "requester", icon: "account_balance_wallet", label: "أنا أدفع", hint: "عند الاستلام منك — بأيِّ طريقة دفع" },
+    { value: "requester", icon: "account_balance_wallet", label: tr("أنا أدفع"), hint: tr("عند الاستلام منك — بأيِّ طريقة دفع") },
     {
       value: "recipient_cash",
       icon: "payments",
-      label: "المستلم يدفع نقداً عند التسليم",
-      hint: "يسلّم الأجرةَ للكبتن بيده",
+      label: tr("المستلم يدفع نقداً عند التسليم"),
+      hint: tr("يسلّم الأجرةَ للكبتن بيده"),
     },
   ];
 
@@ -161,15 +161,15 @@ export function ParcelSheetT2({
             )
           }
         >
-          تأكيد
+          {tr("تأكيد")}
         </button>
       }
     >
-      <div className="t2-picker-title">{fetch ? "أحضر غرضي" : "طرد"}</div>
+      <div className="t2-picker-title">{fetch ? tr("أحضر غرضي") : tr("طرد")}</div>
       {fetch ? (
         <p className="t2-note t2-pf-lead">
           <span className="t2-icon" aria-hidden="true">inventory_2</span>
-          يأخذ الكبتنُ غرضك من حيث تقول ويوصله إليك.
+          {tr("يأخذ الكبتنُ غرضك من حيث تقول ويوصله إليك.")}
         </p>
       ) : null}
 
@@ -177,7 +177,7 @@ export function ParcelSheetT2({
       <div className="t2-auth-consent t2-pc-terms">
         <div className="t2-pc-terms-title">
           <Icon name="gavel" />
-          {fetch ? "الشروط" : "شروط الطرد"}
+          {fetch ? tr("الشروط") : tr("شروط الطرد")}
         </div>
         {terms ? (
           <ul className="t2-pc-terms-list">
@@ -187,7 +187,7 @@ export function ParcelSheetT2({
           </ul>
         ) : (
           <p className="t2-pc-terms-wait">
-            {failed ? "تعذّرت قراءة الشروط — أغلق الورقة وأعد المحاولة." : "نقرأ الشروط…"}
+            {failed ? tr("تعذّرت قراءة الشروط — أغلق الورقة وأعد المحاولة.") : tr("نقرأ الشروط…")}
           </p>
         )}
         <button
@@ -201,51 +201,51 @@ export function ParcelSheetT2({
           <span className="t2-auth-box" aria-hidden="true">
             <Icon name="check" />
           </span>
-          <span>قرأتُ الشروط وأوافق عليها</span>
+          <span>{tr("قرأتُ الشروط وأوافق عليها")}</span>
         </button>
       </div>
 
       {fetch ? (
         <>
-          <AuthBlock label="ما الغرض؟" htmlFor="parcel-item">
+          <AuthBlock label={tr("ما الغرض؟")} htmlFor="parcel-item">
             <AuthInput
               id="parcel-item"
               value={item}
               maxLength={120}
               autoComplete="off"
-              placeholder="مثلاً: شاحن هاتف على طاولة المدخل"
+              placeholder={tr("مثلاً: شاحن هاتف على طاولة المدخل")}
               onChange={(event) => setItem(event.target.value)}
             />
           </AuthBlock>
           <div className="t2-pick-head">
-            <span className="t2-pick-title">من يسلّمه للكبتن؟</span>
+            <span className="t2-pick-title">{tr("من يسلّمه للكبتن؟")}</span>
           </div>
         </>
       ) : null}
-      <AuthBlock label={fetch ? "الاسم" : "اسم المستلم"} htmlFor="parcel-name">
+      <AuthBlock label={fetch ? tr("الاسم") : tr("اسم المستلم")} htmlFor="parcel-name">
         <AuthInput
           id="parcel-name"
           value={name}
           maxLength={80}
           autoComplete="off"
-          placeholder="الاسم كما يناديه الكبتن"
+          placeholder={tr("الاسم كما يناديه الكبتن")}
           onChange={(event) => setName(event.target.value)}
         />
       </AuthBlock>
       <PhoneFieldsT2
         draft={phoneDraft}
         id="parcel-phone"
-        label={fetch ? "رقمه" : "رقم المستلم"}
+        label={fetch ? tr("رقمه") : tr("رقم المستلم")}
         error={phoneError}
         valid={complete}
       />
-      <AuthBlock label={fetch ? "عنوان الاستلام" : "عنوان التسليم"} htmlFor="parcel-address">
+      <AuthBlock label={fetch ? tr("عنوان الاستلام") : tr("عنوان التسليم")} htmlFor="parcel-address">
         <AuthInput
           id="parcel-address"
           value={address}
           maxLength={255}
           autoComplete="off"
-          placeholder={fetch ? "الحيّ والشارع والبناية والطابق" : "الحيّ والشارع والبناية"}
+          placeholder={fetch ? tr("الحيّ والشارع والبناية والطابق") : tr("الحيّ والشارع والبناية")}
           onChange={(event) => setAddress(event.target.value)}
         />
       </AuthBlock>
@@ -253,14 +253,14 @@ export function ParcelSheetT2({
       {fetch ? (
         <p className="t2-note t2-fo-keep">
           <span className="t2-icon" aria-hidden="true">payments</span>
-          تدفع أنت حين يصلك — بالمحفظة أو البطاقة أو نقداً عند التسليم.
+          {tr("تدفع أنت حين يصلك — بالمحفظة أو البطاقة أو نقداً عند التسليم.")}
         </p>
       ) : (
         <>
       <div className="t2-pick-head">
-        <span className="t2-pick-title">من يدفع؟</span>
+        <span className="t2-pick-title">{tr("من يدفع؟")}</span>
       </div>
-      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label="من يدفع">
+      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label={tr("من يدفع")}>
         {payers.map((option) => {
           const on = option.value === payer;
           return (
@@ -289,8 +289,8 @@ export function ParcelSheetT2({
       <p className="t2-note t2-fo-keep">
         <span className="t2-icon" aria-hidden="true">lock</span>
         {fetch
-          ? "نحفظ اسمَ من يسلّم الغرضَ ورقمَه ووصفَ الغرض لهذا الطلب وحده، ونحذفها بعد ثلاثين يوماً."
-          : "نحفظ بيانات المستلم لهذا التوصيل وحده، ونحذفها بعد ثلاثين يوماً."}
+          ? tr("نحفظ اسمَ من يسلّم الغرضَ ورقمَه ووصفَ الغرض لهذا الطلب وحده، ونحذفها بعد ثلاثين يوماً.")
+          : tr("نحفظ بيانات المستلم لهذا التوصيل وحده، ونحذفها بعد ثلاثين يوماً.")}
       </p>
     </SheetModalT2>
   );
@@ -309,7 +309,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
             <span className="t2-icon" aria-hidden="true">inventory_2</span>
             <span className="t2-pc-ride-to">
               <span>
-                من: <b>{ride.recipient_name}</b>
+                {tr("من:")}{" "}<b>{ride.recipient_name}</b>
               </span>
               {ride.recipient_address ? <span className="t2-pc-ride-addr">{ride.recipient_address}</span> : null}
             </span>
@@ -317,7 +317,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
           {ride.parcel_item ? (
             <div className="t2-fo-ride-payer">
               <span className="t2-icon" aria-hidden="true">package_2</span>
-              <span>الغرض: {ride.parcel_item}</span>
+              <span>{tr("الغرض:")}{" "}{ride.parcel_item}</span>
             </div>
           ) : null}
         </div>
@@ -333,7 +333,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
             <span className="t2-icon" aria-hidden="true">package_2</span>
             <span className="t2-pc-ride-to">
               <span>
-                إلى: <b>{ride.recipient_name}</b>
+                {tr("إلى:")}{" "}<b>{ride.recipient_name}</b>
               </span>
               {ride.recipient_address ? <span className="t2-pc-ride-addr">{ride.recipient_address}</span> : null}
             </span>

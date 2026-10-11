@@ -36,7 +36,7 @@ import { DrawerT2 } from "./DrawerT2";
 import { NoteT2, SubHeadT2 } from "./KitT2";
 import "@/taxo2";
 import "./t2.css";
-import "./women.css";
+import "./women.css"; import { tr } from "@/lib/i18n";
 
 type Gender = NonNullable<User["gender"]>;
 
@@ -85,7 +85,7 @@ export function DeclareGenderSheetT2({
         setDeclaredMale(true);
       }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"));
       // **أُعلن من جهازٍ آخر؟** — الجلسةُ تُقرأ من جديد فلا يبقى السؤالُ معروضاً على ما أُجيب
       await refreshUser().catch(() => undefined);
     } finally {
@@ -94,31 +94,31 @@ export function DeclareGenderSheetT2({
   }
 
   return (
-    <DrawerT2 open={open} onOpenChange={close} title="الخدمة النسائية">
+    <DrawerT2 open={open} onOpenChange={close} title={tr("الخدمة النسائية")}>
       {declaredMale ? (
         <>
-          <p className="t2-drawer-text">الخدمة النسائية للراكبات.</p>
+          <p className="t2-drawer-text">{tr("الخدمة النسائية للراكبات.")}</p>
           <div className="t2-drawer-actions">
             <button type="button" className="t2-button t2-quiet" onClick={() => close(false)}>
-              حسناً
+              {tr("حسناً")}
             </button>
           </div>
         </>
       ) : (
         <>
-          <p className="t2-drawer-text">تُعرض الخدمة على من أعلنت أنها أنثى — ولم يُعلَن جنسٌ في حسابك.</p>
-          <p className="t2-wdecl-ask">نخاطبك بصيغة</p>
+          <p className="t2-drawer-text">{tr("تُعرض الخدمة على من أعلنت أنها أنثى — ولم يُعلَن جنسٌ في حسابك.")}</p>
+          <p className="t2-wdecl-ask">{tr("نخاطبك بصيغة")}</p>
           <AuthChoice
-            label="نخاطبك بصيغة"
+            label={tr("نخاطبك بصيغة")}
             value={choice}
             options={[
-              { value: "male", label: "راكب" },
-              { value: "female", label: "راكبة", women: true },
+              { value: "male", label: tr("راكب") },
+              { value: "female", label: tr("راكبة"), women: true },
             ]}
             onChange={setChoice}
           />
           <p className="t2-wdecl-fine">
-            إقرارٌ ذاتيٌّ بلا وثيقة، ولا يظهر لأحد. <b>يُعلَن مرّةً، وتغييرُه بعدها عبر الدعم.</b>
+            {tr("إقرارٌ ذاتيٌّ بلا وثيقة، ولا يظهر لأحد.")}{" "}<b>{tr("يُعلَن مرّةً، وتغييرُه بعدها عبر الدعم.")}</b>
           </p>
           {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
           <div className="t2-drawer-actions">
@@ -130,10 +130,10 @@ export function DeclareGenderSheetT2({
               aria-busy={saving}
               onClick={() => void confirm()}
             >
-              {saving ? "نحفظ…" : "تأكيد"}
+              {saving ? tr("نحفظ…") : tr("تأكيد")}
             </button>
             <button type="button" className="t2-button t2-quiet" onClick={() => close(false)}>
-              ليس الآن
+              {tr("ليس الآن")}
             </button>
           </div>
         </>
@@ -160,15 +160,15 @@ export function WomenServiceCardT2() {
           type="button"
           className="t2-wsvc"
           onClick={() => (user?.gender ? navigate("/account/women") : setAsking(true))}
-          aria-label={women.available ? `الخدمة النسائية — ${on ? "مفعّلة" : "غير مفعّلة"}` : "الخدمة النسائية"}
+          aria-label={women.available ? tr("الخدمة النسائية — {0}", { 0: on ? tr("مفعّلة") : tr("غير مفعّلة") }) : tr("الخدمة النسائية")}
         >
           <span className="t2-wsvc-icon">
             <Icon name="woman" />
           </span>
           <span className="t2-wsvc-main">
-            <span className="t2-wsvc-title">الخدمة النسائية</span>
+            <span className="t2-wsvc-title">{tr("الخدمة النسائية")}</span>
             <span className="t2-wsvc-sub">
-              {women.available ? "نطابقك مع كبتنة فقط" : "تُعرض على من أعلنت أنها أنثى"}
+              {women.available ? tr("نطابقك مع كبتنة فقط") : tr("تُعرض على من أعلنت أنها أنثى")}
             </span>
           </span>
           {/* **حالٌ لا زرّ** (`Switch` بلا دور) — ومن لم تُعلن جنسَها لا حالَ لها: سهمٌ إلى الصفحة */}
@@ -204,7 +204,7 @@ export function WomenServiceT2Screen() {
       await updateMe({ ride_gender_preference: next });
       await refreshUser();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر حفظ التفضيل"));
     } finally {
       setSaving(false);
     }
@@ -212,15 +212,15 @@ export function WomenServiceT2Screen() {
 
   return (
     <div className="t2 t2-page t2-account t2-wsp pb-nav">
-      <SubHeadT2 title="الخدمة النسائية" onBack={goBack} />
+      <SubHeadT2 title={tr("الخدمة النسائية")} onBack={goBack} />
 
       <section className="t2-whero">
         <span className="t2-whero-stripe" aria-hidden="true" />
         <span className="t2-whero-icon">
           <Icon name="woman" fill />
         </span>
-        <h2 className="t2-whero-title">رحلات بين نساء فقط.</h2>
-        <p className="t2-whero-body">كبتنة لراكبة، في كل رحلة تطلبينها من هذه الخدمة.</p>
+        <h2 className="t2-whero-title">{tr("رحلات بين نساء فقط.")}</h2>
+        <p className="t2-whero-body">{tr("كبتنة لراكبة، في كل رحلة تطلبينها من هذه الخدمة.")}</p>
       </section>
 
       {/* **ما يصدق اليوم وحدَه**: الكبتنةُ مختومةُ الجنس من هويتها بيد المشرف ووثائقُها معتمدة (`dispatch._eligible_levels`)، و«لا كبتنة»
@@ -228,11 +228,11 @@ export function WomenServiceT2Screen() {
       <ul className="t2-wpoints">
         <li>
           <Icon name="verified_user" fill />
-          كل الكبتنات موثّقات الهوية والوثائق.
+          {tr("كل الكبتنات موثّقات الهوية والوثائق.")}
         </li>
         <li>
           <Icon name="front_hand" fill />
-          إن لم تتوفر كبتنة نخبرك أولاً، ولا نرسل كبتناً دون موافقتك.
+          {tr("إن لم تتوفر كبتنة نخبرك أولاً، ولا نرسل كبتناً دون موافقتك.")}
         </li>
       </ul>
 
@@ -241,7 +241,7 @@ export function WomenServiceT2Screen() {
           {on ? (
             <p className="t2-wstate">
               <Icon name="check_circle" fill />
-              الخدمة مفعّلة في حسابك
+              {tr("الخدمة مفعّلة في حسابك")}
             </p>
           ) : null}
           {on ? (
@@ -252,28 +252,28 @@ export function WomenServiceT2Screen() {
               aria-busy={saving}
               onClick={() => void save("any")}
             >
-              {saving ? "نحفظ…" : "إيقاف الخدمة — أقبل أي كبتن"}
+              {saving ? tr("نحفظ…") : tr("إيقاف الخدمة — أقبل أي كبتن")}
             </button>
           ) : (
             <button type="button" className="t2-wbtn" disabled={saving} aria-busy={saving} onClick={() => void save("female")}>
-              {saving ? "نحفظ…" : "تفعيل الخدمة النسائية"}
+              {saving ? tr("نحفظ…") : tr("تفعيل الخدمة النسائية")}
             </button>
           )}
-          <p className="t2-wfine">تسري على كل طلبٍ لا تختارين فيه غيرها، ولكِ تغييرها لرحلةٍ واحدة من شاشة الطلب.</p>
+          <p className="t2-wfine">{tr("تسري على كل طلبٍ لا تختارين فيه غيرها، ولكِ تغييرها لرحلةٍ واحدة من شاشة الطلب.")}</p>
         </>
       ) : user.gender === "male" ? (
-        <NoteT2 tone="plain">الخدمة النسائية للراكبات.</NoteT2>
+        <NoteT2 tone="plain">{tr("الخدمة النسائية للراكبات.")}</NoteT2>
       ) : (
         // **الإعلانُ من هنا مرّةً** (§٦٤-ج/٤-٢، رأسُ الملفّ) — كان «راسلي الدعم» يومَ لم يكن له باب؛ **والدعمُ لتغييره بعدها**
         <div className="t2-callout">
           <Icon name="person" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">لم يُعلَن جنسٌ في حسابك</p>
+            <p className="t2-callout-title">{tr("لم يُعلَن جنسٌ في حسابك")}</p>
             <p className="t2-callout-body">
-              تُعرض الخدمة على من أعلنت أنها أنثى. يُعلَن مرّةً، وتغييرُه بعدها عبر الدعم.
+              {tr("تُعرض الخدمة على من أعلنت أنها أنثى. يُعلَن مرّةً، وتغييرُه بعدها عبر الدعم.")}
             </p>
             <button type="button" className="t2-callout-open" onClick={() => setAsking(true)}>
-              إعلان الجنس
+              {tr("إعلان الجنس")}
             </button>
           </div>
         </div>

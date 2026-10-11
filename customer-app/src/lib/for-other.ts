@@ -12,7 +12,7 @@
 import type { CountryConfig, PublicTrack, RidePayer } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { channelsFor, usePaymentPreference, type PayableMethod } from "@/lib/payment";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 export function useRideForOther(): boolean {
   const { user } = useSession();
@@ -59,9 +59,9 @@ export function payerScope(ride: { for_other: boolean; payer: RidePayer }): Ride
 
 /** **سطرُ الدافع على الرحلة الجارية** — يقول لصاحب الحساب ما عليه بعد الرحلة قبل أن تنتهي. */
 export const PAYER_LINE: Record<RidePayer, string> = {
-  requester: "تدفع أنت بعد الرحلة — بالمحفظة أو البطاقة",
-  passenger_cash: "يدفع الراكبُ نقداً للكبتن",
-  recipient_cash: "يدفع المستلمُ نقداً عند التسليم",
+  requester: tr("تدفع أنت بعد الرحلة — بالمحفظة أو البطاقة"),
+  passenger_cash: tr("يدفع الراكبُ نقداً للكبتن"),
+  recipient_cash: tr("يدفع المستلمُ نقداً عند التسليم"),
 };
 
 /** **رابطُ التتبّع من عنوان التطبيق نفسِه** (`/t/{token}`) — والخلفيةُ لا تكتب نطاقاً يفترق عن مكان التطبيق.
@@ -84,10 +84,10 @@ export function trackUrl(token: string): string | null {
  *  وما يعود يقول للشاشة ماذا تقول: النسخُ يُقال بتنبيه (لا شيءَ آخرَ يدلّ عليه)، وورقةُ النظام تقول ما فعلته بنفسها،
  *  **والإغلاقُ بلا مشاركةٍ قرارُ صاحبه** فلا يُقال له شيء. والتعذّرُ يُقال ومعه الرابطُ نفسُه — ينسخه بيده. */
 export async function shareTrackLink(url: string): Promise<"shared" | "copied" | "cancelled" | "failed"> {
-  const text = `تابع رحلتك مع TAXO: ${url}`;
+  const text = tr("تابع رحلتك مع TAXO: {0}", { 0: url });
   if (navigator.share) {
     try {
-      await navigator.share({ title: "تتبّع الرحلة · TAXO", text });
+      await navigator.share({ title: tr("تتبّع الرحلة · TAXO"), text });
       return "shared";
     } catch (error) {
       if ((error as Error)?.name === "AbortError") return "cancelled";
@@ -104,11 +104,11 @@ export async function shareTrackLink(url: string): Promise<"shared" | "copied" |
 
 /** **حالُ الرحلة لمن يتابعها** — جملةٌ لكلِّ حال، ولا رقمَ ولا وقتَ لا مصدرَ له. */
 export const PUBLIC_STATE_LINE: Record<PublicTrack["state"], string> = {
-  searching: "نبحث عن كبتن…",
-  coming: "الكبتن في الطريق",
-  arrived: "الكبتن وصل",
-  riding: "في الطريق إلى الوجهة",
-  ended: "انتهت الرحلة",
+  searching: tr("نبحث عن كبتن…"),
+  coming: tr("الكبتن في الطريق"),
+  arrived: tr("الكبتن وصل"),
+  riding: tr("في الطريق إلى الوجهة"),
+  ended: tr("انتهت الرحلة"),
 };
 
 /** **الموقعُ في خرائط قوقل** — حين لا خريطةَ في الصفحة (لا توكن خرائط منشور). */

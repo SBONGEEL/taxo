@@ -23,7 +23,7 @@ import { composeBody } from "@/lib/notification-text";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 const PAGE_SIZE = 30;
 
@@ -56,10 +56,10 @@ const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };
 
 type Group = "today" | "yesterday" | "week" | "older";
 const GROUP_LABEL: Record<Group, string> = {
-  today: "اليوم",
-  yesterday: "أمس",
-  week: "هذا الأسبوع",
-  older: "أقدم",
+  today: tr("اليوم"),
+  yesterday: tr("أمس"),
+  week: tr("هذا الأسبوع"),
+  older: tr("أقدم"),
 };
 const GROUP_ORDER: Group[] = ["today", "yesterday", "week", "older"];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -106,7 +106,7 @@ export function NotificationsT2Screen() {
       setMore(page.length === PAGE_SIZE);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الإشعارات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الإشعارات"),
       );
     } finally {
       setBusy(false);
@@ -129,7 +129,7 @@ export function NotificationsT2Screen() {
         ),
       );
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التعليم");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التعليم"));
     }
   }
 
@@ -154,13 +154,13 @@ export function NotificationsT2Screen() {
   return (
     <div className="t2 t2-notifs">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-        <h1 className="t2-title">الإشعارات</h1>
+        <h1 className="t2-title">{tr("الإشعارات")}</h1>
         {unread ? (
           <button type="button" className="t2-action" onClick={() => void readAll()}>
-            قراءة الكل
+            {tr("قراءة الكل")}
           </button>
         ) : null}
       </div>
@@ -169,8 +169,8 @@ export function NotificationsT2Screen() {
       {entries === null && !error ? <Spinner className="mx-auto" /> : null}
       {entries?.length === 0 ? (
         <EmptyNote
-          title="لا إشعارات"
-          hint="ما يخص رحلاتك واشتراكك ومستنداتك يصلك هنا، ويبقى بعد أن يمر."
+          title={tr("لا إشعارات")}
+          hint={tr("ما يخص رحلاتك واشتراكك ومستنداتك يصلك هنا، ويبقى بعد أن يمر.")}
         />
       ) : null}
 
@@ -199,7 +199,7 @@ export function NotificationsT2Screen() {
                           {whenLabel(entry.created_at, group)}
                         </span>
                         {entry.read_at === null ? (
-                          <span className="t2-unread" aria-label="غير مقروء" />
+                          <span className="t2-unread" aria-label={tr("غير مقروء")} />
                         ) : null}
                       </span>
                     </span>
@@ -219,7 +219,7 @@ export function NotificationsT2Screen() {
           disabled={busy}
           onClick={() => void load(entries?.length ?? 0)}
         >
-          {busy ? "…" : "عرض المزيد"}
+          {busy ? "…" : tr("عرض المزيد")}
         </button>
       ) : null}
     </div>

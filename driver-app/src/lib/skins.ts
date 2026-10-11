@@ -15,13 +15,13 @@
  */
 
 import { BASE_URL } from "@/api/client";
-import type { Rarity, SkinBlockedReason, VehicleSkin } from "@/api/types";
+import type { Rarity, SkinBlockedReason, VehicleSkin } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 export const RARITY_LABEL: Record<Rarity, string> = {
-  common: "عادية",
-  premium: "مميزة",
-  rare: "نادرة",
-  legendary: "أسطورية",
+  common: tr("عادية"),
+  premium: tr("مميزة"),
+  rare: tr("نادرة"),
+  legendary: tr("أسطورية"),
 };
 
 /** صنفُ الشارة — معرَّفٌ في `index.css` طبقةَ `components`.
@@ -38,10 +38,10 @@ export const RARITY_CHIP: Record<Rarity, string> = {
 
 /** سطرُ قسمِ المتجر — **يقول ما تعنيه الدرجةُ لا ما تبدو عليه**. */
 export const RARITY_NOTE: Record<Rarity, string> = {
-  common: "تُوهب ولا تُباع — وتظهر لكلِّ من حولك على الخريطة.",
-  premium: "معروضةٌ دائماً — وتظهر لكلِّ من حولك على الخريطة.",
-  rare: "كميّةٌ محدودة — ويراها راكبُك بعد قبول الرحلة.",
-  legendary: "أندرُ ما في المتجر — ويراها راكبُك بعد قبول الرحلة.",
+  common: tr("تُوهب ولا تُباع — وتظهر لكلِّ من حولك على الخريطة."),
+  premium: tr("معروضةٌ دائماً — وتظهر لكلِّ من حولك على الخريطة."),
+  rare: tr("كميّةٌ محدودة — ويراها راكبُك بعد قبول الرحلة."),
+  legendary: tr("أندرُ ما في المتجر — ويراها راكبُك بعد قبول الرحلة."),
 };
 
 /** **حالٌ على البطاقة لا رسالةُ خطأ** — كـ`RIDE_STATUS_LABEL` تماماً.
@@ -50,11 +50,11 @@ export const RARITY_NOTE: Record<Rarity, string> = {
  * هنا: هذه كلمةٌ تشرح **لماذا الزرُّ مطفأ**، وتلك جوابُ الخادم على فعلٍ وقع.
  */
 export const BLOCKED_LABEL: Record<SkinBlockedReason, string> = {
-  owned: "تملكها",
-  sold_out: "نفدت الكمية",
-  level_locked: "تحتاج مستوىً أعلى",
-  out_of_season: "خارج موسمها",
-  insufficient_balance: "رصيدك لا يكفي",
+  owned: tr("تملكها"),
+  sold_out: tr("نفدت الكمية"),
+  level_locked: tr("تحتاج مستوىً أعلى"),
+  out_of_season: tr("خارج موسمها"),
+  insufficient_balance: tr("رصيدك لا يكفي"),
 };
 
 /** عنوانُ ملفِّ الرسمة — **مبنيٌّ في مكانٍ واحد**.
@@ -75,8 +75,8 @@ export function skinAssetUrl(path: string): string {
  */
 export function visibilityNote(skin: VehicleSkin): string {
   return skin.visible_before_accept
-    ? "تظهر لكلِّ راكبٍ حولك على الخريطة، وفي رحلتك."
-    : "تظهر لراكبك بعد قبول الرحلة — لا على الخريطة قبلها.";
+    ? tr("تظهر لكلِّ راكبٍ حولك على الخريطة، وفي رحلتك.")
+    : tr("تظهر لراكبك بعد قبول الرحلة — لا على الخريطة قبلها.");
 }
 
 /** **مقاسُ العلامة على الخريطة — ثابتٌ في الكود مهما كان مقاسُ الملف.**

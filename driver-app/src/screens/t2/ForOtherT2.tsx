@@ -6,7 +6,7 @@
  */
 
 import type { Ride, RidePayer } from "@/api/types";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** **من يدفع — سطرٌ يُقرأ قبل القبول وبعده**: نقدُ الراكب الفعليّ بنبرة النجاح (مالٌ في اليد كأيِّ كاش)، **ودفعُ صاحب الطلب
  *  بنبرة التنبيه** — فهو الحالُ الوحيدةُ التي يُطلب فيها من الكبتن ألّا يأخذ شيئاً.
@@ -18,7 +18,7 @@ export function PayerNoteT2({ payer }: { payer: RidePayer }) {
     return (
       <p className="t2-fo-payer ok">
         <Icon name="payments" />
-        <span>يدفع المستلمُ نقداً عند التسليم</span>
+        <span>{tr("يدفع المستلمُ نقداً عند التسليم")}</span>
       </p>
     );
   }
@@ -27,7 +27,7 @@ export function PayerNoteT2({ payer }: { payer: RidePayer }) {
       <p className="t2-fo-payer warn">
         <Icon name="info" fill />
         <span>
-          مدفوعة من صاحب الطلب — <b>لا تستلم شيئاً</b>
+          {tr("مدفوعة من صاحب الطلب —")}{" "}<b>{tr("لا تستلم شيئاً")}</b>
         </span>
       </p>
     );
@@ -35,7 +35,7 @@ export function PayerNoteT2({ payer }: { payer: RidePayer }) {
   return (
     <p className="t2-fo-payer ok">
       <Icon name="payments" />
-      <span>يدفع الراكبُ نقداً عند الوصول</span>
+      <span>{tr("يدفع الراكبُ نقداً عند الوصول")}</span>
     </p>
   );
 }
@@ -50,7 +50,7 @@ export function PassengerRowT2({ ride }: { ride: Ride }) {
         <Icon name="person" />
       </span>
       <div className="t2-rd-rider-main">
-        <div className="t2-rd-rider-name">الراكب: {ride.passenger_name}</div>
+        <div className="t2-rd-rider-name">{tr("الراكب:")}{" "}{ride.passenger_name}</div>
         {ride.passenger_phone ? (
           <div className="t2-rd-rider-sub">
             <span dir="ltr">{ride.passenger_phone}</span>
@@ -58,7 +58,7 @@ export function PassengerRowT2({ ride }: { ride: Ride }) {
         ) : null}
       </div>
       {ride.passenger_phone ? (
-        <a className="t2-fo-call" href={`tel:${ride.passenger_phone}`} aria-label="اتصل بالراكب">
+        <a className="t2-fo-call" href={`tel:${ride.passenger_phone}`} aria-label={tr("اتصل بالراكب")}>
           <Icon name="call" />
         </a>
       ) : null}

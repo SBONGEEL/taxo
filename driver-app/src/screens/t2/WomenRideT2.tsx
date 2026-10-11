@@ -24,7 +24,7 @@ import type { GenderPreference, Ride } from "@/api/types";
 import { Icon } from "@/taxo2";
 
 import "@/taxo2";
-import "./women.css";
+import "./women.css"; import { tr } from "@/lib/i18n";
 
 /** **رحلةُ الخدمة النسائية** = ما طُلبت فيه كبتنة — تفضيلُ الطلب لا جنسُ أحد. */
 export function isWomenRide(ride: Pick<Ride, "gender_preference">): boolean {
@@ -39,9 +39,9 @@ export function isWomenMode(womenService: boolean, preference: GenderPreference,
 /** **«وضع نسائي»** في رأس الرئيسية (CW2) — ولمستُه إلى CW1 حيث يُغيَّر. **وعلى الضيّق مع شارة المستوى أيقونتُه وحدَها** (`women.css`). */
 export function WomenModeChipT2({ onOpen }: { onOpen: () => void }) {
   return (
-    <button type="button" className="t2-wchip" onClick={onOpen} aria-label="وضع نسائي — الخدمة النسائية">
+    <button type="button" className="t2-wchip" onClick={onOpen} aria-label={tr("وضع نسائي — الخدمة النسائية")}>
       <Icon name="woman" fill />
-      <span className="t2-wchip-text">وضع نسائي</span>
+      <span className="t2-wchip-text">{tr("وضع نسائي")}</span>
     </button>
   );
 }
@@ -61,12 +61,12 @@ export function womenGoText({
   goLabel: string;
 }): { title: string; sub: string | null } {
   if (online) {
-    if (awaitedOffer) return { title: "متصلة — نفتح الطلب…", sub: null };
-    if (!located) return { title: "متصلة — بانتظار إشارة الموقع", sub: null };
-    return { title: "متصلة — طلبات الراكبات فقط", sub: "يمكنك تغيير ذلك من الإعدادات" };
+    if (awaitedOffer) return { title: tr("متصلة — نفتح الطلب…"), sub: null };
+    if (!located) return { title: tr("متصلة — بانتظار إشارة الموقع"), sub: null };
+    return { title: tr("متصلة — طلبات الراكبات فقط"), sub: tr("يمكنك تغيير ذلك من الإعدادات") };
   }
   if (connecting) return { title: goLabel, sub: null };
-  return { title: "غير متصلة", sub: goLabel };
+  return { title: tr("غير متصلة"), sub: goLabel };
 }
 
 /** **«رحلة نسائية · الفئة»** (CW3) مكانَ «طلب جديد · الفئة» — بالبرقوق كما رُسمت، **والفئةُ مكانَ «راكبة موثّقة»**. */
@@ -74,7 +74,7 @@ export function WomenOfferChipT2({ categoryLabel }: { categoryLabel: string }) {
   return (
     <span className="t2-wchip">
       <Icon name="woman" fill />
-      رحلة نسائية · {categoryLabel}
+      {tr("رحلة نسائية ·")}{" "}{categoryLabel}
     </span>
   );
 }

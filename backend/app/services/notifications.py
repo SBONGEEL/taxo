@@ -43,8 +43,13 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
+from dataclasses import replace as _replace
+
 from redis.asyncio import Redis
+from sqlalchemy import select as _select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.i18n import translate
 
 from app.models.driver import Driver, DriverDocument
 from app.core.currency import amount_text
@@ -168,6 +173,17 @@ SUBSCRIPTION_EVENT_TEXT: dict[SubscriptionEvent, tuple[str, str]] = {
 # ------------------------------------------------------------------ الإرسال
 
 
+async def in_language_of(session: AsyncSession, user_id: uuid.UUID, message: PushMessage) -> PushMessage:
+    """**الإشعارُ بلغة صاحبه** (SPEC §٧٣-هـ المرحلة ٥) — من `users.language`، **والعربيُّ كما هو حرفاً**. ويُنادى مرّتين على الطريق
+    الواحد (`_safe_notify` ثمّ `notify_user`) بلا أثر: الفرنسيُّ لا مفتاحَ له فيعود كما هو."""
+    from app.models.user import User
+
+    language = await session.scalar(_select(User.language).where(User.id == user_id))
+    if language != "fr":
+        return message
+    return _replace(message, title=translate(message.title, "fr"), body=translate(message.body, "fr"))
+
+
 async def notify_user(
     session: AsyncSession,
     redis: Redis,
@@ -193,6 +209,7 @@ async def notify_user(
     provider = await get_push_provider_or_none(session)
     if provider is None:
         return PushResult()  # لا عقد FCM — الحدث وصل على WebSocket
+    message = await in_language_of(session, user_id, message)
 
     kind = message.data.get("type")
     if kind in channels.NATIVE_ONLY_KINDS:
@@ -246,6 +263,7 @@ async def _safe_notify(
     ومحاولتان منفصلتان لا واحدة: فشلُ الكتابة لا يمنع الإرسال، وفشلُ
     الإرسال لا يمحو الأثر. وما في `EPHEMERAL_KINDS` يُرسل ولا يُحفظ.
     """
+    message = await in_language_of(session, user_id, message)
     # `kind` هو `data["type"]` نفسه، فلا يفترق ما يفتحه الضغط على الإشعار
     # عمّا يفتحه الضغط على صفّه في الصندوق
     kind = message.data.get("type", "")

@@ -26,7 +26,7 @@ import { planSubLine } from "./SubscriptionT2";
 
 import "@/taxo2";
 import "./t2.css";
-import "./plans.css";
+import "./plans.css"; import { tr } from "@/lib/i18n";
 
 export function PlansPreviewT2Screen() {
   // **إلى «طلبك قيد المراجعة» من حيث جاء** — والجذرُ هو هي لمن ينتظر (`DriverHome`)
@@ -42,7 +42,7 @@ export function PlansPreviewT2Screen() {
     listSubscriptionPlans()
       .then(setPlans)
       .catch((caught: unknown) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الباقات"),
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الباقات")),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -64,10 +64,10 @@ export function PlansPreviewT2Screen() {
     <div className="t2 t2-sub t2-plans">
       <div className="t2-sub-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <span className="t2-icon" aria-hidden="true">arrow_forward</span>
           </button>
-          <h1 className="t2-title">باقات الاشتراك</h1>
+          <h1 className="t2-title">{tr("باقات الاشتراك")}</h1>
         </div>
 
         {error ? (
@@ -77,7 +77,7 @@ export function PlansPreviewT2Screen() {
               {error}
             </p>
             <button type="button" className="t2-button secondary t2-plans-retry" disabled={loading} onClick={load}>
-              أعد المحاولة
+              {tr("أعد المحاولة")}
             </button>
           </>
         ) : null}
@@ -87,15 +87,15 @@ export function PlansPreviewT2Screen() {
             {/* **العمولة بنصّ C10 المبنيّ** (التصحيحاتُ §١) — بلا نسبةٍ ولا وعدٍ مطلق */}
             <div className="t2-sub-perk">
               <span>
-                <b>عمولة</b> أقل بكثير من السوق
+                <b>{tr("عمولة")}</b>{" "}{tr("أقل بكثير من السوق")}
               </span>
             </div>
 
             {plans.length > 0 ? (
               <>
-                <h2 className="t2-section">الباقات</h2>
+                <h2 className="t2-section">{tr("الباقات")}</h2>
                 {/* **صفوفُ C10 بلا دائرة اختيار** — عرضٌ لا زرّ: لا اختيارَ حيث لا شراء */}
-                <ul className="t2-sub-plans t2-plans-list" aria-label="الباقات">
+                <ul className="t2-sub-plans t2-plans-list" aria-label={tr("الباقات")}>
                   {plans.map((row) => (
                     <li key={row.id} className="t2-sub-plan view">
                       <span className="t2-sub-plan-main">
@@ -119,7 +119,7 @@ export function PlansPreviewT2Screen() {
               </>
             ) : (
               // **لا خطّةَ مفعَّلةً في سوقه** — جملةٌ واحدة، ولا إطارَ «يُتاح الشراء» فوق لا شيء (C32b)
-              <p className="t2-empty t2-plans-empty">لا باقات معروضة في سوقك الآن.</p>
+              <p className="t2-empty t2-plans-empty">{tr("لا باقات معروضة في سوقك الآن.")}</p>
             )}
           </>
         ) : null}
@@ -130,7 +130,7 @@ export function PlansPreviewT2Screen() {
         <div className="t2-sub-foot">
           <p className="t2-plans-later">
             <span className="t2-icon" aria-hidden="true">hourglass_top</span>
-            يُتاح الشراءُ بعد اعتماد طلبك
+            {tr("يُتاح الشراءُ بعد اعتماد طلبك")}
           </p>
         </div>
       ) : null}

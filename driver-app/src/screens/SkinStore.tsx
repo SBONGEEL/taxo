@@ -26,7 +26,7 @@ import { useGoBack } from "@/lib/back";
 import { useGarage } from "@/lib/garage";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { RARITY_CHIP, RARITY_LABEL, RARITY_NOTE } from "@/lib/skins";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const PAGE = 48;
 
@@ -84,7 +84,7 @@ export function useSkinStoreScreen() {
     load()
       .catch((caught) =>
         setFailed(
-          caught instanceof ApiError ? caught.message : "تعذّر فتح المتجر",
+          caught instanceof ApiError ? caught.message : tr("تعذّر فتح المتجر"),
         ),
       )
       .finally(() => setLoading(false));
@@ -116,9 +116,9 @@ export function useSkinStoreScreen() {
       setOpen(null);
       // **الرصيدُ بعده من الدفتر** — لا مطروحاً في الشاشة (§14)
       setDone(
-        `صارت «${result.skin.name}» في كراجك — رصيدك ${digits(
+        tr("صارت «{0}» في كراجك — رصيدك {1} {2}", { 0: result.skin.name, 1: digits(
           result.balance_after,
-        )} ${CURRENCY_LABEL[result.currency]}`,
+        ), 2: CURRENCY_LABEL[result.currency] }),
       );
       setBought(result.skin);
       setActivateError(null);
@@ -127,7 +127,7 @@ export function useSkinStoreScreen() {
       // **نصُّ الخلفية كما هو** (§17): «رصيدٌ غيرُ كافٍ» و«نفدت الكمية»
       // و«مملوكةٌ سلفاً» و«مقفولةٌ بالمستوى» كلُّها تُسمّى هناك لا هنا
       setBuyError(
-        caught instanceof ApiError ? caught.message : "تعذّر إتمام الشراء",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إتمام الشراء"),
       );
     } finally {
       setBusy(false);
@@ -143,9 +143,9 @@ export function useSkinStoreScreen() {
     try {
       await activate(skin.id);
       setBought(null);
-      setDone(`صارت «${skin.name}» مركبتَك على الخريطة`);
+      setDone(tr("صارت «{0}» مركبتَك على الخريطة", { 0: skin.name }));
     } catch (caught) {
-      setActivateError(caught instanceof ApiError ? caught.message : "تعذّر التفعيل");
+      setActivateError(caught instanceof ApiError ? caught.message : tr("تعذّر التفعيل"));
     } finally {
       setActivating(false);
     }
@@ -216,17 +216,17 @@ export function SkinStoreScreen() {
           <button
             type="button"
             onClick={() => goBack()}
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
             className="pressable text-18 text-muted"
           >
             →
           </button>
-          <h1 className="flex-1 text-20 font-bold text-ink">متجر المركبات</h1>
+          <h1 className="flex-1 text-20 font-bold text-ink">{tr("متجر المركبات")}</h1>
         </div>
 
         {store ? (
           <div className="mb-14 flex items-baseline justify-between rounded-14 border border-line bg-surface px-14 py-12">
-            <span className="text-12 text-muted">رصيد محفظتك</span>
+            <span className="text-12 text-muted">{tr("رصيد محفظتك")}</span>
             <span className="text-15 font-bold text-ink">
               {digits(store.balance)}{" "}
               <span className="text-10.5 font-medium text-muted">
@@ -241,8 +241,8 @@ export function SkinStoreScreen() {
 
         {skins.length === 0 && !failed ? (
           <EmptyNote
-            title="لا مركبات معروضةً الآن"
-            hint="يُضاف إلى المتجر من وقتٍ لآخر — عُد لاحقاً."
+            title={tr("لا مركبات معروضةً الآن")}
+            hint={tr("يُضاف إلى المتجر من وقتٍ لآخر — عُد لاحقاً.")}
           />
         ) : null}
 
@@ -288,8 +288,8 @@ export function SkinStoreScreen() {
         {paging ? <Spinner className="mx-auto my-14" /> : null}
 
         <p className="mt-16 text-11 leading-note text-muted">
-          المركبةُ زينةٌ على الخريطة — لا تغيّر أجرتك ولا فئةَ سيارتك ولا
-          أولويتَك في الطلبات.
+          {tr("المركبةُ زينةٌ على الخريطة — لا تغيّر أجرتك ولا فئةَ سيارتك ولا أولويتَك في الطلبات.")}
+
         </p>
       </div>
 

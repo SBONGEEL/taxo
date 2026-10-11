@@ -36,7 +36,7 @@ import { WITHDRAWAL_METHOD_LABEL } from "@/lib/walletFormat";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/fields.css";
-import "@/screens/t2/money.css";
+import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 interface Props {
   wallet: DriverWallet;
@@ -49,9 +49,9 @@ interface Props {
 
 /** **حقلُ الوجهة لكلِّ قناةٍ جزائريّة** — اسمُه وتلميحُه ومثالُه؛ وكاشُ المكتب بلا حقل. */
 const DESTINATION: Partial<Record<WithdrawalMethod, { label: string; hint: string; placeholder: string }>> = {
-  baridimob: { label: "رقم RIP", hint: "عشرون خانة كما في تطبيق بريدي موب.", placeholder: "00799999…" },
-  ccp: { label: "رقم CCP ومفتاحه", hint: "رقمُ الحساب ثمّ المفتاح (خانتان) كما في دفتر الصكوك البريديّة.", placeholder: "0012345678 90" },
-  bank: { label: "رقم RIB", hint: "عشرون خانة كما في كشف حسابك البنكيّ.", placeholder: "…" },
+  baridimob: { label: tr("رقم RIP"), hint: tr("عشرون خانة كما في تطبيق بريدي موب."), placeholder: "00799999…" },
+  ccp: { label: tr("رقم CCP ومفتاحه"), hint: tr("رقمُ الحساب ثمّ المفتاح (خانتان) كما في دفتر الصكوك البريديّة."), placeholder: "0012345678 90" },
+  bank: { label: tr("رقم RIB"), hint: tr("عشرون خانة كما في كشف حسابك البنكيّ."), placeholder: "…" },
 };
 
 /** المبلغ كما يكتبه الكبتن: خاناتٌ ونقطةٌ واحدة، بلا `Number` ولا تقريب — **وبخانات عملته** (ثلاثٌ للأردنيّ كما كانت، ولا نقطةَ
@@ -108,7 +108,7 @@ export function WithdrawSheet({
         );
         onDone();
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
       } finally {
         setBusy(false);
       }
@@ -123,7 +123,7 @@ export function WithdrawSheet({
       onDone();
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"),
       );
     } finally {
       setBusy(false);
@@ -141,12 +141,12 @@ export function WithdrawSheet({
       >
         <span className="t2-wds-grab" aria-hidden="true" />
         <h2 id="withdraw-title" className="t2-wds-title">
-          طلب سحب
+          {tr("طلب سحب")}
         </h2>
         <p className="t2-wds-lead">
           {local
-            ? "يصلك بالطريقة التي تختارها بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب."
-            : "يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب."}
+            ? tr("يصلك بالطريقة التي تختارها بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب.")
+            : tr("يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب.")}
         </p>
 
         {/* **حين يعلو الحدُّ الأدنى على المتاح**: البلاطتان كلتاهما تؤدّيان إلى ٤٠٩ — «الحد الأدنى» أكبرُ من رصيده، و«كل
@@ -156,11 +156,11 @@ export function WithdrawSheet({
           <p className="t2-wds-blocked">
             <Icon name="info" />
             <span>
-              لا يمكن السحب الآن: الحدُّ الأدنى{" "}
-              {digits(wallet.min_withdrawal_amount)} {currencyLabel}، والمتاح
-              لديك {digits(wallet.available_for_withdrawal)} {currencyLabel}
+              {tr("لا يمكن السحب الآن: الحدُّ الأدنى")}{" "}
+              {digits(wallet.min_withdrawal_amount)} {currencyLabel}{tr("، والمتاح لديك")}{" "}
+{digits(wallet.available_for_withdrawal)} {currencyLabel}
               {Number(wallet.withdrawal_reserve_amount) > 0
-                ? ` — ومنها ${digits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
+                ? tr(" — ومنها {0} محتجَزةٌ لا تُسحب", { 0: digits(wallet.withdrawal_reserve_amount) })
                 : ""}
               .
             </span>
@@ -169,14 +169,14 @@ export function WithdrawSheet({
 
         <div className="t2-wds-quick">
           <Quick
-            label="الحد الأدنى"
+            label={tr("الحد الأدنى")}
             value={wallet.min_withdrawal_amount}
             currencyLabel={currencyLabel}
             active={amount === wallet.min_withdrawal_amount}
             onPick={setAmount}
           />
           <Quick
-            label="كل المتاح"
+            label={tr("كل المتاح")}
             value={wallet.available_for_withdrawal}
             currencyLabel={currencyLabel}
             active={amount === wallet.available_for_withdrawal}
@@ -185,7 +185,7 @@ export function WithdrawSheet({
         </div>
 
         <label className="t2-fld-label" htmlFor="withdraw-amount">
-          أو اكتب مبلغاً
+          {tr("أو اكتب مبلغاً")}
         </label>
         <input
           id="withdraw-amount"
@@ -207,8 +207,8 @@ export function WithdrawSheet({
 
         {local ? (
           <>
-            <p className="t2-fld-label">كيف يصلك</p>
-            <div className="t2-wds-methods" role="radiogroup" aria-label="طريقة السحب">
+            <p className="t2-fld-label">{tr("كيف يصلك")}</p>
+            <div className="t2-wds-methods" role="radiogroup" aria-label={tr("طريقة السحب")}>
               {methods.map((key) => (
                 <button
                   key={key}
@@ -243,7 +243,7 @@ export function WithdrawSheet({
                 />
                 <p className="t2-fld-hint">{field.hint}</p>
                 <label className="t2-fld-label" htmlFor="withdraw-holder">
-                  اسم صاحب الحساب
+                  {tr("اسم صاحب الحساب")}
                 </label>
                 <input
                   id="withdraw-holder"
@@ -252,22 +252,22 @@ export function WithdrawSheet({
                   value={holder}
                   onChange={(event) => setHolder(event.target.value)}
                 />
-                <p className="t2-fld-hint">كما هو مكتوب في الحساب — الحوالةُ إلى غير صاحبه تُردّ.</p>
+                <p className="t2-fld-hint">{tr("كما هو مكتوب في الحساب — الحوالةُ إلى غير صاحبه تُردّ.")}</p>
               </div>
             ) : (
               <p className="t2-wds-alias">
-                تستلم المبلغ نقداً من مكتب TAXO بعد موافقة الإدارة — احمل بطاقة هويّتك.
+                {tr("تستلم المبلغ نقداً من مكتب TAXO بعد موافقة الإدارة — احمل بطاقة هويّتك.")}
               </p>
             )}
           </>
         ) : hasAlias ? (
           <p className="t2-wds-alias">
-            التحويل عبر كليك إلى <b dir="ltr">{cliqAlias}</b>
+            {tr("التحويل عبر كليك إلى")}{" "}<b dir="ltr">{cliqAlias}</b>
           </p>
         ) : (
           <div className="t2-wds-aliasfield">
             <label className="t2-fld-label" htmlFor="withdraw-alias">
-              alias كليك
+              {tr("alias كليك")}
             </label>
             <input
               id="withdraw-alias"
@@ -278,7 +278,7 @@ export function WithdrawSheet({
               onChange={(event) => setAlias(event.target.value)}
             />
             <p className="t2-fld-hint">
-              عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.
+              {tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}
             </p>
           </div>
         )}
@@ -303,7 +303,7 @@ export function WithdrawSheet({
           }
           onClick={() => void submit()}
         >
-          {busy ? "…" : "إرسال الطلب"}
+          {busy ? "…" : tr("إرسال الطلب")}
         </button>
       </div>
     </div>

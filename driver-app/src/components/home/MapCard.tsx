@@ -24,7 +24,7 @@
  */
 
 import { Maximize2, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react"; import { tr } from "@/lib/i18n";
 
 interface Props {
   /** الخريطةُ نفسُها — تُمرَّر كما هي. */
@@ -87,13 +87,13 @@ export function MapCard({ children, badge, action, expandedStatus }: Props) {
           className="pressable absolute end-10 top-10 flex items-center gap-5 rounded-full border border-line bg-surface px-9 py-5 text-10.5 font-semibold text-ink"
         >
           <Maximize2 className="size-12" />
-          توسيع
+          {tr("توسيع")}
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setOpen(false)}
-          aria-label="إغلاق الخريطة"
+          aria-label={tr("إغلاق الخريطة")}
           className="ctl absolute end-16 top-14 size-40"
         >
           <X className="size-20" />

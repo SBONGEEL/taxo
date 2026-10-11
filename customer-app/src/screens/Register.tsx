@@ -31,7 +31,7 @@ import {
   AuthTop,
   AuthWomenNote,
   Icon,
-} from "@/taxo2";
+} from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 type Field = "name" | "phone" | "password";
 type Failure = { field: Field | null; message: string };
@@ -76,9 +76,9 @@ export function RegisterScreen() {
   );
 
   const errorOf = (field: Field) => (failure?.field === field ? failure.message : null);
-  const nameShort = touched && name.length > 0 && name.trim().length < 2 ? "الاسم قصير — حرفان على الأقل." : null;
+  const nameShort = touched && name.length > 0 && name.trim().length < 2 ? tr("الاسم قصير — حرفان على الأقل.") : null;
   const phoneShort =
-    touched && phone.length > 0 && !complete && dialCode !== null ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.` : null;
+    touched && phone.length > 0 && !complete && dialCode !== null ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode }) : null;
 
   async function create(verificationToken?: string) {
     setBusy(true);
@@ -105,7 +105,7 @@ export function RegisterScreen() {
         setStep("details");
         if (at) window.setTimeout(() => document.getElementById(INPUT_ID[at])?.focus(), 0);
       } else {
-        setFailure({ field: null, message: "تعذّر الاتصال بالخادم — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر الاتصال بالخادم — أعد المحاولة") });
         setStep("details");
       }
     } finally {
@@ -151,16 +151,16 @@ export function RegisterScreen() {
   return (
     <AuthPage>
       <AuthTop onBack={reopenWelcome} step={total ? 1 : undefined} total={total || undefined} />
-      <AuthTitle step title="أنشئ حسابك" sub="رقمك هو هويتك في TAXO — نتحقق منه مرة واحدة." />
+      <AuthTitle step title={tr("أنشئ حسابك")} sub={tr("رقمك هو هويتك في TAXO — نتحقق منه مرة واحدة.")} />
 
       <form onSubmit={next} className="t2-auth-form step" noValidate>
-        <AuthBlock label="الاسم الكامل" htmlFor="name" error={nameShort ?? errorOf("name")}>
+        <AuthBlock label={tr("الاسم الكامل")} htmlFor="name" error={nameShort ?? errorOf("name")}>
           <AuthInput
             id="name"
             name="name"
             autoComplete="name"
             value={name}
-            placeholder="اسمك كما يظهر للكبتن"
+            placeholder={tr("اسمك كما يظهر للكبتن")}
             invalid={Boolean(nameShort ?? errorOf("name"))}
             onBlur={() => setTouched(true)}
             onChange={(event) => setName(event.target.value)}
@@ -168,9 +168,9 @@ export function RegisterScreen() {
         </AuthBlock>
 
         {countries.length > 1 ? (
-          <AuthBlock label="السوق">
+          <AuthBlock label={tr("السوق")}>
             <AuthChoice
-              label="السوق"
+              label={tr("السوق")}
               value={country}
               options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
               onChange={setCountry}
@@ -179,11 +179,11 @@ export function RegisterScreen() {
         ) : null}
 
         <AuthBlock
-          label="رقم الهاتف"
+          label={tr("رقم الهاتف")}
           htmlFor="phone"
           error={
             dialCode === null
-              ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+              ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
               : phoneShort ?? errorOf("phone")
           }
         >
@@ -201,7 +201,7 @@ export function RegisterScreen() {
           />
         </AuthBlock>
 
-        <AuthBlock label="كلمة المرور" htmlFor="new-password" error={passwordError(password) ?? errorOf("password")}>
+        <AuthBlock label={tr("كلمة المرور")} htmlFor="new-password" error={passwordError(password) ?? errorOf("password")}>
           <AuthSecret
             id="new-password"
             name="new-password"
@@ -213,7 +213,7 @@ export function RegisterScreen() {
           <AuthConditions items={passwordConditions(password)} />
         </AuthBlock>
 
-        <AuthBlock label="تأكيد كلمة المرور" htmlFor="confirm" error={confirmError(password, confirm)}>
+        <AuthBlock label={tr("تأكيد كلمة المرور")} htmlFor="confirm" error={confirmError(password, confirm)}>
           <AuthSecret
             id="confirm"
             name="confirm"
@@ -226,18 +226,18 @@ export function RegisterScreen() {
 
         {/* إقرارٌ ذاتيٌّ بلا وثيقة (المرحلة 10-ج) — **اختياريّ**: من تركه لا يُخمَّن عنه. ويظهر حيث الخدمةُ مفتوحةٌ في الدولة وحدها */}
         {womenService ? (
-          <AuthBlock label="نخاطبك بصيغة" hint="اختياريّ — إقرارٌ ذاتيٌّ بلا وثيقة، لمطابقة تفضيلات الرحلات وحدها، ولا يظهر لأحد.">
+          <AuthBlock label={tr("نخاطبك بصيغة")} hint={tr("اختياريّ — إقرارٌ ذاتيٌّ بلا وثيقة، لمطابقة تفضيلات الرحلات وحدها، ولا يظهر لأحد.")}>
             <AuthChoice
-              label="نخاطبك بصيغة"
+              label={tr("نخاطبك بصيغة")}
               value={gender}
               options={[
-                { value: "male", label: "راكب" },
-                { value: "female", label: "راكبة", women: true },
+                { value: "male", label: tr("راكب") },
+                { value: "female", label: tr("راكبة"), women: true },
               ]}
               onChange={(value) => setGender(gender === value ? null : value)}
             />
             {gender === "female" ? (
-              <AuthWomenNote>يتيح لكِ هذا طلب كبتنة عبر الخدمة النسائية، ويمكن تغييره من الحساب.</AuthWomenNote>
+              <AuthWomenNote>{tr("يتيح لكِ هذا طلب كبتنة عبر الخدمة النسائية، ويمكن تغييره من الحساب.")}</AuthWomenNote>
             ) : null}
           </AuthBlock>
         ) : null}
@@ -255,13 +255,13 @@ export function RegisterScreen() {
         <div className="t2-auth-push" />
         <div className="t2-auth-actions">
           <button type="submit" className="t2-button primary" disabled={busy || dialCode === null || !ready}>
-            {busy ? "لحظة…" : verification === "none" ? "إنشاء الحساب" : "متابعة"}
+            {busy ? tr("لحظة…") : verification === "none" ? tr("إنشاء الحساب") : tr("متابعة")}
           </button>
         </div>
       </form>
 
       <p className="t2-auth-foot">
-        لديك حساب؟ <Link to="/login">ادخل</Link>
+        {tr("لديك حساب؟")}{" "}<Link to="/login">{tr("ادخل")}</Link>
       </p>
     </AuthPage>
   );

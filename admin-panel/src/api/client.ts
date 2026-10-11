@@ -111,7 +111,7 @@ async function refreshSession(): Promise<boolean> {
   try {
     response = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept-Language": PANEL_LANGUAGE },
       body: JSON.stringify({ refresh_token: token }),
     });
   } catch (error) {
@@ -262,12 +262,12 @@ async function toError(response: Response): Promise<ApiError> {
   }
 }
 
-async function send<T>(
+const PANEL_LANGUAGE = "ar"; async function send<T>(
   path: string,
   options: RequestOptions,
   retry: boolean,
 ): Promise<T> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { "Accept-Language": PANEL_LANGUAGE };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
   const access = tokens.access();
@@ -359,7 +359,7 @@ export async function upload<T>(
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("PUT", `${API_URL}${path}`);
-    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
+    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`); request.setRequestHeader("Accept-Language", PANEL_LANGUAGE);
 
     // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج من قرّر
     // التوقّف، والركودُ يعالج **وصلةً ماتت صامتة**. مقبسٌ يسقط أثناء الرفع لا

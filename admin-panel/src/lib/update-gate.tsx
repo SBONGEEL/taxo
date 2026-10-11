@@ -41,7 +41,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { getAppVersion } from "@/api/endpoints";
-import type { AppVersion } from "@/api/types";
+import type { AppVersion } from "@/api/types"; import { tr } from "@/lib/i18n";
 
 /** التطبيقاتُ الثلاثة — **مرآةُ `ClientApp` في الخلفية**، ويحرسها `check:enums`. */
 export type UpdateApp = "rider" | "driver" | "panel";
@@ -139,9 +139,9 @@ function Blocking({ verdict }: { verdict: AppVersion }) {
           وهذه شاشةٌ لا مخرجَ منها إلا هو. و`48px` هو `p-24` من الطرفين. */}
       <div className="flex max-h-[calc(var(--vvh,100dvh)-48px)] w-full max-w-modal flex-col rounded-22 border border-line bg-surface p-24 text-center">
         <div className="scr">
-        <h1 className="text-20 font-bold text-ink">تحديثٌ مطلوبٌ للمتابعة</h1>
+        <h1 className="text-20 font-bold text-ink">{tr("تحديثٌ مطلوبٌ للمتابعة")}</h1>
         <p className="mt-10 text-12.5 leading-note text-muted">
-          هذه النسخةُ لم تعد مدعومة، ولا يمكن استعمالُ التطبيق قبل تحديثها.
+          {tr("هذه النسخةُ لم تعد مدعومة، ولا يمكن استعمالُ التطبيق قبل تحديثها.")}
         </p>
         {verdict.release_notes ? (
           <p className="mt-14 whitespace-pre-line rounded-14 border border-line bg-surface-2 px-14 py-12 text-start text-12 leading-note text-ink">
@@ -154,7 +154,7 @@ function Blocking({ verdict }: { verdict: AppVersion }) {
           rel="noreferrer"
           className="mt-18 block rounded-16 bg-accent px-16 py-13 text-13 font-bold text-accent-ink"
         >
-          تحميل النسخة الجديدة
+          {tr("تحميل النسخة الجديدة")}
         </a>
         {/* **الرقمُ مُعرِّفٌ لا كمّية** فيبقى لاتينياً: يُقارَن بما تعرضه شاشةُ
             «حول التطبيق» وبما يقوله المشرف على الهاتف */}
@@ -178,7 +178,7 @@ function Notice({
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-modal p-14">
       <div className="rounded-18 border border-line bg-surface p-16 shadow-toast">
-        <h2 className="text-13.5 font-bold text-ink">تحديثٌ جديدٌ متاح</h2>
+        <h2 className="text-13.5 font-bold text-ink">{tr("تحديثٌ جديدٌ متاح")}</h2>
         {verdict.release_notes ? (
           <p className="mt-7 whitespace-pre-line text-11.5 leading-note text-muted">
             {verdict.release_notes}
@@ -191,14 +191,14 @@ function Notice({
             rel="noreferrer"
             className="flex-1 rounded-14 bg-accent px-14 py-11 text-center text-12.5 font-bold text-accent-ink"
           >
-            حمّل الآن
+            {tr("حمّل الآن")}
           </a>
           <button
             type="button"
             onClick={onMute}
             className="rounded-14 border border-line px-14 py-11 text-12.5 text-muted"
           >
-            لاحقاً
+            {tr("لاحقاً")}
           </button>
         </div>
       </div>

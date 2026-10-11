@@ -58,12 +58,12 @@ import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, cn,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
-import { useGoBack } from "@/lib/back";
+import { useGoBack } from "@/lib/back"; import { tr } from "@/lib/i18n";
 
 const DURATION_LABEL: Record<SubscriptionDuration, string> = {
-  daily: "24 ساعة من لحظة الشراء",
-  weekly: "7 أيام · الأوفر للدوام الجزئي",
-  monthly: "30 يوماً · الأوفر للمتفرغ",
+  daily: tr("24 ساعة من لحظة الشراء"),
+  weekly: tr("7 أيام · الأوفر للدوام الجزئي"),
+  monthly: tr("30 يوماً · الأوفر للمتفرغ"),
 };
 
 export type State = "active" | "expiring" | "expired" | "none";
@@ -85,26 +85,26 @@ export const COPY: Record<
   { title: string; body: string; tone: string; dot: string }
 > = {
   active: {
-    title: "اشتراكك ساري",
-    body: "لا تجديد تلقائي — جدّد قبل انتهائه.",
+    title: tr("اشتراكك ساري"),
+    body: tr("لا تجديد تلقائي — جدّد قبل انتهائه."),
     tone: "border-line",
     dot: "bg-ok",
   },
   expiring: {
-    title: "ينتهي اشتراكك قريباً",
-    body: "جدّد الآن لتبقى في التوزيع.",
+    title: tr("ينتهي اشتراكك قريباً"),
+    body: tr("جدّد الآن لتبقى في التوزيع."),
     tone: "border-warn",
     dot: "bg-warn",
   },
   expired: {
-    title: "انتهى اشتراكك",
-    body: "أنت خارج التوزيع حتى التجديد.",
+    title: tr("انتهى اشتراكك"),
+    body: tr("أنت خارج التوزيع حتى التجديد."),
     tone: "border-danger",
     dot: "bg-danger",
   },
   none: {
-    title: "لا اشتراك بعد",
-    body: "اشترك لتبدأ استقبال الطلبات.",
+    title: tr("لا اشتراك بعد"),
+    body: tr("اشترك لتبدأ استقبال الطلبات."),
     tone: "border-line",
     dot: "bg-muted",
   },
@@ -168,7 +168,7 @@ export function useSubscriptionScreen() {
     load()
       .catch((caught) =>
         setError(
-          caught instanceof ApiError ? caught.message : "تعذّر قراءة الاشتراك",
+          caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الاشتراك"),
         ),
       )
       .finally(() => setLoading(false));
@@ -182,10 +182,10 @@ export function useSubscriptionScreen() {
       // مفتاحُ عدم التكرار من العميل (القسم 14): ضغطتان لا تشتريان شهرين
       await buySubscription(planId, `sub-${planId}-${Date.now()}`);
       await load();
-      setDone("تم التجديد — اشتراكك ساري ✓");
+      setDone(tr("تم التجديد — اشتراكك ساري ✓"));
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إتمام الشراء",
+        caught instanceof ApiError ? caught.message : tr("تعذّر إتمام الشراء"),
       );
     } finally {
       setBuying(null);
@@ -202,7 +202,7 @@ export function useSubscriptionScreen() {
       navigate(`/subscription/cliq/${claim.id}`);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع",
+        caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع"),
       );
     } finally {
       setBuying(null);
@@ -217,7 +217,7 @@ export function useSubscriptionScreen() {
       const order = await buySubscriptionWithCard(planId);
       if (!order.redirect_url) {
         // لا اشتراكَ يُنشأ قبل جواب المزود، فغيابُ الرابط ليس نصفَ شراء
-        setError("تعذّر فتح صفحة الدفع — جرّب مرة أخرى أو ادفع من محفظتك.");
+        setError(tr("تعذّر فتح صفحة الدفع — جرّب مرة أخرى أو ادفع من محفظتك."));
         return;
       }
       // مغادرةٌ إلى صفحة المزود: الحسمُ يقع هناك، والعودةُ إلى
@@ -225,7 +225,7 @@ export function useSubscriptionScreen() {
       window.location.assign(order.redirect_url);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع",
+        caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع"),
       );
     } finally {
       setBuying(null);
@@ -308,12 +308,12 @@ export function SubscriptionScreen() {
           <button
             type="button"
             onClick={() => goBack()}
-            aria-label="رجوع"
+            aria-label={tr("رجوع")}
             className="pressable text-18 text-muted"
           >
             →
           </button>
-          <h1 className="text-20 font-bold text-ink">الاشتراك</h1>
+          <h1 className="text-20 font-bold text-ink">{tr("الاشتراك")}</h1>
         </div>
 
         {/* **مفتاحُ التجديد التلقائي** (البند ١٤): موضعُه هنا لا في «الإعدادات»
@@ -325,18 +325,18 @@ export function SubscriptionScreen() {
             type="button"
             role="switch"
             aria-checked={autoRenew}
-            aria-label="التجديد التلقائي"
+            aria-label={tr("التجديد التلقائي")}
             disabled={savingRenew}
             onClick={() => void toggleRenew()}
             className="pressable flex w-full items-center gap-12 text-start"
           >
             <span className="flex-1">
               <span className="block text-13.5 font-semibold text-ink">
-                التجديد التلقائي
+                {tr("التجديد التلقائي")}
               </span>
               <span className="block text-11 leading-snug text-muted">
-                يُخصم ثمنُ خطتك من محفظتك قبل الانتهاء بيوم. لا يقع بلا رصيدٍ
-                كافٍ، ونُخبرك إن تعذّر.
+                {tr("يُخصم ثمنُ خطتك من محفظتك قبل الانتهاء بيوم. لا يقع بلا رصيدٍ كافٍ، ونُخبرك إن تعذّر.")}
+
               </span>
             </span>
             <span
@@ -371,8 +371,8 @@ export function SubscriptionScreen() {
           {subscription?.is_active ? (
             <p className="mt-6 text-12.5 font-semibold text-ink">
               {subscription.days_remaining <= 1
-                ? "ينتهي خلال أقل من يوم"
-                : `باقٍ ${digits(String(subscription.days_remaining))} يوماً`}
+                ? tr("ينتهي خلال أقل من يوم")
+                : tr("باقٍ {0} يوماً", { 0: digits(String(subscription.days_remaining)) })}
             </p>
           ) : null}
         </section>
@@ -383,7 +383,7 @@ export function SubscriptionScreen() {
         ) : null}
 
         <h2 className="mb-10 mt-16 text-13 font-bold text-muted">
-          الخطط المتاحة
+          {tr("الخطط المتاحة")}
         </h2>
         <div className="flex flex-col gap-10">
           {(subscription?.plans ?? []).map((plan) => (
@@ -409,7 +409,7 @@ export function SubscriptionScreen() {
                   {/* الإطارُ وحده غامض: كلمةٌ تقول لماذا هذه الخطة مؤطَّرة */}
                   {subscription?.current?.plan_name === plan.name ? (
                     <span className="ms-8 text-10.5 font-semibold text-muted">
-                      خطتك الحالية
+                      {tr("خطتك الحالية")}
                     </span>
                   ) : null}
                 </span>
@@ -424,18 +424,18 @@ export function SubscriptionScreen() {
                     ومن لم يُعرض عليه شيءٌ لا يُقال له عن عرضٍ لغيره (الفرع و). */}
                 {!plan.offer_name && plan.exhausted_offer_name ? (
                   <span className="mt-4 block text-10.5 text-muted">
-                    استفدتَ من «{plan.exhausted_offer_name}» من قبل
+                    {tr("استفدتَ من «")}{plan.exhausted_offer_name}{tr("» من قبل")}
                   </span>
                 ) : null}
                 {plan.offer_name ? (
                   <span className="mt-4 block text-10.5 font-semibold text-ok">
                     {plan.offer_name}
                     {plan.offer_ends_at
-                      ? ` — حتى ${digits(
+                      ? tr(" — حتى {0}", { 0: digits(
                           new Date(plan.offer_ends_at).toLocaleDateString(DISPLAY_LOCALE,
                             { day: "numeric", month: "numeric" },
                           ),
-                        )}`
+                        ) })
                       : ""}
                   </span>
                 ) : null}
@@ -467,14 +467,14 @@ export function SubscriptionScreen() {
 
         <p className="mt-14 text-11.5 leading-note text-muted">
           {cardEnabled
-            ? "الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."
-            : "الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."}
+            ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")
+            : tr("الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")}
         </p>
 
         {history.length > 0 ? (
           <>
             <h2 className="mb-10 mt-18 text-13 font-bold text-muted">
-              اشتراكات سابقة
+              {tr("اشتراكات سابقة")}
             </h2>
             <Stagger className="flex flex-col gap-8">
               {history.map((item) => (
@@ -495,7 +495,7 @@ export function SubscriptionScreen() {
                         لم يَنَله. ولا طرحَ هنا — الرقمُ يصل محسوباً */}
                     {Number(item.discount_amount) > 0 ? (
                       <span className="mt-3 block text-10.5 font-semibold text-ok">
-                        وفّرتَ {digits(item.discount_amount)}{" "}
+                        {tr("وفّرتَ")}{" "}{digits(item.discount_amount)}{" "}
                         {CURRENCY_LABEL[item.currency]}
                       </span>
                     ) : null}
@@ -511,7 +511,7 @@ export function SubscriptionScreen() {
                         item.status === "active" ? "text-ok" : "text-muted",
                       )}
                     >
-                      {item.status === "active" ? "ساري" : "منتهٍ"}
+                      {item.status === "active" ? tr("ساري") : tr("منتهٍ")}
                     </span>
                   </span>
                 </StaggerItem>
@@ -580,11 +580,11 @@ export function ConfirmSubscriptionSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="mb-4 text-16 font-bold text-ink">
-          تأكيد شراء {plan.name}
+          {tr("تأكيد شراء")}{" "}{plan.name}
         </h2>
         <p className="mb-16 text-12 leading-note text-muted">
-          يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك
-          الحالية إن كانت سارية.
+          {tr("يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك الحالية إن كانت سارية.")}
+
         </p>
         {/* **المبلغُ هنا هو ما يُخصم فعلاً، لا سعرُ الخطة** (قِيس على
             هاتفٍ حقيقي 2026-08-19): كانت الورقةُ تعرض ١٫٥٠٠ ويُخصم ١٫٢٧٥.
@@ -594,7 +594,7 @@ export function ConfirmSubscriptionSheet({
             يفتح الورقةَ أصلاً. */}
         <div className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12">
           <div className="flex items-baseline justify-between">
-            <span className="text-12.5 text-muted">المبلغ</span>
+            <span className="text-12.5 text-muted">{tr("المبلغ")}</span>
             <span className="text-17 font-bold text-ink">
               {digits(
                 plan.price_to_pay ?? plan.price,
@@ -618,7 +618,7 @@ export function ConfirmSubscriptionSheet({
         </div>
         <div className="flex flex-col gap-9">
           <Button size="md" loading={buying !== null} onClick={() => onWallet(plan)}>
-            خصم من المحفظة
+            {tr("خصم من المحفظة")}
           </Button>
           {/* **ما لا عقدَ له يُعرض معطَّلاً بعلّته لا يُخفى** (قرارُ
               المالك 2026-08-29): الإخفاءُ يجعل الكبتنَ يظنّ الطريقةَ
@@ -631,11 +631,11 @@ export function ConfirmSubscriptionSheet({
             disabled={!cardEnabled || buying !== null}
             onClick={() => onCard(plan)}
           >
-            الدفع ببطاقة
+            {tr("الدفع ببطاقة")}
           </Button>
           {!cardEnabled ? (
             <p className="-mt-4 text-11 leading-note text-muted">
-              الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.
+              {tr("الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.")}
             </p>
           ) : null}
 
@@ -646,7 +646,7 @@ export function ConfirmSubscriptionSheet({
               disabled={buying !== null}
               onClick={() => onPayRequest(plan)}
             >
-              الدفع بتحويلٍ أو نقداً
+              {tr("الدفع بتحويلٍ أو نقداً")}
             </Button>
           ) : null}
           {onPayRequest ? null : (
@@ -660,11 +660,11 @@ export function ConfirmSubscriptionSheet({
             disabled={!cliqAlias || buying !== null}
             onClick={() => onCliq(plan)}
           >
-            الدفع بكليك
+            {tr("الدفع بكليك")}
           </Button>
           {!cliqAlias ? (
             <p className="-mt-4 text-11 leading-note text-muted">
-              الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.
+              {tr("الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.")}
             </p>
           ) : null}
             </>
@@ -674,7 +674,7 @@ export function ConfirmSubscriptionSheet({
             onClick={onClose}
             className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
           >
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       </div>

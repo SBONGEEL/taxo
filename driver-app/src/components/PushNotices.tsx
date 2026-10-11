@@ -17,7 +17,7 @@ import { play } from "@/lib/sound";
 import { firstSighting } from "@/lib/notice";
 import { routeCommsPush } from "@/lib/trip-comms";
 
-import "@/taxo2";
+import "@/taxo2"; import { tr } from "@/lib/i18n";
 
 interface Notice {
   id: number;
@@ -89,7 +89,7 @@ export function PushNotices() {
             type="button"
             className="t2-notice-close"
             onClick={() => emit(notices.filter((item) => item.id !== notice.id))}
-            aria-label="إغلاق"
+            aria-label={tr("إغلاق")}
           >
             <span className="t2-icon" aria-hidden="true">
               close

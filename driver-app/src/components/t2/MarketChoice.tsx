@@ -5,12 +5,12 @@
  * يقرؤه** (§٦٢/١)، فلا يبقى لاسم الدولة بيتان يفترقان أوّلَ سوقٍ يُضاف.
  */
 import type { CountryCode } from "@/api/types";
-import { AuthBlock, AuthChoice } from "@/taxo2";
+import { AuthBlock, AuthChoice } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const COUNTRY_LABEL: Record<CountryCode, string> = {
-  JO: "الأردن",
-  LY: "ليبيا",
-  DZ: "الجزائر",
+  JO: tr("الأردن"),
+  LY: tr("ليبيا"),
+  DZ: tr("الجزائر"),
 };
 
 export function MarketChoice({
@@ -24,9 +24,9 @@ export function MarketChoice({
 }) {
   if (countries.length < 2) return null;
   return (
-    <AuthBlock label="الدولة">
+    <AuthBlock label={tr("الدولة")}>
       <AuthChoice
-        label="الدولة"
+        label={tr("الدولة")}
         value={country}
         options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
         onChange={onChange}

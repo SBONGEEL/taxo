@@ -10,11 +10,11 @@ import { useEffect, useState } from "react";
 
 import { requiredPolicies } from "@/api/endpoints";
 import type { CountryCode, RequiredPolicy } from "@/api/types";
-import { AuthConsent } from "@/taxo2";
+import { AuthConsent } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const TITLE: Record<string, string> = {
-  privacy_policy: "سياسة الخصوصية",
-  terms_of_use: "شروط الاستخدام",
+  privacy_policy: tr("سياسة الخصوصية"),
+  terms_of_use: tr("شروط الاستخدام"),
 };
 
 export function PolicyConsentT2({

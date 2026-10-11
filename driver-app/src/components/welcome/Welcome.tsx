@@ -24,7 +24,7 @@ import { removeBootFrame, retrySplash, splashText, useSplashStatus } from "@/lib
 import { useTheme } from "@/lib/theme";
 
 import "@/taxo2";
-import "./welcome.css";
+import "./welcome.css"; import { tr as i18nTr } from "@/lib/i18n";
 
 // ── من اللوحة حرفاً ─────────────────────────────────────────────────────────
 const HD =
@@ -53,9 +53,9 @@ const cam = (x: number, y: number, s: number) =>
 const EZ = { o: "cubic-bezier(.2,.8,.2,1)", io: "cubic-bezier(.65,0,.35,1)" } as const;
 type Pt = [number, string | number, (keyof typeof EZ)?];
 const LB: Array<[string, number, number]> = [
-  ["جبل عمّان", 159.5, 449.9],
-  ["اللويبدة", 222.9, 402.4],
-  ["العبدلي", 141, 353],
+  [i18nTr("جبل عمّان"), 159.5, 449.9],
+  [i18nTr("اللويبدة"), 222.9, 402.4],
+  [i18nTr("العبدلي"), 141, 353],
 ];
 
 /** المقدّمةُ حتى إطارها الأخير — والـX وحدَه «من المرة الثانية». */
@@ -352,15 +352,15 @@ export function Welcome({
         ) : (
           <>
             <img className="cw-map" src={mapSrc} alt="" style={{ left: mx, top: my }} />
-            <span className="cw-label" style={{ left: 95.7, top: 296 }}>جبل عمّان</span>
-            <span className="cw-label" style={{ left: 285.9, top: 154 }}>اللويبدة</span>
+            <span className="cw-label" style={{ left: 95.7, top: 296 }}>{i18nTr("جبل عمّان")}</span>
+            <span className="cw-label" style={{ left: 285.9, top: 154 }}>{i18nTr("اللويبدة")}</span>
           </>
         )}
 
         <div className="cw-veil-solid" style={phase === "intro" ? { animation: intro.anim.veil } : undefined} />
         <div className="cw-veil-grad" />
-        <span className="cw-pin p1">اللويبدة</span>
-        <span className="cw-pin p2">البلد</span>
+        <span className="cw-pin p1">{i18nTr("اللويبدة")}</span>
+        <span className="cw-pin p2">{i18nTr("البلد")}</span>
 
         {phase === "intro" ? (
           <>
@@ -404,25 +404,25 @@ export function Welcome({
             className="cw-badge"
             style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: briefAnim("cw-bbadge") } : undefined}
           >
-            كبتن
+            {i18nTr("كبتن")}
           </span>
         </div>
 
         {onPages ? (
           <>
             <div className={["cw-copy", "centered", page === 0 ? "" : "off-next"].join(" ")}>
-              <h1>الرفيق قبل الطريق.</h1>
-              <p>مثلٌ عربي: اختر رفيقك قبل أن تبدأ رحلتك. ونحن رفيقك من قبل أول رحلة.</p>
+              <h1>{i18nTr("الرفيق قبل الطريق.")}</h1>
+              <p>{i18nTr("مثلٌ عربي: اختر رفيقك قبل أن تبدأ رحلتك. ونحن رفيقك من قبل أول رحلة.")}</p>
             </div>
             <div className={["cw-copy", page === 1 ? "" : page < 1 ? "off-prev" : "off-next"].join(" ")}>
               <div className="cw-pager" aria-hidden="true"><span /><span className="on" /><span /></div>
-              <h1>عمولة أقل بكثير من السوق.</h1>
-              <p>لأنك شريك في الطريق، لا مجرد سائق عليه.</p>
+              <h1>{i18nTr("عمولة أقل بكثير من السوق.")}</h1>
+              <p>{i18nTr("لأنك شريك في الطريق، لا مجرد سائق عليه.")}</p>
             </div>
             <div className={["cw-copy", page === 2 ? "" : "off-prev"].join(" ")}>
               <div className="cw-pager" aria-hidden="true"><span /><span /><span className="on" /></div>
-              <h1>وقتك بيدك.</h1>
-              <p>تختار باقتك وساعات عملك، وتسحب أرباحك من التطبيق.</p>
+              <h1>{i18nTr("وقتك بيدك.")}</h1>
+              <p>{i18nTr("تختار باقتك وساعات عملك، وتسحب أرباحك من التطبيق.")}</p>
             </div>
           </>
         ) : null}
@@ -438,11 +438,11 @@ export function Welcome({
             </span>
             O
           </span>
-          <span className="cw-pill">كبتن</span>
+          <span className="cw-pill">{i18nTr("كبتن")}</span>
           <span style={{ flex: 1 }} />
           {page === 1 ? (
             <button type="button" className="cw-textbtn" onClick={() => setPage(2)}>
-              تخطَّ
+              {i18nTr("تخطَّ")}
             </button>
           ) : null}
         </div>
@@ -455,7 +455,7 @@ export function Welcome({
           {splash.code ? <p className="cw-status-code" dir="ltr">{splash.code}</p> : null}
           {splash.status !== "slow" ? (
             <button type="button" onClick={retrySplash}>
-              إعادة المحاولة
+              {i18nTr("إعادة المحاولة")}
             </button>
           ) : null}
         </div>
@@ -466,7 +466,7 @@ export function Welcome({
         © OpenStreetMap · Copernicus DEM · Open-Meteo
       </span>
 
-      {phase === "intro" ? <span className="cw-skip">المس الشاشة للتخطّي</span> : null}
+      {phase === "intro" ? <span className="cw-skip">{i18nTr("المس الشاشة للتخطّي")}</span> : null}
 
       {onPages && page < 2 ? (
         <div className="cw-actions">
@@ -474,12 +474,12 @@ export function Welcome({
             <div className="cw-pager" aria-hidden="true"><span className="on" /><span /><span /></div>
           ) : null}
           <button type="button" className="cw-ember" onClick={() => setPage(page + 1)}>
-            <span>التالي</span>
+            <span>{i18nTr("التالي")}</span>
             <ArrowBack />
           </button>
           {page === 0 ? (
             <button type="button" className="cw-textbtn" style={{ fontSize: 14 }} onClick={() => setPage(2)}>
-              تخطَّ
+              {i18nTr("تخطَّ")}
             </button>
           ) : null}
         </div>
@@ -489,11 +489,11 @@ export function Welcome({
         <>
           {/* **«سجّل كشريك» إلى خطوات التسجيل** (§٦٢/١١) — والرقمُ يُكتب هناك مرّةً، لا في بطاقةٍ هنا ثمّ ثانيةً هناك */}
           <button type="button" className="cw-ember cw-join" onClick={() => leave("/register")}>
-            <span>سجّل كشريك</span>
+            <span>{i18nTr("سجّل كشريك")}</span>
             <ArrowBack />
           </button>
           <button type="button" className="cw-login" onClick={() => leave("/login")}>
-            دخول
+            {i18nTr("دخول")}
           </button>
         </>
       ) : null}

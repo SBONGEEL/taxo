@@ -34,7 +34,7 @@ import type { Payment, PaymentMethod, Ride, RidePayments } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** ما لا يمر بالمنصة فيبقى في يد الكبتن (`DIRECTLY_COLLECTED_METHODS`).
  *
@@ -61,7 +61,7 @@ export function useCollectScreen(ride: Ride) {
       setState(await getRidePayments(ride.id));
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الدفعة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الدفعة"),
       );
     }
   }, [ride.id]);
@@ -98,17 +98,17 @@ export function collectView(state: RidePayments, ride: Ride) {
 
   // الرقم الكبير وما يصفه — **لا رقمَ بلا وصف**
   const headline = pending
-    ? { caption: "تقبض الآن من الراكب", amount: pending.amount, hand: true }
+    ? { caption: tr("تقبض الآن من الراكب"), amount: pending.amount, hand: true }
     : kept.length > 0
-      ? { caption: "قبضتَه نقداً", amount: kept[0].amount, hand: true }
+      ? { caption: tr("قبضتَه نقداً"), amount: kept[0].amount, hand: true }
       : credited.length > 0
         ? {
-            caption: "أُضيف إلى محفظتك",
+            caption: tr("أُضيف إلى محفظتك"),
             amount: credited[0].amount,
             hand: false,
           }
         : {
-            caption: "الأجرة النهائية",
+            caption: tr("الأجرة النهائية"),
             amount: state.final_fare ?? ride.current_fare,
             hand: false,
           };
@@ -151,15 +151,15 @@ export function CollectScreen({
       </div>
 
       <div className="mb-18 card px-16 py-14">
-        <Row label="السعر المقدّر" value={digits(ride.estimated_fare)} />
+        <Row label={tr("السعر المقدّر")} value={digits(ride.estimated_fare)} />
         {ride.actual_distance_km ? (
           <Row
-            label="المسافة الفعلية"
-            value={`${trimDistance(ride.actual_distance_km)} كم`}
+            label={tr("المسافة الفعلية")}
+            value={tr("{0} كم", { 0: trimDistance(ride.actual_distance_km) })}
           />
         ) : null}
         <Row
-          label="السعر النهائي"
+          label={tr("السعر النهائي")}
           value={`${digits(state.final_fare ?? ride.current_fare)} ${currencyLabel}`}
           strong
         />
@@ -169,7 +169,7 @@ export function CollectScreen({
             نفسه، وتكرارُه سطراً يقرأ كأنه مبلغٌ ثانٍ */}
         {mixed ? (
           <Row
-            label="تقبضه بيدك"
+            label={tr("تقبضه بيدك")}
             value={`${digits(pending?.amount ?? kept[0]?.amount ?? "0")} ${currencyLabel}`}
             tone="text-ink"
             strong
@@ -177,7 +177,7 @@ export function CollectScreen({
         ) : null}
         {credited.length > 0 ? (
           <Row
-            label="قُيّد في محفظتك"
+            label={tr("قُيّد في محفظتك")}
             value={`${digits(credited[0].amount)} ${currencyLabel}`}
             tone="text-ok"
             strong
@@ -185,11 +185,11 @@ export function CollectScreen({
         ) : null}
 
         <Row
-          label="العمولة"
+          label={tr("العمولة")}
           value={
             commission === 0
-              ? "0٪ حالياً"
-              : `${digits(String(commission))}٪`
+              ? tr("0٪ حالياً")
+              : tr("{0}٪", { 0: digits(String(commission)) })
           }
           tone="text-ok"
           last
@@ -219,7 +219,7 @@ export function CollectScreen({
               setError(
                 caught instanceof ApiError
                   ? caught.message
-                  : "تعذّر تأكيد الدفعة",
+                  : tr("تعذّر تأكيد الدفعة"),
               ),
             )
             .finally(() => setBusy(false));
@@ -227,21 +227,21 @@ export function CollectScreen({
       >
         {pending
           ? pending.method === "cliq"
-            ? "وصلتني الحوالة"
-            : "استلمت المبلغ كاش"
-          : "إنهاء"}
+            ? tr("وصلتني الحوالة")
+            : tr("استلمت المبلغ كاش")
+          : tr("إنهاء")}
       </Button>
 
       <p className="mt-12 text-center text-11.5 leading-snug text-muted">
         {pending
-          ? "هذا المبلغ يبقى معك ولا يمر بمحفظتك. وتأكيدك هو ما يُثبّته — إن لم يصلك فافتح نزاعاً من تفاصيل الرحلة."
+          ? tr("هذا المبلغ يبقى معك ولا يمر بمحفظتك. وتأكيدك هو ما يُثبّته — إن لم يصلك فافتح نزاعاً من تفاصيل الرحلة.")
           : headline.hand
-            ? "هذا المبلغ بقي معك ولم يمر بمحفظتك."
+            ? tr("هذا المبلغ بقي معك ولم يمر بمحفظتك.")
             : credited.length > 0
-              ? "المال وصل قبل إنهائك الرحلة — قيدُ أرباحك في المحفظة تلقائي."
-              : "لم يختر الراكب طريقة الدفع بعد — ستظهر الدفعة هنا وفي سجل رحلاتك."}
+              ? tr("المال وصل قبل إنهائك الرحلة — قيدُ أرباحك في المحفظة تلقائي.")
+              : tr("لم يختر الراكب طريقة الدفع بعد — ستظهر الدفعة هنا وفي سجل رحلاتك.")}
         {commission > 0
-          ? " والعمولة تُخصم من رصيد محفظتك، لا من هذا المبلغ."
+          ? tr(" والعمولة تُخصم من رصيد محفظتك، لا من هذا المبلغ.")
           : ""}
       </p>
     </div>

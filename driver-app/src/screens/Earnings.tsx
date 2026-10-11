@@ -26,14 +26,14 @@ import { Icon } from "@/taxo2";
 import { countRides } from "./t2/count";
 
 import "./t2/t2.css";
-import "./t2/money.css";
+import "./t2/money.css"; import { tr } from "@/lib/i18n";
 
 type Period = Earnings["period"];
 
 export const PERIOD_LABEL: Record<Period, string> = {
-  today: "اليوم",
-  week: "الأسبوع",
-  month: "الشهر",
+  today: tr("اليوم"),
+  week: tr("الأسبوع"),
+  month: tr("الشهر"),
 };
 
 /** **حالُ «أرباحي» — بيتٌ واحدٌ للشاشتين** (هذه وC09 في `screens/t2`): الفترةُ وأرقامُها الخمسة
@@ -51,7 +51,7 @@ export function useEarningsScreen() {
 
   useEffect(() => {
     load().catch((caught) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الأرباح"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الأرباح")),
     );
   }, [load]);
 
@@ -76,13 +76,13 @@ export function EarningsScreen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => goBack()}
         >
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">أرباحي</h1>
-        <div className="t2-wal-period" role="tablist" aria-label="الفترة">
+        <h1 className="t2-title">{tr("أرباحي")}</h1>
+        <div className="t2-wal-period" role="tablist" aria-label={tr("الفترة")}>
           {(Object.keys(PERIOD_LABEL) as Period[]).map((key) => (
             <button
               key={key}
@@ -124,49 +124,49 @@ export function EarningsScreen() {
             </span>
           </div>
           <div className="t2-wal-sub">
-            <span>صافي ما دخل محفظتك</span>
+            <span>{tr("صافي ما دخل محفظتك")}</span>
             <span>{countRides(data.completed_rides)}</span>
           </div>
 
           <div className="t2-wal-break">
             <div className="t2-wal-line">
-              <span>أرباح الرحلات</span>
+              <span>{tr("أرباح الرحلات")}</span>
               <span dir="ltr">{digits(data.wallet_earnings)}</span>
             </div>
             <div className="t2-wal-line">
-              <span>عمولة</span>
+              <span>{tr("عمولة")}</span>
               <span dir="ltr">{digits(data.commission)}</span>
             </div>
             {/* **سطرٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ عليه** وهو الوحيد كذلك — فبغير سطرِه لا يتّسق «أرباح
                 الرحلات» مع «عمولة» لمن يجمعهما بيده. ويظهر حين يوجد فقط */}
             {Number(data.tips) > 0 ? (
               <div className="t2-wal-line ok">
-                <span>بقشيش — كاملاً بلا عمولة</span>
+                <span>{tr("بقشيش — كاملاً بلا عمولة")}</span>
                 <span dir="ltr">{digits(data.tips)}</span>
               </div>
             ) : null}
             {/* **ما اقتُطع سداداً للسلفة** (البند ١٥) — رقمٌ ينقص من الأرباح بلا سببٍ مكتوبٍ يُقرأ عطباً. ولا يظهر لمن لا سلفةَ له */}
             {Number(data.advance_repaid) > 0 ? (
               <div className="t2-wal-line">
-                <span>سدادُ سلفة</span>
+                <span>{tr("سدادُ سلفة")}</span>
                 <span dir="ltr">{digits(data.advance_repaid)}</span>
               </div>
             ) : null}
             <div className="t2-wal-line">
-              <span>مُحصَّل مباشرة</span>
+              <span>{tr("مُحصَّل مباشرة")}</span>
               <span>
                 <span dir="ltr">{digits(data.directly_collected)}</span>{" "}
                 {CURRENCY_LABEL[data.currency]}
               </span>
             </div>
             <p className="t2-wal-hint">
-              كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك،
-              وتظهر هنا لأنها من دخلك.
+              {tr("كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك، وتظهر هنا لأنها من دخلك.")}
+
             </p>
             {negative ? (
               <p className="t2-wal-hint warn">
-                العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات
-                النقدية تُخصم من رصيدك ولو لم يمرّ مالُها به.
+                {tr("العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات النقدية تُخصم من رصيدك ولو لم يمرّ مالُها به.")}
+
               </p>
             ) : null}
           </div>

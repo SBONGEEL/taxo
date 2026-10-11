@@ -42,7 +42,7 @@ import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoi
 import type { Coordinates, Ride } from "@/api/types";
 import type { CliqTransfer } from "@/components/CliqTransferSheet";
 import { DriverSocket, type DriverSocketEvent } from "@/lib/socket";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** حالاتُ الرحلة التي تعني «الكبتن مشغول الآن» — مرآةُ `ACTIVE_DRIVER_STATUSES`. */
 const ACTIVE: ReadonlySet<string> = new Set([
@@ -152,7 +152,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
             // عليه، وكتابتُها ظنّاً تغيّر ما يقرّر به.
             method: "",
             category: CATEGORY_LABEL[event.ride.vehicle_category],
-            distance: `${digits(String(event.distance_to_pickup_km))} كم`,
+            distance: tr("{0} كم", { 0: digits(String(event.distance_to_pickup_km)) }),
             pickup: event.ride.pickup_address ?? "",
             drop: event.ride.dropoff_address ?? "",
             seconds: event.expires_in_seconds,

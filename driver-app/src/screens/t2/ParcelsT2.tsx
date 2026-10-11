@@ -17,10 +17,10 @@ import { RIDE_STATUS_LABEL } from "@/lib/rideFormat";
 import { startOfToday, whenParts } from "./when";
 
 import "./t2.css";
-import "./ride.css";
+import "./ride.css"; import { tr } from "@/lib/i18n";
 
 /** «سُلِّم» للطرد بدل «مكتملة» — وما سواه حالُ الرحلة كما يقوله «رحلاتي» (`RIDE_STATUS_LABEL`). */
-const DELIVERED = "سُلِّم";
+const DELIVERED = tr("سُلِّم");
 
 export function ParcelsT2Screen() {
   const navigate = useNavigate();
@@ -39,30 +39,30 @@ export function ParcelsT2Screen() {
     <div className="t2 t2-svc">
       <div className="t2-svc-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <span className="t2-icon" aria-hidden="true">
               arrow_forward
             </span>
           </button>
-          <h1 className="t2-title">الطرود</h1>
+          <h1 className="t2-title">{tr("الطرود")}</h1>
         </div>
 
         <p className="t2-note">
           <span className="t2-icon" aria-hidden="true">
             package_2
           </span>
-          تصلك الطرودُ عرضاً كأيِّ رحلةٍ وعليها شارةُ «طرد». بعد القبول ترى اسمَ المستلم وعنوانَه وتتصل به، وتسلّمه الطردَ في الوجهة.
-          وإن وجدتَ عند الاستلام ما لا تقبل نقلَه فارفض الطردَ من شاشة الرحلة — بلا مالٍ على أحد.
+          {tr("تصلك الطرودُ عرضاً كأيِّ رحلةٍ وعليها شارةُ «طرد». بعد القبول ترى اسمَ المستلم وعنوانَه وتتصل به، وتسلّمه الطردَ في الوجهة. وإن وجدتَ عند الاستلام ما لا تقبل نقلَه فارفض الطردَ من شاشة الرحلة — بلا مالٍ على أحد.")}
+
         </p>
 
-        <div className="t2-group">ما نقلتَه</div>
+        <div className="t2-group">{tr("ما نقلتَه")}</div>
         {rows === null ? (
           failed ? (
             <p className="t2-note danger" role="alert">
               <span className="t2-icon" aria-hidden="true">
                 error
               </span>
-              تعذّر قراءة رحلاتك
+              {tr("تعذّر قراءة رحلاتك")}
             </p>
           ) : (
             <div className="t2-svc-wait" aria-busy="true">
@@ -70,7 +70,7 @@ export function ParcelsT2Screen() {
             </div>
           )
         ) : rows.length === 0 ? (
-          <p className="t2-empty">لم تنقل طرداً بعد.</p>
+          <p className="t2-empty">{tr("لم تنقل طرداً بعد.")}</p>
         ) : (
           <div className="t2-list t2-sgroup">
             {rows.map(({ ride }) => (
@@ -86,8 +86,8 @@ export function ParcelsT2Screen() {
                 <span className="t2-srow-main">
                   <span className="t2-srow-title">
                     {/* **«أحضر غرضي» معلَّمٌ بين طروده** (§٧٢-ج/١، لوحتُه C3) */}
-                    {ride.parcel_fetch ? "أحضر غرضي · " : ""}
-                    {ride.status === "completed" ? DELIVERED : (RIDE_STATUS_LABEL[ride.status] ?? "طرد")}
+                    {ride.parcel_fetch ? tr("أحضر غرضي · ") : ""}
+                    {ride.status === "completed" ? DELIVERED : (RIDE_STATUS_LABEL[ride.status] ?? tr("طرد"))}
                   </span>
                   <span className="t2-srow-hint">
                     {whenParts(ride.created_at, today).day} · {whenParts(ride.created_at, today).time}

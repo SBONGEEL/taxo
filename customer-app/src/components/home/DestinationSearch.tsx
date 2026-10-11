@@ -24,7 +24,7 @@ import { BlankT2, LoaderT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/request.css";
+import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
 const DEBOUNCE_MS = 350;
 
@@ -37,7 +37,7 @@ export function DestinationSearch({
   onPick,
   onPickOnMap,
   onSkip,
-  title = "إلى أين؟",
+  title = tr("إلى أين؟"),
   onHere,
   airports,
 }: {
@@ -110,8 +110,8 @@ export function DestinationSearch({
         <Icon name="search" />
         <input
           autoFocus
-          placeholder="ابحث عن عنوان أو معلم"
-          aria-label="ابحث عن عنوان أو معلم"
+          placeholder={tr("ابحث عن عنوان أو معلم")}
+          aria-label={tr("ابحث عن عنوان أو معلم")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -128,7 +128,7 @@ export function DestinationSearch({
           className="t2-dest-pin"
         >
           <Icon name="location_on" fill />
-          <span className="t2-dest-pin-label">حدّدها على الخريطة بالدبوس</span>
+          <span className="t2-dest-pin-label">{tr("حدّدها على الخريطة بالدبوس")}</span>
           <Icon name="chevron_left" className="t2-chev" />
         </button>
       ) : null}
@@ -144,7 +144,7 @@ export function DestinationSearch({
           className="t2-dest-pin"
         >
           <Icon name="my_location" />
-          <span className="t2-dest-pin-label">موقعي الحالي</span>
+          <span className="t2-dest-pin-label">{tr("موقعي الحالي")}</span>
           <Icon name="chevron_left" className="t2-chev" />
         </button>
       ) : null}
@@ -161,14 +161,14 @@ export function DestinationSearch({
           className="t2-dest-pin"
         >
           <Icon name="timer" />
-          <span className="t2-dest-pin-label">بلا وجهة — تقولها للكبتن في الطريق</span>
+          <span className="t2-dest-pin-label">{tr("بلا وجهة — تقولها للكبتن في الطريق")}</span>
           <Icon name="chevron_left" className="t2-chev" />
         </button>
       ) : null}
 
       {!typing && airports && airports.length > 0 ? (
         <section>
-          <div className="t2-group t2-dest-group">المطارات</div>
+          <div className="t2-group t2-dest-group">{tr("المطارات")}</div>
           <div className="t2-list">
             {airports.map((airport) => (
               <button
@@ -192,7 +192,7 @@ export function DestinationSearch({
 
       {!typing && places.length > 0 ? (
         <section>
-          <div className="t2-group t2-dest-group">أماكن محفوظة</div>
+          <div className="t2-group t2-dest-group">{tr("أماكن محفوظة")}</div>
           <div className="t2-list">
             {places.map((place) => (
               <button
@@ -222,7 +222,7 @@ export function DestinationSearch({
 
       {!typing && recents.length > 0 ? (
         <section>
-          <div className="t2-group t2-dest-group">وجهات أخيرة</div>
+          <div className="t2-group t2-dest-group">{tr("وجهات أخيرة")}</div>
           <div className="t2-list">
             {recents.map((recent) => (
               <button
@@ -276,8 +276,8 @@ export function DestinationSearch({
       {!searching && query.trim().length >= 2 && results.length === 0 ? (
         <BlankT2
           icon="search"
-          title="لا نتائج لهذا البحث"
-          hint={onPickOnMap ? "جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة" : "جرّب اسماً أقصر، أو اختر من أماكنك المحفوظة"}
+          title={tr("لا نتائج لهذا البحث")}
+          hint={onPickOnMap ? tr("جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة") : tr("جرّب اسماً أقصر، أو اختر من أماكنك المحفوظة")}
         />
       ) : null}
 
@@ -285,8 +285,8 @@ export function DestinationSearch({
       {!token ? (
         <p className="t2-note t2-dest-note">
           {onPickOnMap
-            ? "البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة."
-            : "البحث بالعناوين غير متاح الآن — اختر من أماكنك المحفوظة أو وجهاتك الأخيرة."}
+            ? tr("البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة.")
+            : tr("البحث بالعناوين غير متاح الآن — اختر من أماكنك المحفوظة أو وجهاتك الأخيرة.")}
         </p>
       ) : null}
     </DrawerT2>

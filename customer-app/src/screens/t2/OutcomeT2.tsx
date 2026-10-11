@@ -23,7 +23,7 @@ import { NoteT2 } from "./KitT2";
 import { SheetT2 } from "./SheetT2";
 import { WomenNoCaptainT2, isWomenRide } from "./WomenRideT2";
 import "./t2.css";
-import "./request.css";
+import "./request.css"; import { tr } from "@/lib/i18n";
 
 /** دائرةُ المعنى: اكتملت بالنجاح · لم تُوجد كبتنةٌ بالبرقوق (RW3) · ألغاها الكبتنُ بالخطأ · وما عداه محايد. */
 function markOf(ride: Ride): { icon: string; tone: string } {
@@ -76,10 +76,10 @@ export function OutcomeSheetT2({
   const footer = completed ? (
     <div className="t2-out-actions">
       <button type="button" className="t2-button primary" onClick={() => navigate(`/rides/${ride.id}/pay`)}>
-        الانتقال إلى الدفع
+        {tr("الانتقال إلى الدفع")}
       </button>
       <button type="button" className="t2-out-later" onClick={onDismiss}>
-        لاحقاً
+        {tr("لاحقاً")}
       </button>
     </div>
   ) : missedGendered ? (
@@ -98,17 +98,17 @@ export function OutcomeSheetT2({
           }
         }}
       >
-        أقبل أي كبتن متاح
+        {tr("أقبل أي كبتن متاح")}
       </button>
       {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
       <button type="button" className="t2-out-later" onClick={onDismiss}>
-        حسناً
+        {tr("حسناً")}
       </button>
     </div>
   ) : (
     <div className="t2-out-actions">
       <button type="button" className="t2-button primary" onClick={onDismiss}>
-        حسناً
+        {tr("حسناً")}
       </button>
     </div>
   );
@@ -124,7 +124,7 @@ export function OutcomeSheetT2({
 
       {completed ? (
         <div className="t2-out-fare">
-          <div className="t2-out-fare-label">الأجرة النهائية</div>
+          <div className="t2-out-fare-label">{tr("الأجرة النهائية")}</div>
           <div className="t2-out-fare-amount">
             <span dir="ltr" className="t2-num">
               {formatMoney(ride.final_fare ?? ride.rider_estimate)}
@@ -140,11 +140,11 @@ export function OutcomeSheetT2({
         <p className="t2-out-text">
           {/* **و«ذكور» ليس طلبَ كبتنة** (§٦٢-ب/٤٧) — ويختاره الرجلُ في ملفّه أيضاً، فلا يُخاطَب بالمؤنّث */}
           {ride.gender_preference === "male"
-            ? "لا كبتن من الذكور متاحٌ قريباً الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو قبول أي كبتن متاح الآن — الاختيار لك."
-            : "لا كبتنة متاحة قريبة الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو قبول أي كبتن متاح الآن — الاختيار لكِ."}
+            ? tr("لا كبتن من الذكور متاحٌ قريباً الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو قبول أي كبتن متاح الآن — الاختيار لك.")
+            : tr("لا كبتنة متاحة قريبة الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو قبول أي كبتن متاح الآن — الاختيار لكِ.")}
         </p>
       ) : (
-        <p className="t2-out-text">{ride.cancelled_reason ?? "يمكنك طلب رحلة جديدة الآن."}</p>
+        <p className="t2-out-text">{ride.cancelled_reason ?? tr("يمكنك طلب رحلة جديدة الآن.")}</p>
       )}
     </SheetT2>
   );

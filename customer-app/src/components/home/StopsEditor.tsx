@@ -13,7 +13,7 @@
  * فيعود الرقمُ من الخلفية (القسم 14) — ولا يُجمع رسمُ محطةٍ على مبلغٍ معروض.
  */
 
-import { MAX_STOPS } from "@/lib/multistop";
+import { MAX_STOPS } from "@/lib/multistop"; import { tr } from "@/lib/i18n";
 
 export interface DraftStop {
   lat: number;
@@ -45,16 +45,16 @@ export function StopsEditor({
   return (
     <div className="t2-stops">
       <div className="t2-stops-head">
-        محطات في الطريق · {stops.length}/{MAX_STOPS}
+        {tr("محطات في الطريق ·")}{" "}{stops.length}/{MAX_STOPS}
       </div>
       <ul className="t2-stops-list">
         {stops.map((stop, index) => (
           <li key={`${stop.lat},${stop.lng},${index}`} className="t2-stop">
             <span className="t2-stop-num">{index + 1}</span>
-            <span className="t2-stop-label">{stop.address ?? "نقطة على الخريطة"}</span>
+            <span className="t2-stop-label">{stop.address ?? tr("نقطة على الخريطة")}</span>
             <button
               type="button"
-              aria-label="تحريك لأعلى"
+              aria-label={tr("تحريك لأعلى")}
               disabled={index === 0}
               onClick={() => move(index, -1)}
               className="t2-stop-btn"
@@ -63,7 +63,7 @@ export function StopsEditor({
             </button>
             <button
               type="button"
-              aria-label="تحريك لأسفل"
+              aria-label={tr("تحريك لأسفل")}
               disabled={index === stops.length - 1}
               onClick={() => move(index, 1)}
               className="t2-stop-btn"
@@ -72,7 +72,7 @@ export function StopsEditor({
             </button>
             <button
               type="button"
-              aria-label="حذف المحطة"
+              aria-label={tr("حذف المحطة")}
               onClick={() => onChange(stops.filter((_, at) => at !== index))}
               className="t2-stop-btn danger"
             >

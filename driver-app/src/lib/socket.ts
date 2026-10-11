@@ -24,7 +24,7 @@ import { reportLocationOverRest } from "@/api/endpoints";
 import { onlineService } from "@/lib/online-service";
 import type { Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
-import type { TripCommsEvent } from "@/lib/trip-comms";
+import type { TripCommsEvent } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
 
 export type DriverSocketEvent =
   | { type: "connected"; active_ride: Ride | null }
@@ -257,7 +257,7 @@ export class DriverSocket {
       // رفضٌ لسببٍ لا يزول بالمحاولة: يُبلَّغ ولا يُعاد
       if (event.code === WS_UNAUTHORIZED || event.code === WS_FORBIDDEN) {
         this.closed = true;
-        this.options.onRejected?.(event.reason || "تعذّر بدء الاستقبال");
+        this.options.onRejected?.(event.reason || tr("تعذّر بدء الاستقبال"));
         this.options.onClose?.(true);
         return;
       }

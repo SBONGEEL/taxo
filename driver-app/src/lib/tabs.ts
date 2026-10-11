@@ -7,7 +7,7 @@
  */
 
 import { Award, Home, User, Wallet } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react"; import { tr } from "@/lib/i18n";
 
 export interface Tab {
   to: string;
@@ -19,10 +19,10 @@ export interface Tab {
  * (§٦١-ب/٣)، **فلمّا بُني (C16) خرج من الشريط إلى «الأرباح»** حيث أسئلةُ المال. **و«المستوى» قبل «حسابي»** — `nav-order` يأخذ أوّلَ
  * تبويبٍ يبدأ به المسار، و`/account/missions` يبدأ بـ`/account` أيضاً. */
 export const TABS: Tab[] = [
-  { to: "/", label: "الرئيسية", icon: Home },
-  { to: "/wallet", label: "الأرباح", icon: Wallet },
-  { to: "/account/missions", label: "المستوى", icon: Award },
-  { to: "/account", label: "حسابي", icon: User },
+  { to: "/", label: tr("الرئيسية"), icon: Home },
+  { to: "/wallet", label: tr("الأرباح"), icon: Wallet },
+  { to: "/account/missions", label: tr("المستوى"), icon: Award },
+  { to: "/account", label: tr("حسابي"), icon: User },
 ];
 
 /** الشاشاتُ التي تُظهر الشريط — **قائمةُ سماحٍ هنا لا منع**، على عكس تطبيق

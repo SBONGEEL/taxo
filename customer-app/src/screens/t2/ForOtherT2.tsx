@@ -23,14 +23,14 @@ import { AuthBlock, AuthChoice, AuthInput, AuthPhone } from "@/taxo2";
 
 import { SheetModalT2 } from "./MoneyT2";
 import "./t2.css";
-import "./for-other.css";
+import "./for-other.css"; import { tr } from "@/lib/i18n";
 
 /** **الدافعُ في سطرٍ قصيرٍ على شارة الطلب** — والجملةُ الكاملةُ في ورقته وفي التتبّع (`PAYER_LINE`). **وشارةُ الطرد تقرؤه
  *  كذلك** (`ParcelT2`): «تدفع أنت» هي هي، و`recipient_cash` للطرد وحدَه. */
 export const PAYER_SHORT: Record<RidePayer, string> = {
-  requester: "تدفع أنت",
-  passenger_cash: "يدفع نقداً للكبتن",
-  recipient_cash: "يدفع المستلمُ نقداً",
+  requester: tr("تدفع أنت"),
+  passenger_cash: tr("يدفع نقداً للكبتن"),
+  recipient_cash: tr("يدفع المستلمُ نقداً"),
 };
 
 /** **خيارُ «لشخص آخر» في ورقة الطلب** — بطاقةُ «المشاركة» نفسُها قبل الاختيار، **وشارةُ «لـ: الاسم» بعده** بتعديلها وإزالتها.
@@ -55,15 +55,15 @@ export function ForOtherOptionT2({
           <span className="t2-icon">person</span>
         </span>
         <span className="t2-fo-chip-main">
-          <span className="t2-fo-chip-title">لـ: {draft.name}</span>
+          <span className="t2-fo-chip-title">{tr("لـ:")}{" "}{draft.name}</span>
           <span className="t2-fo-chip-sub">
             <span dir="ltr">{draft.phone}</span> · {PAYER_SHORT[draft.payer]}
           </span>
         </span>
-        <button type="button" className="t2-fo-chip-btn" onClick={onOpen} aria-label="تعديل الراكب">
+        <button type="button" className="t2-fo-chip-btn" onClick={onOpen} aria-label={tr("تعديل الراكب")}>
           <span className="t2-icon" aria-hidden="true">edit</span>
         </button>
-        <button type="button" className="t2-fo-chip-btn" onClick={onClear} aria-label="إزالة — الرحلة لي">
+        <button type="button" className="t2-fo-chip-btn" onClick={onClear} aria-label={tr("إزالة — الرحلة لي")}>
           <span className="t2-icon" aria-hidden="true">close</span>
         </button>
       </div>
@@ -74,9 +74,9 @@ export function ForOtherOptionT2({
       <span className="t2-share-main">
         <span className="t2-share-title">
           <span className="t2-icon" aria-hidden="true">person</span>
-          لشخص آخر
+          {tr("لشخص آخر")}
         </span>
-        <span className="t2-share-body">{blockedBy ?? "اطلبها لغيرك — يصله الكبتنُ ويتصل به باسمه ورقمه."}</span>
+        <span className="t2-share-body">{blockedBy ?? tr("اطلبها لغيرك — يصله الكبتنُ ويتصل به باسمه ورقمه.")}</span>
       </span>
       {blockedBy === null ? (
         <span className="t2-icon t2-fo-open-go" aria-hidden="true">chevron_left</span>
@@ -136,9 +136,9 @@ export function PhoneFieldsT2({
     <>
       {/* **دولتان أو أكثر ⇒ تُختار دولةُ الرقم** — كشاشة التحويل (`AuthChoice`) */}
       {countries.length > 1 ? (
-        <AuthBlock label="دولة الرقم">
+        <AuthBlock label={tr("دولة الرقم")}>
           <AuthChoice
-            label="دولة الرقم"
+            label={tr("دولة الرقم")}
             value={code}
             options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
             onChange={setCode}
@@ -193,9 +193,9 @@ export function ForOtherSheetT2({
   const own = full !== null && full === user?.phone;
   const phoneError =
     dialCode === null
-      ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+      ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
       : own
-        ? "هذا رقمُك — اطلب الرحلةَ لنفسك"
+        ? tr("هذا رقمُك — اطلب الرحلةَ لنفسك")
         : null;
   const ready = name.trim().length >= 2 && full !== null && !own && (payer !== "requester" || requesterPayable);
 
@@ -203,15 +203,15 @@ export function ForOtherSheetT2({
     {
       value: "requester",
       icon: "account_balance_wallet",
-      label: "أنا أدفع — بالمحفظة أو البطاقة",
-      hint: requesterPayable ? "من تطبيقك بعد الرحلة" : "لا محفظةَ ولا بطاقةَ مفعّلتان في بلدك",
+      label: tr("أنا أدفع — بالمحفظة أو البطاقة"),
+      hint: requesterPayable ? tr("من تطبيقك بعد الرحلة") : tr("لا محفظةَ ولا بطاقةَ مفعّلتان في بلدك"),
       off: !requesterPayable,
     },
     {
       value: "passenger_cash",
       icon: "payments",
-      label: "الراكب يدفع نقداً عند الوصول",
-      hint: "يسلّم الأجرةَ للكبتن بيده",
+      label: tr("الراكب يدفع نقداً عند الوصول"),
+      hint: tr("يسلّم الأجرةَ للكبتن بيده"),
       off: false,
     },
   ];
@@ -226,33 +226,33 @@ export function ForOtherSheetT2({
           disabled={!ready}
           onClick={() => full !== null && onSave({ name: name.trim(), phone: full, payer })}
         >
-          تأكيد
+          {tr("تأكيد")}
         </button>
       }
     >
-      <div className="t2-picker-title">لشخص آخر</div>
-      <AuthBlock label="اسم الراكب" htmlFor="for-other-name">
+      <div className="t2-picker-title">{tr("لشخص آخر")}</div>
+      <AuthBlock label={tr("اسم الراكب")} htmlFor="for-other-name">
         <AuthInput
           id="for-other-name"
           value={name}
           maxLength={80}
           autoComplete="off"
-          placeholder="الاسم كما يناديه الكبتن"
+          placeholder={tr("الاسم كما يناديه الكبتن")}
           onChange={(event) => setName(event.target.value)}
         />
       </AuthBlock>
       <PhoneFieldsT2
         draft={phoneDraft}
         id="for-other-phone"
-        label="رقم هاتفه"
+        label={tr("رقم هاتفه")}
         error={phoneError}
         valid={complete && !own}
       />
 
       <div className="t2-pick-head">
-        <span className="t2-pick-title">من يدفع؟</span>
+        <span className="t2-pick-title">{tr("من يدفع؟")}</span>
       </div>
-      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label="من يدفع">
+      <div className="t2-cats t2-fo-payers" role="radiogroup" aria-label={tr("من يدفع")}>
         {payers.map((option) => {
           const on = option.value === payer;
           return (
@@ -279,7 +279,7 @@ export function ForOtherSheetT2({
 
       <p className="t2-note t2-fo-keep">
         <span className="t2-icon" aria-hidden="true">lock</span>
-        نحفظ اسمه ورقمه لهذه الرحلة وحدها، ونحذفهما بعد ثلاثين يوماً.
+        {tr("نحفظ اسمه ورقمه لهذه الرحلة وحدها، ونحذفهما بعد ثلاثين يوماً.")}
       </p>
     </SheetModalT2>
   );
@@ -307,10 +307,10 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
       const url = trackUrl(held);
       if (url === null) return;
       const outcome = await shareTrackLink(url);
-      if (outcome === "copied") notify("نُسخ رابط التتبّع", "أرسله إلى الراكب ليتابع رحلته.");
-      if (outcome === "failed") setError(`تعذّر نسخ الرابط — انسخه من هنا: ${url}`);
+      if (outcome === "copied") notify(tr("نُسخ رابط التتبّع"), tr("أرسله إلى الراكب ليتابع رحلته."));
+      if (outcome === "failed") setError(tr("تعذّر نسخ الرابط — انسخه من هنا: {0}", { 0: url }));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إنشاء رابط التتبّع");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إنشاء رابط التتبّع"));
     } finally {
       setBusy(false);
     }
@@ -323,7 +323,7 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
           <div className="t2-fo-ride-name">
             <span className="t2-icon" aria-hidden="true">person</span>
             <span>
-              الراكب: <b>{ride.passenger_name}</b>
+              {tr("الراكب:")}{" "}<b>{ride.passenger_name}</b>
             </span>
           </div>
         ) : null}
@@ -343,7 +343,7 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
           onClick={() => void share()}
         >
           <span className="t2-icon" aria-hidden="true">ios_share</span>
-          شارك رابط التتبّع
+          {tr("شارك رابط التتبّع")}
         </button>
       ) : null}
       <ErrorNote message={error} className="t2-error" />

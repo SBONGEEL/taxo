@@ -41,7 +41,7 @@ import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 interface Props {
   name: string;
@@ -118,7 +118,7 @@ export function CaptainHome({
             <div className="flex items-center gap-5 text-11.5 text-muted">
               <Star className="size-12 text-warn" />
               {rating ? digits(rating) : "—"}
-              {level !== null ? ` · المستوى ${digits(String(level))}` : null}
+              {level !== null ? tr(" · المستوى {0}", { 0: digits(String(level)) }) : null}
             </div>
           </div>
         </div>
@@ -131,7 +131,7 @@ export function CaptainHome({
             className="pressable flex items-center gap-8 rounded-full border border-line bg-surface py-6 pe-8 ps-11 text-12 font-semibold"
           >
             <span className={online ? "text-ink" : "text-muted"}>
-              {online ? "متصل" : "غير متصل"}
+              {online ? tr("متصل") : tr("غير متصل")}
             </span>
             <span
               className={`relative block h-16 w-28 rounded-full ${
@@ -148,7 +148,7 @@ export function CaptainHome({
           <button
             type="button"
             onClick={() => navigate("/notifications")}
-            aria-label="الإشعارات"
+            aria-label={tr("الإشعارات")}
             className="ctl relative size-33"
           >
             <Bell className="size-17" />
@@ -160,7 +160,7 @@ export function CaptainHome({
           <button
             type="button"
             onClick={onToggleTheme}
-            aria-label="تبديل المظهر"
+            aria-label={tr("تبديل المظهر")}
             className="ctl size-33"
           >
             {dark ? <Sun className="size-16" /> : <Moon className="size-16" />}
@@ -187,7 +187,7 @@ export function CaptainHome({
               className={`block size-8 rounded-full ${online ? "bg-ok" : "bg-muted"}`}
             />
             <span className={online ? "text-ink" : "text-muted"}>
-              {online ? "متصل — تستقبل الطلبات" : "غير متصل"}
+              {online ? tr("متصل — تستقبل الطلبات") : tr("غير متصل")}
             </span>
           </span>
         }
@@ -201,16 +201,16 @@ export function CaptainHome({
       <div className="mb-12 grid grid-cols-3 gap-8">
         <Stat
           value={earnings ? digits(String(earnings.completed_rides)) : "—"}
-          label="رحلات اليوم"
+          label={tr("رحلات اليوم")}
         />
         <Stat
           value={earnings ? digits(earnings.net) : "—"}
-          label={currency ? `صافي (${currency})` : "صافي"}
+          label={currency ? tr("صافي ({0})", { 0: currency }) : tr("صافي")}
         />
         {/* **نسبةٌ مقروءةٌ لا مبلغٌ ولا رقمٌ مرسوم** — §14 */}
         <Stat
-          value={commissionPercent ? `${digits(commissionPercent)}٪` : "—"}
-          label="عمولة TAXO"
+          value={commissionPercent ? tr("{0}٪", { 0: digits(commissionPercent) }) : "—"}
+          label={tr("عمولة TAXO")}
           tone={commissionPercent === "0" ? "ok" : undefined}
         />
       </div>
@@ -234,7 +234,7 @@ export function CaptainHome({
           <span className="min-w-0 flex-1 text-12.5 font-medium text-ink">
             {subscriptionLine}
           </span>
-          <span className="text-11.5 font-bold text-ink">جدّد</span>
+          <span className="text-11.5 font-bold text-ink">{tr("جدّد")}</span>
         </button>
       ) : null}
 

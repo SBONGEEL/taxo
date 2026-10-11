@@ -30,7 +30,7 @@ import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
 import { play, type Cue } from "@/lib/sound";
-import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms";
+import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
 
 export interface DriverPing {
   lat: number;
@@ -88,32 +88,32 @@ const TERMINAL_STATUSES = new Set<Ride["status"]>([
 ]);
 
 const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
-  driver_assigned: { title: "قَبِل كبتنٌ رحلتك", body: "هو الآن في طريقه إليك" },
+  driver_assigned: { title: tr("قَبِل كبتنٌ رحلتك"), body: tr("هو الآن في طريقه إليك") },
   // **«الكبتن يقترب»** (§61-ي/١١) — مرّةً لكلِّ رحلة، وصوتُه في `EVENT_SOUND`
-  driver_approaching: { title: "كبتنُك يقترب", body: "على وشك الوصول إلى نقطة الانطلاق — استعدّ." },
-  driver_arrived: { title: "وصل الكبتن", body: "الكبتن بانتظارك في نقطة الانطلاق" },
-  ride_started: { title: "بدأت الرحلة", body: "رحلة موفقة" },
-  ride_completed: { title: "انتهت الرحلة", body: "شاشة الدفع بانتظارك" },
-  ride_cancelled: { title: "أُلغيت الرحلة" },
+  driver_approaching: { title: tr("كبتنُك يقترب"), body: tr("على وشك الوصول إلى نقطة الانطلاق — استعدّ.") },
+  driver_arrived: { title: tr("وصل الكبتن"), body: tr("الكبتن بانتظارك في نقطة الانطلاق") },
+  ride_started: { title: tr("بدأت الرحلة"), body: tr("رحلة موفقة") },
+  ride_completed: { title: tr("انتهت الرحلة"), body: tr("شاشة الدفع بانتظارك") },
+  ride_cancelled: { title: tr("أُلغيت الرحلة") },
   no_driver_found: {
-    title: "لم نجد كبتناً متاحاً",
-    body: "لم يقبل أي كبتن الطلب — حاول مرة أخرى",
+    title: tr("لم نجد كبتناً متاحاً"),
+    body: tr("لم يقبل أي كبتن الطلب — حاول مرة أخرى"),
   },
   driver_connection_lost: {
-    title: "انقطع اتصال الكبتن",
-    body: "الرحلة مستمرة — نحاول استعادة موقعه",
+    title: tr("انقطع اتصال الكبتن"),
+    body: tr("الرحلة مستمرة — نحاول استعادة موقعه"),
   },
-  driver_reconnected: { title: "عاد اتصال الكبتن" },
+  driver_reconnected: { title: tr("عاد اتصال الكبتن") },
 };
 
 /** **«أحضر غرضي»** (§٧٢-ج/١) — الراكبُ ليس عند نقطة الانطلاق: **الاستلامُ بدءُ الرحلة والتسليمُ انتهاؤها**، ونصُّها نصُّ إشعار
  *  الخلفية نفسُه (`notifications.FETCH_EVENT_TEXT`) — وما ليس هنا يُقال بنصّ الرحلة. */
 const FETCH_TOAST: Record<string, { title: string; body?: string }> = {
-  driver_assigned: { title: "قَبِل كبتنٌ طلبك", body: "في طريقه إلى مكان غرضك" },
-  driver_approaching: { title: "الكبتن يقترب من مكان غرضك", body: "نبّه من سيسلّمه الغرض." },
-  driver_arrived: { title: "وصل الكبتن إلى مكان غرضك", body: "بانتظار من يسلّمه الغرض" },
-  ride_started: { title: "استلم الكبتن غرضك", body: "في الطريق إليك" },
-  ride_completed: { title: "وصل غرضك", body: "شاشة الدفع بانتظارك" },
+  driver_assigned: { title: tr("قَبِل كبتنٌ طلبك"), body: tr("في طريقه إلى مكان غرضك") },
+  driver_approaching: { title: tr("الكبتن يقترب من مكان غرضك"), body: tr("نبّه من سيسلّمه الغرض.") },
+  driver_arrived: { title: tr("وصل الكبتن إلى مكان غرضك"), body: tr("بانتظار من يسلّمه الغرض") },
+  ride_started: { title: tr("استلم الكبتن غرضك"), body: tr("في الطريق إليك") },
+  ride_completed: { title: tr("وصل غرضك"), body: tr("شاشة الدفع بانتظارك") },
 };
 
 /** **أصواتُ الراكب** (§٦١-ي/١٠) — وكانت في الجدول منذ المرحلة ٩ **ولا سلكَ إليها**،
@@ -260,14 +260,14 @@ export function RideProvider({ children }: { children: ReactNode }) {
             const preference = withRide.ride?.gender_preference ?? "any";
             if (event.type === "no_driver_found" && preference === "female") {
               notify(
-                "لم نجد كبتنة متاحة",
-                "لا كبتنة قريبة الآن. جرّبي بعد قليل، أو اطلبي أي كبتن.",
+                tr("لم نجد كبتنة متاحة"),
+                tr("لا كبتنة قريبة الآن. جرّبي بعد قليل، أو اطلبي أي كبتن."),
               );
             } else if (event.type === "no_driver_found" && preference === "male") {
               // **و«ذكور» ليس طلبَ كبتنة** (§٦٢-ب/٤٧) — ويختاره الرجلُ في ملفّه أيضاً، فلا يُخاطَب بالمؤنّث
               notify(
-                "لم نجد كبتناً من الذكور",
-                "لا كبتن من الذكور قريبٌ الآن — يمكنك المحاولة بعد قليل، أو طلب أي كبتن.",
+                tr("لم نجد كبتناً من الذكور"),
+                tr("لا كبتن من الذكور قريبٌ الآن — يمكنك المحاولة بعد قليل، أو طلب أي كبتن."),
               );
             } else {
               notify(toast.title, toast.body);

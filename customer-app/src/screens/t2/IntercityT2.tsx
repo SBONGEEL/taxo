@@ -37,21 +37,21 @@ import { Icon } from "@/taxo2";
 import "./t2.css";
 import "./account.css";
 import "./for-other.css";
-import "./intercity.css";
+import "./intercity.css"; import { tr } from "@/lib/i18n";
 
 /** «مقعدٌ واحدٌ متاح · مقعدان متاحان · 3 مقاعد متاحة · 11 مقعداً متاحاً» — **والصفرُ «اكتملت المقاعد»** لا «0 مقاعد». */
 function leftText(count: number): string {
-  if (count <= 0) return "اكتملت المقاعد";
-  if (count === 1) return "مقعدٌ واحدٌ متاح";
-  if (count === 2) return "مقعدان متاحان";
-  return count <= 10 ? `${count} مقاعد متاحة` : `${count} مقعداً متاحاً`;
+  if (count <= 0) return tr("اكتملت المقاعد");
+  if (count === 1) return tr("مقعدٌ واحدٌ متاح");
+  if (count === 2) return tr("مقعدان متاحان");
+  return count <= 10 ? tr("{0} مقاعد متاحة", { 0: count }) : tr("{0} مقعداً متاحاً", { 0: count });
 }
 
 /** «احجز مقعداً · احجز مقعدين · احجز 3 مقاعد» — **المقاعدُ مفعولٌ به بعد الفعل** فتُنصب (لا «احجز مقعدان»). */
 function bookLabel(count: number): string {
-  if (count === 1) return "احجز مقعداً";
-  if (count === 2) return "احجز مقعدين";
-  return count <= 10 ? `احجز ${count} مقاعد` : `احجز ${count} مقعداً`;
+  if (count === 1) return tr("احجز مقعداً");
+  if (count === 2) return tr("احجز مقعدين");
+  return count <= 10 ? tr("احجز {0} مقاعد", { 0: count }) : tr("احجز {0} مقعداً", { 0: count });
 }
 
 // ══════════════════════════════════════════════════════════════════ «بين المدن» — الرحلاتُ المفتوحةُ والحجز
@@ -70,10 +70,10 @@ export function IntercityT2Screen() {
 
   return (
     <div className="t2 t2-page t2-ic pb-nav">
-      <SubHeadT2 title="بين المدن" onBack={goBack} />
+      <SubHeadT2 title={tr("بين المدن")} onBack={goBack} />
       <p className="t2-ic-lede">
-        رحلاتٌ بين المدن يعلنها كباتنُ بتصريحٍ بعد فحص مركباتهم. <b>احجز مقعداً من محفظتك</b>، أو السيارةَ كاملةً نقداً للكبتن —
-        وتلتقيه في نقطة التجمّع.
+        {tr("رحلاتٌ بين المدن يعلنها كباتنُ بتصريحٍ بعد فحص مركباتهم.")}{" "}<b>{tr("احجز مقعداً من محفظتك")}</b>{tr("، أو السيارةَ كاملةً نقداً للكبتن — وتلتقيه في نقطة التجمّع.")}
+
       </p>
 
       {/* **«حجوزاتي» تحت المدخل نفسِه** — لمن له حجزٌ، فيجد ما حجزه حيث حجزه */}
@@ -84,7 +84,7 @@ export function IntercityT2Screen() {
           onClick={() => navigate("/account/intercity/bookings")}
         >
           <Icon name="event_upcoming" />
-          حجوزاتي بين المدن
+          {tr("حجوزاتي بين المدن")}
         </button>
       ) : null}
 
@@ -95,14 +95,14 @@ export function IntercityT2Screen() {
       ) : null}
       {trips === null && !error ? <LoaderT2 /> : null}
       {trips?.length === 0 ? (
-        <BlankT2 icon="route" title="لا رحلاتَ معلَنةً الآن" hint="يعلن الكباتنُ رحلاتِهم قبل موعدها — عُد لاحقاً." />
+        <BlankT2 icon="route" title={tr("لا رحلاتَ معلَنةً الآن")} hint={tr("يعلن الكباتنُ رحلاتِهم قبل موعدها — عُد لاحقاً.")} />
       ) : null}
 
       {groups.map((group) => (
         <section key={group.key} className="t2-ic-group">
           <div className="t2-pick-head">
             <span className="t2-pick-title">
-              من {group.route.from_city} إلى {group.route.to_city}
+              {tr("من")}{" "}{group.route.from_city}{" "}{tr("إلى")}{" "}{group.route.to_city}
             </span>
             <span className="t2-ic-aside">{group.day}</span>
           </div>
@@ -146,11 +146,11 @@ function TripCard({ trip, onBook }: { trip: IntercityTrip; onBook: () => void })
         </span>
       </div>
       <p className="t2-ic-prices">
-        <b className="t2-num">{formatMoney(trip.price_seat, trip.currency)}</b> للمقعد ·{" "}
-        <b className="t2-num">{formatMoney(trip.price_car, trip.currency)}</b> للسيارة
+        <b className="t2-num">{formatMoney(trip.price_seat, trip.currency)}</b>{" "}{tr("للمقعد ·")}{" "}
+        <b className="t2-num">{formatMoney(trip.price_car, trip.currency)}</b>{" "}{tr("للسيارة")}
       </p>
       <button type="button" className="t2-button primary t2-wide t2-ic-book" disabled={left === 0} onClick={onBook}>
-        {left === 0 ? "اكتملت المقاعد" : "احجز"}
+        {left === 0 ? tr("اكتملت المقاعد") : tr("احجز")}
       </button>
     </article>
   );
@@ -192,18 +192,18 @@ function BookSheet({
       onOpenChange={(open) => {
         if (!open) close();
       }}
-      title={trip ? `من ${trip.route.from_city} إلى ${trip.route.to_city}` : undefined}
+      title={trip ? tr("من {0} إلى {1}", { 0: trip.route.from_city, 1: trip.route.to_city }) : undefined}
     >
       {trip && booked ? (
         <BookedNote booked={booked} onMine={onMine} onDone={close} />
       ) : trip ? (
         <>
           <p className="t2-drawer-text">
-            {tripDay(trip.departs_at)} · الساعة <span dir="ltr">{tripClock(trip.departs_at)}</span> — تلتقي الكبتنَ في{" "}
+            {tripDay(trip.departs_at)}{" "}{tr("· الساعة")}{" "}<span dir="ltr">{tripClock(trip.departs_at)}</span>{" "}{tr("— تلتقي الكبتنَ في")}{" "}
             <b>{trip.route.from_point}</b>.
           </p>
 
-          <div className="t2-cats t2-fo-payers t2-ic-choice" role="radiogroup" aria-label="ما تحجز">
+          <div className="t2-cats t2-fo-payers t2-ic-choice" role="radiogroup" aria-label={tr("ما تحجز")}>
             <button
               type="button"
               role="radio"
@@ -215,9 +215,9 @@ function BookSheet({
                 <Icon name="group" />
               </span>
               <span className="t2-cat-main">
-                <span className="t2-cat-name">مقاعد — يُدفع من محفظتك</span>
+                <span className="t2-cat-name">{tr("مقاعد — يُدفع من محفظتك")}</span>
                 <span className="t2-cat-hint">
-                  {formatMoney(trip.price_seat, trip.currency)} للمقعد، ويعود كاملاً إن ألغيتَ قبل الانطلاق
+                  {formatMoney(trip.price_seat, trip.currency)}{" "}{tr("للمقعد، ويعود كاملاً إن ألغيتَ قبل الانطلاق")}
                 </span>
               </span>
             </button>
@@ -233,9 +233,9 @@ function BookSheet({
                   <Icon name="directions_car" />
                 </span>
                 <span className="t2-cat-main">
-                  <span className="t2-cat-name">السيارةُ كاملة — نقداً للكبتن</span>
+                  <span className="t2-cat-name">{tr("السيارةُ كاملة — نقداً للكبتن")}</span>
                   <span className="t2-cat-hint">
-                    {formatMoney(trip.price_car, trip.currency)} تسلّمه للكبتن بيدك عند الانطلاق
+                    {formatMoney(trip.price_car, trip.currency)}{" "}{tr("تسلّمه للكبتن بيدك عند الانطلاق")}
                   </span>
                 </span>
               </button>
@@ -247,13 +247,13 @@ function BookSheet({
             <div className="t2-share t2-ic-seats">
               <span className="t2-ic-seats-label">
                 <Icon name="group" />
-                المقاعد
+                {tr("المقاعد")}
               </span>
               <div className="t2-ic-stepper">
                 <button
                   type="button"
                   className="t2-route-add t2-ic-step"
-                  aria-label="مقعدٌ أقل"
+                  aria-label={tr("مقعدٌ أقل")}
                   disabled={seats <= 1}
                   onClick={() => setSeats((value) => Math.max(1, value - 1))}
                 >
@@ -265,7 +265,7 @@ function BookSheet({
                 <button
                   type="button"
                   className="t2-route-add t2-ic-step"
-                  aria-label="مقعدٌ أكثر"
+                  aria-label={tr("مقعدٌ أكثر")}
                   disabled={seats >= left}
                   onClick={() => setSeats((value) => Math.min(left, value + 1))}
                 >
@@ -277,8 +277,8 @@ function BookSheet({
 
           <p className="t2-sheet-fine">
             {car
-              ? "لا يُخصم شيءٌ من محفظتك — والسيارةُ لك وحدَك، فلا يُحجز فيها مقعدٌ لغيرك."
-              : "يُخصم ثمنُ المقاعد من محفظتك لحظةَ الحجز، ويعود كاملاً إن ألغيتَ قبل الانطلاق أو أُلغيت الرحلة."}
+              ? tr("لا يُخصم شيءٌ من محفظتك — والسيارةُ لك وحدَك، فلا يُحجز فيها مقعدٌ لغيرك.")
+              : tr("يُخصم ثمنُ المقاعد من محفظتك لحظةَ الحجز، ويعود كاملاً إن ألغيتَ قبل الانطلاق أو أُلغيت الرحلة.")}
           </p>
 
           {failure ? (
@@ -288,7 +288,7 @@ function BookSheet({
                 <>
                   {" "}
                   <button type="button" className="t2-tlink accent t2-ic-topup" onClick={() => navigate("/wallet/topup")}>
-                    اشحن محفظتك
+                    {tr("اشحن محفظتك")}
                   </button>
                 </>
               ) : null}
@@ -307,7 +307,7 @@ function BookSheet({
                 });
               }}
             >
-              <span>{busy ? "نرسل…" : car ? "احجز السيارة — نقداً" : bookLabel(seats)}</span>
+              <span>{busy ? tr("نرسل…") : car ? tr("احجز السيارة — نقداً") : bookLabel(seats)}</span>
             </button>
           </div>
         </>
@@ -326,27 +326,27 @@ function BookedNote({ booked, onMine, onDone }: { booked: IntercityBooking; onMi
         <span className="t2-ic-done-icon" aria-hidden="true">
           <Icon name="check_circle" fill />
         </span>
-        <p className="t2-ic-done-title">{booked.whole_car ? "حُجزت السيارةُ كاملة" : `حُجز لك ${seatsCount(booked.seats)}`}</p>
+        <p className="t2-ic-done-title">{booked.whole_car ? tr("حُجزت السيارةُ كاملة") : tr("حُجز لك {0}", { 0: seatsCount(booked.seats) })}</p>
         <p className="t2-ic-done-body">
           {booked.payment === "wallet" ? (
             <>
-              خُصم <b className="t2-num">{amount}</b> من محفظتك.
+              {tr("خُصم")}{" "}<b className="t2-num">{amount}</b>{" "}{tr("من محفظتك.")}
             </>
           ) : (
             <>
-              تدفع <b className="t2-num">{amount}</b> نقداً للكبتن عند الانطلاق.
+              {tr("تدفع")}{" "}<b className="t2-num">{amount}</b>{" "}{tr("نقداً للكبتن عند الانطلاق.")}
             </>
           )}{" "}
-          تلتقي الكبتنَ في <b>{trip.route.from_point}</b> {tripDay(trip.departs_at)} الساعة{" "}
+          {tr("تلتقي الكبتنَ في")}{" "}<b>{trip.route.from_point}</b> {tripDay(trip.departs_at)}{" "}{tr("الساعة")}{" "}
           <span dir="ltr">{tripClock(trip.departs_at)}</span>.
         </p>
       </div>
       <div className="t2-drawer-actions">
         <button type="button" className="t2-button primary" onClick={onMine}>
-          حجوزاتي بين المدن
+          {tr("حجوزاتي بين المدن")}
         </button>
         <button type="button" className="t2-button t2-quiet" onClick={onDone}>
-          تمّ
+          {tr("تمّ")}
         </button>
       </div>
     </>
@@ -356,17 +356,17 @@ function BookedNote({ booked, onMine, onDone }: { booked: IntercityBooking; onMi
 // ══════════════════════════════════════════════════════════════════ «حجوزاتي بين المدن»
 
 const BOOKING_STATUS: Record<IntercityBooking["status"], { text: string; chip: string }> = {
-  booked: { text: "محجوز", chip: "t2-chip ok" },
-  completed: { text: "اكتملت", chip: "t2-chip" },
-  refunded: { text: "عاد مالُك", chip: "t2-chip" },
-  cancelled: { text: "أُلغي", chip: "t2-chip" },
+  booked: { text: tr("محجوز"), chip: "t2-chip ok" },
+  completed: { text: tr("اكتملت"), chip: "t2-chip" },
+  refunded: { text: tr("عاد مالُك"), chip: "t2-chip" },
+  cancelled: { text: tr("أُلغي"), chip: "t2-chip" },
 };
 
 /** **حالُ الرحلة حين لا تكفي حالُ الحجز** — حجزٌ قائمٌ في رحلةٍ انطلقت يُقال (فلا يُبحث عن زرِّ الإلغاء)، **وحجزٌ عاد مالُه لأن
  *  الرحلةَ أُلغيت يُقال سببُه** — كبتنٌ ألغى، أو لم يبلغ المحجوزُ حدَّه عند المهلة. */
 function tripNote(row: IntercityBooking): string | null {
-  if (row.trip.status === "departed" && row.status === "booked") return "انطلقت الرحلة";
-  if (row.trip.status === "cancelled") return "أُلغيت الرحلة — ولا شيءَ عليك";
+  if (row.trip.status === "departed" && row.status === "booked") return tr("انطلقت الرحلة");
+  if (row.trip.status === "cancelled") return tr("أُلغيت الرحلة — ولا شيءَ عليك");
   return null;
 }
 
@@ -379,7 +379,7 @@ export function IntercityBookingsT2Screen() {
 
   return (
     <div className="t2 t2-page t2-ic pb-nav">
-      <SubHeadT2 title="حجوزاتي بين المدن" onBack={goBack} />
+      <SubHeadT2 title={tr("حجوزاتي بين المدن")} onBack={goBack} />
 
       {error ? (
         <NoteT2 tone="danger" lead>
@@ -390,8 +390,8 @@ export function IntercityBookingsT2Screen() {
       {rows?.length === 0 ? (
         <BlankT2
           icon="route"
-          title="لا حجوزاتِ بعد"
-          hint={service ? "احجز مقعداً في رحلةٍ بين المدن يعلنها كبتنٌ بتصريح." : undefined}
+          title={tr("لا حجوزاتِ بعد")}
+          hint={service ? tr("احجز مقعداً في رحلةٍ بين المدن يعلنها كبتنٌ بتصريح.") : undefined}
         />
       ) : null}
 
@@ -410,7 +410,7 @@ export function IntercityBookingsT2Screen() {
       {service ? (
         <button type="button" className="t2-button secondary t2-wide t2-ic-new" onClick={() => navigate("/account/intercity")}>
           <Icon name="route" />
-          الرحلاتُ المفتوحة
+          {tr("الرحلاتُ المفتوحة")}
         </button>
       ) : null}
 
@@ -419,12 +419,12 @@ export function IntercityBookingsT2Screen() {
         onOpenChange={(open) => {
           if (!open) setAsking(null);
         }}
-        title="ألغِ الحجز؟"
+        title={tr("ألغِ الحجز؟")}
       >
         <p className="t2-drawer-text">
           {asking?.payment === "wallet"
-            ? "يعود مالُك كاملاً إلى محفظتك، ويعود مقعدُك متاحاً لغيرك."
-            : "لم تدفع شيئاً بعد — يُلغى حجزُ السيارة وتعود متاحةً لغيرك."}
+            ? tr("يعود مالُك كاملاً إلى محفظتك، ويعود مقعدُك متاحاً لغيرك.")
+            : tr("لم تدفع شيئاً بعد — يُلغى حجزُ السيارة وتعود متاحةً لغيرك.")}
         </p>
         <div className="t2-drawer-actions">
           <button
@@ -435,10 +435,10 @@ export function IntercityBookingsT2Screen() {
               setAsking(null);
             }}
           >
-            نعم، ألغِ الحجز
+            {tr("نعم، ألغِ الحجز")}
           </button>
           <button type="button" className="t2-button t2-quiet" onClick={() => setAsking(null)}>
-            تراجع
+            {tr("تراجع")}
           </button>
         </div>
       </DrawerT2>
@@ -484,10 +484,10 @@ function BookingCard({
         </span>
       </div>
       <div className="t2-ic-facts">
-        <span>{row.whole_car ? "السيارةُ كاملة" : seatsCount(row.seats)}</span>
+        <span>{row.whole_car ? tr("السيارةُ كاملة") : seatsCount(row.seats)}</span>
         <span>
           <b className="t2-num">{formatMoney(row.amount, row.trip.currency)}</b> ·{" "}
-          {row.payment === "wallet" ? "من محفظتك" : "نقداً للكبتن"}
+          {row.payment === "wallet" ? tr("من محفظتك") : tr("نقداً للكبتن")}
         </span>
       </div>
       {why ? <p className="t2-ic-trip-note">{why}</p> : null}
@@ -496,7 +496,7 @@ function BookingCard({
       {live && row.trip.status === "open" ? (
         <div className="t2-ic-actions">
           <button type="button" className="t2-tlink destroy" disabled={locked} onClick={onCancel}>
-            ألغِ الحجز
+            {tr("ألغِ الحجز")}
           </button>
         </div>
       ) : null}

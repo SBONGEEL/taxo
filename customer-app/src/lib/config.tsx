@@ -24,7 +24,7 @@ import { registerCurrencies } from "@/lib/utils";
 import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
-import type { FirebaseWebConfig } from "@/lib/firebase";
+import type { FirebaseWebConfig } from "@/lib/firebase"; import { tr } from "@/lib/i18n";
 
 interface ConfigState {
   config: AppConfig | null;
@@ -271,7 +271,7 @@ export function useMapboxToken(): string | null {
  *
  *  **وقبل وصول `/config` لا يُسمّى شيء**: غيابٌ لم يُقَس بعدُ ليس غياباً. */
 export const IOS_MAP_TOKEN_MISSING =
-  "الخريطة غير متاحة على iPhone حالياً — توكن الخرائط الخاص بـiOS غير مضبوط.";
+  tr("الخريطة غير متاحة على iPhone حالياً — توكن الخرائط الخاص بـiOS غير مضبوط.");
 
 export function useMapboxMissing(): string | null {
   const { config } = useConfig();

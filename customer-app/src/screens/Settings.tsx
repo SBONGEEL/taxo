@@ -18,7 +18,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
-import { getNotificationPreferences, setNotificationPreferences } from "@/api/endpoints";
+import { getNotificationPreferences, setNotificationPreferences, updateMyLanguage } from "@/api/endpoints";
 import { useGoBack } from "@/lib/back";
 import { useBrand } from "@/lib/brand";
 import { useConfig } from "@/lib/config";
@@ -37,14 +37,25 @@ import { AuthChoice, Icon, Switch } from "@/taxo2";
 import { SubHeadT2 } from "@/screens/t2/KitT2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { LANGUAGE_NAME, LANGUAGES, language, setLanguage, tr, type Language } from "@/lib/i18n";
 
 /** المظاهرُ الثلاثة بترتيبها — **النظامُ أوّلاً** كما كانت. */
 const THEMES = [
-  { value: "system" as const, label: "النظام" },
-  { value: "light" as const, label: "نهاري" },
-  { value: "dark" as const, label: "ليلي" },
+  { value: "system" as const, label: tr("النظام") },
+  { value: "light" as const, label: tr("نهاري") },
+  { value: "dark" as const, label: tr("ليلي") },
 ];
+
+/** **اللغة** (SPEC §٧٣-هـ المرحلة ٥) — اسمُ كلٍّ بلغته، فيعرفها من لا يقرأ الأخرى */
+const LANGUAGE_OPTIONS = LANGUAGES.map((value) => ({ value, label: LANGUAGE_NAME[value] }));
+
+/** **تُحفظ في الحساب ثمّ يُعاد تحميلُ التطبيق** — وإن تعذّر الحفظُ تتغيّر على الجهاز، والحسابُ يلحقها عند الدخول التالي */
+function changeLanguage(next: Language) {
+  if (next === language) return;
+  void updateMyLanguage(next)
+    .catch(() => undefined)
+    .finally(() => setLanguage(next));
+}
 
 export function SettingsScreen() {
   const goBack = useGoBack("/account");
@@ -78,20 +89,20 @@ export function SettingsScreen() {
     } catch (caught) {
       setMarketing(!value);
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر حفظ الإعداد",
+        caught instanceof ApiError ? caught.message : tr("تعذّر حفظ الإعداد"),
       );
     }
   }
 
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="الإعدادات" onBack={goBack} />
+      <SubHeadT2 title={tr("الإعدادات")} onBack={goBack} />
 
-      <Group label="الإشعارات">
+      <Group label={tr("الإشعارات")}>
         <Toggle
           icon="campaign"
-          title="إشعارات العروض والكوبونات"
-          hint="عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً."
+          title={tr("إشعارات العروض والكوبونات")}
+          hint={tr("عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً.")}
           on={marketing === true}
           disabled={marketing === null}
           onToggle={() => void toggleMarketing(!marketing)}
@@ -104,8 +115,8 @@ export function SettingsScreen() {
         ) : null}
         <Toggle
           icon="notifications"
-          title="صوت الإشعارات"
-          hint="نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات."
+          title={tr("صوت الإشعارات")}
+          hint={tr("نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات.")}
           on={notifySound}
           onToggle={() => {
             const next = !notifySound;
@@ -122,8 +133,8 @@ export function SettingsScreen() {
           <div className="t2-srow">
             <Icon name="bedtime" className="t2-srow-icon" />
             <span className="t2-srow-main">
-              <span className="t2-srow-title">ساعات الهدوء</span>
-              <span className="t2-srow-hint">تخصّ الحملات التسويقية وحدها — إشعارات رحلتك تصلك في أي وقت.</span>
+              <span className="t2-srow-title">{tr("ساعات الهدوء")}</span>
+              <span className="t2-srow-hint">{tr("تخصّ الحملات التسويقية وحدها — إشعارات رحلتك تصلك في أي وقت.")}</span>
             </span>
             <span dir="ltr" className="t2-srow-value">
               {country.quiet_hours_start} – {country.quiet_hours_end}
@@ -132,12 +143,19 @@ export function SettingsScreen() {
         ) : null}
       </Group>
 
-      <Group label="التطبيق">
+      <Group label={tr("التطبيق")}>
         <div className="t2-srow tall">
           <Icon name="dark_mode" className="t2-srow-icon" />
           <span className="t2-srow-main">
-            <span className="t2-srow-title">مظهر التطبيق</span>
-            <AuthChoice label="مظهر التطبيق" value={choice} options={THEMES} onChange={setChoice} />
+            <span className="t2-srow-title">{tr("مظهر التطبيق")}</span>
+            <AuthChoice label={tr("مظهر التطبيق")} value={choice} options={THEMES} onChange={setChoice} />
+          </span>
+        </div>
+        <div className="t2-srow tall">
+          <Icon name="translate" className="t2-srow-icon" />
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">{tr("اللغة")}</span>
+            <AuthChoice label={tr("اللغة")} value={language} options={LANGUAGE_OPTIONS} onChange={changeLanguage} />
           </span>
         </div>
         {/* السِمة الوردية — **إقرارُها وحده يكفي** (البند 6): عرضٌ بصريٌّ لا
@@ -148,8 +166,8 @@ export function SettingsScreen() {
           <Toggle
             icon="woman"
             women
-            title="السِمة الوردية"
-            hint="هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك."
+            title={tr("السِمة الوردية")}
+            hint={tr("هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك.")}
             on={pink}
             onToggle={() => setPink(!pink)}
           />
@@ -158,8 +176,8 @@ export function SettingsScreen() {
             إسكاته على هاتفه في البيت. ومفعَّلةٌ افتراضياً، فالصوتُ ميزةٌ يُطفئها صاحبُها لا ميزةٌ تنتظر إشعالاً */}
         <Toggle
           icon="volume_up"
-          title="أصوات التطبيق"
-          hint="نغماتٌ قصيرة عند قبول الكبتن ووصوله واكتمال الدفع."
+          title={tr("أصوات التطبيق")}
+          hint={tr("نغماتٌ قصيرة عند قبول الكبتن ووصوله واكتمال الدفع.")}
           on={sounds}
           onToggle={() => {
             const next = !sounds;
@@ -171,8 +189,8 @@ export function SettingsScreen() {
         />
         <Toggle
           icon="bug_report"
-          title="إرسال تقارير الأعطال"
-          hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يساعدنا نعرف أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
+          title={tr("إرسال تقارير الأعطال")}
+          hint={tr("تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يساعدنا نعرف أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.")}
           on={crashReports}
           onToggle={() => {
             const next = !crashReports;
@@ -186,14 +204,14 @@ export function SettingsScreen() {
           بلا بصمةٍ مسجَّلة. **والغيابُ الصامتُ عائلةُ «الشبكة ضعيفة»** (تصحيحُ المالك 2026-08-29): سطرٌ يقول **ما يفعله
           القارئ** ولا يدّعي سبباً لا يعرفه. وفي المتصفّح لا مجموعةَ ولا سطرَ ولا مفتاح — `native` كاذبة. */}
       {biometry?.available || biometry?.native ? (
-        <Group label="الدخول">
+        <Group label={tr("الدخول")}>
           {biometry.native && !biometry.available ? (
             <div className="t2-srow">
               <Icon name="fingerprint" className="t2-srow-icon" />
               <span className="t2-srow-main">
-                <span className="t2-srow-title">الدخول السريع</span>
+                <span className="t2-srow-title">{tr("الدخول السريع")}</span>
                 <span className="t2-srow-hint">
-                  فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.
+                  {tr("فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.")}
                 </span>
               </span>
             </div>
@@ -201,14 +219,14 @@ export function SettingsScreen() {
           {biometry.available ? (
             <Toggle
               icon="fingerprint"
-              title={`الدخول بـ${biometryLabel(biometry.kind)}`}
-              hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
+              title={tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}
+              hint={tr("يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.")}
               on={biometry.enabled}
               onToggle={() => {
                 setBioError(null);
                 void setBiometric(!biometry.enabled).catch((caught: unknown) => {
                   // **الرفضُ يُقال ولا يُقلب مفتاحاً**
-                  setBioError(caught instanceof Error ? caught.message : "تعذّر تفعيل الدخول بالبصمة");
+                  setBioError(caught instanceof Error ? caught.message : tr("تعذّر تفعيل الدخول بالبصمة"));
                 });
               }}
             />

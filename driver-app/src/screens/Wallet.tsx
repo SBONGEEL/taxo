@@ -37,7 +37,7 @@ import {
   isDebit,
   unsigned,
 } from "@/lib/walletFormat";
-import { digits, cn, zeroAmount } from "@/lib/utils";
+import { digits, cn, zeroAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const PAGE_SIZE = 20;
 
@@ -86,7 +86,7 @@ export function useWalletScreen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة المحفظة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة المحفظة"),
       ),
     );
   }, [load]);
@@ -99,7 +99,7 @@ export function useWalletScreen() {
       setMore(page.length === PAGE_SIZE);
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الحركات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الحركات"),
       );
     } finally {
       setBusy(false);
@@ -161,27 +161,27 @@ export function WalletScreen() {
     <div className="relative h-full bg-bg">
       <div className="scr h-full px-16 pb-nav pt-safe">
         <div className="mb-16 mt-6 flex items-center justify-between">
-          <h1 className="text-20 font-bold text-ink">المحفظة</h1>
+          <h1 className="text-20 font-bold text-ink">{tr("المحفظة")}</h1>
           <div className="flex gap-8">
             <button
               type="button"
               onClick={() => navigate("/wallet/earnings")}
               className="pressable rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
             >
-              أرباحي
+              {tr("أرباحي")}
             </button>
             <button
               type="button"
               onClick={() => navigate("/wallet/withdrawals")}
               className="pressable rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
             >
-              طلبات السحب
+              {tr("طلبات السحب")}
             </button>
           </div>
         </div>
 
         <section className="mb-12 rounded-20 border border-line bg-surface p-20">
-          <div className="text-12 text-muted">الرصيد المتاح</div>
+          <div className="text-12 text-muted">{tr("الرصيد المتاح")}</div>
           <div className="mb-4 mt-2 text-34 font-bold leading-hero text-ink">
             {digits(wallet.available_for_withdrawal)}{" "}
             <span className="text-14 font-medium text-muted">{currency}</span>
@@ -192,13 +192,13 @@ export function WalletScreen() {
               أن شيئاً ضاع، والرقمان كلاهما من الخلفية */}
           {holds.length === 1 ? (
             <p className="text-11.5 text-warn">
-              محجوز لطلب سحب معلّق: {digits(holds[0].amount)} {currency} —
-              من أصل {digits(wallet.balance)} {currency}
+              {tr("محجوز لطلب سحب معلّق:")}{" "}{digits(holds[0].amount)} {currency}{" "}{tr("— من أصل")}{" "}
+{digits(wallet.balance)} {currency}
             </p>
           ) : holds.length > 1 ? (
             <p className="text-11.5 text-warn">
-              لديك {digits(String(holds.length))} طلبات سحب قائمة تحجز من
-              رصيدك — تفصيلُها في «طلبات السحب».
+              {tr("لديك")}{" "}{digits(String(holds.length))}{" "}{tr("طلبات سحب قائمة تحجز من رصيدك — تفصيلُها في «طلبات السحب».")}
+
             </p>
           ) : null}
 
@@ -208,8 +208,8 @@ export function WalletScreen() {
               مفتاح التسعير: ذاك لا يراه أحدٌ خارج اللوحة، وهذا مالُ إنسان. */}
           {payoutStopped && holds.some((hold) => hold.status === "approved") ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              اعتُمد طلبُك، والصرفُ متوقّفٌ مؤقّتاً — يبقى طلبُك في مكانه ويصلك
-              حين يُستأنف. ولا شيءَ نقص من رصيدك.
+              {tr("اعتُمد طلبُك، والصرفُ متوقّفٌ مؤقّتاً — يبقى طلبُك في مكانه ويصلك حين يُستأنف. ولا شيءَ نقص من رصيدك.")}
+
             </p>
           ) : null}
 
@@ -220,8 +220,8 @@ export function WalletScreen() {
               معلّقاً بلا سبب يظن العطبَ في المنصّة فيسأل الدعم */}
           {Number(wallet.pending_compensation) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              مستحقاتٌ معلّقة: {digits(wallet.pending_compensation)} {currency}
-              {" "}— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.
+              {tr("مستحقاتٌ معلّقة:")}{" "}{digits(wallet.pending_compensation)} {currency}
+              {" "}{tr("— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.")}
             </p>
           ) : null}
 
@@ -232,9 +232,9 @@ export function WalletScreen() {
               «اشحن» فعلٌ يفعله، و«معلّق» خبرٌ يقرؤه ولا يفعل به شيئاً */}
           {Number(wallet.carrier_dues) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              مبلغٌ مستوفى لكبتنٍ آخر: {digits(wallet.carrier_dues)}{" "}
-              {currency} — استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما
-              يكفي رصيدُها. اشحن المحفظة ليصله.
+              {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{digits(wallet.carrier_dues)}{" "}
+              {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
+
             </p>
           ) : null}
 
@@ -245,13 +245,13 @@ export function WalletScreen() {
               يقرأ صفراً بلا شرطٍ يظنّه دائماً */}
           {Number(wallet.commission_this_month) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
-              عمولة TAXO هذا الشهر: {digits(wallet.commission_this_month)}{" "}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(wallet.commission_this_month)}{" "}
               {currency}
             </p>
           ) : Number(profile?.commission_percent ?? 0) === 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
-              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — صفر عمولة ما
-              دام اشتراكك سارياً.
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— صفر عمولة ما دام اشتراكك سارياً.")}
+
             </p>
           ) : (
             /* **وصفرُ الشهر ليس صفرَ النسبة** (عطبٌ مقيسٌ ٢٠٢٦-٠٩-٠٩): مجموعُ
@@ -260,16 +260,16 @@ export function WalletScreen() {
                الأخرى من التطبيق نفسِه. **فالوعدُ يُشرط بالنسبة لا بالمجموع**،
                والنسبةُ تُقرأ من بابها لا تُكتب هنا. */
             <p className="mt-8 text-11.5 leading-note text-muted">
-              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — ونسبتُك{" "}
-              {digits(String(Number(profile?.commission_percent)))}٪ على ما
-              تقبضه.
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— ونسبتُك")}{" "}
+              {digits(String(Number(profile?.commission_percent)))}{tr("٪ على ما تقبضه.")}
+
             </p>
           )}
 
           {wallet.frozen ? (
             <p className="mt-8 text-11.5 leading-note text-danger">
-              محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع
-              الإدارة التجميد.
+              {tr("محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع الإدارة التجميد.")}
+
             </p>
           ) : (
             <Button
@@ -280,7 +280,7 @@ export function WalletScreen() {
                 setSheet(true);
               }}
             >
-              طلب سحب
+              {tr("طلب سحب")}
             </Button>
           )}
         </section>
@@ -291,13 +291,13 @@ export function WalletScreen() {
         ) : null}
 
         <h2 className="mb-10 mt-16 px-2 text-13 font-bold text-muted">
-          الحركات
+          {tr("الحركات")}
         </h2>
 
         {entries.length === 0 ? (
           <EmptyNote
-            title="لا حركات بعد"
-            hint="أرباحُ رحلاتك وعمولاتها واشتراكاتك تظهر هنا سطراً سطراً."
+            title={tr("لا حركات بعد")}
+            hint={tr("أرباحُ رحلاتك وعمولاتها واشتراكاتك تظهر هنا سطراً سطراً.")}
           />
         ) : null}
 
@@ -324,7 +324,7 @@ export function WalletScreen() {
                     {/* **«عمولة TAXO» باسمها لا «عمولة المنصة»** — الاسمُ الذي
                         وُعد به الكبتن هو الاسمُ الذي يقرؤه في كشفه */}
                     {entry.type === "commission"
-                      ? "عمولة TAXO"
+                      ? tr("عمولة TAXO")
                       : TRANSACTION_LABEL[entry.type]}
                   </div>
                   <div className="text-11 text-muted">
@@ -334,7 +334,7 @@ export function WalletScreen() {
                         صارت نسبةُ السوق عشرين. و`null` لا تُطبع صفراً */}
                     {entry.commission_percent !== null &&
                     entry.commission_percent !== undefined ? (
-                      <> · {digits(entry.commission_percent)}٪</>
+                      <> · {digits(entry.commission_percent)}{tr("٪")}</>
                     ) : null}
                   </div>
                 </div>
@@ -350,7 +350,7 @@ export function WalletScreen() {
                     {digits(unsigned(entry.amount))}
                   </div>
                   <div className="text-10 text-muted">
-                    الرصيد {digits(entry.balance_after)}
+                    {tr("الرصيد")}{" "}{digits(entry.balance_after)}
                   </div>
                 </div>
               </StaggerItem>
@@ -365,7 +365,7 @@ export function WalletScreen() {
             onClick={() => void loadMore()}
             className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
           >
-            {busy ? "…" : "عرض المزيد"}
+            {busy ? "…" : tr("عرض المزيد")}
           </button>
         ) : null}
       </div>
@@ -379,7 +379,7 @@ export function WalletScreen() {
           onClose={() => setSheet(false)}
           onDone={() => {
             setSheet(false);
-            setDone("أُرسل طلب السحب — بانتظار الموافقة");
+            setDone(tr("أُرسل طلب السحب — بانتظار الموافقة"));
             void load();
           }}
         />

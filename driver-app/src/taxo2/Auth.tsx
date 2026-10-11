@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 
 import { Icon } from "./Icon";
-import "./auth.css";
+import "./auth.css"; import { tr } from "@/lib/i18n";
 
 /** الصفحة — **من الحافة إلى الحافة، والمحتوى داخل المنطقة الآمنة** (§٦٢/٩). */
 export function AuthPage({ children }: { children: ReactNode }) {
@@ -23,7 +23,7 @@ export function AuthTop({ onBack, step, total }: { onBack?: () => void; step?: n
   return (
     <div className="t2-auth-top">
       {onBack ? (
-        <button type="button" className="t2-auth-back" onClick={onBack} aria-label="رجوع">
+        <button type="button" className="t2-auth-back" onClick={onBack} aria-label={tr("رجوع")}>
           <Icon name="arrow_forward" />
         </button>
       ) : null}
@@ -34,7 +34,7 @@ export function AuthTop({ onBack, step, total }: { onBack?: () => void; step?: n
               <span key={index} className={index < step ? "on" : undefined} />
             ))}
           </div>
-          <span className="t2-auth-count" aria-label={`الخطوة ${step} من ${total}`}>
+          <span className="t2-auth-count" aria-label={tr("الخطوة {0} من {1}", { 0: step, 1: total })}>
             {step} / {total}
           </span>
         </>
@@ -133,7 +133,7 @@ export function AuthSecret({ invalid, ...input }: InputProps) {
         type="button"
         className="t2-auth-eye"
         onClick={() => setShown((value) => !value)}
-        aria-label={shown ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+        aria-label={shown ? tr("إخفاء كلمة المرور") : tr("إظهار كلمة المرور")}
       >
         <Icon name={shown ? "visibility_off" : "visibility"} />
       </button>
@@ -218,7 +218,7 @@ export function AuthConsent({
         <span className="t2-auth-box" aria-hidden="true">
           <Icon name="check" />
         </span>
-        <span>قرأتُ ووافقتُ على الوثيقتين أدناه.</span>
+        <span>{tr("قرأتُ ووافقتُ على الوثيقتين أدناه.")}</span>
       </button>
       <div className="t2-auth-docs">
         {docs.map((doc) => (
@@ -269,7 +269,7 @@ export function AuthCode({
         ref={input}
         inputMode="numeric"
         autoComplete="one-time-code"
-        aria-label="رمز التحقق"
+        aria-label={tr("رمز التحقق")}
         aria-invalid={invalid || undefined}
         maxLength={length}
         value={value}
@@ -284,5 +284,5 @@ export function AuthCode({
 
 /** «أو» بين خطّين (R02). */
 export function AuthOr() {
-  return <div className="t2-auth-or">أو</div>;
+  return <div className="t2-auth-or">{tr("أو")}</div>;
 }

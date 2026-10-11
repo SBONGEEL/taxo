@@ -11,7 +11,7 @@
  */
 
 import type { Ride } from "@/api/types";
-import { Icon } from "@/taxo2";
+import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** **المستلم** — «المستلم: الاسم» وعنوانُ التسليم تحته، وزرُّ `tel:` بالرقم كما طبّعته الخلفيةُ E.164. **ولا يُرسم بلا اسم**:
  *  الثلاثةُ تُنشر من القبول حتى الانتهاء وحدَه، وصفٌّ فارغٌ يُقرأ عطباً. */
@@ -24,16 +24,16 @@ export function RecipientRowT2({ ride }: { ride: Ride }) {
       </span>
       <div className="t2-rd-rider-main">
         <div className="t2-rd-rider-name">
-          {ride.parcel_fetch ? "يسلّمك" : "المستلم"}: {ride.recipient_name}
+          {ride.parcel_fetch ? tr("يسلّمك") : tr("المستلم")}: {ride.recipient_name}
         </div>
         {ride.recipient_address ? <div className="t2-rd-rider-sub">{ride.recipient_address}</div> : null}
-        {ride.parcel_fetch && ride.parcel_item ? <div className="t2-rd-rider-sub">الغرض: {ride.parcel_item}</div> : null}
+        {ride.parcel_fetch && ride.parcel_item ? <div className="t2-rd-rider-sub">{tr("الغرض:")}{" "}{ride.parcel_item}</div> : null}
       </div>
       {ride.recipient_phone ? (
         <a
           className="t2-fo-call"
           href={`tel:${ride.recipient_phone}`}
-          aria-label={ride.parcel_fetch ? "اتصل بمن يسلّمك الغرض" : "اتصل بالمستلم"}
+          aria-label={ride.parcel_fetch ? tr("اتصل بمن يسلّمك الغرض") : tr("اتصل بالمستلم")}
         >
           <Icon name="call" />
         </a>
@@ -54,7 +54,7 @@ export function RefuseParcelButtonT2({
 }) {
   return (
     <button type="button" className="t2-rd-btn ghost" onClick={onOpen} disabled={busy}>
-      {fetch ? "ارفض الغرض" : "ارفض الطرد"}
+      {fetch ? tr("ارفض الغرض") : tr("ارفض الطرد")}
     </button>
   );
 }
@@ -73,15 +73,15 @@ export function RefuseParcelSheetT2({
 }) {
   return (
     <div className="t2-rd-cx-shade">
-      <div className="t2-rd-cx-sheet" role="dialog" aria-label={fetch ? "ارفض الغرض" : "ارفض الطرد"}>
+      <div className="t2-rd-cx-sheet" role="dialog" aria-label={fetch ? tr("ارفض الغرض") : tr("ارفض الطرد")}>
         <div className="t2-rd-grab" />
-        <h2 className="t2-rd-cx-title">{fetch ? "ترفض الغرض عند الاستلام؟" : "ترفض الطرد عند الاستلام؟"}</h2>
-        <p className="t2-rd-cx-note">تُلغى الرحلةُ بلا مالٍ على أحد.</p>
+        <h2 className="t2-rd-cx-title">{fetch ? tr("ترفض الغرض عند الاستلام؟") : tr("ترفض الطرد عند الاستلام؟")}</h2>
+        <p className="t2-rd-cx-note">{tr("تُلغى الرحلةُ بلا مالٍ على أحد.")}</p>
         <button type="button" className="t2-rd-cx-confirm" disabled={busy} onClick={onConfirm}>
-          {fetch ? "نعم، ارفض الغرض" : "نعم، ارفض الطرد"}
+          {fetch ? tr("نعم، ارفض الغرض") : tr("نعم، ارفض الطرد")}
         </button>
         <button type="button" className="t2-rd-cancel" onClick={onClose}>
-          تراجع
+          {tr("تراجع")}
         </button>
       </div>
     </div>

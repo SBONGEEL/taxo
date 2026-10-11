@@ -24,12 +24,12 @@ import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 const ICONS: { value: PlaceIcon; label: string; icon: string }[] = [
-  { value: "home", label: "المنزل", icon: "home" },
-  { value: "work", label: "العمل", icon: "work" },
-  { value: "star", label: "مكان", icon: "star" },
+  { value: "home", label: tr("المنزل"), icon: "home" },
+  { value: "work", label: tr("العمل"), icon: "work" },
+  { value: "star", label: tr("مكان"), icon: "star" },
 ];
 
 /** أيقونةُ المكان — و**المجهولُ نجمة** لا فراغ: نوعٌ جديد في الخلفية يظهر بشكلٍ محايد بدل أن يختفي الصف. */
@@ -53,7 +53,7 @@ export function PlacesScreen() {
       await refresh();
       setEditing(null);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"));
     } finally {
       setBusy(false);
     }
@@ -61,7 +61,7 @@ export function PlacesScreen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="الأماكن المحفوظة" onBack={goBack} />
+      <SubHeadT2 title={tr("الأماكن المحفوظة")} onBack={goBack} />
 
       {error ? (
         <NoteT2 tone="danger" lead>
@@ -72,8 +72,8 @@ export function PlacesScreen() {
       {places.length === 0 ? (
         <BlankT2
           icon="bookmark"
-          title="لا أماكن محفوظة بعد"
-          hint="احفظ وجهةً من رحلاتك الأخيرة أدناه، فتصير ضغطةً واحدة في المرة القادمة"
+          title={tr("لا أماكن محفوظة بعد")}
+          hint={tr("احفظ وجهةً من رحلاتك الأخيرة أدناه، فتصير ضغطةً واحدة في المرة القادمة")}
         />
       ) : (
         <div className="t2-list">
@@ -94,10 +94,10 @@ export function PlacesScreen() {
                 </span>
                 <div className="t2-plc-main">
                   <p className="t2-plc-label">{place.label}</p>
-                  <p className="t2-plc-addr">{place.address ?? "نقطة على الخريطة"}</p>
+                  <p className="t2-plc-addr">{place.address ?? tr("نقطة على الخريطة")}</p>
                 </div>
                 <button type="button" className="t2-tlink" onClick={() => setEditing(place)}>
-                  تعديل
+                  {tr("تعديل")}
                 </button>
                 <ConfirmDelete busy={busy} onConfirm={() => void run(() => deletePlace(place.id))} />
               </div>
@@ -110,7 +110,7 @@ export function PlacesScreen() {
           إلى خريطةٍ ثانية في هذه الصفحة */}
       {recents.length > 0 ? (
         <section>
-          <div className="t2-section">احفظ من وجهاتك الأخيرة</div>
+          <div className="t2-section">{tr("احفظ من وجهاتك الأخيرة")}</div>
           {naming ? (
             /* **الاسمُ يُسأل قبل الحفظ لا بعده**: عنوانٌ كاملٌ اسماً
                («شارع … ، عمّان، الأردن») لا يُقرأ اختصاراً على الرئيسية،
@@ -147,7 +147,7 @@ export function PlacesScreen() {
                 <Icon name="location_on" />
                 <span className="t2-recent-addr">{recent.address}</span>
                 <button type="button" className="t2-tlink accent" disabled={busy} onClick={() => setNaming(recent)}>
-                  احفظ
+                  {tr("احفظ")}
                 </button>
               </div>
             ))}
@@ -178,11 +178,11 @@ function PlaceForm({
 
   return (
     <div className="t2-plc-form">
-      <AuthBlock label="اسم المكان" htmlFor={id}>
+      <AuthBlock label={tr("اسم المكان")} htmlFor={id}>
         <AuthInput id={id} value={label} maxLength={60} onChange={(event) => setLabel(event.target.value)} />
       </AuthBlock>
       {/* **اختيارُ R03 بأيقونة كلِّ خيار** — الأيقونةُ هي ما يُختار هنا */}
-      <div className="t2-auth-choice" role="group" aria-label="أيقونة المكان">
+      <div className="t2-auth-choice" role="group" aria-label={tr("أيقونة المكان")}>
         {ICONS.map((option) => (
           <button
             key={option.value}
@@ -203,10 +203,10 @@ function PlaceForm({
           aria-busy={busy}
           onClick={() => onSave(label.trim(), icon)}
         >
-          حفظ
+          {tr("حفظ")}
         </button>
         <button type="button" className="t2-cbtn soft grow" onClick={onCancel}>
-          إلغاء
+          {tr("إلغاء")}
         </button>
       </div>
     </div>
@@ -219,7 +219,7 @@ function ConfirmDelete({ busy, onConfirm }: { busy: boolean; onConfirm: () => vo
 
   if (!armed) {
     return (
-      <button type="button" aria-label="حذف" className="t2-ibtn destroy" onClick={() => setArmed(true)}>
+      <button type="button" aria-label={tr("حذف")} className="t2-ibtn destroy" onClick={() => setArmed(true)}>
         <Icon name="delete" />
       </button>
     );
@@ -227,10 +227,10 @@ function ConfirmDelete({ busy, onConfirm }: { busy: boolean; onConfirm: () => vo
   return (
     <span className="t2-plc-confirm">
       <button type="button" className="t2-tlink destroy" disabled={busy} onClick={onConfirm}>
-        تأكيد
+        {tr("تأكيد")}
       </button>
       <button type="button" className="t2-tlink muted" onClick={() => setArmed(false)}>
-        تراجع
+        {tr("تراجع")}
       </button>
     </span>
   );

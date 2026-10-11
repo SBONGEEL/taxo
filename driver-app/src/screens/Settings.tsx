@@ -45,7 +45,7 @@ import {
 } from "@/lib/sound";
 import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
-import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
+import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports"; import { tr } from "@/lib/i18n";
 
 /** **حالُ الإعدادات وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة وC15 في `screens/t2`).
  *
@@ -103,7 +103,7 @@ export function useCaptainSettings() {
     } catch (caught) {
       setMarketing(!next);
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل",
+        caught instanceof ApiError ? caught.message : tr("تعذّر حفظ التفضيل"),
       );
     }
   }
@@ -115,9 +115,9 @@ export function useCaptainSettings() {
     try {
       await updateDriver({ cliq_alias: alias.trim() });
       await refresh();
-      setDone("حُفظ ✓");
+      setDone(tr("حُفظ ✓"));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"));
     } finally {
       setSavingAlias(false);
     }
@@ -132,9 +132,9 @@ export function useCaptainSettings() {
     try {
       await updateDriver({ gender_preference: next });
       await refresh();
-      setDone("حُفظ ✓");
+      setDone(tr("حُفظ ✓"));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"));
     } finally {
       setSavingPreference(false);
     }
@@ -150,7 +150,7 @@ export function useCaptainSettings() {
       await updateDriver({ accepts_airport: !acceptsAirport });
       await refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الحفظ"));
     } finally {
       setSavingAirport(false);
     }
@@ -165,7 +165,7 @@ export function useCaptainSettings() {
       setBioError(
         caught instanceof Error
           ? caught.message
-          : "تعذّر تفعيل الدخول بالبصمة",
+          : tr("تعذّر تفعيل الدخول بالبصمة"),
       );
     });
   }
@@ -279,12 +279,12 @@ export function SettingsScreen() {
         <button
           type="button"
           onClick={() => goBack()}
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           className="pressable text-18 text-muted"
         >
           →
         </button>
-        <h1 className="text-20 font-bold text-ink">الإعدادات</h1>
+        <h1 className="text-20 font-bold text-ink">{tr("الإعدادات")}</h1>
       </div>
 
       {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن
@@ -308,16 +308,16 @@ export function SettingsScreen() {
           باسم «الدخول ببصمة الإصبع». */}
       {biometry?.native && !biometry.available ? (
         <section className="mb-12 card p-15">
-          <p className="text-13.5 font-semibold text-ink">الدخول السريع</p>
-          <p className="mt-4 text-11 leading-snug text-muted">فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.</p>
+          <p className="text-13.5 font-semibold text-ink">{tr("الدخول السريع")}</p>
+          <p className="mt-4 text-11 leading-snug text-muted">{tr("فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.")}</p>
         </section>
       ) : null}
 
       {biometry?.available ? (
         <section className="mb-12 card p-15">
           <SoundToggle
-            title={`الدخول بـ${biometryLabel(biometry.kind)}`}
-            hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
+            title={tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}
+            hint={tr("يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.")}
             on={biometry.enabled}
             onToggle={toggleBiometric}
           />
@@ -331,8 +331,8 @@ export function SettingsScreen() {
           الثالثَ أدناه. وكلُّها **على الجهاز لا الحساب** كالسِمة */}
       <section className="mb-12 card p-15">
         <SoundToggle
-          title="أصوات التطبيق"
-          hint="المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب."
+          title={tr("أصوات التطبيق")}
+          hint={tr("المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب.")}
           on={sounds}
           onToggle={toggleSounds}
         />
@@ -342,8 +342,8 @@ export function SettingsScreen() {
               أسكت ما عدا الطلب، **وأسكت واحدةً من ثمان**. صار يحكم كلَّ ما
               عدا الطلبَ وانقضاءَه */}
           <SoundToggle
-            title="أصوات الرحلة والإشعارات"
-            hint="بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب."
+            title={tr("أصوات الرحلة والإشعارات")}
+            hint={tr("بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب.")}
             on={otherSounds}
             onToggle={toggleOtherSounds}
           />
@@ -355,8 +355,8 @@ export function SettingsScreen() {
               ويلوم التطبيق — والعلاقةُ بين ما أطفأه وما خسره لا تظهر له. فلا
               يُسكتها إلا من قصدها بعينها، وهذا النصُّ يقول ذلك صراحةً */}
           <SoundToggle
-            title="نغمة الطلب الوارد"
-            hint="تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات."
+            title={tr("نغمة الطلب الوارد")}
+            hint={tr("تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات.")}
             on={offerSound}
             onToggle={toggleOfferSound}
           />
@@ -365,8 +365,8 @@ export function SettingsScreen() {
 
       <section className="mb-12 card p-15">
         <SoundToggle
-          title="إرسال تقارير الأعطال"
-          hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
+          title={tr("إرسال تقارير الأعطال")}
+          hint={tr("تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.")}
           on={crashReports}
           onToggle={toggleCrashReports}
         />
@@ -381,10 +381,10 @@ export function SettingsScreen() {
         >
           <span className="flex-1">
             <span className="block text-13.5 font-semibold text-ink">
-              إشعارات العروض والحملات
+              {tr("إشعارات العروض والحملات")}
             </span>
             <span className="block text-11 leading-snug text-muted">
-              إطفاؤها لا يمنع إشعارات الطلبات والرحلات إطلاقاً
+              {tr("إطفاؤها لا يمنع إشعارات الطلبات والرحلات إطلاقاً")}
             </span>
           </span>
           <span
@@ -404,7 +404,7 @@ export function SettingsScreen() {
 
         <div className="mt-13 border-t border-line pt-13">
           <div className="flex items-center justify-between">
-            <div className="text-13 font-semibold text-ink">ساعات الهدوء</div>
+            <div className="text-13 font-semibold text-ink">{tr("ساعات الهدوء")}</div>
             {quietHours ? (
               <span dir="ltr" className="text-12.5 font-bold text-ink">
                 {quietHours}
@@ -413,9 +413,9 @@ export function SettingsScreen() {
           </div>
           <div className="mt-4 text-11 leading-snug text-muted">
             {country?.quiet_hours_timezone
-              ? `بتوقيت ${country.quiet_hours_timezone}. `
+              ? tr("بتوقيت {0}. ", { 0: country.quiet_hours_timezone })
               : ""}
-            تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.
+            {tr("تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.")}
           </div>
         </div>
       </section>
@@ -426,9 +426,9 @@ export function SettingsScreen() {
           onClick={toggle}
           className="pressable flex w-full items-center justify-between px-15 py-14"
         >
-          <span className="text-13.5 font-semibold text-ink">المظهر</span>
+          <span className="text-13.5 font-semibold text-ink">{tr("المظهر")}</span>
           <span className="text-12.5 text-muted">
-            {choice === "dark" ? "ليلي" : "نهاري"}
+            {choice === "dark" ? tr("ليلي") : tr("نهاري")}
           </span>
         </button>
 
@@ -445,13 +445,13 @@ export function SettingsScreen() {
           >
             <span>
               <span className="block text-13.5 font-semibold text-ink">
-                السِمة الوردية
+                {tr("السِمة الوردية")}
               </span>
               {/* السببُ مكتوبٌ لأنه ليس ذوقاً: الشاشة تُرى، وإطفاؤها قرارٌ
                   عن المكان الذي أنت فيه لا عن جمال اللون */}
               <span className="mt-3 block text-11 leading-snug text-muted">
-                هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من
-                حولك.
+                {tr("هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك.")}
+
               </span>
             </span>
             <span
@@ -481,11 +481,11 @@ export function SettingsScreen() {
               أُقلّ» عنوانُ الحقل داخله: التصميمُ يجمع تحت «الطلبات» ما يحكم ما
               يصل الكبتنَ من عمل، وعنوانٌ واحدٌ للقسم والحقل يجعل القسمَ حقلاً */}
           <h2 className="mb-8 text-11 font-bold tracking-map text-muted">
-            الطلبات
+            {tr("الطلبات")}
           </h2>
-          <h3 className="mb-4 text-13.5 font-bold text-ink">من أُقلّ</h3>
+          <h3 className="mb-4 text-13.5 font-bold text-ink">{tr("من أُقلّ")}</h3>
           <p className="mb-10 text-11 leading-snug text-muted">
-            يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.
+            {tr("يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.")}
           </p>
           <div className="grid grid-cols-3 gap-8">
             {(
@@ -518,20 +518,20 @@ export function SettingsScreen() {
               نسخةٍ من هذه الميزة: راكبٌ اختار «الجميع» لا تصله رحلةُ كبتنةٍ
               قصرت عملَها على النساء. فبلا هذا النصّ يُقرأ التضييقُ عطباً */}
           <div className="mt-14 rounded-12 border border-line bg-surface-2 p-12">
-            <p className="text-12 font-semibold text-ink">كيف تعمل المطابقة</p>
+            <p className="text-12 font-semibold text-ink">{tr("كيف تعمل المطابقة")}</p>
             <p className="mt-4 text-11.5 leading-relaxed text-muted">
-              تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه
-              — الاتجاهان معاً. فراكبٌ اختار «الجميع» لن تصله رحلتُك إن كان
-              تفضيلُك «النساء فقط».
+              {tr("تصلك الرحلة فقط إذا قبِل تفضيلُ الراكب جنسَك، وقبِل تفضيلُك جنسَه — الاتجاهان معاً. فراكبٌ اختار «الجميع» لن تصله رحلتُك إن كان تفضيلُك «النساء فقط».")}
+
+
             </p>
           </div>
         </section>
       ) : null}
 
       <section className="card p-15">
-        <h2 className="mb-4 text-13.5 font-bold text-ink">alias كليك</h2>
+        <h2 className="mb-4 text-13.5 font-bold text-ink">{tr("alias كليك")}</h2>
         <p className="mb-10 text-11 leading-snug text-muted">
-          عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.
+          {tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}
         </p>
         <Field
           dir="ltr"
@@ -546,7 +546,7 @@ export function SettingsScreen() {
           disabled={alias.trim() === (profile?.driver.cliq_alias ?? "")}
           onClick={() => void saveAlias()}
         >
-          حفظ
+          {tr("حفظ")}
         </Button>
       </section>
 

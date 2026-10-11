@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import type { Ride } from "@/api/types";
 import { currencyLabel, formatMoney } from "@/lib/utils";
 
-import "@/screens/t2/request.css";
+import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
 function elapsed(since: string, now: number): string {
   const started = new Date(since).getTime();
@@ -48,7 +48,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
       <div className="t2-meter">
         <div>
           <p className="t2-meter-label">
-            {pause.kind === "arrival" ? "الكبتن ينتظرك عند نقطة الانطلاق" : "الكبتن واقفٌ بطلبك"}
+            {pause.kind === "arrival" ? tr("الكبتن ينتظرك عند نقطة الانطلاق") : tr("الكبتن واقفٌ بطلبك")}
           </p>
           {/* الوقتُ يُحسب هنا — والمالُ لا */}
           <p dir="ltr" className="t2-meter-clock">
@@ -58,7 +58,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
         <div className="t2-meter-money">
           {/* **والمهلةُ تُقال قبل أن تنتهي لا بعدها**: راكبٌ يرى صفراً ولا يعرف
               لماذا يظنّ العدّادَ معطوباً، ثم يفاجئه رقمٌ بعد دقيقة */}
-          <p className="t2-meter-label">{billing ? "رسم الانتظار حتى الآن" : `أول ${free} دقائق مجاناً`}</p>
+          <p className="t2-meter-label">{billing ? tr("رسم الانتظار حتى الآن") : tr("أول {0} دقائق مجاناً", { 0: free })}</p>
           <p className="t2-meter-amount">
             <span dir="ltr" className="t2-num">
               {formatMoney(ride.pause_charge)}
@@ -70,7 +70,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
       {pause.over_max ? (
         <p className="t2-note warn">
           <span className="t2-icon" aria-hidden="true">error</span>
-          <span>تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن يُنهي الرحلة عند هذه النقطة.</span>
+          <span>{tr("تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن يُنهي الرحلة عند هذه النقطة.")}</span>
         </p>
       ) : null}
     </div>

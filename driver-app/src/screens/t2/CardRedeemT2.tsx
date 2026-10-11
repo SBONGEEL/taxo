@@ -18,7 +18,7 @@ import { Icon } from "@/taxo2";
 
 import "./fields.css";
 import "./money.css";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 function grouped(raw: string): string {
   const plain = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
@@ -40,7 +40,7 @@ export function CardRedeemT2Screen() {
     try {
       setDone(await redeemTaxoCard(code));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر استعمال البطاقة — أعد المحاولة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر استعمال البطاقة — أعد المحاولة"));
     } finally {
       setBusy(false);
     }
@@ -49,27 +49,27 @@ export function CardRedeemT2Screen() {
   return (
     <div className="t2 t2-clq-page scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">بطاقة TAXO</h1>
+        <h1 className="t2-title">{tr("بطاقة TAXO")}</h1>
       </div>
 
       {done ? (
         <div className="t2-wdl-card t2-pr-done">
           <Icon name="check_circle" />
-          <h2 className="t2-pr-done-title">شُحن رصيدك</h2>
+          <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">
-            أُضيف {digits(done.amount)} {CURRENCY_LABEL[done.currency]} من البطاقة <span dir="ltr">{done.serial}</span>.
+            {tr("أُضيف")}{" "}{digits(done.amount)} {CURRENCY_LABEL[done.currency]}{" "}{tr("من البطاقة")}{" "}<span dir="ltr">{done.serial}</span>.
           </p>
           <button type="button" className="t2-clq-cta t2-pr-gap" onClick={() => navigate("/wallet")}>
-            إلى المحفظة
+            {tr("إلى المحفظة")}
           </button>
         </div>
       ) : (
         <>
           <label className="t2-fld-label" htmlFor="taxo-card-code">
-            رمز البطاقة
+            {tr("رمز البطاقة")}
           </label>
           <input
             id="taxo-card-code"
@@ -81,7 +81,7 @@ export function CardRedeemT2Screen() {
             value={code}
             onChange={(event) => setCode(grouped(event.target.value))}
           />
-          <p className="t2-fld-hint">ستّةَ عشرَ حرفاً كما تحت الطبقة الفضيّة</p>
+          <p className="t2-fld-hint">{tr("ستّةَ عشرَ حرفاً كما تحت الطبقة الفضيّة")}</p>
           {error ? (
             <p className="t2-note danger" role="alert">
               <Icon name="error" fill />
@@ -95,7 +95,7 @@ export function CardRedeemT2Screen() {
             aria-busy={busy}
             onClick={submit}
           >
-            {busy ? "يُشحن…" : "اشحن"}
+            {busy ? tr("يُشحن…") : tr("اشحن")}
           </button>
         </>
       )}

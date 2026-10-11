@@ -30,7 +30,7 @@ import {
   subtractMoney,
 } from "@/lib/utils";
 import { AuthBlock, AuthChoice, AuthPhone, Icon } from "@/taxo2";
-import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function WalletTransferScreen() {
   const navigate = useNavigate();
@@ -80,7 +80,7 @@ export function WalletTransferScreen() {
       setRecipient(await lookupRecipient(phone));
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر العثور على الحساب",
+        caught instanceof ApiError ? caught.message : tr("تعذّر العثور على الحساب"),
       );
     } finally {
       setBusy(false);
@@ -95,7 +95,7 @@ export function WalletTransferScreen() {
       key.current ??= newIdempotencyKey("transfer");
       const entry = await transfer(recipient.phone, amount, key.current);
       setDone(
-        `تم تحويل ${formatMoney(entry.amount.replace("-", ""), entry.currency)} إلى ${recipient.name}`,
+        tr("تم تحويل {0} إلى {1}", { 0: formatMoney(entry.amount.replace("-", ""), entry.currency), 1: recipient.name }),
       );
       key.current = null;
       setRecipient(null);
@@ -103,7 +103,7 @@ export function WalletTransferScreen() {
       setAmount("");
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تنفيذ التحويل",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تنفيذ التحويل"),
       );
     } finally {
       setBusy(false);
@@ -113,7 +113,7 @@ export function WalletTransferScreen() {
   // **سببُ الخطأ تحت حقله** (§٦٢/٢٠): ما يردّه البحثُ عن المستلم يخصّ الرقم — فتحته؛ وما يردّه التحويلُ سطرٌ فوق الزرّ
   const phoneError =
     dialCode === null
-      ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+      ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
       : recipient
         ? null
         : error;
@@ -124,7 +124,7 @@ export function WalletTransferScreen() {
 
   return (
     <div className="t2 t2-m-page">
-      <HeadT2 title="تحويل رصيد" onBack={goBack} />
+      <HeadT2 title={tr("تحويل رصيد")} onBack={goBack} />
 
       {recipient ? (
         // **المستلمُ وُجد** — الاسمُ قبل الرقم، والدائرةُ بعلامة «وُجد الحساب» (R08)
@@ -139,23 +139,23 @@ export function WalletTransferScreen() {
             </div>
           </div>
           <button type="button" className="t2-m-change" onClick={() => setRecipient(null)}>
-            تغيير
+            {tr("تغيير")}
           </button>
         </div>
       ) : (
         <>
           {/* **دولتان أو أكثر ⇒ تُختار الدولة** — زرّان لا قائمة، كشاشات الدخول (`AuthChoice`) */}
           {countries.length > 1 ? (
-            <AuthBlock label="الدولة">
+            <AuthBlock label={tr("الدولة")}>
               <AuthChoice
-                label="الدولة"
+                label={tr("الدولة")}
                 value={code}
                 options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
                 onChange={setCode}
               />
             </AuthBlock>
           ) : null}
-          <AuthBlock label="رقم الهاتف" htmlFor="transfer-phone" error={phoneError}>
+          <AuthBlock label={tr("رقم الهاتف")} htmlFor="transfer-phone" error={phoneError}>
             <AuthPhone
               id="transfer-phone"
               type="tel"
@@ -180,10 +180,10 @@ export function WalletTransferScreen() {
         <>
           <div className="t2-m-gap">
             {/* **الرمزُ لا الكود**: كلُّ سطحٍ ماليٍّ آخر يقول «د.أ» */}
-            <AmountCardT2 id="transfer-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency} />
+            <AmountCardT2 id="transfer-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency} />
           </div>
           <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
-          <p className="t2-m-hint">الحدّان اليومي والشهري يضبطهما فريق TAXO</p>
+          <p className="t2-m-hint">{tr("الحدّان اليومي والشهري يضبطهما فريق TAXO")}</p>
         </>
       ) : null}
 
@@ -196,7 +196,7 @@ export function WalletTransferScreen() {
           <Icon name="error" />
           <div className="t2-callout-main">
             <p className="t2-callout-body t2-m-callout-text">
-              رصيدك لا يكفي — المتاح <b>{formatMoney(balance ?? "0", currency)}</b>. اشحن محفظتك أو أنقص المبلغ.
+              {tr("رصيدك لا يكفي — المتاح")}{" "}<b>{formatMoney(balance ?? "0", currency)}</b>{tr(". اشحن محفظتك أو أنقص المبلغ.")}
             </p>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function WalletTransferScreen() {
           >
             <BusyLabel busy={busy}>
               <Icon name="sync_alt" />
-              تأكيد التحويل
+              {tr("تأكيد التحويل")}
             </BusyLabel>
           </button>
         ) : (
@@ -229,13 +229,13 @@ export function WalletTransferScreen() {
             aria-busy={busy}
             onClick={findRecipient}
           >
-            <BusyLabel busy={busy}>متابعة</BusyLabel>
+            <BusyLabel busy={busy}>{tr("متابعة")}</BusyLabel>
           </button>
         )}
 
         {done ? (
           <button type="button" className="t2-button secondary t2-m-wide" onClick={() => navigate("/wallet")}>
-            العودة للمحفظة
+            {tr("العودة للمحفظة")}
           </button>
         ) : null}
       </div>
@@ -250,18 +250,18 @@ export function WalletTransferScreen() {
               <div className="t2-m-sum">
                 {/* **الاسمُ أولاً وأكبر**: الرقمُ ما كُتب، والاسمُ ما يُتحقَّق به */}
                 <div className="t2-m-sum-row">
-                  <span className="t2-m-sum-label">إلى</span>
+                  <span className="t2-m-sum-label">{tr("إلى")}</span>
                   <span className="t2-m-sum-name">{recipient?.name}</span>
                 </div>
                 <div className="t2-m-sum-row">
-                  <span className="t2-m-sum-label">رقمه</span>
+                  <span className="t2-m-sum-label">{tr("رقمه")}</span>
                   <span dir="ltr" className="t2-m-sum-sub">
                     {recipient?.phone}
                   </span>
                 </div>
                 <div className="t2-m-dash" aria-hidden="true" />
                 <div className="t2-m-sum-row">
-                  <span className="t2-m-sum-label">المبلغ</span>
+                  <span className="t2-m-sum-label">{tr("المبلغ")}</span>
                   <span>
                     <span dir="ltr" className="t2-m-num sm">
                       {formatMoney(amount)}
@@ -271,7 +271,7 @@ export function WalletTransferScreen() {
                 </div>
                 {balance ? (
                   <div className="t2-m-sum-row">
-                    <span className="t2-m-sum-label">رصيدك بعده</span>
+                    <span className="t2-m-sum-label">{tr("رصيدك بعده")}</span>
                     {/* **ولا يُعرض سالباً** (عطبٌ مقيسٌ على الجهاز 2026-08-23: رصيدٌ صفرٌ ومبلغُ 12.500 أعطى
                         «رصيدك بعده −12.500 د.أ»). **و«رصيدك بعده» لا يكون سالباً بالتعريف**: التحويلُ لا يقع أصلاً،
                         فالرقمُ يصف حالاً لن تكون. والسالبُ يُقرأ **ديناً**، ولا دَينَ هنا.
@@ -280,7 +280,7 @@ export function WalletTransferScreen() {
                         الراكب. **حدٌّ في موضعٍ لا يحرس موضعاً ثانياً يحسب الشيءَ نفسَه.** */}
                     <span className={short ? "t2-m-sum-after short" : "t2-m-sum-after"}>
                       {short
-                        ? "لا يكفي رصيدك"
+                        ? tr("لا يكفي رصيدك")
                         : formatMoney(subtractMoney(balance, amount), country?.currency)}
                     </span>
                   </div>
@@ -296,7 +296,7 @@ export function WalletTransferScreen() {
                   void send();
                 }}
               >
-                <BusyLabel busy={busy}>أرسل الآن</BusyLabel>
+                <BusyLabel busy={busy}>{tr("أرسل الآن")}</BusyLabel>
               </button>
               <button
                 type="button"
@@ -304,13 +304,13 @@ export function WalletTransferScreen() {
                 disabled={busy}
                 onClick={() => setConfirming(false)}
               >
-                رجوع
+                {tr("رجوع")}
               </button>
             </div>
           }
         >
-          <div className="t2-m-sheet-title">تأكيد التحويل</div>
-          <p className="t2-m-sheet-sub last">لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.</p>
+          <div className="t2-m-sheet-title">{tr("تأكيد التحويل")}</div>
+          <p className="t2-m-sheet-sub last">{tr("لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.")}</p>
         </SheetModalT2>
       ) : null}
     </div>

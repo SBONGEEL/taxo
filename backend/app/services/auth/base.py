@@ -19,6 +19,7 @@ from app.models.user_role_grant import UserRoleGrant
 from app.schemas.auth import RegisterRequest
 from app.core.redis_client import get_redis_client
 from app.services import otp_limits, referrals
+from app.core.i18n import current_language
 
 async def create_account(
     session: AsyncSession,
@@ -90,6 +91,8 @@ async def create_account(
         phone=phone,
         account_kind=account_kind,
         name=data.name.strip(),
+        # **لغةُ التطبيق الذي سجّل منه** (SPEC §٧٣-هـ المرحلة ٥) — من رأس الطلب
+        language=current_language(),
         role=UserRole(data.role),
         country_code=data.country_code,
         password_hash=password_hash,

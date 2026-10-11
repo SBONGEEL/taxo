@@ -22,7 +22,7 @@ import { SkinArt } from "@/components/skins/SkinArt";
 import { Button } from "@/components/ui/Button";
 import { useGarage } from "@/lib/garage";
 import { RARITY_CHIP, RARITY_LABEL, visibilityNote } from "@/lib/skins";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function CelebrationSheet() {
   const { garage, activate, celebrated } = useGarage();
@@ -49,10 +49,10 @@ export function CelebrationSheet() {
     <div className="absolute inset-0 z-50 animate-fadein-fast bg-dim">
       <div className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20">
         <p className="mb-2 text-11.5 font-semibold text-muted">
-          هديّة أول اشتراك
+          {tr("هديّة أول اشتراك")}
         </p>
         <h2 className="mb-12 text-20 font-bold text-ink">
-          مبروك! سيارتك الجديدة وصلت
+          {tr("مبروك! سيارتك الجديدة وصلت")}
         </h2>
 
         <SkinArt skin={skin} className="mb-12 h-150 w-full" />
@@ -72,12 +72,12 @@ export function CelebrationSheet() {
         </div>
 
         <p className="mb-16 text-11.5 leading-note text-muted">
-          {visibilityNote(skin)} وتجدها دائماً في «مركباتي».
+          {visibilityNote(skin)}{" "}{tr("وتجدها دائماً في «مركباتي».")}
         </p>
 
         <div className="flex flex-col gap-9">
           <Button size="md" loading={busy} onClick={() => void close(true)}>
-            فعّلها الآن
+            {tr("فعّلها الآن")}
           </Button>
           <button
             type="button"
@@ -88,7 +88,7 @@ export function CelebrationSheet() {
             }}
             className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
           >
-            افتح مركباتي
+            {tr("افتح مركباتي")}
           </button>
         </div>
       </div>

@@ -33,7 +33,7 @@ import { ROWS } from "@/lib/permission-rows";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ إذن — **أيقوناتُ الجولة** (`PermissionsIntro::STEP_ICON`) وما ليس فيها بمعناه، بالمفتاح لا بالترتيب. */
 const ROW_ICON: Record<string, string> = {
@@ -75,18 +75,18 @@ export function PermissionsScreen() {
     <div className="t2 t2-ax t2-perm">
       <div className="t2-ax-scroll">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">أذونات الجهاز</h1>
+          <h1 className="t2-title">{tr("أذونات الجهاز")}</h1>
         </div>
 
         {!alertsAvailable() ? (
           <section className="t2-callout">
             <Icon name="info" fill className="muted" />
             <p className="t2-perm-msg">
-              هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا
-              شيء هنا يُقرأ. افتحها من تطبيق الكبتن المثبَّت.
+              {tr("هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا شيء هنا يُقرأ. افتحها من تطبيق الكبتن المثبَّت.")}
+
             </p>
           </section>
         ) : null}
@@ -95,8 +95,8 @@ export function PermissionsScreen() {
           <section className="t2-callout warn">
             <Icon name="info" fill />
             <p className="t2-perm-msg warn">
-              تعذّرت قراءة حال الأذونات من النظام. لا يعني ذلك أنّها ممنوحة ولا
-              أنّها ممنوعة — أعد فتح الشاشة، وإن تكرّر فافتح إعدادات التطبيق.
+              {tr("تعذّرت قراءة حال الأذونات من النظام. لا يعني ذلك أنّها ممنوحة ولا أنّها ممنوعة — أعد فتح الشاشة، وإن تكرّر فافتح إعدادات التطبيق.")}
+
             </p>
           </section>
         ) : null}
@@ -109,10 +109,10 @@ export function PermissionsScreen() {
               <section className="t2-callout danger" role="alert">
                 <Icon name="error" fill />
                 <div className="t2-callout-main">
-                  <h2 className="t2-callout-title">لا تصلك طلبات الآن</h2>
+                  <h2 className="t2-callout-title">{tr("لا تصلك طلبات الآن")}</h2>
                   <p className="t2-callout-body">
-                    {missing.map((row) => row.label).join(" · ")} — امنح ما ينقص
-                    أدناه ثم عد.
+                    {missing.map((row) => row.label).join(" · ")}{" "}{tr("— امنح ما ينقص أدناه ثم عد.")}
+
                   </p>
                 </div>
               </section>
@@ -120,9 +120,9 @@ export function PermissionsScreen() {
               <section className="t2-callout ok">
                 <Icon name="check_circle" fill />
                 <div className="t2-callout-main">
-                  <h2 className="t2-callout-title t2-perm-ok-title">كل ما يلزم ممنوح</h2>
+                  <h2 className="t2-callout-title t2-perm-ok-title">{tr("كل ما يلزم ممنوح")}</h2>
                   <p className="t2-callout-body">
-                    لا شيء يمنع وصول الطلبات إليك من جهة الأذونات.
+                    {tr("لا شيء يمنع وصول الطلبات إليك من جهة الأذونات.")}
                   </p>
                 </div>
               </section>
@@ -144,10 +144,10 @@ export function PermissionsScreen() {
                       <span className="t2-perm-label">{row.label}</span>
                       <span className={`t2-chip ${tone}`}>
                         {on
-                          ? "ممنوح"
+                          ? tr("ممنوح")
                           : row.severity === "blocking"
-                            ? "مطلوب"
-                            : "مستحسن"}
+                            ? tr("مطلوب")
+                            : tr("مستحسن")}
                       </span>
                     </div>
                     <p className="t2-perm-why">{row.why}</p>
@@ -157,7 +157,7 @@ export function PermissionsScreen() {
                         onClick={() => void row.open?.()}
                         className="t2-perm-open"
                       >
-                        افتح موضع المنح
+                        {tr("افتح موضع المنح")}
                       </button>
                     ) : null}
                   </div>
@@ -173,10 +173,10 @@ export function PermissionsScreen() {
               <p className="t2-ax-fine t2-perm-maker">
                 <Icon name="info" />
                 <span>
-                  وإعدادات المصنّع لا يقرؤها التطبيق ولا يعرف حالها: «التشغيل
-                  التلقائيّ» و«توفير الطاقة الخاص» في هواتف سامسونغ وشاومي وهواوي
-                  تُوقف الخدمة بلا أن يظهر لنا شيء. فإن انقطع عملك ولا شيء هنا أحمر،
-                  فابحث عنها في إعدادات هاتفك.
+                  {tr("وإعدادات المصنّع لا يقرؤها التطبيق ولا يعرف حالها: «التشغيل التلقائيّ» و«توفير الطاقة الخاص» في هواتف سامسونغ وشاومي وهواوي تُوقف الخدمة بلا أن يظهر لنا شيء. فإن انقطع عملك ولا شيء هنا أحمر، فابحث عنها في إعدادات هاتفك.")}
+
+
+
                 </span>
               </p>
             ) : null}

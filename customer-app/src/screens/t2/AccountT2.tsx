@@ -39,7 +39,7 @@ import { SignOutEverywhereRow } from "@/components/account/SignOutEverywhere";
 
 import { WomenServiceCardT2 } from "./WomenServiceT2";
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 interface Row {
   to: string;
@@ -78,35 +78,35 @@ export function AccountT2Screen() {
     {
       to: "/account/places",
       icon: "bookmark",
-      label: "الأماكن المحفوظة",
+      label: tr("الأماكن المحفوظة"),
       trailing: places.length > 0 ? String(places.length) : undefined,
     },
-    { to: "/account/cards", icon: "credit_card", label: "طرق الدفع" },
+    { to: "/account/cards", icon: "credit_card", label: tr("طرق الدفع") },
     // **خلف مفتاحه** (12-ط) كما في الشاشة القائمة: صفٌّ يفتح شاشةً فارغةً في سوقٍ مطفأٍ يُقرأ عطباً
-    ...(scheduled ? [{ to: "/account/bookings", icon: "event_upcoming", label: "رحلاتي المجدولة" }] : []),
+    ...(scheduled ? [{ to: "/account/bookings", icon: "event_upcoming", label: tr("رحلاتي المجدولة") }] : []),
     // **المشوارُ الثابت** (§٦٣-ج/٦) — لا بلاطةَ له في الرئيسية (بلاطاتُها كما رُسمت، ومقاصدُ المتجر مسجَّلةٌ في الخلفية)، **فبيتُه هنا
     // بجوار أخيه المجدول**: بابُ الجديد خلف مفتاحه، **و«اشتراكاتي» لمن له اشتراكٌ ولو أُطفئ المفتاح** — مالُه مدفوعٌ ويُرى
-    ...(commuteService ? [{ to: "/account/commute", icon: "event_repeat", label: "مشوارٌ ثابت" }] : []),
-    ...(hasCommutes ? [{ to: "/account/commutes", icon: "card_membership", label: "اشتراكاتي" }] : []),
+    ...(commuteService ? [{ to: "/account/commute", icon: "event_repeat", label: tr("مشوارٌ ثابت") }] : []),
+    ...(hasCommutes ? [{ to: "/account/commutes", icon: "card_membership", label: tr("اشتراكاتي") }] : []),
     // **بين المدن** (§٦٣-ج/٧) — بجوار أخويه وبحكمهما: التصفّحُ والحجزُ خلف مفتاحه (المالكُ يراجع القانونَ قبل إشعاله)، **و«حجوزاتي
     // بين المدن» لمن له حجزٌ ولو أُطفئ** — مقعدٌ دُفع ثمنُه لا يختفي بمفتاح
-    ...(intercity ? [{ to: "/account/intercity", icon: "route", label: "بين المدن" }] : []),
-    ...(hasIntercity ? [{ to: "/account/intercity/bookings", icon: "event_upcoming", label: "حجوزاتي بين المدن" }] : []),
-    { to: "/account/referrals", icon: "redeem", label: "ادعُ صديقك" },
-    { to: "/account/notifications", icon: "notifications", label: "الإشعارات" },
-    { to: "/account/settings", icon: "settings", label: "الإعدادات" },
+    ...(intercity ? [{ to: "/account/intercity", icon: "route", label: tr("بين المدن") }] : []),
+    ...(hasIntercity ? [{ to: "/account/intercity/bookings", icon: "event_upcoming", label: tr("حجوزاتي بين المدن") }] : []),
+    { to: "/account/referrals", icon: "redeem", label: tr("ادعُ صديقك") },
+    { to: "/account/notifications", icon: "notifications", label: tr("الإشعارات") },
+    { to: "/account/settings", icon: "settings", label: tr("الإعدادات") },
     // **«المساعدة والدعم» قبل «الشروط والخصوصية» كما رُسمتا في R15** (§٦٢-ج/١٦) — الأسئلةُ وبريدُ الدعم من إعدادات الموقع
-    { to: "/account/help", icon: "help", label: "المساعدة والدعم" },
+    { to: "/account/help", icon: "help", label: tr("المساعدة والدعم") },
     // **قوقل تشترط بلوغَ السياسات من داخل التطبيق** (§٦١-و/٦) — قبل الحذف الذي يبقى آخرَ القائمة
-    { to: "/account/legal", icon: "gavel", label: "الشروط والخصوصية" },
+    { to: "/account/legal", icon: "gavel", label: tr("الشروط والخصوصية") },
     // **حذفُ الحساب آخرَ القائمة بقصد** (٢٠٢٦-٠٩-٠٧) — **وظاهرٌ لا مخفيّ**: شرطُ المتجر «an in-app path»
-    { to: "/account/delete", icon: "delete", label: "حذف الحساب" },
+    { to: "/account/delete", icon: "delete", label: tr("حذف الحساب") },
   ];
 
   return (
     <div className="t2 t2-page t2-account pb-nav">
       <div className="t2-prof">
-        <span className="t2-avatar">{user?.name.slice(0, 1) ?? "؟"}</span>
+        <span className="t2-avatar">{user?.name.slice(0, 1) ?? tr("؟")}</span>
         <div className="t2-prof-main">
           <div className="t2-prof-name">{user?.name}</div>
           {/* **الرقمُ لا يُحرَّر ولا يُعرَّب** — معرَّفٌ يُقارَن ويُملى (الشاشةُ القائمة) */}
@@ -117,7 +117,7 @@ export function AccountT2Screen() {
         <button
           type="button"
           className="t2-back t2-edit"
-          aria-label="بياناتي"
+          aria-label={tr("بياناتي")}
           onClick={() => navigate("/account/profile")}
         >
           <span className="t2-icon" aria-hidden="true">edit</span>
@@ -127,18 +127,18 @@ export function AccountT2Screen() {
       <div className="t2-stats">
         <div className="t2-stat">
           <div className="t2-stat-num" dir="ltr">{summary ? summary.completed_rides : "—"}</div>
-          <div className="t2-stat-label">رحلة</div>
+          <div className="t2-stat-label">{tr("رحلة")}</div>
         </div>
         <div
           className="t2-stat"
-          aria-label={summary && summary.ratings_count > 0 ? `تقييمك ${summary.rating_avg} من ${summary.ratings_count} تقييمات` : undefined}
+          aria-label={summary && summary.ratings_count > 0 ? tr("تقييمك {0} من {1} تقييمات", { 0: summary.rating_avg, 1: summary.ratings_count }) : undefined}
         >
           <div className="t2-stat-num" dir="ltr">{summary?.rating_avg ?? "—"}</div>
-          <div className="t2-stat-label">تقييمك</div>
+          <div className="t2-stat-label">{tr("تقييمك")}</div>
         </div>
         <div className="t2-stat">
           <div className="t2-stat-num" dir="ltr">{since ?? "—"}</div>
-          <div className="t2-stat-label">معنا منذ</div>
+          <div className="t2-stat-label">{tr("معنا منذ")}</div>
         </div>
       </div>
 
@@ -161,8 +161,8 @@ export function AccountT2Screen() {
         <button type="button" className="t2-arow tall" disabled={swap.busy} onClick={() => void swap.press()}>
           <span className="t2-icon" aria-hidden="true">directions_car</span>
           <span className="t2-arow-label">
-            تبديل إلى تطبيق السائق
-            <span className="t2-arow-sub">نفس الحساب — تنتقل جلستك بلا تسجيل دخول</span>
+            {tr("تبديل إلى تطبيق السائق")}
+            <span className="t2-arow-sub">{tr("نفس الحساب — تنتقل جلستك بلا تسجيل دخول")}</span>
           </span>
           <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
         </button>
@@ -170,7 +170,7 @@ export function AccountT2Screen() {
       </div>
 
       <button type="button" className="t2-logout" onClick={() => void signOut()}>
-        تسجيل الخروج
+        {tr("تسجيل الخروج")}
       </button>
 
       <SignOutEverywhereRow className="t2-endall" />

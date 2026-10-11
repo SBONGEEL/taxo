@@ -25,7 +25,7 @@ import { Icon } from "@/taxo2";
 
 import "./fields.css";
 import "./money.css";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 const KIND_ICON: Record<PayMethod["kind"], string> = {
   cash: "payments",
@@ -84,7 +84,7 @@ export function PayRequestT2Screen() {
       })
       .catch((caught: unknown) => {
         setMethods([]);
-        setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة طرق الدفع");
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة طرق الدفع"));
       });
   }, [purpose]);
 
@@ -141,7 +141,7 @@ export function PayRequestT2Screen() {
         });
         window.location.assign(opened.checkout_url);
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع — أعد المحاولة");
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
         setBusy(false);
       }
       return;
@@ -164,19 +164,19 @@ export function PayRequestT2Screen() {
       );
       setDone(true);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب — أعد المحاولة");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب — أعد المحاولة"));
     } finally {
       setBusy(false);
       setProgress(null);
     }
   }
 
-  const title = purpose === "subscription" ? "دفع الاشتراك" : "شحن الرصيد";
+  const title = purpose === "subscription" ? tr("دفع الاشتراك") : tr("شحن الرصيد");
 
   return (
     <div className="t2 t2-clq-page scr">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{title}</h1>
@@ -185,14 +185,14 @@ export function PayRequestT2Screen() {
       {done ? (
         <div className="t2-wdl-card t2-pr-done">
           <Icon name="schedule" />
-          <h2 className="t2-pr-done-title">أرسلنا طلبك</h2>
+          <h2 className="t2-pr-done-title">{tr("أرسلنا طلبك")}</h2>
           <p className="t2-pr-done-text">
             {purpose === "subscription"
-              ? `يراجعه فريقُ المالية، وعند اعتماده تُشحن محفظتُك ويُفعَّل ${handoff?.planName ?? "اشتراكك"} منها.`
-              : `يراجعه فريقُ المالية ويُضاف ${digits(amount)} ${label} إلى رصيدك بعد اعتماده.`}
+              ? tr("يراجعه فريقُ المالية، وعند اعتماده تُشحن محفظتُك ويُفعَّل {0} منها.", { 0: handoff?.planName ?? tr("اشتراكك") })
+              : tr("يراجعه فريقُ المالية ويُضاف {0} {1} إلى رصيدك بعد اعتماده.", { 0: digits(amount), 1: label })}
           </p>
           <button type="button" className="t2-clq-cta t2-pr-gap" onClick={() => navigate("/wallet")}>
-            إلى المحفظة
+            {tr("إلى المحفظة")}
           </button>
         </div>
       ) : methods === null ? (
@@ -202,20 +202,20 @@ export function PayRequestT2Screen() {
       ) : methods.length === 0 ? (
         <p className="t2-note danger" role="alert">
           <Icon name="error" fill />
-          {error ?? "لا طريقةَ دفعٍ متاحةٌ في بلدك الآن."}
+          {error ?? tr("لا طريقةَ دفعٍ متاحةٌ في بلدك الآن.")}
         </p>
       ) : (
         <>
           {purpose === "subscription" ? (
             <div className="t2-wdl-card">
-              <span className="t2-pr-k">{handoff?.planName ?? "الاشتراك"}</span>
+              <span className="t2-pr-k">{handoff?.planName ?? tr("الاشتراك")}</span>
               <div className="t2-pr-amount">
                 <span className="t2-pr-amount-num" dir="ltr">
                   {digits(amount)}
                 </span>
                 <span className="t2-pr-amount-cur">{label}</span>
               </div>
-              <p className="t2-fld-hint">تُشحن محفظتُك بالمبلغ عند الاعتماد ثمّ يُشترى الاشتراكُ منها.</p>
+              <p className="t2-fld-hint">{tr("تُشحن محفظتُك بالمبلغ عند الاعتماد ثمّ يُشترى الاشتراكُ منها.")}</p>
             </div>
           ) : null}
 
@@ -224,14 +224,14 @@ export function PayRequestT2Screen() {
               <span className="t2-wal-txicon" aria-hidden="true">
                 <span className="t2-icon">confirmation_number</span>
               </span>
-              <span className="t2-wal-door-title">لديك بطاقة TAXO؟ أدخل رمزها</span>
+              <span className="t2-wal-door-title">{tr("لديك بطاقة TAXO؟ أدخل رمزها")}</span>
               <span className="t2-icon t2-wal-door-go" aria-hidden="true">
                 arrow_back
               </span>
             </button>
           ) : null}
-          <div className="t2-section">طريقة الدفع</div>
-          <div className="t2-list" role="radiogroup" aria-label="طريقة الدفع">
+          <div className="t2-section">{tr("طريقة الدفع")}</div>
+          <div className="t2-list" role="radiogroup" aria-label={tr("طريقة الدفع")}>
             {methods.map((row) => (
               <button
                 key={row.id}
@@ -249,10 +249,10 @@ export function PayRequestT2Screen() {
                   <span className="t2-row-title">{row.name}</span>
                   <span className="t2-row-body">
                     {row.gateway
-                      ? "ادفع بالبطاقة في صفحة الوسيط — يُضاف فورَ تأكيده"
+                      ? tr("ادفع بالبطاقة في صفحة الوسيط — يُضاف فورَ تأكيده")
                       : row.requires_receipt
-                        ? "حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة"
-                        : "ادفع ثمّ يُضاف بعد المراجعة"}
+                        ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
+                        : tr("ادفع ثمّ يُضاف بعد المراجعة")}
                   </span>
                 </span>
                 <Icon name={row.id === methodId ? "radio_button_checked" : "radio_button_unchecked"} />
@@ -261,15 +261,15 @@ export function PayRequestT2Screen() {
           </div>
 
           {method && !method.gateway ? (
-            <div className="t2-wdl-card t2-pr-gap t2-pr-dest" aria-label="إلى أين تدفع">
+            <div className="t2-wdl-card t2-pr-gap t2-pr-dest" aria-label={tr("إلى أين تدفع")}>
               {method.account_number ? (
                 <div className="t2-pr-line">
-                  <span className="t2-pr-k">{method.kind === "phone_number" ? "رقم الهاتف" : "رقم الحساب"}</span>
+                  <span className="t2-pr-k">{method.kind === "phone_number" ? tr("رقم الهاتف") : tr("رقم الحساب")}</span>
                   <span className="t2-pr-value">
                     <span dir="ltr" className="t2-pr-number">
                       {method.account_number}
                     </span>
-                    <button type="button" className="t2-pr-copy" onClick={copyNumber} aria-label="نسخ الرقم">
+                    <button type="button" className="t2-pr-copy" onClick={copyNumber} aria-label={tr("نسخ الرقم")}>
                       <Icon name={copied ? "check" : "content_copy"} />
                     </button>
                   </span>
@@ -277,25 +277,25 @@ export function PayRequestT2Screen() {
               ) : null}
               {method.account_holder ? (
                 <div className="t2-pr-line">
-                  <span className="t2-pr-k">باسم</span>
+                  <span className="t2-pr-k">{tr("باسم")}</span>
                   <span className="t2-pr-text">{method.account_holder}</span>
                 </div>
               ) : null}
               {method.bank_name ? (
                 <div className="t2-pr-line">
-                  <span className="t2-pr-k">البنك</span>
+                  <span className="t2-pr-k">{tr("البنك")}</span>
                   <span className="t2-pr-text">{method.bank_name}</span>
                 </div>
               ) : null}
               {method.instructions ? <p className="t2-pr-instructions">{method.instructions}</p> : null}
-              {qrUrl ? <img className="t2-clq-qr" src={qrUrl} alt={`رمز QR لـ${method.name}`} /> : null}
+              {qrUrl ? <img className="t2-clq-qr" src={qrUrl} alt={tr("رمز QR لـ{0}", { 0: method.name })} /> : null}
             </div>
           ) : null}
 
           {purpose === "wallet_topup" ? (
             <div className="t2-pr-gap-lg">
               <label className="t2-fld-label" htmlFor="pay-request-amount">
-                المبلغ ({label})
+                {tr("المبلغ (")}{label})
               </label>
               <input
                 id="pay-request-amount"
@@ -319,7 +319,7 @@ export function PayRequestT2Screen() {
           {needsReceipt ? (
             <div className="t2-pr-gap-lg">
               <label className="t2-fld-label" htmlFor="pay-request-reference">
-                رقم التحويل
+                {tr("رقم التحويل")}
               </label>
               <input
                 id="pay-request-reference"
@@ -329,13 +329,13 @@ export function PayRequestT2Screen() {
                 value={reference}
                 onChange={(event) => setReference(event.target.value)}
               />
-              <p className="t2-fld-hint">كما يظهر في الإيصال</p>
+              <p className="t2-fld-hint">{tr("كما يظهر في الإيصال")}</p>
 
               <label className="t2-pr-file" htmlFor="pay-request-receipt">
                 <Icon name={receipt ? "task" : "add_photo_alternate"} />
                 <span className="t2-pr-file-main">
-                  <span className="t2-pr-file-title">{receipt ? "الإيصال مرفق" : "صورة الإيصال"}</span>
-                  <span className="t2-pr-file-hint">{receipt ? receipt.name : "صورةٌ أو PDF — إجباريّة"}</span>
+                  <span className="t2-pr-file-title">{receipt ? tr("الإيصال مرفق") : tr("صورة الإيصال")}</span>
+                  <span className="t2-pr-file-hint">{receipt ? receipt.name : tr("صورةٌ أو PDF — إجباريّة")}</span>
                 </span>
               </label>
               <input
@@ -356,7 +356,7 @@ export function PayRequestT2Screen() {
           ) : null}
           {progress !== null && progress < 100 ? (
             <p className="t2-fld-hint">
-              يُرفع الإيصال… <span dir="ltr">{progress}%</span>
+              {tr("يُرفع الإيصال…")}{" "}<span dir="ltr">{progress}%</span>
             </p>
           ) : null}
 
@@ -367,7 +367,7 @@ export function PayRequestT2Screen() {
             aria-busy={busy}
             onClick={submit}
           >
-            {busy ? "يُرسل…" : method?.gateway ? "ادفع في صفحة الوسيط" : "أرسل للمراجعة"}
+            {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}
           </button>
         </>
       )}

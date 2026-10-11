@@ -111,6 +111,8 @@ export interface RideHourly {
 }
 
 export interface User {
+  /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — العربيّةُ افتراضاً؛ بها تُكتب إشعاراتُه */
+  language?: "ar" | "fr";
   /** **موعدُ حذف حسابه إن طلبه** (SPEC §59) — منه تُرسم شاشةُ الاستعادة. */
   deletion_due_at?: string | null;
   id: string;

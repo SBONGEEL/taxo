@@ -33,7 +33,7 @@ import { currencyLabel, digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
-import "@/screens/t2/account.css";
+import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
 
 /** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن.
  *
@@ -43,28 +43,28 @@ import "@/screens/t2/account.css";
  * **والنبرةُ اسمٌ لا صنفُ لون** (`ok` · `muted` · `warn` · `""` للحبر) — يرسمها صنفُ الشاشة بالرموز.
  */
 function stageOf(row: ReferralStage): { text: string; tone: string } {
-  if (row.rewarded) return { text: "وصلت المكافأة", tone: "ok" };
+  if (row.rewarded) return { text: tr("وصلت المكافأة"), tone: "ok" };
   if (row.referral_type === "driver") {
     if (!row.driver_approved) {
-      return { text: "حسابه قيد المراجعة", tone: "muted" };
+      return { text: tr("حسابه قيد المراجعة"), tone: "muted" };
     }
     if (!row.has_subscription) {
-      return { text: "لم يشترِ اشتراكاً بعد", tone: "muted" };
+      return { text: tr("لم يشترِ اشتراكاً بعد"), tone: "muted" };
     }
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: `أكمل ${digits(String(row.rides_done))} من ${digits(
+      text: tr("أكمل {0} من {1} رحلات", { 0: digits(String(row.rides_done)), 1: digits(
         String(row.rides_required),
-      )} رحلات`,
+      ) }),
       tone: "muted",
     };
   }
   // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
   if (row.over_monthly_cap) {
-    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "warn" };
+    return { text: tr("فوق سقف هذا الشهر — لن تُدفع"), tone: "warn" };
   }
-  return { text: "استحقّت — المكافأة في الطريق", tone: "" };
+  return { text: tr("استحقّت — المكافأة في الطريق"), tone: "" };
 }
 
 export function ReferralsScreen() {
@@ -81,7 +81,7 @@ export function ReferralsScreen() {
       .then(setData)
       .catch((caught) =>
         setError(
-          caught instanceof ApiError ? caught.message : "تعذّر قراءة الإحالات",
+          caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الإحالات"),
         ),
       );
   }, []);
@@ -116,7 +116,7 @@ export function ReferralsScreen() {
   async function share() {
     if (!data) return;
     // **TAXO باللاتينية** (§٦٢/٢٠) — كان «تاكسو» في الرسالة التي يرسلها الكبتنُ لمن يدعوه
-    const text = `سجّل في TAXO برمزي ${data.code}`;
+    const text = tr("سجّل في TAXO برمزي {0}", { 0: data.code });
     if (navigator.share) {
       try {
         await navigator.share({ text });
@@ -143,10 +143,10 @@ export function ReferralsScreen() {
     <div className="t2 t2-ax">
       <div className="t2-ax-scroll">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">أَحِلْ صديقك</h1>
+          <h1 className="t2-title">{tr("أَحِلْ صديقك")}</h1>
         </div>
 
         {error ? (
@@ -158,13 +158,13 @@ export function ReferralsScreen() {
         {data === null ? (
           error ? null : (
             <div className="t2-ax-center">
-              <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+              <span className="t2-ax-spin" role="status" aria-label={tr("جارٍ التحميل")} />
             </div>
           )
         ) : (
           <>
             <section className="t2-ref-code">
-              <p className="t2-ref-code-k">رمز الإحالة الخاص بك</p>
+              <p className="t2-ref-code-k">{tr("رمز الإحالة الخاص بك")}</p>
               {/* **لاتينيٌّ ومتباعدُ الحروف**: يُقرأ ليُنطق ويُكتب في شاشةٍ أخرى */}
               <p dir="ltr" className="t2-ref-code-v">
                 {data.code}
@@ -176,7 +176,7 @@ export function ReferralsScreen() {
                   className={copied ? "t2-ref-act done" : "t2-ref-act"}
                 >
                   <Icon name={copied ? "check" : "content_copy"} />
-                  {copied ? "نُسخ" : "انسخ"}
+                  {copied ? tr("نُسخ") : tr("انسخ")}
                 </button>
                 <button
                   type="button"
@@ -184,7 +184,7 @@ export function ReferralsScreen() {
                   className="t2-ref-act"
                 >
                   <Icon name="share" />
-                  شارك
+                  {tr("شارك")}
                 </button>
               </div>
             </section>
@@ -193,7 +193,7 @@ export function ReferralsScreen() {
                 يعمل مع الاثنين وأن المكافأة تختلف بحسب من يسجّل به */}
             {pays ? (
               <>
-                <h2 className="t2-section">رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به</h2>
+                <h2 className="t2-section">{tr("رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به")}</h2>
                 <section className="t2-ref-programs">
                   {data.programs.map((program) => {
                     const active =
@@ -206,24 +206,24 @@ export function ReferralsScreen() {
                         </span>
                         <div className="t2-ref-program-main">
                           <p className="t2-ref-program-title">
-                            {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
+                            {isDriver ? tr("سجّل كبتناً") : tr("سجّل راكباً")}
                           </p>
                           <p className="t2-ref-program-cond">
                             {isDriver
-                              ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${digits(
+                              ? tr("يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0} رحلات", { 0: digits(
                                   String(program.required_rides),
-                                )} رحلات`
-                              : `يُكمل ${digits(
+                                ) })
+                              : tr("يُكمل {0} رحلات", { 0: digits(
                                   String(program.required_rides),
-                                )} رحلات`}
+                                ) })}
                           </p>
                           {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** —
                               ورقمان منفصلان يُقرأ ثانيهما بديلاً عن الأول */}
                           {isDriver && Number(program.female_bonus_amount) > 0 ? (
                             <p className="t2-ref-program-bonus">
-                              وإن كانت سائقةً موثَّقة:{" "}
+                              {tr("وإن كانت سائقةً موثَّقة:")}{" "}
                               {digits(program.female_total_amount)} {currency}{" "}
-                              — الأساسُ وعلاوتُه معاً
+                              {tr("— الأساسُ وعلاوتُه معاً")}
                             </p>
                           ) : null}
                         </div>
@@ -236,30 +236,30 @@ export function ReferralsScreen() {
                   {cap !== undefined ? (
                     <p className={left === 0 ? "t2-ref-note warn" : "t2-ref-note"}>
                       {left === 0
-                        ? `بلغتَ سقفَ هذا الشهر (${digits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
-                        : `سقفُ هذا الشهر ${digits(String(cap))} إحالات — بقي لك ${digits(String(left))}.`}
+                        ? tr("بلغتَ سقفَ هذا الشهر ({0}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.", { 0: digits(String(cap)) })
+                        : tr("سقفُ هذا الشهر {0} إحالات — بقي لك {1}.", { 0: digits(String(cap)), 1: digits(String(left)) })}
                     </p>
                   ) : null}
 
                   <p className="t2-ref-note">
-                    مجموع ما وصلك: {digits(data.total_rewarded)} {currency}
+                    {tr("مجموع ما وصلك:")}{" "}{digits(data.total_rewarded)} {currency}
                   </p>
                 </section>
               </>
             ) : (
               <section className="t2-ax-card t2-ref-how">
-                <h2 className="t2-ref-how-title">كيف تعمل</h2>
+                <h2 className="t2-ref-how-title">{tr("كيف تعمل")}</h2>
                 <p className="t2-ref-how-text">
-                  شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الإحالةُ في
-                  حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
+                  {tr("شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الإحالةُ في حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.")}
+
                 </p>
               </section>
             )}
 
             <section>
-              <h2 className="t2-section">من سجّل برمزك</h2>
+              <h2 className="t2-section">{tr("من سجّل برمزك")}</h2>
               {data.referrals.length === 0 ? (
-                <p className="t2-empty">لم يسجّل أحدٌ برمزك بعد.</p>
+                <p className="t2-empty">{tr("لم يسجّل أحدٌ برمزك بعد.")}</p>
               ) : (
                 <Stagger className="t2-ref-rows">
                   {data.referrals.map((row) => {
@@ -277,7 +277,7 @@ export function ReferralsScreen() {
                             {where.text}
                           </span>
                           <span className="t2-ref-row-kind">
-                            {isDriver ? "كبتن" : "راكب"}
+                            {isDriver ? tr("كبتن") : tr("راكب")}
                           </span>
                         </span>
                         {row.rewarded && row.reward_amount ? (

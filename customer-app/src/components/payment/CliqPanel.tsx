@@ -36,7 +36,7 @@ import { UNCONFIRMED_FLAG } from "@/lib/payment";
 import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
-import { BusyLabel } from "@/screens/t2/MoneyT2";
+import { BusyLabel } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function CliqPanel({
   charge,
@@ -68,7 +68,7 @@ export function CliqPanel({
       onSubmitted(await submitCliqReference(charge.payment_id, reference.trim()));
     } catch (caught) {
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تسجيل مرجع الحوالة",
+        caught instanceof ApiError ? caught.message : tr("تعذّر تسجيل مرجع الحوالة"),
       );
     } finally {
       setBusy(false);
@@ -81,49 +81,49 @@ export function CliqPanel({
       animate={{ opacity: 1, y: 0 }}
       className="t2-m-card t2-m-gap"
     >
-      <h2 className="t2-m-cliq-title sm">الدفع عبر كليك</h2>
+      <h2 className="t2-m-cliq-title sm">{tr("الدفع عبر كليك")}</h2>
       <p className="t2-m-cliq-text sm">
-        حوّل {formatMoney(charge.amount, charge.currency)} إلى alias الكبتن، ثم أدخل
-        مرجع الحوالة.
+        {tr("حوّل")}{" "}{formatMoney(charge.amount, charge.currency)}{" "}{tr("إلى alias الكبتن، ثم أدخل مرجع الحوالة.")}
+
       </p>
 
       {guessedQrRemoved ? null : <QrCode payload={charge.qr_payload} size={180} />}
 
       <dl className="t2-m-copies">
         <CopyRow
-          label="alias الكبتن"
+          label={tr("alias الكبتن")}
           value={charge.alias}
           copied={copied === "alias"}
           onCopy={() => copy(charge.alias, "alias")}
         />
         <CopyRow
-          label="المرجع (اكتبه في ملاحظة الحوالة)"
+          label={tr("المرجع (اكتبه في ملاحظة الحوالة)")}
           value={charge.reference}
           copied={copied === "reference"}
           onCopy={() => copy(charge.reference, "reference")}
         />
         <div className="t2-m-copy">
-          <dt>المبلغ</dt>
+          <dt>{tr("المبلغ")}</dt>
           <dd>{formatMoney(charge.amount, charge.currency)}</dd>
         </div>
       </dl>
 
       <a href={charge.deep_link} className="t2-button secondary t2-m-open">
         <Icon name="open_in_new" />
-        افتح تطبيق البنك
+        {tr("افتح تطبيق البنك")}
       </a>
 
       {submitted ? (
         <div className="t2-callout t2-m-callout">
           <Icon name="hourglass_top" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">أرسلنا مرجعك للكبتن — بانتظار تأكيده</p>
+            <p className="t2-callout-title">{tr("أرسلنا مرجعك للكبتن — بانتظار تأكيده")}</p>
             <p dir="ltr" className="t2-callout-body t2-m-ref">
               {charge.transfer_reference}
             </p>
             <p className="t2-callout-body">
-              المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكبتنَ سيفتح
-              نزاعاً تفصل فيه الإدارة.
+              {tr("المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكبتنَ سيفتح نزاعاً تفصل فيه الإدارة.")}
+
             </p>
           </div>
         </div>
@@ -132,10 +132,10 @@ export function CliqPanel({
           <div className="t2-m-dash" aria-hidden="true" />
           {/* **سببُ الخطأ تحت حقله** (§٦٢/٢٠) — والتلميحُ مكانَه حين لا خطأ */}
           <AuthBlock
-            label="مرجع الحوالة من تطبيق بنكك"
+            label={tr("مرجع الحوالة من تطبيق بنكك")}
             htmlFor="cliq-reference"
             error={error}
-            hint="يُسجَّل مرةً واحدة ولا يُعدَّل — تأكّد منه قبل الإرسال."
+            hint={tr("يُسجَّل مرةً واحدة ولا يُعدَّل — تأكّد منه قبل الإرسال.")}
           >
             <AuthInput
               id="cliq-reference"
@@ -154,7 +154,7 @@ export function CliqPanel({
             aria-busy={busy}
             onClick={submit}
           >
-            <BusyLabel busy={busy}>حوّلتُ — أرسل المرجع للكبتن</BusyLabel>
+            <BusyLabel busy={busy}>{tr("حوّلتُ — أرسل المرجع للكبتن")}</BusyLabel>
           </button>
         </>
       )}
@@ -184,7 +184,7 @@ export function CopyRow({
           type="button"
           onClick={onCopy}
           className={copied ? "t2-m-copy-btn done" : "t2-m-copy-btn"}
-          aria-label={`نسخ ${label}`}
+          aria-label={tr("نسخ {0}", { 0: label })}
         >
           <Icon name={copied ? "check" : "content_copy"} />
         </button>

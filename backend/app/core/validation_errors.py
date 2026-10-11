@@ -224,7 +224,8 @@ def message_for(error: dict) -> str:
     if kind == "missing":
         if not name:
             return "حقلٌ مطلوبٌ ناقص"
-        return f"{subject} {'مطلوبة' if _fem(subject) else 'مطلوب'}"
+        # **قالبان لا قالبٌ بموضعين** (SPEC §٧٣-هـ المرحلة ٥): «{0} {1}» لا عربيَّ فيه يُطابَق فلا يُترجم — والنصُّ العربيُّ هو هو حرفاً
+        return f"{subject} مطلوبة" if _fem(subject) else f"{subject} مطلوب"
     if kind in {
         "int_type",
         "int_parsing",

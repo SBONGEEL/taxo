@@ -37,42 +37,42 @@ import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
 import "@/screens/t2/account.css";
-import "@/screens/t2/women.css";
+import "@/screens/t2/women.css"; import { tr } from "@/lib/i18n";
 
 /** أوّلُ حقيقةٍ تحكم: الحجزُ ثم رحلتُه — لا سردٌ للاثنين. والنبرةُ شارةُ الهوية: نجاحٌ · تنبيهٌ · خطأٌ · محايدةٌ · منتظَر —
  *  **والبرقوقُ لما ينتظر اختيارَها** (§٦٤-ج/٤-١). */
 function stateOf(booking: Booking): { text: string; tone: "plain" | "warn" | "live" | "danger" | "ok" | "women" } {
   if (booking.status === "cancelled") {
-    return { text: "أُلغي", tone: "plain" };
+    return { text: tr("أُلغي"), tone: "plain" };
   }
   if (booking.status === "missed") {
     // **وللحجز النسائيّ طريقٌ ثانٍ إلى `missed`** (§٦٤-ج/٤-١): خدمةٌ متوقّفةٌ ونصفُ ساعةٍ بعد الموعد بلا اختيار — **ولا حقلَ
     // يفرّق الطريقين**، فعلّةُ «كنتَ في رحلة» تكذب على من لم تكن. فلا علّةَ لما طلب كبتنة، والعلّةُ لما طلب «أي كبتن» وحدَه
     return booking.gender_preference === "any"
-      ? { text: "لم يُنفَّذ — كنتَ في رحلةٍ حينها", tone: "warn" }
-      : { text: "لم يُنفَّذ", tone: "warn" };
+      ? { text: tr("لم يُنفَّذ — كنتَ في رحلةٍ حينها"), tone: "warn" }
+      : { text: tr("لم يُنفَّذ"), tone: "warn" };
   }
   if (booking.awaiting_choice) {
-    return { text: "تنتظر اختيارك", tone: "women" };
+    return { text: tr("تنتظر اختيارك"), tone: "women" };
   }
   if (booking.status === "pending") {
     // **حلّ وقتُه وتطلبه الدورةُ في دقيقتها** — «بانتظار موعده» عن موعدٍ حلّ تقول ما ليس كذلك
-    return { text: requestingSoon(booking) ? "نطلبها لك خلال دقيقة" : "بانتظار موعده", tone: "live" };
+    return { text: requestingSoon(booking) ? tr("نطلبها لك خلال دقيقة") : tr("بانتظار موعده"), tone: "live" };
   }
   // سُلّم للتوزيع: الرحلةُ تقول الباقي
   switch (booking.ride_status) {
     case "no_driver_found":
-      return { text: "لم نجد كبتناً", tone: "danger" };
+      return { text: tr("لم نجد كبتناً"), tone: "danger" };
     case "completed":
-      return { text: "اكتملت", tone: "ok" };
+      return { text: tr("اكتملت"), tone: "ok" };
     case "cancelled_by_rider":
     case "cancelled_by_driver":
-      return { text: "أُلغيت الرحلة", tone: "plain" };
+      return { text: tr("أُلغيت الرحلة"), tone: "plain" };
     case null:
     case undefined:
-      return { text: "طُلبت الرحلة", tone: "ok" };
+      return { text: tr("طُلبت الرحلة"), tone: "ok" };
     default:
-      return { text: "رحلتك جارية", tone: "ok" };
+      return { text: tr("رحلتك جارية"), tone: "ok" };
   }
 }
 
@@ -87,9 +87,9 @@ const CHIP: Record<ReturnType<typeof stateOf>["tone"], string> = {
 
 /** **أين رسمُ الضمان** — نصُّ كلِّ حالٍ ونبرتُه: المحفوظُ محايد، والواصلُ للكبتن حبر، والعائدُ إليه أخضر. */
 const GUARANTEE_FEE: Record<NonNullable<Booking["guarantee_state"]>, { text: string; tone: string }> = {
-  held: { text: "محفوظ", tone: "t2-bkg-fee" },
-  paid: { text: "دُفع للكبتن", tone: "t2-bkg-fee paid" },
-  refunded: { text: "رُدّ إلى محفظتك", tone: "t2-bkg-fee ok" },
+  held: { text: tr("محفوظ"), tone: "t2-bkg-fee" },
+  paid: { text: tr("دُفع للكبتن"), tone: "t2-bkg-fee paid" },
+  refunded: { text: tr("رُدّ إلى محفظتك"), tone: "t2-bkg-fee ok" },
 };
 
 /** سطرُ الكبتن: **اسمُه حين قبله أحد**، و«نبحث…» ما دام الحجزُ ينتظر — وبعد التسليم بلا كبتنٍ لا سطر: الرحلةُ تقول الباقي. */
@@ -98,8 +98,8 @@ function captainLine(booking: Booking): string | null {
   // (`guarantees.on_execute_without_captain`)، **ولا أحدَ يبحث** — والسطرُ فوق «لم نطلب رحلتك» يناقضه. **ولا بعد «أي كبتن»**:
   // يعود منتظراً والرسمُ مردودٌ حتى تطلبه الدورة، و«نبحث عن كبتنٍ يضمن حجزك» فوق «رُدّ إلى محفظتك» تناقضه كذلك
   if (booking.awaiting_choice || booking.guarantee_state === "refunded") return null;
-  if (booking.captain_name) return `كبتنُك: ${booking.captain_name}`;
-  return booking.status === "pending" ? "نبحث عن كبتنٍ يضمن حجزك" : null;
+  if (booking.captain_name) return tr("كبتنُك: {0}", { 0: booking.captain_name });
+  return booking.status === "pending" ? tr("نبحث عن كبتنٍ يضمن حجزك") : null;
 }
 
 function when(iso: string): string {
@@ -125,7 +125,7 @@ export function BookingsScreen() {
 
   useEffect(() => {
     load().catch((caught) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الحجوزات"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الحجوزات")),
     );
   }, [load]);
 
@@ -136,7 +136,7 @@ export function BookingsScreen() {
       await cancelBooking(bookingId);
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الإلغاء");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر الإلغاء"));
     } finally {
       setBusy(null);
     }
@@ -151,7 +151,7 @@ export function BookingsScreen() {
 
   return (
     <div className="t2 t2-page pb-nav">
-      <SubHeadT2 title="رحلاتي المجدولة" onBack={goBack} />
+      <SubHeadT2 title={tr("رحلاتي المجدولة")} onBack={goBack} />
 
       {error ? (
         <NoteT2 tone="danger" lead>
@@ -160,7 +160,7 @@ export function BookingsScreen() {
       ) : null}
       {rows === null && !error ? <LoaderT2 /> : null}
       {rows?.length === 0 ? (
-        <BlankT2 icon="event_upcoming" title="لا حجوزَ بعد" hint="حدّد موعداً من شاشة تأكيد الرحلة." />
+        <BlankT2 icon="event_upcoming" title={tr("لا حجوزَ بعد")} hint={tr("حدّد موعداً من شاشة تأكيد الرحلة.")} />
       ) : null}
 
       {(rows ?? []).map((booking) => {
@@ -169,7 +169,7 @@ export function BookingsScreen() {
         // **وما ينتظر اختيارَها لا يُلغى من الرابط** — فعلاه في كتلة البرقوق تحت البطاقة
         const pending = booking.status === "pending" && !awaiting;
         // «نسائية» مكانَ الفئة كما في بطاقة «مجدولة» في «رحلاتي» — **وصفٌ للطلب لا لصاحبته**
-        const kind = booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category];
+        const kind = booking.gender_preference === "female" ? tr("نسائية") : VEHICLE_LABEL[booking.vehicle_category];
         return (
           <article key={booking.id} className={awaiting ? "t2-bk t2-wbk" : pending ? "t2-bk pending" : "t2-bk"}>
             <div className="t2-bk-top">
@@ -181,9 +181,9 @@ export function BookingsScreen() {
             </div>
             <div className="t2-route">
               <span className="t2-dot" />
-              <span className="t2-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+              <span className="t2-place">{booking.pickup_address ?? tr("نقطة على الخريطة")}</span>
               <span className="t2-dot to" />
-              <span className="t2-place strong">{booking.dropoff_address ?? "نقطة على الخريطة"}</span>
+              <span className="t2-place strong">{booking.dropoff_address ?? tr("نقطة على الخريطة")}</span>
             </div>
             {/* **حجزٌ مضمونٌ يُرى ضمانُه ولو أُطفئت الخدمةُ بعده** — رسمُه محفوظٌ في محفظة صاحبه، فحالُ مالِه تُقال (§٦٣-ج/٣) */}
             {booking.guaranteed ? <GuaranteeBlock booking={booking} /> : null}
@@ -192,8 +192,8 @@ export function BookingsScreen() {
                 {kind} ·{" "}
                 {/* **تقديرٌ لا أجرة** — والسعرُ يُحسب عند التنفيذ */}
                 {booking.estimated_fare_at_booking
-                  ? `تقديراً ${formatMoney(booking.estimated_fare_at_booking, booking.currency)}`
-                  : "بلا تقدير"}
+                  ? tr("تقديراً {0}", { 0: formatMoney(booking.estimated_fare_at_booking, booking.currency) })
+                  : tr("بلا تقدير")}
               </span>
               {/* **«ألغِ الحجز» بالحبر** كفعل بطاقة «مجدولة» في R12 («تعديل») — والأحمرُ على الجمر الخافت دون ٤٫٥:١ (٤٫٤٧) */}
               {pending ? (
@@ -204,11 +204,11 @@ export function BookingsScreen() {
                   aria-busy={busy === booking.id}
                   onClick={() => void drop(booking.id)}
                 >
-                  ألغِ الحجز
+                  {tr("ألغِ الحجز")}
                 </button>
               ) : booking.ride_id ? (
                 <Link to={`/rides/${booking.ride_id}`} className="t2-tlink">
-                  تفاصيل الرحلة
+                  {tr("تفاصيل الرحلة")}
                 </Link>
               ) : null}
             </div>
@@ -237,7 +237,7 @@ function GuaranteeBlock({ booking }: { booking: Booking }) {
       <div className="t2-bkg-head">
         <span className="t2-chip t2-bkg-chip">
           <Icon name="verified_user" />
-          مضمون
+          {tr("مضمون")}
         </span>
         {captain ? (
           <span className={booking.captain_name ? "t2-bkg-captain named" : "t2-bkg-captain"}>{captain}</span>
@@ -245,7 +245,7 @@ function GuaranteeBlock({ booking }: { booking: Booking }) {
       </div>
       {fee ? (
         <p className={fee.tone}>
-          رسمُ الضمان{" "}
+          {tr("رسمُ الضمان")}{" "}
           {booking.guarantee_fee ? <span className="t2-bkg-amount">{formatMoney(booking.guarantee_fee, booking.currency)}</span> : null}{" "}
           {fee.text}
         </p>

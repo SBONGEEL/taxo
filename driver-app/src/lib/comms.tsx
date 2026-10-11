@@ -40,7 +40,7 @@ import { useFeature } from "@/lib/config";
 import { useCallsSupported } from "@/lib/mic-gate";
 import { ringsNatively } from "@/lib/push";
 import { loop, play } from "@/lib/sound";
-import { onTripComms, setCommsPushRoute, type TripCommsEvent } from "@/lib/trip-comms";
+import { onTripComms, setCommsPushRoute, type TripCommsEvent } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
 
 /** **نافذةُ المحادثة والمكالمة** — مرآةُ `trip_chat.CHAT_WINDOW` (`ACTIVE_DRIVER_STATUSES`): من القبول حتى الانتهاء. */
 const WINDOW: ReadonlySet<string> = new Set(["accepted", "arrived", "in_progress", "at_stop"]);
@@ -147,7 +147,7 @@ async function microphone(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 }
 
-const MIC_REFUSED = "لا إذنَ للميكروفون — اسمح به من إعدادات الهاتف ثمّ أعد المحاولة.";
+const MIC_REFUSED = tr("لا إذنَ للميكروفون — اسمح به من إعدادات الهاتف ثمّ أعد المحاولة.");
 
 /** **كم يُنتظر المقبسُ لرنينٍ وصل من إشعار** — الإقلاعُ البارد يفتحه في ثوانٍ؛ وبعدها لا يُرنّ هنا: «ردّ» بلا مقبسٍ لا تصله إشارة. */
 const LIVE_WAIT_MS = 10_000;
@@ -207,11 +207,11 @@ export function CommsProvider({
   toast: (title: string, body?: string) => void;
   children: ReactNode;
 }) {
-  const peerRole = side === "rider" ? "الكبتن" : "الراكب";
+  const peerRole = side === "rider" ? tr("الكبتن") : tr("الراكب");
   /** **«مكالمةٌ فائتة» بنصِّ إشعار الخادم حرفاً** (`MISSED_CALL_TITLE` · `MISSED_CALL_BODY`) — فبلاغُه على المقبس، إن وصل بعدها،
    *  يُطوى معها (`firstSighting`) ولا يُرسم مرّتين. */
   const missed = useCallback(
-    () => toast(`مكالمةٌ فائتة من ${peerRole}`, "افتح الرحلة لتعاود الاتصال أو تراسل"),
+    () => toast(tr("مكالمةٌ فائتة من {0}", { 0: peerRole }), tr("افتح الرحلة لتعاود الاتصال أو تراسل")),
     [peerRole, toast],
   );
   const chatFlag = useFeature(ride?.country_code, "trip_chat_enabled");
@@ -286,7 +286,7 @@ export function CommsProvider({
   const alertMessage = useCallback(
     (body: string | null) => {
       setUnread((count) => count + 1);
-      toast(`رسالةٌ جديدة من ${peerRole}`, body ?? "افتح المحادثة لقراءتها");
+      toast(tr("رسالةٌ جديدة من {0}", { 0: peerRole }), body ?? tr("افتح المحادثة لقراءتها"));
     },
     [peerRole, toast],
   );
@@ -303,7 +303,7 @@ export function CommsProvider({
       } catch (caught) {
         const open = chatRef.current;
         if (open && open.rideId === rideId && !open.thread) {
-          setChat({ ...open, error: messageOf(caught, "تعذّر فتح المحادثة — تحقّق من الاتصال.") });
+          setChat({ ...open, error: messageOf(caught, tr("تعذّر فتح المحادثة — تحقّق من الاتصال.")) });
         }
       }
     },
@@ -395,7 +395,7 @@ export function CommsProvider({
           setKnown({ rideId: open.rideId, open: false, can_call: false });
           return null;
         }
-        return messageOf(caught, "تعذّر الإرسال — تحقّق من الاتصال وأعد المحاولة.");
+        return messageOf(caught, tr("تعذّر الإرسال — تحقّق من الاتصال وأعد المحاولة."));
       }
     },
     [setChat],
@@ -409,7 +409,7 @@ export function CommsProvider({
         await reportTripChat(open.rideId, messageId, reason, note.trim() ? note.trim() : null);
         return null;
       } catch (caught) {
-        return messageOf(caught, "تعذّر إرسال البلاغ — أعد المحاولة.");
+        return messageOf(caught, tr("تعذّر إرسال البلاغ — أعد المحاولة."));
       }
     },
     [],
@@ -583,7 +583,7 @@ export function CommsProvider({
       local.getTracks().forEach((track) => track.stop());
       if (!still()) return;
       if (caught instanceof ApiError && caught.code === "call_window_closed") finish("tripover");
-      else finish("broken", messageOf(caught, "تعذّر بدءُ المكالمة — تحقّق من الاتصال."));
+      else finish("broken", messageOf(caught, tr("تعذّر بدءُ المكالمة — تحقّق من الاتصال.")));
       return;
     }
     const view = callRef.current;
@@ -619,7 +619,7 @@ export function CommsProvider({
         await ackRecordingNotice(pending.started.call_id);
       } catch (caught) {
         pending.local.getTracks().forEach((track) => track.stop());
-        finish("broken", messageOf(caught, "تعذّر بدءُ المكالمة — تحقّق من الاتصال."));
+        finish("broken", messageOf(caught, tr("تعذّر بدءُ المكالمة — تحقّق من الاتصال.")));
         return;
       }
       await dial(pending.started, pending.local);
@@ -678,7 +678,7 @@ export function CommsProvider({
       } else if (caught instanceof ApiError && caught.code === "call_window_closed") {
         finish("tripover");
       } else {
-        finish("broken", messageOf(caught, "تعذّر الردّ — تحقّق من الاتصال."));
+        finish("broken", messageOf(caught, tr("تعذّر الردّ — تحقّق من الاتصال.")));
       }
       return;
     }

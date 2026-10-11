@@ -30,7 +30,8 @@ export function nextMode(current: FollowMode): FollowMode {
 }
 
 export function labelFor(mode: FollowMode): string {
-  if (mode === "heading") return "الخريطة تدور مع اتجاهك";
-  if (mode === "follow") return "الخريطة تتبعك";
-  return "اعرض موقعي";
+  if (mode === "heading") return tr("الخريطة تدور مع اتجاهك");
+  if (mode === "follow") return tr("الخريطة تتبعك");
+  return tr("اعرض موقعي");
 }
+import { tr } from "@/lib/i18n";

@@ -26,7 +26,7 @@ import { removeBootFrame } from "@/lib/splash";
 import { Icon } from "@/taxo2";
 
 import "./t2.css";
-import "./for-other.css";
+import "./for-other.css"; import { tr } from "@/lib/i18n";
 
 /** دورةُ السؤال — **دورةُ بثِّ الكبتن نفسُها** تقريباً، فلا يُسأل أسرعَ ممّا يتغيّر الجواب. */
 const POLL_MS = 5_000;
@@ -89,7 +89,7 @@ export function PublicTrackScreen() {
           setGone(true);
           return;
         }
-        setError(caught instanceof ApiError ? caught.message : "تعذّر الوصول — نعيد المحاولة");
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر الوصول — نعيد المحاولة"));
       }
       timer = window.setTimeout(() => void poll(), POLL_MS);
     };
@@ -112,13 +112,13 @@ export function PublicTrackScreen() {
   return (
     <div className="t2 t2-page t2-pt">
       <div className="t2-head">
-        <h1 className="t2-title">تتبّع الرحلة · TAXO</h1>
+        <h1 className="t2-title">{tr("تتبّع الرحلة · TAXO")}</h1>
       </div>
 
       {gone ? (
-        <StateCardT2 icon="error" tone="danger" text="الرابط غير صحيح أو انتهى" />
+        <StateCardT2 icon="error" tone="danger" text={tr("الرابط غير صحيح أو انتهى")} />
       ) : track === null ? (
-        <StateCardT2 icon="hourglass_top" text={error ?? "نقرأ حال الرحلة…"} tone={error ? "danger" : undefined} />
+        <StateCardT2 icon="hourglass_top" text={error ?? tr("نقرأ حال الرحلة…")} tone={error ? "danger" : undefined} />
       ) : (
         <>
           <StateCardT2
@@ -128,7 +128,7 @@ export function PublicTrackScreen() {
           />
           {/* **شريطٌ يتحرّك ولا يتقدّم** ما دام البحثُ جارياً — شريطُ R07 نفسُه */}
           {track.state === "searching" ? (
-            <div className="t2-trk-bar" role="progressbar" aria-label="نبحث عن كبتن" aria-busy="true">
+            <div className="t2-trk-bar" role="progressbar" aria-label={tr("نبحث عن كبتن")} aria-busy="true">
               <span />
             </div>
           ) : null}
@@ -148,7 +148,7 @@ export function PublicTrackScreen() {
             ) : (
               <a className="t2-button secondary t2-pt-maps" href={mapsUrl(position)} target="_blank" rel="noopener noreferrer">
                 <Icon name="map" />
-                افتح الموقع في الخرائط
+                {tr("افتح الموقع في الخرائط")}
               </a>
             )
           ) : null}

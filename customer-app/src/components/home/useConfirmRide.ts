@@ -34,22 +34,22 @@ import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
 import { useConfig } from "@/lib/config";
 import { useWomenService } from "@/lib/women";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** نصٌّ لكل خيار — والثلاثةُ تقول أثرَه على الانتظار لا اسمَه.
  *
  * **والنطاقُ من الخلفية** (`/config` · `dispatch` — §٦٢-ب/٤٨): كان «10 كم بدل 7» مكتوباً هنا نسخةً من ثابتَي `geo` — **رقمان لشيءٍ
  * واحدٍ يفترقان أوّلَ تعديل**. **وقبل وصول الإعداد يُقال بلا رقم** — لا رقمَ يُخمَّن مكانه. */
 export function preferenceNote(preference: GenderPreference, dispatch: AppConfig["dispatch"] | undefined): string {
-  if (preference === "any") return "أي كبتن متاح — أسرع استجابة وأوسع نطاق.";
+  if (preference === "any") return tr("أي كبتن متاح — أسرع استجابة وأوسع نطاق.");
   if (preference === "female") {
     return dispatch
-      ? `سيبحث النظام عن كبتنات فقط، ضمن نطاق ${dispatch.gendered_max_search_radius_km} كم بدل ${dispatch.max_search_radius_km} — قد يطول الانتظار.`
-      : "سيبحث النظام عن كبتنات فقط، في نطاقٍ أوسع — قد يطول الانتظار.";
+      ? tr("سيبحث النظام عن كبتنات فقط، ضمن نطاق {0} كم بدل {1} — قد يطول الانتظار.", { 0: dispatch.gendered_max_search_radius_km, 1: dispatch.max_search_radius_km })
+      : tr("سيبحث النظام عن كبتنات فقط، في نطاقٍ أوسع — قد يطول الانتظار.");
   }
   return dispatch
-    ? `سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق ${dispatch.gendered_max_search_radius_km} كم.`
-    : "سيبحث النظام عن كبتنٍ رجل فقط، في نطاقٍ أوسع.";
+    ? tr("سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق {0} كم.", { 0: dispatch.gendered_max_search_radius_km })
+    : tr("سيبحث النظام عن كبتنٍ رجل فقط، في نطاقٍ أوسع.");
 }
 
 /** «دقيقتان» لا «2 دقيقة» — **العربيةُ تعدّ بالمثنّى والجمع** (§17).
@@ -61,10 +61,10 @@ export function preferenceNote(preference: GenderPreference, dispatch: AppConfig
  * **والخاناتُ لاتينيةٌ بحكم §20** — التغييرُ في صيغة المعدود لا في شكل الرقم.
  */
 export function freeMinutes(count: number): string {
-  if (count === 1) return "الدقيقة الأولى";
-  if (count === 2) return "أول دقيقتين";
-  if (count <= 10) return `أول ${count} دقائق`;
-  return `أول ${count} دقيقة`;
+  if (count === 1) return tr("الدقيقة الأولى");
+  if (count === 2) return tr("أول دقيقتين");
+  if (count <= 10) return tr("أول {0} دقائق", { 0: count });
+  return tr("أول {0} دقيقة", { 0: count });
 }
 
 /** ما سيدفعه لو انتظر — **بالأرقام، وقبل أن يقبل السعر** (§5.10).
@@ -85,13 +85,13 @@ export function waitingNote(estimate: RideEstimate | null): string | null {
   const free = estimate.stop_free_minutes;
   const perMin = Number(estimate.stop_price_per_min);
   if (perMin <= 0)
-    return "يقف الكبتن عند كل محطة، ولا رسمَ على الانتظار في هذه السوق.";
+    return tr("يقف الكبتن عند كل محطة، ولا رسمَ على الانتظار في هذه السوق.");
   const price = formatMoney(estimate.stop_price_per_min, estimate.currency);
   const head =
     free > 0
-      ? `يقف الكبتن عند كل محطة، و${freeMinutes(free)} عند كل واحدة مجاناً`
-      : "يقف الكبتن عند كل محطة، والانتظار محسوبٌ من أول دقيقة";
-  return `${head}، ثم ${price} لكل دقيقة — يظهر عدّادُه أمامك أثناء الوقوف.`;
+      ? tr("يقف الكبتن عند كل محطة، و{0} عند كل واحدة مجاناً", { 0: freeMinutes(free) })
+      : tr("يقف الكبتن عند كل محطة، والانتظار محسوبٌ من أول دقيقة");
+  return tr("{0}، ثم {1} لكل دقيقة — يظهر عدّادُه أمامك أثناء الوقوف.", { 0: head, 1: price });
 }
 
 export interface ConfirmRideProps {
@@ -314,7 +314,7 @@ export function useConfirmRide({
       .catch(
         (caught: unknown) =>
           !cancelled &&
-          setError(caught instanceof ApiError ? caught.message : "تعذّر حساب السعر"),
+          setError(caught instanceof ApiError ? caught.message : tr("تعذّر حساب السعر")),
       )
       .finally(() => !cancelled && setLoading(false));
 
@@ -337,7 +337,7 @@ export function useConfirmRide({
       setCouponOpen(false);
     } catch (caught) {
       setCouponError(
-        caught instanceof ApiError ? caught.message : "تعذّر التحقق من الرمز",
+        caught instanceof ApiError ? caught.message : tr("تعذّر التحقق من الرمز"),
       );
     } finally {
       setChecking(false);
@@ -382,14 +382,14 @@ export function useConfirmRide({
       ? null
       : Number(balance) <= 0
         ? forOther
-          ? "لا رصيد في محفظتك — اشحنها قبل الدفع أو ادفع بالبطاقة."
-          : "لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع."
+          ? tr("لا رصيد في محفظتك — اشحنها قبل الدفع أو ادفع بالبطاقة.")
+          : tr("لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع.")
         : !forOther && unit !== null && Number(balance) < Number(unit)
-          ? "رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك — اشحنها أو اختر طريقةً أخرى عند الدفع."
+          ? tr("رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك — اشحنها أو اختر طريقةً أخرى عند الدفع.")
         : Number(balance) < Number(shownFare)
           ? forOther
-            ? "رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً."
-            : "رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن."
+            ? tr("رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً.")
+            : tr("رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن.")
           : null;
 
   // **وفي الساعات: المحجوزُ كاملاً من المحفظة عند البدء أو لا يبدأ** (§٦٣-ج/٥، `hourly.prepay_on_start`) — **لا باقيَ نقداً**، فرصيدٌ
@@ -399,7 +399,7 @@ export function useConfirmRide({
     hourly?.prepay !== "wallet" || balance === null || shownFare === null
       ? null
       : Number(balance) < Number(shownFare)
-        ? "رصيدك لا يغطّي الساعاتِ المحجوزة — اشحن محفظتك قبل أن يبدأ الكبتن، أو ادفعها نقداً عند البدء."
+        ? tr("رصيدك لا يغطّي الساعاتِ المحجوزة — اشحن محفظتك قبل أن يبدأ الكبتن، أو ادفعها نقداً عند البدء.")
         : null;
 
   return {

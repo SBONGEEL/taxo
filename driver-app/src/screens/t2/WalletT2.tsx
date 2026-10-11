@@ -39,13 +39,13 @@ import { EarningsDays } from "./EarningsDays";
 
 import "@/taxo2";
 import "./t2.css";
-import "./payrequest.css";
+import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **عمّا تُقارَن النسبة** — النافذةُ السابقةُ المساويةُ لها حتى الساعة نفسِها (§٦٢-ج/٣٨). */
 const COMPARED_TO: Record<Earnings["period"], string> = {
-  today: "عن أمس حتى هذه الساعة",
-  week: "عن الأسبوع الماضي",
-  month: "عن الشهر الماضي",
+  today: tr("عن أمس حتى هذه الساعة"),
+  week: tr("عن الأسبوع الماضي"),
+  month: tr("عن الشهر الماضي"),
 };
 
 /** «+12%» كما رُسمت، والهبوطُ بعلامة الطرح التي يكتب بها التصميمُ سالبَه («−8.000»). */
@@ -121,7 +121,7 @@ export function WalletT2Screen() {
       const updated = await cancelPaymentRequest(id);
       setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
     } catch (caught) {
-      setRequestError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الطلب");
+      setRequestError(caught instanceof ApiError ? caught.message : tr("تعذّر إلغاء الطلب"));
     }
   }
 
@@ -153,8 +153,8 @@ export function WalletT2Screen() {
     <div className="t2 t2-wal">
       <div className="t2-wal-scroll scr pb-nav">
         <div className="t2-wal-head">
-          <h1 className="t2-wal-title">الأرباح</h1>
-          <div className="t2-wal-period" role="tablist" aria-label="الفترة">
+          <h1 className="t2-wal-title">{tr("الأرباح")}</h1>
+          <div className="t2-wal-period" role="tablist" aria-label={tr("الفترة")}>
             {(Object.keys(PERIOD_LABEL) as Earnings["period"][]).map((key) => (
               <button
                 key={key}
@@ -207,7 +207,7 @@ export function WalletT2Screen() {
                   {COMPARED_TO[data.period]}
                 </span>
               )}
-              <span>صافي ما دخل محفظتك</span>
+              <span>{tr("صافي ما دخل محفظتك")}</span>
               <span>{countRides(data.completed_rides)}</span>
               {/* **«31 ساعة»** (§٦٢-ج/٣٧، C09) — حيث المفتاحُ مشتعلٌ وحدَه: `null` «لم يُقَس» فلا يُرسم */}
               {data.online_minutes == null ? null : <span>{workedHours(data.online_minutes)}</span>}
@@ -221,40 +221,40 @@ export function WalletT2Screen() {
             {/* ── تفصيلُ الصافي تحت الرسم: أرقامُ «أرباحي» كما تصل ── */}
             <div className="t2-wal-break">
               <div className="t2-wal-line">
-                <span>أرباح الرحلات</span>
+                <span>{tr("أرباح الرحلات")}</span>
                 <span dir="ltr">{digits(data.wallet_earnings)}</span>
               </div>
               <div className="t2-wal-line">
-                <span>عمولة</span>
+                <span>{tr("عمولة")}</span>
                 <span dir="ltr">{digits(data.commission)}</span>
               </div>
               {Number(data.tips) > 0 ? (
                 <div className="t2-wal-line ok">
-                  <span>بقشيش — كاملاً بلا عمولة</span>
+                  <span>{tr("بقشيش — كاملاً بلا عمولة")}</span>
                   <span dir="ltr">{digits(data.tips)}</span>
                 </div>
               ) : null}
               {Number(data.advance_repaid) > 0 ? (
                 <div className="t2-wal-line">
-                  <span>سدادُ سلفة</span>
+                  <span>{tr("سدادُ سلفة")}</span>
                   <span dir="ltr">{digits(data.advance_repaid)}</span>
                 </div>
               ) : null}
               <div className="t2-wal-line">
-                <span>مُحصَّل مباشرة</span>
+                <span>{tr("مُحصَّل مباشرة")}</span>
                 <span>
                   {digits(data.directly_collected)}{" "}
                   {CURRENCY_LABEL[data.currency]}
                 </span>
               </div>
               <p className="t2-wal-hint">
-                كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك،
-                وتظهر هنا لأنها من دخلك.
+                {tr("كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك، وتظهر هنا لأنها من دخلك.")}
+
               </p>
               {negative ? (
                 <p className="t2-wal-hint warn">
-                  العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات
-                  النقدية تُخصم من رصيدك ولو لم يمرّ مالُها به.
+                  {tr("العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات النقدية تُخصم من رصيدك ولو لم يمرّ مالُها به.")}
+
                 </p>
               ) : null}
             </div>
@@ -265,7 +265,7 @@ export function WalletT2Screen() {
         <div className="t2-wal-cash">
           <div className="t2-wal-cash-top">
             <div className="t2-wal-cash-main">
-              <div className="t2-wal-cash-label">الرصيد القابل للسحب</div>
+              <div className="t2-wal-cash-label">{tr("الرصيد القابل للسحب")}</div>
               <div className="t2-wal-cash-amount">
                 <span className="t2-wal-cash-num" dir="ltr">
                   {digits(wallet.available_for_withdrawal)}
@@ -287,8 +287,8 @@ export function WalletT2Screen() {
                 </span>
                 {/* **وفي سوقٍ بلا كليك** (الجزائر) يُقال «طلب سحب» — والقناةُ تُختار في الورقة */}
                 {(wallet.withdrawal_methods ?? []).length > 0 && !wallet.withdrawal_methods.includes("cliq")
-                  ? "طلب سحب"
-                  : "سحب عبر CliQ"}
+                  ? tr("طلب سحب")
+                  : tr("سحب عبر CliQ")}
               </button>
             )}
           </div>
@@ -300,8 +300,8 @@ export function WalletT2Screen() {
                 schedule
               </span>
               <span>
-                محجوز لطلب سحب معلّق: {digits(w.holds[0].amount)} {currency} —
-                من أصل {digits(wallet.balance)} {currency}
+                {tr("محجوز لطلب سحب معلّق:")}{" "}{digits(w.holds[0].amount)} {currency}{" "}{tr("— من أصل")}{" "}
+{digits(wallet.balance)} {currency}
               </span>
             </p>
           ) : w.holds.length > 1 ? (
@@ -310,8 +310,8 @@ export function WalletT2Screen() {
                 schedule
               </span>
               <span>
-                لديك {digits(String(w.holds.length))} طلبات سحب قائمة تحجز من
-                رصيدك — تفصيلُها في «طلبات السحب».
+                {tr("لديك")}{" "}{digits(String(w.holds.length))}{" "}{tr("طلبات سحب قائمة تحجز من رصيدك — تفصيلُها في «طلبات السحب».")}
+
               </span>
             </p>
           ) : null}
@@ -323,8 +323,8 @@ export function WalletT2Screen() {
                 info
               </span>
               <span>
-                اعتُمد طلبُك، والصرفُ متوقّفٌ مؤقّتاً — يبقى طلبُك في مكانه
-                ويصلك حين يُستأنف. ولا شيءَ نقص من رصيدك.
+                {tr("اعتُمد طلبُك، والصرفُ متوقّفٌ مؤقّتاً — يبقى طلبُك في مكانه ويصلك حين يُستأنف. ولا شيءَ نقص من رصيدك.")}
+
               </span>
             </p>
           ) : null}
@@ -335,9 +335,9 @@ export function WalletT2Screen() {
                 info
               </span>
               <span>
-                مستحقاتٌ معلّقة: {digits(wallet.pending_compensation)}{" "}
-                {currency} — تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها
-                أصحابُها.
+                {tr("مستحقاتٌ معلّقة:")}{" "}{digits(wallet.pending_compensation)}{" "}
+                {currency}{" "}{tr("— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.")}
+
               </span>
             </p>
           ) : null}
@@ -348,9 +348,9 @@ export function WalletT2Screen() {
                 info
               </span>
               <span>
-                مبلغٌ مستوفى لكبتنٍ آخر: {digits(wallet.carrier_dues)}{" "}
-                {currency} — استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما
-                يكفي رصيدُها. اشحن المحفظة ليصله.
+                {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{digits(wallet.carrier_dues)}{" "}
+                {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
+
               </span>
             </p>
           ) : null}
@@ -361,8 +361,8 @@ export function WalletT2Screen() {
                 lock
               </span>
               <span>
-                محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع
-                الإدارة التجميد.
+                {tr("محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع الإدارة التجميد.")}
+
               </span>
             </p>
           ) : null}
@@ -370,19 +370,19 @@ export function WalletT2Screen() {
           {/* **«عمولة TAXO» بنصّ الشاشة القائمة وشرطِه** (§25.11) — والنسبةُ تُقرأ من بابها لا تُكتب هنا */}
           {Number(wallet.commission_this_month) > 0 ? (
             <p className="t2-wal-fine">
-              عمولة TAXO هذا الشهر: {digits(wallet.commission_this_month)}{" "}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(wallet.commission_this_month)}{" "}
               {currency}
             </p>
           ) : Number(w.profile?.commission_percent ?? 0) === 0 ? (
             <p className="t2-wal-fine">
-              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — صفر عمولة ما
-              دام اشتراكك سارياً.
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— صفر عمولة ما دام اشتراكك سارياً.")}
+
             </p>
           ) : (
             <p className="t2-wal-fine">
-              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — ونسبتُك{" "}
-              {digits(String(Number(w.profile?.commission_percent)))}٪ على ما
-              تقبضه.
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— ونسبتُك")}{" "}
+              {digits(String(Number(w.profile?.commission_percent)))}{tr("٪ على ما تقبضه.")}
+
             </p>
           )}
         </div>
@@ -394,7 +394,7 @@ export function WalletT2Screen() {
               <span className="t2-wal-txicon" aria-hidden="true">
                 <span className="t2-icon">add_card</span>
               </span>
-              <span className="t2-wal-door-title">شحن الرصيد</span>
+              <span className="t2-wal-door-title">{tr("شحن الرصيد")}</span>
               <span className="t2-icon t2-wal-door-go" aria-hidden="true">
                 arrow_back
               </span>
@@ -421,7 +421,7 @@ export function WalletT2Screen() {
                           {request.provider_name}
                         </span>
                         <span className="t2-row-body">
-                          {request.purpose === "subscription" ? "اشتراك" : "شحن"} · {formatWhen(request.created_at)}
+                          {request.purpose === "subscription" ? tr("اشتراك") : tr("شحن")} · {formatWhen(request.created_at)}
                           {request.reference ? <span dir="ltr"> · {request.reference}</span> : null}
                         </span>
                         {reason ? <span className="t2-pr-reason">{reason}</span> : null}
@@ -431,7 +431,7 @@ export function WalletT2Screen() {
                       </span>
                       {request.status === "pending" ? (
                         <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
-                          إلغاء
+                          {tr("إلغاء")}
                         </button>
                       ) : null}
                     </div>
@@ -451,7 +451,7 @@ export function WalletT2Screen() {
           <span className="t2-wal-txicon" aria-hidden="true">
             <span className="t2-icon">receipt_long</span>
           </span>
-          <span className="t2-wal-door-title">طلبات السحب</span>
+          <span className="t2-wal-door-title">{tr("طلبات السحب")}</span>
           <span className="t2-icon t2-wal-door-go" aria-hidden="true">
             arrow_back
           </span>
@@ -463,7 +463,7 @@ export function WalletT2Screen() {
           <span className="t2-wal-txicon" aria-hidden="true">
             <span className="t2-icon">route</span>
           </span>
-          <span className="t2-wal-door-title">سجل الرحلات</span>
+          <span className="t2-wal-door-title">{tr("سجل الرحلات")}</span>
           <span className="t2-icon t2-wal-door-go" aria-hidden="true">
             arrow_back
           </span>
@@ -482,9 +482,9 @@ export function WalletT2Screen() {
         {/* ── الدفتر: سطرٌ لكلِّ قيد، والإشارةُ من الخلفية ── */}
         {w.entries.length === 0 ? (
           <div className="t2-empty t2-wal-empty">
-            <b>لا حركات بعد</b>
+            <b>{tr("لا حركات بعد")}</b>
             <span>
-              أرباحُ رحلاتك وعمولاتها واشتراكاتك تظهر هنا سطراً سطراً.
+              {tr("أرباحُ رحلاتك وعمولاتها واشتراكاتك تظهر هنا سطراً سطراً.")}
             </span>
           </div>
         ) : (
@@ -503,14 +503,14 @@ export function WalletT2Screen() {
                     {/* **«عمولة TAXO» باسمها** كما في الشاشة القائمة */}
                     <span className="t2-wal-txtitle">
                       {entry.type === "commission"
-                        ? "عمولة TAXO"
+                        ? tr("عمولة TAXO")
                         : TRANSACTION_LABEL[entry.type]}
                     </span>
                     <span className="t2-wal-txwhen">
                       {formatWhen(entry.created_at)}
                       {entry.commission_percent !== null &&
                       entry.commission_percent !== undefined ? (
-                        <> · {digits(entry.commission_percent)}٪</>
+                        <> · {digits(entry.commission_percent)}{tr("٪")}</>
                       ) : null}
                     </span>
                   </span>
@@ -525,7 +525,7 @@ export function WalletT2Screen() {
                       {digits(unsigned(entry.amount))}
                     </span>
                     <span className="t2-wal-txafter">
-                      الرصيد {digits(entry.balance_after)}
+                      {tr("الرصيد")}{" "}{digits(entry.balance_after)}
                     </span>
                   </span>
                 </div>
@@ -541,7 +541,7 @@ export function WalletT2Screen() {
             disabled={w.busy}
             onClick={() => void w.loadMore()}
           >
-            {w.busy ? "…" : "عرض المزيد"}
+            {w.busy ? "…" : tr("عرض المزيد")}
           </button>
         ) : null}
       </div>
@@ -557,7 +557,7 @@ export function WalletT2Screen() {
             onClose={() => w.setSheet(false)}
             onDone={() => {
               w.setSheet(false);
-              w.setDone("أُرسل طلب السحب — بانتظار الموافقة");
+              w.setDone(tr("أُرسل طلب السحب — بانتظار الموافقة"));
               void w.load();
             }}
           />

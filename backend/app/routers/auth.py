@@ -907,6 +907,8 @@ async def update_me(
         user.gender = payload.gender
     if payload.ride_gender_preference is not None:
         user.ride_gender_preference = payload.ride_gender_preference
+    if payload.language is not None:
+        user.language = payload.language
 
     await session.commit()
     await session.refresh(user)

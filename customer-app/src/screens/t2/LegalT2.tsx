@@ -9,17 +9,17 @@ import { useNavigate } from "react-router-dom";
 import { LEGAL_PAGES, openLegal } from "@/lib/legal";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 export function LegalT2Screen() {
   const navigate = useNavigate();
   return (
     <div className="t2 t2-page t2-account pb-nav">
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => navigate(-1)}>
+        <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => navigate(-1)}>
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-        <h1 className="t2-title">الشروط والخصوصية</h1>
+        <h1 className="t2-title">{tr("الشروط والخصوصية")}</h1>
       </div>
       <div className="t2-list t2-arows">
         {LEGAL_PAGES.map((page) => (
@@ -30,7 +30,7 @@ export function LegalT2Screen() {
           </button>
         ))}
       </div>
-      <p className="t2-legal-note">تُفتحان على موقع TAXO — النصُّ المنشورُ نفسُه الذي وافقتَ عليه عند التسجيل.</p>
+      <p className="t2-legal-note">{tr("تُفتحان على موقع TAXO — النصُّ المنشورُ نفسُه الذي وافقتَ عليه عند التسجيل.")}</p>
     </div>
   );
 }

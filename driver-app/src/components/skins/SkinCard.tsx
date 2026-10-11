@@ -13,7 +13,7 @@ import type { VehicleSkin } from "@/api/types";
 import { SkinArt } from "@/components/skins/SkinArt";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { BLOCKED_LABEL, RARITY_CHIP, RARITY_LABEL } from "@/lib/skins";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function SkinCard({
   skin,
@@ -44,7 +44,7 @@ export function SkinCard({
         </span>
         {skin.active ? (
           <span className="flex items-center gap-3 text-9.5 font-bold text-ok">
-            <Check size={11} /> مفعَّلة
+            <Check size={11} />{" "}{tr("مفعَّلة")}
           </span>
         ) : null}
       </span>
@@ -56,7 +56,7 @@ export function SkinCard({
       {/* **السعرُ أو سببُ المنع — لا كلاهما**: العقدُ يعطي سبباً واحداً
           بأسبقيةٍ مكتوبة، وسطران يقولان لكبتنٍ واحدٍ خبرين عن حالةٍ واحدة */}
       {skin.owned ? (
-        <span className="block text-11 text-muted">في كراجك</span>
+        <span className="block text-11 text-muted">{tr("في كراجك")}</span>
       ) : skin.blocked_reason ? (
         <span className="block text-11 font-semibold text-muted">
           {BLOCKED_LABEL[skin.blocked_reason]}
@@ -69,7 +69,7 @@ export function SkinCard({
           </span>
         </span>
       ) : (
-        <span className="block text-11 text-muted">غير معروضة للبيع</span>
+        <span className="block text-11 text-muted">{tr("غير معروضة للبيع")}</span>
       )}
 
       {/* **الكميّةُ المتبقيةُ حين تكون محدودة** — و`null` بلا حدٍّ فلا سطر:
@@ -77,14 +77,14 @@ export function SkinCard({
       {skin.remaining !== null ? (
         <span className="block text-10 text-muted">
           {skin.remaining > 0
-            ? `متبقٍّ ${digits(String(skin.remaining))}`
-            : "نفدت الكمية"}
+            ? tr("متبقٍّ {0}", { 0: digits(String(skin.remaining)) })
+            : tr("نفدت الكمية")}
           {" · "}
-          {digits(String(skin.owners_count))} اقتنوها
+          {digits(String(skin.owners_count))}{" "}{tr("اقتنوها")}
         </span>
       ) : skin.owners_count > 0 ? (
         <span className="block text-10 text-muted">
-          {digits(String(skin.owners_count))} اقتنوها
+          {digits(String(skin.owners_count))}{" "}{tr("اقتنوها")}
         </span>
       ) : null}
     </button>

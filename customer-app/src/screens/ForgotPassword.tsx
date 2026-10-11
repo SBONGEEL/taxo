@@ -30,7 +30,7 @@ import {
   AuthTitle,
   AuthTop,
   Icon,
-} from "@/taxo2";
+} from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 type Failure = { field: "phone" | "password" | null; message: string };
 
@@ -54,7 +54,7 @@ export function ForgotPasswordScreen() {
   const complete = looksComplete(phone, nationalLength);
   const ready = useMemo(() => complete && passwordsReady(password, confirm), [complete, password, confirm]);
   const phoneShort =
-    touched && phone.length > 0 && !complete && dialCode !== null ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.` : null;
+    touched && phone.length > 0 && !complete && dialCode !== null ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode }) : null;
 
   async function apply(verificationToken: string) {
     setBusy(true);
@@ -75,7 +75,7 @@ export function ForgotPasswordScreen() {
         const field = caught.field("field");
         setFailure({ field: field === "phone" || field === "password" ? field : null, message: caught.message });
       } else {
-        setFailure({ field: null, message: "تعذّر تغيير كلمة المرور — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر تغيير كلمة المرور — أعد المحاولة") });
       }
       setStep("details");
     } finally {
@@ -96,7 +96,7 @@ export function ForgotPasswordScreen() {
         onLeave={() => setStep("details")}
         step={2}
         total={2}
-        submitLabel="تغيير كلمة المرور"
+        submitLabel={tr("تغيير كلمة المرور")}
         busy={busy}
       />
     );
@@ -105,12 +105,12 @@ export function ForgotPasswordScreen() {
   return (
     <AuthPage>
       <AuthTop onBack={() => navigate("/login")} step={verification === "none" ? undefined : 1} total={verification === "none" ? undefined : 2} />
-      <AuthTitle step title="نسيت كلمة المرور؟" sub="اكتب رقمك وكلمة مرورٍ جديدة، ثم نرسل لك رمزاً نتأكد به أنه رقمك." />
+      <AuthTitle step title={tr("نسيت كلمة المرور؟")} sub={tr("اكتب رقمك وكلمة مرورٍ جديدة، ثم نرسل لك رمزاً نتأكد به أنه رقمك.")} />
 
       {verification === "none" ? (
         <div className="t2-auth-banner" role="alert">
           <Icon name="error" />
-          <span>استعادة كلمة المرور غير متاحة حالياً — لا مُحقِّق مُهيّأ. راجع الدعم.</span>
+          <span>{tr("استعادة كلمة المرور غير متاحة حالياً — لا مُحقِّق مُهيّأ. راجع الدعم.")}</span>
         </div>
       ) : (
         <form
@@ -123,9 +123,9 @@ export function ForgotPasswordScreen() {
           noValidate
         >
           {countries.length > 1 ? (
-            <AuthBlock label="السوق">
+            <AuthBlock label={tr("السوق")}>
               <AuthChoice
-                label="السوق"
+                label={tr("السوق")}
                 value={country}
                 options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
                 onChange={setCountry}
@@ -134,11 +134,11 @@ export function ForgotPasswordScreen() {
           ) : null}
 
           <AuthBlock
-            label="رقم الهاتف"
+            label={tr("رقم الهاتف")}
             htmlFor="phone"
             error={
               dialCode === null
-                ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+                ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
                 : phoneShort ?? (failure?.field === "phone" ? failure.message : null)
             }
           >
@@ -157,10 +157,10 @@ export function ForgotPasswordScreen() {
           </AuthBlock>
 
           <AuthBlock
-            label="كلمة المرور الجديدة"
+            label={tr("كلمة المرور الجديدة")}
             htmlFor="new-password"
             error={passwordError(password) ?? (failure?.field === "password" ? failure.message : null)}
-            hint="تُغلق كلُّ الجلسات المفتوحة على حسابك بعد التغيير."
+            hint={tr("تُغلق كلُّ الجلسات المفتوحة على حسابك بعد التغيير.")}
           >
             <AuthSecret
               id="new-password"
@@ -173,7 +173,7 @@ export function ForgotPasswordScreen() {
             <AuthConditions items={passwordConditions(password)} />
           </AuthBlock>
 
-          <AuthBlock label="تأكيد كلمة المرور" htmlFor="confirm" error={confirmError(password, confirm)}>
+          <AuthBlock label={tr("تأكيد كلمة المرور")} htmlFor="confirm" error={confirmError(password, confirm)}>
             <AuthSecret
               id="confirm"
               name="confirm"
@@ -194,14 +194,14 @@ export function ForgotPasswordScreen() {
           <div className="t2-auth-push" />
           <div className="t2-auth-actions">
             <button type="submit" className="t2-button primary" disabled={busy || dialCode === null || !ready}>
-              متابعة
+              {tr("متابعة")}
             </button>
           </div>
         </form>
       )}
 
       <p className="t2-auth-foot">
-        تذكّرتَها؟ <Link to="/login">ادخل</Link>
+        {tr("تذكّرتَها؟")}{" "}<Link to="/login">{tr("ادخل")}</Link>
       </p>
     </AuthPage>
   );

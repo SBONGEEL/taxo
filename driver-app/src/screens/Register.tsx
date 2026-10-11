@@ -37,7 +37,7 @@ import {
   Icon,
 } from "@/taxo2";
 
-import "@/components/t2/captain-auth.css";
+import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
 type Field = "name" | "phone" | "password";
 type Failure = { field: Field | null; message: string };
@@ -113,10 +113,10 @@ export function RegisterScreen() {
 
   const errorOf = (field: Field) => (failure?.field === field ? failure.message : null);
   const nameShort =
-    touched && name.length > 0 && name.trim().length < 2 ? "الاسم قصير — حرفان على الأقل." : null;
+    touched && name.length > 0 && name.trim().length < 2 ? tr("الاسم قصير — حرفان على الأقل.") : null;
   const phoneShort =
     touched && phone.length > 0 && !complete && dialCode !== null
-      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode })
       : null;
 
   // الخطوةُ الجديدةُ تُفتح من أعلاها لا من حيث توقّف التمرير
@@ -167,7 +167,7 @@ export function RegisterScreen() {
         if (at || caught.status === 401) setStep("details");
         if (at) window.setTimeout(() => document.getElementById(INPUT_ID[at])?.focus(), 0);
       } else {
-        setFailure({ field: null, message: "تعذّر الاتصال بالخادم — أعد المحاولة" });
+        setFailure({ field: null, message: tr("تعذّر الاتصال بالخادم — أعد المحاولة") });
       }
     } finally {
       setBusy(false);
@@ -186,7 +186,7 @@ export function RegisterScreen() {
             requestChallenge={requestChallenge}
             onProven={(token) => void create(token)}
             onBack={() => setStep("details")}
-            note="التحقق من الرقم مرة واحدة عند التسجيل."
+            note={tr("التحقق من الرقم مرة واحدة عند التسجيل.")}
             outerError={failure?.field === null ? failure.message : null}
             busy={busy}
           />
@@ -202,12 +202,12 @@ export function RegisterScreen() {
         <RegisterTop step={1} onBack={() => reopenWelcome()} />
 
         <form onSubmit={next} className="t2-auth-form" noValidate>
-          <AuthBlock label="الاسم الكامل" htmlFor="name" error={nameShort ?? errorOf("name")}>
+          <AuthBlock label={tr("الاسم الكامل")} htmlFor="name" error={nameShort ?? errorOf("name")}>
             <AuthInput
               id="name"
               name="name"
               autoComplete="name"
-              placeholder="مثال: أبو محمد الزعبي"
+              placeholder={tr("مثال: أبو محمد الزعبي")}
               value={name}
               invalid={Boolean(nameShort ?? errorOf("name"))}
               onBlur={() => setTouched(true)}
@@ -218,14 +218,14 @@ export function RegisterScreen() {
           <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
           <AuthBlock
-            label="رقم الهاتف"
+            label={tr("رقم الهاتف")}
             htmlFor="phone"
             error={
               dialCode === null
-                ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+                ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
                 : phoneShort ?? errorOf("phone")
             }
-            hint="الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية."
+            hint={tr("الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية.")}
           >
             <AuthPhone
               id="phone"
@@ -247,7 +247,7 @@ export function RegisterScreen() {
 
           {/* **القاعدةُ كما تنشرها الخلفية** (٨–١٢٨ وقائمةُ المنع تفحصها هي) — بنودُها من `/config` لا من نصٍّ هنا */}
           <AuthBlock
-            label="كلمة المرور"
+            label={tr("كلمة المرور")}
             htmlFor="new-password"
             error={passwordError(password) ?? errorOf("password")}
           >
@@ -263,7 +263,7 @@ export function RegisterScreen() {
           </AuthBlock>
 
           <AuthBlock
-            label="تأكيد كلمة المرور"
+            label={tr("تأكيد كلمة المرور")}
             htmlFor="confirm-password"
             error={confirmError(password, confirmation)}
           >
@@ -296,14 +296,14 @@ export function RegisterScreen() {
           <div className="t2-auth-push" />
           <div className="t2-auth-actions">
             <button type="submit" className="t2-button primary" disabled={busy || !ready}>
-              {busy ? "لحظة…" : "التالي"}
+              {busy ? tr("لحظة…") : tr("التالي")}
             </button>
           </div>
-          {method !== "none" ? <p className="cap-after">الرقم يُثبت بالتحقق مرة واحدة.</p> : null}
+          {method !== "none" ? <p className="cap-after">{tr("الرقم يُثبت بالتحقق مرة واحدة.")}</p> : null}
         </form>
 
         <p className="t2-auth-foot">
-          لديك حساب؟ <Link to="/login">ادخل</Link>
+          {tr("لديك حساب؟")}{" "}<Link to="/login">{tr("ادخل")}</Link>
         </p>
       </AuthPage>
     </div>

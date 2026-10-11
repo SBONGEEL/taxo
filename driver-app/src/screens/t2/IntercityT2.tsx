@@ -27,16 +27,16 @@ import { countSeats } from "./count";
 import "./t2.css";
 import "./guarantees.css";
 import "./fields.css";
-import "./intercity.css";
+import "./intercity.css"; import { tr } from "@/lib/i18n";
 
 /** **أقصى مقاعد الإعلان** — سيارةُ التصريح أربعةُ مقاعدَ على الأقل، **والخلفيةُ تعيد الفحصَ بمقاعد تصريحه** وترفض بنصّها. */
 const MAX_SEATS = 4;
 
 const STATUS: Record<IntercityTrip["status"], { text: string; chip: string }> = {
-  open: { text: "مفتوحة", chip: "t2-chip ok" },
-  departed: { text: "انطلقت", chip: "t2-chip warn" },
-  completed: { text: "اكتملت", chip: "t2-chip" },
-  cancelled: { text: "أُلغيت", chip: "t2-chip" },
+  open: { text: tr("مفتوحة"), chip: "t2-chip ok" },
+  departed: { text: tr("انطلقت"), chip: "t2-chip warn" },
+  completed: { text: tr("اكتملت"), chip: "t2-chip" },
+  cancelled: { text: tr("أُلغيت"), chip: "t2-chip" },
 };
 
 /** «الخميس 8 أكتوبر · 07:30» — **الساعةُ بخاناتٍ لاتينيةٍ و24 ساعة** (§20)، بتوقيت الجهاز. */
@@ -65,14 +65,14 @@ export function IntercityT2Screen() {
     <div className="t2 t2-gu">
       <div className="t2-gu-scroll scr">
         <div className="t2-head">
-          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">بين المدن</h1>
+          <h1 className="t2-title">{tr("بين المدن")}</h1>
         </div>
         <p className="t2-gu-lede">
-          رحلتُك بين مدينتين — تعلنها بمقاعدها وأقلِّ عددٍ تنطلق به، فيحجز الركّابُ مقاعدَ من محافظهم أو السيارةَ كاملةً نقداً لك.{" "}
-          <b>وتلتقيهم في نقطة التجمّع.</b>
+          {tr("رحلتُك بين مدينتين — تعلنها بمقاعدها وأقلِّ عددٍ تنطلق به، فيحجز الركّابُ مقاعدَ من محافظهم أو السيارةَ كاملةً نقداً لك.")}{" "}
+          <b>{tr("وتلتقيهم في نقطة التجمّع.")}</b>
         </p>
 
         {error ? (
@@ -93,14 +93,14 @@ export function IntercityT2Screen() {
             {/* **الإعلانُ خلف المفتاح** — ومطفأً لا نموذجَ يَعِد بما سيُرفض */}
             {enabled ? (
               <section>
-                <div className="t2-section">أعلن رحلة</div>
+                <div className="t2-section">{tr("أعلن رحلة")}</div>
                 <PostForm routes={routes ?? []} busy={busy === "post"} locked={busy !== null} note={posting} onPost={post} />
               </section>
             ) : null}
 
             <section>
               <div className="t2-section">
-                رحلاتُك
+                {tr("رحلاتُك")}
                 {trips.length > 0 ? (
                   <span className="t2-section-aside" dir="ltr">
                     {digits(String(trips.length))}
@@ -109,7 +109,7 @@ export function IntercityT2Screen() {
               </div>
               {trips.length === 0 ? (
                 <p className="t2-empty">
-                  {enabled ? "لم تعلن رحلةً بعد. أعلنها أعلاه — وتظهر للركّاب في سوقك حتى موعدها." : "لا رحلاتِ لك."}
+                  {enabled ? tr("لم تعلن رحلةً بعد. أعلنها أعلاه — وتظهر للركّاب في سوقك حتى موعدها.") : tr("لا رحلاتِ لك.")}
                 </p>
               ) : (
                 trips.map((trip) => (
@@ -150,7 +150,7 @@ function Stepper({
       <button
         type="button"
         className="t2-ict-step"
-        aria-label={`${label}: أقل`}
+        aria-label={tr("{0}: أقل", { 0: label })}
         disabled={value <= min}
         onClick={() => onChange(Math.max(min, value - 1))}
       >
@@ -162,7 +162,7 @@ function Stepper({
       <button
         type="button"
         className="t2-ict-step"
-        aria-label={`${label}: أكثر`}
+        aria-label={tr("{0}: أكثر", { 0: label })}
         disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
       >
@@ -197,13 +197,13 @@ function PostForm({
   const cur = currencyLabel(useCountryConfig(user?.country_code)?.currency);
 
   if (routes.length === 0) {
-    return <p className="t2-empty">لا مساراتٍ مفعّلةً في سوقك بعد — يضيفها TAXO بين المدن بسعري المقعد والسيارة.</p>;
+    return <p className="t2-empty">{tr("لا مساراتٍ مفعّلةً في سوقك بعد — يضيفها TAXO بين المدن بسعري المقعد والسيارة.")}</p>;
   }
 
   return (
     <div className="t2-gu-card t2-ict-form">
-      <span className="t2-fld-label">المسار</span>
-      <div className="t2-ict-routes" role="radiogroup" aria-label="المسار">
+      <span className="t2-fld-label">{tr("المسار")}</span>
+      <div className="t2-ict-routes" role="radiogroup" aria-label={tr("المسار")}>
         {routes.map((route) => {
           const on = route.id === routeId;
           return (
@@ -216,11 +216,11 @@ function PostForm({
               onClick={() => setRouteId(route.id)}
             >
               <span className="t2-ict-route-name">
-                من {route.from_city} إلى {route.to_city}
+                {tr("من")}{" "}{route.from_city}{" "}{tr("إلى")}{" "}{route.to_city}
               </span>
               <span className="t2-ict-route-meta">{route.from_point}</span>
               <span className="t2-ict-route-meta">
-                <b dir="ltr">{digits(route.price_seat)}</b> {cur} للمقعد · <b dir="ltr">{digits(route.price_car)}</b> {cur} للسيارة
+                <b dir="ltr">{digits(route.price_seat)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{digits(route.price_car)}</b> {cur}{" "}{tr("للسيارة")}
               </span>
             </button>
           );
@@ -228,7 +228,7 @@ function PostForm({
       </div>
 
       <label className="t2-fld-label t2-ict-gap" htmlFor="intercity-at">
-        موعد الانطلاق
+        {tr("موعد الانطلاق")}
       </label>
       <DateField
         id="intercity-at"
@@ -236,16 +236,16 @@ function PostForm({
         value={at}
         min={localValue(new Date())}
         onChange={setAt}
-        label="موعد الانطلاق"
+        label={tr("موعد الانطلاق")}
       />
 
       <div className="t2-ict-row">
         <span className="t2-ict-row-label">
           <Icon name="group" />
-          المقاعد
+          {tr("المقاعد")}
         </span>
         <Stepper
-          label="المقاعد"
+          label={tr("المقاعد")}
           value={seats}
           min={1}
           max={MAX_SEATS}
@@ -259,12 +259,12 @@ function PostForm({
       <div className="t2-ict-row">
         <span className="t2-ict-row-label">
           <Icon name="flag" />
-          أقلُّ عددٍ أنطلق به
+          {tr("أقلُّ عددٍ أنطلق به")}
         </span>
-        <Stepper label="أقلُّ عددٍ أنطلق به" value={minSeats} min={1} max={seats} onChange={setMinSeats} />
+        <Stepper label={tr("أقلُّ عددٍ أنطلق به")} value={minSeats} min={1} max={seats} onChange={setMinSeats} />
       </div>
       <p className="t2-fld-hint">
-        إن لم يبلغه المحجوزُ قبل المهلة أُلغيت الرحلةُ وحدَها، وعاد إلى كلِّ راكبٍ مالُه كاملاً — بلا أثرٍ عليك.
+        {tr("إن لم يبلغه المحجوزُ قبل المهلة أُلغيت الرحلةُ وحدَها، وعاد إلى كلِّ راكبٍ مالُه كاملاً — بلا أثرٍ عليك.")}
       </p>
 
       {note ? (
@@ -286,7 +286,7 @@ function PostForm({
           });
         }}
       >
-        {busy ? "نرسل…" : "أعلن الرحلة"}
+        {busy ? tr("نرسل…") : tr("أعلن الرحلة")}
       </button>
     </div>
   );
@@ -320,8 +320,8 @@ function TripCard({
       <div className="t2-callout t2-ict-ask" role="alert">
         <Icon name="error" />
         <div className="t2-callout-main">
-          <p className="t2-callout-title">ألغِ الرحلة؟</p>
-          <p className="t2-callout-body">قبل المهلة بلا أثرٍ عليك، ويُردّ لكلِّ راكبٍ مالُه كاملاً.</p>
+          <p className="t2-callout-title">{tr("ألغِ الرحلة؟")}</p>
+          <p className="t2-callout-body">{tr("قبل المهلة بلا أثرٍ عليك، ويُردّ لكلِّ راكبٍ مالُه كاملاً.")}</p>
           <div className="t2-gu-actions t2-ict-ask-actions">
             <button
               type="button"
@@ -333,10 +333,10 @@ function TripCard({
                 onAct("cancel");
               }}
             >
-              نعم، ألغِها
+              {tr("نعم، ألغِها")}
             </button>
             <button type="button" className="t2-button secondary" onClick={() => setAsking(false)}>
-              تراجع
+              {tr("تراجع")}
             </button>
           </div>
         </div>
@@ -345,13 +345,13 @@ function TripCard({
       <>
         <div className="t2-gu-actions">
           <button type="button" className="t2-button action" disabled={locked} aria-busy={busy} onClick={() => onAct("depart")}>
-            {busy ? "نرسل…" : "انطلقتُ"}
+            {busy ? tr("نرسل…") : tr("انطلقتُ")}
           </button>
           <button type="button" className="t2-button secondary" disabled={locked} onClick={() => setAsking(true)}>
-            ألغِ الرحلة
+            {tr("ألغِ الرحلة")}
           </button>
         </div>
-        <p className="t2-gu-hint center">«ألغِ الرحلة» قبل المهلة بلا أثر، ويُردّ للركّاب كاملاً.</p>
+        <p className="t2-gu-hint center">{tr("«ألغِ الرحلة» قبل المهلة بلا أثر، ويُردّ للركّاب كاملاً.")}</p>
       </>
     );
   } else if (trip.status === "departed") {
@@ -363,7 +363,7 @@ function TripCard({
         aria-busy={busy}
         onClick={() => onAct("complete")}
       >
-        {busy ? "نرسل…" : "وصلتُ — أنهِ الرحلة"}
+        {busy ? tr("نرسل…") : tr("وصلتُ — أنهِ الرحلة")}
       </button>
     );
   }
@@ -392,24 +392,24 @@ function TripCard({
       </div>
       <div className="t2-gu-money">
         <span>
-          محجوزٌ <b dir="ltr">{digits(String(trip.seats_booked))}</b> من {countSeats(trip.seats_offered)} · وأقلُّ ما تنطلق به{" "}
+          {tr("محجوزٌ")}{" "}<b dir="ltr">{digits(String(trip.seats_booked))}</b>{" "}{tr("من")}{" "}{countSeats(trip.seats_offered)}{" "}{tr("· وأقلُّ ما تنطلق به")}{" "}
           <b dir="ltr">{digits(String(trip.min_seats))}</b>
         </span>
         <span className="t2-gu-fee">
-          <b dir="ltr">{digits(trip.price_seat)}</b> {cur} للمقعد · <b dir="ltr">{digits(trip.price_car)}</b> {cur} للسيارة
+          <b dir="ltr">{digits(trip.price_seat)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{digits(trip.price_car)}</b> {cur}{" "}{tr("للسيارة")}
         </span>
       </div>
 
       {/* **الركّابُ كما ينشرهم الباب**: الاسمُ قبل الانطلاق بساعة، والرقمُ عند الانطلاق وحدَه — فلا يُطلب ما لم يصل */}
       {trip.passengers.length > 0 ? (
-        <ul className="t2-ict-people" aria-label="الركّاب">
+        <ul className="t2-ict-people" aria-label={tr("الركّاب")}>
           {trip.passengers.map((person, index) => (
             <li key={`${person.name}-${index}`} className="t2-ict-person">
               <Icon name="person" />
               <span className="t2-ict-person-name">{person.name}</span>
               <span className="t2-ict-person-seats">{countSeats(person.seats)}</span>
               {person.phone ? (
-                <a className="t2-ict-call" href={`tel:${person.phone}`} aria-label={`اتصل بـ${person.name}`}>
+                <a className="t2-ict-call" href={`tel:${person.phone}`} aria-label={tr("اتصل بـ{0}", { 0: person.name })}>
                   <Icon name="call" />
                   <span dir="ltr">{person.phone}</span>
                 </a>
@@ -418,7 +418,7 @@ function TripCard({
           ))}
         </ul>
       ) : live && trip.seats_booked > 0 ? (
-        <p className="t2-gu-hint">تظهر أسماءُ ركّابك قبل الانطلاق بساعة، وأرقامُهم حين تنطلق.</p>
+        <p className="t2-gu-hint">{tr("تظهر أسماءُ ركّابك قبل الانطلاق بساعة، وأرقامُهم حين تنطلق.")}</p>
       ) : null}
 
       {actions}

@@ -25,7 +25,7 @@ import {
   RARITY_LABEL,
   visibilityNote,
 } from "@/lib/skins";
-import { digits, cn, DISPLAY_LOCALE } from "@/lib/utils";
+import { digits, cn, DISPLAY_LOCALE } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function SkinDetailSheet({
   skin,
@@ -68,7 +68,7 @@ export function SkinDetailSheet({
         <SkinArt skin={skin} className="mb-12 h-150 w-full" />
 
         <div className="mb-6 text-11.5 font-semibold text-muted">
-          كما يراها الراكب على الخريطة
+          {tr("كما يراها الراكب على الخريطة")}
         </div>
         <SkinMapPreview skin={skin} className="mb-12 h-150 w-full" />
 
@@ -76,36 +76,36 @@ export function SkinDetailSheet({
         <p className="mb-12 rounded-14 border border-line bg-surface-2 px-14 py-11 text-11.5 leading-note text-ink">
           {visibilityNote(skin)}
           {skin.map_rotates
-            ? " وتدور مع اتجاه سيرك."
-            : " وتُعرض ثابتةً بلا دوران."}
+            ? tr(" وتدور مع اتجاه سيرك.")
+            : tr(" وتُعرض ثابتةً بلا دوران.")}
         </p>
 
         <dl className="mb-14 flex flex-col gap-7">
           {skin.remaining !== null ? (
             <Line
-              term="المتبقّي"
+              term={tr("المتبقّي")}
               value={
                 skin.remaining > 0
                   ? digits(String(skin.remaining))
-                  : "نفدت الكمية"
+                  : tr("نفدت الكمية")
               }
             />
           ) : null}
           {/* **«عددُ من اقتنوها»** لا «اقتنوها»: الثانيةُ فعلٌ يُقرأ مع
               رقمه «اقتنوها 0» — جملةٌ لا معنى لها. قِيس في المتصفح */}
           <Line
-            term="عددُ من اقتنوها"
+            term={tr("عددُ من اقتنوها")}
             value={digits(String(skin.owners_count))}
           />
           {skin.level_required !== null ? (
             <Line
-              term="المستوى المطلوب"
+              term={tr("المستوى المطلوب")}
               value={digits(String(skin.level_required))}
             />
           ) : null}
           {skin.valid_until ? (
             <Line
-              term="حتى"
+              term={tr("حتى")}
               value={digits(
                 new Date(skin.valid_until).toLocaleDateString(DISPLAY_LOCALE, {
                   day: "numeric",
@@ -118,17 +118,17 @@ export function SkinDetailSheet({
 
         {onActivate ? (
           <Button size="md" loading={busy} onClick={onActivate}>
-            {skin.active ? "مفعَّلة الآن" : "فعّلها"}
+            {skin.active ? tr("مفعَّلة الآن") : tr("فعّلها")}
           </Button>
         ) : onBuy && skin.price && skin.currency ? (
           <Button size="md" disabled={busy} onClick={onBuy}>
-            شراء بـ {digits(skin.price)} {CURRENCY_LABEL[skin.currency]}
+            {tr("شراء بـ")}{" "}{digits(skin.price)} {CURRENCY_LABEL[skin.currency]}
           </Button>
         ) : (
           <p className="rounded-16 border border-line bg-surface-2 p-14 text-center text-12.5 font-semibold text-muted">
             {skin.blocked_reason
               ? BLOCKED_LABEL[skin.blocked_reason]
-              : "غير معروضة للبيع"}
+              : tr("غير معروضة للبيع")}
           </p>
         )}
 
@@ -137,7 +137,7 @@ export function SkinDetailSheet({
           onClick={onClose}
           className="pressable mt-9 w-full py-8 text-center text-12.5 font-semibold text-muted"
         >
-          إغلاق
+          {tr("إغلاق")}
         </button>
       </div>
     </div>

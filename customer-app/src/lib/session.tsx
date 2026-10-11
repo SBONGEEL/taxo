@@ -52,7 +52,7 @@ import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
 import { channelSet, markPushReady, registerNativePush } from "@/lib/push";
-import { setSplashStatus } from "@/lib/splash";
+import { setSplashStatus } from "@/lib/splash"; import { tr } from "@/lib/i18n";
 
 /** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
  *  أو خطأٌ لم يمرّ بعميل HTTP أصلاً. وما عدا ذلك قاله الخادمُ عن الحساب. */
@@ -218,7 +218,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const setBiometric = useCallback(
     async (on: boolean) => {
       if (on) {
-        await proveBiometry("لتفعيل الدخول بالبصمة");
+        await proveBiometry(tr("لتفعيل الدخول بالبصمة"));
         await enableBiometric(tokens.refresh());
         tokens.detachFromLocalStorage();
       } else {
@@ -231,13 +231,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   /** **الفتحُ ثم التجديد** — والخلفيةُ لا ترى إلا رمزاً كأيِّ رمز. */
   const signInWithBiometry = useCallback(async () => {
-    const token = await unlockToken("لتسجيل الدخول إلى TAXO");
+    const token = await unlockToken(tr("لتسجيل الدخول إلى TAXO"));
     tokens.adoptRefresh(token);
     const ok = await refreshNow();
     if (!ok) {
       await forgetToken();
       await refreshBiometry();
-      throw new Error("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور");
+      throw new Error(tr("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور"));
     }
     setUser(await getMe());
     await refreshBiometry();

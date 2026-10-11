@@ -32,7 +32,7 @@ import {
 } from "@/lib/permission-walk";
 import { AuthPage, AuthTitle, AuthTop, Icon } from "@/taxo2";
 
-import "@/components/t2/captain-auth.css";
+import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ إذن — بالمفتاح لا بالترتيب، ومن خطّ الأيقونات المقتطع (`index.html`). */
 const STEP_ICON: Record<string, string> = {
@@ -143,17 +143,17 @@ export function PermissionsIntroScreen() {
         {blockedStep || exhausted ? (
           <p className="cap-perm-warn" role="status">
             <Icon name="info" fill />
-            رفضتَ هذا الإذن مرّتين، فلا يعرض النظام نافذته مرّةً أخرى. امنحه من إعدادات التطبيق متى شئت.
+            {tr("رفضتَ هذا الإذن مرّتين، فلا يعرض النظام نافذته مرّةً أخرى. امنحه من إعدادات التطبيق متى شئت.")}
           </p>
         ) : null}
 
         <div className="t2-auth-push" />
         <div className="t2-auth-actions">
           <button type="button" className="t2-button primary" disabled={busy} onClick={() => void act()}>
-            {exhausted || blockedStep ? "فتح الإعدادات" : step.cta}
+            {exhausted || blockedStep ? tr("فتح الإعدادات") : step.cta}
           </button>
           <button type="button" className="cap-perm-later" onClick={skip}>
-            {index + 1 >= steps.length ? "لاحقاً" : "ليس الآن"}
+            {index + 1 >= steps.length ? tr("لاحقاً") : tr("ليس الآن")}
           </button>
         </div>
       </AuthPage>

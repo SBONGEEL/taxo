@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
 import { useFeature } from "@/lib/config";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 export function useHourly(): boolean {
   const { user } = useSession();
@@ -21,17 +21,17 @@ export function useHourly(): boolean {
 
 /** «ساعة واحدة · ساعتان · 3 ساعات · 11 ساعة» — **العربيةُ تعدّ بالمثنّى والجمع** (قاعدةُ `freeMinutes`)، والخاناتُ لاتينية (§20). */
 export function hoursLabel(count: number): string {
-  if (count === 1) return "ساعة واحدة";
-  if (count === 2) return "ساعتان";
-  if (count <= 10) return `${count} ساعات`;
-  return `${count} ساعة`;
+  if (count === 1) return tr("ساعة واحدة");
+  if (count === 2) return tr("ساعتان");
+  if (count <= 10) return tr("{0} ساعات", { 0: count });
+  return tr("{0} ساعة", { 0: count });
 }
 
 /** «لساعةٍ واحدة · لساعتين · لـ 3 ساعات» — **المجرورُ غيرُ المرفوع**: «لـ ساعتان» نحوٌ مكسورٌ تحت مبلغ. */
 export function forHours(count: number): string {
-  if (count === 1) return "لساعةٍ واحدة";
-  if (count === 2) return "لساعتين";
-  return `لـ ${hoursLabel(count)}`;
+  if (count === 1) return tr("لساعةٍ واحدة");
+  if (count === 2) return tr("لساعتين");
+  return tr("لـ {0}", { 0: hoursLabel(count) });
 }
 
 /** **رحلةٌ بالساعة بلا وجهة** — الطلبُ أرسل نقطةَ الانطلاق نفسَها وجهةً (عقدُ `HourlyIn`)، فالنقطتان متطابقتان. **ولا يُقرأ غيابُ

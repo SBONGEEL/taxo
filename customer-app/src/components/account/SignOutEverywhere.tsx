@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { DrawerT2 } from "@/screens/t2/DrawerT2";
 import { NoteT2 } from "@/screens/t2/KitT2";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١، قرارُ المالك ٢٠٢٦-١٠-٠٤) — لهاتفٍ أو
  *  حاسوبٍ ضاع. **ويُسأل قبل أن يقع**: يُخرج صاحبَ الحساب من هذا الجهاز أيضاً،
@@ -27,7 +27,7 @@ export function SignOutEverywhereRow({
       await signOutEverywhere();
     } catch (caught) {
       // نصُّ الخلفية كما هو (§17) — ولا عربيةَ ثانيةٌ هنا
-      setError(caught instanceof Error ? caught.message : "تعذّر إنهاء الجلسات — أعد المحاولة");
+      setError(caught instanceof Error ? caught.message : tr("تعذّر إنهاء الجلسات — أعد المحاولة"));
       setBusy(false);
     }
   }
@@ -35,12 +35,12 @@ export function SignOutEverywhereRow({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={className}>
-        إنهاء كل الجلسات
+        {tr("إنهاء كل الجلسات")}
       </button>
-      <DrawerT2 open={open} onOpenChange={(next) => !busy && setOpen(next)} title="إنهاء كل الجلسات">
+      <DrawerT2 open={open} onOpenChange={(next) => !busy && setOpen(next)} title={tr("إنهاء كل الجلسات")}>
         <p className="t2-drawer-text">
-          تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل إشعاراتُ
-          حسابك إلى أيٍّ منها. استعمله إن ضاع هاتفٌ أو حاسوب.
+          {tr("تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل إشعاراتُ حسابك إلى أيٍّ منها. استعمله إن ضاع هاتفٌ أو حاسوب.")}
+
         </p>
         {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
         <div className="t2-drawer-actions">
@@ -51,10 +51,10 @@ export function SignOutEverywhereRow({
             aria-busy={busy}
             onClick={() => void confirm()}
           >
-            إنهاء كل الجلسات
+            {tr("إنهاء كل الجلسات")}
           </button>
           <button type="button" className="t2-button t2-quiet" disabled={busy} onClick={() => setOpen(false)}>
-            إلغاء
+            {tr("إلغاء")}
           </button>
         </div>
       </DrawerT2>

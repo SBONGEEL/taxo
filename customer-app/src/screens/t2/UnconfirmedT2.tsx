@@ -46,10 +46,10 @@ import { startOfToday, whenParts } from "./when";
 
 import "./t2.css";
 import "./money.css";
-import "./unconfirmed.css";
+import "./unconfirmed.css"; import { tr } from "@/lib/i18n";
 
 /** **نصُّ الحدّ كما كتبه التصميم** (§٦ «الحدّ») — وهو نصُّ ٤٠٢ `unconfirmed_payment_blocked` نفسُه في الخلفية. */
-const LIMIT_TEXT = "لا يمكن طلبُ رحلةٍ جديدةٍ حتى يُحسم دفعُ هذه الرحلة";
+const LIMIT_TEXT = tr("لا يمكن طلبُ رحلةٍ جديدةٍ حتى يُحسم دفعُ هذه الرحلة");
 
 /** «الكبتن زيد» — **الاسمُ الأوّل في سطر الرحلة** (§٦)، والكاملُ لورقة كليك وحدَها: به يطابق الراكبُ ما يراه في بنكه. */
 function firstName(name: string | null): string | null {
@@ -59,10 +59,10 @@ function firstName(name: string | null): string | null {
 
 /** «رحلةٌ لم يكتمل دفعها» · «رحلتان…» · «3 رحلاتٍ…» — **تمييزُ العدد بالعربية** (رحلة · رحلتان · رحلات · رحلةً) لا «3 رحلة». */
 function ridesLine(count: number): string {
-  if (count === 1) return "رحلةٌ لم يكتمل دفعها";
-  if (count === 2) return "رحلتان لم يكتمل دفعهما";
-  if (count <= 10) return `${count} رحلاتٍ لم يكتمل دفعها`;
-  return `${count} رحلةً لم يكتمل دفعها`;
+  if (count === 1) return tr("رحلةٌ لم يكتمل دفعها");
+  if (count === 2) return tr("رحلتان لم يكتمل دفعهما");
+  if (count <= 10) return tr("{0} رحلاتٍ لم يكتمل دفعها", { 0: count });
+  return tr("{0} رحلةً لم يكتمل دفعها", { 0: count });
 }
 
 /** «أمس 22:04» — يومٌ وساعةٌ بخاناتٍ لاتينية (`when.ts`)؛ والساعةُ في `ltr` كي لا تنقلب خاناتُها. **و«أمس · 21:58»** بنقطةٍ في سطر
@@ -117,11 +117,11 @@ export function UnconfirmedT2Screen() {
       // المشرف) فلا «بانتظار تأكيده» — الإقرارُ روايةٌ تصل فريقَ TAXO مع النزاع (§٢-٣)
       setDone(
         item.state === "disputed"
-          ? "سُجّل إقرارُك — يصل فريقَ TAXO مع النزاع."
-          : "سُجّل إقرارُك — بانتظار تأكيد الكبتن، ولا يلزمك شيء.",
+          ? tr("سُجّل إقرارُك — يصل فريقَ TAXO مع النزاع.")
+          : tr("سُجّل إقرارُك — بانتظار تأكيد الكبتن، ولا يلزمك شيء."),
       );
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تسجيل الإقرار");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تسجيل الإقرار"));
     } finally {
       setBusy(null);
     }
@@ -130,8 +130,8 @@ export function UnconfirmedT2Screen() {
   if (data === null) {
     return (
       <div className="t2 t2-m-stage t2-uc">
-        <HeadT2 title="رحلةٌ لم يكتمل دفعها" />
-        <WaitT2 label="نقرأ ما ينتظرك…" />
+        <HeadT2 title={tr("رحلةٌ لم يكتمل دفعها")} />
+        <WaitT2 label={tr("نقرأ ما ينتظرك…")} />
       </div>
     );
   }
@@ -139,7 +139,7 @@ export function UnconfirmedT2Screen() {
   return (
     <div className="t2 t2-m-stage t2-uc">
       {/* **عنوانٌ واحدٌ بلا سهم** (§٦): «لا تُغلق إلى صمت» — مخرجُها «لاحقاً» في القاع، وزرُّ الجهاز يعود كما يعود منها */}
-      <HeadT2 title="رحلةٌ لم يكتمل دفعها" />
+      <HeadT2 title={tr("رحلةٌ لم يكتمل دفعها")} />
 
       {/* **الحدُّ وحدَه بالأحمر** — حين صار الطلبُ الجديدُ ممنوعاً فعلاً (`blocked` هو حكمُ «اطلب رحلة» نفسُه) */}
       {data.blocked ? (
@@ -173,7 +173,7 @@ export function UnconfirmedT2Screen() {
 
       {/* **«لاحقاً» لهذه الفتحة وحدَها** (§٦) — وعند الحدّ «ابقَ في الرئيسية»: لا «لاحقاً» لما يمنع الآن */}
       <button type="button" className="t2-button secondary t2-m-cta t2-uc-later" onClick={leave}>
-        {data.blocked ? "ابقَ في الرئيسية" : "لاحقاً"}
+        {data.blocked ? tr("ابقَ في الرئيسية") : tr("لاحقاً")}
       </button>
 
       {changing ? (
@@ -227,7 +227,7 @@ function ItemCard({
       <p className="t2-uc-trip">
         <When iso={item.completed_at} today={today} dot />
         {route ? ` · ${route}` : ""}
-        {captain ? ` · الكبتن ${captain}` : ""}
+        {captain ? tr(" · الكبتن {0}", { 0: captain }) : ""}
       </p>
       {/* **المبلغُ كبيراً** (§٦) — كما أرسلته الخلفية، والعملةُ من رمزها */}
       <div className="t2-m-amount">
@@ -241,10 +241,10 @@ function ItemCard({
       {item.state === "payment_due" ? (
         // **أجرةٌ مستحقّةٌ ولا صفَّ عليها** — حكمُ «غيرُ مدفوع» أو دفعٌ سقط (`schemas/unconfirmed_payment.py`): بابُها شاشةُ الدفع
         <>
-          <p className="t2-uc-note">لم يكتمل دفعُ هذه الرحلة — ادفعها بالطريقة التي تناسبك.</p>
+          <p className="t2-uc-note">{tr("لم يكتمل دفعُ هذه الرحلة — ادفعها بالطريقة التي تناسبك.")}</p>
           <div className="t2-uc-acts">
             <button type="button" className="t2-button action t2-m-cta" onClick={onPay}>
-              ادفع الآن
+              {tr("ادفع الآن")}
             </button>
           </div>
         </>
@@ -264,14 +264,14 @@ function ItemCard({
           <div className="t2-callout warn t2-uc-callout">
             <Icon name="gavel" />
             <div className="t2-callout-main">
-              <p className="t2-callout-title">لم يؤكّد الكبتنُ استلامَ المبلغ</p>
+              <p className="t2-callout-title">{tr("لم يؤكّد الكبتنُ استلامَ المبلغ")}</p>
               <p className="t2-callout-body">
                 {item.declared_at ? (
                   <>
-                    أقررتَ بالتسليم <When iso={item.declared_at} today={today} /> — يفصل فريقُ TAXO في النزاع.
+                    {tr("أقررتَ بالتسليم")}{" "}<When iso={item.declared_at} today={today} />{" "}{tr("— يفصل فريقُ TAXO في النزاع.")}
                   </>
                 ) : (
-                  <>الدفعُ في نزاعٍ يفصل فيه فريقُ TAXO — إن سلّمتَه فقل ذلك، أو ادفعه الآن.</>
+                  <>{tr("الدفعُ في نزاعٍ يفصل فيه فريقُ TAXO — إن سلّمتَه فقل ذلك، أو ادفعه الآن.")}</>
                 )}
               </p>
             </div>
@@ -279,11 +279,11 @@ function ItemCard({
           <div className="t2-uc-acts pair">
             {item.declared_at ? null : (
               <button type="button" className="t2-button secondary" disabled={busy} aria-busy={busy} onClick={onDeclare}>
-                <BusyLabel busy={busy}>سلّمتُه</BusyLabel>
+                <BusyLabel busy={busy}>{tr("سلّمتُه")}</BusyLabel>
               </button>
             )}
             <button type="button" className="t2-button action" disabled={busy} onClick={onChange}>
-              سأدفع الآن
+              {tr("سأدفع الآن")}
             </button>
           </div>
         </>
@@ -291,14 +291,14 @@ function ItemCard({
         // **كليك: المرجعُ إلزاميٌّ ومنه تبدأ ساعةُ الكبتن** (§٢-٤) — الإدخالُ في شاشة الدفع القائمة، والنسخُ هنا (§٤-٢/١)
         <div className="t2-uc-acts">
           <button type="button" className="t2-button action t2-m-cta" onClick={onPay}>
-            أدخل مرجع الحوالة
+            {tr("أدخل مرجع الحوالة")}
           </button>
           <div className="t2-uc-acts pair">
             <button type="button" className="t2-button secondary" onClick={onCopy}>
-              انسخ بيانات التحويل
+              {tr("انسخ بيانات التحويل")}
             </button>
             <button type="button" className="t2-button secondary" onClick={onChange}>
-              غيّر طريقة الدفع
+              {tr("غيّر طريقة الدفع")}
             </button>
           </div>
         </div>
@@ -312,14 +312,14 @@ function ItemCard({
             aria-busy={busy}
             onClick={onDeclare}
           >
-            <BusyLabel busy={busy}>سلّمتُ المبلغ للكبتن</BusyLabel>
+            <BusyLabel busy={busy}>{tr("سلّمتُ المبلغ للكبتن")}</BusyLabel>
           </button>
           <div className="t2-uc-acts pair">
             <button type="button" className="t2-button secondary" disabled={busy} onClick={onChange}>
-              غيّر طريقة الدفع
+              {tr("غيّر طريقة الدفع")}
             </button>
             <button type="button" className="t2-button secondary" disabled={busy} onClick={onPay}>
-              لم أسلّمه بعد
+              {tr("لم أسلّمه بعد")}
             </button>
           </div>
         </div>
@@ -330,10 +330,10 @@ function ItemCard({
 
 /** **ما يُقال بعد التبديل** — بالقناة الجديدة: المحفظةُ تُسوّى لحظتَها، والكاشُ وكليك صفٌّ معلَّقٌ جديدٌ ينتظر خطوتَه. */
 const CHANGED: Record<PayableMethod, string> = {
-  wallet: "دُفعت من محفظتك — اكتمل دفعُ الرحلة.",
-  card: "دُفعت بالبطاقة — اكتمل دفعُ الرحلة.",
-  cliq: "صار الدفعُ عبر كليك — حوّل ثمّ أدخل مرجع الحوالة.",
-  cash: "صار الدفعُ كاشاً — سلّم المبلغ للكبتن ثمّ أقِرّ بالتسليم.",
+  wallet: tr("دُفعت من محفظتك — اكتمل دفعُ الرحلة."),
+  card: tr("دُفعت بالبطاقة — اكتمل دفعُ الرحلة."),
+  cliq: tr("صار الدفعُ عبر كليك — حوّل ثمّ أدخل مرجع الحوالة."),
+  cash: tr("صار الدفعُ كاشاً — سلّم المبلغ للكبتن ثمّ أقِرّ بالتسليم."),
 };
 
 /** **«غيّر طريقة الدفع» و«سأدفع الآن»** (§٢-١ · §٦) — **بابٌ واحدٌ** (`POST /payments/{id}/change-method`) بحمل الدفع حرفاً.
@@ -384,7 +384,7 @@ function ChangeMethodSheet({
       }
       onChanged(CHANGED[method]);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تبديل طريقة الدفع");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تبديل طريقة الدفع"));
       setCard(false);
     } finally {
       setBusy(null);
@@ -397,18 +397,18 @@ function ChangeMethodSheet({
 
   return (
     <SheetModalT2 onClose={busy ? null : onClose}>
-      <p className="t2-m-sheet-title">{payNow ? "سأدفع الآن" : "غيّر طريقة الدفع"}</p>
+      <p className="t2-m-sheet-title">{payNow ? tr("سأدفع الآن") : tr("غيّر طريقة الدفع")}</p>
       <p className="t2-m-sheet-sub">
         <b dir="ltr" className="t2-m-strong">
           {formatMoney(item.amount, item.currency)}
         </b>{" "}
         {payNow
-          ? "— يُطوى النزاعُ بدفعتك الجديدة."
-          : `— بدل ${PAYMENT_METHOD_LABEL[item.method]}، والطريقةُ الجديدةُ تحلّ محلَّها.`}
+          ? tr("— يُطوى النزاعُ بدفعتك الجديدة.")
+          : tr("— بدل {0}، والطريقةُ الجديدةُ تحلّ محلَّها.", { 0: PAYMENT_METHOD_LABEL[item.method] })}
       </p>
       <BannerT2 tone="danger" message={error} />
       {options.length === 0 ? (
-        <p className="t2-m-hint">لا طريقةَ أخرى متاحةٌ في بلدك الآن.</p>
+        <p className="t2-m-hint">{tr("لا طريقةَ أخرى متاحةٌ في بلدك الآن.")}</p>
       ) : (
         <div className="t2-list t2-m-gap">
           {options.map(({ method, hint }) => (
@@ -465,31 +465,31 @@ function CopySheet({
       footer={
         <div className="t2-m-foot">
           <button type="button" className="t2-button action t2-m-cta" onClick={onReference}>
-            حوّلتُ — أدخل مرجع الحوالة
+            {tr("حوّلتُ — أدخل مرجع الحوالة")}
           </button>
           <button type="button" className="t2-m-link" onClick={onClose}>
-            إغلاق
+            {tr("إغلاق")}
           </button>
         </div>
       }
     >
-      <p className="t2-m-sheet-title">بيانات التحويل</p>
-      <p className="t2-m-sheet-sub">انسخ كلَّ سطرٍ ثمّ الصقه في تطبيق بنكك — والمرجعَ في ملاحظة الحوالة.</p>
+      <p className="t2-m-sheet-title">{tr("بيانات التحويل")}</p>
+      <p className="t2-m-sheet-sub">{tr("انسخ كلَّ سطرٍ ثمّ الصقه في تطبيق بنكك — والمرجعَ في ملاحظة الحوالة.")}</p>
       <dl className="t2-m-copies">
         <CopyRow
-          label="الاسم المستعار للكبتن"
+          label={tr("الاسم المستعار للكبتن")}
           value={item.cliq_alias ?? "—"}
           copied={copied === "alias"}
           onCopy={() => void copy(item.cliq_alias, "alias")}
         />
         <CopyRow
-          label={`المبلغ بالضبط (${currencyLabel(item.currency)})`}
+          label={tr("المبلغ بالضبط ({0})", { 0: currencyLabel(item.currency) })}
           value={item.amount}
           copied={copied === "amount"}
           onCopy={() => void copy(item.amount, "amount")}
         />
         <CopyRow
-          label="مرجع TAXO (اكتبه في ملاحظة الحوالة)"
+          label={tr("مرجع TAXO (اكتبه في ملاحظة الحوالة)")}
           value={item.cliq_reference ?? "—"}
           copied={copied === "reference"}
           onCopy={() => void copy(item.cliq_reference, "reference")}
@@ -500,8 +500,8 @@ function CopySheet({
         <div className="t2-callout t2-m-callout">
           <Icon name="verified_user" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">ستظهر في بنكك باسم: {item.captain_name}</p>
-            <p className="t2-callout-body">طابِق الاسمَ قبل أن ترسل — اسمٌ غيرُه يعني أن الحوالةَ لا تذهب إلى كبتن رحلتك.</p>
+            <p className="t2-callout-title">{tr("ستظهر في بنكك باسم:")}{" "}{item.captain_name}</p>
+            <p className="t2-callout-body">{tr("طابِق الاسمَ قبل أن ترسل — اسمٌ غيرُه يعني أن الحوالةَ لا تذهب إلى كبتن رحلتك.")}</p>
           </div>
         </div>
       ) : null}
@@ -542,7 +542,7 @@ export function UnconfirmedStripT2({
       <button type="button" className="t2-uc-strip" onClick={onOpen}>
         <Icon name="payments" className="t2-uc-strip-icon" />
         <span className="t2-uc-strip-text">
-          <b>تأكيدٌ ينتظرك</b>
+          <b>{tr("تأكيدٌ ينتظرك")}</b>
           <span className="t2-uc-strip-sub">{ridesLine(waiting.length)}</span>
         </span>
         <Icon name="chevron_left" className="t2-uc-strip-go" />
@@ -559,19 +559,19 @@ export function UnconfirmedStripT2({
           // **نصٌّ صادقٌ في الطرق الثلاث** التي يصير بها كليك نزاعاً: «لم تصلني» من الكبتن · انقضاءُ المهلة بلا ردّه
           // (`AUTO_DISPUTE_REASON` — لم يقل الكبتنُ شيئاً) · إحالةُ المشرف ولو بلا مرجع (فلا حوالةَ خرجت أصلاً). **ولا يُنسب
           // إلى الكبتن ما لم يقله** — والمرجعُ لا يُدخَل على نزاع (`submit_cliq_reference` يقبل المعلَّقَ وحدَه)، فـ«لا يلزمك شيء» صادقة
-          <>دفعُ هذه الرحلة في نزاعٍ لدى فريق TAXO — يفصل فيه، ولا يلزمك شيء</>
+          <>{tr("دفعُ هذه الرحلة في نزاعٍ لدى فريق TAXO — يفصل فيه، ولا يلزمك شيء")}</>
         ) : first.method === "cash" && first.declared_at ? (
           <>
-            أقررتَ بالتسليم <When iso={first.declared_at} today={today} /> — بانتظار تأكيد الكبتن. <b>لا يلزمك شيء</b>
+            {tr("أقررتَ بالتسليم")}{" "}<When iso={first.declared_at} today={today} />{" "}{tr("— بانتظار تأكيد الكبتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
           </>
         ) : first.cliq_reference_at ? (
           <>
-            أدخلتَ مرجع الحوالة <When iso={first.cliq_reference_at} today={today} /> — بانتظار تأكيد الكبتن.{" "}
-            <b>لا يلزمك شيء</b>
+            {tr("أدخلتَ مرجع الحوالة")}{" "}<When iso={first.cliq_reference_at} today={today} />{" "}{tr("— بانتظار تأكيد الكبتن.")}{" "}
+            <b>{tr("لا يلزمك شيء")}</b>
           </>
         ) : (
           <>
-            بانتظار تأكيد الكبتن. <b>لا يلزمك شيء</b>
+            {tr("بانتظار تأكيد الكبتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
           </>
         )}
       </span>

@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
-import "./t2/money.css";
+import "./t2/money.css"; import { tr } from "@/lib/i18n";
 
 export function DebtCliqScreen() {
   const goBack = useGoBack("/account/debt");
@@ -30,7 +30,7 @@ export function DebtCliqScreen() {
 
   useEffect(() => {
     load().catch((caught: unknown) =>
-      setError(caught instanceof ApiError ? caught.message : "تعذّرت القراءة"),
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّرت القراءة")),
     );
   }, [load]);
 
@@ -47,12 +47,12 @@ export function DebtCliqScreen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => goBack()}
         >
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">سداد المستحقّات</h1>
+        <h1 className="t2-title">{tr("سداد المستحقّات")}</h1>
       </div>
 
       {error ? (
@@ -70,7 +70,7 @@ export function DebtCliqScreen() {
       {claim ? (
         <CliqClaimView
           claim={claim}
-          paidText="مؤكَّد — نقص من مستحقّاتك"
+          paidText={tr("مؤكَّد — نقص من مستحقّاتك")}
         />
       ) : null}
     </div>

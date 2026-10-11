@@ -20,14 +20,14 @@
 import { ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useSession } from "@/lib/session";
+import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** **مسارُ التأكيد في هذا التطبيق** — بيتٌ واحدٌ يقرؤه الحالان. */
 const CONFIRM_PATH = "/account/profile";
 
 /** نصُّ الحال المحدودة — **بيتٌ واحدٌ للوجهين**، فلا يفترق ما يقوله القائمُ عمّا يقوله TAXO 2.0. */
 const PENDING_BODY =
-  "سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا طلبَ رحلةٍ ولا محفظةَ حتى تؤكّده.";
+  tr("سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا طلبَ رحلةٍ ولا محفظةَ حتى تؤكّده.");
 
 /** **وجهُ TAXO 2.0** — الحالان والنصّان والوجهةُ هي هي، والشكلُ من الهوية (`.t2-callout`). */
 function CalloutT2({ tone, title, body }: { tone: "danger" | "warn"; title: string; body: string }) {
@@ -40,7 +40,7 @@ function CalloutT2({ tone, title, body }: { tone: "danger" | "warn"; title: stri
         <div className="t2-callout-title">{title}</div>
         <p className="t2-callout-body">{body}</p>
         <Link to={CONFIRM_PATH} className="t2-callout-link">
-          أكّده الآن
+          {tr("أكّده الآن")}
         </Link>
       </div>
     </div>
@@ -54,7 +54,7 @@ export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
   // **والموقوفُ أشدّ فيُقدَّم**، ونصُّه يأتي من الخلفية لا يُكتب هنا.
   if (user?.suspension) {
     if (variant === "t2")
-      return <CalloutT2 tone="danger" title="حسابك موقوف" body={user.suspension.message} />;
+      return <CalloutT2 tone="danger" title={tr("حسابك موقوف")} body={user.suspension.message} />;
     return (
       <div
         role="status"
@@ -62,7 +62,7 @@ export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
       >
         <ShieldAlert className="mt-2 size-16 shrink-0 text-danger" />
         <div className="min-w-0 flex-1">
-          <div className="text-12 font-bold text-ink">حسابك موقوف</div>
+          <div className="text-12 font-bold text-ink">{tr("حسابك موقوف")}</div>
           <p className="mt-2 text-11 leading-note text-muted">
             {user.suspension.message}
           </p>
@@ -70,7 +70,7 @@ export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
             to={CONFIRM_PATH}
             className="mt-6 inline-block text-11 font-semibold text-accent underline"
           >
-            أكّده الآن
+            {tr("أكّده الآن")}
           </Link>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
     return (
       <CalloutT2
         tone="warn"
-        title="أكّد رقم هاتفك"
+        title={tr("أكّد رقم هاتفك")}
         body={PENDING_BODY}
       />
     );
@@ -94,13 +94,13 @@ export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
     >
       <ShieldAlert className="mt-2 size-16 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
-        <div className="text-12 font-bold text-ink">أكّد رقم هاتفك</div>
+        <div className="text-12 font-bold text-ink">{tr("أكّد رقم هاتفك")}</div>
         <p className="mt-2 text-11 leading-note text-muted">{PENDING_BODY}</p>
         <Link
           to={CONFIRM_PATH}
           className="mt-6 inline-block text-11 font-semibold text-accent underline"
         >
-          أكّده الآن
+          {tr("أكّده الآن")}
         </Link>
       </div>
     </div>

@@ -22,7 +22,7 @@ import { composeBody, destinationOf } from "@/lib/notification-text";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
 import "@/taxo2";
-import "./t2.css";
+import "./t2.css"; import { tr } from "@/lib/i18n";
 
 type Tone = "live" | "plain" | "offer" | "money" | "women" | "warn" | "danger";
 
@@ -61,10 +61,10 @@ const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };
 
 type Group = "today" | "yesterday" | "week" | "older";
 const GROUP_LABEL: Record<Group, string> = {
-  today: "اليوم",
-  yesterday: "أمس",
-  week: "هذا الأسبوع",
-  older: "أقدم",
+  today: tr("اليوم"),
+  yesterday: tr("أمس"),
+  week: tr("هذا الأسبوع"),
+  older: tr("أقدم"),
 };
 const GROUP_ORDER: Group[] = ["today", "yesterday", "week", "older"];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -106,7 +106,7 @@ export function NotificationsT2Screen() {
   useEffect(() => {
     load().catch((caught) =>
       setError(
-        caught instanceof ApiError ? caught.message : "تعذّر قراءة الإشعارات",
+        caught instanceof ApiError ? caught.message : tr("تعذّر قراءة الإشعارات"),
       ),
     );
   }, [load]);
@@ -116,7 +116,7 @@ export function NotificationsT2Screen() {
       await markNotificationsRead();
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التحديد");
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر التحديد"));
     }
   }
 
@@ -135,15 +135,15 @@ export function NotificationsT2Screen() {
         <button
           type="button"
           className="t2-back"
-          aria-label="رجوع"
+          aria-label={tr("رجوع")}
           onClick={() => navigate("/account")}
         >
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-        <h1 className="t2-title">الإشعارات</h1>
+        <h1 className="t2-title">{tr("الإشعارات")}</h1>
         {unread ? (
           <button type="button" className="t2-action" onClick={() => void markAll()}>
-            قراءة الكل
+            {tr("قراءة الكل")}
           </button>
         ) : null}
       </div>
@@ -152,8 +152,8 @@ export function NotificationsT2Screen() {
       {rows === null && !error ? <Spinner /> : null}
       {rows?.length === 0 ? (
         <EmptyState
-          title="لا إشعارات بعد"
-          hint="ستجد هنا أخبار رحلاتك وشحن رصيدك."
+          title={tr("لا إشعارات بعد")}
+          hint={tr("ستجد هنا أخبار رحلاتك وشحن رصيدك.")}
         />
       ) : null}
 
@@ -184,7 +184,7 @@ export function NotificationsT2Screen() {
                           {whenLabel(entry.created_at, group)}
                         </span>
                         {entry.read_at === null ? (
-                          <span className="t2-unread" aria-label="غير مقروء" />
+                          <span className="t2-unread" aria-label={tr("غير مقروء")} />
                         ) : null}
                       </span>
                     </span>

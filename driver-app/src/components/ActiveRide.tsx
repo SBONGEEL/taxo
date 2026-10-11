@@ -21,7 +21,7 @@ import type { GenderPreference, Ride } from "@/api/types";
 import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { openIn, targetFor } from "@/lib/external-maps";
 import type { NextInstruction } from "@/lib/next-instruction";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export interface CancelReason {
   label: string;
@@ -31,9 +31,9 @@ export interface CancelReason {
 
 /** أسبابُ إلغاء الكبتن كما في التصميم النسائي. */
 const CANCEL_REASONS: CancelReason[] = [
-  { label: "الراكب غير موجود" },
-  { label: "الراكب ليس أنثى — عدم تطابق", code: "gender_mismatch" },
-  { label: "سلوك غير لائق" },
+  { label: tr("الراكب غير موجود") },
+  { label: tr("الراكب ليس أنثى — عدم تطابق"), code: "gender_mismatch" },
+  { label: tr("سلوك غير لائق") },
 ];
 
 const PHASES = {
@@ -47,9 +47,9 @@ type Phase = keyof typeof PHASES;
 
 /** **«أحضر غرضي»** (§٧٢-ج/١، لوحتُه C2) — الأطوارُ نفسُها بلغة الغرض: الانطلاقُ مكانُه والوجهةُ صاحبُه. */
 const FETCH_PHASES: Record<Phase, { title: string; action: string }> = {
-  accepted: { title: "في الطريق إلى مكان الغرض", action: "وصلتُ إلى مكان الغرض" },
-  arrived: { title: "بانتظار من يسلّمك الغرض", action: "استلمتُ الغرض — ابدأ" },
-  in_progress: { title: "في الطريق إلى صاحب الغرض", action: "سلّمتُ الغرض — إنهاء" },
+  accepted: { title: tr("في الطريق إلى مكان الغرض"), action: tr("وصلتُ إلى مكان الغرض") },
+  arrived: { title: tr("بانتظار من يسلّمك الغرض"), action: tr("استلمتُ الغرض — ابدأ") },
+  in_progress: { title: tr("في الطريق إلى صاحب الغرض"), action: tr("سلّمتُ الغرض — إنهاء") },
   at_stop: PHASES.at_stop,
 };
 
@@ -86,7 +86,7 @@ export function useActiveRide(ride: Ride, genderPreference: GenderPreference) {
   // فالإنهاءُ ليس الفعلَ التالي — والزرُّ الأول هو ما يقع تسعاً من عشر
   const stopAction =
     ride.status === "in_progress" && nextStop !== undefined
-      ? { label: `وصلتُ المحطة ${digits(String(nextStop.sequence))}`, stop: nextStop }
+      ? { label: tr("وصلتُ المحطة {0}", { 0: digits(String(nextStop.sequence)) }), stop: nextStop }
       : null;
   const [picking, setPicking] = useState(false);
   const [reason, setReason] = useState<CancelReason | null>(null);
@@ -159,7 +159,7 @@ export function ActiveRide({
         <div className="pointer-events-none absolute inset-x-0 top-52 z-10 flex justify-center px-18">
           <span className="flex max-w-full items-center gap-8 rounded-13 border border-line bg-surface px-14 py-9 shadow-card">
             <span className="text-13 font-bold text-ink">
-              {digits(instruction.meters)} م
+              {digits(instruction.meters)}{" "}{tr("م")}
             </span>
             <span className="truncate text-12.5 text-muted">
               {instruction.text}
@@ -175,7 +175,7 @@ export function ActiveRide({
               حالةَ ثانية. **وضغطُها يفتح ورقتَها وفيها البلاغ** */}
           <RiderAvatar rideId={ride.id} className="size-44" />
           <div className="flex-1">
-            <div className="text-14 font-bold text-ink">راكب TAXO</div>
+            <div className="text-14 font-bold text-ink">{tr("راكب TAXO")}</div>
             <div className="text-11 text-muted">
               {digits(ride.estimated_fare)} {currencyLabel}
             </div>
@@ -186,8 +186,8 @@ export function ActiveRide({
             {Number(ride.share_discount_percent) > 0 ? (
               <div className="mt-3 text-10.5 font-bold text-muted">
                 {ride.share_group_id
-                  ? "رحلة مشتركة — راكبان"
-                  : "مشتركة — قد ينضم راكب ثانٍ"}
+                  ? tr("رحلة مشتركة — راكبان")
+                  : tr("مشتركة — قد ينضم راكب ثانٍ")}
               </div>
             ) : null}
           </div>
@@ -206,7 +206,7 @@ export function ActiveRide({
             )}
           />
           <div className={cn("text-12.5", riding ? "text-muted" : "text-ink")}>
-            {ride.pickup_address ?? "نقطة الانطلاق"}
+            {ride.pickup_address ?? tr("نقطة الانطلاق")}
           </div>
           <span className="mx-auto block h-12 w-2 bg-line" />
           <span />
@@ -239,7 +239,7 @@ export function ActiveRide({
                 >
                   {/* **ولا سطرَ فارغ**: عنوانٌ غائبٌ يعود إلى رقم المحطة، فلا
                       تُرسم نقطةٌ بلا اسمٍ تُقرأ عطباً في الرسم */}
-                  {stop.address ?? `محطة ${digits(String(stop.sequence))}`}
+                  {stop.address ?? tr("محطة {0}", { 0: digits(String(stop.sequence)) })}
                 </div>
                 <span className="mx-auto block h-12 w-2 bg-line" />
                 <span />
@@ -253,7 +253,7 @@ export function ActiveRide({
             )}
           />
           <div className={cn("text-12.5", riding ? "text-ink" : "text-muted")}>
-            {ride.dropoff_address ?? "الوجهة"}
+            {ride.dropoff_address ?? tr("الوجهة")}
           </div>
         </div>
 
@@ -290,7 +290,7 @@ export function ActiveRide({
                 : "border-line text-ink",
             )}
           >
-            {ride.open_pause ? "استئناف" : "نقطة توقف"}
+            {ride.open_pause ? tr("استئناف") : tr("نقطة توقف")}
           </button>
         ) : null}
 
@@ -333,7 +333,7 @@ export function ActiveRide({
             disabled={busy}
             className="pressable mt-11 w-full text-center text-12 font-semibold text-muted"
           >
-            إلغاء الرحلة
+            {tr("إلغاء الرحلة")}
           </button>
         )}
       </div>
@@ -345,7 +345,7 @@ export function ActiveRide({
         <div className="absolute inset-0 z-30 flex flex-col justify-end bg-dim">
           <div className="rounded-t-24 border-t border-line bg-surface px-20 pb-24 pt-18">
             <div className="mx-auto mb-16 h-4 w-38 rounded-full bg-line" />
-            <div className="text-17 font-bold text-ink">سبب الإلغاء</div>
+            <div className="text-17 font-bold text-ink">{tr("سبب الإلغاء")}</div>
             <div className="mt-14 flex flex-col gap-9">
               {reasons.map((option) => (
                 <button
@@ -383,8 +383,8 @@ export function ActiveRide({
 
             {reason?.code === "gender_mismatch" ? (
               <p className="mt-14 rounded-13 border border-line bg-surface-2 p-14 text-12.5 leading-relaxed text-muted">
-                لن تُحتسب عليكِ رسوم إلغاء. ويُسجَّل بلاغٌ على حساب الراكب،
-                وتكرارُ البلاغات يوسم الحساب للمراجعة.
+                {tr("لن تُحتسب عليكِ رسوم إلغاء. ويُسجَّل بلاغٌ على حساب الراكب، وتكرارُ البلاغات يوسم الحساب للمراجعة.")}
+
               </p>
             ) : null}
 
@@ -397,14 +397,14 @@ export function ActiveRide({
               }}
               className="pressable mt-16 w-full rounded-15 bg-danger p-15 text-center text-15 font-bold text-white disabled:opacity-50"
             >
-              تأكيد الإلغاء
+              {tr("تأكيد الإلغاء")}
             </button>
             <button
               type="button"
               onClick={() => setPicking(false)}
               className="pressable w-full pt-10 text-center text-13 text-muted"
             >
-              تراجع
+              {tr("تراجع")}
             </button>
           </div>
         </div>
@@ -486,22 +486,22 @@ function PauseStrip({
     >
       <div className="flex flex-wrap items-center gap-6">
         <span className="text-12.5 font-bold text-ink">
-          {pause.kind === "arrival" ? "بانتظار الراكب" : "وقفة"}
+          {pause.kind === "arrival" ? tr("بانتظار الراكب") : tr("وقفة")}
         </span>
         <span className="text-12.5 text-muted">
-          {digits(String(minutes))} دقيقة
+          {digits(String(minutes))}{" "}{tr("دقيقة")}
         </span>
         {/* **والمبلغُ من الخلفية لا محسوباً هنا** — والمهلةُ تُقال قبل أن تنتهي
             لا بعدها: كبتنٌ يرى «٠٫٠٠٠» ولا يعرف لماذا يظنّ العدّادَ معطوباً */}
         <span className="ms-auto text-12.5 font-bold text-ink">
           {billing
             ? `${digits(ride.pause_charge)} ${currencyLabel}`
-            : `مهلة ${digits(String(free))} دقائق`}
+            : tr("مهلة {0} دقائق", { 0: digits(String(free)) })}
         </span>
       </div>
       {pause.over_max ? (
         <p className="mt-6 text-11 text-warn">
-          تجاوز الانتظارُ حدَّه — لك أن تستأنف أو تُنهي، والقرارُ قرارك.
+          {tr("تجاوز الانتظارُ حدَّه — لك أن تستأنف أو تُنهي، والقرارُ قرارك.")}
         </p>
       ) : null}
     </div>
@@ -542,12 +542,12 @@ function StopStrip({
                     : "text-muted",
               )}
             >
-              محطة {digits(String(stop.sequence))}
+              {tr("محطة")}{" "}{digits(String(stop.sequence))}
             </span>
           );
         })}
         <span className="rounded-full px-10 py-4 text-11 font-semibold text-muted">
-          الوجهة
+          {tr("الوجهة")}
         </span>
       </div>
 
@@ -557,7 +557,7 @@ function StopStrip({
               والكبتنُ يريد «كم وقفتُ» لا كسرَ الدقيقة. **والعدّادُ محليٌّ
               يتقدّم** (`useElapsedMinutes`) لا رقماً واصلاً مع الرحلة */}
           <span className="text-muted">
-            انتظارٌ {digits(String(waitedMinutes))} دقيقة
+            {tr("انتظارٌ")}{" "}{digits(String(waitedMinutes))}{" "}{tr("دقيقة")}
           </span>
           <span className="font-semibold text-ink">
             {digits(ride.waiting_charge)} {currencyLabel}
@@ -567,8 +567,8 @@ function StopStrip({
 
       {waiting?.over_max_wait ? (
         <p className="mt-6 text-11 leading-note text-warn">
-          تجاوز الانتظارُ السقف — يمكنك إنهاء الرحلة عند هذه المحطة بدل
-          الاستئناف.
+          {tr("تجاوز الانتظارُ السقف — يمكنك إنهاء الرحلة عند هذه المحطة بدل الاستئناف.")}
+
         </p>
       ) : null}
     </div>
