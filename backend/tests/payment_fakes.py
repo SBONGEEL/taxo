@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import secrets
 import uuid
 from typing import Any
 
@@ -19,7 +20,8 @@ from app.models.payment_request import PayMethod
 from app.services import payment_gateways
 from tests.helpers import _enable_provider
 
-CHARGILY_SECRET = "test_sk_taxo_fake"
+#: **مفتاحٌ مولَّدٌ لكلِّ تشغيلٍ لا حرفيّ** — قيمةٌ حرفيّةٌ بشكل مفتاحٍ أوقفت ماسحَ الأسرار في الرفع (٢٠٢٦-١٠-١١)
+CHARGILY_SECRET = "test_sk_" + secrets.token_hex(12)
 SOFIZPAY_ACCOUNT = "GTAXOFAKEACCOUNT0000000000000000000000000000000000000000"
 
 

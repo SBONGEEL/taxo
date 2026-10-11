@@ -123,10 +123,10 @@ async def test_a_notification_is_written_in_its_owner_language(client: AsyncClie
 async def test_the_code_message_template_is_french_for_a_french_request(session_factory) -> None:
     async with session_factory() as session:
         arabic = await otp_templates.body_for(session, "registration")
-        token = i18n._current.set("fr")
+        previous = i18n._current.set("fr")
         try:
             french = await otp_templates.body_for(session, "registration")
         finally:
-            i18n._current.reset(token)
+            i18n._current.reset(previous)
     assert arabic == otp_templates.DEFAULTS["registration"]
     assert french.startswith("Votre code de confirmation") and "{code}" in french and "{minutes}" in french
