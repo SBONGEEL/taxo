@@ -48,7 +48,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, pg_enum
-from app.models.enums import ClientApp
+from app.models.enums import ClientApp, ReleasePlatform
 
 #: أقصى مدّةٍ لكتم التنبيه الاختياريّ — شهرٌ. وما فوقه «لا يعود أبداً» بصيغةٍ
 #: أخرى، **وكتمٌ أبديٌّ يُكتب بابَ إطفاءٍ لا حقلَ مدّة**.
@@ -60,9 +60,12 @@ class AppRelease(Base):
 
     __tablename__ = "app_releases"
     __table_args__ = (
-        # **لا رقمان متساويان لتطبيقٍ واحد**: الرقمُ هو الهوية عند أندرويد،
-        # وصفّان به يجعلان «الأخير» غيرَ معرَّف
-        UniqueConstraint("app", "build", name="uq_app_releases_app_build"),
+        # **لا رقمان متساويان لتطبيقٍ واحدٍ على نظامٍ واحد**: الرقمُ هو الهوية
+        # عند أندرويد، وصفّان به يجعلان «الأخير» غيرَ معرَّف. **والنظامُ في
+        # المفتاح** (2026-10-12): رقمُ iOS يُرقَّم وحدَه، فيلتقي برقم أندرويد
+        UniqueConstraint(
+            "app", "platform", "build", name="uq_app_releases_app_platform_build"
+        ),
         # **ولا حدٌّ فوق الإصدار نفسِه**: يُقفل صاحبُ أحدث حزمةٍ خارجَ تطبيقه
         # ولا شيءَ يحمّله ليخرج — وهو القفلُ الذي لا مخرجَ منه
         CheckConstraint(
@@ -83,6 +86,15 @@ class AppRelease(Base):
     )
     app: Mapped[ClientApp] = mapped_column(
         pg_enum(ClientApp, "client_app"), nullable=False, index=True
+    )
+    #: نظامُ الحزمة — **والحكمُ والرابطُ لكلِّ تطبيقٍ على كلِّ نظام** (قرارُ المالك
+    #: 2026-10-12): الصفُّ الحاكمُ لـ(تطبيق، نظام) هو أعلى رقمٍ فيهما، **ورابطُه هو
+    #: ما يفتحه زرُّ «تحديث»** — فالتبديلُ من صفحة التحميل إلى المتجر تعديلُ حقلٍ في اللوحة.
+    platform: Mapped[ReleasePlatform] = mapped_column(
+        pg_enum(ReleasePlatform, "release_platform"),
+        nullable=False,
+        default=ReleasePlatform.ANDROID,
+        server_default=ReleasePlatform.ANDROID.value,
     )
     #: `versionCode` الحزمة — عددٌ صحيحٌ يزيد أبداً (عددُ الإيداعات).
     build: Mapped[int] = mapped_column(Integer, nullable=False)

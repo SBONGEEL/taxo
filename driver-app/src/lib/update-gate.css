@@ -1,0 +1,87 @@
+/* ═══ نافذةُ التحديث الإلزاميّ — بهوية TAXO 2.0 (قرارُ المالك 2026-10-12) ═══
+ *
+ * **نسخةٌ واحدةٌ في التطبيقات الثلاثة، متطابقةٌ بايتاً** مع `update-gate.tsx` بجانبها — يحرسهما `check:update-gate` معاً.
+ * **وبالرموز وحدَها** (`src/taxo2/tokens.css`) فتعمل في الفاتح والداكن والنسائيّ: لا لونَ مكتوباً هنا.
+ *
+ * **وكلُّ قطعةٍ من رسمٍ قائم**: الظلُّ تحت ورقةٍ تحجب الشاشة (`--t2-scrim`، ورقةُ الترحيب §٦٢/٦) · بطاقةٌ تطفو بزاوية ٣٠ وظلِّ
+ * البطاقات العائمة (`--t2-float-card-shadow`، R09) · دائرةُ الأيقونة بالجمر الخافت · **وزرُّ الفعل من أزرار الهوية** (`.t2-button.action`).
+ */
+
+.t2.t2-update {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  /* **التطبيقُ لا يُرسم تحتها** — فالظلُّ فوق خلفية الهوية، كأن النافذةَ فوق شاشةٍ مُعتَمة */
+  background: linear-gradient(var(--t2-scrim), var(--t2-scrim)), var(--t2-bg);
+}
+
+.t2-update-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 22rem;
+  /* **سقفٌ ومنطقةُ تمرير**: الرسالةُ يكتبها المشرفُ بلا حدِّ طول، وبطاقةٌ بلا سقفٍ تنمو خارج الإطار **فيُقصّ زرُّ «تحديث»**
+     — وهذه نافذةٌ لا مخرجَ منها إلا هو. فالزرُّ خارج منطقة التمرير، يُرى دائماً */
+  max-height: 100%;
+  padding: 26px 22px 18px;
+  box-sizing: border-box;
+  border-radius: 30px;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-float-card-shadow);
+  text-align: center;
+}
+
+.t2-update-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.t2-update-scroll::-webkit-scrollbar { display: none; }
+
+.t2-update-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-update-mark .t2-icon { font-size: 32px; }
+
+.t2-update-title {
+  margin: 16px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--t2-text);
+}
+
+.t2-update-text {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--t2-muted);
+  white-space: pre-line;
+}
+
+.t2-update-go {
+  flex: none;
+  margin-top: 22px;
+  text-decoration: none;
+}
+
+.t2-update-build {
+  flex: none;
+  margin: 12px 0 0;
+  font-size: 10.5px;
+  color: var(--t2-faint);
+}

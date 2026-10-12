@@ -40,6 +40,7 @@ from app.models.enums import (
     FeatureKey,
     PolicyApp,
     PolicyDocType,
+    ReleasePlatform,
 )
 from app.models.subscription_offer import (
     AUDIENCE_ALL,
@@ -159,6 +160,7 @@ async def app_version(
     session: DbSession,
     app: ClientApp,
     build: int | None = None,
+    platform: ReleasePlatform = ReleasePlatform.ANDROID,
 ) -> AppVersionOut:
     """ماذا يفعل التطبيقُ عند الإقلاع — **البند ٨ (§39٫٨، §43)**.
 
@@ -171,8 +173,13 @@ async def app_version(
 
     **وبلا سجلٍّ لهذا التطبيق: `ok` بحقولٍ فارغة** — لا «كلُّ النسخ مرفوضة».
     **فغيابُ السجلِّ يعطّل الحجبَ لا التطبيق.**
+
+    **و`platform` أندرويد افتراضاً** (2026-10-12): كلُّ صفٍّ قبله أندرويد، والبوّابةُ
+    ترسل نظامَها منذه — **وحزمةُ iOS لا يحكمها رقمُ أندرويد**.
     """
-    verdict = await releases_service.verdict_for(session, app=app, build=build)
+    verdict = await releases_service.verdict_for(
+        session, app=app, build=build, platform=platform
+    )
     return AppVersionOut(
         state=verdict.state,
         latest_build=verdict.latest_build,

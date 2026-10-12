@@ -107,10 +107,17 @@ async def _create(
     return await client.post("/admin/releases", json=body, headers=headers)
 
 
-async def _version(client: AsyncClient, app: str, build: int | None = None):
+async def _version(
+    client: AsyncClient,
+    app: str,
+    build: int | None = None,
+    platform: str | None = None,
+):
     params: dict[str, Any] = {"app": app}
     if build is not None:
         params["build"] = build
+    if platform is not None:
+        params["platform"] = platform
     response = await client.get("/public/app-version", params=params)
     assert response.status_code == 200, response.text
     return response.json()
@@ -403,3 +410,123 @@ async def test_a_download_page_that_is_not_an_apk_url_still_passes(
     links.kinds[page] = "text/html"
     created = await _create(client, admin_headers, download_url=page)
     assert created.status_code == 201, created.text
+
+
+# ------------------------------------- النظامُ ورابطُه (قرارُ المالك 2026-10-12)
+
+PAGE = "https://taxo.tajora.ly/download"
+STORE = "https://play.google.com/store/apps/details?id=ly.tajora.rider"
+
+
+async def test_an_android_row_never_judges_ios(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**رقمُ iOS يُرقَّم وحدَه** — فحدُّ أندرويد 772 لا يقفل حزمةَ iOS رقمُها 5.
+
+    **والقياسُ بالنقض**: الحزمةُ نفسُها على أندرويد **تُقفل**، وبلا نظامٍ تُقرأ أندرويد —
+    كلُّ صفٍّ وكلُّ بوّابةٍ قبل هذا اليوم أندرويد.
+    """
+    created = await _create(
+        client, admin_headers, build=772, min_supported_build=772
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["platform"] == "android"
+
+    assert (await _version(client, "rider", 5, "ios"))["state"] == "ok"
+    assert (await _version(client, "rider", 5, "ios"))["download_url"] is None
+    assert (await _version(client, "rider", 496, "android"))["state"] == "forced"
+    assert (await _version(client, "rider", 496))["state"] == "forced"
+    assert (await _version(client, "rider", 772, "android"))["state"] == "ok"
+
+
+async def test_each_platform_has_its_own_link_and_governing_row(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**رابطٌ لكلِّ تطبيقٍ ولكلِّ نظام** — وصفٌّ حاكمٌ لكلٍّ منهما، **والرقمُ نفسُه على نظامين ليس تكراراً**."""
+    links.kinds[PAGE] = "text/html"
+    android = await _create(
+        client, admin_headers, build=400, min_supported_build=400, download_url=PAGE
+    )
+    ios = await _create(
+        client,
+        admin_headers,
+        platform="ios",
+        build=400,
+        min_supported_build=400,
+        download_url=STORE,
+    )
+    assert android.status_code == 201, android.text
+    assert ios.status_code == 201, ios.text
+
+    assert (await _version(client, "rider", 1, "android"))["download_url"] == PAGE
+    assert (await _version(client, "rider", 1, "ios"))["download_url"] == STORE
+
+    listed = (await client.get("/admin/releases", headers=admin_headers)).json()
+    governing = {(row["platform"], row["build"]): row["is_current"] for row in listed}
+    assert governing == {("android", 400): True, ("ios", 400): True}
+
+    # **والرقمُ هويةُ الحزمة على نظامها** — فالتكرارُ على النظام نفسِه يُرفض
+    again = await _create(client, admin_headers, platform="ios", build=400)
+    assert again.status_code == 409, again.text
+
+
+async def test_switching_the_button_is_one_field_in_the_panel(
+    client: AsyncClient, admin_headers: dict, links, session_factory
+) -> None:
+    """**التبديلُ من صفحة التحميل إلى المتجر بلا كودٍ ولا رفع**: تعديلُ رابط الصفِّ الحاكم.
+
+    **ويُطرق الرابطُ الجديدُ قبل الحفظ**، والقيمةُ قبل وبعد في التدقيق، **ولا يُطلب الإذنُ الثاني**:
+    الحدُّ لم يرتفع — والتأكيدُ حيث لا خطر يُفرَّغ من داخله.
+    """
+    links.kinds[PAGE] = "text/html"
+    links.kinds[STORE] = "text/html"
+    created = await _create(
+        client, admin_headers, build=772, min_supported_build=772, download_url=PAGE
+    )
+    release_id = created.json()["id"]
+    assert (await _version(client, "rider", 496))["download_url"] == PAGE
+
+    links.seen = []
+    switched = await client.put(
+        f"/admin/releases/{release_id}",
+        json=_body(build=772, min_supported_build=772, download_url=STORE),
+        headers=admin_headers,
+    )
+    assert switched.status_code == 200, switched.text
+    assert "HEAD " + STORE in links.seen
+    after = await _version(client, "rider", 496)
+    assert after["state"] == "forced" and after["download_url"] == STORE
+
+    async with session_factory() as session:
+        stamp = (
+            await session.scalars(
+                select(AdminAuditLog).where(
+                    AdminAuditLog.entity_type == "app_release",
+                    AdminAuditLog.action == AuditAction.UPDATE,
+                )
+            )
+        ).one()
+    assert stamp.details["changes"]["download_url"] == {"before": PAGE, "after": STORE}
+    assert stamp.details["platform"] == "android"
+
+
+async def test_the_first_ios_row_asks_twice_even_after_android(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**أوّلُ صفٍّ لنظامٍ يستأذن دائماً** — حدُّ أندرويد القائمُ لا يُحسب لـiOS: لا حدَّ قبله هناك."""
+    assert (
+        await _create(client, admin_headers, build=400, min_supported_build=400)
+    ).status_code == 201
+    refused = await _create(
+        client,
+        admin_headers,
+        platform="ios",
+        build=10,
+        min_supported_build=10,
+        confirm=False,
+    )
+    assert refused.status_code == 422, refused.text
+    accepted = await _create(
+        client, admin_headers, platform="ios", build=10, min_supported_build=10
+    )
+    assert accepted.status_code == 201, accepted.text

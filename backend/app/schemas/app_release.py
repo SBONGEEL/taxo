@@ -15,13 +15,16 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from app.models.app_release import MAX_REMINDER_HOURS
-from app.models.enums import ClientApp
+from app.models.enums import ClientApp, ReleasePlatform
 
 
 class AppReleaseIn(BaseModel):
     """إنشاءُ إصدارٍ أو تعديلُه — **ومعه إقرارُ الحجب حين يرتفع الحدّ**."""
 
     app: ClientApp
+    #: **أندرويد افتراضاً** — وكلُّ صفٍّ قبل 2026-10-12 أندرويد. ولا يُعدَّل في
+    #: صفٍّ قائم كما لا يُعدَّل رقمُه: هو هويةُ الحزمة معه
+    platform: ReleasePlatform = ReleasePlatform.ANDROID
     build: int = Field(ge=1)
     min_supported_build: int = Field(ge=1)
     #: **يُفحص قبل الحفظ** — `HttpUrl` تحرس الشكل، والخدمةُ تطرق الباب
@@ -39,6 +42,7 @@ class AppReleaseOut(BaseModel):
 
     id: uuid.UUID
     app: ClientApp
+    platform: ReleasePlatform
     build: int
     min_supported_build: int
     download_url: str

@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import DbSession, SettingsWriter, StaffUser
 from app.models.app_release import AppRelease
-from app.models.enums import AuditAction, ClientApp
+from app.models.enums import AuditAction, ClientApp, ReleasePlatform
 from app.schemas.app_release import AppReleaseIn, AppReleaseOut
 from app.services import audit, releases as releases_service
 
@@ -39,11 +39,14 @@ async def _row(
     current_id: uuid.UUID | None = None,
 ) -> AppReleaseOut:
     if current_id is None:
-        live = await releases_service.current(session, release.app)
+        live = await releases_service.current(
+            session, release.app, release.platform
+        )
         current_id = None if live is None else live.id
     return AppReleaseOut(
         id=release.id,
         app=release.app,
+        platform=release.platform,
         build=release.build,
         min_supported_build=release.min_supported_build,
         download_url=release.download_url,
@@ -65,22 +68,25 @@ async def list_releases(
     أعلى ما في الجدول — وهي قاعدةُ «التجميعُ في الخلفية» بعينها.
     """
     stmt = select(AppRelease).order_by(
-        AppRelease.app, AppRelease.build.desc()
+        AppRelease.app, AppRelease.platform, AppRelease.build.desc()
     )
     if app is not None:
         stmt = stmt.where(AppRelease.app == app)
     rows = (await session.scalars(stmt)).all()
 
     current_ids = set()
+    # **صفٌّ حاكمٌ لكلِّ (تطبيق، نظام)** — فحاكمُ أندرويد لا يُطفئ حاكمَ iOS
     for one in ClientApp if app is None else (app,):
-        live = await releases_service.current(session, one)
-        if live is not None:
-            current_ids.add(live.id)
+        for platform in ReleasePlatform:
+            live = await releases_service.current(session, one, platform)
+            if live is not None:
+                current_ids.add(live.id)
 
     return [
         AppReleaseOut(
             id=row.id,
             app=row.app,
+            platform=row.platform,
             build=row.build,
             min_supported_build=row.min_supported_build,
             download_url=row.download_url,
@@ -102,6 +108,7 @@ async def create_release(
     release = await releases_service.create(
         session,
         app=payload.app,
+        platform=payload.platform,
         build=payload.build,
         min_supported_build=payload.min_supported_build,
         download_url=str(payload.download_url),
@@ -117,6 +124,7 @@ async def create_release(
         entity_id=release.id,
         details={
             "app": release.app.value,
+            "platform": release.platform.value,
             "build": release.build,
             "min_supported_build": release.min_supported_build,
         },
@@ -154,7 +162,11 @@ async def update_release(
         action=AuditAction.UPDATE,
         entity_type="app_release",
         entity_id=release.id,
-        details={"app": release.app.value, "build": release.build},
+        details={
+            "app": release.app.value,
+            "platform": release.platform.value,
+            "build": release.build,
+        },
         changes=changes,
     )
     await session.commit()
@@ -176,6 +188,7 @@ async def delete_release(
         entity_id=release.id,
         details={
             "app": release.app.value,
+            "platform": release.platform.value,
             "build": release.build,
             "min_supported_build": release.min_supported_build,
             "download_url": release.download_url,

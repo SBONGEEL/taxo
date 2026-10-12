@@ -1906,6 +1906,10 @@ export interface AdminPermissions {
 /** التطبيقاتُ الثلاثة — **مرآةُ `ClientApp`**، ويحرسها `check:enums`. */
 export type ClientApp = "rider" | "driver" | "panel";
 
+/** نظامُ الحزمة — **مرآةُ `ReleasePlatform`**، ويحرسها `check:enums`. ولا `web`:
+ *  لا حزمةَ في متصفّحٍ لتُحدَّث. **ورقمُ iOS يُرقَّم وحدَه** (قرارُ المالك 2026-10-12). */
+export type ReleasePlatform = "android" | "ios";
+
 /** إصدارٌ مسجَّل — **والرقمُ `versionCode` لا اسمُ نسخة**.
  *
  * `versionName` ثابتٌ في هذه الشجرة (قِيست حزمتان بـ`1.0` و`1.1` ورقمُهما
@@ -1914,6 +1918,8 @@ export type ClientApp = "rider" | "driver" | "panel";
 export interface AppRelease {
   id: string;
   app: ClientApp;
+  /** **ولكلِّ (تطبيق، نظام) صفٌّ حاكمٌ ورابط** — رابطُه ما يفتحه زرُّ «تحديث» هناك. */
+  platform: ReleasePlatform;
   build: number;
   min_supported_build: number;
   download_url: string;

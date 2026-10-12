@@ -642,10 +642,11 @@ export const getStorefront = () =>
 export const getAppVersion = (
   app: "rider" | "driver" | "panel",
   build: number | null,
+  platform: "android" | "ios",
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
-    query: build === null ? { app } : { app, build },
+    query: build === null ? { app, platform } : { app, build, platform },
   });
 
 /** **«المساعدة والدعم»** (R30، §٦٢-ج/١٦): الأسئلةُ الشائعةُ وبريدُ الدعم **من إعدادات الموقع التي يديرها المشرف** —

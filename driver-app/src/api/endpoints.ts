@@ -758,10 +758,11 @@ export const declareCliqPaid = (cartId: string) =>
 export const getAppVersion = (
   app: "rider" | "driver" | "panel",
   build: number | null,
+  platform: "android" | "ios",
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
-    query: build === null ? { app } : { app, build },
+    query: build === null ? { app, platform } : { app, build, platform },
   });
 
 // ------------------------------------------------- تقاريرُ الأعطال (2026-09-20)

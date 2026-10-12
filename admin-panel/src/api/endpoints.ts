@@ -58,6 +58,7 @@ import type {
   AppRelease,
   AppVersion,
   ClientApp,
+  ReleasePlatform,
   OrgProfile,
   PolicyApp,
   PolicyDocType,
@@ -1777,6 +1778,7 @@ export const listReleases = (app?: ClientApp) =>
  *  الحدُّ، والخلفيةُ ترفض بدونه. وورقةُ الشاشة هي الأولى. */
 export const createRelease = (body: {
   app: ClientApp;
+  platform: ReleasePlatform;
   build: number;
   min_supported_build: number;
   download_url: string;
@@ -1789,6 +1791,7 @@ export const updateRelease = (
   releaseId: string,
   body: {
     app: ClientApp;
+    platform: ReleasePlatform;
     build: number;
     min_supported_build: number;
     download_url: string;
@@ -1813,10 +1816,11 @@ export const deleteRelease = (releaseId: string) =>
 export const getAppVersion = (
   app: "rider" | "driver" | "panel",
   build: number | null,
+  platform: "android" | "ios",
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
-    query: build === null ? { app } : { app, build },
+    query: build === null ? { app, platform } : { app, build, platform },
   });
 
 // ------------------------------------------------ السياساتُ والشروط (البند ١٠)

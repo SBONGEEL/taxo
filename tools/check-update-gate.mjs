@@ -29,21 +29,27 @@ import { certify } from "./certify.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APPS = ["customer-app", "driver-app", "admin-panel"];
-const REL = join("src", "lib", "update-gate.tsx");
+// **والأنماطُ معها** (2026-10-12): نافذةُ الإلزاميِّ صارت بهوية TAXO 2.0 في ملفِّ أنماطٍ بجانبها، **وأنماطٌ تفترق نافذةٌ تفترق**
+// وإن تطابق المكوّن — فيُبصم الملفّان معاً
+const RELS = [join("src", "lib", "update-gate.tsx"), join("src", "lib", "update-gate.css")];
 
 const seen = [];
 for (const app of APPS) {
-  const path = join(ROOT, app, REL);
-  if (!existsSync(path)) {
-    console.error(`\n✗ نسخةٌ مفقودة: ${app}/${REL.replace(/\\/g, "/")}`);
-    console.error("  **والغيابُ ليس تطابقاً**: تطبيقٌ بلا بوّابةٍ لا يسأل");
-    console.error("  الخلفيةَ أبداً، ويبقى مستعمِلوه على حزمةٍ غير مدعومة.");
-    process.exit(1);
+  const hash = createHash("sha256");
+  for (const rel of RELS) {
+    const path = join(ROOT, app, rel);
+    if (!existsSync(path)) {
+      console.error(`\n✗ نسخةٌ مفقودة: ${app}/${rel.replace(/\\/g, "/")}`);
+      console.error("  **والغيابُ ليس تطابقاً**: تطبيقٌ بلا بوّابةٍ لا يسأل");
+      console.error("  الخلفيةَ أبداً، ويبقى مستعمِلوه على حزمةٍ غير مدعومة.");
+      process.exit(1);
+    }
+    // **الأسطرُ تُطبَّع قبل البصم**: `driver-app` محفوظٌ بـCRLF في هذه الشجرة،
+    // **وفرقُ نهايةِ سطرٍ ليس افتراقاً في السلوك** — وحارسٌ يصيح عليه يُطفأ.
+    hash.update(readFileSync(path, "utf8").replace(/\r\n/g, "\n"));
+    hash.update("\0");
   }
-  // **الأسطرُ تُطبَّع قبل البصم**: `driver-app` محفوظٌ بـCRLF في هذه الشجرة،
-  // **وفرقُ نهايةِ سطرٍ ليس افتراقاً في السلوك** — وحارسٌ يصيح عليه يُطفأ.
-  const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
-  seen.push({ app, digest: createHash("sha256").update(text).digest("hex") });
+  seen.push({ app, digest: hash.digest("hex") });
 }
 
 const unique = new Set(seen.map((one) => one.digest));

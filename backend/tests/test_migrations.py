@@ -313,3 +313,36 @@ async def test_0111_downgrade_stops_while_algeria_holds_data() -> None:
                 )
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0117_downgrade_stops_while_an_ios_release_exists() -> None:
+    """**نزولٌ لا يحذف صفّاً** (2026-10-12): صفُّ iOS لا مكانَ له في جدولٍ بلا نظام — **فيقف النزولُ بنصِّه**، ثمّ يُزال الصفُّ
+    فيمرّ النزولُ والصعودُ، **وصفُّ أندرويد يعود أندرويد**."""
+    config = alembic_config()
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO app_releases (id, app, platform, build, min_supported_build, download_url, release_notes) "
+                    "VALUES (gen_random_uuid(), 'rider', 'ios', 10, 10, 'https://example.com/ios', 'ios'), "
+                    "(gen_random_uuid(), 'rider', 'android', 772, 772, 'https://taxo.tajora.ly/download', 'android')"
+                )
+            )
+        with pytest.raises(Exception) as raised:
+            await asyncio.to_thread(command.downgrade, config, "0116")
+        assert "iOS" in str(raised.value)
+
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM app_releases WHERE platform = 'ios'"))
+        await asyncio.to_thread(command.downgrade, config, "0116")
+        await asyncio.to_thread(command.upgrade, config, "head")
+        async with engine.begin() as conn:
+            rows = (
+                await conn.execute(text("SELECT platform::text, build FROM app_releases"))
+            ).all()
+        assert [tuple(row) for row in rows] == [("android", 772)]
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM app_releases"))
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()

@@ -18,6 +18,13 @@
  * **ولا حقلَ لرقم الإصدار في التعديل**: الرقمُ هويةُ حزمةٍ موقَّعةٍ في يد
  * الناس، **وتغييرُه يجعل السجلَّ يصف حزمةً غيرَ التي وُصفت** — وهو تزويرُ
  * سجلٍّ لا تصحيحُ حقل. والخطأُ فيه يُصحَّح بحذف الصفِّ وكتابة غيره.
+ *
+ * ٤. **ورابطُ زرِّ «تحديث» لكلِّ تطبيقٍ ولكلِّ نظام** (قرارُ المالك
+ *    2026-10-12): الزرُّ في نافذة التحديث يفتح **رابطَ الصفِّ الحاكم** لذلك
+ *    التطبيق على ذلك النظام — صفحةَ التحميل اليوم، **وصفحةَ المتجر يومَ يُنشر
+ *    فيه**. **فالتبديلُ تعديلُ حقلٍ هنا، بلا كودٍ ولا رفع**، والرابطُ يُطرق قبل
+ *    الحفظ كما يُطرق في الإصدار الجديد. **والنظامُ في الصفِّ لا في الرابط**:
+ *    رقمُ iOS يُرقَّم وحدَه، فحدٌّ بلا نظامٍ يقفل حزمةَ iOS بأنها «أقدم».
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -28,7 +35,7 @@ import {
   listReleases,
   updateRelease,
 } from "@/api/endpoints";
-import type { AppRelease, ClientApp } from "@/api/types";
+import type { AppRelease, ClientApp, ReleasePlatform } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -47,10 +54,19 @@ const APP_LABEL: Record<ClientApp, string> = {
   panel: "غلاف المشرف",
 };
 
-const COLUMNS = "0.9fr 0.6fr 0.7fr 0.6fr 1.4fr 0.7fr";
+const PLATFORM_LABEL: Record<ReleasePlatform, string> = {
+  android: "أندرويد",
+  ios: "iOS",
+};
+
+const APPS = Object.keys(APP_LABEL) as ClientApp[];
+const PLATFORMS = Object.keys(PLATFORM_LABEL) as ReleasePlatform[];
+
+const COLUMNS = "0.9fr 0.5fr 0.6fr 0.7fr 0.6fr 1.4fr 0.7fr";
 
 interface Draft {
   app: ClientApp;
+  platform: ReleasePlatform;
   build: string;
   min: string;
   url: string;
@@ -60,6 +76,7 @@ interface Draft {
 
 const EMPTY: Draft = {
   app: "rider",
+  platform: "android",
   build: "",
   min: "",
   url: "",
@@ -88,10 +105,42 @@ export function ReleasesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
-  /** **الحدُّ القائم للتطبيق المختار** — منه تُعرف الورقةُ الأولى: هل يرتفع؟ */
+  /** **الصفُّ الحاكمُ لتطبيقٍ على نظام** — محسوبٌ في الخلفية (`is_current`)، ورابطُه ما يفتحه زرُّ «تحديث» هناك. */
+  const governing = (app: ClientApp, platform: ReleasePlatform) =>
+    rows?.find(
+      (row) => row.app === app && row.platform === platform && row.is_current,
+    ) ?? null;
+
+  /** **الحدُّ القائم للتطبيق والنظام المختارين** — منه تُعرف الورقةُ الأولى: هل يرتفع؟ */
   const standing =
-    rows?.find((row) => row.app === draft.app && row.is_current)
-      ?.min_supported_build ?? 0;
+    governing(draft.app, draft.platform)?.min_supported_build ?? 0;
+
+  /** إصدارٌ جديدٌ لتطبيقٍ ونظام — **ورابطُه يبدأ برابط الحاكم هناك** إن لم يُكتب غيرُه: الرابطُ صفةُ (تطبيق، نظام) لا صفةُ رقم. */
+  function choose(app: ClientApp, platform: ReleasePlatform) {
+    const before = governing(draft.app, draft.platform)?.download_url ?? "";
+    const keep = draft.url.length > 0 && draft.url !== before;
+    setDraft({
+      ...draft,
+      app,
+      platform,
+      url: keep ? draft.url : (governing(app, platform)?.download_url ?? ""),
+    });
+  }
+
+  function edit(row: AppRelease) {
+    form.setMessage(null);
+    setDone(null);
+    setEditing(row);
+    setDraft({
+      app: row.app,
+      platform: row.platform,
+      build: String(row.build),
+      min: String(row.min_supported_build),
+      url: row.download_url,
+      notes: row.release_notes,
+      hours: String(row.reminder_hours),
+    });
+  }
   const rises = Number(draft.min) > standing;
   const ready =
     draft.build.length > 0 &&
@@ -115,6 +164,7 @@ export function ReleasesScreen() {
     form.setMessage(null);
     const body = {
       app: draft.app,
+      platform: draft.platform,
       build: Number(draft.build),
       min_supported_build: Number(draft.min),
       download_url: draft.url.trim(),
@@ -128,12 +178,12 @@ export function ReleasesScreen() {
       if (editing) {
         await updateRelease(editing.id, body);
         setDone(
-          `حُدِّث سجلُّ ${APP_LABEL[draft.app]} — الحدُّ الأدنى الآن ${draft.min}.`,
+          `حُدِّث سجلُّ ${APP_LABEL[draft.app]} على ${PLATFORM_LABEL[draft.platform]} — الحدُّ الأدنى الآن ${draft.min}.`,
         );
       } else {
         await createRelease(body);
         setDone(
-          `سُجِّل الإصدار ${draft.build} لـ${APP_LABEL[draft.app]}، والحدُّ الأدنى ${draft.min}.`,
+          `سُجِّل الإصدار ${draft.build} لـ${APP_LABEL[draft.app]} على ${PLATFORM_LABEL[draft.platform]}، والحدُّ الأدنى ${draft.min}.`,
         );
       }
       setDraft(EMPTY);
@@ -157,6 +207,52 @@ export function ReleasesScreen() {
         <ErrorNote message={form.message} />
         <SuccessNote message={done} />
 
+        {/* **رابطُ زرِّ «تحديث» لكلِّ تطبيقٍ ولكلِّ نظام** — رابطُ الصفِّ الحاكم، وتغييرُه يفتح نموذجَ تعديله */}
+        <section className="mb-18 rounded-16 border border-line bg-surface p-18">
+          <h2 className="mb-4 text-16 font-bold text-ink">
+            رابطُ زرِّ «تحديث» — لكلِّ تطبيقٍ ولكلِّ نظام
+          </h2>
+          <p className="mb-12 text-11 leading-note text-muted">
+            ما يفتحه الزرُّ في نافذة التحديث: صفحةُ التحميل اليوم، وصفحةُ
+            التطبيق في المتجر حين يُنشر فيه. تغييرُه هنا يبلغ الهواتفَ عند فتح
+            التطبيق بلا كودٍ ولا رفع، ويُطرق الرابطُ قبل الحفظ.
+          </p>
+          <div className="flex flex-col gap-8">
+            {APPS.flatMap((app) =>
+              PLATFORMS.map((platform) => {
+                const live = governing(app, platform);
+                return (
+                  <div
+                    key={`${app}-${platform}`}
+                    className="flex items-center gap-10 rounded-13 border border-line bg-surface-2 px-13 py-10"
+                  >
+                    <span className="flex-none text-12.5 text-ink">
+                      {APP_LABEL[app]} · {PLATFORM_LABEL[platform]}
+                    </span>
+                    {live ? (
+                      <span
+                        className="min-w-0 flex-1 truncate text-11.5 text-muted"
+                        dir="ltr"
+                      >
+                        {live.download_url}
+                      </span>
+                    ) : (
+                      <span className="min-w-0 flex-1 text-11.5 text-muted">
+                        لا إصدارَ حاكم — ولا نافذةَ تظهر لأحد
+                      </span>
+                    )}
+                    {isAdmin && live ? (
+                      <Button size="sm" variant="ghost" onClick={() => edit(live)}>
+                        تغيير الرابط
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              }),
+            )}
+          </div>
+        </section>
+
         {isAdmin ? (
           <section className="mb-18 rounded-16 border border-line bg-surface p-18">
             <h2 className="mb-4 text-16 font-bold text-ink">
@@ -178,12 +274,28 @@ export function ReleasesScreen() {
                 value={draft.app}
                 disabled={editing !== null}
                 onChange={(event) =>
-                  setDraft({ ...draft, app: event.target.value as ClientApp })
+                  choose(event.target.value as ClientApp, draft.platform)
                 }
               >
-                {(Object.keys(APP_LABEL) as ClientApp[]).map((key) => (
+                {APPS.map((key) => (
                   <option key={key} value={key}>
                     {APP_LABEL[key]}
+                  </option>
+                ))}
+              </Select>
+              {/* **النظامُ هويةٌ مع الرقم** فلا يُعدَّل في صفٍّ قائم — رقمُ iOS يُرقَّم وحدَه */}
+              <Select
+                label="النظام"
+                name="platform"
+                value={draft.platform}
+                disabled={editing !== null}
+                onChange={(event) =>
+                  choose(draft.app, event.target.value as ReleasePlatform)
+                }
+              >
+                {PLATFORMS.map((key) => (
+                  <option key={key} value={key}>
+                    {PLATFORM_LABEL[key]}
                   </option>
                 ))}
               </Select>
@@ -229,7 +341,7 @@ export function ReleasesScreen() {
               />
               <div className="col-span-2">
                 <Field
-                  label="رابط التحميل"
+                  label="رابطُ زرِّ «تحديث» — صفحةُ التحميل، أو صفحةُ المتجر حين يُنشر فيه"
                   name="download_url"
                   dir="ltr"
                   value={draft.url}
@@ -240,7 +352,8 @@ export function ReleasesScreen() {
               </div>
               <div className="col-span-2">
                 <label className="mb-6 block text-11.5 text-muted">
-                  ما الجديد — يقرؤه صاحبُ الهاتف
+                  نصُّ الرسالة — يظهر في نافذة التحديث كما يُكتب، ويقرؤه صاحبُ
+                  الهاتف
                 </label>
                 <textarea
                   name="release_notes"
@@ -286,6 +399,7 @@ export function ReleasesScreen() {
           columns={COLUMNS}
           headers={[
             "التطبيق",
+            "النظام",
             "الإصدار",
             "أدنى مقبول",
             "الكتم",
@@ -304,6 +418,9 @@ export function ReleasesScreen() {
                 {APP_LABEL[row.app]}
                 {row.is_current ? <Badge tone="ok">الحاكم</Badge> : null}
               </span>
+              <span className="text-12.5 text-ink">
+                {PLATFORM_LABEL[row.platform]}
+              </span>
               <span className="text-12.5 text-ink" dir="ltr">
                 {digits(String(row.build))}
               </span>
@@ -319,21 +436,7 @@ export function ReleasesScreen() {
               <span className="flex justify-end gap-7">
                 {isAdmin ? (
                   <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(row);
-                        setDraft({
-                          app: row.app,
-                          build: String(row.build),
-                          min: String(row.min_supported_build),
-                          url: row.download_url,
-                          notes: row.release_notes,
-                          hours: String(row.reminder_hours),
-                        });
-                      }}
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => edit(row)}>
                       تعديل
                     </Button>
                     <Button
@@ -371,8 +474,9 @@ export function ReleasesScreen() {
               </h2>
               <p className="mt-9 text-12.5 leading-note text-ink">
                 كلُّ من حزمتُه أقلُّ من <b dir="ltr">{draft.min}</b> في{" "}
-                <b>{APP_LABEL[draft.app]}</b> لن يفتح التطبيقَ حتى يحمّل النسخة
-                الجديدة من الرابط أعلاه.
+                <b>{APP_LABEL[draft.app]}</b> على{" "}
+                <b>{PLATFORM_LABEL[draft.platform]}</b> لن يفتح التطبيقَ حتى
+                يحمّل النسخة الجديدة من الرابط أعلاه.
               </p>
               <p className="mt-8 text-11.5 leading-note text-muted">
                 أعِد كتابة الرقم لتأكيده — ورقمٌ خاطئٌ هنا يوقف الجميع دفعةً
@@ -412,7 +516,7 @@ export function ReleasesScreen() {
 
         {removing ? (
           <ConfirmDelete
-            what={`إصدار ${removing.build} من ${APP_LABEL[removing.app]}`}
+            what={`إصدار ${removing.build} من ${APP_LABEL[removing.app]} على ${PLATFORM_LABEL[removing.platform]}`}
             note="سجلُّ إصدارٍ إعدادُ تشغيلٍ لا شاهدَ نزاع — ويبقى أثرُه في سجل التدقيق بقيمته قبل الحذف."
             onConfirm={async () => {
               await deleteRelease(removing.id);

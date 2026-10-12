@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.app_release import AppRelease
-from app.models.enums import ClientApp
+from app.models.enums import ClientApp, ReleasePlatform
 
 #: مهلةُ طرقِ رابط التحميل. **أقصرُ من مهلة المزوّدين**: هذه على مشرفٍ ينتظر
 #: أمام نموذج، **ورابطٌ لا يجيب في عشر ثوانٍ ليس رابطاً يُعتمد عليه قفلُ ناس**.
@@ -49,18 +49,30 @@ NO_POLICY = VersionVerdict(
 )
 
 
-async def current(session: AsyncSession, app: ClientApp) -> AppRelease | None:
-    """الصفُّ الحاكم لتطبيق — **أعلى رقمٍ لا أحدثُ إنشاء**."""
+async def current(
+    session: AsyncSession,
+    app: ClientApp,
+    platform: ReleasePlatform = ReleasePlatform.ANDROID,
+) -> AppRelease | None:
+    """الصفُّ الحاكم لتطبيقٍ على نظام — **أعلى رقمٍ لا أحدثُ إنشاء**.
+
+    **والنظامُ جزءٌ من السؤال** (2026-10-12): رقمُ iOS لا يُقارَن برقم أندرويد،
+    **ورابطُ هذا الصفِّ هو ما يفتحه زرُّ «تحديث» على ذلك النظام**.
+    """
     return await session.scalar(
         select(AppRelease)
-        .where(AppRelease.app == app)
+        .where(AppRelease.app == app, AppRelease.platform == platform)
         .order_by(AppRelease.build.desc())
         .limit(1)
     )
 
 
 async def verdict_for(
-    session: AsyncSession, *, app: ClientApp, build: int | None
+    session: AsyncSession,
+    *,
+    app: ClientApp,
+    build: int | None,
+    platform: ReleasePlatform = ReleasePlatform.ANDROID,
 ) -> VersionVerdict:
     """ماذا يفعل التطبيقُ عند الإقلاع.
 
@@ -68,7 +80,7 @@ async def verdict_for(
     ملحقُه. **ولا يُقفل من لا نعرف نسختَه**: القفلُ عقوبةٌ على قِدَمٍ مثبَت،
     **والظنُّ لا يقفل باباً**.
     """
-    release = await current(session, app)
+    release = await current(session, app, platform)
     if release is None:
         return NO_POLICY
 
@@ -140,6 +152,7 @@ async def _require_second_permission(
     session: AsyncSession,
     *,
     app: ClientApp,
+    platform: ReleasePlatform,
     build: int,
     min_supported_build: int,
     confirmation: int | None,
@@ -157,7 +170,7 @@ async def _require_second_permission(
     **وأوّلُ صفٍّ لتطبيقٍ يستأذن دائماً**: لا حدَّ قبله، **فكلُّ حدٍّ يكتبه
     يقفل من هو دونه** — وذاك أوسعُ فعلٍ في هذه الشاشة لا أهونُه.
     """
-    live = await current(session, app)
+    live = await current(session, app, platform)
     if release_id is None:
         governs = live is None or build > live.build
     else:
@@ -179,6 +192,7 @@ async def create(
     session: AsyncSession,
     *,
     app: ClientApp,
+    platform: ReleasePlatform = ReleasePlatform.ANDROID,
     build: int,
     min_supported_build: int,
     download_url: str,
@@ -192,14 +206,21 @@ async def create(
             "الحدُّ الأدنى فوق رقم الإصدار — يُقفل صاحبُ أحدث حزمةٍ بلا مخرج."
         )
     exists = await session.scalar(
-        select(AppRelease).where(AppRelease.app == app, AppRelease.build == build)
+        select(AppRelease).where(
+            AppRelease.app == app,
+            AppRelease.platform == platform,
+            AppRelease.build == build,
+        )
     )
     if exists is not None:
-        raise Conflict("هذا الرقم مسجَّلٌ لهذا التطبيق — والرقمُ هو هويةُ الحزمة.")
+        raise Conflict(
+            "هذا الرقم مسجَّلٌ لهذا التطبيق على هذا النظام — والرقمُ هو هويةُ الحزمة."
+        )
 
     await _require_second_permission(
         session,
         app=app,
+        platform=platform,
         build=build,
         min_supported_build=min_supported_build,
         confirmation=confirmation,
@@ -208,6 +229,7 @@ async def create(
 
     release = AppRelease(
         app=app,
+        platform=platform,
         build=build,
         min_supported_build=min_supported_build,
         download_url=download_url,
@@ -236,7 +258,7 @@ async def update(
     reminder_hours: int,
     confirmation: int | None,
 ) -> dict[str, dict[str, object]]:
-    """يعدّل صفّاً قائماً — **ولا يُعدَّل رقمُ الإصدار ولا تطبيقُه**.
+    """يعدّل صفّاً قائماً — **ولا يُعدَّل رقمُ الإصدار ولا تطبيقُه ولا نظامُه**.
 
     **والرقمُ هويةُ حزمةٍ مبنيّةٍ موقَّعةٍ في يد الناس** — تغييرُه هنا يجعل
     السجلَّ يصف حزمةً غير التي وُصفت، **وهو تزويرُ سجلٍّ لا تصحيحُ حقل**.
@@ -251,6 +273,7 @@ async def update(
     await _require_second_permission(
         session,
         app=release.app,
+        platform=release.platform,
         build=release.build,
         min_supported_build=min_supported_build,
         confirmation=confirmation,

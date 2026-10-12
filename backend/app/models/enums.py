@@ -55,6 +55,19 @@ class ClientApp(StrEnum):
     PANEL = "panel"
 
 
+class ReleasePlatform(StrEnum):
+    """نظامُ الحزمة في سجلِّ الإصدارات — **أندرويد، ثمّ iOS لاحقاً** (قرارُ المالك 2026-10-12).
+
+    **ورقمُ البناء لا يُقارَن عبر نظامين**: رقمُ أندرويد عددُ الإيداعات (`taxoVersionCode`)، ورقمُ iOS يُرقَّم وحدَه — **فحدٌّ بلا
+    نظامٍ يقفل كلَّ حزمةِ iOS بأنها «أقدمُ من 772»** يومَ تُنشر. **ورابطُ التحديث لكلِّ تطبيقٍ ولكلِّ نظام** يسكن صفَّه الحاكم.
+
+    **وليست `DevicePlatform` ولا `ErrorPlatform`**: لا `web` هنا — لا حزمةَ في متصفّحٍ لتُحدَّث، وعضوٌ لا يُكتب به صفٌّ قيمةٌ مخترعة.
+    """
+
+    ANDROID = "android"
+    IOS = "ios"
+
+
 class DriverStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
