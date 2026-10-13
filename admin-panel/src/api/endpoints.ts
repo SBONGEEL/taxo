@@ -6,7 +6,7 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { Markets, PricingZones, SignupDisplay } from "@/api/types";
+import type { Currency, ExchangeRates, FinanceOverview, FinanceOverviewQuery, Markets, PricingZones, SignupDisplay } from "@/api/types";
 import type {
   AdminPayMethod,
   AdminPayMethodInput,
@@ -2202,4 +2202,54 @@ export const setZoneRule = (
   category: string,
   body: { base_fare: string; price_per_km: string; price_per_min: string; minimum_fare: string },
 ) => api.put<PricingZones>(`/admin/pricing-zones/${zoneId}/rules/${category}`, body);
+
+// ════════════════════════════════════════ «المالية العامة» وأسعارُ الصرف (SPEC §٧٤-أ/٩)
+//
+// **بصلاحية المالية المستقلّة** (`finance.summary`) — وكلُّ عرضٍ وتصديرٍ وضبطِ سعرٍ سطرٌ في التدقيق. **ولا سوقَ في النداء**: الدولُ كلُّها،
+// كلٌّ بعملته، **والمجموعُ التقريبيُّ من الخلفية موسوماً** — لا يُجمع في الشاشة شيء.
+
+function overviewQuery(query: FinanceOverviewQuery): Record<string, string | undefined> {
+  return {
+    period: query.period,
+    from_date: query.period === "custom" ? query.from_date : undefined,
+    to_date: query.period === "custom" ? query.to_date : undefined,
+    user_type: query.user_type,
+    method: query.method,
+    status: query.status,
+  };
+}
+
+export const getFinanceOverview = (query: FinanceOverviewQuery) =>
+  api.get<FinanceOverview>("/admin/finance/overview", { query: overviewQuery(query) });
+
+export const getExchangeRates = () => api.get<ExchangeRates>("/admin/finance/rates");
+
+/** **يضعها المالك** — صفٌّ جديدٌ لكلِّ سعر، والتاريخُ يُحفظ. */
+export const setExchangeRates = (body: { reference: string; rates: Array<{ currency: Currency; rate: string }> }) =>
+  api.put<ExchangeRates>("/admin/finance/rates", body);
+
+/** **المالية العامة إلى Excel** — كتصدير «مالية الدولة»: يُجلب بالمفتاح ثمّ يُحفظ، والخطأُ بنصِّ الخادم. */
+export async function exportFinanceOverview(query: FinanceOverviewQuery): Promise<void> {
+  const url = new URL(`${API_URL}/admin/finance/overview/export`);
+  for (const [key, value] of Object.entries(overviewQuery(query))) {
+    if (value !== undefined && value !== "") url.searchParams.set(key, value);
+  }
+  const answer = await fetch(url.toString(), { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } });
+  if (!answer.ok) {
+    let message = "تعذّر تصديرُ الملفّ";
+    try {
+      message = ((await answer.json()) as { message?: string }).message ?? message;
+    } catch {
+      /* ردٌّ غيرُ مقروء */
+    }
+    throw new Error(message);
+  }
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(await answer.blob());
+  link.download = "taxo-finance-overview.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
 

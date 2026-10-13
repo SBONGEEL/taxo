@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
@@ -40,6 +41,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Segmented } from "@/components/ui/Segmented";
 import { useCountry } from "@/lib/country";
+import { useCountries } from "@/lib/countries";
 import { moment, money } from "@/lib/format";
 import { cn, digits } from "@/lib/utils";
 import { DateField, Icon } from "@/taxo2";
@@ -70,14 +72,14 @@ const STATUS_LABEL: Record<FinanceStatus, string> = {
 };
 
 /** **سطرُ التدقيق بنصِّ A39** — ثابتٌ في أسفل الصفحة وما وراء البطاقة: من يقرأ يعرف أن قراءتَه تُكتب. */
-const AUDIT_LINE = "فتحُك هذه الصفحة وكلُّ تصديرٍ يُسجَّلان باسمك";
+export const AUDIT_LINE = "فتحُك هذه الصفحة وكلُّ تصديرٍ يُسجَّلان باسمك";
 
 /** صفحةُ ما وراء البطاقة — خمسون صفّاً، **والعددُ الكاملُ من الخلفية** (`total`) فلا يُخمَّن آخرُ صفحة. */
 const PAGE = 50;
 
 type Tab = Exclude<FinanceView, "summary">;
 
-interface Filters {
+export interface Filters {
   period: FinancePeriod;
   from: string;
   to: string;
@@ -86,7 +88,7 @@ interface Filters {
   status: FinanceStatus | "all";
 }
 
-const INITIAL: Filters = { period: "month", from: "", to: "", userType: "all", method: "all", status: "all" };
+export const INITIAL: Filters = { period: "month", from: "", to: "", userType: "all", method: "all", status: "all" };
 
 /** **ما يُرسل** — والفترةُ المخصَّصةُ بلا تاريخيها لا تُرسل أصلاً (`null`): الخادمُ يردّها ٤٢٢، والشاشةُ تطلب التاريخين أوّلاً. */
 function queryOf(country: CountryCode, filters: Filters): FinanceQuery | null {
@@ -106,7 +108,39 @@ function messageOf(caught: unknown, fallback: string): string {
   return caught instanceof Error && caught.message ? caught.message : fallback;
 }
 
-export function FinanceSummaryScreen() {
+/** **«مالية الدولة»** (SPEC §٧٤-أ/٩) — الصفحةُ نفسُها **بدولة المسار** (`/finance/country/:code`): تنقل مبدّلَ الرأس إليها، **وفوقها شريطُ
+ *  الدول والعودةُ إلى «المالية العامة»**. ولا رقمَ يُحسب بطريقٍ ثانٍ — هي `FinanceSummaryScreen` كما هي. */
+export function FinanceCountryScreen() {
+  const { code } = useParams();
+  const { country, setCountry } = useCountry();
+  const { rows } = useCountries();
+  useEffect(() => {
+    if (code && /^[A-Z]{2}$/.test(code) && code !== country) setCountry(code as CountryCode);
+  }, [code, country, setCountry]);
+  return (
+    <FinanceSummaryScreen
+      tabs={
+        <nav aria-label="الدول" className="mb-12 flex flex-wrap items-center gap-6">
+          <Link to="/finance/overview" className="ad-btn ad-btn-sm ad-btn-ghost">
+            المالية العامة
+          </Link>
+          {(rows ?? []).map((row) => (
+            <Link
+              key={row.country_code}
+              to={`/finance/country/${row.country_code}`}
+              aria-current={row.country_code === country ? "page" : undefined}
+              className={row.country_code === country ? "ad-btn ad-btn-sm ad-btn-primary" : "ad-btn ad-btn-sm ad-btn-secondary"}
+            >
+              {row.name}
+            </Link>
+          ))}
+        </nav>
+      }
+    />
+  );
+}
+
+export function FinanceSummaryScreen({ tabs }: { tabs?: ReactNode } = {}) {
   // **السوقُ من مبدّل الرأس** — واحدٌ في كلِّ مرّة، والعملةُ تتبعه من الخلفية
   const { country } = useCountry();
   const [filters, setFilters] = useState<Filters>(INITIAL);
@@ -161,8 +195,8 @@ export function FinanceSummaryScreen() {
 
   return (
     <Shell
-      title="الملخّصات المالية"
-      subtitle="من الدفتر وجداول المال مباشرةً — قراءةٌ وحدَها"
+      title="مالية الدولة"
+      subtitle="من الدفتر وجداول المال مباشرةً — قراءةٌ وحدَها، بعملة السوق"
       actions={
         open ? null : (
           <Button size="sm" variant="secondary" loading={exporting} disabled={!data} onClick={() => void download("summary")}>
@@ -171,6 +205,7 @@ export function FinanceSummaryScreen() {
         )
       }
     >
+      {tabs}
       <FilterBar filters={filters} onChange={setFilters} />
       <ErrorNote message={error} />
 
@@ -219,7 +254,7 @@ export function FinanceSummaryScreen() {
 }
 
 /** **A39 — صفحةُ المنع**: بنصِّ الطلب، **ومعها من يمنح** فلا يبقى المشرفُ أمام بابٍ لا يعرف مفتاحَه. */
-function Denied() {
+export function Denied() {
   return (
     <div className="ad-banner" role="alert">
       <Icon name="lock" fill />
@@ -235,7 +270,7 @@ function Denied() {
 
 /** **شريطُ المرشِّحات ثابتٌ أعلى المحتوى** (A37): الفترةُ مبدّلٌ واحد، **والمخصَّصةُ بتاريخين**، ثمّ نوعُ المستخدم والطريقةُ والحال
  *  حبّاتٍ «الكلّ» أوّلُها. **والسوقُ ليس هنا**: مبدّلُ الرأس يحكمه لكلِّ شاشة. */
-function FilterBar({ filters, onChange }: { filters: Filters; onChange: (next: Filters) => void }) {
+export function FilterBar({ filters, onChange }: { filters: Filters; onChange: (next: Filters) => void }) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   return (
     <div className="sticky top-header z-10 mb-14 flex flex-col gap-10 bg-bg py-10">

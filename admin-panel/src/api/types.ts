@@ -2732,3 +2732,44 @@ export interface PricingZones {
   attribution: string | null;
 }
 
+// ════════════════════════════════════════ «المالية العامة» (SPEC §٧٤-أ/٩)
+
+/** **سعرُ صرفٍ تضعه الإدارة** — وحداتٌ من العملة المرجعيّة لوحدةٍ واحدةٍ من عملة السوق، بتاريخ ضبطه. */
+export interface ExchangeRateRow {
+  currency: Currency;
+  rate: string;
+  set_at: string;
+}
+
+export interface ExchangeRates {
+  reference: string | null;
+  rates: ExchangeRateRow[];
+  note: string;
+}
+
+export interface FinanceCombinedMetric {
+  key: string;
+  label: string;
+  /** **نصٌّ بخانتين** بالعملة المرجعيّة — `null` حين نقص سعرُ عملةٍ لها مبلغ (`missing` يسمّيها) */
+  approx_value: string | null;
+  missing: Currency[];
+}
+
+export interface FinanceCombined {
+  reference: string;
+  /** «تقريبي — بسعر صرف تضعه الإدارة» — من الخلفية حرفاً */
+  note: string;
+  rates: ExchangeRateRow[];
+  metrics: FinanceCombinedMetric[];
+}
+
+export interface FinanceOverview {
+  /** **كلُّ دولةٍ بصفحتها نفسِها** — بانٍ واحدٌ مع «مالية الدولة» */
+  countries: FinanceSummary[];
+  /** حكمٌ واحدٌ: كلُّ دولةٍ تطابق دفترَها */
+  reconciled: boolean;
+  combined: FinanceCombined | null;
+}
+
+export type FinanceOverviewQuery = Omit<FinanceQuery, "country_code">;
+

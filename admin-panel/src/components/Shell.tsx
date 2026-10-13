@@ -68,7 +68,9 @@ const GROUPS: {
       // **بطاقاتُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — جوارَ نظام الدفع: البطاقةُ طريقةٌ فيه («رمز شراء»)
       { label: "بطاقات TAXO", icon: "confirmation_number", to: "/taxo-cards" },
       // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
-      { label: "الملخّصات المالية", icon: "receipt_long", to: "/finance/summary", permission: FINANCE_SUMMARY },
+      // **الماليةُ بمستويين** (SPEC §٧٤-أ/٩) — العامّةُ كلُّ الدول متجاورةً كلٌّ بعملته، ومالية الدولة هي الملخّصاتُ نفسُها بدولة المبدّل
+      { label: "المالية العامة", icon: "account_balance", to: "/finance/overview", permission: FINANCE_SUMMARY },
+      { label: "مالية الدولة", icon: "receipt_long", to: "/finance/summary", permission: FINANCE_SUMMARY },
       { label: "الدفعات", icon: "payments", to: "/payments" },
       // **المدفوعاتُ غيرُ المؤكَّدة** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥) — جوارَ «الدفعات»: صفوفُها هي هي، وهذه ما ينتظر
       // أحداً منها. **وبلا `adminOnly`**: القراءةُ لـ`support` والأفعالُ يحرسها الخادم (`DisputeResolver`) كالنزاعات

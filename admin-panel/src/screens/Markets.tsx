@@ -45,7 +45,7 @@ const SHORTCUTS: Array<{ label: string; to: string }> = [
   { label: "الخدمات", to: "/settings" },
   { label: "طرق الدفع", to: "/payment-system" },
   { label: "السياسات", to: "/policies" },
-  { label: "المالية", to: "/finance/summary" },
+  { label: "المالية", to: "/finance/country/:code" },
 ];
 
 type Pending =
@@ -214,7 +214,7 @@ export function MarketsScreen() {
                         size="sm"
                         onClick={() => {
                           setCountry(row.country_code);
-                          navigate(shortcut.to);
+                          navigate(shortcut.to.replace(":code", row.country_code));
                         }}
                       >
                         {shortcut.label}

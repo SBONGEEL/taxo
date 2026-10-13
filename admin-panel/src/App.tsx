@@ -61,6 +61,13 @@ const FinanceScreen = lazy(() =>
 const FinanceSummaryScreen = lazy(() =>
   import("@/screens/FinanceSummary").then((m) => ({ default: m.FinanceSummaryScreen })),
 );
+// **«المالية العامة» و«مالية الدولة»** (SPEC §٧٤-أ/٩)
+const FinanceOverviewScreen = lazy(() =>
+  import("@/screens/FinanceOverview").then((m) => ({ default: m.FinanceOverviewScreen })),
+);
+const FinanceCountryScreen = lazy(() =>
+  import("@/screens/FinanceSummary").then((m) => ({ default: m.FinanceCountryScreen })),
+);
 const PaymentsScreen = lazy(() =>
   import("@/screens/Payments").then((m) => ({ default: m.PaymentsScreen })),
 );
@@ -410,6 +417,22 @@ export default function App() {
                     element={
                       <Guarded>
                         <FinanceSummaryScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/finance/overview"
+                    element={
+                      <Guarded>
+                        <FinanceOverviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/finance/country/:code"
+                    element={
+                      <Guarded>
+                        <FinanceCountryScreen />
                       </Guarded>
                     }
                   />

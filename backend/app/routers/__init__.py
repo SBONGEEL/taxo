@@ -6,6 +6,7 @@ from app.routers import (
     admin_countries,
     admin_markets,
     admin_pricing_zones,
+    admin_finance_overview,
     admin_errors,
     admin_cancellations,
     admin_photo_reports,
@@ -142,6 +143,8 @@ api_router.include_router(admin_search.router)
 api_router.include_router(admin_stats.router)
 # **الملخّصاتُ المالية** (SPEC §٦٥-د) — قراءةٌ وحدَها بصلاحيةٍ مستقلّة، **موجّهٌ في ملفِّه** لا ثانٍ في `admin_stats`
 api_router.include_router(admin_finance_summary.router)
+# **«المالية العامة» وأسعارُ الصرف** (SPEC §٧٤-أ/٩) — الدولُ متجاورةً كلٌّ بعملته، والمجموعُ التقريبيُّ الموسوم
+api_router.include_router(admin_finance_overview.router)
 api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_account.router)
 api_router.include_router(admin_campaigns.router)
