@@ -293,15 +293,15 @@ async def write_off(
     session: AsyncSession,
     *,
     debt: DriverDebt,
-    actor: User,
+    actor: User | None,
     reason: str,
 ) -> DriverDebt:
-    """شطبُ مستحقٍّ بقرارٍ إداريّ — **بسببٍ مكتوبٍ لا بلا سبب**."""
+    """شطبُ مستحقٍّ بقرارٍ إداريّ — **بسببٍ مكتوبٍ لا بلا سبب**. و`actor` فارغٌ لسكربت التصفير وحدَه (§٧٤-ح)."""
     if debt.status is not DriverDebtStatus.OUTSTANDING:
         raise InvalidInput("هذا المستحقّ ليس قائماً")
     debt.status = DriverDebtStatus.WRITTEN_OFF
     debt.written_off_at = _now()
-    debt.written_off_by = actor.id
+    debt.written_off_by = actor.id if actor else None
     debt.writeoff_reason = reason
     await session.flush()
     return debt

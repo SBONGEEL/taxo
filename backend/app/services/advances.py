@@ -760,9 +760,9 @@ async def blocks_daily_subscription(
 
 
 async def write_off(
-    session: AsyncSession, *, advance_id: uuid.UUID, admin: User, reason: str
+    session: AsyncSession, *, advance_id: uuid.UUID, admin: User | None, reason: str
 ) -> DriverAdvance:
-    """شطبُ دَينٍ بقرارٍ إداريٍّ مسجَّل (القرار ٧) — والـcommit للمستدعي.
+    """شطبُ دَينٍ بقرارٍ إداريٍّ مسجَّل (القرار ٧) — والـcommit للمستدعي. و`admin` فارغٌ لسكربت التصفير وحدَه (§٧٤-ح).
 
     **ولا شطبَ آليّ بعد التسعين**: المدّةُ تجعله *مقترحاً*، والاعترافُ بالخسارة
     فعلُ إنسانٍ باسمه — وهو نصُّ القرار. **ولا قيدَ يُكتب في الدفتر**: لم يتحرك
@@ -782,7 +782,7 @@ async def write_off(
 
     advance.status = AdvanceStatus.WRITTEN_OFF
     advance.written_off_at = _now()
-    advance.written_off_by = admin.id
+    advance.written_off_by = admin.id if admin else None
     advance.writeoff_reason = reason.strip()
 
     driver = await session.get(
