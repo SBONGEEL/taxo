@@ -19,6 +19,13 @@
   **داخل معاملة الحذف وحدَها** (`ALTER TABLE … DISABLE TRIGGER`) **ويُشعَل قبل الالتزام** — والقاعدةُ تُطبّق الاثنين معاً أو لا شيء،
   **ولا يُحذف منه إلا صفوفُ الإغلاق**. ويُقال في التقرير.
 * **وبعد الحذف يُمسح كلُّ عمودِ معرّفٍ في كلِّ جدول**: صفرُ صفٍّ يحمل معرّفاً حُذف — **وإلا تراجعٌ** والجدولُ يُسمّى.
+
+## `--keep-ledger` — **حين وقع القيدُ فعلاً** (قِيس على الإنتاج ٢٠٢٦-١٠-١٣)
+
+إلغاءٌ سبق قبولاً فصار إلغاءً بعد القبول: رسمٌ −1.000 وتعويضٌ +1.000 لكبتنِ اختبار (صافيهما صفر). **والقيدُ لا يُحذف** — فيبقى **هو وما
+يشير إليه وحدَه** (الرحلةُ وراكبُها وكبتنُها ومركبتُه — آباؤه بالمفاتيح الأجنبيّة، مرّةً بعد مرّة)، وسطرُ التدقيق الذي يسمّي شيئاً منها،
+**ويُحذف كلُّ ما سواه**. **ويُطبع الباقي جدولاً جدولاً** ليُذكر في التقرير. **ولا يُشعَل هذا الطورُ إلا بقرار** (العَلَم)، والافتراضُ
+وقوفٌ كما كان.
 """
 
 from __future__ import annotations
@@ -111,6 +118,64 @@ async def _closure(session: AsyncSession) -> dict[str, set[str]]:
     return counts
 
 
+async def _keep_ledger(session: AsyncSession, edges) -> dict[str, int]:
+    """**قيودُ الدفتر وآباؤها** تُنزع من الإغلاق — صفُّ الأب يبقى ما دام ابنٌ باقٍ يشير إليه؛ **ولا يُبقى إلا ما في الإغلاق أصلاً**."""
+    await session.execute(text("CREATE TEMP TABLE stress_keep (tbl text, rid tid, PRIMARY KEY (tbl, rid)) ON COMMIT DROP"))
+    await session.execute(
+        text("INSERT INTO stress_keep SELECT tbl, rid FROM stress_rows WHERE tbl = ANY(:t)"), {"t": list(REFUSED_TABLES)}
+    )
+    changed = True
+    while changed:
+        changed = False
+        for child, col, parent, pcol in edges:
+            added = (
+                await session.execute(
+                    text(
+                        f"INSERT INTO stress_keep SELECT :parent, p.ctid FROM {q(parent)} p "
+                        f"JOIN stress_rows r ON r.tbl = :parent AND r.rid = p.ctid "
+                        f"WHERE p.{q(pcol)} IN (SELECT c.{q(col)} FROM {q(child)} c "
+                        f"JOIN stress_keep k ON k.tbl = :child AND k.rid = c.ctid) "
+                        f"ON CONFLICT DO NOTHING"
+                    ),
+                    {"child": child, "parent": parent},
+                )
+            ).rowcount
+            if added:
+                changed = True
+    # وسطرُ التدقيق الذي يسمّي صفّاً باقياً يبقى معه — تاريخُه لا يُمحى وهو قائم
+    kept_ids = set()
+    for tbl in (await session.execute(text("SELECT DISTINCT tbl FROM stress_keep"))).scalars().all():
+        has_id = await session.scalar(
+            text(
+                "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name=:t "
+                "AND column_name='id' AND data_type='uuid'"
+            ),
+            {"t": tbl},
+        )
+        if has_id:
+            kept_ids.update(
+                (
+                    await session.execute(
+                        text(f"SELECT t.id FROM {q(tbl)} t JOIN stress_keep k ON k.tbl = :t AND k.rid = t.ctid"), {"t": tbl}
+                    )
+                ).scalars().all()
+            )
+    if kept_ids:
+        await session.execute(
+            text(
+                "INSERT INTO stress_keep SELECT 'admin_audit_logs', a.ctid FROM admin_audit_logs a "
+                "JOIN stress_rows r ON r.tbl = 'admin_audit_logs' AND r.rid = a.ctid WHERE a.entity_id = ANY(:ids) "
+                "ON CONFLICT DO NOTHING"
+            ),
+            {"ids": list(kept_ids)},
+        )
+    await session.execute(text("DELETE FROM stress_rows r USING stress_keep k WHERE r.tbl = k.tbl AND r.rid = k.rid"))
+    kept = defaultdict(int)
+    for tbl, n in (await session.execute(text("SELECT tbl, count(*) FROM stress_keep GROUP BY tbl"))).all():
+        kept[tbl] = int(n)
+    return dict(kept)
+
+
 async def _ids_table(session: AsyncSession) -> bool:
     """**كلُّ معرّفٍ (`id`) لصفٍّ في الإغلاق** — به يُعرف ما يسمّيه سجلُّ التدقيق بلا مفتاح، **وبه يُمسح بعد الحذف**."""
     await session.execute(text("DROP TABLE IF EXISTS stress_ids"))
@@ -186,14 +251,21 @@ async def _leftovers(session: AsyncSession) -> dict[str, int]:
     return found
 
 
-async def run(*, write: bool, session_factory=SessionLocal) -> dict:
+async def run(*, write: bool, session_factory=SessionLocal, keep_ledger: bool = False) -> dict:
     async with session_factory() as session:
         plan = await _closure(session)
         sizes = {tbl: len(rids) for tbl, rids in sorted(plan.items())}
+        kept: dict[str, int] = {}
         for table in REFUSED_TABLES:
-            if sizes.get(table):
+            if sizes.get(table) and not keep_ledger:
                 await session.rollback()
                 raise CleanupRefused(f"{table}: {sizes[table]} صفّاً لحسابات الحمل — يُضاف إليه ولا يُحذف؛ يُعرض على المالك")
+        if keep_ledger and any(sizes.get(t) for t in REFUSED_TABLES):
+            kept = await _keep_ledger(session, await _edges(session))
+            plan = defaultdict(set)
+            for tbl, rid in (await session.execute(text("SELECT tbl, rid::text FROM stress_rows"))).all():
+                plan[tbl].add(rid)
+            sizes = {tbl: len(rids) for tbl, rids in sorted(plan.items())}
         await _ids_table(session)
         deleted = await _delete(session, plan)
         left = await _leftovers(session)
@@ -203,22 +275,23 @@ async def run(*, write: bool, session_factory=SessionLocal) -> dict:
         users_left = await session.scalar(
             text("SELECT count(*) FROM users WHERE phone LIKE :prefix"), {"prefix": stress.STRESS_PHONE_PREFIX + "%"}
         )
-        if users_left:
+        if users_left != kept.get("users", 0):
             await session.rollback()
             raise CleanupRefused(f"بقي {users_left} حساباً في النطاق المحجوز")
         if write:
             await session.commit()
         else:
             await session.rollback()
-    return {"plan": sizes, "deleted": deleted}
+    return {"plan": sizes, "deleted": deleted, "kept": kept}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="تنظيفُ اختبار الحمل (SPEC §٧٥)")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--keep-ledger", action="store_true", help="قيودُ الدفتر وما تشير إليه تبقى، ويُحذف ما سواها")
     args = parser.parse_args()
     try:
-        result = asyncio.run(run(write=args.apply))
+        result = asyncio.run(run(write=args.apply, keep_ledger=args.keep_ledger))
     except CleanupRefused as exc:
         print(f"✗ {exc}")
         return 1
@@ -226,6 +299,8 @@ def main() -> int:
         asyncio.run(engine.dispose())
     for tbl, n in result["plan"].items():
         print(f"  {tbl}: {n}")
+    for tbl, n in result["kept"].items():
+        print(f"  ↺ باقٍ (قيدٌ في الدفتر وما يشير إليه) {tbl}: {n}")
     print(("✓ حُذف كلُّه والتُزم" if args.apply else "· معاينة — حُذف ثمّ تُراجع (أعد بـ--apply)") + f" · {sum(result['deleted'].values())} صفّاً")
     return 0
 

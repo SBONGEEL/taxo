@@ -101,3 +101,65 @@ async def test_the_whole_cycle_leaves_every_existing_row_as_it_was(
         # **والمشغّلُ عاد حارساً**: حذفُ صفٍّ من السجلّ يُرفض بعد التنظيف كما كان قبله
         with pytest.raises(Exception, match="append-only"):
             await session.execute(text("DELETE FROM money_roundings WHERE id IN (SELECT id FROM money_roundings LIMIT 1)"))
+
+
+async def test_a_ledger_row_of_a_stress_account_stays_with_what_it_points_to_and_nothing_else(
+    client: AsyncClient, session_factory, jordan_settings: None, jordan_wallet: None, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """**القيدُ لا يُحذف** (قِيس على الإنتاج ٢٠٢٦-١٠-١٣: تعويضُ إلغاءٍ +1.000 ورسمُه −1.000 على محفظة كبتن الحمل نفسِه) — فالتنظيفُ
+    **يقف افتراضاً**، و`keep_ledger` **يُبقي القيدين وما يشيران إليه وحدَه** ويحذف ما سواه، **ولا يمسّ صفّاً قائماً**."""
+    from app.models.enums import WalletOwnerType, WalletTransactionType
+    from app.services import wallet
+    from tests.helpers import bring_online
+
+    rider = await _rider(client)
+    driver = await _online_driver(client, session_factory)
+    await completed_ride(client, rider["headers"], driver)
+    await client.post("/drivers/me/offline", headers=driver["headers"])
+    before = await _fp(session_factory)
+
+    monkeypatch.setattr(provision_test_accounts, "_EPHEMERAL_ROOTS", ())
+    tokens = tmp_path / "stress-tokens.json"
+    await stress_provision.provision(captains=2, riders=2, tokens_file=tokens, write=True, session_factory=session_factory)
+    rows = json.loads(tokens.read_text(encoding="utf-8"))
+    captains = [_who(r) for r in rows if r["role"] == "driver"]
+    riders = [_who(r) for r in rows if r["role"] == "rider"]
+    await bring_online(client, captains[0])
+    stress_ride = await completed_ride(client, riders[0]["headers"], captains[0])
+    await client.post("/drivers/me/offline", headers=captains[0]["headers"])
+    await bring_online(client, captains[1])
+    other = await completed_ride(client, riders[1]["headers"], captains[1])
+    assert other["id"] != stress_ride["id"]
+    async with session_factory() as session:
+        captain_user = await session.get(User, uuid.UUID(captains[0]["user_id"]))
+        ride_id = uuid.UUID(stress_ride["id"])
+        await wallet.record(session, owner=captain_user, owner_type=WalletOwnerType.DRIVER,
+                            tx_type=WalletTransactionType.CANCELLATION_COMPENSATION, amount=Decimal("1.000"),
+                            ride_id=ride_id, idempotency_key="stress-test:comp")
+        await wallet.record(session, owner=captain_user, owner_type=WalletOwnerType.DRIVER,
+                            tx_type=WalletTransactionType.CANCELLATION_FEE, amount=Decimal("-1.000"),
+                            ride_id=ride_id, idempotency_key="stress-test:comp:paid")
+        await session.commit()
+
+    with pytest.raises(stress_cleanup.CleanupRefused, match="wallet_transactions"):
+        await stress_cleanup.run(write=True, session_factory=session_factory)
+    result = await stress_cleanup.run(write=True, session_factory=session_factory, keep_ledger=True)
+    assert result["kept"]["wallet_transactions"] == 2
+    assert result["kept"]["rides"] == 1
+
+    after = await _fp(session_factory)
+    async with session_factory() as session:
+        left_users = set(
+            (await session.execute(select(User.id).where(User.phone.like("+962719%")))).scalars().all()
+        )
+        ledger = await session.scalar(text("SELECT count(*) FROM wallet_transactions WHERE ride_id = :r"), {"r": ride_id})
+        other_left = await session.scalar(text("SELECT count(*) FROM rides WHERE id = :r"), {"r": uuid.UUID(other["id"])})
+    # **الباقي: كبتنُ القيد وراكبُ رحلته وحدَهما** — والكبتنُ الآخرُ ورحلتُه حُذفا
+    assert left_users == {uuid.UUID(captains[0]["user_id"]), uuid.UUID(riders[0]["user_id"])}
+    assert ledger == 2 and other_left == 0
+    kept_tables = set(result["kept"])
+    changed = sorted(t for t in before if before[t] != after.get(t) and t not in kept_tables)
+    assert changed == [], f"تغيّر ما لم يكن للاختبار: {changed}"
+    for table in kept_tables & set(before):
+        assert after[table]["rows"] == before[table]["rows"] + result["kept"][table], table
