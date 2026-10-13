@@ -142,7 +142,9 @@ check)
   "$0" counters > "$OUT/counters_$NAME.txt"; cat "$OUT/counters_$NAME.txt"
   ;;
 cleanup)
-  remote "cd ~/taxo && docker compose $F run --rm --no-deps -T backend python -m scripts.stress_cleanup --apply" | tail -25
+  # **`KEEP_LEDGER=1` بقرارٍ صريح** — قيدُ دفترٍ لحساب اختبارٍ لا يُحذف أبداً، فيبقى هو وما يشير إليه وحدَه (`stress_cleanup --keep-ledger`)؛
+  # وبدونه يقف التنظيفُ إن وجد قيداً، كما بُني
+  remote "cd ~/taxo && docker compose $F run --rm --no-deps -T backend python -m scripts.stress_cleanup --apply ${KEEP_LEDGER:+--keep-ledger}" | tail -25
   "$0" stub off
   remote "rm -f /home/taxo/secrets/stress-tokens-$RUN-*.json; ls /home/taxo/secrets | grep -c stress-tokens"
   wsl bash -c "rm -f ~/stress-prod/$RUN-*.json; ls ~/stress-prod | wc -l"
