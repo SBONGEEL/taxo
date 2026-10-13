@@ -650,6 +650,12 @@ export const reportLocationOverRest = (payload: {
   heading: number | null;
 }) => api.post<void>("/drivers/me/location", payload);
 
+/** **دفعةُ نقاط الرحلة بـREST** (§٧٥-ج) — لتطبيقٍ فقد مقبسَه في الرحلة؛ **والإقرارُ بالرقم** فلا تُمحى من الهاتف قبل أن تُحفظ. */
+export const reportPointsOverRest = (batch: {
+  seq: number;
+  points: { lat: number; lng: number; heading: number | null; t: number }[];
+}) => api.post<{ seq: number | null }>("/drivers/me/locations", { seq: batch.seq, points: batch.points });
+
 // ------------------------------------- مركباتُ الكراج والمتجر (2026-08-22)
 
 /** المتجر — **مع الرصيد والعملة والمستوى في نداءٍ واحد**، فالبطاقةُ تعرف

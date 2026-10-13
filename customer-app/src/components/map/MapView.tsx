@@ -113,8 +113,28 @@ const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
 // زمن تنعيم الحركة: أقصر قليلاً من دورة البثّ، فتصل السيارة موضعها الجديد
 // قبيل وصول التالي بدل أن تتقطع الحركة أو تتأخر عنه
+//
+// **وصار حدَّه الأدنى لا قيمتَه** (§٧٥-ج): الكبتنُ يبثّ كلَّ ١٠–٤٥ ثانيةً لا كلَّ ثلاث، فانتقالُ ثلاث ثوانٍ ثمّ وقوفٌ أربعين قفزةٌ
+// مقنَّعة — **فالانتقالُ بطول الفاصل الحقيقيّ بين تحديثين** (حتى سقفه) **وبسرعةٍ ثابتة**: سيارةٌ تسير لا نقطةٌ تتسارع وتقف
 const NEARBY_TWEEN_MS = 4_500;
 const DRIVER_TWEEN_MS = 2_800;
+const NEARBY_TWEEN_MAX_MS = 45_000;
+const DRIVER_TWEEN_MAX_MS = 20_000;
+
+/** طولُ الانتقال من الفاصل الحقيقيّ — بين الأدنى والسقف */
+function tweenFor(gap: number | null, floor: number, ceiling: number): number {
+  return gap === null ? floor : Math.min(ceiling, Math.max(floor, gap));
+}
+
+/** اتجاهُ القطعة بالدرجات — لإعادة دفعة الرحلة: الاتجاهُ من المسار نفسِه لا من بوصلةٍ قد تغيب */
+function bearing(a: Coordinates, b: Coordinates): number {
+  const rad = Math.PI / 180;
+  const y = Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad);
+  const x =
+    Math.cos(a.lat * rad) * Math.sin(b.lat * rad) -
+    Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad);
+  return ((Math.atan2(y, x) / rad) + 360) % 360;
+}
 
 /** حشوُ الإطار بالبكسل — والافتراضيُّ (`FIT_PADDING`) لورقةٍ قائمةٍ فوق شريط التبويب. */
 export interface FitPadding {
@@ -141,7 +161,13 @@ interface MapViewProps {
   drivers?: NearbyDriver[];
   pickup?: Coordinates | null;
   dropoff?: Coordinates | null;
-  driverLocation?: { lat: number; lng: number; heading: number | null } | null;
+  driverLocation?: {
+    lat: number;
+    lng: number;
+    heading: number | null;
+    /** نقاطُ دفعة الرحلة (§٧٥-ج) — `[lat, lng, heading, ms_before_last]` */
+    path?: [number, number, number | null, number][];
+  } | null;
   /** **مركبةُ الكبتن المُسنَد** — تصل بعد القبول وحدَه (`RideDriverSkin`).
    *
    *  **ولا تمسّ سياراتِ الكباتن القريبين**: تلك تبقى كما هي قبل القبول، فلا
@@ -182,6 +208,12 @@ interface TweenedMarker {
   headingTo: number;
   startedAt: number;
   duration: number;
+  /** **متى تغيّر موضعُها آخرَ مرّة** — منه طولُ الانتقال التالي (§٧٥-ج) */
+  changedAt: number | null;
+  /** **سرعةٌ ثابتة** لانتقالٍ طويل — والتسارعُ والتباطؤُ للقصير وحدَه */
+  linear: boolean;
+  /** **نقاطُ دفعة الرحلة** بأزمانها من `startedAt` — تُعاد على المسار بدل خطٍّ مستقيم */
+  waypoints: { at: number; lat: number; lng: number }[] | null;
   element: HTMLElement;
   /** **أتدور العلامةُ مع الاتجاه؟** — العلويّةُ المرسومةُ تدور، والرندرُ
    *  الواقعيُّ ثابت (`map_rotates` في الصفّ، لا استنتاجاً من الندرة). */
@@ -542,10 +574,28 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       let moving = false;
 
       const advance = (entry: TweenedMarker) => {
+        // **دفعةُ الرحلة على مسارها** (§٧٥-ج): قطعةً قطعةً بأزمانها، والاتجاهُ من القطعة
+        const path = entry.waypoints;
+        if (path && path.length > 1) {
+          const end = path[path.length - 1].at;
+          const t = Math.min(now - entry.startedAt, end);
+          if (t < end) moving = true;
+          let i = 1;
+          while (i < path.length - 1 && path[i].at < t) i += 1;
+          const a = path[i - 1];
+          const b = path[i];
+          const r = b.at <= a.at ? 1 : Math.min(1, Math.max(0, (t - a.at) / (b.at - a.at)));
+          entry.marker.setLngLat([lerp(a.lng, b.lng, r), lerp(a.lat, b.lat, r)]);
+          if (entry.rotates && (a.lat !== b.lat || a.lng !== b.lng)) {
+            entry.headingTo = bearing(a, b);
+            headingLayer(entry.element).style.rotate = `${entry.headingTo}deg`;
+          }
+          return;
+        }
         const ratio = Math.min(1, (now - entry.startedAt) / entry.duration);
         if (ratio < 1) moving = true;
-        // تسارعٌ ثم تباطؤ: حركةُ سيارةٍ لا انتقالُ نقطة
-        const eased = ratio < 0.5 ? 2 * ratio * ratio : 1 - (-2 * ratio + 2) ** 2 / 2;
+        // تسارعٌ ثم تباطؤ: حركةُ سيارةٍ لا انتقالُ نقطة — **والطويلُ بسرعةٍ ثابتة** (§٧٥-ج)
+        const eased = entry.linear ? ratio : ratio < 0.5 ? 2 * ratio * ratio : 1 - (-2 * ratio + 2) ** 2 / 2;
         entry.marker.setLngLat([
           lerp(entry.from.lng, entry.to.lng, eased),
           lerp(entry.from.lat, entry.to.lat, eased),
@@ -590,12 +640,22 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       const existing = carMarkers.current.get(driver.ref);
 
       if (existing) {
+        // **الإطارُ كلَّ خمس ثوانٍ والموقعُ أبطأُ منه** (§٧٥-ج) — فموضعٌ لم يتغيّر لا يعيد الانتقال
+        if (existing.to.lat === point.lat && existing.to.lng === point.lng) continue;
         // الانتقال يبدأ من **الموضع المعروض الآن** لا من الهدف السابق: بغيره
         // تقفز سيارةٌ وصلت متأخرةً إلى الوراء ثم تعود
         const shown = existing.marker.getLngLat();
+        const now = performance.now();
         existing.from = { lat: shown.lat, lng: shown.lng };
         existing.to = point;
-        existing.startedAt = performance.now();
+        existing.startedAt = now;
+        existing.duration = tweenFor(
+          existing.changedAt === null ? null : now - existing.changedAt,
+          NEARBY_TWEEN_MS,
+          NEARBY_TWEEN_MAX_MS,
+        );
+        existing.linear = existing.duration > NEARBY_TWEEN_MS;
+        existing.changedAt = now;
         existing.headingFrom = existing.headingTo;
         existing.headingTo = driver.heading ?? existing.headingTo;
         ensureLoop();
@@ -632,6 +692,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         headingTo: driver.heading ?? 0,
         startedAt: performance.now(),
         duration: NEARBY_TWEEN_MS,
+        changedAt: null,
+        linear: false,
+        waypoints: null,
         rotates,
       });
     }
@@ -669,13 +732,30 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
     const point = { lat: driverLocation.lat, lng: driverLocation.lng };
     if (driverMarker.current) {
-      const shown = driverMarker.current.marker.getLngLat();
-      driverMarker.current.from = { lat: shown.lat, lng: shown.lng };
-      driverMarker.current.to = point;
-      driverMarker.current.startedAt = performance.now();
-      driverMarker.current.headingFrom = driverMarker.current.headingTo;
-      driverMarker.current.headingTo =
-        driverLocation.heading ?? driverMarker.current.headingTo;
+      const entry = driverMarker.current;
+      const shown = entry.marker.getLngLat();
+      const now = performance.now();
+      entry.from = { lat: shown.lat, lng: shown.lng };
+      entry.to = point;
+      entry.startedAt = now;
+      entry.duration = tweenFor(entry.changedAt === null ? null : now - entry.changedAt, DRIVER_TWEEN_MS, DRIVER_TWEEN_MAX_MS);
+      entry.linear = entry.duration > DRIVER_TWEEN_MS;
+      entry.changedAt = now;
+      entry.headingFrom = entry.headingTo;
+      entry.headingTo = driverLocation.heading ?? entry.headingTo;
+      // **دفعةُ الرحلة تُعاد على مسارها** (§٧٥-ج): من الموضع المعروض، عبر نقاطها بفروق أزمانها — **متأخّرةً دفعةً واحدة**، فالسيارةُ
+      // تسير الطريقَ الذي سارته لا خطّاً مستقيماً بين طرفيه
+      const path = driverLocation.path;
+      if (path && path.length > 1) {
+        const span = path[0][3];
+        const lead = span > 0 ? span / (path.length - 1) : 0;
+        entry.waypoints = [
+          { at: 0, lat: shown.lat, lng: shown.lng },
+          ...path.map(([lat, lng, , ago]) => ({ at: lead + (span - ago), lat, lng })),
+        ];
+      } else {
+        entry.waypoints = null;
+      }
       ensureLoop();
       return;
     }
@@ -702,6 +782,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       headingTo: driverLocation.heading ?? 0,
       startedAt: performance.now(),
       duration: DRIVER_TWEEN_MS,
+      changedAt: null,
+      linear: false,
+      waypoints: null,
       rotates,
     };
   }, [driverLocation, driverSkin, ensureLoop, t2]);

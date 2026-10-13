@@ -358,16 +358,20 @@ async def publish_driver_location(
     lat: float,
     lng: float,
     heading: float | None,
+    path: list[tuple[float, float, float | None, int]] | None = None,
 ) -> None:
-    """موقع الكبتن كل ثلاث ثوانٍ — يصل راكبه المُسنَد إن كان متصلاً."""
-    await publish(
-        redis,
-        driver_location_channel(driver_id),
-        {
-            "type": "driver_location",
-            "driver_id": str(driver_id),
-            "lat": lat,
-            "lng": lng,
-            "heading": heading,
-        },
-    )
+    """موقع الكبتن — يصل راكبه المُسنَد إن كان متصلاً.
+
+    **و`path` في الرحلة** (§٧٥-ج): نقاطُ الدفعة بترتيبها — `[lat, lng, heading, ms_before_last]` — فتعيدها خريطةُ الراكب على المسار
+    بنعومةٍ بدل قفزةٍ كلَّ خمسَ عشرةَ ثانية. **و`lat`/`lng` آخرُها** — فالتطبيقُ الأقدمُ الذي لا يعرف `path` يرسم ما كان يرسمه.
+    """
+    payload: dict = {
+        "type": "driver_location",
+        "driver_id": str(driver_id),
+        "lat": lat,
+        "lng": lng,
+        "heading": heading,
+    }
+    if path:
+        payload["path"] = [[p_lat, p_lng, p_heading, ago] for p_lat, p_lng, p_heading, ago in path]
+    await publish(redis, driver_location_channel(driver_id), payload)

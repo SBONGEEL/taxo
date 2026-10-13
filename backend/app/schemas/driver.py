@@ -257,6 +257,38 @@ class DriverLocationIn(BaseModel):
     heading: float | None = Field(default=None, ge=0, lt=360)
 
 
+class TripPointIn(DriverLocationIn):
+    """نقطةٌ من دفعة الرحلة (§٧٥-ج) — ومعها لحظةُ تسجيلها في الهاتف (مللي ثانية)، **تُستعمل فروقُها لا قيمتُها**."""
+
+    t: int = Field(ge=0)
+
+
+class PointsAckOut(BaseModel):
+    """إقرارُ الدفعة برقمها — فيمحوها الهاتف."""
+
+    seq: int | None = None
+
+
+class BroadcastPolicyOut(BaseModel):
+    """**سياسةُ البثّ** (§٧٥-ج) كما يتبعها التطبيق — بالثواني والأمتار، **ومهلةُ الحضور المشتقّةُ منها**."""
+
+    mode: str
+    available_seconds: int
+    heading_seconds: int
+    trip_send_seconds: int
+    trip_record_seconds: int
+    move_meters: int
+    heartbeat_seconds: int
+    presence_ttl: int
+
+
+class DriverPointsIn(BaseModel):
+    """**دفعةُ نقاط الرحلة** (§٧٥-ج): نقطةٌ كلَّ ~ثانيتين تُرسل كلَّ ~خمسَ عشرة — و`seq` رقمُها عند الهاتف فلا تُكتب مكرّرةً إن أُعيدت."""
+
+    points: list[TripPointIn] = Field(min_length=1, max_length=120)
+    seq: int | None = Field(default=None, ge=0)
+
+
 #: **بيتُ رابط الرسمة الواحد** — تقرؤه الخدمةُ (`vehicle_skins.art_url`)
 #: ويقرؤه بانِي بطاقةِ الكبتن في `schemas/ride.py`. **وقالبٌ في موضعين
 #: يفترق أوّلَ إعادةِ تسميةٍ للمسار**، فيرسم أحدُ البابين رابطاً ميّتاً.

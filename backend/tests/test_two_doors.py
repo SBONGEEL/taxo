@@ -152,6 +152,15 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — إعداداتُ بثّ الموقع (SPEC §٧٥-ج، 2026-10-13)
+    "BroadcastSettingsOut": (
+        "بانٍ واحد: `admin_settings._broadcast_out` في البابين (القراءةُ والتعديل) — يقرأ الصفَّ والحالَ الحيّةَ والسجلّ معاً. "
+        "**و`updated_at` فارغٌ حال**: صفٌّ أُنشئ ولم يُقرأ ختمُه بعد"
+    ),
+    "BroadcastLiveOut": (
+        "بانٍ واحد: `admin_settings._broadcast_out` نفسُه. **وفراغُ `online` و`checked_at` و`changed_at` حالٌ لا نسيان**: الطورُ "
+        "الآليُّ لم يدُر بعد منذ أُعيد تشغيلُ Redis"
+    ),
     # ✅ بانٍ واحد — النصُّ الفرنسيُّ للوثيقة (SPEC §٧٤-ل/١، 2026-10-13)
     "PolicyVersionOut": (
         "بانٍ واحد: `admin_policies._row` في الأبواب الأربعة (القائمةُ والإنشاءُ والنشرُ والسحب) — من صفِّ `privacy_policies` كلِّه. "

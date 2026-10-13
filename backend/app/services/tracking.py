@@ -6,9 +6,10 @@
 الشطر الثاني قيدٌ لا ميزة: لا يوجد في هذا الملف أي مسار يغيّر حالة رحلة.
 إنهاء الرحلة فعل بشري بيد الكبتن مهما طال الانقطاع.
 
-«انقطاع 60 ثانية» و«اختفاء مفتاح الحضور» شيء واحد: عمر المفتاح في
-`services/geo.py` هو `PRESENCE_TTL_SECONDS` نفسه، فوجوده كافٍ للحكم بلا عدّاد
-مستقل يمكن أن يفترق عنه.
+«انقطاع 60 ثانية» كان «اختفاء مفتاح الحضور» نفسَه: عمر المفتاح كان ستين.
+**وصار العمرُ من سياسة البثّ** (§٧٥-ج، النبضةُ وأطولُ فاصلٍ وهامش — نحو دقيقتين)،
+**فالحكمُ هنا بختم `seen`** (آخرُ اتّصال) **لا بوجود المفتاح وحدَه** — فيبقى
+«ستون ثانية» كما نصّ القسم 5، **ودفعاتُ الرحلة كلَّ خمسَ عشرةَ ثانيةً تجدّده**.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 import uuid
 
 from app.core.db import SessionLocal
@@ -26,8 +28,9 @@ from app.ws import events
 
 logger = logging.getLogger(__name__)
 
-# كل خمس ثوانٍ نسأل: أما الحكم نفسه فعمر الحضور (60 ثانية)
+# كل خمس ثوانٍ نسأل: أما الحكم نفسه فستون ثانيةً بلا اتّصال (SPEC القسم 5)
 CHECK_INTERVAL_SECONDS = 5.0
+LOST_AFTER_SECONDS = 60
 
 _tasks: dict[uuid.UUID, asyncio.Task] = {}
 
@@ -46,7 +49,11 @@ async def _run(ride_id: uuid.UUID) -> None:
             if ride.status != RideStatus.IN_PROGRESS or ride.driver_id is None:
                 return  # انتهت الرحلة — لا شيء يُراقَب
 
-            present = bool(await redis.exists(geo.presence_key(ride.driver_id)))
+            # و`at` لحضورٍ كتبته شيفرةٌ أقدمُ بلا `seen` — فلا يُعلَن انقطاعٌ لحظةَ الرفع
+            seen, at = await redis.hmget(geo.presence_key(ride.driver_id), ["seen", "at"])
+            seen = seen or at
+            seen = seen.decode() if isinstance(seen, bytes) else seen
+            present = bool(seen) and str(seen).isdigit() and time.time() - int(seen) < LOST_AFTER_SECONDS
             if present == (not reported_lost):
                 continue  # لا جديد
 

@@ -20,8 +20,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import math
+import time
 import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from redis.asyncio import Redis
@@ -58,6 +63,34 @@ def active_ride_key(driver_id: uuid.UUID | str) -> str:
 
 def sample_key(ride_id: uuid.UUID | str) -> str:
     return f"route:sample:{ride_id}"
+
+
+def tail_key(ride_id: uuid.UUID | str) -> str:
+    """**آخرُ نقطةٍ كُتبت من الدفعات** (§٧٥-ج): موضعُها وزمنُها ورقمُ دفعتها — عليه تُقاس عتبةُ الحركة ويُرتَّب ما بعده ويُعرف المكرَّر."""
+    return f"route:tail:{ride_id}"
+
+
+#: **عتبةُ الحركة الدنيا بين نقطتين مكتوبتين** — ما دونها رجفةُ GPS عند إشارةٍ حمراء، تُطيل المسافةَ ولا تُضيف طريقاً. **ولا تُقصِّر
+#: مسافةً حقيقيّة**: المقارنةُ بآخر نقطةٍ *مكتوبة* لا بالتي قبلها، فالزحفُ البطيءُ يُكتب حين يبلغ مجموعُه العتبة.
+MIN_POINT_METERS = 5.0
+#: سقفُ النقاط في الدفعة الواحدة — دقيقتان من نقاط الثانية، **وما تراكم في انقطاعٍ أطول يُرسل دفعاتٍ متتالية**
+MAX_BATCH_POINTS = 120
+
+
+@dataclass(frozen=True, slots=True)
+class TripPoint:
+    lat: float
+    lng: float
+    heading: float | None
+    #: لحظةُ التسجيل في الهاتف (مللي ثانية) — **تُستعمل فروقُها لا قيمتُها**: ساعةُ الهاتف قد تبعد دقائق عن ساعة الخادم
+    t: int
+
+
+def _meters(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    rad = math.radians
+    dlat, dlng = rad(lat2 - lat1), rad(lng2 - lng1)
+    h = math.sin(dlat / 2) ** 2 + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(dlng / 2) ** 2
+    return 2 * 6_371_000 * math.asin(math.sqrt(h))
 
 
 # ------------------------------------------------------------------ الالتقاط
@@ -118,6 +151,72 @@ async def capture(
             await session.commit()
     except Exception:  # pragma: no cover - لا يُسقط بثَّ الموقع
         logger.exception("تعذّر تسجيل نقطة مسار للرحلة %s", ride_id)
+
+
+async def capture_points(
+    redis: Redis,
+    *,
+    driver_id: uuid.UUID,
+    points: list[TripPoint],
+    seq: int | None,
+    received_at: float | None = None,
+) -> bool:
+    """**دفعةُ نقاط الرحلة** (§٧٥-ج) — كلُّها تُكتب لا عيّنةٌ منها، فلا تقصر مسافةُ الأجرة ولا يضيع منعطف.
+
+    * **الترتيبُ بزمن الاستلام**: آخرُ نقطةٍ في الدفعة «الآن» عند الخادم، وما قبلها بفروقها في ساعة الهاتف — فلا يُخلط زمنُ هاتفٍ
+      منحرفِ الساعة بزمن الخادم، **ولا تسبق نقطةٌ ما كُتب قبلها** (تُزاح بعد الذيل بمللي ثانية).
+    * **والمكرَّرُ لا يُكتب مرّتين**: دفعةٌ أُعيد إرسالُها بعد انقطاعٍ (`seq` ≤ آخر ما كُتب) تُقبل ولا تُكتب — فيُردّ إقرارُها ويُمحى من
+      الهاتف.
+    * **وعتبةُ الحركة** `MIN_POINT_METERS` من آخر نقطةٍ مكتوبة.
+
+    يعيد `True` إن قُبلت الدفعة فيُقَرّ بها — كُتبت، أو كانت مكرّرة، **أو لا رحلةَ جارية** (النقاطُ لا مكانَ لها، وإبقاؤها في الهاتف
+    لا يجد لها مكاناً غداً) — و`False` إن تعذّرت الكتابة وحدَه، **فلا إقرار وتُعاد**.
+    """
+    ride_id = await redis.get(active_ride_key(driver_id))
+    if ride_id is None or not points:
+        return True
+    ride_id = ride_id.decode() if isinstance(ride_id, bytes) else str(ride_id)
+    raw = await redis.get(tail_key(ride_id))
+    tail = json.loads(raw) if raw else {}
+    if seq is not None and tail.get("seq") is not None and seq <= int(tail["seq"]):
+        return True
+
+    received = time.time() if received_at is None else received_at
+    ordered = sorted(points, key=lambda p: p.t)
+    last_t = ordered[-1].t
+    floor = float(tail.get("at") or 0)
+    last_lat, last_lng = tail.get("lat"), tail.get("lng")
+    rows: list[tuple[TripPoint, float]] = []
+    for point in ordered:
+        at = received - max(0, last_t - point.t) / 1000
+        if at <= floor:
+            at = floor + 0.001
+        if last_lat is not None and _meters(last_lat, last_lng, point.lat, point.lng) < MIN_POINT_METERS:
+            continue
+        rows.append((point, at))
+        floor, last_lat, last_lng = at, point.lat, point.lng
+
+    try:
+        if rows:
+            async with SessionLocal() as session:
+                leg = await session.scalar(select(Ride.current_leg).where(Ride.id == uuid.UUID(ride_id)))
+                for point, at in rows:
+                    session.add(
+                        RideRoutePoint(
+                            ride_id=uuid.UUID(ride_id),
+                            point=make_point(point.lat, point.lng),
+                            heading=None if point.heading is None else Decimal(str(point.heading)),
+                            leg=leg or 0,
+                            created_at=datetime.fromtimestamp(at, UTC),
+                        )
+                    )
+                await session.commit()
+        new_tail = {"seq": seq if seq is not None else tail.get("seq"), "at": floor, "lat": last_lat, "lng": last_lng}
+        await redis.set(tail_key(ride_id), json.dumps(new_tail), ex=ACTIVE_RIDE_TTL_SECONDS)
+    except Exception:  # pragma: no cover - لا يُسقط البثّ — والدفعةُ بلا إقرارٍ تُعاد
+        logger.exception("تعذّر تسجيل دفعة نقاطٍ للرحلة %s", ride_id)
+        return False
+    return True
 
 
 # -------------------------------------------------------------- المسافة

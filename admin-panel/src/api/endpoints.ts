@@ -15,6 +15,7 @@ import type {
   PricingZones,
   SignupDisplay,
   TestAccounts,
+  BroadcastSettings,
 } from "@/api/types";
 import type {
   AdminPayMethod,
@@ -1561,6 +1562,12 @@ export const updateDispatchSettings = (
   country: CountryCode,
   payload: Partial<Omit<DispatchSetting, "country_code">>,
 ) => api.patch<DispatchSetting>(`/admin/settings/dispatch/${country}`, payload);
+
+/** **إعداداتُ بثّ موقع الكبتن** (§٧٥-ج) — عامّةٌ لكلِّ الدول، ومعها ما يعمل الآن وسجلُّ التغييرات. */
+export const getBroadcastSettings = () => api.get<BroadcastSettings>("/admin/settings/broadcast");
+
+export const updateBroadcastSettings = (payload: Partial<Omit<BroadcastSettings, "live" | "changes" | "updated_at">>) =>
+  api.patch<BroadcastSettings>("/admin/settings/broadcast", payload);
 
 // ── بلاطاتُ الخدمات واللافتات — **تُدار من هنا بلا نشر** (الترحيلة `0063`)
 

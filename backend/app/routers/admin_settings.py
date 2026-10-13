@@ -70,6 +70,13 @@ from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
 from app.services import admin_search, audit, money_guards, otp_limits, rounding, settings_service, trip_chat
+from app.services import broadcast as broadcast_service
+from app.schemas.broadcast import (
+    BroadcastChangeOut,
+    BroadcastLiveOut,
+    BroadcastSettingsOut,
+    BroadcastSettingsUpdate,
+)
 from app.services.pricing import as_money
 from app.services.providers.credentials import provider_is_active
 
@@ -1008,6 +1015,75 @@ async def update_dispatch_settings(
     )
     await session.commit()
     return DispatchSettingOut.model_validate(setting)
+
+
+# ─────────────────── بثُّ موقع الكبتن (§٧٥-ج) ───────────────
+
+
+async def _broadcast_out(session, redis) -> BroadcastSettingsOut:
+    row = await broadcast_service.get_settings(session)
+    live = await broadcast_service.live(redis)
+    stamp = lambda value: None if value is None else datetime.fromtimestamp(float(value), UTC)  # noqa: E731
+    return BroadcastSettingsOut(
+        mode=row.mode,
+        available_seconds=row.available_seconds,
+        heading_seconds=row.heading_seconds,
+        trip_send_seconds=row.trip_send_seconds,
+        trip_record_seconds=row.trip_record_seconds,
+        move_meters=row.move_meters,
+        heartbeat_seconds=row.heartbeat_seconds,
+        auto_steps=row.auto_steps,
+        updated_at=row.updated_at,
+        live=BroadcastLiveOut(
+            mode=live["mode"],
+            available_seconds=live["available_seconds"],
+            presence_ttl=live["presence_ttl"],
+            online=live["online"],
+            checked_at=stamp(live["checked_at"]),
+            changed_at=stamp(live["changed_at"]),
+        ),
+        changes=[BroadcastChangeOut.model_validate(c) for c in await broadcast_service.recent_changes(session)],
+    )
+
+
+@router.get("/broadcast", response_model=BroadcastSettingsOut)
+async def get_broadcast_settings(_staff: StaffUser, session: DbSession, redis: RedisDep) -> BroadcastSettingsOut:
+    """إعداداتُ البثّ، **وما يعمل الآن** (الطورُ والفاصلُ الفعّالُ وعددُ المتّصلين)، **وسجلُّ آخر التغييرات**."""
+    out = await _broadcast_out(session, redis)
+    await session.commit()
+    return out
+
+
+@router.patch("/broadcast", response_model=BroadcastSettingsOut)
+async def update_broadcast_settings(
+    payload: BroadcastSettingsUpdate, admin: SettingsWriter, session: DbSession, redis: RedisDep
+) -> BroadcastSettingsOut:
+    """**تُكتب ثمّ تُطبَّق في الطلب نفسِه** — فما يحفظه المشرفُ يصل كلَّ كبتنٍ متّصلٍ فوراً (`broadcast.apply`)، ولا ينتظر دورةَ الطور الآليّ.
+
+    **ونقطةُ الرحلة أقصرُ من دفعتها** شرطٌ يُقاس على القيم بعد الدمج: دفعةٌ بلا نقطتين لا مسارَ فيها.
+    """
+    row = await broadcast_service.get_settings(session)
+    changes = payload.model_dump(exclude_unset=True, mode="json")
+    record = int(changes.get("trip_record_seconds", row.trip_record_seconds))
+    send = int(changes.get("trip_send_seconds", row.trip_send_seconds))
+    if record * 2 > send:
+        raise InvalidInput(
+            "نقطةُ الرحلة أقصرُ من نصف دفعتها — وإلا حملت الدفعةُ نقطةً واحدةً ولا مسارَ فيها"
+        )
+    audit.apply_changes(row, changes)
+    row.updated_by = admin.id
+    await session.flush()
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="broadcast_settings",
+        entity_id=row.id,
+        details=changes,
+    )
+    await broadcast_service.apply(session, redis, source="admin", actor_id=admin.id)
+    await session.commit()
+    return await _broadcast_out(session, redis)
 
 
 # ─────────────────── بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ───────────────

@@ -27,6 +27,9 @@ from app.models.enums import CountryCode, VehicleCategory
 
 # صمتٌ أطول من هذا يعني كبتناً غير متاح. SPEC القسم 5 يعتبر انقطاع الكبتن
 # أكثر من 60 ثانية حدثاً يستحق التنبيه، فهو الحد الطبيعي لعمر الحضور.
+#
+# **وصار افتراضاً لا قيمةً عاملة** (§٧٥-ج): المهلةُ العاملةُ `broadcast.Policy.presence_ttl` — النبضةُ وأطولُ فاصلٍ وهامش —
+# فكبتنٌ ساكنٌ لا يرسل إلا نبضتَه أو متاحٌ بفاصل ٤٥ لا يسقط من التوزيع. **وهذا لمن يكتب حضوراً بلا سياسة** (اختبارٌ قديم).
 PRESENCE_TTL_SECONDS = 60
 
 # نصف قطر البحث الابتدائي ثم الموسّع (SPEC القسم 5.3)
@@ -85,6 +88,8 @@ class DriverPresence:
     # في الكتالوج أصلاً، فتغيب عن الجميع سواءً
     # (`vehicle_skins.publishable_skin_for`)
     skin: MapSkin | None = None
+    #: **لحظةُ آخر موقع** (ثوانٍ، `at` في الحضور) — بها يعرف التوزيعُ أيُّ المواقع قديمٌ فيُستحدث (§٧٥-ج)
+    at: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,9 +110,11 @@ async def update_location(
     heading: float | None,
     vehicle_category: VehicleCategory,
     skin: MapSkin | None = None,
+    ttl: int = PRESENCE_TTL_SECONDS,
 ) -> None:
-    """بث موقع واحد: يحدّث الفهرس الجغرافي ويجدّد عمر الحضور."""
+    """بث موقع واحد: يحدّث الفهرس الجغرافي ويجدّد عمر الحضور (`ttl` من سياسة البثّ، §٧٥-ج)."""
     key = presence_key(driver_id)
+    now = str(int(time.time()))
     pipe = redis.pipeline()
     pipe.geoadd(geo_key(country_code), (lng, lat, str(driver_id)))
     pipe.hset(
@@ -125,11 +132,30 @@ async def update_location(
             # **ختمُ لحظةِ البثّ** — تقرؤه لوحةُ الإشراف لتقول «منذ كم».
             # ولا يُشتقّ من عمرِ المفتاح (`TTL`): العمرُ يُجدَّد بكلِّ كتابةٍ
             # فيقول «ستون» أبداً، **ويصير رقماً يبدو معلومةً وليس فيه شيء**
-            "at": str(int(time.time())),
+            "at": now,
+            # **وآخرُ اتّصالٍ غيرُ آخر موقع** (§٧٥-ج): الساكنُ لا يرسل موقعاً بل نبضة — فـ`at` يشيخ وهو حاضر، **و«شحوبُه»
+            # يُقرأ من هذا** (`touch` يجدّده وحدَه)
+            "seen": now,
         },
     )
-    pipe.expire(key, PRESENCE_TTL_SECONDS)
+    pipe.expire(key, ttl)
     await pipe.execute()
+
+
+async def touch(redis: Redis, *, driver_id: uuid.UUID, ttl: int) -> bool:
+    """**نبضةُ «ما زلتُ متّصلاً»** (§٧٥-ج) — تجدّد عمرَ الحضور و`seen` **ولا تمسّ الموقعَ ولا `at`**.
+
+    **ولا تُحيي حضوراً انقضى**: مفتاحٌ ذهب أُسقط صاحبُه من الفهرس كسولاً، ونبضةٌ بلا موقعٍ لا تعيد إليه موضعاً — **فيُعاد بأوّل
+    موقعٍ يرسله**، ويُقال للمستدعي بـ`False` ليطلبه.
+    """
+    key = presence_key(driver_id)
+    if not await redis.exists(key):
+        return False
+    pipe = redis.pipeline()
+    pipe.hset(key, "seen", str(int(time.time())))
+    pipe.expire(key, ttl)
+    await pipe.execute()
+    return True
 
 
 async def go_offline(
@@ -236,6 +262,7 @@ async def nearby(
             continue
 
         raw_heading = data.get("heading") or ""
+        raw_at = data.get("at") or ""
         found.append(
             DriverPresence(
                 driver_id=driver_id,
@@ -245,6 +272,7 @@ async def nearby(
                 vehicle_category=category,
                 distance_km=round(float(distance), 3),
                 skin=_skin_of(data),
+                at=int(raw_at) if raw_at.isdigit() else None,
             )
         )
 

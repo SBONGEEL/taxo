@@ -347,6 +347,14 @@ class MarketNotReady(AppError):
     message = "السوقُ غيرُ جاهزٍ للفتح — أكمل ما ينقص، أو افتح رغم ذلك بسببٍ مكتوب"
 
 
+class PointsNotSaved(AppError):
+    """**دفعةُ نقاط رحلةٍ لم تُحفظ** (§٧٥-ج) — فلا إقرارَ بها، **ويبقيها الهاتفُ ويعيدها**: نقطةٌ تضيع تُقصِّر مسافةَ الأجرة."""
+
+    status_code = 503
+    code = "points_not_saved"
+    message = "تعذّر حفظُ نقاط الرحلة — يُعاد إرسالُها تلقائياً"
+
+
 class ServiceAreaUndeclared(AppError):
     """سوقٌ بلا صندوقٍ مصرَّح — **يقف ولا يُقرأ سلامة**.
 

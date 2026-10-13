@@ -21,7 +21,7 @@ from app.core.deps import (
     RedisDep,
     RiderUser,
 )
-from app.core.exceptions import Conflict, PermissionDenied, RateLimited
+from app.core.exceptions import Conflict, PermissionDenied, PointsNotSaved, RateLimited
 from app.models.user import User
 from app.models.driver import DriverDocument
 from app.models.enums import DocumentType, FeatureKey
@@ -41,7 +41,10 @@ from app.schemas.driver import (
     DocumentUploadOut,
     DriverDocumentOut,
     DriverDocumentsOut,
+    BroadcastPolicyOut,
     DriverLocationIn,
+    DriverPointsIn,
+    PointsAckOut,
     DriverOut,
     DriverProfileOut,
     DriverUpdate,
@@ -62,6 +65,7 @@ from app.core.currency import currency_for_country
 from app.services import presence_token
 from app.services import (
     advances as advances_service,
+    broadcast as broadcast_service,
     cliq_debts,
     debts as debts_service,
     notifications,
@@ -71,6 +75,7 @@ from app.services import (
     earnings as earnings_service,
     rounding as rounding_service,
     settings_service,
+    route as route_service,
     vehicles as vehicles_service,
 )
 
@@ -422,6 +427,42 @@ async def report_location(
         redis, context, lat=payload.lat, lng=payload.lng, heading=payload.heading
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/me/locations", response_model=PointsAckOut)
+async def report_points(
+    payload: DriverPointsIn,
+    driver: BroadcastingDriver,
+    session: DbSession,
+    redis: RedisDep,
+) -> PointsAckOut:
+    """**بديلُ REST لدفعة نقاط الرحلة** (§٧٥-ج) — لتطبيقٍ فقد مقبسَه في الرحلة: النقاطُ لا تنتظر عودتَه، **ولا إقرارَ إلا بما حُفظ**.
+
+    **وبسقف `/me/location` نفسِه** — دفعةٌ كلَّ خمسَ عشرةَ ثانيةً أخفُّ عليه من موقعٍ كلَّ عشر.
+    """
+    limit = await rate_limit.hit(
+        redis,
+        f"location:driver:{driver.id}",
+        limit=settings.location_rate_limit_requests,
+        window_seconds=settings.location_rate_limit_window_seconds,
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    context = await drivers_service.presence_context(session, driver)
+    points = [route_service.TripPoint(lat=p.lat, lng=p.lng, heading=p.heading, t=p.t) for p in payload.points]
+    if not await drivers_service.report_points(redis, context, points=points, seq=payload.seq):
+        raise PointsNotSaved()
+    return PointsAckOut(seq=payload.seq)
+
+
+@router.get("/me/broadcast", response_model=BroadcastPolicyOut)
+async def broadcast_policy(driver: CurrentDriver, redis: RedisDep) -> BroadcastPolicyOut:
+    """**سياسةُ البثّ القائمة** (§٧٥-ج) — يقرؤها التطبيقُ عند بدئه؛ والمقبسُ يحملها حيّةً بعده."""
+    policy = await broadcast_service.current_policy(redis)
+    frame = policy.frame()
+    frame.pop("type")
+    return BroadcastPolicyOut(**frame)
 
 
 @router.get("/nearby", response_model=list[NearbyDriverOut])

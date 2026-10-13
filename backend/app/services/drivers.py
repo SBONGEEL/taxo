@@ -25,7 +25,7 @@ from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import approach
+from app.services import approach, broadcast
 from app.services import geo, route
 from app.services import presence_token
 from app.ws import events
@@ -124,7 +124,10 @@ async def report_location(
     ومن هنا وحده يُلتقط مسار الرحلة (SPEC القسم 5.7): البثّ هو مصدر النقاط،
     فوضعُ الالتقاط في مسارٍ آخر يعني مساراً ناقصاً لكبتنٍ يبث من القناة
     الأخرى. `route.capture` يعرف بنفسه متى لا يكتب شيئاً.
+
+    **وعمرُ الحضور من سياسة البثّ** (§٧٥-ج) لا ثابتٍ هنا — والتطبيقُ الأقدمُ الذي يبثّ كلَّ ثلاث ثوانٍ يمرّ من هنا كما كان.
     """
+    policy = await broadcast.current_policy(redis)
     await geo.update_location(
         redis,
         driver_id=context.driver_id,
@@ -134,6 +137,7 @@ async def report_location(
         heading=heading,
         vehicle_category=context.vehicle_category,
         skin=context.skin,
+        ttl=policy.presence_ttl,
     )
     await route.capture(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading
@@ -143,6 +147,56 @@ async def report_location(
     )
     # **«الكبتن يقترب»** (§61-ي/١١): قراءةُ مفتاحٍ واحدٍ لمن لا رحلةَ له — ولا يُسقط البثَّ بسقوطه
     await approach.check(redis, driver_id=context.driver_id, lat=lat, lng=lng)
+
+
+async def report_heartbeat(redis: Redis, context: PresenceContext) -> bool:
+    """**نبضةُ «ما زلتُ متّصلاً»** (§٧٥-ج) — يجدّد الحضورَ بلا موقع. و`False`: الحضورُ انقضى فليرسلِ التطبيقُ موقعَه الآن."""
+    policy = await broadcast.current_policy(redis)
+    return await geo.touch(redis, driver_id=context.driver_id, ttl=policy.presence_ttl)
+
+
+async def report_points(
+    redis: Redis,
+    context: PresenceContext,
+    *,
+    points: list[route.TripPoint],
+    seq: int | None,
+) -> bool:
+    """**دفعةُ نقاط الرحلة** (§٧٥-ج): كلُّها إلى مسار الأجرة، **وآخرُها هو الموقعُ الحاليّ** (الفهرس والحضور والاقتراب)، **وكلُّها
+    للراكب** فيعيدها على خريطته بنعومة. يعيد `True` إن قُبلت فيُقَرّ بها.
+
+    **والترتيبُ مقصود**: المسارُ أوّلاً — فإن تعذّرت كتابتُه لم يُقَرّ بالدفعة وأعادها التطبيق، **ولا يُحدَّث الموقعُ الحاليُّ بنقطةٍ
+    لم تُحفظ في الأجرة**.
+    """
+    if not points:
+        return True
+    accepted = await route.capture_points(redis, driver_id=context.driver_id, points=points, seq=seq)
+    if not accepted:
+        return False
+    ordered = sorted(points, key=lambda p: p.t)
+    last = ordered[-1]
+    policy = await broadcast.current_policy(redis)
+    await geo.update_location(
+        redis,
+        driver_id=context.driver_id,
+        country_code=context.country_code,
+        lat=last.lat,
+        lng=last.lng,
+        heading=last.heading,
+        vehicle_category=context.vehicle_category,
+        skin=context.skin,
+        ttl=policy.presence_ttl,
+    )
+    await events.publish_driver_location(
+        redis,
+        driver_id=context.driver_id,
+        lat=last.lat,
+        lng=last.lng,
+        heading=last.heading,
+        path=[(p.lat, p.lng, p.heading, last.t - p.t) for p in ordered],
+    )
+    await approach.check(redis, driver_id=context.driver_id, lat=last.lat, lng=last.lng)
+    return True
 
 
 async def nearby_available(

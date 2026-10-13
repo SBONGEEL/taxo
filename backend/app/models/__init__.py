@@ -129,6 +129,7 @@ from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
 from app.models.admin_permission import AdminPermissionGrant
 from app.models.app_release import AppRelease
 from app.models.market import BorderAllowance, CountryMarket, MarketBorders
+from app.models.broadcast import BroadcastChange, BroadcastSettings
 from app.models.pricing_zone import PricingZone, ZonePricingRule
 from app.models.exchange_rate import ExchangeRate
 from app.models.user_role_grant import UserRoleGrant
@@ -138,6 +139,8 @@ __all__ = [
     "AdminPermissionGrant",
     "AppRelease",
     "BorderAllowance",
+    "BroadcastChange",
+    "BroadcastSettings",
     "CountryMarket",
     "MarketBorders",
     "PricingZone",

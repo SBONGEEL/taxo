@@ -35,6 +35,7 @@ import { ApiError } from "@/api/client";
 import { DurationField, MoneyField } from "@/components/ui/Inputs";
 import { Storefront } from "@/components/Storefront";
 import { VerificationCampaign } from "@/components/VerificationCampaign";
+import { BroadcastSettings } from "@/components/BroadcastSettings";
 import {
   listCommission,
   listFeatureFlags,
@@ -718,6 +719,9 @@ export function SettingsScreen() {
               شيفرة**: إضافةُ خدمةٍ أو لافتةٍ **بلا نشر** */}
           <Storefront country={country} onError={setError} />
           <VerificationCampaign country={country} onError={setError} />
+
+          {/* **بثُّ موقع الكبتن** (§٧٥-ج) — عامٌّ لكلِّ الدول، فلا يتبدّل باختيار الدولة أعلاه */}
+          <BroadcastSettings disabled={!isAdmin} onError={setError} onSaved={setDone} />
 
           {/* قواعدُ التوزيع (§5.3) — **صارت إعداداً بعد أن كانت ثوابتَ في
               الشيفرة** (قرارُ المالك 2026-08-30)، وعُدِّلت §5.3 معها */}

@@ -82,15 +82,31 @@ class PendingRide:
 # جاوزه بقيت له ثلثٌ من حياته، **وهو الوقتُ الذي يصلح للتنبيه** — وأيُّ رقمٍ
 # ثابتٍ هنا يفترق عن `PRESENCE_TTL_SECONDS` يومَ يتغيّر، فيصير الشحوبُ إمّا
 # دائماً وإمّا مستحيلاً
+#
+# **وصار العمرُ من سياسة البثّ** (§٧٥-ج) — فالحدُّ ثلثا `Policy.presence_ttl` يُقرأ مع كلِّ خريطة (`stale_after`)، **والعمرُ من آخر
+# اتّصالٍ (`seen`) لا آخر موقع**: الساكنُ يرسل نبضتَه لا موقعَه، فموقعُه «قديمٌ» وهو حاضرٌ في مكانه. وهذا الثابتُ لما لا سياسةَ له.
 STALE_AFTER_SECONDS = (geo.PRESENCE_TTL_SECONDS * 2) // 3
 
 
-def _state_of(*, on_ride: bool, age: int | None) -> str:
+async def stale_after(redis: Redis) -> int:
+    """**حدُّ الشحوب العامل** — ثلثا مهلة الحضور من سياسة البثّ (§٧٥-ج)."""
+    from app.services import broadcast
+
+    return ((await broadcast.current_policy(redis)).presence_ttl * 2) // 3
+
+
+def _contact(data: dict) -> int | None:
+    """آخرُ اتّصال — `seen`، و`at` لحضورٍ كتبته شيفرةٌ أقدمُ بلاه."""
+    raw = data.get("seen") or data.get("at") or ""
+    return int(raw) if str(raw).isdigit() else None
+
+
+def _state_of(*, on_ride: bool, age: int | None, limit: int = STALE_AFTER_SECONDS) -> str:
     """**«في رحلة» يسبق «شاحب»**: الأولى واقعةٌ في القاعدة، والثاني ظنٌّ من
     صمتٍ قصير — وكبتنٌ في رحلةٍ صمت دقيقةً في نفقٍ لا يُقرأ «مفقوداً»."""
     if on_ride:
         return "on_ride"
-    if age is None or age >= STALE_AFTER_SECONDS:
+    if age is None or age >= limit:
         return "stale"
     return "available"
 
@@ -114,7 +130,7 @@ async def drivers_now(
         pipe.hgetall(geo.presence_key(member))
     presence_rows = await pipe.execute()
 
-    live: dict[uuid.UUID, tuple[float, float, str | None, str | None]] = {}
+    live: dict[uuid.UUID, tuple[float, float, str | None, str | None, int | None, int | None]] = {}
     for member, position, data in zip(members, positions, presence_rows, strict=True):
         if not data or position is None:
             continue  # صمتٌ أطول من عمر المفتاح — حاضرٌ في الفهرس لا في الواقع
@@ -128,6 +144,7 @@ async def drivers_now(
             data.get("heading") or None,
             data.get("vehicle_category"),
             int(data["at"]) if (data.get("at") or "").isdigit() else None,
+            _contact(data),
         )
 
     if not live:
@@ -149,10 +166,12 @@ async def drivers_now(
         )
     ).all()
 
+    limit = await stale_after(redis)
     result: list[LiveDriver] = []
     for driver in rows:
-        lat, lng, heading, category, at = live[driver.id]
+        lat, lng, heading, category, at, seen = live[driver.id]
         age = None if at is None else max(0, int(time.time()) - at)
+        silence = None if seen is None else max(0, int(time.time()) - seen)
         vehicle = driver.vehicles[0] if driver.vehicles else None
         result.append(
             LiveDriver(
@@ -171,7 +190,7 @@ async def drivers_now(
                 on_ride=driver.current_ride_id is not None,
                 ride_id=driver.current_ride_id,
                 state=_state_of(
-                    on_ride=driver.current_ride_id is not None, age=age
+                    on_ride=driver.current_ride_id is not None, age=silence, limit=limit
                 ),
                 seconds_since_update=age,
             )
@@ -250,11 +269,13 @@ async def position_of(
     lng, lat = positions[0]
     at = int(data["at"]) if (data.get("at") or "").isdigit() else None
     age = None if at is None else max(0, int(time.time()) - at)
+    seen = _contact(data)
+    silence = None if seen is None else max(0, int(time.time()) - seen)
     return DriverPosition(
         lat=float(lat),
         lng=float(lng),
         seconds_since_update=age,
-        stale=age is None or age >= STALE_AFTER_SECONDS,
+        stale=silence is None or silence >= await stale_after(redis),
     )
 
 

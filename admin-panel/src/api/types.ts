@@ -1837,6 +1837,42 @@ export interface DispatchSetting {
   broadcast_batch_size: number;
 }
 
+/** **درجةٌ في جدول الطور الآليّ** (§٧٥-ج) — «حتى هذا العدد ⇒ هذا الفاصل»، والأخيرةُ بلا حدّ. */
+export interface BroadcastStep {
+  max_online: number | null;
+  seconds: number;
+}
+
+export interface BroadcastChange {
+  created_at: string;
+  source: "automatic" | "admin";
+  online_count: number;
+  old_seconds: number | null;
+  new_seconds: number;
+}
+
+/** **بثُّ موقع الكبتن** (§٧٥-ج) — ما كُتب، و`live` ما يعمل الآن (من Redis)، و`changes` سجلُّه. */
+export interface BroadcastSettings {
+  mode: "manual" | "automatic";
+  available_seconds: number;
+  heading_seconds: number;
+  trip_send_seconds: number;
+  trip_record_seconds: number;
+  move_meters: number;
+  heartbeat_seconds: number;
+  auto_steps: BroadcastStep[];
+  updated_at: string | null;
+  live: {
+    mode: string;
+    available_seconds: number;
+    presence_ttl: number;
+    online: number | null;
+    checked_at: string | null;
+    changed_at: string | null;
+  };
+  changes: BroadcastChange[];
+}
+
 // ═══════ بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ═══════
 
 export type ServiceTileStatus = "soon" | "active" | "hidden";

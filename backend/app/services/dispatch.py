@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
+import math
 import time
 import uuid
 from dataclasses import dataclass
@@ -548,6 +550,8 @@ async def _ranked_candidates(
         ranked = [p for p in presences if p.driver_id in levels]
         if not ranked:
             continue
+        # **والمواقعُ القديمةُ تُستحدث قبل الترتيب الأخير** (§٧٥-ج) — ومن لم يُجب يتأخّر
+        ranked, silent = await _freshened(session, redis, ride=ride, ranked=ranked)
 
         # **الأقربُ يبقى الأول، والمستوى يفصل بين المتقاربين** (البند ٥٣، §٥).
         #
@@ -570,6 +574,7 @@ async def _ranked_candidates(
         if discounts:
             ranked.sort(
                 key=lambda p: (
+                    p.driver_id in silent,
                     p.distance_km * 1000 - discounts.get(levels[p.driver_id], 0),
                     # **والمسافةُ الحقيقيةُ فاصلٌ ثانٍ**: متساويان في المؤثِّرة
                     # يُرتَّبان بالأقرب فعلاً، فلا يقرّر ترتيبُ ريدِس بينهما
@@ -581,6 +586,89 @@ async def _ranked_candidates(
         return ranked
 
     return []
+
+
+#: **دقّةُ التوزيع بفواصل طويلة** (§٧٥-ج): كم مرشّحاً من الأقرب يُستحدث موقعُه، ومتى يُعدّ الموقعُ قديماً، وكم يُنتظر الجواب
+FRESH_CANDIDATES = 5
+FRESH_AFTER_SECONDS = 8
+FRESH_WAIT_SECONDS = 2.0
+_FRESH_POLL_SECONDS = 0.2
+
+
+def _km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    rad = math.radians
+    dlat, dlng = rad(lat2 - lat1), rad(lng2 - lng1)
+    h = math.sin(dlat / 2) ** 2 + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(dlng / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+async def _freshened(
+    session: AsyncSession, redis: Redis, *, ride: Ride, ranked: list[geo.DriverPresence]
+) -> tuple[list[geo.DriverPresence], set[uuid.UUID]]:
+    """**يُستحدث موقعُ أقرب المرشّحين قبل العرض** (§٧٥-ج) — متاحٌ يبثّ كلَّ ٤٥ ثانيةً قد يكون موقعُه المخزَّنُ ~٥٠٠ م قديماً.
+
+    * لأقرب `FRESH_CANDIDATES` ممّن عمرُ موقعه فوق `FRESH_AFTER_SECONDS`: **«location_request»** على قناته فيرسل التطبيقُ موقعَه فوراً
+      (متجاوزاً قاعدةَ السكون)، **وانتظارٌ حتى يجيب الجميعُ أو `FRESH_WAIT_SECONDS`**.
+    * **ثمّ يُعاد الترتيبُ بالمواقع الجديدة** — بالمسافة الحقيقيّة، **ومن لم يُجب يتأخّر عمّن أجاب**: موقعٌ قديمٌ ومقبسٌ لا يردّ في
+      ثانيتين أضعفُ من موقعٍ قيس الآن، **ولا يُسقط**: قد يكون الأقربَ فعلاً على شبكةٍ بطيئة.
+    * **ولا انتظارَ حين لا قديم**: التطبيقُ الأقدمُ يبثّ كلَّ ثلاث ثوانٍ فمواقعُ كباتنه طازجةٌ دائماً — ولا يُسأل.
+
+    **ولا يغيّر خصمَ المستوى**: يُعاد الترتيبُ بالمسافة المؤثِّرة نفسِها، والمستوى يُقرأ مرّةً قبل ذلك (`_ranked_candidates`).
+    """
+    now = int(time.time())
+    head = ranked[:FRESH_CANDIDATES]
+    stale = [p for p in head if p.at is None or now - p.at > FRESH_AFTER_SECONDS]
+    if not stale:
+        return ranked, set()
+    owners = dict(
+        (await session.execute(select(Driver.id, Driver.user_id).where(Driver.id.in_([p.driver_id for p in stale])))).all()
+    )
+    asked_at = now
+    asked = 0
+    for presence in stale:
+        user_id = owners.get(presence.driver_id)
+        # **ولا يُسأل مرّتين في نافذةٍ قصيرة**: محاولةٌ تاليةٌ في التوزيع نفسِه تجد من لم يُجب ما زال قديماً — فيتأخّر بلا انتظارٍ ثانٍ
+        if user_id is not None and await redis.set(f"dispatch:fresh_asked:{presence.driver_id}", "1", nx=True, ex=10):
+            await events.publish(redis, events.user_channel(user_id), {"type": "location_request"})
+            asked += 1
+
+    answered: set[uuid.UUID] = set()
+    deadline = time.monotonic() + (FRESH_WAIT_SECONDS if asked else 0)
+    while True:
+        pipe = redis.pipeline()
+        for presence in stale:
+            pipe.hget(geo.presence_key(presence.driver_id), "at")
+        for presence, raw in zip(stale, await pipe.execute(), strict=True):
+            raw = raw.decode() if isinstance(raw, bytes) else raw
+            if raw and str(raw).isdigit() and int(raw) >= asked_at:
+                answered.add(presence.driver_id)
+        if len(answered) == len(stale) or time.monotonic() >= deadline:
+            break
+        await asyncio.sleep(_FRESH_POLL_SECONDS)
+
+    fresh: dict[uuid.UUID, geo.DriverPresence] = {}
+    if answered:
+        ids = [p.driver_id for p in stale if p.driver_id in answered]
+        positions = await redis.geopos(geo.geo_key(ride.country_code), *[str(i) for i in ids])
+        for driver_id, position in zip(ids, positions, strict=True):
+            if position is None:
+                continue
+            lng, lat = float(position[0]), float(position[1])
+            old = next(p for p in stale if p.driver_id == driver_id)
+            fresh[driver_id] = dataclasses.replace(
+                old,
+                lat=lat,
+                lng=lng,
+                distance_km=round(_km(ride.pickup_lat, ride.pickup_lng, lat, lng), 3),
+                at=int(time.time()),
+            )
+    unanswered = {p.driver_id for p in stale} - answered
+    updated = [fresh.get(p.driver_id, p) for p in ranked]
+    # **بالمسافة الجديدة، وغيرُ المجيب بعد المجيبين** — والمستوى يُطبَّق فوق هذا في `_ranked_candidates` بالمفتاح نفسِه
+    updated.sort(key=lambda p: (p.driver_id in unanswered, p.distance_km))
+    if fresh or unanswered:
+        logger.info("توزيعُ %s: استُحدث %s من %s، ولم يُجب %s", ride.id, len(fresh), len(stale), len(unanswered))
+    return updated, unanswered
 
 
 async def _next_candidate(

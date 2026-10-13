@@ -119,6 +119,7 @@ export function useHomeScreen() {
     error,
     goOnline,
     goOffline,
+    flushTrip,
     setRide,
     dismissOffer,
     dismissTransfer,
@@ -411,6 +412,8 @@ export function useHomeScreen() {
       else if (ride.status === "in_progress" || ride.status === "at_stop") {
         // **الإنهاءُ من `at_stop` مسموحٌ عمداً**: مخرجُ السقف حين يطول
         // انتظارُ الراكب (SPEC القسم 5.10) — والخلفيةُ هي من يجيزه
+        // **وآخرُ نقاط الرحلة تُرسل أوّلاً** (§٧٥-ج): الأجرةُ تُقاس بما وصل الخادمَ لحظةَ الإنهاء
+        await flushTrip();
         const finished = await completeRide(ride.id);
         setRide(null);
         setSettling(finished);

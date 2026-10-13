@@ -41,7 +41,7 @@ import { presentNotice } from "@/components/PushNotices";
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
 import type { CliqTransfer } from "@/components/CliqTransferSheet";
-import { DriverSocket, type DriverSocketEvent } from "@/lib/socket";
+import { type BroadcastMode, DriverSocket, type DriverSocketEvent } from "@/lib/socket";
 import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 /** حالاتُ الرحلة التي تعني «الكبتن مشغول الآن» — مرآةُ `ACTIVE_DRIVER_STATUSES`. */
@@ -77,6 +77,8 @@ interface RideState {
   error: string | null;
   goOnline: () => void;
   goOffline: () => void;
+  /** **آخرُ نقاط الرحلة تُرسل قبل إنهائها** (§٧٥-ج) — فلا تقصر مسافةُ الأجرة بآخر دفعة */
+  flushTrip: () => Promise<void>;
   setRide: (ride: Ride | null) => void;
   dismissOffer: () => void;
   dismissTransfer: () => void;
@@ -93,6 +95,7 @@ const RideContext = createContext<RideState>({
   error: null,
   goOnline: () => undefined,
   goOffline: () => undefined,
+  flushTrip: () => Promise.resolve(),
   setRide: () => undefined,
   dismissOffer: () => undefined,
   dismissTransfer: () => undefined,
@@ -337,6 +340,17 @@ export function RideProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => socket.current?.close(), []);
 
+  // **حالُ البثّ من الرحلة** (§٧٥-ج): في الطريق إلى الراكب كلَّ ١٠ ثوانٍ، وفي الرحلة نقاطٌ تُرسل دفعات، وما سواهما متاحٌ ينتظر
+  const broadcastMode: BroadcastMode =
+    ride?.status === "in_progress" || ride?.status === "at_stop"
+      ? "trip"
+      : ride?.status === "accepted" || ride?.status === "arrived"
+        ? "heading"
+        : "available";
+  useEffect(() => {
+    socket.current?.setMode(broadcastMode);
+  }, [broadcastMode, online]);
+
   // **ما يتراكم يُقرأ وهو يتراكم** (§٦٢-ج/٤٢): رسمُ الانتظار والوقفة وعدّادُ الأجرة مبالغُ يحسبها الخادمُ لحظةَ القراءة —
   // وبلا إطارٍ جديدٍ تقف حيث قُرئت والدقائقُ تمشي («وقد يتأخّر دقائق» — `useElapsedMinutes`). **فما دام انتظارٌ أو وقفةٌ
   // مفتوحاً تُقرأ الرحلةُ كلَّ نصف دقيقة**، وحين يُغلق يكفّ: لا نداءَ على رحلةٍ لا يتراكم فيها شيء
@@ -392,6 +406,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
       error,
       goOnline,
       goOffline,
+      flushTrip: () => socket.current?.flushTrip() ?? Promise.resolve(),
       setRide,
       // **طيُّ البطاقة يطوي نغمتَها** (قِيس ٢٠٢٦-١٠-٠٤): كانت الحلقةُ لا يوقفها إلا حدثٌ من المقبس، **والرافضُ لا يصله
       // حدث** (الخادمُ يُسقطه من الجولة بصمت) — فبقيت النغمةُ تتكرّر كلَّ ٢٫٣ ثانية بعد أن اختفت البطاقة

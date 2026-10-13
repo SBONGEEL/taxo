@@ -38,14 +38,16 @@ from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.ride import Ride
 from app.models.user import User
-from app.schemas.driver import DriverLocationIn, NearbyDriverOut
+from app.schemas.driver import DriverLocationIn, DriverPointsIn, NearbyDriverOut
 from app.schemas.ride import RideOut
 from app.services import (
+    broadcast as broadcast_service,
     dispatch,
     drivers as drivers_service,
     presence as socket_presence,
     ride_calls,
     rides as rides_service,
+    route as route_service,
 )
 from app.services import token_service
 from app.ws import events
@@ -219,6 +221,24 @@ async def _driver_reader(
         if isinstance(message, dict) and message.get("type") == VISIBILITY:
             await presence.report(message)
             continue
+        # **النبضة** (§٧٥-ج): ساكنٌ لا يرسل موقعاً — وحضورٌ انقضى يُطلب له موقعٌ فوراً
+        if isinstance(message, dict) and message.get("type") == "heartbeat":
+            if not await drivers_service.report_heartbeat(redis, context):
+                await websocket.send_json({"type": "location_request"})
+            continue
+        # **دفعةُ نقاط الرحلة** (§٧٥-ج) — وإقرارُها برقمها، فما لم يُقَرَّ به يبقى في الهاتف ويُعاد
+        if isinstance(message, dict) and message.get("type") == "locations":
+            try:
+                batch = DriverPointsIn.model_validate(message)
+            except ValidationError:
+                await websocket.send_json({"type": "error", "detail": "إحداثيات غير صالحة"})
+                continue
+            points = [
+                route_service.TripPoint(lat=p.lat, lng=p.lng, heading=p.heading, t=p.t) for p in batch.points
+            ]
+            if await drivers_service.report_points(redis, context, points=points, seq=batch.seq):
+                await websocket.send_json({"type": "points_ack", "seq": batch.seq})
+            continue
         if not isinstance(message, dict) or message.get("type") != "location":
             continue
         try:
@@ -282,10 +302,15 @@ async def driver_socket(
     try:
         async with Subscription(redis) as subscription:
             await subscription.subscribe(events.user_channel(user.id))
+            # **وسياسةُ البثّ حيّة** (§٧٥-ج): قناةٌ واحدةٌ لكلِّ الكباتن، فتغييرُ اللوحة أو الطور الآليّ يصل كلَّ مقبسٍ مفتوح
+            await subscription.subscribe(broadcast_service.CHANNEL)
             # **والرنينُ القائمُ يُستعاد كما يُستعاد العرض** (§٦٦-ج/١٧) — **بعد الاشتراك لا قبله** (`_ringing_now`)
             ringing = await _ringing_now(active, user.id)
-            # آخر حالة معروفة مع أول رسالة — عليها يعتمد الاسترجاع بعد انقطاع
-            await websocket.send_json(money_wire.normalize({"type": "connected", "active_ride": snapshot}))
+            policy = await broadcast_service.current_policy(redis)
+            # آخر حالة معروفة مع أول رسالة — عليها يعتمد الاسترجاع بعد انقطاع، **ومعها السياسةُ التي يبثّ بها** (§٧٥-ج)
+            await websocket.send_json(
+                money_wire.normalize({"type": "connected", "active_ride": snapshot, "broadcast": policy.frame()})
+            )
             if pending is not None:
                 await websocket.send_json(money_wire.normalize(pending))
             if ringing is not None:

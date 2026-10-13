@@ -36,6 +36,8 @@ export interface DriverPing {
   lat: number;
   lng: number;
   heading: number | null;
+  /** **نقاطُ دفعة الرحلة** (§٧٥-ج): `[lat, lng, heading, ms_before_last]` بترتيبها — تعيدها الخريطةُ على المسار بنعومة */
+  path?: [number, number, number | null, number][];
 }
 
 /** ما يصل والتطبيق مفتوح: لا يعرضه المتصفح، فيُعرض داخل الشاشة. */
@@ -227,7 +229,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
 
         case "driver_location": {
           const ping = event as unknown as DriverPing;
-          setDriverPing({ lat: ping.lat, lng: ping.lng, heading: ping.heading });
+          setDriverPing({ lat: ping.lat, lng: ping.lng, heading: ping.heading, path: ping.path });
           return;
         }
 
