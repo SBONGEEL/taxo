@@ -190,6 +190,9 @@ class PaymentRequest(UUIDMixin, TimestampMixin, Base):
     reference_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
     #: معرّفُ الدفعة عند الوسيط الآليّ (المرحلة ٣)
     external_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    #: **رسومُ الوسيط** (SPEC §٧٤-ك/١): على من (`taxo` · `user`، من إعداد الطريقة لحظةَ الفتح) وكم كما قالها الوسيط — **تُقرأ في المالية**
+    fee_payer: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    fee_amount: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
 
     receipt_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receipt_content_type: Mapped[str | None] = mapped_column(String(60), nullable=True)

@@ -1469,6 +1469,8 @@ export interface PayMethod {
   gateway: boolean;
   /** **عقدُه في وضع التجربة** (SPEC §٧٤-ط/٥) — لا يراه إلا حسابُ تجربة، ومالُه «رصيد تجريبي» */
   test_mode?: boolean;
+  /** **رسومُ الوسيط على من** (§٧٤-ك/١): `taxo` يدفع ما اختاره، `user` تُضاف فوقه وتُعرض قبل الدفع */
+  fee_payer?: "taxo" | "user" | null;
 }
 
 export interface PayMethods {
@@ -1507,4 +1509,8 @@ export interface TaxoCardRedeemed {
 export interface PaymentCheckout {
   request: MyPaymentRequest;
   checkout_url: string;
+  currency?: Currency | null;
+  /** **حين يحمل الدافعُ رسومَ الوسيط** (SPEC §٧٤-ك/١): رسمُها والمجموعُ كما قالهما الوسيط — **تُعرض قبل الدفع**؛ و`null` على TAXO */
+  fee_amount?: string | null;
+  total_amount?: string | null;
 }

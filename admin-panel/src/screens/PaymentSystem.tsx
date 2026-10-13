@@ -397,7 +397,8 @@ const KINDS: PaymentProviderKind[] = ["bank_transfer", "cash", "phone_number"];
     Chargily يقبل الثلاثة، وSofizPay لا يوثّق خياراً فتحملها TAXO وحدَها. والخادمُ يرفض غيرَ ذلك بنصّ. */
 type Integration = "chargily" | "sofizpay";
 const GATEWAYS: { key: Integration; label: string; bearers: GatewayFeeBearer[] }[] = [
-  { key: "chargily", label: "Chargily — الذهبية وCIB", bearers: ["taxo", "user", "split"] },
+  // **خياران بأمر المالك** (SPEC §٧٤-ك/١): «TAXO» أو «الدافع» لكلِّ دولة — والمناصفةُ لا تُعرض
+  { key: "chargily", label: "Chargily — الذهبية وCIB", bearers: ["taxo", "user"] },
   { key: "sofizpay", label: "SofizPay — CIB", bearers: ["taxo"] },
 ];
 

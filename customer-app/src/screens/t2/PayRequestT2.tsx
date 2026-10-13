@@ -13,8 +13,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createPaymentRequest, listPaymentMethods, openPaymentCheckout, paymentMethodQr } from "@/api/endpoints";
-import type { PayMethod } from "@/api/types";
+import { cancelPaymentRequest, createPaymentRequest, listPaymentMethods, openPaymentCheckout, paymentMethodQr } from "@/api/endpoints";
+import type { PayMethod, PaymentCheckout } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
@@ -52,6 +52,8 @@ export function PayRequestT2Screen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // **الرسمُ قبل الدفع** (SPEC §٧٤-ك/١): حين يحمله الدافع تُفتح الصفحةُ عند الوسيط ثمّ تُعرض الأرقامُ الثلاثة هنا قبل الانتقال إليها
+  const [quote, setQuote] = useState<PaymentCheckout | null>(null);
 
   const currency = country?.currency;
   const unit = roundingUnit(country);
@@ -120,6 +122,11 @@ export function PayRequestT2Screen() {
       setError(null);
       try {
         const opened = await openPaymentCheckout({ methodId: method.id, purpose: "wallet_topup", amount });
+        if (opened.fee_amount) {
+          setQuote(opened);
+          setBusy(false);
+          return;
+        }
         window.location.assign(opened.checkout_url);
       } catch (caught) {
         setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
@@ -307,16 +314,51 @@ export function PayRequestT2Screen() {
             </p>
           ) : null}
 
+          {quote ? (
+            <section className="t2-m-card t2-m-gap t2-pr-dest" aria-label={tr("رسوم الدفع")}>
+              <div className="t2-pr-line">
+                <span className="t2-m-label">{tr("يُضاف إلى محفظتك")}</span>
+                <span className="t2-pr-text">{formatMoney(quote.request.amount, currency)}</span>
+              </div>
+              <div className="t2-pr-line">
+                <span className="t2-m-label">{tr("رسوم الدفع بالبطاقة")}</span>
+                <span className="t2-pr-text">{formatMoney(quote.fee_amount ?? "0", currency)}</span>
+              </div>
+              <div className="t2-pr-line">
+                <span className="t2-m-label">{tr("تدفع")}</span>
+                <span className="t2-pr-text">{formatMoney(quote.total_amount ?? quote.request.amount, currency)}</span>
+              </div>
+            </section>
+          ) : null}
+
           <div className="t2-m-actions">
-            <button
-              type="button"
-              className="t2-button primary t2-m-cta"
-              disabled={busy || !ready}
-              aria-busy={busy}
-              onClick={submit}
-            >
-              <BusyLabel busy={busy}>{method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}</BusyLabel>
-            </button>
+            {quote ? (
+              <>
+                <button type="button" className="t2-button primary t2-m-cta" onClick={() => window.location.assign(quote.checkout_url)}>
+                  {tr("ادفع {0} في صفحة الوسيط", { 0: formatMoney(quote.total_amount ?? quote.request.amount, currency) })}
+                </button>
+                <button
+                  type="button"
+                  className="t2-button t2-m-cta"
+                  onClick={() => {
+                    void cancelPaymentRequest(quote.request.id).catch(() => undefined);
+                    setQuote(null);
+                  }}
+                >
+                  {tr("رجوع")}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="t2-button primary t2-m-cta"
+                disabled={busy || !ready}
+                aria-busy={busy}
+                onClick={submit}
+              >
+                <BusyLabel busy={busy}>{method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}</BusyLabel>
+              </button>
+            )}
           </div>
         </>
       )}

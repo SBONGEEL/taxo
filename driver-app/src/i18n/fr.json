@@ -1534,5 +1534,10 @@
  "متاح للسحب": "Disponible au retrait",
  "قيد التحويل:": "En cours de transfert :",
  "— أجرةُ رحلاتٍ دُفعت من المحفظة. تراها في رصيدك الآن، وتُسحب بعد {0} أيّام من كلِّ رحلة.": "— courses payées par portefeuille. Visibles dans votre solde dès maintenant, retirables {0} jours après chaque course.",
- "قيد التحويل — يصبح متاحاً في {0}": "En cours de transfert — disponible le {0}"
+ "قيد التحويل — يصبح متاحاً في {0}": "En cours de transfert — disponible le {0}",
+ "رسوم الدفع": "Frais de paiement",
+ "يُضاف إلى محفظتك": "Ajouté à votre portefeuille",
+ "رسوم الدفع بالبطاقة": "Frais de paiement par carte",
+ "تدفع": "Vous payez",
+ "ادفع {0} في صفحة الوسيط": "Payer {0} sur la page du prestataire"
 }

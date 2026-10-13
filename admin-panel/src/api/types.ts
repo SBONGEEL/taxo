@@ -2808,6 +2808,9 @@ export interface FinanceGateway {
   test_mode: boolean;
   received_amount: string;
   received_count: number;
+  /** رسومُ الوسيط على ما دخل: ما حملته TAXO، وما حمله الدافعون (SPEC §٧٤-ك/١) */
+  fees_taxo_amount: string;
+  fees_payer_amount: string;
   balance: string | null;
   ready_amount: string | null;
   on_hold_amount: string | null;

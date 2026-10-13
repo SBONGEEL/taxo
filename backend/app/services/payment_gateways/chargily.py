@@ -91,18 +91,27 @@ class ChargilyGateway:
         checkout_id, url = body.get("id"), body.get("checkout_url")
         if not isinstance(checkout_id, str) or not isinstance(url, str):
             raise base.GatewayError("جوابُ Chargily بلا معرّفٍ أو رابط")
-        return base.Checkout(external_id=checkout_id, checkout_url=url)
+        return base.Checkout(
+            external_id=checkout_id,
+            checkout_url=url,
+            fee_on_customer=_money(body.get("fees_on_customer")),
+            fee_on_merchant=_money(body.get("fees_on_merchant")),
+        )
 
     async def check(self, external_id: str) -> base.GatewayEvent | None:
         body = await self._request("GET", f"/checkouts/{external_id}")
         status = body.get("status")
         amount = Decimal(str(body["amount"])) if body.get("amount") is not None else None
+        fees = {"fee_on_customer": _money(body.get("fees_on_customer")), "fee_on_merchant": _money(body.get("fees_on_merchant"))}
         if status == "paid":
-            return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED, amount=amount)
+            return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED, amount=amount, **fees)
         if status == "failed":
             return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason="رفض الوسيطُ الدفع")
         if status == "canceled":
             return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason="أُلغي الدفعُ عند الوسيط")
+        if status == "expired":
+            # **لا تسمّيه الوثائق، وصفحةُ وضع التجربة تحمل زرَّه** («Expire» — قُرئت ٢٠٢٦-١٠-١٣) — فيُحسم ملغًى بسببه لا معلَّقاً إلى الأبد
+            return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason="انتهت صلاحيةُ صفحة الدفع عند الوسيط")
         return None  # `pending` · `processing`
 
     def webhook_ids(self, headers: Mapping[str, str], body: bytes) -> list[str]:
@@ -139,6 +148,16 @@ class ChargilyGateway:
     async def test_connection(self) -> str:
         await self._request("GET", "/balance")
         return f"الاتصالُ بـChargily يعمل — الوضع: {'اختبار' if self.test_mode else 'حيّ'}"
+
+
+def _money(value: Any) -> Decimal | None:
+    """رسومٌ كما يكتبها Chargily (عددٌ أو نصّ) — أو `None` حين لا تُذكر أو لا تُقرأ."""
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except ArithmeticError:
+        return None
 
 
 def build_chargily(values: Mapping[str, Any]) -> ChargilyGateway:

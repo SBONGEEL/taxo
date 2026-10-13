@@ -36,6 +36,9 @@ class GatewayPosition:
     test_mode: bool
     received_amount: Decimal
     received_count: int
+    #: **رسومُ الوسيط على ما دخل** (§٧٤-ك/١) — ما حملته TAXO وما حمله الدافعون، من الطلبات نفسِها
+    fees_taxo_amount: Decimal
+    fees_payer_amount: Decimal
     #: ما يقوله الوسيط — `None` حين لا يُقرأ (وسيطٌ بلا بابِ رصيد، أو تعذّر)
     balance: Decimal | None
     ready_amount: Decimal | None
@@ -44,12 +47,14 @@ class GatewayPosition:
     note: str | None
 
 
-async def _received(session: AsyncSession, country: CountryCode, integration: str) -> tuple[Decimal, int]:
-    total, count = (
+async def _received(session: AsyncSession, country: CountryCode, integration: str) -> tuple[Decimal, int, Decimal, Decimal]:
+    total, count, taxo_fees, payer_fees = (
         await session.execute(
             select(
                 func.coalesce(func.sum(func.coalesce(PaymentRequest.credited_amount, PaymentRequest.amount)), 0),
                 func.count(),
+                func.coalesce(func.sum(PaymentRequest.fee_amount).filter(PaymentRequest.fee_payer == "taxo"), 0),
+                func.coalesce(func.sum(PaymentRequest.fee_amount).filter(PaymentRequest.fee_payer == "user"), 0),
             )
             .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
             .where(
@@ -60,7 +65,7 @@ async def _received(session: AsyncSession, country: CountryCode, integration: st
             )
         )
     ).one()
-    return as_money(Decimal(total)), int(count)
+    return as_money(Decimal(total)), int(count), as_money(Decimal(taxo_fees)), as_money(Decimal(payer_fees))
 
 
 async def positions(session: AsyncSession, country: CountryCode) -> list[GatewayPosition]:
@@ -77,7 +82,7 @@ async def positions(session: AsyncSession, country: CountryCode) -> list[Gateway
         )
         if not active:
             continue
-        received, count = await _received(session, country, integration)
+        received, count, taxo_fees, payer_fees = await _received(session, country, integration)
         balance = ready = on_hold = None
         read_at = None
         note: str | None = None
@@ -101,6 +106,7 @@ async def positions(session: AsyncSession, country: CountryCode) -> list[Gateway
             GatewayPosition(
                 integration=integration, label=LABELS.get(integration, integration), currency=currency,
                 test_mode=test_mode, received_amount=received, received_count=count,
+                fees_taxo_amount=taxo_fees, fees_payer_amount=payer_fees,
                 balance=balance, ready_amount=ready, on_hold_amount=on_hold, read_at=read_at, note=note,
             )
         )

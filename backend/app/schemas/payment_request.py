@@ -43,6 +43,8 @@ class PaymentMethodOut(BaseModel):
     gateway: bool
     #: **عقدُه في وضع التجربة** (§٧٤-ط/٥) — لا يراه إلا حسابُ تجربة، ومالُه «رصيد تجريبي» لا يغادر المنصّة
     test_mode: bool = False
+    #: **رسومُ الوسيط على من** (§٧٤-ك/١): `taxo` — يدفع ما اختاره؛ `user` — تُضاف فوقه وتُعرض قبل الدفع
+    fee_payer: str | None = None
 
 
 class PaymentMethodsOut(BaseModel):
@@ -87,6 +89,10 @@ class PaymentCheckoutIn(BaseModel):
 class PaymentCheckoutOut(BaseModel):
     request: MyPaymentRequestOut
     checkout_url: str
+    currency: Currency | None = None
+    #: **حين يحمل الدافعُ الرسوم** (§٧٤-ك/١): رسمُها والمجموعُ كما قالهما الوسيط — **تُعرض قبل الدفع**؛ و`null` حين تحملها TAXO
+    fee_amount: Decimal | None = None
+    total_amount: Decimal | None = None
 
 
 class AdminPaymentMethodOut(BaseModel):

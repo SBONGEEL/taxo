@@ -256,6 +256,7 @@ async def read_gateways(
             FinanceGatewayOut(
                 integration=row.integration, label=row.label, currency=row.currency, test_mode=row.test_mode,
                 received_amount=row.received_amount, received_count=row.received_count, balance=row.balance,
+                fees_taxo_amount=row.fees_taxo_amount, fees_payer_amount=row.fees_payer_amount,
                 ready_amount=row.ready_amount, on_hold_amount=row.on_hold_amount, read_at=row.read_at, note=row.note,
             )
             for row in rows

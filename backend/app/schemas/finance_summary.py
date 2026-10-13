@@ -288,6 +288,9 @@ class FinanceGatewayOut(BaseModel):
     test_mode: bool
     received_amount: Decimal
     received_count: int
+    #: رسومُ الوسيط على ما دخل: ما حملته TAXO، وما حمله الدافعون (§٧٤-ك/١)
+    fees_taxo_amount: Decimal
+    fees_payer_amount: Decimal
     balance: Decimal | None
     ready_amount: Decimal | None
     on_hold_amount: Decimal | None

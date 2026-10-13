@@ -43,6 +43,7 @@ router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 def method_out(provider: PayMethod, *, test_mode: bool = False) -> PaymentMethodOut:
     return PaymentMethodOut(
         test_mode=test_mode,
+        fee_payer=provider.fee_bearer if provider.integration is not None else None,
         id=provider.id,
         kind=provider.kind,
         name=provider.name,
@@ -225,7 +226,14 @@ async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: 
     )
     await session.commit()
     await session.refresh(request, attribute_names=["provider"])
-    return PaymentCheckoutOut(request=mine_out(request), checkout_url=url)
+    fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
+    return PaymentCheckoutOut(
+        request=mine_out(request),
+        checkout_url=url,
+        currency=request.currency,
+        fee_amount=fee,
+        total_amount=(request.amount + fee) if fee is not None else None,
+    )
 
 
 @router.post("/{request_id}/refresh", response_model=MyPaymentRequestOut)

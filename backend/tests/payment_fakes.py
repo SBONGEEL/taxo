@@ -29,7 +29,15 @@ class ChargilyFake:
     def __init__(self) -> None:
         self.status: dict[str, str] = {}
         self.amount: dict[str, int] = {}
+        self.fees: dict[str, dict[str, int]] = {}
         self.created: list[dict[str, Any]] = []
+
+    @staticmethod
+    def _fees(amount: int, allocation: str) -> dict[str, int]:
+        """**رسومٌ بشكل الوثائق** (`fees` · `fees_on_customer` · `fees_on_merchant`) — ٢٪ تقريبيّةٌ للاختبار وحدَه، على من تقوله الطريقة."""
+        fee = max(15, amount * 2 // 100)
+        return {"fees": fee, "fees_on_customer": fee if allocation == "customer" else 0,
+                "fees_on_merchant": fee if allocation == "merchant" else 0}
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         assert request.headers["authorization"] == f"Bearer {CHARGILY_SECRET}"
@@ -40,15 +48,16 @@ class ChargilyFake:
             self.created.append(body)
             self.status[checkout_id] = "pending"
             self.amount[checkout_id] = body["amount"]
+            self.fees[checkout_id] = self._fees(body["amount"], body.get("chargily_pay_fees_allocation", "merchant"))
             return httpx.Response(200, json={
                 "id": checkout_id, "entity": "checkout", "amount": body["amount"], "currency": "dzd", "status": "pending",
-                "checkout_url": f"https://pay.chargily.dz/test/checkouts/{checkout_id}/pay",
+                "checkout_url": f"https://pay.chargily.dz/test/checkouts/{checkout_id}/pay", **self.fees[checkout_id],
             })
         if request.method == "GET" and "/checkouts/" in path:
             checkout_id = path.rsplit("/", 1)[1]
             return httpx.Response(200, json={
                 "id": checkout_id, "entity": "checkout", "status": self.status.get(checkout_id, "pending"),
-                "amount": self.amount.get(checkout_id), "currency": "dzd",
+                "amount": self.amount.get(checkout_id), "currency": "dzd", **self.fees.get(checkout_id, {}),
             })
         if request.method == "GET" and path.endswith("/balance"):
             return httpx.Response(200, json={"entity": "balance", "livemode": False, "wallets": []})

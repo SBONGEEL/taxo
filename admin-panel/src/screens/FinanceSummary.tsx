@@ -327,6 +327,24 @@ function GatewayPositions({ country }: { country: CountryCode }) {
             ) : (
               <div className="mt-4 text-11.5 text-muted">{row.note}</div>
             )}
+            <ul className="ad-mini mt-8">
+              <li>
+                <span className="ad-mini-row">
+                  <span className="ad-mini-main">
+                    <span className="ad-mini-title">رسومُ الوسيط على TAXO</span>
+                  </span>
+                  <span className="ad-mini-value">{money(row.fees_taxo_amount, row.currency)}</span>
+                </span>
+              </li>
+              <li>
+                <span className="ad-mini-row">
+                  <span className="ad-mini-main">
+                    <span className="ad-mini-title">رسومٌ دفعها الدافعون فوق ما شحنوه</span>
+                  </span>
+                  <span className="ad-mini-value">{money(row.fees_payer_amount, row.currency)}</span>
+                </span>
+              </li>
+            </ul>
             <div className="mt-10 text-11.5 text-muted">
               دخل عبره منذ البداية: {money(row.received_amount, row.currency)} · {digits(String(row.received_count))} دفعة
               {row.read_at ? ` · قُرئ الرصيدُ ${moment(row.read_at)}` : ""}

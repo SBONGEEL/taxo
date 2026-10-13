@@ -667,8 +667,17 @@ async def start_checkout(
     )
     request.external_id = checkout.external_id
     request.reference = checkout.external_id[:120]
+    # **الرسومُ كما قالها الوسيطُ عند الفتح** (§٧٤-ك/١) — ومن يحملها من إعداد الطريقة الآن؛ وتُصحَّح عند التأكيد
+    request.fee_payer = provider.fee_bearer
+    request.fee_amount = _fee_of(provider.fee_bearer, checkout.fee_on_customer, checkout.fee_on_merchant)
     await session.flush()
     return request, checkout.checkout_url
+
+
+def _fee_of(payer: str | None, on_customer: Decimal | None, on_merchant: Decimal | None) -> Decimal | None:
+    """**رسمُ الطلب الواحد** — ما على الدافع إن حملها، وما على TAXO إن حملتها؛ و`None` حين لا يذكره الوسيط."""
+    value = on_customer if payer == "user" else on_merchant
+    return as_money(value) if value is not None else None
 
 
 async def refresh(session: AsyncSession, *, request_id: uuid.UUID) -> PaymentRequest:
@@ -713,6 +722,11 @@ async def settle_from_gateway(
         return locked, False
     if late:
         _reopen_for_late_payment(locked)
+    if event.outcome is PaymentRequestStatus.APPROVED:
+        # **الرسومُ كما قالها الوسيطُ عند الدفع** (§٧٤-ك/١) — أصدقُ من قولها عند الفتح
+        paid_fee = _fee_of(locked.fee_payer, event.fee_on_customer, event.fee_on_merchant)
+        if paid_fee is not None:
+            locked.fee_amount = paid_fee
     settled = await apply_gateway_outcome(
         session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
         test_money=bool(getattr(gateway, "test_mode", False)),

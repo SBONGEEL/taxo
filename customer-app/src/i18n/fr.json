@@ -1319,5 +1319,9 @@
  "مغلقة للعموم": "fermé au public",
  "تعذّر الانتقال": "Changement impossible",
  "اختر مبلغ الشحن": "Choisissez le montant de la recharge",
- "وضعُ التجربة — مالٌ تجريبيٌّ لا يغادر المنصّة، ولا يُؤخذ من بطاقتك شيء.": "Mode test — argent fictif qui ne quitte pas la plateforme ; rien n’est débité de votre carte."
+ "وضعُ التجربة — مالٌ تجريبيٌّ لا يغادر المنصّة، ولا يُؤخذ من بطاقتك شيء.": "Mode test — argent fictif qui ne quitte pas la plateforme ; rien n’est débité de votre carte.",
+ "رسوم الدفع": "Frais de paiement",
+ "يُضاف إلى محفظتك": "Ajouté à votre portefeuille",
+ "رسوم الدفع بالبطاقة": "Frais de paiement par carte",
+ "ادفع {0} في صفحة الوسيط": "Payer {0} sur la page du prestataire"
 }

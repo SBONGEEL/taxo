@@ -12,8 +12,14 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createPaymentRequest, listPaymentMethods, openPaymentCheckout, paymentMethodQr } from "@/api/endpoints";
-import type { PayMethod, PaymentRequestPurpose } from "@/api/types";
+import {
+  cancelPaymentRequest,
+  createPaymentRequest,
+  listPaymentMethods,
+  openPaymentCheckout,
+  paymentMethodQr,
+} from "@/api/endpoints";
+import type { PayMethod, PaymentCheckout, PaymentRequestPurpose } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
@@ -68,6 +74,8 @@ export function PayRequestT2Screen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // **الرسمُ قبل الدفع** (SPEC §٧٤-ك/١): حين يحمله الدافع تُعرض الأرقامُ الثلاثة هنا قبل الانتقال إلى صفحة الوسيط
+  const [quote, setQuote] = useState<PaymentCheckout | null>(null);
 
   const currency = country?.currency;
   const label = currency ? CURRENCY_LABEL[currency] : "";
@@ -143,6 +151,11 @@ export function PayRequestT2Screen() {
           amount,
           planId: purpose === "subscription" ? handoff?.planId : undefined,
         });
+        if (opened.fee_amount) {
+          setQuote(opened);
+          setBusy(false);
+          return;
+        }
         window.location.assign(opened.checkout_url);
       } catch (caught) {
         setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
@@ -397,15 +410,45 @@ export function PayRequestT2Screen() {
             </p>
           ) : null}
 
-          <button
-            type="button"
-            className="t2-clq-cta t2-pr-gap-lg"
-            disabled={busy || !ready}
-            aria-busy={busy}
-            onClick={submit}
-          >
-            {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}
-          </button>
+          {quote ? (
+            <div className="t2-pr-gap-lg" role="group" aria-label={tr("رسوم الدفع")}>
+              <div className="t2-wal-line">
+                <span>{tr("يُضاف إلى محفظتك")}</span>
+                <span dir="ltr">{digits(quote.request.amount)} {label}</span>
+              </div>
+              <div className="t2-wal-line">
+                <span>{tr("رسوم الدفع بالبطاقة")}</span>
+                <span dir="ltr">{digits(quote.fee_amount ?? "0")} {label}</span>
+              </div>
+              <div className="t2-wal-line">
+                <span>{tr("تدفع")}</span>
+                <span dir="ltr">{digits(quote.total_amount ?? quote.request.amount)} {label}</span>
+              </div>
+              <button type="button" className="t2-clq-cta t2-pr-gap-lg" onClick={() => window.location.assign(quote.checkout_url)}>
+                {tr("ادفع {0} في صفحة الوسيط", { 0: `${digits(quote.total_amount ?? quote.request.amount)} ${label}` })}
+              </button>
+              <button
+                type="button"
+                className="t2-row t2-pr-opt"
+                onClick={() => {
+                  void cancelPaymentRequest(quote.request.id).catch(() => undefined);
+                  setQuote(null);
+                }}
+              >
+                {tr("رجوع")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="t2-clq-cta t2-pr-gap-lg"
+              disabled={busy || !ready}
+              aria-busy={busy}
+              onClick={submit}
+            >
+              {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}
+            </button>
+          )}
         </>
       )}
     </div>

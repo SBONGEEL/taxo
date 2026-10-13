@@ -278,3 +278,76 @@ async def test_a_test_captain_buys_the_held_plan_through_chargily_and_a_real_one
     async with session_factory() as session:
         plan = await session.get(SubscriptionPlan, plan_id)
         assert plan.is_active is False and plan.price == Decimal("6000")
+
+
+# ------------------------------------------------------------------ الرسوم: «TAXO» أو «الدافع» (§٧٤-ك/١)
+
+
+async def test_payer_fees_are_shown_before_paying_and_the_wallet_gets_the_full_amount(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily", fee_bearer="user")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    listed = (await client.get("/payment-requests/methods", headers=rider["headers"])).json()["methods"]
+    assert next(m for m in listed if m["id"] == str(method_id))["fee_payer"] == "user"
+
+    opened = (await _checkout(client, rider["headers"], method_id, amount="1000")).json()
+    # **الرسمُ والمجموعُ كما قالهما Chargily — قبل الدفع**
+    assert opened["fee_amount"] == "20" and opened["total_amount"] == "1020"
+    chargily.status["chk_0001"] = "paid"
+    assert (await _deliver(client, "chk_0001"))["applied"] == 1
+    row = await _row(session_factory, opened["request"]["id"])
+    assert (row.fee_payer, row.fee_amount) == ("user", Decimal("20"))
+    # **والمحفظةُ تستلم ما اختاره كاملاً** — الرسمُ فوقه
+    assert await balance(client, rider["headers"]) == "1000"
+
+
+async def test_taxo_fees_are_not_shown_to_the_payer_but_reach_the_finance_page(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, admin_headers: dict
+) -> None:
+    from tests.test_finance_summary import finance_reader
+
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily", fee_bearer="taxo")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    opened = (await _checkout(client, rider["headers"], method_id, amount="1000")).json()
+    assert opened["fee_amount"] is None and opened["total_amount"] is None
+    chargily.status["chk_0001"] = "paid"
+    assert (await _deliver(client, "chk_0001"))["applied"] == 1
+    assert await balance(client, rider["headers"]) == "1000"
+
+    reader = await finance_reader(client, admin_headers)
+    body = (await client.get("/admin/finance/summary/gateways", params={"country_code": "DZ"}, headers=reader["headers"])).json()
+    [row] = body["gateways"]
+    assert row["received_amount"] == "1000" and row["received_count"] == 1
+    assert row["fees_taxo_amount"] == "20" and row["fees_payer_amount"] == "0"
+
+
+async def test_an_expired_checkout_is_closed_cleanly(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    request_id = (await _checkout(client, rider["headers"], method_id)).json()["request"]["id"]
+    chargily.status["chk_0001"] = "expired"
+    refreshed = (await client.post(f"/payment-requests/{request_id}/refresh", headers=rider["headers"])).json()
+    assert refreshed["status"] == "cancelled" and "انتهت صلاحيةُ" in refreshed["cancel_reason"]
+    assert await balance(client, rider["headers"]) == "0"
+
+
+async def test_the_split_choice_is_no_longer_offered(client: AsyncClient, admin_headers: dict, session_factory) -> None:
+    from tests.helpers import _enable_provider
+    from tests.payment_fakes import CHARGILY_SECRET
+
+    await _enable_provider(session_factory, "chargily", {"secret_key": CHARGILY_SECRET}, country="DZ")
+    base = {"country_code": "DZ", "kind": "bank_transfer", "name": "الذهبية", "enabled": True, "code": "chargily",
+            "integration": "chargily"}
+    split = await client.post("/admin/payment-methods", json=base | {"fee_bearer": "split"}, headers=admin_headers)
+    assert split.status_code == 422 and split.json()["field"] == "fee_bearer"
+    payer = await client.post("/admin/payment-methods", json=base | {"fee_bearer": "user"}, headers=admin_headers)
+    assert payer.status_code == 201 and payer.json()["fee_bearer"] == "user"

@@ -314,8 +314,8 @@ export const PAYMENT_PROVIDER_KIND_LABEL: Record<PaymentProviderKind, string> = 
 
 /** **من يحمل رسومَ الوسيط** — بلغة الموظّف. */
 export const GATEWAY_FEE_BEARER_LABEL: Record<GatewayFeeBearer, string> = {
-  taxo: "على TAXO — يدفع المستخدمُ ما كتبه",
-  user: "على المستخدم — تُضاف إلى ما يدفعه",
+  taxo: "TAXO — المحفظةُ تستلم المبلغَ المشحونَ كاملاً",
+  user: "الدافع — تُضاف الرسومُ فوقه وتُعرض قبل الدفع",
   split: "مناصفةً",
 };
 

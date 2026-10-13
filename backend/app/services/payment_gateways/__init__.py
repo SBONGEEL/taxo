@@ -69,12 +69,18 @@ class GatewayEvent:
     #: ما وصل بعملة الطلب كما يقوله الوسيط — `None` حين لا يذكره
     amount: Decimal | None = None
     reason: str | None = None
+    #: **رسومُه كما يقولها** (§٧٤-ك/١) — على الدافع وعلى التاجر؛ `None` حين لا يذكرها
+    fee_on_customer: Decimal | None = None
+    fee_on_merchant: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class Checkout:
     external_id: str
     checkout_url: str
+    #: **رسومُ الصفحة كما قالها الوسيطُ عند فتحها** (§٧٤-ك/١) — فتُعرض قبل الدفع حين يحملها الدافع
+    fee_on_customer: Decimal | None = None
+    fee_on_merchant: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,7 +133,8 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {"chargily": ProviderKey.CHARGILY, "sofi
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
 FEE_BEARERS: dict[str, frozenset[str]] = {
-    "chargily": frozenset({"taxo", "user", "split"}),
+    # **خياران بأمر المالك** (§٧٤-ك/١): «TAXO» أو «الدافع» — والمناصفةُ لا تُعرض
+    "chargily": frozenset({"taxo", "user"}),
     "sofizpay": frozenset({"taxo"}),
 }
 
