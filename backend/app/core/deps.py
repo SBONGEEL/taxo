@@ -23,6 +23,7 @@ from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
 from app.services import presence_token as presence_service
+from app.services import stress
 from app.services.token_service import access_sid, authenticate_access
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -67,6 +68,8 @@ async def get_current_user(
     # الدخول وحدَه، **وإلا بقي مسارُه مفتوحاً ساعاتٍ بعد الإغلاق**.
     if user.deactivated_at is not None:
         raise AccountClosed()
+    # **حسابُ الحمل يُسمّى للطلب** (SPEC §٧٥) — فيُخطّى Mapbox له وحدَه حين يُشعَل مفتاحُ الاختبار
+    stress.mark_request(user)
     return user
 
 

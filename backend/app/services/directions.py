@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -92,6 +93,19 @@ class Route:
     steps: list[dict] | None = None
 
 
+async def _count_call() -> None:
+    from app.core.redis_client import get_redis_client
+    from app.services import stress
+
+    try:
+        redis = get_redis_client()
+        key = stress.calls_key()
+        await redis.incr(key)
+        await redis.expire(key, 14 * 24 * 3600)
+    except Exception:  # noqa: BLE001 — عدّادٌ لا يُسقط مساراً
+        logging.getLogger(__name__).warning("تعذّر عدُّ نداء Mapbox")
+
+
 async def fetch_route(
     token: str,
     *waypoints: Coordinates,
@@ -135,6 +149,8 @@ async def fetch_route(
         ),
     }
 
+    # **كلُّ نداءٍ حقيقيٍّ يُعدّ** (SPEC §٧٥) — قبل الجواب: نداءٌ سقط كُلِّف أيضاً. ولا يُسقط عطلُ العدّاد المسار
+    await _count_call()
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as http_client:
             response = await http_client.get(url, params=params)
@@ -186,6 +202,12 @@ async def route_between(
     و`stops` محطاتٌ **وسيطة** بترتيبها بين الانطلاق والوجهة الأخيرة.
     و`with_geometry` لمن يرسم الخط لا لمن يسعّر (البند ٨).
     """
+    # **حسابُ الحمل والمفتاحُ مشتعل** (SPEC §٧٥) — خطٌّ مستقيمٌ بلا نداء؛ وما عداه كما كان حرفاً
+    from app.services import stress
+
+    if await stress.stub_active():
+        return await stress.stub_route(pickup, *stops, dropoff, with_geometry=with_geometry)
+
     values = await credentials_service.get_values(
         session, ProviderKey.MAPBOX, country_code
     )
