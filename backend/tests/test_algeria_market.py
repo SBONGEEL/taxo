@@ -374,6 +374,7 @@ NOT_MONEY_STEPS = {
     "services/directions.py": "كيلومتراتُ الطريق",
     "services/route.py": "كيلومتراتُ المسار المسجَّل",
     "services/pauses.py": "دقائقُ الوقفة",
+    "services/stress.py": "كيلومتراتُ مسار الحمل المحاكى (§٧٥-ب/٣)",
 }
 
 
