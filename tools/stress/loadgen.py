@@ -167,6 +167,10 @@ class Shard:
         self.assign_started: dict[str, float] = {}
         #: طلباتٌ أُطلقت ولم تُكتب رحلتُها بعد — تُعدّ مع القائمة فلا يُطلق المجدولُ فوق العدد
         self.launching = 0
+        #: **رحلاتٌ قرّر راكبُها إلغاءها** — لا يقبلها كبتنُ المولّد، فيقع الإلغاءُ وهي تبحث **ولا رسمَ ولا قيدَ في الدفتر**
+        self.to_cancel: set[str] = set()
+        #: طلباتٌ لم يعد ردُّها بعد — العرضُ قد يسبق ردَّ `POST /rides` فلا يُعرف أيُلغى أم لا
+        self.pending_cancel_decisions = 0
         self.deadline = time.monotonic() + args.minutes * 60
         self.stop = asyncio.Event()
 
@@ -384,6 +388,14 @@ class Shard:
         who.busy = True
         ride_id = ride["id"]
         try:
+            # **عرضٌ سبق ردَّ الطلب** — يُنتظر حتى يُعرف قرارُ راكبه (ثانيتان على الأكثر)، **ورحلةٌ ستُلغى لا تُقبل**
+            for _ in range(20):
+                if ride_id in self.ride_rider or self.pending_cancel_decisions == 0:
+                    break
+                await asyncio.sleep(0.1)
+            if ride_id in self.to_cancel or ride_id not in self.ride_rider:
+                self.metrics.counts["offers_left_for_cancel"] += 1
+                return
             accepted = await self.call(http, "POST", f"/rides/{ride_id}/accept", who, label="POST rides/accept")
             if accepted is None or accepted.status_code != 200:
                 return
@@ -492,13 +504,19 @@ class Shard:
         await self.call(http, "POST", "/rides/estimate", who,
                         {"pickup": pickup, "dropoff": dropoff, "vehicle_category": "economy"}, label="POST rides/estimate")
         t0 = time.monotonic()
+        will_cancel = random.random() < self.args.cancel_share
+        self.pending_cancel_decisions += 1
         created = await self.call(http, "POST", "/rides", who,
                                   {"pickup": pickup, "dropoff": dropoff, "vehicle_category": "economy", "payment_method": "cash"},
                                   label="POST rides")
         if created is None or created.status_code != 201:
+            self.pending_cancel_decisions -= 1
             who.busy = False
             return
         ride_id = created.json()["id"]
+        if will_cancel:
+            self.to_cancel.add(ride_id)
+        self.pending_cancel_decisions -= 1
         self.metrics.counts["rides_requested"] += 1
         self.requested_at[ride_id] = t0
         self.assign_started[ride_id] = t0
@@ -506,7 +524,7 @@ class Shard:
         self.active.add(ride_id)
         launched["open"] = False
         self.launching -= 1
-        if random.random() < self.args.cancel_share:
+        if will_cancel:
             await asyncio.sleep(random.uniform(2, 6))
             if ride_id in self.assign_started:  # **لم يُسند بعد** — إلغاءٌ قبل القبول بلا رسم
                 cancelled = await self.call(http, "POST", f"/rides/{ride_id}/cancel", who, {}, label="POST rides/cancel")

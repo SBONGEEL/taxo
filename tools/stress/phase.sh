@@ -23,9 +23,19 @@ OUT=/d/taxo-stress/$RUN
 WOUT=/mnt/d/taxo-stress/$RUN
 mkdir -p "$OUT"
 wsl() { MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -- "$@"; }
-remote() { "$SSH" "${O[@]}" "$H" "$@" < /dev/null; }
+# **جدارُ الخادم يحدّ اتصالات ssh** (قِيس ٢٠٢٦-١٠-١٣: انقطع المنفذ ٢٢ نحو أربعين ثانيةً بعد دفعةِ اتصالاتٍ قصيرة) — فبين كلِّ اتصالين
+# ستُّ ثوانٍ ونصف على الأقلّ، فلا يتجاوز خمسةً في نصف دقيقة. وطابعُ آخر اتصالٍ في ملفّ لأن الأوامرَ تنادي بعضَها في عمليّاتٍ منفصلة
+pace() {
+  local stamp="$OUT/.last_ssh" now last
+  now=$(date +%s%N); last=$(cat "$stamp" 2>/dev/null || echo 0)
+  local wait_ms=$(( 6500 - (now - last) / 1000000 ))
+  [ "$wait_ms" -gt 0 ] && sleep "$(awk -v m="$wait_ms" 'BEGIN{printf "%.2f", m/1000}')"
+  date +%s%N > "$stamp"
+}
+remote() { pace; "$SSH" "${O[@]}" "$H" "$@" < /dev/null; }
 sql() {  # ملفُّ SQL قراءةٍ وحدَها عبر stdin
   grep -q "^BEGIN TRANSACTION READ ONLY;" "$1" && grep -q "^ROLLBACK;" "$1" || { echo "✗ ليس قراءةً وحدَها: $1"; return 1; }
+  pace
   "$SSH" "${O[@]}" "$H" "cd ~/taxo && docker compose $F exec -T db psql -U taxo -d taxo -v ON_ERROR_STOP=1 -P pager=off -tA -F '|'" < "$1"
 }
 redis_py() {  # أمرٌ قصيرٌ على Redis الإنتاج من داخل الخلفية — والكلمةُ لا تخرج من الحاوية
@@ -36,7 +46,7 @@ case "${1:-}" in
 backup)
   D="/d/taxo-backups/stress-$RUN"; mkdir -p "$D"
   remote "cd ~/taxo && docker compose $F exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9" > "$D/taxo.sql.gz"
-  "$SSH" "${O[@]}" "$H" "cd ~/taxo && docker compose $F exec -T db psql -U taxo -d taxo -v ON_ERROR_STOP=1 -P pager=off -tA -F '|'" \
+  pace; "$SSH" "${O[@]}" "$H" "cd ~/taxo && docker compose $F exec -T db psql -U taxo -d taxo -v ON_ERROR_STOP=1 -P pager=off -tA -F '|'" \
     < "$REPO/tools/stress/fingerprint.sql" | grep '|' > "$D/prod_fp.txt"
   gzip -t "$D/taxo.sql.gz" || { echo "✗ الأرشيفُ تالف"; exit 1; }
   echo "· النسخة $(wc -c < "$D/taxo.sql.gz") بايت · $(wc -l < "$D/prod_fp.txt") جدولاً · $D"
@@ -71,7 +81,10 @@ SELECT 'stress_ledger_rows', count(*) FROM wallet_transactions w JOIN users u ON
 ROLLBACK;
 Q
   sql "$OUT/.counters.sql" | grep '|' | tr '|' ' '
-  echo "whatsapp_gateway_log_lines_since_T0 $(remote "docker logs --since $(cat "$OUT/T0" 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ) taxo-whatsapp-gateway 2>&1 | wc -l")"
+  # **ما أُرسل لا ما سُجّل** (قِيس ٢٠٢٦-١٠-١٣): بوّابةُ واتساب تسجّل كلَّ رسالةٍ يرسلها هاتفُ الحساب المربوط نفسُه («failed to decrypt»
+  # و`fromMe`) — ضجيجٌ بمعدّله قبل الاختبار. **فيُعدّ ما ترسله TAXO**: أحداثُ الإرسال في البوّابة، ونداءاتُ الخلفية والعامل إليها
+  SINCE="$(cat "$OUT/T0" 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
+  remote "echo whatsapp_gateway_send_events \$(docker logs --since $SINCE taxo-whatsapp-gateway 2>&1 | grep -ciE '\"msg\":\"[^\"]*(send|sent|relay)'); echo backend_whatsapp_posts \$(docker logs --since $SINCE taxo-backend 2>&1 | grep -ciE 'POST http://whatsapp-gateway'); echo worker_whatsapp_posts \$(docker logs --since $SINCE taxo-worker 2>&1 | grep -ciE 'POST http://whatsapp-gateway')"
   ;;
 provision)
   C="$2"; R="$3"; N="$4"
@@ -112,7 +125,7 @@ asyncio.run(m())
 stage)
   NAME="$2"; STAGE="$3"; MIN="$4"; PROTO="$5"; N="$6"; SHARDS="${SHARDS:-6}"
   SECS=$(awk -v m="$MIN" 'BEGIN{print int(m*60 + 330)}')
-  "$SSH" "${O[@]}" "$H" "bash -s $SECS 10" < "$REPO/tools/stress/monitor_remote.sh" > "$OUT/$NAME.monitor.csv" 2>&1 &
+  pace; "$SSH" "${O[@]}" "$H" "bash -s $SECS 10" < "$REPO/tools/stress/monitor_remote.sh" > "$OUT/$NAME.monitor.csv" 2>&1 &
   MON=$!
   wsl bash -c "cd $WREPO && ~/stress-venv/bin/python tools/stress/loadgen.py --tokens ~/stress-prod/$RUN-$N.json --stage $STAGE --minutes $MIN \
     --out $WOUT/$NAME.json --shards $SHARDS --protocol $PROTO > $WOUT/$NAME.log 2>&1"
