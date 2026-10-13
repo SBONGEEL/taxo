@@ -127,7 +127,7 @@ stage)
   SECS=$(awk -v m="$MIN" 'BEGIN{print int(m*60 + 330)}')
   pace; "$SSH" "${O[@]}" "$H" "bash -s $SECS 10" < "$REPO/tools/stress/monitor_remote.sh" > "$OUT/$NAME.monitor.csv" 2>&1 &
   MON=$!
-  wsl bash -c "cd $WREPO && ~/stress-venv/bin/python tools/stress/loadgen.py --tokens ~/stress-prod/$RUN-$N.json --stage $STAGE --minutes $MIN \
+  wsl bash -c "ulimit -n 65536; cd $WREPO && ~/stress-venv/bin/python tools/stress/loadgen.py --tokens ~/stress-prod/$RUN-$N.json --stage $STAGE --minutes $MIN \
     --out $WOUT/$NAME.json --shards $SHARDS --protocol $PROTO > $WOUT/$NAME.log 2>&1"
   echo "· المولّد انتهى ($?)"
   kill "$MON" 2>/dev/null; wait "$MON" 2>/dev/null

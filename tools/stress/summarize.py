@@ -25,7 +25,7 @@ def monitor(path: Path) -> dict:
             if line.startswith("ts,") or "," not in line:
                 continue
             parts = line.strip().split(",")
-            if len(parts) < 20:
+            if len(parts) < 20:  # المراقبُ الأقدمُ بعشرين عموداً — والأحدثُ باثنين وعشرين
                 continue
             rows.append(parts)
     if not rows:
@@ -61,6 +61,8 @@ def monitor(path: Path) -> dict:
         "geoadd_per_s": geo_rate,
         "redis_ops_max": max(col(17), default=None),
         "refused": int(max(col(19), default=0)),
+        "backend_fds_max": max(col(20), default=None),
+        "backend_procs": max(col(21), default=None),
         "stops": stops,
     }
 
