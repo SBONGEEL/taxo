@@ -81,6 +81,8 @@ IDLE_POLL_SECONDS = 3.0
 
 _SIGNAL_ACCEPTED = "accepted"
 _SIGNAL_DECLINED = "declined"
+#: **«قِف» من عاملٍ آخر** — إلغاءٌ وصل عمليّةً لا تحمل مهمّةَ التوزيع (§٧٥-د/٢)
+_SIGNAL_STOP = "stop"
 _SIGNAL_TTL_SECONDS = 60
 
 # حذف مشروط بالقيمة: مهمة قديمة يجب ألا تمحو عرضاً أحدث للكبتن نفسه
@@ -983,6 +985,9 @@ async def _run(ride_id: uuid.UUID) -> None:
                 if signal == _SIGNAL_ACCEPTED:
                     accepted = True
                     break
+                if signal == _SIGNAL_STOP:
+                    # **أُلغيت من عاملٍ آخر** (§٧٥-د/٢) — والبطاقاتُ يطويها بابُ الإلغاء (`withdraw_offer`)
+                    return
                 if signal is None:
                     break
                 if signal.startswith(_SIGNAL_DECLINED):
@@ -1048,10 +1053,17 @@ def start(ride_id: uuid.UUID) -> None:
     _tasks[ride_id] = asyncio.create_task(_guarded(ride_id), name=f"dispatch:{ride_id}")
 
 
-async def stop(ride_id: uuid.UUID) -> None:
-    """إيقاف التوزيع عند إلغاء الراكب رحلته وهي في `searching`."""
+async def stop(ride_id: uuid.UUID, *, local_only: bool = False) -> None:
+    """إيقاف التوزيع عند إلغاء الراكب رحلته وهي في `searching`.
+
+    **والمهمّةُ قد تكون في عمليّةٍ أخرى** (الخلفيةُ بعدّة عمّال، §٧٥-د/٢): الإلغاءُ يصل أيَّ عامل، والتوزيعُ يجري في العامل الذي أنشأ
+    الرحلة — **فتُرسل إشارةُ «قِف» على Redis** فيستيقظ انتظارُه ويخرج، بدل أن يبقى عرضٌ لرحلةٍ أُلغيت حتى تنقضي مهلتُه. **وحلقتُه تعيد
+    قراءةَ الحال كلَّ جولةٍ أصلاً** — فالإشارةُ تقصّر ولا تُصلح.
+    """
     task = _tasks.pop(ride_id, None)
     if task is None:
+        if not local_only:
+            await _signal(get_redis_client(), ride_id, _SIGNAL_STOP)
         return
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -1061,4 +1073,4 @@ async def stop(ride_id: uuid.UUID) -> None:
 async def shutdown() -> None:
     """إطفاء التطبيق: تُلغى المهام الجارية بدل أن تُقطع في منتصفها."""
     for ride_id in list(_tasks):
-        await stop(ride_id)
+        await stop(ride_id, local_only=True)

@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     database_url: str = ""
     redis_url: str = "redis://localhost:6379/0"
     sql_echo: bool = False
+    #: **ميزانيّةُ اتصالات القاعدة لكلِّ عمليّة** (§٧٥-د/٢) — والخلفيةُ عدّةُ عمليّات: ٤ × (٦+٦) = ٤٨ من حدِّ PostgreSQL ١٠٠.
+    #: والافتراضُ افتراضُ SQLAlchemy نفسُه (٥+١٠) — فالتطويرُ والاختباراتُ كما كانت
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"

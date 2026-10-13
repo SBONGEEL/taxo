@@ -6,7 +6,11 @@
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
+import json
+import math
+import time
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -272,6 +276,110 @@ async def nearby_available(
     # الحاضرون فيبقى المؤهّلون قلّةً بلا سبب
     ceiling = limits.max_count if max_count is None else max_count
     return available[:ceiling]
+
+
+# ------------------------------------------------- خريطةُ الراكب مشتركةً بالخلايا (§٧٥-د/٢)
+
+#: **ضلعُ الخليّة** (~٢٫٢ كم) — كلُّ راكبٍ في الخليّة يقرأ حسابَها الواحد
+NEARBY_CELL_DEG = 0.02
+#: **عمرُ حساب الخليّة** — دون دورة البثّ (٥ ثوانٍ)، فلا يرى راكبٌ صورةً أقدمَ من دورةٍ واحدة
+NEARBY_CELL_SECONDS = 4
+#: **وحدودُ العرض من القاعدة كلَّ نصف دقيقة** لا مع كلِّ إطار — تفضيلُ عرضٍ يغيّره المشرفُ نادراً
+_MAP_LIMITS_SECONDS = 30.0
+_map_limits: dict[str, tuple[float, object]] = {}
+
+
+def _km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    rad = math.radians
+    h = math.sin(rad(lat2 - lat1) / 2) ** 2 + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(rad(lng2 - lng1) / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+async def _limits(session: AsyncSession, country_code: CountryCode):
+    from app.services import map_settings
+
+    key = CountryCode(country_code).value
+    cached = _map_limits.get(key)
+    if cached is not None and time.monotonic() - cached[0] < _MAP_LIMITS_SECONDS:
+        return cached[1]
+    limits = await map_settings.limits_for(session, country_code)
+    _map_limits[key] = (time.monotonic(), limits)
+    return limits
+
+
+def _encode(presence: geo.DriverPresence) -> dict:
+    data = dataclasses.asdict(presence)
+    data["driver_id"] = str(presence.driver_id)
+    data["vehicle_category"] = VehicleCategory(presence.vehicle_category).value
+    if presence.skin is not None:
+        data["skin"]["skin_id"] = str(presence.skin.skin_id)
+    return data
+
+
+def _decode(data: dict) -> geo.DriverPresence:
+    skin = data.get("skin")
+    return geo.DriverPresence(
+        driver_id=uuid.UUID(data["driver_id"]),
+        lat=data["lat"],
+        lng=data["lng"],
+        heading=data.get("heading"),
+        vehicle_category=VehicleCategory(data["vehicle_category"]),
+        distance_km=data["distance_km"],
+        skin=None if not skin else geo.MapSkin(**(skin | {"skin_id": uuid.UUID(skin["skin_id"])})),
+        at=data.get("at"),
+    )
+
+
+async def nearby_for_map(
+    redis: Redis,
+    session: AsyncSession,
+    *,
+    country_code: CountryCode,
+    lat: float,
+    lng: float,
+    rider: User,
+) -> list[geo.DriverPresence]:
+    """**ما يُرسم على خريطة الراكب كلَّ خمس ثوانٍ — بحسابٍ مشتركٍ لكلِّ خليّة** (§٧٥-د/٢).
+
+    **العلّةُ مقيسة** (المرحلة ١، ٢٠٢٦-١٠-١٣): كلُّ راكبٍ مفتوحِ التطبيق كان يكلّف القاعدةَ ثلاثةَ استعلاماتٍ كلَّ خمس ثوانٍ (حدودُ الخريطة ·
+    شرطُ الجنس · الأهليّة) — **فاستهلكت القاعدةُ نواتين وربعاً عند ٢٠٠ راكب**. فالآن: **المؤهَّلون حول مركز الخليّة** بنصف قطر الخريطة مزيداً
+    بنصف قُطر الخليّة يُحسبون **مرّةً لكلِّ خليّةٍ وعالمٍ وشرطِ جنسٍ كلَّ `NEARBY_CELL_SECONDS`** في Redis (فتشترك فيه العمليّاتُ كلُّها)، **ثمّ
+    لكلِّ راكبٍ من نقطته هو**: المسافةُ والحدُّ والترتيبُ والسقف — **فالنتيجةُ نتيجةُ `nearby_available` نفسُها** (القاعدةُ نفسُها في الأهليّة،
+    وقِيس التطابقُ في `test_nearby_cells.py`).
+    """
+    limits = await _limits(session, country_code)
+    cell_lat = round(lat / NEARBY_CELL_DEG) * NEARBY_CELL_DEG
+    cell_lng = round(lng / NEARBY_CELL_DEG) * NEARBY_CELL_DEG
+    world = int(bool(rider.is_test))
+    gender = rider.gender.value if rider.gender is not None else "-"
+    preference = getattr(rider.ride_gender_preference, "value", rider.ride_gender_preference) or "-"
+    key = (
+        f"nearby:cell:{CountryCode(country_code).value}:{world}:{gender}:{preference}:"
+        f"{cell_lat:.3f}:{cell_lng:.3f}"
+    )
+    raw = await redis.get(key)
+    if raw is None:
+        # نصفُ قُطر الخليّة (أبعدُ نقطةٍ فيها عن مركزها) — فكلُّ سيّارةٍ في نصف قطر أيِّ راكبٍ فيها داخلةٌ في الحساب
+        margin_km = NEARBY_CELL_DEG * 111.32 * math.sqrt(2) / 2
+        presences = await nearby_available(
+            redis,
+            session,
+            country_code=country_code,
+            lat=cell_lat,
+            lng=cell_lng,
+            radius_km=limits.radius_km + margin_km,
+            max_count=limits.max_count * 6,
+            rider=rider,
+        )
+        raw = json.dumps([_encode(p) for p in presences])
+        await redis.set(key, raw, ex=NEARBY_CELL_SECONDS)
+    mine: list[geo.DriverPresence] = []
+    for presence in map(_decode, json.loads(raw)):
+        distance = _km(lat, lng, presence.lat, presence.lng)
+        if distance <= limits.radius_km:
+            mine.append(dataclasses.replace(presence, distance_km=round(distance, 3)))
+    mine.sort(key=lambda presence: presence.distance_km)
+    return mine[: limits.max_count]
 
 
 def anonymous_ref(driver_id: uuid.UUID, salt: str) -> str:

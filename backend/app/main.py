@@ -16,6 +16,7 @@ from app.core.request_id import HEADER as REQUEST_ID_HEADER
 from app.core.request_id import RequestIdMiddleware
 from app.routers import api_router
 from app.services import dispatch, tracking
+from app.ws import hub
 
 
 @asynccontextmanager
@@ -25,6 +26,8 @@ async def lifespan(app: FastAPI):
     # مهام الخلفية تُلغى قبل إغلاق Redis والقاعدة اللتين تقرأ منهما
     await dispatch.shutdown()
     await tracking.shutdown()
+    # **محورُ المقابس قبل عميل Redis** — اشتراكُه الواحدُ اتصالٌ من العميل نفسِه (§٧٥-د/٢)
+    await hub.shutdown()
     await close_redis_client()
     await engine.dispose()
 

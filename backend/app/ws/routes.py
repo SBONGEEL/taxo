@@ -369,7 +369,8 @@ async def _send_nearby(
     websocket: WebSocket, redis: Redis, user: User, state: _RiderState
 ) -> None:
     async with SessionLocal() as session:
-        presences = await drivers_service.nearby_available(
+        # **بحسابٍ مشتركٍ لكلِّ خليّة** (§٧٥-د/٢) — والأهليّةُ والترتيبُ هما هما، فلا تفترق رسمةُ المقبس عن لقطة REST الأولى
+        presences = await drivers_service.nearby_for_map(
             redis,
             session,
             country_code=user.country_code,

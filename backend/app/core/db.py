@@ -18,6 +18,9 @@ engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=settings.sql_echo,
     pool_pre_ping=True,
+    # **ميزانيّةٌ لكلِّ عمليّة** (§٧٥-د/٢) — الخلفيةُ أربعُ عمليّاتٍ على الإنتاج
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
 )
 
 SessionLocal = async_sessionmaker(
