@@ -92,6 +92,19 @@ provision)
   remote "cat /home/taxo/secrets/stress-tokens-$RUN-$N.json" > "$OUT/tokens-$N.json"
   chmod 600 "$OUT/tokens-$N.json" 2>/dev/null
   wsl bash -c "mkdir -p ~/stress-prod && chmod 700 ~/stress-prod && cp '$WOUT/tokens-$N.json' ~/stress-prod/$RUN-$N.json && chmod 600 ~/stress-prod/$RUN-$N.json && rm -f '$WOUT/tokens-$N.json'"
+  # **حساباتٌ لا تدخل الحِمل** (`$OUT/exclude_ids`، معرّفٌ في كلِّ سطر): ما أبقاه قيدُ الدفتر من اختبارٍ سابق (`--keep-ledger`) — كبتنٌ بلا
+  # مركبةٍ يُحسب خطأً لا يقع على الخادم
+  if [ -s "$OUT/exclude_ids" ]; then
+    wsl python3 -c "
+import json
+path = '/home/loly3/stress-prod/$RUN-$N.json'
+drop = {line.split('|')[0].strip() for line in open('$WOUT/exclude_ids') if line.strip()}
+rows = json.load(open(path))
+kept = [r for r in rows if r['user_id'] not in drop]
+json.dump(kept, open(path, 'w'))
+print('· استُبعد', len(rows) - len(kept), 'حساباً')
+"
+  fi
   echo "· جلساتٌ: $(wsl python3 -c "import json;print(len(json.load(open('/home/loly3/stress-prod/$RUN-$N.json'))))")"
   ;;
 stub)

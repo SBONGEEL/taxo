@@ -35,6 +35,11 @@ services:
       PUBLIC_API_BASE_URL: https://api.tajora.ly
       CARD_RETURN_URL: https://app.tajora.ly/payments/card/return
       CARD_RETURN_URL_DRIVER: https://driver.tajora.ly/payments/card/return
+      # **أربعُ عمليّاتٍ وميزانيّةُ القاعدة لكلٍّ** (§٧٥-هـ) — في كتلة `environment` نفسِها: **كتلتان لمفتاحٍ واحدٍ يرفضهما compose**
+      # (قِيس على الإنتاج ٢٠٢٦-١٠-١٣: وقف الرفعُ في البوّابة الخامسة، وحارسُه `tests/test_compose_files.py`)
+      BACKEND_WORKERS: "4"
+      DB_POOL_SIZE: "6"
+      DB_MAX_OVERFLOW: "6"
     # **بلا `--reload` على الإنتاج** (قرارُ المالك 2026-09-22) — والتطويرُ يُبقيه
     # لأن الملفَّ الأساسيَّ لم يُمسّ. **الأمرُ نفسُه حرفاً ناقصاً `--reload`**:
     # `alembic upgrade head` باقٍ، والمنفذُ والمضيفُ كما هما، ولا عمّال.
@@ -49,10 +54,6 @@ services:
     # (المرحلة ١): العمليّةُ الواحدةُ بلغت ١٫٢–١٫٦ نواة والأنويةُ الأخرى شبهُ فارغة، **ونفدت ملفّاتُها المفتوحة** عند نحو ٩٠٠ تطبيقٍ مفتوح
     # («Too many open files» ٨١٧ مرّة). **والعمّالُ آمنون**: البثُّ كلُّه عبر Redis، وإيقافُ التوزيع يبلغ عمليّةً أخرى بإشارة، ومراقبةُ
     # الرحلة تنتهي وحدَها. **وميزانيّةُ القاعدة**: `DB_POOL_SIZE`+`DB_MAX_OVERFLOW` لكلِّ عمليّة × ٤ = ٤٨ من حدِّ ١٠٠ — والباقي للعامل والمجدول.
-    environment:
-      BACKEND_WORKERS: "4"
-      DB_POOL_SIZE: "6"
-      DB_MAX_OVERFLOW: "6"
     ulimits:
       nofile:
         soft: 65536
