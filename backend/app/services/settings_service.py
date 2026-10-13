@@ -229,7 +229,17 @@ async def get_or_create_wallet_settings(
         select(WalletSetting).where(WalletSetting.country_code == country_code)
     )
     if setting is None:
-        setting = WalletSetting(country_code=country_code)
+        setting = WalletSetting(country_code=country_code, **MARKET_WALLET_DEFAULTS.get(country_code, {}))
         session.add(setting)
         await session.flush()
     return setting
+
+
+#: **ما أمر به المالكُ لسوقٍ بعينه** (SPEC §٧٤-ط/٥ و٦) — لا افتراضٌ يخترعه الكود: الجزائرُ «بعد مدّة» بثلاثة أيّام، وشحنُها
+#: عند الوسيط بخياراتٍ ثابتة. **والصفُّ القائمُ كتبته الترحيلة `0122`**؛ وهذا لصفٍّ يُنشأ بعدها
+MARKET_WALLET_DEFAULTS: dict[CountryCode, dict[str, object]] = {
+    CountryCode.DZ: {
+        "earnings_hold_days": 3,
+        "topup_choices": [Decimal("500"), Decimal("1000"), Decimal("2000"), Decimal("5000")],
+    },
+}

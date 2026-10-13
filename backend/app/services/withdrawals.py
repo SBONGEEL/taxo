@@ -42,6 +42,7 @@ from app.services import (
     admin_search,
     audit,
     cancellation,
+    earnings_hold,
     money_guards,
     rounding,
     settings_service,
@@ -159,7 +160,7 @@ async def _reserved_amount(session: AsyncSession, driver_id: uuid.UUID) -> Decim
 async def available_balance(
     session: AsyncSession, driver: Driver, user: User
 ) -> Decimal:
-    """الرصيد القابل للسحب = الرصيد − ما حجزته طلبات قائمة − **المحتجَز**.
+    """الرصيد القابل للسحب = الرصيد − ما حجزته طلبات قائمة − **المحتجَز** − **«قيد التحويل»** (§٧٤-ي).
 
     **والمحتجَزُ شرطٌ لا قيد** (البند ١٣): لا تُكتب حركةٌ تحجزه، فقيدٌ يُكتب
     لحجزه يجعل الرصيدَ يكذب على صاحبه — يقرأ رقماً ناقصاً بلا أن يُدفع له.
@@ -194,7 +195,11 @@ async def available_balance(
     # **وأكبرُ مضاعفٍ للوحدة لا يتجاوزه** (SPEC §٧٠-ج/٦، المثال ج): `37.842 ⇐ 37.500`، **والكسرُ `0.342` يبقى في محفظته
     # له** (اشتراكٌ أو دَينٌ لاحق، أو يكتمل بأرباحٍ قادمة) — **ولا فرقَ تقريبٍ ولا صفَّ في السجلّ**: المسحوبُ اختيارُه، وما لم
     # يُسحب لم يتحرّك. ومطفأً هو المتاحُ نفسُه حرفاً
-    available = max(Decimal("0.000"), current - held - reserve - carried)
+    #
+    # **و«قيد التحويل» لا يُسحب بعد** (SPEC §٧٤-ي): أجرةُ رحلةٍ دُفعت عبر المنصّة في سوقٍ مدّتُه «بعد مدّة» — في رصيده ويراها،
+    # وتُسحب حين تكمل المدّة (`earnings_hold`). **وفوريّاً هو صفرٌ** فالمتاحُ ما كان حرفاً
+    transit = await earnings_hold.in_transit(session, user_id=user.id, country=user.country_code, balance=current)
+    available = max(Decimal("0.000"), current - held - reserve - carried - transit.total)
     return rounding.floor_to_unit(available, await rounding.policy_for(session, user.country_code))
 
 

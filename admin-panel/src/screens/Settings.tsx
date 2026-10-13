@@ -85,6 +85,7 @@ import type {
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select, Switch } from "@/components/ui/Field";
+import { Segmented } from "@/components/ui/Segmented";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
@@ -1209,9 +1210,19 @@ function WalletForm({
   const [monthly, setMonthly] = useState(row.transfer_monthly_limit);
   const [minimum, setMinimum] = useState(row.min_withdrawal_amount);
   const [reserve, setReserve] = useState(row.withdrawal_reserve_amount);
+  // **متى تُسحب أجرةُ رحلاتٍ دُفعت عبر المنصّة** (SPEC §٧٤-ط/٦) — «فوري» صفرٌ، و«بعد مدّة» بأيّامها (١–٣٠)
+  const [holdMode, setHoldMode] = useState<"instant" | "delayed">((row.earnings_hold_days ?? 0) > 0 ? "delayed" : "instant");
+  const [holdDays, setHoldDays] = useState(String((row.earnings_hold_days ?? 0) > 0 ? row.earnings_hold_days : 3));
+  // **خياراتُ الشحن عند الوسيط** (§٧٤-ط/٥) — تُكتب مفصولةً بفواصل، والخادمُ يرتّبها ويفحص كلَّ خيار
+  const [choices, setChoices] = useState((row.topup_choices ?? []).map((value) => digits(value)).join("، "));
   const [busy, setBusy] = useState(false);
 
   const clean = (value: string) => value.replace(/[^0-9.]/g, "");
+  const choiceList = () =>
+    choices
+      .split(/[,،\s]+/)
+      .map((part) => clean(part))
+      .filter((part) => part.length > 0);
 
   return (
     <>
@@ -1261,6 +1272,48 @@ function WalletForm({
           حسابه. **وصفرٌ يعني لا احتجاز.**
         </p>
       </div>
+      <div className="mt-12">
+        <p className="mb-6 text-12 font-semibold">متى تُسحب أجرةُ رحلاتٍ دُفعت من المحفظة</p>
+        <Segmented
+          label="متى تُسحب أجرةُ رحلاتٍ دُفعت من المحفظة"
+          value={holdMode}
+          onPick={(key) => !disabled && setHoldMode(key)}
+          options={[
+            { key: "instant", label: "فوري" },
+            { key: "delayed", label: "بعد مدّة" },
+          ]}
+        />
+        {holdMode === "delayed" ? (
+          <div className="mt-8">
+            <Field
+              name="earnings_hold_days"
+              label="عدد الأيّام (من 1 إلى 30)"
+              dir="ltr"
+              inputMode="numeric"
+              value={holdDays}
+              disabled={disabled}
+              onChange={(event) => setHoldDays(event.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+            />
+          </div>
+        ) : null}
+        <p className="mt-6 text-11 leading-note text-muted">
+          الأجرةُ تدخل محفظةَ الكبتن فوراً في الحالين. «بعد مدّة»: يراها «قيد التحويل» ومعها تاريخُ إتاحتها، وتُسحب حين تكمل
+          الأيّام — والتغييرُ يسري على ما هو قيد التحويل الآن أيضاً. رحلاتُ النقد لا تتأثّر.
+        </p>
+      </div>
+      <div className="mt-12">
+        <Field
+          name="topup_choices"
+          label="خيارات الشحن بالبطاقة (مفصولةٌ بفواصل)"
+          dir="ltr"
+          value={choices}
+          disabled={disabled}
+          onChange={(event) => setChoices(event.target.value)}
+        />
+        <p className="mt-6 text-11 leading-note text-muted">
+          الشحنُ عند وسيط البطاقات يُختار من هذه المبالغ وحدَها، وكلٌّ مضاعفٌ لوحدة التقريب. وفارغةً يكتب صاحبُ المحفظة المبلغ.
+        </p>
+      </div>
 
       <Button
         className="mt-14"
@@ -1274,6 +1327,8 @@ function WalletForm({
             transfer_monthly_limit: monthly,
             min_withdrawal_amount: minimum,
             withdrawal_reserve_amount: reserve,
+            earnings_hold_days: holdMode === "delayed" ? Number(holdDays || "0") : 0,
+            topup_choices: choiceList(),
           })
             .then(() => onSaved("حُفظت الحدود"))
             .catch((caught) =>

@@ -16,10 +16,17 @@ import { Link, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
-import { exportFinance, getFinanceSummary, getFinanceTransactions, getFinanceUsers } from "@/api/endpoints";
+import {
+  exportFinance,
+  getFinanceGateways,
+  getFinanceSummary,
+  getFinanceTransactions,
+  getFinanceUsers,
+} from "@/api/endpoints";
 import type {
   CountryCode,
   Currency,
+  FinanceGateways,
   FinanceGroup,
   FinanceMethod,
   FinanceMetric,
@@ -234,13 +241,16 @@ export function FinanceSummaryScreen({ tabs }: { tabs?: ReactNode } = {}) {
               exporting={exporting}
             />
           ) : (
-            data.groups.map((group) =>
-              group.layout === "table" ? (
-                <LedgerTable key={group.key} group={group} currency={data.window.currency} onOpen={setOpen} />
-              ) : (
-                <GroupCards key={group.key} group={group} currency={data.window.currency} onOpen={setOpen} />
-              ),
-            )
+            <>
+              {data.groups.map((group) =>
+                group.layout === "table" ? (
+                  <LedgerTable key={group.key} group={group} currency={data.window.currency} onOpen={setOpen} />
+                ) : (
+                  <GroupCards key={group.key} group={group} currency={data.window.currency} onOpen={setOpen} />
+                ),
+              )}
+              <GatewayPositions country={country} />
+            </>
           )}
         </>
       )}
@@ -250,6 +260,81 @@ export function FinanceSummaryScreen({ tabs }: { tabs?: ReactNode } = {}) {
         {currency ? ` · كلُّ رقمٍ بعملة السوق (${currency}) — لا يُجمع سوقان` : ""}
       </p>
     </Shell>
+  );
+}
+
+/** **ما بقي لـTAXO عند وسيط البطاقات** (SPEC §٧٤-ي/٧) — لكلِّ عقدٍ مفعَّلٍ في السوق: ما دخل عبره (من الدفتر، بلا مال التجربة)،
+ *  **وما يقوله الوسيطُ عن رصيده الآن** (الجاهزُ للتحويل إلى حساب TAXO والمعلَّقُ عنده) بساعة القراءة — **ووضعُ التجربة يُقال**:
+ *  رصيدُه رصيدُ تجربة. **ولا يُجمع الرقمان**: أحدُهما ما دخل منذ البداية، والآخرُ ما بقي عند الوسيط الآن. وسوقٌ بلا عقدٍ لا يُرسم فيه شيء. */
+function GatewayPositions({ country }: { country: CountryCode }) {
+  const [data, setData] = useState<FinanceGateways | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setData(null);
+    setError(null);
+    let alive = true;
+    getFinanceGateways(country)
+      .then((body) => {
+        if (alive) setData(body);
+      })
+      .catch((caught) => {
+        if (alive) setError(messageOf(caught, "تعذّر قراءة ما عند وسيط البطاقات"));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [country]);
+
+  if (error) return <ErrorNote message={error} />;
+  if (data === null || data.gateways.length === 0) return null;
+  return (
+    <section className="mt-18">
+      <h2 className="mb-12 text-14 font-bold text-ink">مالُ البطاقات عند الوسيط</h2>
+      <div className="grid gap-14 md:grid-cols-2">
+        {data.gateways.map((row) => (
+          <div key={row.integration} className="flex flex-col rounded-16 border border-line bg-surface p-18">
+            <div className="flex items-center justify-between gap-8">
+              <span className="text-12 text-muted">{row.label}</span>
+              <span className="flex flex-wrap gap-6">
+                {row.test_mode ? <Badge tone="warn">وضعُ التجربة</Badge> : null}
+                <Badge tone="muted">رصيدٌ الآن</Badge>
+              </span>
+            </div>
+            <div className="mt-6 text-11.5 text-muted">ما يدين به الوسيطُ لـTAXO الآن</div>
+            <div className="mt-2 text-26 font-bold text-ink">
+              {row.balance === null ? "—" : money(row.balance, row.currency)}
+            </div>
+            {row.balance !== null ? (
+              <ul className="ad-mini mt-8">
+                <li>
+                  <span className="ad-mini-row">
+                    <span className="ad-mini-main">
+                      <span className="ad-mini-title">جاهزٌ للتحويل إلى حساب TAXO</span>
+                    </span>
+                    <span className="ad-mini-value">{money(row.ready_amount ?? "0", row.currency)}</span>
+                  </span>
+                </li>
+                <li>
+                  <span className="ad-mini-row">
+                    <span className="ad-mini-main">
+                      <span className="ad-mini-title">معلَّقٌ عند الوسيط</span>
+                    </span>
+                    <span className="ad-mini-value">{money(row.on_hold_amount ?? "0", row.currency)}</span>
+                  </span>
+                </li>
+              </ul>
+            ) : (
+              <div className="mt-4 text-11.5 text-muted">{row.note}</div>
+            )}
+            <div className="mt-10 text-11.5 text-muted">
+              دخل عبره منذ البداية: {money(row.received_amount, row.currency)} · {digits(String(row.received_count))} دفعة
+              {row.read_at ? ` · قُرئ الرصيدُ ${moment(row.read_at)}` : ""}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

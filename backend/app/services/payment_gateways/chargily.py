@@ -35,6 +35,8 @@ FEES_ALLOCATION = {"taxo": "merchant", "user": "customer", "split": "split"}
 
 class ChargilyGateway:
     name = "chargily"
+    #: **لا شحنَ ولا اشتراكَ إلا بإشعارٍ موقَّعٍ متحقَّق** (أمرُ المالك §٧٤-ط/٥) — وعودةُ التطبيق تسأل ولا تقيِّد «دُفع»
+    confirms_by_webhook = True
 
     def __init__(self, *, secret_key: str, test_mode: bool) -> None:
         self._key = secret_key
@@ -117,6 +119,22 @@ class ChargilyGateway:
             return []
         checkout_id = data.get("id")
         return [checkout_id] if isinstance(checkout_id, str) else []
+
+    async def balance(self, currency: str) -> tuple[Decimal, Decimal, Decimal] | None:
+        """**ما عند Chargily لـTAXO الآن** (`GET /balance`): الرصيدُ والجاهزُ للتحويل والمعلَّق — بمحفظة العملة، أو `None` بلا محفظتها.
+        **والجاهزُ نصٌّ في الوثائق** («40000») والباقيان عددان — فكلٌّ يُقرأ من نصّه."""
+        body = await self._request("GET", "/balance")
+        for wallet in body.get("wallets") or []:
+            if isinstance(wallet, dict) and str(wallet.get("currency", "")).lower() == currency:
+                try:
+                    return (
+                        Decimal(str(wallet.get("balance") or 0)),
+                        Decimal(str(wallet.get("ready_for_payout") or 0)),
+                        Decimal(str(wallet.get("on_hold") or 0)),
+                    )
+                except ArithmeticError as exc:
+                    raise base.GatewayError("رصيدٌ غيرُ مقروءٍ من Chargily") from exc
+        return None
 
     async def test_connection(self) -> str:
         await self._request("GET", "/balance")

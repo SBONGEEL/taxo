@@ -148,6 +148,13 @@ class WithdrawalOut(BaseModel):
     created_at: datetime
 
 
+class InTransitReleaseOut(BaseModel):
+    """**مبلغٌ «قيد التحويل» وساعةُ إتاحته** — والساعةُ مقرَّبةٌ للأعلى (§٧٤-ي)."""
+
+    available_at: datetime
+    amount: Decimal
+
+
 class DriverWalletOut(WalletOut):
     """محفظة الكبتن + المتاح للسحب بعد حجز الطلبات القائمة."""
 
@@ -167,6 +174,11 @@ class DriverWalletOut(WalletOut):
     commission_this_month: Decimal = Decimal("0.000")
     # **قنواتُ الصرف في سوقه بترتيب عرضها** (SPEC §٧٣-هـ المرحلة ٤) — كليكُ وحدَها تُعرض في الأردن وليبيا كما كانت
     withdrawal_methods: list[WithdrawalMethod] = Field(default_factory=list)
+    # **«قيد التحويل»** (SPEC §٧٤-ي): أجرةُ رحلاتٍ دُفعت عبر المنصّة لم تكمل مدّةَ سوقه — في رصيده **ولا تُسحب بعد**،
+    # ومتى يصير كلُّ مبلغٍ متاحاً. **وصفرُ الأيّام «فوري»** فلا شيءَ هنا
+    earnings_hold_days: int = 0
+    in_transit: Decimal = Decimal("0.000")
+    in_transit_releases: list[InTransitReleaseOut] = Field(default_factory=list)
 
 
 class EarningsDayOut(BaseModel):
@@ -302,6 +314,10 @@ class WalletSettingUpdate(BaseModel):
     min_withdrawal_amount: Decimal | None = OptionalLimitMoney
     # الرصيدُ المحتجَز (البند ١٣) — صفرٌ يعني «لا احتجاز»
     withdrawal_reserve_amount: Decimal | None = OptionalLimitMoney
+    # **متى تُسحب أجرةُ رحلاتٍ دُفعت عبر المنصّة** (§٧٤-ي): صفرٌ «فوري»، ومن ١ إلى ٣٠ «بعد مدّة» بعدد أيّامها
+    earnings_hold_days: int | None = Field(default=None, ge=0, le=30)
+    # **خياراتُ الشحن عند الوسيط** (§٧٤-ط/٥) — حتى ثمانية، وكلٌّ مضاعفٌ لوحدة التقريب (يُفحص في الباب)؛ وفارغةٌ «لا خيارات»
+    topup_choices: list[Decimal] | None = Field(default=None, max_length=8)
 
 
 class WalletSettingOut(BaseModel):
@@ -313,6 +329,8 @@ class WalletSettingOut(BaseModel):
     transfer_monthly_limit: Decimal
     min_withdrawal_amount: Decimal
     withdrawal_reserve_amount: Decimal
+    earnings_hold_days: int = 0
+    topup_choices: list[Decimal] = Field(default_factory=list)
     updated_at: datetime
 
 

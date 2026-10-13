@@ -105,12 +105,19 @@ def install_transport(monkeypatch) -> tuple[ChargilyFake, SofizPayFake]:
     return chargily, sofizpay
 
 
-async def add_gateway_method(session_factory, integration: str, *, fee_bearer: str = "taxo", contract: bool = True) -> uuid.UUID:
-    """**عقدُ الوسيط في صفحة العقود** (بالخدمة نفسِها) **وطريقتُه مفعَّلةً في نظام الدفع**."""
+async def add_gateway_method(
+    session_factory, integration: str, *, fee_bearer: str = "taxo", contract: bool = True, test_mode: bool = False
+) -> uuid.UUID:
+    """**عقدُ الوسيط في صفحة العقود** (بالخدمة نفسِها) **وطريقتُه مفعَّلةً في نظام الدفع**.
+
+    **و`test_mode`** (§٧٤-ط/٥): عقدٌ بوضع التجربة لا يفتحه إلا حسابُ تجربة — فالافتراضُ هنا **حيٌّ** لأن الاختبارات تدفع بحساباتٍ
+    حقيقيّةٍ مزيّفة الشبكة؛ والوضعُ التجريبيُّ يُختبر باسمه."""
     if contract and integration == "chargily":
-        await _enable_provider(session_factory, "chargily", {"secret_key": CHARGILY_SECRET, "test_mode": True}, country="DZ")
+        await _enable_provider(
+            session_factory, "chargily", {"secret_key": CHARGILY_SECRET, "test_mode": test_mode}, country="DZ"
+        )
     if contract and integration == "sofizpay":
-        await _enable_provider(session_factory, "sofizpay", {"account": SOFIZPAY_ACCOUNT, "sandbox": True}, country="DZ")
+        await _enable_provider(session_factory, "sofizpay", {"account": SOFIZPAY_ACCOUNT, "sandbox": test_mode}, country="DZ")
     async with session_factory() as session:
         method = PayMethod(
             country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code=integration,

@@ -22,6 +22,7 @@ from app.schemas.wallet import (
     CliqTopupCreate,
     CliqTopupOut,
     DriverWalletOut,
+    InTransitReleaseOut,
     TopupRequestCreate,
     TopupRequestOut,
     TransferRecipientOut,
@@ -31,7 +32,7 @@ from app.schemas.wallet import (
     WithdrawalCreate,
     WithdrawalOut,
 )
-from app.services import cancellation, commission_view
+from app.services import cancellation, commission_view, earnings_hold
 from app.services import (
     card_payments,
     cliq_topups,
@@ -351,13 +352,19 @@ async def get_my_driver_wallet(
     """محفظة الكبتن مع المتاح فعلاً للسحب (SPEC القسم 9)."""
     limits = await settings_service.get_wallet_settings(session, user.country_code)
     available = await withdrawals.available_balance(session, driver, user)
+    balance = await wallet_service.balance(session, user.id, WalletOwnerType.DRIVER)
+    # **«قيد التحويل» بالقاعدة نفسِها التي طرحته من المتاح** (`earnings_hold`، §٧٤-ي) — فالرقمان من بيتٍ واحد
+    transit = await earnings_hold.in_transit(session, user_id=user.id, country=user.country_code, balance=balance)
 
     return DriverWalletOut(
         owner_id=user.id,
         owner_type=WalletOwnerType.DRIVER,
-        balance=await wallet_service.balance(
-            session, user.id, WalletOwnerType.DRIVER
-        ),
+        balance=balance,
+        earnings_hold_days=transit.days,
+        in_transit=transit.total,
+        in_transit_releases=[
+            InTransitReleaseOut(available_at=release.available_at, amount=release.amount) for release in transit.releases
+        ],
         currency=currency_for_country(user.country_code),
         frozen=wallet_service.is_frozen(user, WalletOwnerType.DRIVER),
         pending_compensation=await cancellation.pending_for_driver(session, driver.id),

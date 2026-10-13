@@ -68,6 +68,13 @@ def offenders(payload: Any, path: str = "", currency: str | None = None) -> list
                 _, dot, fraction = value.partition(".")
                 if len(fraction) != places or (places == 0 and dot):
                     found.append(f"{here} = {value!r} ({here_currency or 'بلا عملة'}: {places} خانات)")
+            # **قائمةُ مبالغ تحت اسم مال** (`topup_choices`) — كلُّ عنصرٍ يُفحص كالمفرد
+            if is_money_key(str(key)) and isinstance(value, list):
+                for index, item in enumerate(value):
+                    if isinstance(item, str) and DECIMAL_TEXT.match(item):
+                        _, dot, fraction = item.partition(".")
+                        if len(fraction) != places or (places == 0 and dot):
+                            found.append(f"{here}[{index}] = {item!r} ({here_currency or 'بلا عملة'}: {places} خانات)")
             found.extend(offenders(value, here, here_currency))
     elif isinstance(payload, list):
         for index, item in enumerate(payload):

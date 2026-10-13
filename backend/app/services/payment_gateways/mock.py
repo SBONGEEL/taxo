@@ -29,6 +29,10 @@ async def settle(external_id: str, outcome: str) -> None:
 
 
 class MockGateway:
+    #: **الوهميُّ للتطوير وحدَه** — يُحسم من صفحته بسؤال `refresh`، ولا مالَ حقيقيٌّ فيه ولا تجربةٌ عند وسيط
+    test_mode = False
+    confirms_by_webhook = False
+
     def __init__(self, integration: str) -> None:
         self.name = integration
 

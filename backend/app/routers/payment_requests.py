@@ -40,8 +40,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 
 
-def method_out(provider: PayMethod) -> PaymentMethodOut:
+def method_out(provider: PayMethod, *, test_mode: bool = False) -> PaymentMethodOut:
     return PaymentMethodOut(
+        test_mode=test_mode,
         id=provider.id,
         kind=provider.kind,
         name=provider.name,
@@ -91,10 +92,26 @@ async def list_methods(
     """**طرقُ الدفع المفعَّلة في سوقي لهذا الغرض** — بما يلزم لأدفع: إلى أين، وما يُطلب مني."""
     await payment_requests.require_enabled(session, user.country_code)
     providers = await payment_requests.providers_for(session, user.country_code, purpose)
+    shown: list[PaymentMethodOut] = []
+    for provider in providers:
+        if provider.integration is None:
+            shown.append(method_out(provider))
+            continue
+        # **الوسيطُ بوضع عقده** (§٧٤-ط/٥): وضعُ التجربة لحساب التجربة وحدَه، والحيُّ لغيره — **وما لا يُفتح لا يُعرض**؛
+        # وعقدٌ غائبٌ يُسقط الطريقةَ من القائمة كما يُسقطها الدفعُ نفسُه
+        try:
+            gateway = await payment_gateways.gateway_for(session, provider.integration, user.country_code)
+        except payment_gateways.GatewayUnavailable:
+            continue
+        test_mode = bool(getattr(gateway, "test_mode", False))
+        if test_mode != bool(user.is_test):
+            continue
+        shown.append(method_out(provider, test_mode=test_mode))
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
         # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها
-        methods=[method_out(p) for p in providers],
+        methods=shown,
+        topup_choices=await payment_requests.topup_choices(session, user.country_code),
     )
 
 
@@ -241,9 +258,12 @@ async def gateway_webhook(
     body = await request.body()
     headers = {k.lower(): v for k, v in request.headers.items()}
     ids: list[str] | None = None
+    signed = False
     for gateway in gateways:
         try:
             ids = gateway.webhook_ids(headers, body)
+            # **«موقَّعٌ» لمن يوقّع إشعارَه** (Chargily) — وSofizPay لا توقيعَ موثَّقاً له، فإشعارُه يوقظ ولا يشهد
+            signed = bool(getattr(gateway, "confirms_by_webhook", False))
             break
         except payment_gateways.WebhookSignatureInvalid:
             continue
@@ -257,7 +277,8 @@ async def gateway_webhook(
         if row is None:
             logger.error("إشعارُ وسيط %s لمعرّفٍ لا طلبَ له: %s", integration, external_id)
             continue
-        row, settled = await payment_requests.settle_from_gateway(session, request_id=row.id)
+        # **من إشعارٍ تحقّق توقيعُه** — وهو وحدَه ما يقيِّد «دُفع» عند Chargily (§٧٤-ط/٥)
+        row, settled = await payment_requests.settle_from_gateway(session, request_id=row.id, signed=signed)
         if settled:
             applied += 1
             owners.append(row.user_id)

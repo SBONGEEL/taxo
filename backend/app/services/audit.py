@@ -88,6 +88,9 @@ def _plain(value: Any) -> Any:
         return value.value
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
+    if isinstance(value, (list, tuple)):
+        # **قائمةُ قيمٍ عنصراً عنصراً** (خياراتُ الشحن، §٧٤-ي) — لا نصُّ تمثيلها البايثونيّ
+        return [_plain(item) for item in value]
     return str(value)
 
 

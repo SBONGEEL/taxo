@@ -68,6 +68,10 @@ MONEY_NAMES = frozenset(
         # **`hourly_rate` أُضيف ٢٠٢٦-١٠-١١** (§٧٣، البندُ المفتوح ٤): سعرُ الساعة يُدفع كما هو — «500» للجزائريّ — **ولم تكن
         # المفرداتُ تعدّه مالاً** فخرج «500.000». **ولا تُضاف `_rate` لاحقةً**: `cancellation_rate` نسبةٌ لا مبلغ
         "hourly_rate",
+        # **`in_transit` و`topup_choices` أُضيفا ٢٠٢٦-١٠-١٣** (§٧٤-ي): «قيد التحويل» في محفظة الكبتن، **وخياراتُ الشحن قائمةُ
+        # مبالغ** — فالقائمةُ تُصاغ عنصراً عنصراً بعملة سياقها (`normalize`)، و«500» للجزائريّ لا «500.000»
+        "in_transit",
+        "topup_choices",
     }
 )
 
@@ -139,6 +143,17 @@ def normalize(payload: Any, currency: str | None = None) -> Any:
                 and DECIMAL_TEXT.match(value)
             ):
                 new = _trimmed(value, places)
+            elif (
+                places is not None
+                and isinstance(value, list)
+                and isinstance(key, str)
+                and is_money_key(key)
+                and value
+                and all(isinstance(item, str) and DECIMAL_TEXT.match(item) for item in value)
+            ):
+                # **قائمةُ مبالغ** (`topup_choices`) — كلُّ عنصرٍ بعملة سياقه، والقائمةُ هي هي إن لم يتغيّر عنصر
+                trimmed = [_trimmed(item, places) for item in value]
+                new = value if trimmed == value else trimmed
             elif isinstance(value, (dict, list)):
                 new = normalize(value, here)
             if new is not value:

@@ -599,6 +599,12 @@ export interface DriverWallet extends Wallet {
   commission_this_month: string;
   /** **قنواتُ الصرف في سوقه بترتيب عرضها** (SPEC §٧٣-هـ المرحلة ٤) — وفيها كليك ⇐ الورقةُ كما كانت حرفاً */
   withdrawal_methods: WithdrawalMethod[];
+  /** **«قيد التحويل»** (SPEC §٧٤-ي): أيّامُ سوقه — صفرٌ «فوري» */
+  earnings_hold_days?: number;
+  /** أجرةُ رحلاتٍ دُفعت عبر المنصّة لم تكمل المدّة — في رصيده ولا تُسحب بعد */
+  in_transit?: string;
+  /** متى يصير كلُّ مبلغٍ متاحاً — والساعةُ مقرَّبةٌ للأعلى */
+  in_transit_releases?: { available_at: string; amount: string }[];
 }
 
 export type WalletTransactionType =
@@ -1626,11 +1632,15 @@ export interface PayMethod {
   requires_receipt: boolean;
   /** **وسيطٌ آليّ** (المرحلة ٣) — يُدفع في صفحته ويُضاف فورَ تأكيده */
   gateway: boolean;
+  /** **عقدُه في وضع التجربة** (SPEC §٧٤-ط/٥) — لا يراه إلا حسابُ تجربة، ومالُه «رصيد تجريبي» */
+  test_mode?: boolean;
 }
 
 export interface PayMethods {
   currency: Currency;
   methods: PayMethod[];
+  /** **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — وفارغةٌ «لا خيارات»: يُكتب المبلغ كما كان */
+  topup_choices?: string[];
 }
 
 /** **دفعتي** بحالها وسببِ رفضها أو إلغائها أو ردّها كما كُتب. */

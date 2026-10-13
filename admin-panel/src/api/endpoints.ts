@@ -173,6 +173,7 @@ import type {
   SiteSettings,
   SiteUpdate,
   FinanceQuery,
+  FinanceGateways,
   FinanceSummary,
   FinanceTransactionsPage,
   FinanceUsersPage,
@@ -630,6 +631,8 @@ export const updateWalletSettings = (
     transfer_monthly_limit: string;
     min_withdrawal_amount: string;
     withdrawal_reserve_amount: string;
+    earnings_hold_days: number;
+    topup_choices: string[];
   }>,
 ) => api.patch<WalletSetting>(`/admin/settings/wallet/${country}`, payload);
 
@@ -1961,6 +1964,10 @@ function financeQuery(query: FinanceQuery): Record<string, string | undefined> {
 
 export const getFinanceSummary = (query: FinanceQuery) =>
   api.get<FinanceSummary>("/admin/finance/summary", { query: financeQuery(query) });
+
+/** **ما بقي لـTAXO عند وسيط البطاقات** (SPEC §٧٤-ي/٧) — ما دخل عبره، وما يقول الوسيطُ إنه عنده الآن بساعته ووضع عقده. */
+export const getFinanceGateways = (country: CountryCode) =>
+  api.get<FinanceGateways>("/admin/finance/summary/gateways", { query: { country_code: country } });
 
 /** **«المستخدمون»** وراء مجموع — مرتَّبين من الأكبر، مرقَّمين بـ`limit`/`offset`. */
 export const getFinanceUsers = (metric: string, query: FinanceQuery, limit: number, offset: number) =>

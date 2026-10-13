@@ -56,6 +56,7 @@ export function PayRequestT2Screen() {
   const goBack = useGoBack(purpose === "subscription" ? "/subscription" : "/wallet");
 
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  const [choices, setChoices] = useState<string[]>([]);
   const [cardMethod, setCardMethod] = useState(false);
   const [methodId, setMethodId] = useState("");
   const [amount, setAmount] = useState(handoff?.amount ?? "");
@@ -80,6 +81,7 @@ export function PayRequestT2Screen() {
         setCardMethod(body.methods.some((row) => row.kind === "purchase_code"));
         const reviewed = body.methods.filter((row) => row.kind !== "purchase_code");
         setMethods(reviewed);
+        setChoices(body.topup_choices ?? []);
         setMethodId((current) => current || reviewed[0]?.id || "");
       })
       .catch((caught: unknown) => {
@@ -89,6 +91,8 @@ export function PayRequestT2Screen() {
   }, [purpose]);
 
   const method = methods?.find((row) => row.id === methodId) ?? null;
+  // **الشحنُ عند الوسيط خياراتٌ ثابتةٌ إن ضبطها السوق** (SPEC §٧٤-ط/٥) — والاشتراكُ ثمنُه من الخادم أصلاً
+  const fixed = purpose === "wallet_topup" && method?.gateway === true && choices.length > 0;
 
   useEffect(() => {
     setQrUrl(null);
@@ -242,6 +246,9 @@ export function PayRequestT2Screen() {
                 onClick={() => {
                   setMethodId(row.id);
                   setReceipt(null);
+                  if (purpose === "wallet_topup" && row.gateway && choices.length > 0 && !choices.includes(amount)) {
+                    setAmount("");
+                  }
                 }}
               >
                 <Icon name={KIND_ICON[row.kind]} />
@@ -292,7 +299,31 @@ export function PayRequestT2Screen() {
             </div>
           ) : null}
 
-          {purpose === "wallet_topup" ? (
+          {fixed ? (
+            <div className="t2-pr-gap-lg">
+              <p className="t2-fld-label">{tr("اختر مبلغ الشحن")}</p>
+              <div className="t2-wds-quick" role="radiogroup" aria-label={tr("اختر مبلغ الشحن")}>
+                {choices.map((choice) => (
+                  <button
+                    key={choice}
+                    type="button"
+                    role="radio"
+                    aria-checked={amount === choice}
+                    aria-pressed={amount === choice}
+                    onClick={() => setAmount(choice)}
+                    className="t2-wds-tile"
+                  >
+                    <span className="t2-wds-tile-v">
+                      <span className="t2-wds-tile-num" dir="ltr">
+                        {digits(choice)}
+                      </span>{" "}
+                      <span className="t2-wds-tile-cur">{label}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : purpose === "wallet_topup" ? (
             <div className="t2-pr-gap-lg">
               <label className="t2-fld-label" htmlFor="pay-request-amount">
                 {tr("المبلغ (")}{label})
@@ -348,6 +379,12 @@ export function PayRequestT2Screen() {
             </div>
           ) : null}
 
+          {method?.test_mode ? (
+            <p className="t2-note" role="status">
+              <Icon name="science" />
+              {tr("وضعُ التجربة — مالٌ تجريبيٌّ لا يغادر المنصّة، ولا يُؤخذ من بطاقتك شيء.")}
+            </p>
+          ) : null}
           {error ? (
             <p className="t2-note danger" role="alert">
               <Icon name="error" fill />

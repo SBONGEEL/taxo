@@ -553,6 +553,10 @@ export interface WalletSetting {
   min_withdrawal_amount: string;
   /** يبقى في محفظة الكبتن ولا يُسحب — يخرج عند إلغاء التفعيل (البند ١٣). */
   withdrawal_reserve_amount: string;
+  /** **«قيد التحويل»** (SPEC §٧٤-ي): صفرٌ «فوري»، ومن ١ إلى ٣٠ «بعد مدّة» بعدد أيّامها. */
+  earnings_hold_days: number;
+  /** **خياراتُ الشحن عند الوسيط** (§٧٤-ط/٥) — وفارغةٌ «لا خيارات». */
+  topup_choices: string[];
   updated_at: string;
 }
 
@@ -2795,3 +2799,24 @@ export interface FinanceOverview {
 
 export type FinanceOverviewQuery = Omit<FinanceQuery, "country_code">;
 
+/** **وسيطُ بطاقاتٍ في السوق** (SPEC §٧٤-ي/٧): ما دخل عبره من الدفتر، **وما يقول إنه عنده لـTAXO الآن** — لا يُجمعان. */
+export interface FinanceGateway {
+  integration: string;
+  label: string;
+  currency: Currency;
+  /** عقدٌ بوضع التجربة — رصيدُه رصيدُ تجربةٍ لا مال */
+  test_mode: boolean;
+  received_amount: string;
+  received_count: number;
+  balance: string | null;
+  ready_amount: string | null;
+  on_hold_amount: string | null;
+  read_at: string | null;
+  note: string | null;
+}
+
+export interface FinanceGateways {
+  country_code: CountryCode;
+  currency: Currency;
+  gateways: FinanceGateway[];
+}

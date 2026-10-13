@@ -66,6 +66,37 @@ TRANSFER_KINDS: frozenset[PaymentProviderKind] = frozenset(
 MIN_REASON = 3
 
 
+#: **مرجعُ قيدِ شحنٍ من وسيطٍ في وضع التجربة** (§٧٤-ط/٥) — كعلامة مال التجربة (`test_markets`): يُقرأ في الكشف أنه ليس مالاً
+TEST_MONEY_MARK = "رصيد تجريبي"
+
+#: **سببُ إلغاء صفحةٍ لم تُدفع في مهلتها** (§٧٤-ي/٥) — وChargily لا حالَ «انتهى» عنده؛ فالمهلةُ مهلتُنا
+EXPIRED_REASON = "انتهت مهلةُ الدفع — لم يُدفع شيء"
+
+#: **مهلةُ صفحة الوسيط** — بعدها يُسأل الوسيط: لم يُدفع ⇒ تُلغى بسببها، ودفعٌ يصل بعدها يُقيَّد ولا يضيع
+CHECKOUT_TTL_HOURS = 24
+
+
+class TestModeOnly(AppError):
+    """**عقدُ الوسيط في وضع التجربة** — لحسابات التجربة وحدَها (§٧٤-ط/٥)، والطريقةُ لا تُعرض لغيرها أصلاً (`403`)."""
+
+    status_code = 403
+    code = "payment_test_mode_only"
+    message = "هذه الطريقةُ في وضع التجربة — لحسابات التجربة وحدَها"
+
+
+def require_test_account(owner: User) -> None:
+    if not owner.is_test:
+        raise TestModeOnly()
+
+
+async def topup_choices(session: AsyncSession, country: CountryCode) -> list[Decimal]:
+    """**خياراتُ الشحن عند الوسيط** لسوقٍ (§٧٤-ط/٥) — قراءةً بلا إنشاء صفّ؛ وفارغةٌ «لا خيارات»."""
+    from app.models.wallet_setting import WalletSetting
+
+    values = await session.scalar(select(WalletSetting.topup_choices).where(WalletSetting.country_code == country))
+    return sorted(as_money(value) for value in (values or []))
+
+
 class PaymentAlreadySubmitted(Conflict):
     """**هذا التحويلُ قُدِّم من قبل** — مرجعُه أو صورةُ إيصاله في طلبٍ معلَّقٍ أو معتمدٍ للطريقة نفسِها (§٧٣-هـ/٦)."""
 
@@ -236,15 +267,23 @@ async def _prepare(
     owner: User,
     provider_id: uuid.UUID,
     purpose: PaymentRequestPurpose,
-    amount: Decimal,
+    amount: Decimal | None,
     plan_id: uuid.UUID | None,
     declared: WalletOwnerType | None,
     gateway: bool,
+    test_money: bool = False,
 ) -> Prepared:
-    """**حرّاسُ كلِّ طلبٍ قبل أن يُكتب** — يدويّاً كان أو عند وسيط: بابٌ واحدٌ فلا يفترق الطريقان أوّلَ شرطٍ يُضاف."""
-    test_accounts.require_real_money(
-        owner, "حسابُ التجربة لا يُشحن بدفعٍ حقيقيّ — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
-    )
+    """**حرّاسُ كلِّ طلبٍ قبل أن يُكتب** — يدويّاً كان أو عند وسيط: بابٌ واحدٌ فلا يفترق الطريقان أوّلَ شرطٍ يُضاف.
+
+    **و`test_money`**: صفحةُ وسيطٍ بعقدٍ في وضع التجربة (§٧٤-ط/٥) — **لحسابات التجربة وحدَها**، ومالُها «تجريبيّ» لا يغادر المنصّة.
+    **وعقدٌ حيٌّ لا يفتحه حسابُ تجربة** كما كان. **وفي الاشتراك عند الوسيط المبلغُ ثمنُ الخطّة من الخادم** لا ما أرسله التطبيق.
+    """
+    if test_money:
+        require_test_account(owner)
+    else:
+        test_accounts.require_real_money(
+            owner, "حسابُ التجربة لا يُشحن بدفعٍ حقيقيّ — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
+        )
     await require_enabled(session, owner.country_code)
     provider = await available_provider(session, provider_id, owner.country_code)
 
@@ -268,10 +307,20 @@ async def _prepare(
     owner_type = wallet.owner_type_for(owner, declared=declared)
     wallet.require_not_frozen(owner, owner_type)
 
-    amount = as_money(amount)
-    if amount <= 0:
-        raise InvalidInput("المبلغُ يجب أن يكون أكبرَ من صفر", field="amount")
-    await rounding.require_multiple_in(session, owner.country_code, amount)
+    if gateway and purpose is PaymentRequestPurpose.SUBSCRIPTION:
+        amount = Decimal("0")  # يُكتب أدناه ثمنَ الخطّة من الخادم — ولا يُقرأ ما أرسله التطبيق
+    else:
+        if amount is None:
+            raise InvalidInput("اكتب المبلغ", field="amount")
+        amount = as_money(amount)
+        if amount <= 0:
+            raise InvalidInput("المبلغُ يجب أن يكون أكبرَ من صفر", field="amount")
+        await rounding.require_multiple_in(session, owner.country_code, amount)
+    if gateway and purpose is PaymentRequestPurpose.WALLET_TOPUP:
+        # **خياراتٌ ثابتةٌ إن ضبطها السوق** (§٧٤-ط/٥) — والمبلغُ واحدٌ منها وإلا رُدّ؛ وسوقٌ بلا خياراتٍ كما كان
+        choices = await topup_choices(session, owner.country_code)
+        if choices and amount not in choices:
+            raise InvalidInput("اختر مبلغَ الشحن من الخيارات", field="amount")
 
     if purpose is PaymentRequestPurpose.SUBSCRIPTION:
         if plan_id is None:
@@ -283,8 +332,14 @@ async def _prepare(
         plan = await subscriptions.get_plan(session, plan_id, owner.country_code)
         offer = await offers.resolve(session, driver=driver, plan=plan, for_update=False)
         price = await subscriptions.price_to_pay(session, plan, offer)
+        if gateway:
+            # **ثمنُ الخطّة من الخادم** (§٧٤-ط/٥: «never trust the app for the amount») — والعرضُ القائمُ محسوبٌ فيه
+            amount = as_money(price.payable)
+            if amount <= 0:
+                raise InvalidInput("لا شيءَ يُدفع لهذه الخطّة الآن", field="plan_id")
+            rounding.require_precise(amount, currency_for_country(owner.country_code), field="plan_id")
         # **أقلُّ من الثمن لا يفعّل اشتراكاً** — وأكثرُ منه يبقى فرقُه في المحفظة (§٧٣-هـ/٧)
-        if amount < price.payable:
+        elif amount < price.payable:
             raise InvalidInput(
                 f"المبلغُ أقلُّ من ثمن الاشتراك ({amount_text(price.payable, plan.currency)})", field="amount"
             )
@@ -362,8 +417,12 @@ async def approve(
     request: PaymentRequest,
     actor: User | None,
     credited: Decimal | None = None,
+    test_money: bool = False,
 ) -> PaymentRequest:
     """**اعتمادُ الموظّف الماليّ — أو الوسيطِ الآليّ** (`actor=None`) → قيدُ شحنٍ في المعاملة نفسِها.
+
+    **و`test_money`** (§٧٤-ط/٥): الوسيطُ في وضع التجربة — **يُقيَّد لحساب تجربةٍ وحدَه** ومرجعُه موسومٌ «رصيد تجريبي»؛ وحسابٌ حقيقيٌّ
+    لا يُقيَّد له مالٌ لا وجودَ له، **وحسابُ التجربة لا يُقيَّد له مالٌ حقيقيّ** كما كان.
 
     **والمبلغُ مبلغُ الموظّف** (قرارُ المالك ٢٠٢٦-٠٨-٢٩): ما قرأه في كشف الحساب؛ و`None` «بمبلغه كما هو». **ودعوى صاحبِه تبقى في
     `amount`** فيرى من راجع بعد شهرٍ ما قيل وما دخل.
@@ -375,9 +434,12 @@ async def approve(
     owner = await session.get(User, request.user_id)
     if owner is None:  # pragma: no cover — مفتاحٌ أجنبيٌّ يمنعه
         raise NotFound("صاحبُ الدفعة غيرُ موجود")
-    test_accounts.require_real_money(
-        owner, "لا يُعتمد دفعٌ لحساب تجربة — أعطه رصيداً بـ«تصحيحِ تجربة» من المحفظة"
-    )
+    if test_money and actor is None:
+        require_test_account(owner)
+    else:
+        test_accounts.require_real_money(
+            owner, "لا يُعتمد دفعٌ لحساب تجربة — أعطه رصيداً بـ«تصحيحِ تجربة» من المحفظة"
+        )
 
     amount = as_money(credited) if credited is not None else request.amount
     if amount <= 0:
@@ -397,7 +459,7 @@ async def approve(
         owner_type=request.owner_type,
         tx_type=WalletTransactionType.TOPUP,
         amount=amount,
-        reference=f"{provider.name} {request.reference or ''}".strip()[:120],
+        reference=((f"{TEST_MONEY_MARK} — " if test_money else "") + f"{provider.name} {request.reference or ''}".strip())[:120],
         created_by=actor.id if actor is not None else None,
         # **الطلبُ نفسُه مفتاحُ عدم التكرار** — حارسٌ ثانٍ لا الأوّل
         idempotency_key=f"payment_request:{request.id}",
@@ -445,6 +507,7 @@ async def approve(
             "transaction_id": str(entry.id),
             "subscription_id": str(request.subscription_id) if request.subscription_id else None,
             "via": "gateway" if actor is None else "staff",
+            "test_money": test_money,
         },
     )
     return request
@@ -555,7 +618,7 @@ async def start_checkout(
     owner: User,
     provider_id: uuid.UUID,
     purpose: PaymentRequestPurpose,
-    amount: Decimal,
+    amount: Decimal | None,
     plan_id: uuid.UUID | None,
     declared: WalletOwnerType | None,
     opened_from: str,
@@ -567,12 +630,17 @@ async def start_checkout(
     """
     from app.services import payment_gateways
 
+    # **العقدُ أوّلاً — فوضعُه يقرّر من يفتح الصفحة** (§٧٤-ط/٥): وضعُ التجربة لحسابات التجربة وحدَها، والحيُّ لغيرها
+    await require_enabled(session, owner.country_code)
+    chosen = await available_provider(session, provider_id, owner.country_code)
+    if chosen.integration is None:
+        raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")
+    gateway = await payment_gateways.gateway_for(session, chosen.integration, owner.country_code)
     prepared = await _prepare(
         session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
-        declared=declared, gateway=True,
+        declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),
     )
     provider = prepared.provider
-    gateway = await payment_gateways.gateway_for(session, provider.integration or "", owner.country_code)
     request = PaymentRequest(
         user_id=owner.id,
         owner_type=prepared.owner_type,
@@ -604,32 +672,118 @@ async def start_checkout(
 
 
 async def refresh(session: AsyncSession, *, request_id: uuid.UUID) -> PaymentRequest:
-    """**يسأل الوسيطَ عن طلبٍ معلَّق ويطبّق جوابَه** — حين تأخّر الإشعار أو ضاع."""
-    row, _ = await settle_from_gateway(session, request_id=request_id)
+    """**يسأل الوسيطَ عن طلبٍ معلَّق ويطبّق جوابَه** — حين تأخّر الإشعار أو ضاع. **ولا يقيِّد «دُفع» عند وسيطٍ يوقّع إشعارَه**
+    (Chargily، §٧٤-ط/٥): العودةُ تسأل، والإشعارُ الموقَّعُ وحدَه يشحن — فيبقى الطلبُ «معلَّقاً» حتى يصل."""
+    row, _ = await settle_from_gateway(session, request_id=request_id, signed=False)
     return row
 
 
-async def settle_from_gateway(session: AsyncSession, *, request_id: uuid.UUID) -> tuple[PaymentRequest, bool]:
+#: ما يُحسم بعد أن حُسم الطلب: **دفعٌ وصل بعد إلغاءٍ أو فشل** — المالُ دخل، فيُقيَّد ولا يضيع (§٧٤-ي/٥)
+_LATE_STATUSES = frozenset({PaymentRequestStatus.CANCELLED, PaymentRequestStatus.REJECTED})
+
+
+async def settle_from_gateway(
+    session: AsyncSession, *, request_id: uuid.UUID, signed: bool = False
+) -> tuple[PaymentRequest, bool]:
     """**السؤالُ قبل القفل** (لا قفلَ عبر نداء شبكة)، والتطبيقُ بعده بالباب نفسِه الذي يطبّق به الإشعار — **و«أحَسمَه هذا النداء؟»
     يُحكم تحت القفل**: ثلاثةُ إشعاراتٍ متزامنةٍ يقرأ كلٌّ منها «معلَّق» قبل القفل، **وواحدٌ وحدَه يجده معلَّقاً بعده** (قِيس: عدُّ ما
-    قبل القفل قال «حُسم» ثلاثاً لقيدٍ واحد)."""
+    قبل القفل قال «حُسم» ثلاثاً لقيدٍ واحد).
+
+    **و`signed`**: النداءُ من إشعارٍ تحقّق توقيعُه (§٧٤-ط/٥). **عند وسيطٍ يوقّع إشعارَه (Chargily) لا يُقيَّد «دُفع» بغيره** — وما عداه
+    (فشلٌ · إلغاء) يُحسم من أيِّ سؤال. **ودفعٌ يصل بعد أن أُلغي الطلبُ أو فشل** يُقيَّد (المالُ دخل) بسطرٍ يقول ذلك.
+    """
     from app.services import payment_gateways
 
     row = await get_request(session, request_id)
     provider = row.provider
-    if row.status is not PaymentRequestStatus.PENDING or provider.integration is None or row.external_id is None:
+    if provider.integration is None or row.external_id is None:
+        return row, False
+    if row.status is not PaymentRequestStatus.PENDING and not (signed and row.status in _LATE_STATUSES):
         return row, False
     gateway = await payment_gateways.gateway_for(session, provider.integration, row.country_code)
     event = await gateway.check(row.external_id)
     if event is None:
         return row, False
+    may_credit = signed or not getattr(gateway, "confirms_by_webhook", False)
+    if event.outcome is PaymentRequestStatus.APPROVED and not may_credit:
+        return row, False  # **«دُفع» ينتظر إشعارَه الموقَّع** — لا يُقيَّد من عودة التطبيق
     locked = await get_request(session, request_id, for_update=True)
-    if locked.status is not PaymentRequestStatus.PENDING:
+    late = locked.status in _LATE_STATUSES and event.outcome is PaymentRequestStatus.APPROVED and may_credit
+    if locked.status is not PaymentRequestStatus.PENDING and not late:
         return locked, False
+    if late:
+        _reopen_for_late_payment(locked)
     settled = await apply_gateway_outcome(
-        session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason
+        session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+        test_money=bool(getattr(gateway, "test_mode", False)),
     )
     return settled, settled.status is not PaymentRequestStatus.PENDING
+
+
+def _reopen_for_late_payment(request: PaymentRequest) -> None:
+    """**دفعٌ وصل بعد أن حُسم الطلب** (أُلغي بمهلته أو بصاحبه، أو فشل ثمّ دُفع) — يُعاد معلَّقاً ليُعتمد بالباب نفسِه، **وما كان
+    يُكتب في `outcome_note`** فيقرأ من راجعه لمَ اعتُمد طلبٌ كان ملغًى."""
+    was = request.cancel_reason or request.rejection_reason or request.status.value
+    request.outcome_note = f"وصل الدفعُ بعد أن حُسم الطلب («{was}») — قُيِّد بإشعار الوسيط"[:500]
+    request.status = PaymentRequestStatus.PENDING
+
+
+async def expire_stale(session: AsyncSession, *, now: datetime | None = None) -> int:
+    """**صفحاتٌ لم تُدفع في مهلتها تُلغى بسببها** (§٧٤-ي/٥) — بعد سؤال الوسيط، **قبل القفل** ثمّ تحت القفل.
+
+    Chargily لا حالَ «انتهى» عنده (حالاتُه في وثائقه: معلَّق · قيد المعالجة · مدفوع · فاشل · ملغى)، **فالمهلةُ مهلتُنا**
+    (`CHECKOUT_TTL_HOURS`). **وما قال «دُفع» لا يُلغى** — ينتظر إشعارَه؛ **وما يصل بعد الإلغاء يُقيَّد** (`settle_from_gateway`).
+    **ولكلِّ طلبٍ معاملتُه**: يُودَع بعد كلِّ واحد، فوسيطٌ بطيءٌ لا يُبقي أقفالاً.
+    """
+    from datetime import timedelta
+
+    from app.services import payment_gateways
+
+    moment = now or _now()
+    stale = (
+        await session.scalars(
+            select(PaymentRequest.id)
+            .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
+            .where(
+                PaymentRequest.status == PaymentRequestStatus.PENDING,
+                PaymentRequest.external_id.is_not(None),
+                PayMethod.integration.is_not(None),
+                PaymentRequest.created_at < moment - timedelta(hours=CHECKOUT_TTL_HOURS),
+            )
+            .order_by(PaymentRequest.created_at)
+            .limit(200)
+        )
+    ).all()
+    expired = 0
+    for request_id in stale:
+        row = await get_request(session, request_id)
+        try:
+            gateway = await payment_gateways.gateway_for(session, row.provider.integration or "", row.country_code)
+            event = await gateway.check(row.external_id or "")
+        except (payment_gateways.GatewayUnavailable, payment_gateways.GatewayError):
+            continue  # **لا يُلغى ما لم يُسأل عنه** — يُعاد في الدورة التالية
+        if event is not None and event.outcome is PaymentRequestStatus.APPROVED:
+            continue
+        locked = await get_request(session, request_id, for_update=True)
+        if locked.status is not PaymentRequestStatus.PENDING:
+            await session.commit()
+            continue
+        if event is not None:
+            await apply_gateway_outcome(
+                session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+                test_money=bool(getattr(gateway, "test_mode", False)),
+            )
+        else:
+            locked.status = PaymentRequestStatus.CANCELLED
+            locked.cancel_reason = EXPIRED_REASON
+            locked.cancelled_at = moment
+            await audit.record(
+                session, actor=None, action=AuditAction.UPDATE, entity_type="payment_request", entity_id=locked.id,
+                details={"action": "expire", "reason": EXPIRED_REASON},
+            )
+        await session.commit()
+        expired += 1
+    return expired
 
 
 # ------------------------------------------------------------------ الوسيطُ الآليّ (الـwebhook الموحّد)
@@ -668,6 +822,7 @@ async def apply_gateway_outcome(
     outcome: PaymentRequestStatus,
     amount: Decimal | None,
     reason: str | None,
+    test_money: bool = False,
 ) -> PaymentRequest:
     """**ما قاله الوسيطُ يُطبَّق بالأبواب نفسِها التي يعتمد بها الموظّف** (§٧٣-هـ/١٠) — فلا مسارَ ثانياً للمال.
 
@@ -687,7 +842,7 @@ async def apply_gateway_outcome(
                     f"({amount_text(request.amount, request.currency)})"
                 ),
             )
-        return await approve(session, request=request, actor=None, credited=request.amount)
+        return await approve(session, request=request, actor=None, credited=request.amount, test_money=test_money)
     if outcome is PaymentRequestStatus.REJECTED:
         return await reject(session, request=request, actor=None, reason=reason or "رفضه الوسيط")
     if outcome is PaymentRequestStatus.CANCELLED:

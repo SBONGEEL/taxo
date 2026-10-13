@@ -1317,5 +1317,7 @@
  "حسابُ تجربة — تصل كلَّ سوقٍ ولو كان مغلقاً، ورصيدُه «رصيد تجريبي» لا يغادر المنصّة": "Compte de test — accès à tous les marchés, même fermés ; son « solde de test » ne quitte jamais la plateforme",
  "لكلِّ سوقٍ حسابُ تجربةٍ بمحفظته وعملته — والانتقالُ يُسجَّل.": "Chaque marché a son compte de test, avec son portefeuille et sa devise — chaque changement est enregistré.",
  "مغلقة للعموم": "fermé au public",
- "تعذّر الانتقال": "Changement impossible"
+ "تعذّر الانتقال": "Changement impossible",
+ "اختر مبلغ الشحن": "Choisissez le montant de la recharge",
+ "وضعُ التجربة — مالٌ تجريبيٌّ لا يغادر المنصّة، ولا يُؤخذ من بطاقتك شيء.": "Mode test — argent fictif qui ne quitte pas la plateforme ; rien n’est débité de votre carte."
 }

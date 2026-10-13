@@ -276,3 +276,26 @@ class FinanceTransactionsOut(BaseModel):
             offset=offset,
             rows=[FinanceTransactionRowOut.of(row) for row in page.rows],
         )
+
+
+class FinanceGatewayOut(BaseModel):
+    """**وسيطُ بطاقاتٍ في السوق** (§٧٤-ي/٧): ما دخل عبره من الدفتر، **وما يقول إنه عنده لـTAXO الآن** — لا يُجمعان."""
+
+    integration: str
+    label: str
+    currency: Currency
+    #: **عقدٌ بوضع التجربة** — رصيدُه رصيدُ تجربةٍ لا مال
+    test_mode: bool
+    received_amount: Decimal
+    received_count: int
+    balance: Decimal | None
+    ready_amount: Decimal | None
+    on_hold_amount: Decimal | None
+    read_at: datetime | None
+    note: str | None
+
+
+class FinanceGatewaysOut(BaseModel):
+    country_code: CountryCode
+    currency: Currency
+    gateways: list[FinanceGatewayOut]

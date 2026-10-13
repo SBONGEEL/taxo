@@ -70,3 +70,18 @@ def sweep_cliq_confirmations() -> dict[str, int]:
     expired = run_async(_sweep())
     logger.info("كنس مهل كليك: %s دفعة صارت نزاعاً", expired)
     return {"expired": expired}
+
+
+async def _expire_checkouts() -> int:
+    from app.services import payment_requests
+
+    async with SessionLocal() as session:
+        return await payment_requests.expire_stale(session)
+
+
+@celery_app.task(name="app.tasks.payments.expire_gateway_checkouts")
+def expire_gateway_checkouts() -> dict[str, int]:
+    """**صفحاتُ الوسيط التي لم تُدفع في مهلتها تُلغى بسببها** (SPEC §٧٤-ي/٥) — بعد سؤال الوسيط، وما قال «دُفع» لا يُمسّ."""
+    expired = run_async(_expire_checkouts())
+    logger.info("كنس صفحات الوسيط: %s طلباً حُسم بمهلته أو بجواب الوسيط", expired)
+    return {"expired": expired}

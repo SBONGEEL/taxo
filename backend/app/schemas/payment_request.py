@@ -41,11 +41,15 @@ class PaymentMethodOut(BaseModel):
     requires_receipt: bool
     #: **وسيطٌ آليّ** (المرحلة ٣) — يُدفع في صفحته ويُضاف فورَ تأكيده، لا طلبٌ يُراجَع
     gateway: bool
+    #: **عقدُه في وضع التجربة** (§٧٤-ط/٥) — لا يراه إلا حسابُ تجربة، ومالُه «رصيد تجريبي» لا يغادر المنصّة
+    test_mode: bool = False
 
 
 class PaymentMethodsOut(BaseModel):
     currency: Currency
     methods: list[PaymentMethodOut]
+    #: **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — وفارغةٌ «لا خيارات»: يُكتب المبلغ كما كان
+    topup_choices: list[Decimal] = Field(default_factory=list)
 
 
 class MyPaymentRequestOut(BaseModel):
@@ -74,7 +78,8 @@ class PaymentCheckoutIn(BaseModel):
 
     provider_id: uuid.UUID
     purpose: PaymentRequestPurpose
-    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+    #: **الشحنُ وحدَه يرسله** (وخيارٌ من خيارات السوق إن ضبطها) — **والاشتراكُ ثمنُه من الخادم** ولا يُقرأ ما يُرسل هنا (§٧٤-ط/٥)
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=3)
     plan_id: uuid.UUID | None = None
     wallet: WalletOwnerType | None = None
 

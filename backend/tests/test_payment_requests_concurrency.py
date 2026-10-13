@@ -152,3 +152,50 @@ async def test_the_same_transfer_submitted_twice_at_once_is_accepted_once(
     )
     assert Counter(r.status_code for r in responses) == Counter({201: 1, 409: 1})
     assert {r.json()["code"] for r in responses if r.status_code == 409} == {"payment_already_submitted"}
+
+
+async def test_late_payments_delivered_at_once_reopen_and_credit_once(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**دفعٌ وصل بعد أن انتهت مهلةُ الصفحة** (SPEC §٧٤-ي/٥) — ثلاثةُ إشعاراتٍ موقَّعةٍ معاً على طلبٍ ملغًى: **يُعاد معلَّقاً ويُعتمد
+    مرّةً واحدة**. كلُّها تقرأ «ملغًى» قبل القفل، **وواحدٌ وحدَه يجده ملغًى بعده** — والباقيان يجدانه معتمداً فلا يفتحانه ثانية."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import update
+
+    from app.services import payment_requests
+
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
+    algerian = await rider_session(client, ALGERIAN_RIDER)
+    opened = await client.post(
+        "/payment-requests/checkout",
+        json={"provider_id": str(method_id), "purpose": "wallet_topup", "amount": "3000"},
+        headers=algerian["headers"],
+    )
+    request_id = opened.json()["request"]["id"]
+    async with session_factory() as session:
+        await session.execute(
+            update(PaymentRequest)
+            .where(PaymentRequest.id == uuid.UUID(request_id))
+            .values(created_at=datetime.now(UTC) - timedelta(hours=payment_requests.CHECKOUT_TTL_HOURS + 1))
+        )
+        await session.commit()
+    async with session_factory() as session:
+        assert await payment_requests.expire_stale(session) == 1
+
+    chargily.status["chk_0001"] = "paid"
+    body, headers = ChargilyFake.signed("chk_0001")
+    responses = await asyncio.wait_for(
+        asyncio.gather(
+            *(client.post("/payment-requests/webhook/chargily", content=body, headers=headers) for _ in range(3))
+        ),
+        timeout=30,
+    )
+    assert [r.status_code for r in responses] == [200, 200, 200]
+    assert sum(r.json()["applied"] for r in responses) == 1
+    assert await _entries(session_factory, request_id) == 1
+    async with session_factory() as session:
+        row = await session.get(PaymentRequest, uuid.UUID(request_id))
+        assert row.status.value == "approved"

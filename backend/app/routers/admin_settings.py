@@ -69,7 +69,8 @@ from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
-from app.services import admin_search, audit, money_guards, otp_limits, settings_service, trip_chat
+from app.services import admin_search, audit, money_guards, otp_limits, rounding, settings_service, trip_chat
+from app.services.pricing import as_money
 from app.services.providers.credentials import provider_is_active
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
@@ -479,7 +480,18 @@ async def update_wallet_settings(
     setting = await settings_service.get_or_create_wallet_settings(
         session, country_code
     )
-    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+    updates = payload.model_dump(exclude_unset=True)
+    if updates.get("topup_choices") is not None:
+        # **كلُّ خيارٍ مبلغٌ يُدفع كما هو** (§٧٤-ط/٥): موجبٌ بخانات عملته ومضاعفٌ لوحدة التقريب — **وبلا تكرار، مرتَّباً**
+        choices = sorted({as_money(value) for value in updates["topup_choices"]})
+        for value in choices:
+            if value <= 0:
+                raise InvalidInput("كلُّ خيارٍ مبلغٌ أكبرُ من صفر", field="topup_choices")
+            await rounding.require_multiple_in(session, country_code, value, field="topup_choices")
+        updates["topup_choices"] = choices
+    elif "topup_choices" in updates:
+        updates["topup_choices"] = []
+    changed = _apply_updates(setting, updates)
 
     await audit.record(
         session,

@@ -22,7 +22,7 @@ import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
-import { AmountCardT2, BannerT2, BusyLabel, HeadT2, UnitNoteT2, WaitT2 } from "./MoneyT2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2, WaitT2 } from "./MoneyT2";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ نوع — **الكاشُ يدٌ تسلّم، والتحويلُ بنك، ورقمُ الهاتف هاتف** */
@@ -41,6 +41,7 @@ export function PayRequestT2Screen() {
   const handoff = (useLocation().state ?? null) as { amount?: string; methodId?: string } | null;
 
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  const [choices, setChoices] = useState<string[]>([]);
   const [methodId, setMethodId] = useState(handoff?.methodId ?? "");
   const [amount, setAmount] = useState(handoff?.amount ?? "");
   const [reference, setReference] = useState("");
@@ -61,6 +62,7 @@ export function PayRequestT2Screen() {
       .then((body) => {
         // **بطاقةُ TAXO تُدخل برمزها في صفحتها** (`/wallet/card`) — لا طلبَ يُراجَع
         setMethods(body.methods.filter((row) => row.kind !== "purchase_code"));
+        setChoices(body.topup_choices ?? []);
         setMethodId((current) => current || body.methods.find((row) => row.kind !== "purchase_code")?.id || "");
       })
       .catch((caught: unknown) => {
@@ -70,6 +72,8 @@ export function PayRequestT2Screen() {
   }, []);
 
   const method = methods?.find((row) => row.id === methodId) ?? null;
+  // **الشحنُ عند الوسيط خياراتٌ ثابتةٌ إن ضبطها السوق** (SPEC §٧٤-ط/٥) — فلا يُكتب مبلغ، ويُختار واحدٌ منها؛ والخادمُ يردّ غيرَها
+  const fixed = method?.gateway === true && choices.length > 0;
 
   // **صورةُ الرمز بجلسة صاحبها** — `Blob` يصير رابطاً محلّيّاً ويُحرَّر حين تتبدّل الطريقة
   useEffect(() => {
@@ -186,6 +190,7 @@ export function PayRequestT2Screen() {
                 onClick={() => {
                   setMethodId(row.id);
                   setReceipt(null);
+                  if (row.gateway && choices.length > 0 && !choices.includes(amount)) setAmount("");
                 }}
                 className={row.id === methodId ? "t2-m-chan on" : "t2-m-chan"}
               >
@@ -243,8 +248,27 @@ export function PayRequestT2Screen() {
           ) : null}
 
           <div className="t2-m-gap-lg">
-            <AmountCardT2 id="pay-request-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency} />
-            <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
+            <AmountCardT2
+              id="pay-request-amount"
+              label={fixed ? tr("اختر مبلغ الشحن") : tr("المبلغ")}
+              value={amount}
+              onChange={setAmount}
+              currency={currency}
+              disabled={fixed}
+            >
+              {fixed ? (
+                <QuickAmountsT2
+                  amounts={choices}
+                  value={amount}
+                  onPick={setAmount}
+                  label={(choice) => formatMoney(choice, currency)}
+                />
+              ) : null}
+            </AmountCardT2>
+            {fixed ? null : <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />}
+            {method?.test_mode ? (
+              <BannerT2 tone="ok" message={tr("وضعُ التجربة — مالٌ تجريبيٌّ لا يغادر المنصّة، ولا يُؤخذ من بطاقتك شيء.")} />
+            ) : null}
           </div>
 
           {needsReceipt ? (

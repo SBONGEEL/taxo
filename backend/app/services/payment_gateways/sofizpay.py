@@ -34,10 +34,13 @@ BASE = "https://sofizpay.com"
 
 class SofizPayGateway:
     name = "sofizpay"
+    #: **إشعارُه بلا توقيعٍ موثَّق** — فالفحصُ المباشرُ يحسم كما بُني (§٧٣-هـ المرحلة ٣)
+    confirms_by_webhook = False
 
     def __init__(self, *, account: str, sandbox: bool) -> None:
         self.account = account
         self.sandbox = sandbox
+        self.test_mode = sandbox
 
     async def _get(self, path: str, params: dict[str, str]) -> dict[str, Any]:
         try:

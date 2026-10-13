@@ -1467,11 +1467,15 @@ export interface PayMethod {
   requires_receipt: boolean;
   /** **وسيطٌ آليّ** (المرحلة ٣) — يُدفع في صفحته ويُضاف فورَ تأكيده */
   gateway: boolean;
+  /** **عقدُه في وضع التجربة** (SPEC §٧٤-ط/٥) — لا يراه إلا حسابُ تجربة، ومالُه «رصيد تجريبي» */
+  test_mode?: boolean;
 }
 
 export interface PayMethods {
   currency: Currency;
   methods: PayMethod[];
+  /** **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — وفارغةٌ «لا خيارات»: يُكتب المبلغ كما كان */
+  topup_choices?: string[];
 }
 
 /** **دفعتي** بحالها وسببِ رفضها أو إلغائها أو ردّها كما كُتب. */

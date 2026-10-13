@@ -20,6 +20,8 @@ from app.core.deps import DbSession, FinanceSummaryReader
 from app.models.enums import AuditAction, CountryCode
 from app.models.user import User
 from app.schemas.finance_summary import (
+    FinanceGatewayOut,
+    FinanceGatewaysOut,
     FinanceSummaryOut,
     FinanceTransactionsOut,
     FinanceUsersOut,
@@ -27,7 +29,8 @@ from app.schemas.finance_summary import (
     FinanceWindowOut,
     groups_out,
 )
-from app.services import audit, finance_export
+from app.core.currency import currency_for_country
+from app.services import audit, finance_export, finance_gateways
 from app.services import finance_summary as fs
 
 router = APIRouter(prefix="/admin/finance/summary", tags=["admin"])
@@ -230,3 +233,31 @@ async def read_transactions(
     )
     await session.commit()
     return FinanceTransactionsOut.of(scope, page, limit=limit, offset=offset)
+
+
+@router.get("/gateways", response_model=FinanceGatewaysOut)
+async def read_gateways(
+    admin: FinanceSummaryReader, session: DbSession, country_code: CountryCode
+) -> FinanceGatewaysOut:
+    """**ما بقي لـTAXO عند وسيط البطاقات** (§٧٤-ي/٧) — ما دخل عبره، وما يقول الوسيطُ إنه عنده الآن بساعته ووضع عقده."""
+    rows = await finance_gateways.positions(session, country_code)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.READ,
+        entity_type=AUDIT_ENTITY,
+        details={"country_code": country_code.value, "view": "gateways"},
+    )
+    await session.commit()
+    return FinanceGatewaysOut(
+        country_code=country_code,
+        currency=currency_for_country(country_code),
+        gateways=[
+            FinanceGatewayOut(
+                integration=row.integration, label=row.label, currency=row.currency, test_mode=row.test_mode,
+                received_amount=row.received_amount, received_count=row.received_count, balance=row.balance,
+                ready_amount=row.ready_amount, on_hold_amount=row.on_hold_amount, read_at=row.read_at, note=row.note,
+            )
+            for row in rows
+        ],
+    )

@@ -437,3 +437,40 @@ async def test_0121_downgrade_keeps_test_twins_linked() -> None:
     finally:
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0122_sets_algeria_hold_and_round_trips() -> None:
+    """**`0122` يكتب افتراضَ الجزائر بأمر المالك** (§٧٤-ط/٦: «بعد مدّة» ثلاثةُ أيّام، وخياراتُ الشحن) **ولا يمسّ الأردن**؛
+    **ونزولُه يُسقط العمودين** فيعود السحبُ فوريّاً — مقيسٌ قبلها لا مقروء."""
+    config = alembic_config()
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0121")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM wallet_settings WHERE country_code::text IN ('DZ', 'JO')"))
+            await conn.execute(text(
+                "INSERT INTO wallet_settings (id, country_code, transfer_daily_limit, transfer_monthly_limit, "
+                "min_withdrawal_amount, withdrawal_reserve_amount, created_at, updated_at) VALUES "
+                "(gen_random_uuid(), 'DZ', 0, 0, 0, 0, now(), now()), (gen_random_uuid(), 'JO', 0, 0, 0, 0, now(), now())"
+            ))
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0122")
+        async with engine.begin() as conn:
+            rows = dict((await conn.execute(text(
+                "SELECT country_code::text, earnings_hold_days FROM wallet_settings WHERE country_code::text IN ('DZ', 'JO')"
+            ))).all())
+            choices = (await conn.execute(text(
+                "SELECT topup_choices::text FROM wallet_settings WHERE country_code::text = 'DZ'"
+            ))).scalar_one()
+        assert rows == {"DZ": 3, "JO": 0}
+        assert choices == "{500.000,1000.000,2000.000,5000.000}"
+        await engine.dispose()
+        await asyncio.to_thread(command.downgrade, config, "0121")
+        async with engine.begin() as conn:
+            columns = {c["name"] for c in await conn.run_sync(lambda sync: inspect(sync).get_columns("wallet_settings"))}
+        assert "earnings_hold_days" not in columns and "topup_choices" not in columns
+    finally:
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM wallet_settings WHERE country_code::text IN ('DZ', 'JO')"))
+        await engine.dispose()

@@ -92,7 +92,7 @@ from app.models.wallet import (
 )
 from app.models.wallet_freeze import WalletFreeze
 from app.models.wallet_setting import WalletSetting
-from app.services import stats, test_accounts
+from app.services import earnings_hold, stats, test_accounts
 from app.services.payments import REFUNDABLE_METHODS
 
 _MONEY = Numeric(12, 3)
@@ -354,13 +354,58 @@ async def _reserve(session: AsyncSession, country: CountryCode) -> Decimal:
     return money(value)
 
 
-def _positions(scope: Scope, reserve: Decimal) -> Select:
+async def _hold_days(session: AsyncSession, country: CountryCode) -> int:
+    """**مدّةُ «قيد التحويل» قراءةً** (§٧٤-ي) — بيتُها `earnings_hold.hold_days`، **ولا يُنشأ صفّ**."""
+    return await earnings_hold.hold_days(session, country)
+
+
+def _transit(scope: Scope, hold_days: int):
+    """**«قيد التحويل» لكلِّ كبتن** — بقاعدة `earnings_hold.in_transit` حرفاً، في SQL لكلِّ الكباتن معاً: لكلِّ رحلةٍ قُيِّد أجرُها
+    في محفظته منذ أقلَّ من المدّة، صافيها (الأجرُ وعمولتُه على الرحلة نفسِها)، مجموعاً. **ويُقصّ إلى الرصيد في `_positions`.**
+    وصفرُ الأيّام «فوري» ⇒ `None` (لا شيءَ قيد التحويل)."""
+    if hold_days <= 0:
+        return None
+    tx = WalletTransaction
+    earning = aliased(WalletTransaction)
+    cutoff = scope.now - timedelta(days=hold_days)
+    recent = (
+        select(earning.id)
+        .where(
+            earning.owner_id == tx.owner_id,
+            earning.owner_type == WalletOwnerType.DRIVER,
+            earning.type == WalletTransactionType.RIDE_EARNING,
+            earning.ride_id == tx.ride_id,
+            earning.created_at > cutoff,
+        )
+        .exists()
+    )
+    per_ride = (
+        select(tx.owner_id.label("user_id"), func.greatest(0, func.sum(tx.amount)).label("net"))
+        .where(
+            tx.owner_type == WalletOwnerType.DRIVER,
+            tx.type.in_(earnings_hold.NET_TYPES),
+            tx.ride_id.is_not(None),
+            recent,
+        )
+        .group_by(tx.owner_id, tx.ride_id)
+        .subquery("transit_rides")
+    )
+    return (
+        select(per_ride.c.user_id, func.sum(per_ride.c.net).label("transit"))
+        .group_by(per_ride.c.user_id)
+        .subquery("transit")
+    )
+
+
+def _positions(scope: Scope, reserve: Decimal, hold_days: int = 0) -> Select:
     """**رصيدُ كلِّ كبتنٍ مقسوماً قسمين** — بقاعدة `withdrawals.available_balance` حرفاً، **محسوبةً في SQL لكلِّ الكباتن معاً**.
 
     - **يُصرف الآن** = ما طلبه ولم يُصرف بعد (`pending`/`approved`) **ومعه ما يستطيع طلبَه الآن** (المتاحُ للسحب):
       `LEAST(الرصيد, GREATEST(المطلوب, الرصيد − المحتجَز − ما يحمله لغيره))`، ولا ينزل تحت الصفر.
     - **لم يحِن بعد** = الباقي: **المحتجَزُ** (`withdrawal_reserve_amount` — ويسقط عمّن أُلغي تفعيلُه كما يسقط هناك) **وما قبضه
       نقداً لكبتنٍ آخر** (رسومُ إلغاءٍ يحملها، `cancellation.carrier_dues_of`).
+    - **و«قيد التحويل»** (§٧٤-ي) جزءٌ من «لم يحِن»: صافي أجرةِ رحلاتٍ دُفعت عبر المنصّة لم تكمل مدّةَ السوق، مقصوصاً إلى الرصيد
+      (`_transit`)؛ ويُخرج وحدَه في عمود `in_transit` = ما هو منه داخلَ «لم يحِن».
     - **والمحفظةُ المجمَّدةُ لا يُصرف منها شيء** (`wallet_freezes` بمحفظة `driver`): بابُ السحب يردّها قبل أن يقرأ رصيدَها
       (`wallet.require_not_frozen`)، **فرصيدُها كلُّه «لم يحِن»** — ومعه ما طلبه قبل التجميد: التجميدُ وُضع ليوقف خروجَ المال.
 
@@ -393,10 +438,16 @@ def _positions(scope: Scope, reserve: Decimal) -> Select:
         .subquery("carried")
     )
     balance = balances.c.balance
+    transit = _transit(scope, hold_days)
+    in_transit = (
+        func.least(func.coalesce(transit.c.transit, 0), func.greatest(balance, 0))
+        if transit is not None
+        else literal(Decimal("0.000"), _MONEY)
+    )
     held_by_rule = case(
         (Driver.status == DriverStatus.DEACTIVATED, literal(Decimal("0.000"), _MONEY)),
         else_=literal(reserve, _MONEY),
-    ) + func.coalesce(carried.c.carried, 0)
+    ) + func.coalesce(carried.c.carried, 0) + in_transit
     frozen = select(WalletFreeze.user_id).where(WalletFreeze.owner_type == WalletOwnerType.DRIVER)
     payable = case(
         (balances.c.user_id.in_(frozen), literal(Decimal("0.000"), _MONEY)),
@@ -405,24 +456,33 @@ def _positions(scope: Scope, reserve: Decimal) -> Select:
             func.least(balance, func.greatest(func.coalesce(requested.c.requested, 0), balance - held_by_rule)),
         ),
     )
-    return (
+    query = (
         select(
             balances.c.user_id.label("user_id"),
             balance.label("balance"),
             payable.label("payable"),
+            # **ما هو «قيد التحويل» من «لم يحِن»** — لا يزيد عليه
+            func.greatest(0, func.least(in_transit, balance - payable)).label("in_transit"),
             (func.length(func.trim(func.coalesce(Driver.cliq_alias, ""))) > 0).label("cliq"),
         )
         .select_from(balances)
         .outerjoin(Driver, Driver.user_id == balances.c.user_id)
         .outerjoin(requested, requested.c.user_id == balances.c.user_id)
         .outerjoin(carried, carried.c.user_id == balances.c.user_id)
-        .subquery("positions")
     )
+    if transit is not None:
+        query = query.outerjoin(transit, transit.c.user_id == balances.c.user_id)
+    return query.subquery("positions")
 
 
-def _position_rows(scope: Scope, reserve: Decimal, *, part: str) -> Select:
-    positions = _positions(scope, reserve)
-    amount = positions.c.payable if part == "payable_now" else positions.c.balance - positions.c.payable
+def _position_rows(scope: Scope, reserve: Decimal, *, part: str, hold_days: int = 0) -> Select:
+    positions = _positions(scope, reserve, hold_days)
+    if part == "payable_now":
+        amount = positions.c.payable
+    elif part == "in_transit":
+        amount = positions.c.in_transit
+    else:
+        amount = positions.c.balance - positions.c.payable
     return (
         select(
             *_row(
@@ -949,6 +1009,8 @@ class Context:
 
     reserve: Decimal
     ceiling: Decimal | None
+    #: مدّةُ «قيد التحويل» بالأيّام (§٧٤-ي) — صفرٌ «فوري»
+    hold_days: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -1036,14 +1098,22 @@ _CATALOG: list[Metric] = [
         "لكلِّ كبتن: ما طلب سحبَه ولم يُصرف (`withdrawal_requests` معلَّقاً أو معتمَداً) ومعه ما يستطيع طلبَه الآن — "
         "الرصيدُ ناقصاً المحتجَز (`withdrawal_reserve_amount`) وما يحمله نقداً لكبتنٍ آخر، بقاعدة «المتاح للسحب» نفسِها. "
         "والمحفظةُ المجمَّدة (`wallet_freezes`) لا يُصرف منها شيء. والحدُّ الأدنى للسحب لا يُقرأ هنا.",
-        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="payable_now"),
+        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="payable_now", hold_days=ctx.hold_days),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_not_due", "captains_owed", "لم يحِن بعد",
         "باقي الرصيد: المحتجَزُ بإعداد السوق (ويسقط عمّن أُلغي تفعيلُه) ورسومُ إلغاءٍ قبضها نقداً لكبتنٍ آخر ولم يحوّلها، "
         "ورصيدُ المحفظة المجمَّدة كلُّه.",
-        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="not_due"),
+        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="not_due", hold_days=ctx.hold_days),
+        stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
+    ),
+    Metric(
+        "captain_in_transit", "captains_owed", "قيد التحويل",
+        "من «لم يحِن بعد»: أجرةُ رحلاتٍ دفعها الراكبُ عبر المنصّة (`ride_earning` ناقصاً عمولتَها على الرحلة نفسِها) لم تكمل مدّةَ السوق "
+        "(`wallet_settings.earnings_hold_days`) — في رصيد الكبتن ولا تُسحب بعد. وصفرُ الأيّام «فوري» فلا شيءَ هنا. "
+        "ومقصوصةٌ إلى الرصيد: ما خرج من المحفظة بعد الأجر خرج.",
+        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="in_transit", hold_days=ctx.hold_days),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     # ── ديونُ الكباتن — قائمٌ الآن
@@ -1314,7 +1384,11 @@ def not_applicable(metric: Metric, scope: Scope) -> str | None:
 
 
 async def _context(session: AsyncSession, scope: Scope) -> Context:
-    return Context(reserve=await _reserve(session, scope.country), ceiling=await _ceiling(session, scope.country))
+    return Context(
+        reserve=await _reserve(session, scope.country),
+        ceiling=await _ceiling(session, scope.country),
+        hold_days=await _hold_days(session, scope.country),
+    )
 
 
 def rows_of(metric: Metric, scope: Scope, context: Context) -> Select | CompoundSelect:
@@ -1681,20 +1755,33 @@ _RAW_DRIVER_SPLIT = text(
     "  ELSE COALESCE((SELECT ws.withdrawal_reserve_amount FROM wallet_settings ws WHERE ws.country_code::text = :country), 0)"
     "  END)"
     " + COALESCE((SELECT SUM(c.amount) FROM ride_cancellation_charges c"
-    "  WHERE c.carrier_driver_id = d.id AND c.status::text = 'pending'), 0) AS held"
+    "  WHERE c.carrier_driver_id = d.id AND c.status::text = 'pending'), 0) AS held,"
+    # **«قيد التحويل»** (§٧٤-ي): صافي كلِّ رحلةٍ قُيِّد أجرُها منذ أقلَّ من المدّة، مقصوصاً إلى الرصيد — و`:hold` كاذبٌ «فوري»
+    " LEAST(GREATEST(b.balance, 0), COALESCE((SELECT SUM(r.net) FROM (SELECT GREATEST(0, SUM(t.amount)) AS net"
+    "  FROM wallet_transactions t WHERE t.owner_id = b.user_id AND t.owner_type::text = 'driver'"
+    "  AND t.type::text IN ('ride_earning', 'commission') AND :hold AND EXISTS (SELECT 1 FROM wallet_transactions e"
+    "   WHERE e.owner_id = t.owner_id AND e.owner_type::text = 'driver' AND e.type::text = 'ride_earning'"
+    "   AND e.ride_id = t.ride_id AND e.created_at > :cutoff)"
+    "  GROUP BY t.ride_id) r), 0)) AS transit"
     " FROM balances b LEFT JOIN drivers d ON d.user_id = b.user_id"
-    ") SELECT"
-    " COALESCE(SUM(CASE WHEN frozen THEN 0"
-    "  ELSE GREATEST(0, LEAST(balance, GREATEST(requested, balance - held))) END), 0),"
-    " COALESCE(SUM(balance) FILTER (WHERE has_cliq), 0)"
+    "), split AS ("
+    " SELECT balance, has_cliq, transit, CASE WHEN frozen THEN 0"
+    "  ELSE GREATEST(0, LEAST(balance, GREATEST(requested, balance - held - transit))) END AS payable"
     " FROM positions"
+    ") SELECT"
+    " COALESCE(SUM(payable), 0),"
+    " COALESCE(SUM(balance) FILTER (WHERE has_cliq), 0),"
+    " COALESCE(SUM(GREATEST(0, LEAST(transit, balance - payable))), 0)"
+    " FROM split"
 )
 
 
 async def _raw_driver_split(session: AsyncSession, scope: Scope) -> dict[str, Decimal]:
     """`payable`: مجموعُ «يُصرف الآن» لكلِّ الكباتن، و`cliq`: أرصدةُ من في ملفّه حسابُ كليك — **لحسابات السوق الحقيقية وحدها**."""
-    payable, cliq = (await session.execute(_RAW_DRIVER_SPLIT, {"country": scope.country.value})).one()
-    return {"payable": money(payable), "cliq": money(cliq)}
+    days = await earnings_hold.hold_days(session, scope.country)
+    params = {"country": scope.country.value, "hold": days > 0, "cutoff": scope.now - timedelta(days=max(days, 0))}
+    payable, cliq, transit = (await session.execute(_RAW_DRIVER_SPLIT, params)).one()
+    return {"payable": money(payable), "cliq": money(cliq), "transit": money(transit)}
 
 
 def checks_for(
@@ -1729,6 +1816,8 @@ def checks_for(
         Check("driver_wallets_other", "أرصدةُ الكباتن: صرفٌ بغير كليك", total("captain_balances_other"), money(driver - cliq)),
         Check("driver_wallets_payable", "أرصدةُ الكباتن: يُصرف الآن", total("captain_payable_now"), payable),
         Check("driver_wallets_not_due", "أرصدةُ الكباتن: لم يحِن بعد", total("captain_not_due"), money(driver - payable)),
+        Check("driver_wallets_in_transit", "أرصدةُ الكباتن: قيد التحويل", total("captain_in_transit"),
+              split.get("transit", money(0))),
         Check("topups", "الشحن", total("topups"), ledger(t.TOPUP)),
         Check("topups_by_channel", "الشحن بقنواته", total("topups_cliq", "topups_card", "topups_cash"), ledger(t.TOPUP)),
         Check("commission", "العمولةُ المحصَّلة", total("commission_collected"), ledger(t.COMMISSION, -1)),

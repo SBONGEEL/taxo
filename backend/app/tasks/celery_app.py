@@ -39,6 +39,7 @@ CAMPAIGN_INTERVAL_SECONDS = 60
 STOP_WAIT_INTERVAL_SECONDS = 60.0
 VERIFICATION_CAMPAIGN_INTERVAL_SECONDS = 900
 CLIQ_SWEEP_INTERVAL_SECONDS = 300
+GATEWAY_CHECKOUT_SWEEP_SECONDS = 900
 
 # دورةُ مكافآت الإحالة (المرحلة 12-ح). عشرُ دقائق: الاستحقاقُ يقع بإكمال رحلةٍ
 # أو باعتماد حساب، وكلاهما لا ينتظره أحدٌ على شاشة — ومكافأةٌ تصل بعد عشر دقائق
@@ -131,6 +132,11 @@ celery_app.conf.update(
         "sweep-cliq-confirmations": {
             "task": "app.tasks.payments.sweep_cliq_confirmations",
             "schedule": CLIQ_SWEEP_INTERVAL_SECONDS,
+        },
+        # **صفحاتُ الوسيط بمهلة ٢٤ ساعة** (§٧٤-ي/٥) — فربعُ ساعةٍ سخيّ، ودورةٌ لا جديدَ فيها تسأل الوسيطَ عن لا شيء
+        "expire-gateway-checkouts": {
+            "task": "app.tasks.payments.expire_gateway_checkouts",
+            "schedule": GATEWAY_CHECKOUT_SWEEP_SECONDS,
         },
         # كل دقيقة: السقفُ يُقاس بالدقائق، ودورةٌ كل خمسٍ تجعل تنبيهاً عن
         # تجاوزٍ يصل بعد خمس دقائق من وقوعه — والراكب واقفٌ يقرأ عدّاده

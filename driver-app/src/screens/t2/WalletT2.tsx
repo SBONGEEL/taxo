@@ -265,7 +265,10 @@ export function WalletT2Screen() {
         <div className="t2-wal-cash">
           <div className="t2-wal-cash-top">
             <div className="t2-wal-cash-main">
-              <div className="t2-wal-cash-label">{tr("الرصيد القابل للسحب")}</div>
+              {/* **في سوقٍ «بعد مدّة»** (§٧٤-ي) يُقال بلفظ المالك «متاح للسحب» بجوار «قيد التحويل»؛ و«فوري» كما كان حرفاً */}
+              <div className="t2-wal-cash-label">
+                {(wallet.earnings_hold_days ?? 0) > 0 ? tr("متاح للسحب") : tr("الرصيد القابل للسحب")}
+              </div>
               <div className="t2-wal-cash-amount">
                 <span className="t2-wal-cash-num" dir="ltr">
                   {digits(wallet.available_for_withdrawal)}
@@ -292,6 +295,30 @@ export function WalletT2Screen() {
               </button>
             )}
           </div>
+
+          {/* **«قيد التحويل»** (SPEC §٧٤-ي): أجرةُ رحلاتٍ دُفعت من محفظة الراكب — **في رصيده الآن، وتُسحب حين تكمل المدّة**؛
+              ولكلِّ مبلغٍ ساعةُ إتاحته كما كتبتها الخلفية. ورحلاتُ النقد لا تدخل هنا */}
+          {(wallet.in_transit_releases ?? []).length > 0 ? (
+            <div className="t2-wal-transit">
+              <p className="t2-wal-note">
+                <span className="t2-icon" aria-hidden="true">
+                  hourglass_top
+                </span>
+                <span>
+                  {tr("قيد التحويل:")}{" "}{digits(wallet.in_transit ?? "0")} {currency}{" "}
+                  {tr("— أجرةُ رحلاتٍ دُفعت من المحفظة. تراها في رصيدك الآن، وتُسحب بعد {0} أيّام من كلِّ رحلة.", {
+                    0: digits(String(wallet.earnings_hold_days ?? 0)),
+                  })}
+                </span>
+              </p>
+              {(wallet.in_transit_releases ?? []).slice(0, 6).map((release) => (
+                <div className="t2-wal-line" key={release.available_at}>
+                  <span>{tr("قيد التحويل — يصبح متاحاً في {0}", { 0: formatWhen(release.available_at) })}</span>
+                  <span dir="ltr">{digits(release.amount)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* ما حُجز — **بنصّ الشاشة القائمة**: مبلغُ الطلب نفسُه حين يكون واحداً، ومعه الرصيدُ الكلّي */}
           {w.holds.length === 1 ? (
