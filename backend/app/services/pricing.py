@@ -62,6 +62,8 @@ class FareEstimate:
     # **رسومُ الكبتن داخل `fare`** (§٦٣-ج/٢) — والمرفقُ الذي جاءت منه. **وصفرٌ و`None` بلا رسم**
     captain_fees: Decimal = Decimal("0.000")
     facility_id: "uuid.UUID | None" = None
+    # **منطقةُ الانطلاق الوعرة** (SPEC §٧٤-أ/٥) — تُجمَّد على الرحلة، و`None` = سعرٌ موحَّد
+    pricing_zone_id: "uuid.UUID | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,6 +211,24 @@ async def estimate(
         route = await route_between(session, pickup, dropoff, country_code, stops=stops)
         fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
 
+    # **منطقةُ الانطلاق الوعرة** (SPEC §٧٤-أ/٥): **بعد الحدّ الأدنى وقبل رسوم الكبتن** — زيادةُ سعر رحلةٍ لا رسمٌ للكبتن، **وسطرٌ
+    # بذاته** («تسعيرة المناطق الوعرة») يراه الراكبُ قبل الطلب. **والتقريبُ بعده** (§٧٠: على ما يدفعه في النهاية)
+    from app.services import pricing_zones
+
+    effect = await pricing_zones.effect_for(
+        session,
+        country=CountryCode(country_code),
+        rule=rule,
+        pickup_lat=pickup.lat,
+        pickup_lng=pickup.lng,
+        road_fare=fare,
+        route=route if hourly is None else None,
+        stops_count=len(stops),
+    )
+    if effect is not None:
+        fare = effect.fare
+        lines = [*lines, FareLine("rugged", effect.amount)]
+
     # **رسمُ المطار يُحسب هنا وحدَه** (§٦٣-ج/٢) — بابُ التقدير هو بابُ الطلب، فما يُعرض هو ما يُطلب. **وبعد الحدّ الأدنى**:
     # الحدُّ حدُّ أجرة طريق، ورسمٌ يُبتلع فيه رسمٌ لا يصل صاحبَه
     from app.services import facilities
@@ -253,6 +273,7 @@ async def estimate(
         lines=tuple(lines),
         captain_fees=captain_fees,
         facility_id=facility.id if facility is not None and captain_fees > 0 else None,
+        pricing_zone_id=effect.zone_id if effect is not None else None,
     )
 
 

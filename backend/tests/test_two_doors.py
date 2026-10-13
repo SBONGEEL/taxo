@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — مناطقُ التسعير (SPEC §٧٤-أ/٥، 2026-10-13)
+    "PricingZonesOut": (
+        "بانٍ واحد: `admin_pricing_zones._out` في الأبواب الثلاثة (القائمةُ وتعديلُ المنطقة وجدولُها) — يعيد المناطقَ كلَّها بعد الكتابة. "
+        "**و`attribution` فارغٌ حال**: سوقٌ لا ملفَّ حدودٍ له في الشجرة (فلا مناطقَ ولا مصدرَ يُسند)"
+    ),
     # ✅ بانٍ واحد — سحبُ الكابتن الجزائريّ (SPEC §٧٣-هـ المرحلة ٤، 2026-10-11)
     "WithdrawalOut": (
         "بانٍ واحد: `WithdrawalOut.model_validate(request)` من صفِّ `withdrawal_requests` في الأبواب الخمسة (طلبُ الكبتن وقائمتُه، "

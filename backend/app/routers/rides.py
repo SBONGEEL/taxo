@@ -203,6 +203,7 @@ async def estimate_ride(
         # **كلُّ رسمٍ من سطره** لا من طرحٍ بين مجموعين — السطرُ هو المبلغُ نفسُه
         airport_fee=next((line.amount for line in quote.lines if line.kind == "airport_fee"), None),
         parcel_fee=next((line.amount for line in quote.lines if line.kind == "parcel_fee"), None),
+        rugged_fee=next((line.amount for line in quote.lines if line.kind == "rugged"), None),
         parcel_terms=list(parcels.TERMS) if payload.is_parcel else None,
         **(await _hourly_terms(session, rider.country_code)),
     )

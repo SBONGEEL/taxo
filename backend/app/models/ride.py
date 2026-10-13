@@ -431,6 +431,11 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("facilities.id"), nullable=True
     )
+    #: **منطقةُ الانطلاق الوعرةُ التي سُعِّرت بها الرحلة** (SPEC §٧٤-أ/٥) — تُجمَّد لحظةَ الطلب كالمرفق، **فإعادةُ الحساب عند انحراف الطريق
+    #: تسأل المنطقةَ نفسَها** لا التي يقع فيها الطرفُ الآن. و`None` = سعرٌ موحَّد
+    pricing_zone_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("pricing_zones.id"), nullable=True
+    )
     # ---------------------------------------------- الطرد (§٦٣-ج/٤)
     #: **نوعُ الرحلة** — `standard` لكلِّ ما سبق، و`parcel` للطرد. نصٌّ بقيدٍ لا `ENUM`: «بالساعة» يضيف قيمةً بتعديل القيد
     ride_type: Mapped[str] = mapped_column(

@@ -92,6 +92,8 @@ class RideEstimateOut(BaseModel):
     airport_fee: Decimal | None = None
     # **رسمُ الطرد للكبتن وشروطُه** (§٦٣-ج/٤) — `null` في غير تقدير طرد. **والشروطُ من الخلفية** فلا تكتبها واجهتان بلفظين
     parcel_fee: Decimal | None = None
+    #: **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥) — داخل السعر المعروض، ويُسمّى للراكب قبل الطلب. و`null` = سعرٌ موحَّد
+    rugged_fee: Decimal | None = None
     parcel_terms: list[str] | None = None
     # **بالساعة** (§٦٣-ج/٥) — سعرُ الساعة وكيلومتراتُها وأقصى الساعات، لتقول الشاشةُ «8.000 للساعة شاملةً 15 كم». و`null` حيث لا خدمة
     hourly_rate: Decimal | None = None

@@ -360,6 +360,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           {tr("يشمل رسمَ المطار")}{" "}{formatMoney(c.estimate.airport_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
         </p>
       ) : null}
+      {/* **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥) — **داخلَ السعر أعلاه** كرسم المطار: يُقال قبل الطلب كي يعرف الراكبُ لمَ زاد،
+          ولا يُجمع إليه شيء (§14) */}
+      {c.estimate?.rugged_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          {tr("يشمل تسعيرة المناطق الوعرة")}{" "}{formatMoney(c.estimate.rugged_fee, c.estimate.currency)}
+        </p>
+      ) : null}
       {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
       {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
         <p className="t2-sheet-fine">

@@ -6,7 +6,7 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { Markets, SignupDisplay } from "@/api/types";
+import type { Markets, PricingZones, SignupDisplay } from "@/api/types";
 import type {
   AdminPayMethod,
   AdminPayMethodInput,
@@ -2181,4 +2181,25 @@ export const grantBorderAllowance = (body: { phone: string; country_code: Countr
 
 export const revokeBorderAllowance = (allowanceId: string) =>
   api.post<Markets>(`/admin/markets/borders/allowances/${allowanceId}/revoke`);
+
+// ════════════════════════════════════════ «مناطق التسعير» (SPEC §٧٤-أ/٥)
+//
+// **القراءةُ للطاقم، والكتابةُ كالتسعيرة** (`settings.write`، وتجميدُ التسعير يجمّدها) — وكلُّ كتابةٍ تعيد المناطقَ كلَّها.
+
+export const listPricingZones = (country: CountryCode) => api.get<PricingZones>("/admin/pricing-zones", { query: { country_code: country } });
+
+/** **حدودُ المناطق للخريطة** — GeoJSON من القاعدة، وحالُ كلِّ منطقةٍ في خصائصها. */
+export const getPricingZoneMap = (country: CountryCode) =>
+  api.get<GeoJSON.FeatureCollection>("/admin/pricing-zones/map", { query: { country_code: country } });
+
+export const updatePricingZone = (
+  zoneId: string,
+  body: { rugged?: boolean; adjustment_mode?: "percent" | "table"; adjustment_percent?: string },
+) => api.put<PricingZones>(`/admin/pricing-zones/${zoneId}`, body);
+
+export const setZoneRule = (
+  zoneId: string,
+  category: string,
+  body: { base_fare: string; price_per_km: string; price_per_min: string; minimum_fare: string },
+) => api.put<PricingZones>(`/admin/pricing-zones/${zoneId}/rules/${category}`, body);
 

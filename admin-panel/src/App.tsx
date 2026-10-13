@@ -101,6 +101,10 @@ const IntercityScreen = lazy(() =>
 const ProvidersScreen = lazy(() =>
   import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
 );
+// **«مناطق التسعير»** (SPEC §٧٤-أ/٥) — حزمةٌ كسولةٌ بخريطتها
+const PricingZonesScreen = lazy(() =>
+  import("@/screens/PricingZones").then((m) => ({ default: m.PricingZonesScreen })),
+);
 // **«الدول» والحدود** (SPEC §٧٤-أ/٢–٣)
 const MarketsScreen = lazy(() =>
   import("@/screens/Markets").then((m) => ({ default: m.MarketsScreen })),
@@ -414,6 +418,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <OtpTemplatesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/pricing-zones"
+                    element={
+                      <Guarded>
+                        <PricingZonesScreen />
                       </Guarded>
                     }
                   />

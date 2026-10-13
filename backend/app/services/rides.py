@@ -60,7 +60,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import categories, markets, parcels, ride_for_other, test_accounts
+from app.services import categories, markets, parcels, pricing_zones, ride_for_other, test_accounts
 from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
@@ -608,6 +608,7 @@ async def request_ride(
         # **رسمُ المطار مجمَّداً** (§٦٣-ج/٢) — داخل `estimated_fare` وسطرُه في `fare_lines`، والمرفقُ للتوزيع والشارة
         captain_fees_at_ride=quote.captain_fees,
         facility_id=quote.facility_id,
+        pricing_zone_id=quote.pricing_zone_id,
     )
     # **سياسةُ التقريب للعرض مجمَّدةً** (SPEC §٧٠-ج/٤): العدّادُ الحيُّ يُبنى أيضاً في بثٍّ بلا جلسة فيقرؤها من الرحلة.
     # **والتقريبُ المحفوظُ لا يقرؤها**: يُحسب بإعداد لحظة الإنهاء (`rounding.apply_to_ride`). ومطفأً `NULL` — الرحلةُ كما كانت
@@ -1042,6 +1043,15 @@ async def _final_fare(
     if ride.ride_type == "hourly":
         rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
         fare, hourly_lines = hourly_service.final_fare(ride, rule, actual_km)
+        # **والمنطقةُ الوعرةُ بنسبتها على الساعات** (§٧٤-أ/٥) — المنطقةُ المجمَّدة لا التي يقع فيها الطرفُ الآن
+        if ride.pricing_zone_id is not None:
+            effect = await pricing_zones.effect_for(
+                session, country=ride.country_code, rule=rule, pickup_lat=0.0, pickup_lng=0.0,
+                road_fare=fare, zone_id=ride.pricing_zone_id,
+            )
+            if effect is not None:
+                fare = effect.fare
+                hourly_lines = [*hourly_lines, pricing.FareLine("rugged", effect.amount).as_json()]
         fees = [line for line in (ride.fare_lines or []) if line.get("kind") == "airport_fee"]
         ride.fare_lines = hourly_lines + fees
         return pricing.round_money(fare + ride.captain_fees_at_ride, ride.currency)
@@ -1058,6 +1068,16 @@ async def _final_fare(
             ride.stops_count,
         )
         base_lines = pricing.lines_json(recomputed)
+        # **والمنطقةُ الوعرةُ المجمَّدةُ تُعاد على الطريق الجديد** (§٧٤-أ/٥) — قبل رسوم الكبتن كما في التقدير
+        if ride.pricing_zone_id is not None:
+            effect = await pricing_zones.effect_for(
+                session, country=ride.country_code, rule=rule, pickup_lat=0.0, pickup_lng=0.0, road_fare=base,
+                route=Route(distance_km=actual_km, duration_min=ride.duration_min), stops_count=ride.stops_count,
+                zone_id=ride.pricing_zone_id,
+            )
+            if effect is not None:
+                base = effect.fare
+                base_lines += [pricing.FareLine("rugged", effect.amount).as_json()]
         # **ورسومُ الكبتن لا يمسّها انحرافُ الطريق** (§٦٣-ج/٢): مجمَّدةٌ لحظةَ الطلب، فتُضاف إلى أجرة الطريق المعادة بسطرها
         if ride.captain_fees_at_ride > 0:
             base = pricing.round_money(base + ride.captain_fees_at_ride, ride.currency)

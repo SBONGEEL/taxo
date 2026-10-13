@@ -46,6 +46,9 @@ function fareLineLabel(line: FareLine): string {
     // **وقد يكون سالباً** (قُرِّب للأدنى) — و`formatMoney` يرسم علامتَه كما وصلت، ولا يُحسب هنا شيء
     case "rounding":
       return tr("تقريب");
+    // **ولايةُ الانطلاق الوعرة** (SPEC §٧٤-أ/٥) — زيادتُها سطرٌ بذاته، كما رآه الراكبُ قبل الطلب
+    case "rugged":
+      return tr("تسعيرة المناطق الوعرة");
   }
 }
 

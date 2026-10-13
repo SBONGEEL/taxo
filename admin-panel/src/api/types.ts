@@ -2700,3 +2700,35 @@ export interface Markets {
   borders_enforced: boolean;
   allowances: BorderAllowanceRow[];
 }
+
+// ════════════════════════════════════════ «مناطق التسعير» (SPEC §٧٤-أ/٥)
+
+export interface ZoneRule {
+  vehicle_category: VehicleCategory;
+  base_fare: string;
+  price_per_km: string;
+  price_per_min: string;
+  minimum_fare: string;
+}
+
+export interface PricingZone {
+  id: string;
+  country_code: CountryCode;
+  code: string;
+  name_ar: string;
+  name_fr: string | null;
+  /** **ما ضُمَّ إليها** — الولاياتُ الجديدةُ التي تتبعها حتى يبدأ عملُها */
+  note: string | null;
+  rugged: boolean;
+  /** **نسبةٌ على سعر الرحلة، أو جدولُ أسعارٍ مستقلّ** */
+  adjustment_mode: "percent" | "table";
+  adjustment_percent: string;
+  rules: ZoneRule[];
+}
+
+export interface PricingZones {
+  zones: PricingZone[];
+  /** مصدرُ الحدود — يُعرض تحت الخريطة (ODbL يشترط الإسناد) */
+  attribution: string | null;
+}
+
