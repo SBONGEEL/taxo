@@ -242,3 +242,39 @@ async def test_a_checkout_chargily_says_paid_is_not_expired(
     async with session_factory() as session:
         assert await payment_requests.expire_stale(session) == 0
     assert (await _row(session_factory, request_id)).status.value == "pending"
+
+
+# ------------------------------------------------------------------ الخطّةُ الموقوفة لحساب التجربة وحدَه
+
+
+async def test_a_test_captain_buys_the_held_plan_through_chargily_and_a_real_one_cannot(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**خطّةُ الجزائر موقوفةٌ حتى يقرّ المالكُ سعرَها** (§٧٤-ز/٩) — **فحسابُ التجربة يشتريها** بوضع تجربة Chargily ويُفعَّل اشتراكُه،
+    **والكبتنُ الحقيقيُّ يجدها موقوفة** (٤٠٩) ولا يتغيّر سعرٌ ولا ظهور."""
+    from app.models.subscription import SubscriptionPlan
+
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily", test_mode=True)
+    plan_id = await ensure_plan(session_factory, country="DZ", name="خطّةُ الجزائر الموقوفة", price="6000")
+    async with session_factory() as session:
+        await session.execute(update(SubscriptionPlan).where(SubscriptionPlan.id == plan_id).values(is_active=False))
+        await session.commit()
+
+    captain = await _algerian_captain(client, session_factory)
+    real = await client.post("/subscriptions", json={"plan_id": str(plan_id), "idempotency_key": "held-real-0001"},
+                             headers=captain["headers"])
+    assert real.status_code == 409, real.text
+
+    await _mark_test(session_factory, captain["user_id"])
+    opened = await _checkout(client, captain["headers"], method_id, purpose="subscription", plan_id=str(plan_id))
+    assert opened.status_code == 201, opened.text
+    assert opened.json()["request"]["amount"] == "6000" and chargily.created[0]["amount"] == 6000
+    chargily.status["chk_0001"] = "paid"
+    assert (await _deliver(client, "chk_0001"))["applied"] == 1
+    row = await _row(session_factory, opened.json()["request"]["id"])
+    assert row.status.value == "approved" and row.subscription_id is not None and row.outcome_note is None
+    async with session_factory() as session:
+        plan = await session.get(SubscriptionPlan, plan_id)
+        assert plan.is_active is False and plan.price == Decimal("6000")

@@ -290,18 +290,21 @@ async def available_plans(
 
 
 async def get_plan(
-    session: AsyncSession, plan_id: uuid.UUID, country_code: CountryCode
+    session: AsyncSession, plan_id: uuid.UUID, country_code: CountryCode, *, held_ok: bool = False
 ) -> SubscriptionPlan:
     """خطةٌ يجوز شراؤها في هذه الدولة الآن.
 
     الدولة شرطٌ لا زينة: أسعار الخطط بعملة بلدها، وشراءُ كبتنٍ أردنيٍّ خطةً
     ليبية يعني خصماً بعملةٍ ودفتراً بأخرى.
+
+    **و`held_ok` لحساب التجربة وحدَه** (SPEC §٧٤-ي/٩): خطّةٌ موقوفةٌ لم يُقرّ المالكُ سعرَها (خطّةُ الجزائر) **يشتريها حسابُ تجربةٍ
+    بمال التجربة** فيُجرَّب طريقُ الاشتراك كاملاً — **ولا يراها كبتنٌ حقيقيٌّ ولا يشتريها**، ولا يتغيّر سعر.
     """
     plan = await session.get(SubscriptionPlan, plan_id)
     if plan is None or plan.country_code != country_code:
         # 404 لا 403: خطةُ بلدٍ آخر ليست معلومة يستحقها من يجرّب مُعرّفات
         raise NotFound("خطة الاشتراك غير موجودة")
-    if not plan.is_active:
+    if not plan.is_active and not held_ok:
         raise Conflict("هذه الخطة موقوفة — اختر خطة أخرى")
     return plan
 
@@ -549,7 +552,7 @@ async def purchase_with_wallet(
     if existing is not None:
         return existing
 
-    plan = await get_plan(session, plan_id, user.country_code)
+    plan = await get_plan(session, plan_id, user.country_code, held_ok=bool(user.is_test))
 
     # **العرضُ يُحلّ قبل الخصم من الرصيد لا بعده**: حسابٌ يقع بعد القيد يخصم
     # السعرَ كاملاً ويكتب صفّاً مخفَّضاً — مالٌ من عدم. و`for_update` يقفل صفَّ
