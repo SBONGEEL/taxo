@@ -104,7 +104,8 @@ export function usePhoneDraft(initial: string | null) {
   const [phone, setPhone] = useState(held?.national ?? "");
   const complete = dialCode !== null && looksComplete(phone, nationalLength);
   return {
-    countries: listed.map((entry) => entry.country_code),
+    // **المفتوحةُ وحدَها تُختار** (SPEC §٧٤-أ/٢) — `/config` ينشر المغلقةَ للدخول، والفكُّ أعلاه يقرأ الكلَّ لرقمٍ كُتب قبل
+    countries: listed.filter((entry) => entry.status === "open").map((entry) => entry.country_code),
     code,
     setCode,
     dialCode,

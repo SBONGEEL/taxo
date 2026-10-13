@@ -14,12 +14,12 @@ import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
 import { reopenWelcome } from "@/components/welcome/gate";
 import { biometryLabel } from "@/lib/biometric";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
-import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
+import { looksComplete, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
   AuthBlock,
-  AuthChoice,
   AuthOr,
   AuthPage,
   AuthPhone,
@@ -37,7 +37,10 @@ export function LoginScreen() {
   const location = useLocation();
 
   // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`)
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("login");
+  const { country } = auth;
+  // **مُختارُ الدولة في حقل الهاتف** (SPEC §٧٤-أ/٤) — في الدخول كلُّ دولة، فلا يُقفل أحدٌ خارج حسابه
+  const pick = useCountryPick(auth, "login");
   const { dialCode, nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -98,16 +101,6 @@ export function LoginScreen() {
 
       <form onSubmit={submit} className="t2-auth-form" noValidate>
         {/* **سوقان أو أكثر ⇒ يُختار السوق** — زرّان لا قائمة: سوقان اثنان، والقائمةُ تخفي أحدَهما خلف ضغطة */}
-        {countries.length > 1 ? (
-          <AuthBlock label={tr("السوق")}>
-            <AuthChoice
-              label={tr("السوق")}
-              value={country}
-              options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
-              onChange={setCountry}
-            />
-          </AuthBlock>
-        ) : null}
 
         <AuthBlock
           label={tr("رقم الهاتف")}
@@ -120,6 +113,7 @@ export function LoginScreen() {
         >
           <AuthPhone
             id="phone"
+            country={pick.trigger}
             name="phone"
             dial={dialCode}
             value={phone}
@@ -129,6 +123,7 @@ export function LoginScreen() {
             onBlur={() => setTouched(true)}
             onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
           />
+          {pick.sheet}
         </AuthBlock>
 
         <AuthBlock label={tr("كلمة المرور")} htmlFor="password" error={failure?.field === "password" ? failure.message : null}>

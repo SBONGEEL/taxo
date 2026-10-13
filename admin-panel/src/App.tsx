@@ -101,6 +101,10 @@ const IntercityScreen = lazy(() =>
 const ProvidersScreen = lazy(() =>
   import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
 );
+// **«الدول» والحدود** (SPEC §٧٤-أ/٢–٣)
+const MarketsScreen = lazy(() =>
+  import("@/screens/Markets").then((m) => ({ default: m.MarketsScreen })),
+);
 const ReleasesScreen = lazy(() =>
   import("@/screens/Releases").then((m) => ({ default: m.ReleasesScreen })),
 );
@@ -410,6 +414,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <OtpTemplatesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/markets"
+                    element={
+                      <Guarded>
+                        <MarketsScreen />
                       </Guarded>
                     }
                   />

@@ -30,7 +30,7 @@ from app.schemas.intercity import (
     TripIn,
     TripOut,
 )
-from app.services import audit, intercity
+from app.services import audit, intercity, markets
 
 from app.routers.intercity_common import booking_out, trip_out
 
@@ -64,6 +64,7 @@ async def open_trips(rider: RiderUser, session: DbSession) -> list[TripOut]:
 
 @router.post("/bookings", response_model=IntercityBookingOut, status_code=status.HTTP_201_CREATED)
 async def book(payload: BookingIn, rider: RiderUser, session: DbSession) -> IntercityBookingOut:
+    await markets.require_open_for(session, rider, door="intercity")  # **المغلقُ لا يُحجز فيه** (§٧٤-أ/٢)
     row = await intercity.book(session, rider=rider, trip_id=payload.trip_id, seats=payload.seats, whole_car=payload.whole_car)
     await session.commit()
     return await booking_out(session, row)

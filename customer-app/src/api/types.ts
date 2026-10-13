@@ -12,6 +12,10 @@
 import type { Crumb } from "@/lib/breadcrumbs";
 
 export type CountryCode = "JO" | "LY" | "DZ";
+/** **حالُ السوق** (SPEC §٧٤-أ/٢) — مرآةُ `MarketStatus` في الخلفية (`check:enums`). */
+export type MarketStatus = "open" | "closed";
+/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
+export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;
@@ -211,6 +215,14 @@ export interface Tip {
 
 export interface CountryConfig {
   country_code: CountryCode;
+  /** **اسمُ الدولة بلغة الطلب** (SPEC §٧٤-أ/٤) — منه يُسمّي مُختارُ الدولة كلَّ سوقٍ بلا نصٍّ مكتوبٍ في التطبيق. */
+  name: string;
+  /** **مفتوحةٌ أم مغلقة** — المغلقةُ تُنشر للدخول، ولا يُطلب فيها جديد. */
+  status: MarketStatus;
+  /** **ما يراه التسجيل** — يختاره المالكُ للمغلقة من «الدول». */
+  signup: SignupState;
+  /** **صندوقُ نطاق الخدمة** `[جنوب، شمال، غرب، شرق]` — يخمّن به المُختارُ من الموقع. */
+  area: number[];
   currency: Currency;
   /** **علامةُ العملة واسمُها وخاناتُها من الخلفية** (SPEC §٧٣-ج/٢) — «د.أ» · «دينار أردني» · `3`، و«د.ج» · `0`.
    *  **ولا تُكتب في الواجهة**: منها يُملأ سجلُّ العملات (`registerCurrencies`) فتقرؤه كلُّ صياغةٍ للمال. */
@@ -307,6 +319,8 @@ export interface AppConfig {
   };
   /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
   default_country_code: CountryCode;
+  /** **دولةُ الشبكة** (رأسُ Cloudflare) — أوّلُ تخمينٍ لمُختار الدولة؛ و`null` حين لا رأسَ أو لا سوقَ بها (§٧٤-أ/٤). */
+  network_country: CountryCode | null;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣).
    *
    * **ولا نسخةَ منها مكتوبةً هنا**: حدٌّ يُكتب في التطبيق يفترق عن حدِّ المخطط

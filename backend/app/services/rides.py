@@ -21,7 +21,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.currency import currency_for_country
-from app.core import service_area
 from app.core.exceptions import (
     AccountDeletionPending,
     CancelReasonNotApplicable,
@@ -61,7 +60,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import categories, parcels, ride_for_other, test_accounts
+from app.services import categories, markets, parcels, ride_for_other, test_accounts
 from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
@@ -474,10 +473,8 @@ async def request_ride(
     # **ومكانُه هنا لا في الراوتر** لعلّة السطور فوقه نفسِها: الحجزُ
     # المجدول ينشئ رحلاتِه من هذا الباب، وحارسٌ في الراوتر بابٌ يُنسى
     # في الباب الثاني.
-    service_area.require_inside_market(
-        rider.country_code,
-        [pickup, dropoff, *stops],
-    )
+    # **وبمفتاح الحدود وقائمة السماح** (SPEC §٧٤-أ/٣) — `markets.require_inside` يسأل `service_area` نفسَه حين تُفرض
+    await markets.require_inside(session, rider, [pickup, dropoff, *stops])
 
     preference = (
         rider.ride_gender_preference if gender_preference is None else gender_preference

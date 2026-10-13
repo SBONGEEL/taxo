@@ -308,6 +308,45 @@ class OutsideServiceArea(InvalidInput):
         )
 
 
+class MarketClosed(AppError):
+    """**سوقٌ مغلقٌ للعموم** (SPEC §٧٤-أ/٢): لا يُطلب فيه جديد — **والجاري يكتمل، والمحفظةُ لا تُمسّ، والدخولُ قائم**.
+
+    **و٤٠٣ لا ٤٢٢**: الطلبُ صحيحُ الشكل، والمانعُ قرارُ إطلاقٍ يملكه المالك — كمفتاح ميزةٍ مطفأ.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "market_closed"
+    message = "الخدمةُ غيرُ متاحةٍ في بلدك الآن"
+
+    def __init__(self, country_code: object | None = None) -> None:
+        name = _country_name(country_code)
+        super().__init__(
+            f"الخدمةُ غيرُ متاحةٍ في {name} الآن — رحلاتُك الجارية تكتمل ورصيدُك محفوظ."
+            if name
+            else self.message
+        )
+
+
+class SignupClosed(AppError):
+    """**التسجيلُ في دولةٍ مغلقة** (SPEC §٧٤-أ/٤) — يُردّ قبل الرمز وقبل الصفّ. **والدخولُ إليها قائم** فلا يُقفل أحدٌ خارج حسابه."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "signup_closed"
+    message = "التسجيلُ في هذه الدولة غيرُ متاحٍ بعد"
+
+    def __init__(self, country_code: object | None = None) -> None:
+        name = _country_name(country_code)
+        super().__init__(f"التسجيلُ في {name} غيرُ متاحٍ بعد — قريباً." if name else self.message)
+
+
+class MarketNotReady(AppError):
+    """**فحصُ الجاهزيّة سقط** (SPEC §٧٤-أ/٢) — يقول ما نقص في `missing`، **وللمالك أن يفتح رغم ذلك بسببٍ مكتوبٍ مدقَّق**."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "market_not_ready"
+    message = "السوقُ غيرُ جاهزٍ للفتح — أكمل ما ينقص، أو افتح رغم ذلك بسببٍ مكتوب"
+
+
 class ServiceAreaUndeclared(AppError):
     """سوقٌ بلا صندوقٍ مصرَّح — **يقف ولا يُقرأ سلامة**.
 

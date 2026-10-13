@@ -17,9 +17,9 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordResetChallenge } from "@/api/endpoints";
 import type { OtpChannel } from "@/api/types";
-import { MarketChoice } from "@/components/t2/MarketChoice";
 import { VerifyCode } from "@/components/t2/VerifyCode";
 import { forgetToken } from "@/lib/biometric";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError } from "@/lib/password";
 import { looksComplete, toE164, toNational } from "@/lib/phone";
@@ -46,7 +46,10 @@ export function ForgotPasswordScreen() {
   const { signIn } = useSession();
   // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
   // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("login");
+  const { country } = auth;
+  // **مُختارُ الدولة في حقل الهاتف** (SPEC §٧٤-أ/٤)
+  const pick = useCountryPick(auth, "login");
   const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [step, setStep] = useState<Step>("phone");
@@ -248,7 +251,6 @@ export function ForgotPasswordScreen() {
           </div>
         ) : (
           <form onSubmit={toVerification} className="t2-auth-form" noValidate>
-            <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
             <AuthBlock
               label={tr("رقم الهاتف")}
@@ -261,6 +263,7 @@ export function ForgotPasswordScreen() {
             >
               <AuthPhone
                 id="phone"
+                country={pick.trigger}
                 name="phone"
                 type="tel"
                 inputMode="numeric"
@@ -275,6 +278,7 @@ export function ForgotPasswordScreen() {
                   dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
                 }
               />
+              {pick.sheet}
             </AuthBlock>
 
             {banner}

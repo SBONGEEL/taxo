@@ -12,6 +12,10 @@
 import type { Crumb } from "@/lib/breadcrumbs";
 
 export type CountryCode = "JO" | "LY" | "DZ";
+/** **حالُ السوق** (SPEC §٧٤-أ/٢) — مرآةُ `MarketStatus` في الخلفية (`check:enums`). */
+export type MarketStatus = "open" | "closed";
+/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
+export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
 export type UserRole = "rider" | "driver" | "admin" | "support";
 
@@ -109,6 +113,14 @@ export interface SecurityPolicy {
 
 export interface CountryConfig {
   country_code: CountryCode;
+  /** **اسمُ الدولة بلغة الطلب** (SPEC §٧٤-أ/٤) — منه يُسمّي مُختارُ الدولة كلَّ سوقٍ بلا نصٍّ مكتوبٍ في التطبيق. */
+  name: string;
+  /** **مفتوحةٌ أم مغلقة** — المغلقةُ تُنشر للدخول، ولا يُطلب فيها جديد. */
+  status: MarketStatus;
+  /** **ما يراه التسجيل** — يختاره المالكُ للمغلقة من «الدول». */
+  signup: SignupState;
+  /** **صندوقُ نطاق الخدمة** `[جنوب، شمال، غرب، شرق]` — يخمّن به المُختارُ من الموقع. */
+  area: number[];
   currency: Currency;
   /** **علامةُ العملة واسمُها وخاناتُها من الخلفية** (SPEC §٧٣-ج/٢) — «د.أ» · «دينار أردني» · `3`، و«د.ج» · `0`.
    *  **ولا تُكتب في الواجهة**: منها يُملأ سجلُّ العملات (`registerCurrencies`) فتقرؤه كلُّ صياغةٍ للمال. */
@@ -170,6 +182,8 @@ export interface AppConfig {
   countries: CountryConfig[];
   providers: Record<string, Record<string, string | undefined>>;
   default_country_code: CountryCode;
+  /** **دولةُ الشبكة** (رأسُ Cloudflare) — أوّلُ تخمينٍ لمُختار الدولة؛ و`null` حين لا رأسَ أو لا سوقَ بها (§٧٤-أ/٤). */
+  network_country: CountryCode | null;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣) — لا نسخةَ منها هنا. */
   validation: Record<string, Record<string, FieldRule>>;
   /** **أنصافُ أقطار البحث** من `geo` في الخلفية (§٦٢-ب/٤٨) — ورقةُ الطلب تقول نطاقَها منها، **ولا رقمَ يُكتب هنا**. */
@@ -2648,4 +2662,41 @@ export interface TaxoCardLimits {
   max_wrong_per_account: number;
   max_wrong_per_ip: number;
   window_minutes: number;
+}
+
+// ════════════════════════════════════════ «الدول» والحدود (SPEC §٧٤-أ/٢–٣)
+
+/** **ظهورُ المغلقة في التسجيل** — مرآةُ `SignupDisplay` (`check:enums`): «قريباً» رماديّةٌ لا تُختار، و«مخفية» لا تُعرض. */
+export type SignupDisplay = "soon" | "hidden";
+
+export interface MarketRow {
+  country_code: CountryCode;
+  name: string;
+  status: MarketStatus;
+  signup_display: SignupDisplay;
+  /** **ما ينقص للفتح** — فارغةٌ = جاهزة، وتُحسب عند كلِّ قراءة */
+  readiness: string[];
+  /** رحلاتٌ جاريةٌ الآن — تكتمل إن أُغلق السوق */
+  active_rides: number;
+  currency: Currency;
+  currency_label: string;
+}
+
+export interface BorderAllowanceRow {
+  id: string;
+  user_id: string;
+  name: string | null;
+  phone: string | null;
+  role: UserRole;
+  country_code: CountryCode;
+  is_test: boolean;
+  reason: string;
+  granted_at: string;
+  granted_by_name: string | null;
+}
+
+export interface Markets {
+  countries: MarketRow[];
+  borders_enforced: boolean;
+  allowances: BorderAllowanceRow[];
 }

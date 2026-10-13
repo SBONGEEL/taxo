@@ -6,6 +6,7 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
+import type { Markets, SignupDisplay } from "@/api/types";
 import type {
   AdminPayMethod,
   AdminPayMethodInput,
@@ -2157,3 +2158,27 @@ export const getCardLimits = (country: CountryCode) =>
 
 export const saveCardLimits = (country: CountryCode, body: TaxoCardLimits) =>
   api.put<TaxoCardLimits>("/admin/taxo-cards/limits", { ...body, country_code: country });
+
+// ════════════════════════════════════════ «الدول» والحدود (SPEC §٧٤-أ/٢–٣)
+//
+// **القراءةُ للطاقم، والكتابةُ `markets.manage`** — «بصلاحية المالك»: لا يملكها أحدٌ افتراضاً، والخادمُ يردّ غيرَه. **وكلُّ بابٍ يعيد
+// الصفحةَ كلَّها** فلا تُحسب حالٌ في الشاشة بعد كتابة.
+
+export const getMarkets = () => api.get<Markets>("/admin/markets");
+
+/** **الفتحُ يمرّ بفحص الجاهزيّة** — يُردّ ٤٠٩ بما نقص (`missing`)، **والفتحُ رغم النقص `force` وسببٌ مكتوب**. والإغلاقُ بلا شرط. */
+export const setMarketStatus = (country: CountryCode, body: { open: boolean; force?: boolean; reason?: string }) =>
+  api.put<Markets>(`/admin/markets/${country}/status`, body);
+
+export const setSignupDisplay = (country: CountryCode, display: SignupDisplay) =>
+  api.put<Markets>(`/admin/markets/${country}/signup-display`, { display });
+
+/** **رفعُ الحدود يشترط سبباً مكتوباً** (٨ أحرف) — والإعادةُ بلا شرط. */
+export const setBorders = (body: { enforced: boolean; reason?: string }) => api.put<Markets>("/admin/markets/borders", body);
+
+export const grantBorderAllowance = (body: { phone: string; country_code: CountryCode; reason: string }) =>
+  api.post<Markets>("/admin/markets/borders/allowances", body);
+
+export const revokeBorderAllowance = (allowanceId: string) =>
+  api.post<Markets>(`/admin/markets/borders/allowances/${allowanceId}/revoke`);
+

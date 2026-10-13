@@ -15,7 +15,6 @@ from sqlalchemy import select
 
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
-from app.core import service_area
 from app.core.exceptions import Conflict, NotFound, PermissionDenied
 from app.models.driver import Driver
 from app.models.user import User
@@ -45,7 +44,7 @@ from app.schemas.ride import (
     HourlyPrepayIn,
 )
 from app.services import approach, avatar, cancellation, rider_photo
-from app.services import eta
+from app.services import eta, markets
 from app.services import (
     categories,
     dispatch,
@@ -138,10 +137,13 @@ async def estimate_ride(
     rides_service.reject_stop_at_dropoff(payload.stops, _coords(payload.dropoff))
     # **وفئةٌ لا تُطلب لا تُقدَّر** (SPEC §٦٧) — الحارسُ نفسُه الذي يمنع عند الطلب
     await categories.require_requestable(session, rider.country_code, payload.vehicle_category)
+    # **والسوقُ المغلقُ لا يُقدَّر فيه** (SPEC §٧٤-أ/٢) — حسابُ التجربة يمرّ، **ولا تدقيقَ هنا**: التقديرُ قراءةٌ خالصة
+    await markets.require_open_for(session, rider, door="estimate", record=False)
     # **ونفسُ حدِّ الطلب هنا** — فمن قُبل تقديرُه ورُدَّ طلبُه بنى على
-    # رقمٍ ثم رُدّ، وهو أسوأُ من ألّا يُمنع.
-    service_area.require_inside_market(
-        rider.country_code,
+    # رقمٍ ثم رُدّ، وهو أسوأُ من ألّا يُمنع. **وبمفتاحه** (`markets.require_inside`، §٧٤-أ/٣)
+    await markets.require_inside(
+        session,
+        rider,
         [
             _coords(payload.pickup),
             _coords(payload.dropoff),
@@ -230,6 +232,8 @@ async def request_ride(
     ترجع الرحلة بحالة `requested`؛ انتقالها إلى `searching` ثم إسنادها يصل
     الراكبَ عبر WebSocket، ويمكن استرجاعه في أي وقت من `GET /rides/me/active`.
     """
+    # **السوقُ المغلقُ لا يُطلب فيه جديد** (SPEC §٧٤-أ/٢) — هنا لا في الخدمة: الحجزُ الذي سبق الإغلاقَ يُنشئ رحلتَه من الخدمة ويُنفَّذ
+    await markets.require_open_for(session, rider, door="ride")
     ride = await rides_service.request_ride(
         session,
         rider=rider,

@@ -346,3 +346,63 @@ async def test_0117_downgrade_stops_while_an_ios_release_exists() -> None:
             await conn.execute(text("DELETE FROM app_releases"))
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0118_downgrade_keeps_the_owners_written_decisions_and_widens_no_one() -> None:
+    """**نزولُ `0118` يقف على قرارٍ مكتوب** (SPEC §٧٤): سماحُ الحدود صفٌّ كتبه المالك ولا يُمحى بنزول — **فيقف بنصِّه**؛ ثمّ يُزال
+    فيمرّ، **ومن كانت «الدولُ والحدود» صلاحيتَه الوحيدةَ يُكتب له `read.only`** (قاعدةُ `0103`) فلا يتّسع بالنزول."""
+    from app.core.security import hash_password
+    from app.models.admin_permission import AdminPermissionGrant
+    from app.models.enums import AdminPermission, CountryCode, UserRole
+    from app.models.user import User
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        owner = User(
+            phone="+962790000083", name="مالكُ الدول وحدَها", role=UserRole.ADMIN,
+            country_code=CountryCode.JO, password_hash=hash_password("StaffSecret123"),
+        )
+        session.add(owner)
+        await session.flush()
+        session.add(AdminPermissionGrant(user_id=owner.id, permission=AdminPermission.MARKETS_MANAGE))
+        await session.commit()
+        owner_id = owner.id
+    await engine.dispose()
+
+    config = alembic_config()
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO border_allowances (id, user_id, reason) VALUES (gen_random_uuid(), :user, 'حسابُ تجربة')"
+                ),
+                {"user": owner_id},
+            )
+        with pytest.raises(Exception) as raised:
+            await asyncio.to_thread(command.downgrade, config, "0117")
+        assert "«الدول»" in str(raised.value)
+
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM border_allowances"))
+        await asyncio.to_thread(command.downgrade, config, "0117")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            rows = (
+                await conn.execute(
+                    text("SELECT permission::text FROM admin_permissions WHERE user_id = :user"), {"user": owner_id}
+                )
+            ).scalars().all()
+            members = set(
+                (await conn.execute(text("SELECT unnest(enum_range(NULL::admin_permission))::text"))).scalars().all()
+            )
+            tables = set(
+                (await conn.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))).scalars().all()
+            )
+        assert rows == ["read.only"]
+        assert "markets.manage" not in members
+        assert not {"country_markets", "market_borders", "border_allowances"} & tables
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM admin_permissions"))
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()

@@ -252,6 +252,11 @@ async def upsert_feature_flag(
     `country_visible` لم تعودا واحدة. وكلُّ تبديلٍ يُسجَّل في التدقيق سبباً
     كان أو لا (`settings_service.set_flag`).
     """
+    # **حالُ السوق بابُها صفحةُ «الدول» وحدَها** (SPEC §٧٤-أ/٢): فتحٌ بفحص الجاهزيّة وبصلاحية المالك (`markets.manage`). **وبابٌ
+    # ثانٍ يكتب المفتاحَ نفسَه يتخطّى الاثنين** — فيُردّ هنا لا يُخفى في الشاشة وحدَها (§21: إخفاءُ الواجهة راحةٌ لا حماية)
+    if payload.feature_key == FeatureKey.COUNTRY_VISIBLE:
+        raise InvalidInput("فتحُ الدولة وإغلاقُها من صفحة «الدول» — بفحص الجاهزيّة وصلاحية المالك")
+
     if (
         payload.feature_key in settings_service.GUARDED_FLAGS
         and not payload.enabled

@@ -18,11 +18,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { registerAccount, startSignupChallenge } from "@/api/endpoints";
 import type { OtpChannel } from "@/api/types";
-import { MarketChoice } from "@/components/t2/MarketChoice";
 import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
 import { RegisterTop } from "@/components/t2/RegisterTop";
 import { VerifyCode } from "@/components/t2/VerifyCode";
 import { reopenWelcome } from "@/components/welcome/gate";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError, passwordsReady } from "@/lib/password";
 import { looksComplete, toE164, toNational } from "@/lib/phone";
@@ -60,7 +60,10 @@ export function RegisterScreen() {
 
   // **الاختيارُ محفوظٌ على الجهاز** (البند ١٠): نسخةٌ محليةٌ هنا تعني اختياراً
   // يُنسى بين التسجيل والدخول، فيعيده صاحبُ الرقم الليبيّ في كل شاشة
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("signup");
+  const { country } = auth;
+  // **مُختارُ الدولة في حقل الهاتف** (SPEC §٧٤-أ/٤)
+  const pick = useCountryPick(auth, "signup");
   const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [step, setStep] = useState<"details" | "verify">("details");
@@ -215,8 +218,6 @@ export function RegisterScreen() {
             />
           </AuthBlock>
 
-          <MarketChoice country={country} countries={countries} onChange={setCountry} />
-
           <AuthBlock
             label={tr("رقم الهاتف")}
             htmlFor="phone"
@@ -229,6 +230,7 @@ export function RegisterScreen() {
           >
             <AuthPhone
               id="phone"
+              country={pick.trigger}
               name="phone"
               type="tel"
               inputMode="numeric"
@@ -243,6 +245,7 @@ export function RegisterScreen() {
                 dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
               }
             />
+            {pick.sheet}
           </AuthBlock>
 
           {/* **القاعدةُ كما تنشرها الخلفية** (٨–١٢٨ وقائمةُ المنع تفحصها هي) — بنودُها من `/config` لا من نصٍّ هنا */}

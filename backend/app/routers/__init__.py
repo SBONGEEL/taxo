@@ -4,6 +4,7 @@ from app.routers import (
     admin_account,
     admin_campaigns,
     admin_countries,
+    admin_markets,
     admin_errors,
     admin_cancellations,
     admin_photo_reports,
@@ -144,6 +145,8 @@ api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_account.router)
 api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_countries.router)
+# **«الدول» ومفتاحُ الحدود** (SPEC §٧٤-أ/٢–٣) — بابُ حال السوق الوحيد، والكتابةُ `markets.manage`
+api_router.include_router(admin_markets.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
 api_router.include_router(admin_otp_templates.router)

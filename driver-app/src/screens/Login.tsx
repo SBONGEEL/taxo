@@ -20,9 +20,9 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
-import { MarketChoice } from "@/components/t2/MarketChoice";
 import { reopenWelcome } from "@/components/welcome/gate";
 import { biometryLabel } from "@/lib/biometric";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
@@ -46,7 +46,10 @@ export function LoginScreen() {
   const { signIn, biometry, signInWithBiometry } = useSession();
   // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
   // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("login");
+  const { country } = auth;
+  // **مُختارُ الدولة في حقل الهاتف** (SPEC §٧٤-أ/٤)
+  const pick = useCountryPick(auth, "login");
   const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [phone, setPhone] = useState("");
@@ -125,7 +128,6 @@ export function LoginScreen() {
         <AuthTitle title={tr("جاهز للطريق؟")} sub={tr("ادخل لتبدأ استقبال الطلبات.")} />
 
         <form onSubmit={submit} className="t2-auth-form" noValidate>
-          <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
           <AuthBlock
             label={tr("رقم الهاتف")}
@@ -139,6 +141,7 @@ export function LoginScreen() {
             {/* **البادئةُ من `GET /config`** والرقمُ الوطنيُّ وحده يُكتب — والصفرُ البادئ يُحذف فور كتابته */}
             <AuthPhone
               id="phone"
+              country={pick.trigger}
               name="phone"
               type="tel"
               inputMode="numeric"
@@ -152,6 +155,7 @@ export function LoginScreen() {
                 dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
               }
             />
+            {pick.sheet}
           </AuthBlock>
 
           <AuthBlock

@@ -839,5 +839,12 @@
  "يومٌ جديدٌ في سلسلتك": "Un nouveau jour dans votre série",
  "يُبدَّل الدفعُ قبل بدء الرحلة وحدَه": "Le paiement ne peut être changé qu’avant le début de la course",
  "يُرفض الطردُ عند الاستلام وحدَه": "Le colis ne peut être refusé qu’à la récupération",
- "يُعلَّق يومٌ قادمٌ لا يومُ اليوم": "On suspend un jour à venir, pas le jour même"
+ "يُعلَّق يومٌ قادمٌ لا يومُ اليوم": "On suspend un jour à venir, pas le jour même",
+ "الخدمةُ غيرُ متاحةٍ في بلدك الآن": "Le service n’est pas disponible dans votre pays pour le moment",
+ "الخدمةُ غيرُ متاحةٍ في {0} الآن — رحلاتُك الجارية تكتمل ورصيدُك محفوظ.": "Le service n’est pas disponible en {0} pour le moment — vos courses en cours se terminent et votre solde est conservé.",
+ "التسجيلُ في هذه الدولة غيرُ متاحٍ بعد": "L’inscription n’est pas encore ouverte dans ce pays",
+ "التسجيلُ في {0} غيرُ متاحٍ بعد — قريباً.": "L’inscription n’est pas encore ouverte en {0} — bientôt.",
+ "الأردن": "Jordanie",
+ "ليبيا": "Libye",
+ "الجزائر": "Algérie"
 }

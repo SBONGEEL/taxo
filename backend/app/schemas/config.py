@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.enums import CountryCode, Currency, RoundingMode
+from app.models.enums import CountryCode, Currency, MarketStatus, RoundingMode, SignupState
 from app.models.payment_setting import DEFAULT_ROUNDING_UNIT
 from app.schemas.auth import AuthMethodResponse
 from app.schemas.category import RideCategoryPublic
@@ -13,6 +13,16 @@ from app.schemas.category import RideCategoryPublic
 
 class CountryConfigOut(BaseModel):
     country_code: CountryCode
+    #: **اسمُ الدولة بلغة الطلب** (SPEC §٧٤-أ/٤) — من `core/currency.COUNTRY_NAME` وقاموسِ الخلفية، **فسوقٌ يُضاف يظهر في مُختار
+    #: الدولة باسمه بلا نصٍّ في التطبيق**
+    name: str
+    #: **مفتوحةٌ أم مغلقة** (§٧٤-أ/٢) — المغلقةُ تُنشر للدخول (كلُّ حسابٍ يدخل)، **ولا يُطلب فيها جديد**
+    status: MarketStatus
+    #: **ما يراه التسجيل**: `open` تُختار · `soon` رماديّةٌ لا تُختار · `hidden` لا تُرسم — يختاره المالكُ للمغلقة من «الدول»
+    signup: SignupState
+    #: **صندوقُ نطاق الخدمة** `[أدنى عرض، أعلى عرض، أدنى طول، أعلى طول]` — من `core/service_area.py` نفسِه، **ليخمّن به مُختارُ
+    #: الدولة من الموقع** حين لا تقول الشبكةُ شيئاً (§٧٤-أ/٤) **بلا صندوقٍ مكتوبٍ في التطبيق**
+    area: list[float]
     currency: Currency
     #: **علامةُ العملة واسمُها وخاناتُها** (SPEC §٧٣-ج/٢) — من `core/currency.py` وحدَه: «د.أ» · «دينار أردني» · `3`، و«د.ج» ·
     #: «دينار جزائري» · `0`. **فلا تكتب واجهةٌ علامةً ولا خاناتٍ ولا شرطاً بدولة** — كانت العلامةُ مكتوبةً خمسَ مرّاتٍ في الثلاث
@@ -101,6 +111,9 @@ class ConfigOut(BaseModel):
     # معروفة، والتصميم بلا منتقي دول. إعدادُ نشرٍ لا سرّ — مكانه `settings`
     # كـ`cors_origins` و`card_return_url`
     default_country_code: CountryCode
+    #: **دولةُ الشبكة التي جاء منها الطلب** (رأسُ `CF-IPCountry` من حافّة Cloudflare) — **أوّلُ تخمينٍ لمُختار الدولة** (§٧٤-أ/٤:
+    #: «من الشريحة والشبكة ثمّ الموقع»؛ والشريحةُ لا يقرؤها تطبيقُ ويبٍ بلا إضافةٍ أصليّة). **و`null` حين لا رأسَ أو لا سوقَ بها**
+    network_country: CountryCode | None = None
     # **قواعدُ التحقق منشورةً** (القسم ١٧.٣): يجلبها التطبيقُ ويخزّن آخرَ نسخةٍ
     # ليتحقق فوراً قبل وصول الرد وعند انقطاع الشبكة. مُشتقّةٌ من المخططات
     # برمجياً، ونصوصُها من السجل المركزي — فلا نسخةَ قواعدَ في التطبيق تفترق.

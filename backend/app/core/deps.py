@@ -231,6 +231,8 @@ TripChatsReader = Annotated[User, _perm(AdminPermission.TRIP_CHATS_READ)]
 RecordingsListener = Annotated[User, _perm(AdminPermission.CALL_RECORDINGS_LISTEN)]
 # **الملخّصاتُ المالية** (SPEC §٦٥-د/٧) — **خارجَ افتراض `admin` كذلك**: «صلاحيةٌ إداريةٌ مستقلّةٌ لا تُعطى لكلِّ مشرفٍ افتراضاً»
 FinanceSummaryReader = Annotated[User, _perm(AdminPermission.FINANCE_SUMMARY_READ)]
+# **الدولُ والحدود** (SPEC §٧٤-أ/٢–٣) — «بصلاحية المالك»: خارجَ افتراض `admin`، تُمنح بالاسم
+MarketsManager = Annotated[User, _perm(AdminPermission.MARKETS_MANAGE)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

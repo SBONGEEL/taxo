@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.core import validation_rules
 from app.core.config import settings
@@ -33,9 +33,19 @@ async def _auth_method(session, country: CountryCode) -> AuthMethodResponse:
     )
 
 
+def _network_country(request: Request) -> CountryCode | None:
+    """**دولةُ شبكة الطالب** من رأس `CF-IPCountry` — تضعه حافّةُ Cloudflare على كلِّ طلبٍ يمرّ بها؛ **ولا قرارَ يُبنى عليه في
+    الخلفية**: تخمينٌ لافتراض المُختار وحدَه، والمستخدمُ يغيّره بلمسة. وسوقٌ ليس عندنا ⇒ `None`."""
+    raw = (request.headers.get("cf-ipcountry") or "").strip().upper()
+    try:
+        return CountryCode(raw)
+    except ValueError:
+        return None
+
+
 @router.get("/config", response_model=ConfigOut)
 async def get_public_config(
-    session: DbSession, country_code: CountryCode | None = None
+    request: Request, session: DbSession, country_code: CountryCode | None = None
 ) -> ConfigOut:
     """الإعدادات العامة للواجهات — بلا مصادقة (تحتاجها شاشة الدخول نفسها).
 
@@ -51,18 +61,25 @@ async def get_public_config(
     # إخفاءُ واجهةٍ لا إيقافُ خدمة.
     #
     # **واللوحةُ لا تقرأ من هنا**: لها `GET /admin/countries` وترى الكلَّ دائماً.
-    countries = [c for c in asked if await country_config.is_visible(session, c)]
+    #
+    # **ومنذ §٧٤ (أمرُ المالك ٢٠٢٦-١٠-١٣) تُنشر المغلقةُ أيضاً بحالها** — «في الدخول كلُّ دولة، فالحساباتُ القائمةُ تدخل دائماً».
+    # **والإغلاقُ صار يُفرض في الخلفية لا بالإخفاء**: التسجيلُ يُردّ (`markets.require_signup_open`) وكلُّ طلبٍ جديدٍ يُردّ
+    # (`markets.require_open_for`)، **وما يُرسم في التسجيل يقرأ `signup`** — فإخفاءُ الواجهة صار راحةً لا حماية (§21).
+    # **والمفتوحةُ أوّلاً** بترتيب التعداد ثمّ المغلقة — فقائمةُ الاختيار ترسم ما يُختار قبل ما لا يُختار.
+    opened = [c for c in asked if await country_config.is_visible(session, c)]
+    countries = opened + [c for c in asked if c not in opened]
 
     # **والافتراضيةُ لا تُعلَن وهي مخفيّة**: تطبيقٌ يقرأ اسمَ دولةٍ ليست في
     # القائمة يقع على `undefined` — فتصير الأولى الظاهرةَ، أو تبقى كما هي إن
     # لم يظهر شيءٌ (وحينها لا قائمةَ أصلاً والسؤالُ لا يُطرح).
     default = settings.default_country_code
-    if countries and default not in countries:
-        default = countries[0]
+    if opened and default not in opened:
+        default = opened[0]
 
     return ConfigOut(
         app=settings.app_name,
         default_country_code=default,
+        network_country=_network_country(request),
         # مُشتقّةٌ من المخططات عند كل نداء — لا جدولَ حدودٍ يُكتب بجانبها ويبرد
         validation=validation_rules.published_rules(),
         # **من `geo` نفسِه** — ما تقوله ورقةُ الطلب عن نطاق البحث هو ما يبحث فيه التوزيعُ فعلاً (§٦٢-ب/٤٨)

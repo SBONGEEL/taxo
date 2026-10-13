@@ -8,6 +8,7 @@
 2. **ما يُكتب في الإشعارات** — كلُّ نصٍّ في `services/notifications.py` و`services/push/`، و`title=`/`body=` في أيِّ نداء.
 3. **رسائلُ التحقّق ونصوصُ الحالات** — `core/validation_errors.py` و`core/exceptions.py`.
 4. **قالبُ رسالة الرمز** — `services/otp_templates.py`.
+5. **أسماءُ الدول وعملاتُها** — `core/currency.py` (§٧٤-أ/٤: الاسمُ يُنشر في `/config` بلغة الطلب).
 
 **والقالبُ النصّيُّ (`f"…"`) مفتاحٌ بمواضع** `{0}` `{1}` — فيُطابَق ما يُرسم وقتَ الخطأ وتُنقل قيمُه إلى الفرنسيّة. **وما لا يُستخرج**: نصُّ
 السجلّ (`logger.*`)، والتوثيقُ، وما يُبنى بالجمع أو بـ`format` — **يبقى عربيّاً في الفرنسيّة** ويُقال كذلك.
@@ -28,6 +29,8 @@ WHOLE_FILES = (
     "core/validation_errors.py",
     "core/exceptions.py",
     "services/otp_templates.py",
+    # **أسماءُ الدول** (SPEC §٧٤-أ/٤) — تُنشر في `/config` بلغة الطلب فيسمّي بها مُختارُ الدولة كلَّ سوق
+    "core/currency.py",
 )
 WHOLE_DIRS = ("services/push",)
 LOGGER = {"debug", "info", "warning", "error", "exception", "critical", "log"}

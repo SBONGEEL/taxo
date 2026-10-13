@@ -71,6 +71,7 @@ from app.schemas.security import (
     TotpRecoveryVerifyRequest,
     TotpStatusOut,
 )
+from app.services import markets
 from app.services import verification_campaign
 from app.services import rider_photo
 from app.services import (
@@ -264,6 +265,9 @@ async def register(
         phone = normalize_phone(payload.phone, payload.country_code)
     except InvalidPhoneNumber as exc:
         raise InvalidInput(str(exc)) from exc
+
+    # **والدولةُ المغلقةُ لا يُسجَّل فيها** (SPEC §٧٤-أ/٤) — قبل الرمز وقبل الصفّ كالرقم؛ **والدخولُ إليها قائم**
+    await markets.require_signup_open(session, payload.country_code)
 
     # **قبل الرمز وقبل الصف**: تسجيلُ راكبٍ من تطبيق الكبتن يُنشئ حساباً لا
     # يستطيع صاحبُه الدخولَ إليه من التطبيق الذي أنشأه — حسابٌ يولد مقفلاً

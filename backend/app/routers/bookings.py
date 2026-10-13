@@ -22,7 +22,7 @@ from app.models.booking import RideBooking
 from app.models.ride import Ride
 from app.schemas.booking import BookingCreate, BookingOut
 from app.services import bookings as bookings_service
-from app.services import rounding, settings_service
+from app.services import markets, rounding, settings_service
 from app.services.directions import Coordinates
 
 router = APIRouter(prefix="/me/bookings", tags=["bookings"])
@@ -105,6 +105,8 @@ async def create_booking(
     الحجزُ ليس رحلة، فحدُّ «رحلةٌ نشطةٌ واحدة» لا محلَّ له هنا: من هو في رحلةٍ
     الآن له أن يحجز للغد. والفحصُ يقع لحظةَ التنفيذ حيث يعني شيئاً.
     """
+    # **السوقُ المغلقُ لا يُحجز فيه** (SPEC §٧٤-أ/٢)
+    await markets.require_open_for(session, rider, door="booking")
     booking = await bookings_service.create(
         session,
         rider=rider,

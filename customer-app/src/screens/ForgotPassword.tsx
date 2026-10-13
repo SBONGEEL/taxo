@@ -16,13 +16,13 @@ import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordReset } from "@/api/endpoints";
 import { VerifyCode } from "@/components/t2/VerifyCode";
 import { forgetToken } from "@/lib/biometric";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError, passwordsReady } from "@/lib/password";
-import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
+import { looksComplete, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
   AuthBlock,
-  AuthChoice,
   AuthConditions,
   AuthPage,
   AuthPhone,
@@ -40,7 +40,10 @@ export function ForgotPasswordScreen() {
   const navigate = useNavigate();
   const [step, setStep] = useState<"details" | "verify">("details");
   // **من `useAuthCountry` لا من `countries[0]`**: الترتيبُ في `/config` تعدادٌ لا أفضلية
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("login");
+  const { country } = auth;
+  // **الاستعادةُ لحسابٍ قائم** — فكلُّ دولةٍ كالدخول (§٧٤-أ/٤)
+  const pick = useCountryPick(auth, "login");
   const entry = config?.countries.find((item) => item.country_code === country);
   const verification = entry?.verification ?? config?.auth.verification ?? "none";
   const { dialCode, nationalLength } = usePhoneCountry(country);
@@ -122,16 +125,6 @@ export function ForgotPasswordScreen() {
           className="t2-auth-form step"
           noValidate
         >
-          {countries.length > 1 ? (
-            <AuthBlock label={tr("السوق")}>
-              <AuthChoice
-                label={tr("السوق")}
-                value={country}
-                options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
-                onChange={setCountry}
-              />
-            </AuthBlock>
-          ) : null}
 
           <AuthBlock
             label={tr("رقم الهاتف")}
@@ -144,6 +137,7 @@ export function ForgotPasswordScreen() {
           >
             <AuthPhone
               id="phone"
+              country={pick.trigger}
               name="phone"
               dial={dialCode}
               value={phone}
@@ -154,6 +148,7 @@ export function ForgotPasswordScreen() {
               onBlur={() => setTouched(true)}
               onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
             />
+            {pick.sheet}
           </AuthBlock>
 
           <AuthBlock

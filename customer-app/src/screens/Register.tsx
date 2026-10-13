@@ -15,9 +15,10 @@ import { register, startChallenge } from "@/api/endpoints";
 import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
 import { VerifyCode } from "@/components/t2/VerifyCode";
 import { reopenWelcome } from "@/components/welcome/gate";
+import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, useFeature, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError, passwordsReady } from "@/lib/password";
-import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
+import { looksComplete, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
   AuthBlock,
@@ -46,7 +47,8 @@ export function RegisterScreen() {
 
   const [step, setStep] = useState<"details" | "verify">("details");
   // **الدولةُ من `useAuthCountry`** — بيتٌ واحدٌ لشاشات المصادقة الثلاث
-  const { country, countries, setCountry } = useAuthCountry();
+  const auth = useAuthCountry("signup");
+  const { country } = auth;
   // المُحقِّقُ **وطولُ رمزه** يتبعان الدولةَ المختارة لا الافتراضية (12-هـ)
   const entry = config?.countries.find((item) => item.country_code === country);
   const verification = entry?.verification ?? config?.auth.verification ?? "none";
@@ -59,6 +61,8 @@ export function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [gender, setGender] = useState<"male" | "female" | null>(null);
+  // **مُختارُ الدولة** (SPEC §٧٤-أ/٤) — المفتوحةُ تُختار، والمغلقةُ «قريباً» أو لا تُرسم؛ **والدولةُ تحدّد سوقَ الحساب مرّةً واحدة**
+  const pick = useCountryPick(auth, "signup", { feminine: gender === "female" });
   const [touched, setTouched] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,17 +171,6 @@ export function RegisterScreen() {
           />
         </AuthBlock>
 
-        {countries.length > 1 ? (
-          <AuthBlock label={tr("السوق")}>
-            <AuthChoice
-              label={tr("السوق")}
-              value={country}
-              options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
-              onChange={setCountry}
-            />
-          </AuthBlock>
-        ) : null}
-
         <AuthBlock
           label={tr("رقم الهاتف")}
           htmlFor="phone"
@@ -189,6 +182,7 @@ export function RegisterScreen() {
         >
           <AuthPhone
             id="phone"
+            country={pick.trigger}
             name="phone"
             dial={dialCode}
             value={phone}
@@ -199,6 +193,7 @@ export function RegisterScreen() {
             onBlur={() => setTouched(true)}
             onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
           />
+          {pick.sheet}
         </AuthBlock>
 
         <AuthBlock label={tr("كلمة المرور")} htmlFor="new-password" error={passwordError(password) ?? errorOf("password")}>

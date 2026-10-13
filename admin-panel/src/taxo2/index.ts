@@ -12,6 +12,7 @@ export {
   AuthCode,
   AuthConditions,
   AuthConsent,
+  AuthCountrySheet,
   AuthError,
   AuthInput,
   AuthOr,
@@ -22,6 +23,8 @@ export {
   AuthTop,
   AuthWomenNote,
 } from "./Auth";
+export type { AuthCountryOption } from "./Auth";
+export { Flag } from "./Flag";
 export { DateField } from "./DateField";
 export { Icon } from "./Icon";
 export { SERVICE_ICON, serviceIcon } from "./serviceIcon";

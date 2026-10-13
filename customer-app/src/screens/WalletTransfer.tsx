@@ -41,8 +41,9 @@ export function WalletTransferScreen() {
 
   // **ولا سوقٌ مكتوبٌ هنا** (SPEC §24): القائمةُ من `/config`، فالمخفيُّ لا
   // يُعرض ولو كان لصاحب الحساب — والتحويلُ إليه بابٌ يفتحه إشعالُ المفتاح
+  // **ومنذ §٧٤ تُنشر المغلقةُ للدخول** — فالتحويلُ يصفّي المفتوحةَ هنا كما كان يصفّيها الإخفاء
   const countries =
-    config?.countries.map((entry) => entry.country_code) ?? [];
+    config?.countries.filter((entry) => entry.status === "open").map((entry) => entry.country_code) ?? [];
   const [code, setCode] = useState<CountryCode>(user?.country_code ?? "JO");
   const { dialCode, nationalLength } = usePhoneCountry(code);
   const [phone, setPhone] = useState("");

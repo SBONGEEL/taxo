@@ -77,6 +77,9 @@ const ALLOWED = new Map([
   ["customer-app/src/components/home/ServiceTiles.tsx", "حالُ البلاطة من الخلفية (`status`)"],
   ["driver-app/src/screens/t2/SettingsT2.tsx", "فرعُ «المطار» و«صوتُ الإرشاد» المطفأ — المفتاحُ يُقرأ في الشاشة نفسِها"],
   ["customer-app/src/screens/t2/RiderHomeT2.tsx", "فروعُ البلاطات المطفأة — كلٌّ بمفتاحه في الشاشة نفسِها"],
+  // **«قريباً» على دولةٍ مغلقةٍ في ورقة التسجيل** (SPEC §٧٤-أ/٤) — من `signup` في `/config`: حالُ السوق تحسبه الخلفيةُ من «الدول»
+  ["customer-app/src/taxo2/Auth.tsx", "دولةٌ «قريباً» في ورقة الدول — من `signup` الذي تحسبه الخلفيةُ من حال السوق"],
+  ["driver-app/src/taxo2/Auth.tsx", "دولةٌ «قريباً» في ورقة الدول — من `signup` الذي تحسبه الخلفيةُ من حال السوق"],
 ]);
 const strip = (text) => text.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|(^|[^:])\/\/[^\n]*/g, "$1");
 function walk(dir, out = []) {

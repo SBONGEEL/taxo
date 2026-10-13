@@ -201,35 +201,92 @@ export function useFeature(
  *  من يدخل ليس له حسابٌ بعد، فلا مكانَ آخرَ يحفظ اختيارَه. */
 const COUNTRY_KEY = "taxo.auth.country";
 
-export function useAuthCountry(): {
+/** **ما تعرضه شاشةُ المصادقة من الدول** (SPEC §٧٤-أ/٤): **الدخولُ كلُّ دولة** — فالحساباتُ القائمةُ تدخل دائماً؛ **والتسجيلُ المفتوحةُ تُختار**،
+ *  والمغلقةُ «قريباً» رماديّةً أو لا تُرسم بحسب ما اختاره المالكُ لها في «الدول» (`signup` في `/config`). */
+export type AuthMode = "login" | "signup";
+
+/** **دولةُ الموقع** — تخمينٌ ثالثٌ لا يُسأل له إذن: يُقرأ الموقعُ إن كان الإذنُ ممنوحاً سلفاً، وإلا لا شيء. **والصندوقُ من الخلفية**
+ *  (`area` — صندوقُ نطاق الخدمة نفسُه)، فلا حدودَ مكتوبةٌ هنا. */
+async function locatedCountry(entries: CountryConfig[]): Promise<CountryCode | null> {
+  try {
+    const state = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+    if (state?.state !== "granted") return null;
+    const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000, maximumAge: 600_000 }),
+    );
+    const { latitude, longitude } = position.coords;
+    const hit = entries.find(({ area }) => {
+      const [south, north, west, east] = area;
+      return latitude >= south && latitude <= north && longitude >= west && longitude <= east;
+    });
+    return hit?.country_code ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** **إقليمُ لغة الهاتف** (`fr-DZ` ⇒ `DZ`) — أقربُ ما يصل إليه تطبيقُ ويبٍ من الشريحة. */
+function localeRegion(): string | null {
+  const region = (navigator.language || "").split("-")[1];
+  return region ? region.toUpperCase() : null;
+}
+
+export function useAuthCountry(mode: AuthMode = "login"): {
   country: CountryCode;
+  /** **ما يُختار** — في الدخول كلُّ دولة، وفي التسجيل المفتوحةُ وحدَها */
   countries: CountryCode[];
+  /** **ما ترسمه ورقةُ الدول** — ومعه المغلقةُ «قريباً» في التسجيل */
+  options: Array<{ code: CountryCode; name: string; dial: string; soon: boolean }>;
+  /** اسمُ الدولة المختارة بلغة الطلب — من `/config` */
+  name: string;
   setCountry: (value: CountryCode) => void;
 } {
   const { config } = useConfig();
-  // **ولا رمزَ دولةٍ مكتوبٌ هنا** (SPEC §24): كان `?? ["JO"]`، وهو سوقٌ
-  // مكتوبٌ في التطبيق يظهر في القائمة ولو أطفأته الخلفية. القائمةُ من
-  // `/config` وحدها، والافتراضيةُ منها كذلك — وقبل وصولها لا قائمةَ ولا
-  // اختيار، وهي حالٌ لا تُرسم أصلاً (`Boot` ينتظر `/config`).
-  const countries =
-    config?.countries.map((entry) => entry.country_code) ?? [];
-  const fallback = config?.default_country_code ?? countries[0];
+  // **ولا رمزَ دولةٍ مكتوبٌ هنا** (SPEC §24): القائمةُ من `/config` وحدها، والافتراضيةُ منها كذلك — وقبل وصولها لا قائمةَ ولا
+  // اختيار، وهي حالٌ لا تُرسم أصلاً (`Boot` ينتظر `/config`)
+  const all = useMemo(() => config?.countries ?? [], [config]);
+  const shown = mode === "signup" ? all.filter((entry) => entry.signup !== "hidden") : all;
+  const selectable = mode === "signup" ? shown.filter((entry) => entry.signup === "open") : shown;
+  const countries = selectable.map((entry) => entry.country_code);
 
   const [chosen, setChosen] = useState<CountryCode | null>(() => {
     const held = localStorage.getItem(COUNTRY_KEY);
     return held ? (held as CountryCode) : null;
   });
+  const [located, setLocated] = useState<CountryCode | null>(null);
+  const network = config?.network_country ?? null;
 
-  // **اختيارٌ لا تعرفه `/config` يُهمَل**: سوقٌ أُغلق، أو مفتاحٌ عبث به أحد —
-  // فالقائمةُ هي الحاكمة، ويعود إلى الافتراضي بدل أن يُرسل دولةً لا وجود لها
-  const country = chosen && countries.includes(chosen) ? chosen : fallback;
+  // **الموقعُ آخرُ التخمينات** — لا يُطلب إلا حين لا اختيارَ محفوظاً ولا شبكةَ تقول شيئاً
+  useEffect(() => {
+    if (chosen || network || all.length === 0) return;
+    let alive = true;
+    void locatedCountry(all).then((code) => {
+      if (alive) setLocated(code);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [chosen, network, all]);
+
+  // **الافتراضُ بالترتيب** (§٧٤-أ/٤): ما اختاره صاحبُ الجهاز · شبكتُه · إقليمُ لغته · موقعُه · افتراضيّةُ الخلفية · أوّلُ ما يُختار —
+  // **وكلٌّ لا يُقبل إلا إن كان ممّا يُختار في هذه الشاشة** (دولةٌ مغلقةٌ اختيرت للدخول لا تصير افتراضَ التسجيل)
+  const country = ([chosen, network, localeRegion(), located, config?.default_country_code, countries[0]].find(
+    (code) => code && countries.includes(code as CountryCode),
+  ) ?? countries[0] ?? config?.default_country_code ?? "") as CountryCode;
 
   const setCountry = useCallback((value: CountryCode) => {
     localStorage.setItem(COUNTRY_KEY, value);
     setChosen(value);
   }, []);
 
-  return { country, countries, setCountry };
+  const options = shown.map((entry) => ({
+    code: entry.country_code,
+    name: entry.name,
+    dial: entry.dial_code,
+    soon: mode === "signup" && entry.signup !== "open",
+  }));
+  const name = all.find((entry) => entry.country_code === country)?.name ?? country;
+  return { country, countries, options, name, setCountry };
 }
 
 export function usePhoneCountry(override?: CountryCode): {

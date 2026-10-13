@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 
+import { Flag } from "./Flag";
 import { Icon } from "./Icon";
 import "./auth.css"; import { tr } from "@/lib/i18n";
 
@@ -100,19 +101,113 @@ export function AuthInput({ invalid, ...input }: InputProps) {
   );
 }
 
-/** الهاتف: «+962 | 79 555 01» من اليسار كما رُسم، **وعلامةُ صحّةٍ حين يكتمل** (R03). */
+/** الهاتف: «+962 | 79 555 01» من اليسار كما رُسم، **وعلامةُ صحّةٍ حين يكتمل** (R03).
+ *
+ * **ومع `country` يصير المفتاحُ زرَّ مُختار الدولة** (SPEC §٧٤-أ/٤، لوحةُ «تسجيل — حقل الهاتف»): العلمُ والمفتاحُ وسهمٌ، **ولمسةٌ
+ * تفتح ورقةَ الدول** (`AuthCountrySheet`). وبلاه كما كان حرفاً — حقولُ الهاتف خارج المصادقة (التحويل · «اطلب لغيرك») لم تتغيّر.
+ */
 export function AuthPhone({
   dial,
   valid,
   invalid,
+  country,
   ...input
-}: InputProps & { dial: string | null; valid?: boolean }) {
+}: InputProps & {
+  dial: string | null;
+  valid?: boolean;
+  country?: { code: string; name: string; onOpen: () => void; disabled?: boolean };
+}) {
   return (
     <div className={invalid ? "t2-auth-field phone error" : "t2-auth-field phone"}>
-      <span className="t2-auth-dial">+{dial ?? ""}</span>
+      {country ? (
+        <button
+          type="button"
+          className="t2-auth-country"
+          onClick={country.onOpen}
+          disabled={country.disabled}
+          aria-haspopup="dialog"
+          aria-label={tr("الدولة: {0}، +{1} — غيّرها", { 0: country.name, 1: dial ?? "" })}
+        >
+          <Flag code={country.code} label={country.name} size={26} />
+          <span className="t2-auth-dial">+{dial ?? ""}</span>
+          <Icon name="expand_more" />
+        </button>
+      ) : (
+        <span className="t2-auth-dial">+{dial ?? ""}</span>
+      )}
       <span className="t2-auth-sep" aria-hidden="true" />
       <input inputMode="tel" autoComplete="tel-national" aria-invalid={invalid || undefined} {...input} />
       {valid ? <Icon name="check_circle" fill className="t2-auth-ok" /> : null}
+    </div>
+  );
+}
+
+/** دولةٌ في ورقة المُختار — **`soon` رماديّةٌ لا تُختار** («قريباً»)، والمخفيّةُ لا تصل هنا أصلاً (يصفّيها المُنادي). */
+export type AuthCountryOption = { code: string; name: string; dial: string; soon?: boolean };
+
+/** **ورقةُ الدول** (لوحاتُ «تسجيل — ورقة الدول» · «دخول — كلُّ دولة» · «وضعُ النساء» · الفرنسيّة): العلمُ والاسمُ والمفتاح، والمختارةُ
+ * بحافّةٍ مزدوجةٍ وعلامة، والمغلقةُ في التسجيل «قريباً» بحافّةٍ متقطّعة. **تُغلق بالظلّ وبـEscape، واختيارٌ يغلقها.**
+ */
+export function AuthCountrySheet({
+  open,
+  title,
+  sub,
+  note,
+  options,
+  value,
+  onPick,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  sub?: string;
+  note?: ReactNode;
+  options: AuthCountryOption[];
+  value: string;
+  onPick: (code: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="t2 t2-country">
+      <button type="button" className="t2-country-scrim" aria-label={tr("إغلاق")} onClick={onClose} />
+      <div className="t2-country-sheet" role="dialog" aria-modal="true" aria-label={title}>
+        <span className="t2-country-handle" aria-hidden="true" />
+        <h2 className="t2-country-title">{title}</h2>
+        {sub ? <p className="t2-country-sub">{sub}</p> : null}
+        <div className="t2-country-list">
+          {options.map((option) => {
+            const on = option.code === value;
+            return (
+              <button
+                key={option.code}
+                type="button"
+                className={option.soon ? "soon" : undefined}
+                aria-pressed={on}
+                disabled={option.soon}
+                onClick={() => onPick(option.code)}
+              >
+                <Flag code={option.code} label={option.name} size={30} muted={option.soon} />
+                <span className="t2-country-name">{option.name}</span>
+                <span className="t2-country-dial" dir="ltr">
+                  +{option.dial}
+                </span>
+                {option.soon ? <span className="t2-country-soon">{tr("قريباً")}</span> : null}
+                {on && !option.soon ? <Icon name="check_circle" fill className="t2-country-on" /> : null}
+              </button>
+            );
+          })}
+        </div>
+        {note ? <p className="t2-country-note">{note}</p> : null}
+      </div>
     </div>
   );
 }

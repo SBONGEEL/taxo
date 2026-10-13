@@ -1515,5 +1515,13 @@
  "— تمّت": "— terminée",
  "— صفر عمولة ما دام اشتراكك سارياً.": "— zéro commission tant que votre abonnement est valide.",
  "— من أصل": "— sur un total de",
- "— ونسبتُك": "— et votre taux"
+ "— ونسبتُك": "— et votre taux",
+ "الدولة: {0}، +{1} — غيّرها": "Pays : {0}, +{1} — changer",
+ "اختر دولتك": "Choisissez votre pays",
+ "اختاري دولتك": "Choisissez votre pays",
+ "دولةُ حسابك": "Pays de votre compte",
+ "منها عملتُك وأسعارُك وطرقُ دفعك — وتُختار مرّةً واحدة.": "Il fixe votre devise, vos tarifs et vos moyens de paiement — il se choisit une seule fois.",
+ "اختر الدولةَ التي سجّلت فيها رقمك.": "Choisissez le pays où vous avez inscrit votre numéro.",
+ "عندك حسابٌ في دولةٍ أخرى؟ ادخل منه — الدخولُ متاحٌ من كلِّ دولة.": "Vous avez un compte dans un autre pays ? Connectez-vous — la connexion est ouverte depuis tous les pays.",
+ "في الدخول كلُّ الدول — فحسابُك يدخل ولو لم تُفتح دولتُه للتسجيل بعد.": "À la connexion, tous les pays sont proposés : votre compte s’ouvre même si son pays n’est pas encore ouvert aux inscriptions."
 }

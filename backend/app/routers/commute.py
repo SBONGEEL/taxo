@@ -23,7 +23,7 @@ from app.schemas.commute import (
     CommuteQuoteOut,
     CommuteSuspendIn,
 )
-from app.services import commute
+from app.services import commute, markets
 from app.services.directions import Coordinates
 
 router = APIRouter(prefix="/me/commutes", tags=["commutes"])
@@ -71,6 +71,7 @@ async def _out(session, row: RiderSubscription) -> CommuteOut:
 
 @router.post("/quote", response_model=CommuteQuoteOut)
 async def quote_commute(payload: CommutePlanIn, rider: RiderUser, session: DbSession) -> CommuteQuoteOut:
+    await markets.require_open_for(session, rider, door="commute_quote", record=False)  # **المغلقُ لا يُسعَّر فيه** (§٧٤-أ/٢)
     priced = await commute.quote(session, rider=rider, plan=_plan(payload))
     return CommuteQuoteOut(
         discount_percent=priced.discount_percent,
@@ -84,6 +85,7 @@ async def quote_commute(payload: CommutePlanIn, rider: RiderUser, session: DbSes
 
 @router.post("", response_model=CommuteOut, status_code=status.HTTP_201_CREATED)
 async def buy_commute(payload: CommutePlanIn, rider: RiderUser, session: DbSession) -> CommuteOut:
+    await markets.require_open_for(session, rider, door="commute")  # **المغلقُ لا يُشترى فيه** (§٧٤-أ/٢)
     row = await commute.purchase(session, rider=rider, plan=_plan(payload))
     await session.commit()
     return await _out(session, row)

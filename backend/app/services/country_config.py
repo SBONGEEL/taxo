@@ -11,11 +11,19 @@
 
 from __future__ import annotations
 
-from app.core.currency import CURRENCY_LABEL, CURRENCY_NAME, currency_for_country, decimals_of
+from app.core.currency import COUNTRY_NAME, CURRENCY_LABEL, CURRENCY_NAME, currency_for_country, decimals_of
+from app.core.i18n import translate
 from app.core.phone import dial_code_for, national_length_for
 from app.models.enums import CountryCode, FeatureKey
 from app.schemas.config import CountryConfigOut
-from app.services import campaigns, categories, otp, settings_service, verification
+from app.services import campaigns, categories, markets, otp, settings_service, verification
+
+
+def _area(country: CountryCode) -> list[float]:
+    from app.core import service_area
+
+    box = service_area.box_for(country)
+    return [box.min_lat, box.max_lat, box.min_lng, box.max_lng]
 
 
 async def build(session, country: CountryCode) -> CountryConfigOut:
@@ -35,6 +43,11 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
     currency = currency_for_country(country)
     return CountryConfigOut(
         country_code=country,
+        # **بلغة الطلب** — اللوحةُ ترسل `ar` صراحةً، والتطبيقان لغتَهما (§٧٣-هـ/٥)
+        name=translate(COUNTRY_NAME[country]),
+        status=await markets.status_of(session, country),
+        signup=await markets.signup_state(session, country),
+        area=_area(country),
         currency=currency,
         currency_label=CURRENCY_LABEL[currency],
         currency_name=CURRENCY_NAME[currency],

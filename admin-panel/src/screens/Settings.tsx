@@ -29,6 +29,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { DurationField, MoneyField } from "@/components/ui/Inputs";
@@ -118,8 +119,8 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     hint: "سلفةٌ نقديةٌ تُقتطع من أرباح الرحلات. أساسُ سقفها سعرُ خطتك اليومية، فلا خطةَ يومية = لا سلف ولو أُشعل المفتاح. واضبط الاقتطاعَ والمهلةَ وشروطَ الأهلية في «سياسة السلف» أدناه — والقرارُ سوقٌ واحدٌ أولاً.",
   },
   country_visible: {
-    title: "إظهار هذا السوق في التطبيقات",
-    hint: "مطفأً: لا يظهر في اختيار الدولة ولا في التسجيل — والخلفيةُ والبياناتُ والإعدادات كما هي. وإشعالُه يُظهره في اللحظة نفسِها بلا تحديث تطبيق. واللوحةُ ترى السوقَ في الحالين.",
+    title: "السوقُ مفتوحٌ للعموم",
+    hint: "يُفتح ويُغلق من صفحة «الدول» وحدَها: الفتحُ بفحص الجاهزيّة وصلاحية المالك، والإغلاقُ يُكمل الجاريَ ولا يمسّ المحافظ.",
   },
   pricing_writes_enabled: {
     title: "الكتابة على التسعير",
@@ -507,6 +508,21 @@ export function SettingsScreen() {
               {FLAGS.map((key) => {
                 const on = current?.flags[key] === true;
                 const isGuard = (GUARDED_FLAGS as readonly FeatureKey[]).includes(key);
+                // **حالُ السوق بابُها «الدول» وحدَها** (SPEC §٧٤-أ/٢): فتحٌ بفحص الجاهزيّة وبصلاحية المالك — **والخادمُ يردّ هذا
+                // المفتاحَ من هنا**، فيُرسم حالُه ورابطٌ لا مفتاحٌ يرتدّ
+                if (key === "country_visible") {
+                  return (
+                    <li key={key} className="flex items-start gap-12">
+                      <span className="flex-1">
+                        <span className="block text-13 font-semibold text-ink">{FLAG_LABEL[key].title}</span>
+                        <span className="block text-11 leading-snug text-muted">{FLAG_LABEL[key].hint}</span>
+                      </span>
+                      <Link to="/markets" className="ad-btn ad-btn-sm ad-btn-secondary">
+                        {on ? "مفتوحة" : "مغلقة"} — «الدول»
+                      </Link>
+                    </li>
+                  );
+                }
                 return (
                   <li key={key} className="flex items-start gap-12">
                     <span className="flex-1">

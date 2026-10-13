@@ -1,4 +1,5 @@
-"""ظهورُ الدولة في الواجهات (2026-08-19، SPEC §24).
+"""ظهورُ الدولة في الواجهات (2026-08-19، SPEC §24) — **وبمعناه بعد §٧٤** (٢٠٢٦-١٠-١٣): المطفأةُ **مغلقة** تُنشر بحالها للدخول،
+ولا يُسجَّل فيها ولا يُطلب (`test_markets.py`)، **وبابُ حالها صفحةُ «الدول» وحدَها**.
 
 **وما يُقاس هنا ليس أن ليبيا مخفيّة، بل أن الإخفاءَ صفةُ سوقٍ عامّةٌ يقرؤها
 بيتٌ واحد**: لا اسمَ دولةٍ في شرط، ولا قائمةَ مكتوبةٍ في تطبيق، ولا بابٌ ثانٍ
@@ -40,15 +41,20 @@ async def test_silence_means_visible(client) -> None:
     """
     body = (await client.get("/config")).json()
     assert set(_codes(body)) == {c.value for c in CountryCode}
+    assert {entry["status"] for entry in body["countries"]} == {"open"}
 
 
-async def test_a_hidden_country_is_not_published(client, session_factory) -> None:
-    """المطفأةُ تختفي من `/config` — ومعها كلُّ ما كان يُقرأ عنها."""
+def _status(body: dict, code: str) -> str:
+    return next(entry["status"] for entry in body["countries"] if entry["country_code"] == code)
+
+
+async def test_a_hidden_country_is_published_closed(client, session_factory) -> None:
+    """**المطفأةُ مغلقةٌ لا مختفية** (§٧٤): تبقى في `/config` بحالها — «في الدخول كلُّ دولة»."""
     await _set_visible(session_factory, CountryCode.LY, False)
 
     body = (await client.get("/config")).json()
-    assert "LY" not in _codes(body)
-    assert "JO" in _codes(body)
+    assert _status(body, "LY") == "closed"
+    assert _status(body, "JO") == "open"
 
 
 async def test_enabling_it_again_restores_it_on_the_next_call(
@@ -60,20 +66,20 @@ async def test_enabling_it_again_restores_it_on_the_next_call(
     حزمةٍ لا تتغير إلا بحزمةٍ جديدةٍ على كل جهاز.
     """
     await _set_visible(session_factory, CountryCode.LY, False)
-    assert "LY" not in _codes((await client.get("/config")).json())
+    assert _status((await client.get("/config")).json(), "LY") == "closed"
 
     await _set_visible(session_factory, CountryCode.LY, True)
-    assert "LY" in _codes((await client.get("/config")).json())
+    assert _status((await client.get("/config")).json(), "LY") == "open"
 
 
-async def test_asking_for_a_hidden_country_by_name_gets_nothing(
+async def test_asking_for_a_closed_country_by_name_gets_it_closed(
     client, session_factory
 ) -> None:
-    """ولا يُلتفّ عليه بـ`?country_code=` — التصفيةُ على المنشور لا على المسؤول عنه."""
+    """وبـ`?country_code=` تأتي بحالها نفسِها — **الحمايةُ في الخلفية لا في الإخفاء** (§٧٤)."""
     await _set_visible(session_factory, CountryCode.LY, False)
 
     body = (await client.get("/config?country_code=LY")).json()
-    assert body["countries"] == []
+    assert _codes(body) == ["LY"] and _status(body, "LY") == "closed"
 
 
 async def test_the_default_country_is_never_one_that_is_hidden(
@@ -91,7 +97,7 @@ async def test_the_default_country_is_never_one_that_is_hidden(
 
     body = (await client.get("/config")).json()
     assert body["default_country_code"] != default.value
-    assert body["default_country_code"] in _codes(body)
+    assert _status(body, body["default_country_code"]) == "open"
 
 
 async def test_the_panel_sees_every_market_including_the_hidden_one(
@@ -139,23 +145,18 @@ async def test_the_two_doors_publish_the_same_description(
 async def test_hiding_a_market_needs_no_written_reason(
     client, session_factory, admin_headers
 ) -> None:
+    from tests.test_markets import markets_owner
+
+    owner = await markets_owner(client, admin_headers)
     """**قرارُ إطلاقٍ لا إجراءُ طوارئ** — والسببُ المكتوب لغيره.
 
     المفتاحُ في `DEFAULT_ENABLED_FLAGS` لأن سكوتَه ظهور، وليس في
     `GUARDED_FLAGS` لأن إخفاءَ سوقٍ ليس إسقاطَ حارس. ولو جُمعا لطالبت اللوحةُ
     بسببٍ ورسالتُه تقول «مفتاح التحقق» — جملةٌ لا علاقةَ لها بما ضُغط.
     """
-    answer = await client.put(
-        "/admin/settings/feature-flags",
-        json={
-            "country_code": "LY",
-            "feature_key": FeatureKey.COUNTRY_VISIBLE.value,
-            "enabled": False,
-        },
-        headers=admin_headers,
-    )
+    answer = await client.put("/admin/markets/LY/status", json={"open": False}, headers=owner["headers"])
     assert answer.status_code == 200, answer.text
-    assert answer.json()["flags"][FeatureKey.COUNTRY_VISIBLE.value] is False
+    assert next(row for row in answer.json()["countries"] if row["country_code"] == "LY")["status"] == "closed"
 
     # وإطفاءُ الحارس ما يزال يطلب سبباً
     guard = await client.put(
@@ -177,16 +178,10 @@ async def test_every_toggle_lands_in_the_audit_log(
     from sqlalchemy import select
 
     from app.models.audit import AdminAuditLog
+    from tests.test_markets import markets_owner
 
-    await client.put(
-        "/admin/settings/feature-flags",
-        json={
-            "country_code": "LY",
-            "feature_key": FeatureKey.COUNTRY_VISIBLE.value,
-            "enabled": False,
-        },
-        headers=admin_headers,
-    )
+    owner = await markets_owner(client, admin_headers)
+    await client.put("/admin/markets/LY/status", json={"open": False}, headers=owner["headers"])
 
     async with session_factory() as session:
         rows = (

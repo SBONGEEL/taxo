@@ -73,6 +73,9 @@ SENSITIVE: frozenset[AdminPermission] = frozenset(
         AdminPermission.TRIP_CHATS_READ,
         AdminPermission.CALL_RECORDINGS_LISTEN,
         AdminPermission.FINANCE_SUMMARY_READ,
+        # **والرابعةُ الدولُ والحدود** (SPEC §٧٤-أ/٢–٣، ٢٠٢٦-١٠-١٣) — بنصِّ المالك «بصلاحية المالك»: فتحُ سوقٍ للناس ورفعُ الحدود
+        # قرارا إطلاقٍ لا يملكهما كلُّ مشرف
+        AdminPermission.MARKETS_MANAGE,
     }
 )
 

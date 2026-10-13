@@ -302,8 +302,9 @@ async def test_the_hidden_row_hides_algeria_from_the_apps_not_from_the_panel(
         session.add(FeatureFlag(country_code=CountryCode.DZ, feature_key="country_visible", enabled=False))
         await session.commit()
 
-    published = {entry["country_code"] for entry in (await client.get("/config")).json()["countries"]}
-    assert "DZ" not in published and {"JO", "LY"} <= published
+    published = {entry["country_code"]: entry["status"] for entry in (await client.get("/config")).json()["countries"]}
+    # **مغلقةٌ لا مختفية** (§٧٤): تُنشر للدخول بحالها، ولا يُسجَّل فيها ولا يُطلب
+    assert published["DZ"] == "closed" and published["JO"] == published["LY"] == "open"
 
     panel = (await client.get("/admin/countries", headers=admin_headers)).json()["countries"]
     algeria = next(row for row in panel if row["country_code"] == "DZ")
