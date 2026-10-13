@@ -5,7 +5,9 @@ D="/mnt/d/taxo-backups/stress-$1"
 N=taxo-restore-check
 FP=~/prj/TAXO-rd-dz/tools/stress/fingerprint.sql
 docker rm -f $N >/dev/null 2>&1
-docker run -d --name $N -e POSTGRES_USER=taxo -e POSTGRES_PASSWORD=restorecheck -e POSTGRES_DB=taxo postgis/postgis:16-3.4 >/dev/null || exit 1
+# **كلمةُ مرور القاعدة المؤقّتة تُولَّد عند كلِّ تشغيل** (أمرُ المالك ٢٠٢٦-١٠-١٣، SPEC §٧٥-د/١) — لا كلمةَ مكتوبةً في الشيفرة
+PGPASS="$(openssl rand -hex 16)"
+docker run -d --name $N -e POSTGRES_USER=taxo -e POSTGRES_PASSWORD="$PGPASS" -e POSTGRES_DB=taxo postgis/postgis:16-3.4 >/dev/null || exit 1
 # **والجاهزيّةُ الأولى كاذبة** (قِيس ٢٠٢٦-١٠-١٣): الصورةُ تُقلع خادماً مؤقّتاً تبني عليه PostGIS ثمّ تعيد التشغيل — و`pg_isready`
 # يجيب «جاهز» على المؤقّت، **فانقطعت الاستعادةُ بعد سطرها الأوّل وخرجت بصفر أخطاء**. فيُنتظر «ready to accept connections» مرّتين
 for i in $(seq 1 90); do
