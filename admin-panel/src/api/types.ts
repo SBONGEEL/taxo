@@ -1989,6 +1989,8 @@ export interface PolicyVersion {
   min_accepted_version: number;
   body_ar: string;
   body_en: string | null;
+  /** **النصُّ الفرنسيّ** (SPEC §٧٤-ل/١) — للجزائر؛ وفارغٌ لما سواها */
+  body_fr?: string | null;
   requires_reconsent: boolean;
   is_published: boolean;
   published_at: string | null;

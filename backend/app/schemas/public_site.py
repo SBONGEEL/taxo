@@ -126,6 +126,10 @@ class PublicPolicyOut(BaseModel):
     version: int
     body_ar: str
     published_at: datetime | None = None
+    #: **دولةُ الوثيقة — تُعلَن ولا تُستنتج** (§٧٤-ل/١)، كـ`app` فوقها: صفحةُ الجزائر لا تُخبز بنصِّ الأردن صامتة
+    country_code: str | None = None
+    #: **النصُّ الفرنسيّ** إن وُجد (§٧٤-ل/١)
+    body_fr: str | None = None
 
 
 class RequiredPolicyOut(BaseModel):
@@ -143,3 +147,5 @@ class RequiredPolicyOut(BaseModel):
     version: int
     body_ar: str
     published_at: datetime | None
+    #: **النصُّ الفرنسيّ** (§٧٤-ل/١) — يعرضه التطبيقُ لمن لغتُه الفرنسيّة؛ وفارغٌ فالعربيّ
+    body_fr: str | None = None

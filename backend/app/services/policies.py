@@ -156,6 +156,7 @@ async def create_version(
     body_ar: str,
     body_en: str | None,
     requires_reconsent: bool,
+    body_fr: str | None = None,
 ) -> PrivacyPolicy:
     """يكتب **نسخةً جديدةً مسوّدةً** — ولا يُحرِّر شيئاً قائماً.
 
@@ -175,6 +176,7 @@ async def create_version(
         min_accepted_version=0,  # يُختم فوراً أدناه، والكاتبُ واحد
         body_ar=body_ar,
         body_en=(body_en or None),
+        body_fr=(body_fr or None),
         requires_reconsent=requires_reconsent,
         is_published=False,
     )
@@ -187,7 +189,7 @@ async def create_version(
 
 
 async def publish(
-    session: AsyncSession, policy: PrivacyPolicy, *, actor: User
+    session: AsyncSession, policy: PrivacyPolicy, *, actor: User | None
 ) -> PrivacyPolicy | None:
     """ينشر نسخةً — **وينزع سابقَها في المعاملة نفسِها**.
 
@@ -217,7 +219,9 @@ async def publish(
 
     policy.is_published = True
     policy.published_at = datetime.now(UTC)
-    policy.published_by = actor.id
+    # **وفاعلٌ فارغٌ لسكربت المالك وحدَه** (SPEC §٧٤-ل/١): نشرٌ قرّره في المحادثة لا مشرفٌ في اللوحة — **وقيدٌ يسمّي من لم يفعل
+    # أسوأُ من قيدٍ لا يسمّي أحداً**؛ والتدقيقُ يكتب الأمر
+    policy.published_by = actor.id if actor is not None else None
     await session.flush()
     return previous
 

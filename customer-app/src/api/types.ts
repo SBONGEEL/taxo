@@ -1273,6 +1273,8 @@ export interface RequiredPolicy {
   version: number;
   body_ar: string;
   published_at: string | null;
+  /** **النصُّ الفرنسيّ** (SPEC §٧٤-ل/١) — لمن لغتُه الفرنسيّة؛ وفارغٌ فالعربيّ */
+  body_fr?: string | null;
 }
 
 /** طلبُ إغلاق الحساب (٢٠٢٦-٠٩-٠٧) — **البابُ نفسُه الذي يستعمله الكبتن**.

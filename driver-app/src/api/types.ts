@@ -1368,6 +1368,8 @@ export interface RequiredPolicy {
   version: number;
   body_ar: string;
   published_at: string | null;
+  /** **النصُّ الفرنسيّ** (SPEC §٧٤-ل/١) — لمن لغتُه الفرنسيّة؛ وفارغٌ فالعربيّ */
+  body_fr?: string | null;
 }
 
 /** حمولةُ تقرير العطب — **تعريفٌ واحدٌ يقرؤه البابُ والمُرسِل**.

@@ -215,6 +215,7 @@ async def policy(
     session: DbSession,
     doc_type: PolicyDocType,
     app: PolicyApp = PolicyApp.RIDER,
+    country: CountryCode | None = None,
 ) -> PublicPolicyOut | None:
     """وثيقةٌ للويب — **أو `None`، وهي حالٌ صحيحةٌ لا خطأ**.
 
@@ -237,9 +238,10 @@ async def policy(
     if row is None or not row.policies_public:
         return None
 
+    # **وأيُّ دولةٍ نصُّها؟ يُسأل، وافتراضُه دولةُ الموقع** (§٧٤-ل/١): صفحاتُ الجزائر على الموقع نفسِه — **ولا يتغيّر نداءٌ قائم**
     doc = await policies_service.published(
         session,
-        country=site_service.SITE_COUNTRY,
+        country=country or site_service.SITE_COUNTRY,
         doc_type=doc_type,
         app=app,
     )
@@ -252,6 +254,8 @@ async def policy(
         version=doc.version,
         body_ar=doc.body_ar,
         published_at=doc.published_at,
+        country_code=doc.country_code.value,
+        body_fr=doc.body_fr,
     )
 
 
@@ -281,6 +285,7 @@ async def required_policies(
             version=doc.version,
             body_ar=doc.body_ar,
             published_at=doc.published_at,
+            body_fr=doc.body_fr,
         )
         for doc in docs
     ]

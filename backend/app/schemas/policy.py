@@ -23,6 +23,8 @@ class PolicyVersionIn(BaseModel):
     body_ar: str = Field(min_length=1)
     #: **ولا تُترجم بحدس** — تبقى فارغةً حتى يُكتب نصٌّ إنجليزيٌّ بيد
     body_en: str | None = None
+    #: **النصُّ الفرنسيّ** (SPEC §٧٤-ل/١) — للجزائر؛ وفارغٌ لما سواها
+    body_fr: str | None = None
     #: **يقرّره الناشر**: تصحيحُ فاصلةٍ لا يُعيد سؤالَ الناس، **وتغييرٌ جوهريٌّ
     #: بلا إعادةِ سؤالٍ يجعل الموافقةَ القديمةَ دعوى**
     requires_reconsent: bool = False
@@ -40,6 +42,7 @@ class PolicyVersionOut(BaseModel):
     min_accepted_version: int
     body_ar: str
     body_en: str | None
+    body_fr: str | None = None
     requires_reconsent: bool
     is_published: bool
     published_at: datetime | None

@@ -65,6 +65,8 @@ class PrivacyPolicy(UUIDMixin, TimestampMixin, Base):
     body_ar: Mapped[str] = mapped_column(Text, nullable=False)
     #: **ولا تُترجم بحدس**: تبقى فارغةً حتى يُكتب نصٌّ إنجليزيّ بيد
     body_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: **النصُّ الفرنسيّ** (SPEC §٧٤-ل/١) — الجزائرُ تتبع لغةَ الهاتف؛ وفارغٌ لسوقٍ لا فرنسيّةَ فيه
+    body_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
     #: **يقرّره الناشرُ عند الحفظ** — تصحيحُ فاصلةٍ لا يُعيد سؤالَ الناس،
     #: وتغييرٌ جوهريٌّ بلا إعادةِ سؤالٍ يجعل الموافقةَ القديمةَ دعوى.
     requires_reconsent: Mapped[bool] = mapped_column(

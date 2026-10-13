@@ -69,6 +69,7 @@ export function PoliciesScreen() {
   const [rows, setRows] = useState<PolicyVersion[] | null>(null);
   const [org, setOrg] = useState<OrgProfile | null>(null);
   const [writing, setWriting] = useState<string | null>(null);
+  const [writingFr, setWritingFr] = useState("");
   const [reconsent, setReconsent] = useState(false);
   const [publishing, setPublishing] = useState<PolicyVersion | null>(null);
   const [removing, setRemoving] = useState<PolicyVersion | null>(null);
@@ -101,6 +102,7 @@ export function PoliciesScreen() {
     setDone(null);
     setReconsent(false);
     setWriting(rows?.[0]?.body_ar ?? "");
+    setWritingFr(rows?.[0]?.body_fr ?? "");
   }
 
   async function save() {
@@ -113,6 +115,8 @@ export function PoliciesScreen() {
         doc_type: docType,
         app,
         body_ar: writing,
+        // **والفرنسيُّ يُحفظ مع العربيّ** (SPEC §٧٤-ل/١) — وفارغاً لا يُرسل: وثيقةٌ بالعربيّة وحدَها كما كانت
+        body_fr: writingFr.trim() ? writingFr : null,
         requires_reconsent: reconsent,
       });
       setDone(
@@ -353,6 +357,15 @@ export function PoliciesScreen() {
               onChange={(event) => setWriting(event.target.value)}
               className="w-full rounded-13 border border-line bg-surface-2 px-13 py-11 text-12.5 leading-note text-ink"
             />
+            <p className="mt-12 mb-6 text-11.5 font-semibold text-ink">النصّ الفرنسيّ (اختياريّ — لسوقٍ يتكلّم الفرنسيّة)</p>
+            <textarea
+              name="body_fr"
+              dir="ltr"
+              rows={10}
+              value={writingFr}
+              onChange={(event) => setWritingFr(event.target.value)}
+              className="w-full rounded-13 border border-line bg-surface-2 px-13 py-11 text-12.5 leading-note text-ink"
+            />
             <div className="mt-12">
               <Checkbox checked={reconsent} onChange={setReconsent}>
                 تغييرٌ جوهريّ — يُسأل من وافق سابقاً من جديد
@@ -385,6 +398,11 @@ export function PoliciesScreen() {
             <p className="whitespace-pre-line text-12.5 leading-note text-ink">
               {reading.body_ar}
             </p>
+            {reading.body_fr ? (
+              <p dir="ltr" lang="fr" className="mt-16 whitespace-pre-line border-t border-line pt-12 text-12.5 leading-note text-ink">
+                {reading.body_fr}
+              </p>
+            ) : null}
           </Modal>
         ) : null}
 

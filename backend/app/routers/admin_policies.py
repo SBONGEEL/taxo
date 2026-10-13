@@ -65,6 +65,7 @@ def _row(policy: PrivacyPolicy, consents: int) -> PolicyVersionOut:
         min_accepted_version=policy.min_accepted_version,
         body_ar=policy.body_ar,
         body_en=policy.body_en,
+        body_fr=policy.body_fr,
         requires_reconsent=policy.requires_reconsent,
         is_published=policy.is_published,
         published_at=policy.published_at,
@@ -101,6 +102,7 @@ async def create_policy_version(
         app=payload.app,
         body_ar=payload.body_ar,
         body_en=payload.body_en,
+        body_fr=payload.body_fr,
         requires_reconsent=payload.requires_reconsent,
     )
     await audit.record(

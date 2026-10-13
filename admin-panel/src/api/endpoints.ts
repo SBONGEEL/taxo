@@ -1852,6 +1852,7 @@ export const createPolicyVersion = (body: {
   app: PolicyApp;
   body_ar: string;
   body_en?: string | null;
+  body_fr?: string | null;
   requires_reconsent: boolean;
 }) => api.post<PolicyVersion>("/admin/policies", body);
 

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import { requiredPolicies } from "@/api/endpoints";
 import type { CountryCode, RequiredPolicy } from "@/api/types";
-import { AuthConsent } from "@/taxo2"; import { tr } from "@/lib/i18n";
+import { AuthConsent } from "@/taxo2"; import { language, tr } from "@/lib/i18n";
 
 const TITLE: Record<string, string> = {
   privacy_policy: tr("سياسة الخصوصية"),
@@ -49,7 +49,12 @@ export function PolicyConsentT2({
     <AuthConsent
       checked={checked}
       onToggle={() => onChange(!checked)}
-      docs={docs.map((doc) => ({ id: doc.id, title: TITLE[doc.doc_type] ?? doc.doc_type, body: doc.body_ar }))}
+      // **ونصُّ الفرنسيّة لمن لغتُه الفرنسيّة** (SPEC §٧٤-ل/١) — وثيقةٌ بلا نصٍّ فرنسيٍّ تُعرض بالعربيّة كما كانت
+      docs={docs.map((doc) => ({
+        id: doc.id,
+        title: TITLE[doc.doc_type] ?? doc.doc_type,
+        body: language === "fr" && doc.body_fr ? doc.body_fr : doc.body_ar,
+      }))}
     />
   );
 }
