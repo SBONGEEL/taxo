@@ -4,6 +4,7 @@
  * عقد FCM من الإعدادات، و`Session` قبل `Ride` لأن المقبس لا يُفتح بلا مستخدم.
  */
 
+import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
 import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -446,6 +447,8 @@ export default function App() {
                     ترنّ في أيِّ شاشة، وطبقتُها مرسومةٌ داخلها (`CommsLayerT2`) */}
                 <RideComms>
                   <Toasts />
+                  {/* **سوقُ حساب التجربة من موقعه** (§٧٤-أ/١٠) — لا يفعل شيئاً لغير حساب التجربة */}
+                  <TestMarketAuto />
                   <NotificationTaps />
                   {/* **الحركةُ فوق `Suspense` لا تحته** (`ui/Motion.tsx`):
                       البديلُ فوقها كان يستبدل الشجرةَ المتحركةَ كلَّها فيموت

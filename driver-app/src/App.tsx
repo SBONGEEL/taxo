@@ -14,6 +14,7 @@
  * أصلاً (`dispatch.eligible_driver_ids`).
  */
 
+import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -534,6 +535,8 @@ export default function App() {
                     {/* **حدُّ الخطأ حول الشاشات** — انظر تطبيق الراكب:
                         استثناءٌ غيرُ ملتقَطٍ يُبيّض الشاشةَ صامتاً، وقد مرّ
                         عطبٌ ماليٌّ كذلك يوماً كاملاً */}
+                    {/* **سوقُ حساب التجربة من موقعه** (§٧٤-أ/١٠) — لا يفعل شيئاً لغير حساب التجربة */}
+                    <TestMarketAuto />
                     <BoundaryByRoute>
                     <RouteTransition>
                       {(animated) => (

@@ -12,6 +12,14 @@ import type { Crumb } from "@/lib/breadcrumbs";
 export type CountryCode = "JO" | "LY" | "DZ";
 /** **حالُ السوق** (SPEC §٧٤-أ/٢) — مرآةُ `MarketStatus` في الخلفية (`check:enums`). */
 export type MarketStatus = "open" | "closed";
+
+/** **سوقٌ من أسواق حساب التجربة** (SPEC §٧٤-أ/١٠) — `GET /auth/test-markets`، **وفارغةٌ لغير حساب التجربة**. */
+export interface TestMarket {
+  country_code: CountryCode;
+  name: string;
+  status: MarketStatus;
+  current: boolean;
+}
 /** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
 export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
@@ -88,6 +96,8 @@ export interface User {
   roles: UserRole[];
   country_code: CountryCode;
   is_blocked: boolean;
+  /** **حسابُ تجربة** (SPEC §٦٥-ج) — به وحدَه يُرسم «سوق التجربة» (§٧٤-أ/١٠). قراءةٌ لا يكتبها التطبيق. */
+  is_test?: boolean;
   phone_verified: boolean;
   /** **الرقمُ محجوزٌ ولا يُملَك** — من سجّل ببريده (قرارُ المالك 2026-08-31).
    *

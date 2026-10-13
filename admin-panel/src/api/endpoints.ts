@@ -6,7 +6,16 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { Currency, ExchangeRates, FinanceOverview, FinanceOverviewQuery, Markets, PricingZones, SignupDisplay } from "@/api/types";
+import type {
+  Currency,
+  ExchangeRates,
+  FinanceOverview,
+  FinanceOverviewQuery,
+  Markets,
+  PricingZones,
+  SignupDisplay,
+  TestAccounts,
+} from "@/api/types";
 import type {
   AdminPayMethod,
   AdminPayMethodInput,
@@ -2178,6 +2187,12 @@ export const setBorders = (body: { enforced: boolean; reason?: string }) => api.
 
 export const grantBorderAllowance = (body: { phone: string; country_code: CountryCode; reason: string }) =>
   api.post<Markets>("/admin/markets/borders/allowances", body);
+
+/** **حساباتُ التجربة بأسواقها وأرصدتها** (SPEC §٧٤-أ/١٠). */
+export const getTestAccounts = () => api.get<TestAccounts>("/admin/test-accounts");
+
+/** **إعادةُ ملء رصيد التجربة إلى مبلغ سوقه** — للمالك وحدَه، وسطرٌ في التدقيق. */
+export const refillTestFunds = (userId: string) => api.post<TestAccounts>(`/admin/test-accounts/${userId}/refill`);
 
 export const revokeBorderAllowance = (allowanceId: string) =>
   api.post<Markets>(`/admin/markets/borders/allowances/${allowanceId}/revoke`);

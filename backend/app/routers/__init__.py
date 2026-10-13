@@ -7,6 +7,7 @@ from app.routers import (
     admin_markets,
     admin_pricing_zones,
     admin_finance_overview,
+    admin_test_accounts,
     admin_errors,
     admin_cancellations,
     admin_photo_reports,
@@ -153,6 +154,8 @@ api_router.include_router(admin_countries.router)
 api_router.include_router(admin_markets.router)
 # **«مناطق التسعير»** (SPEC §٧٤-أ/٥) — الحدودُ ووسمُ «وعرة» ونسبتُها أو جدولُها؛ والكتابةُ كالتسعيرة
 api_router.include_router(admin_pricing_zones.router)
+# **حساباتُ التجربة** (SPEC §٧٤-أ/١٠) — قائمتُها وإعادةُ ملء رصيدها للمالك
+api_router.include_router(admin_test_accounts.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
 api_router.include_router(admin_otp_templates.router)

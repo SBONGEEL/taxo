@@ -4,9 +4,12 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import uuid
+
 from sqlalchemy import (
     CheckConstraint,
     Boolean,
+    ForeignKey,
     DateTime,
     Index,
     Integer,
@@ -82,6 +85,11 @@ class User(UUIDMixin, TimestampMixin, Base):
     # طلب. **يكتبه سكربتُ الإنشاء على الخادم والقاعدةُ وحدَهما**: وسمٌ يملك
     # المستخدمُ رفعَه **بابٌ يخرج منه من الإحصاءات ومن حدود المال معاً**،
     # وتنزيلُه بيد مشرفٍ **يُدخل حسابَ تجربةٍ في التوزيع على ركّابٍ حقيقيّين**.
+    #: **توأمُ حساب التجربة في سوقٍ آخر** (SPEC §٧٤-أ/١٠) — يشير إلى الحساب الأوّل، فيعرف مُختارُ السوق إخوتَه. **لا يكتبه بابٌ في
+    #: التطبيقات ولا في اللوحة** — سكربتُ الإنشاء وحدَه، كوسم `is_test`
+    test_twin_of: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     is_test: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

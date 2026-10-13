@@ -2695,6 +2695,28 @@ export interface BorderAllowanceRow {
   granted_by_name: string | null;
 }
 
+/** **حسابُ تجربةٍ بسوقه ورصيده** (SPEC §٧٤-أ/١٠) — `GET /admin/test-accounts`. */
+export interface TestAccountRow {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  role: UserRole;
+  country_code: CountryCode;
+  currency: Currency;
+  /** **رصيدُ التجربة الآن** بعملة سوقه */
+  balance: string;
+  /** **مبلغُ السوق** الذي تكمّل إليه إعادةُ الملء */
+  target_amount: string;
+  /** **دون مبلغ سوقه** — تقرّره الخلفية، فلا تقارن الواجهةُ مبلغين */
+  refillable: boolean;
+  twin_of: string | null;
+  outside_allowed: boolean;
+}
+
+export interface TestAccounts {
+  accounts: TestAccountRow[];
+}
+
 export interface Markets {
   countries: MarketRow[];
   borders_enforced: boolean;

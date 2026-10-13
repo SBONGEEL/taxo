@@ -23,6 +23,7 @@
 
 import { useState, type ReactNode } from "react";
 
+import { TestMarketSection } from "@/components/t2/TestMarket";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { biometryLabel } from "@/lib/biometric";
 import { NAV_APPS, autoAcceptEnabled, navApp, setAutoAccept, setNavApp, type NavApp } from "@/lib/driving-prefs";
@@ -153,6 +154,8 @@ export function SettingsT2Screen() {
         </button>
         <h1 className="t2-title">{tr("الإعدادات")}</h1>
       </div>
+
+      <TestMarketSection />
 
       <Group label={tr("استقبال الطلبات")}>
         <Toggle

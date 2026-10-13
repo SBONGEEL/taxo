@@ -14,13 +14,15 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import {
   getMarkets,
+  getTestAccounts,
   grantBorderAllowance,
+  refillTestFunds,
   revokeBorderAllowance,
   setBorders,
   setMarketStatus,
   setSignupDisplay,
 } from "@/api/endpoints";
-import type { CountryCode, MarketRow, Markets, SignupDisplay } from "@/api/types";
+import type { CountryCode, MarketRow, Markets, SignupDisplay, TestAccounts } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -29,7 +31,7 @@ import { Field, Select, Switch } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Segmented } from "@/components/ui/Segmented";
 import { useCountry } from "@/lib/country";
-import { day } from "@/lib/format";
+import { day, money } from "@/lib/format";
 import { useMyPermissions } from "@/lib/permissions";
 import { Flag, Icon } from "@/taxo2";
 
@@ -328,7 +330,8 @@ export function MarketsScreen() {
               ) : null}
             </div>
           </section>
-          <p className="text-11.5 text-muted">كلُّ فتحٍ وإغلاقٍ ورفعٍ للحدود وسماحٍ ونزعٍ يُكتب في سجلّ التدقيق باسمك.</p>
+          <TestAccountsSection canManage={canManage} countries={data.countries} />
+          <p className="text-11.5 text-muted">كلُّ فتحٍ وإغلاقٍ ورفعٍ للحدود وسماحٍ ونزعٍ وإعادةِ ملءٍ يُكتب في سجلّ التدقيق باسمك.</p>
         </div>
       )}
 
@@ -413,5 +416,103 @@ export function MarketsScreen() {
         </Modal>
       ) : null}
     </Shell>
+  );
+}
+
+/** **حساباتُ التجربة** (SPEC §٧٤-أ/١٠) — سوقُ كلِّ حسابٍ ورصيدُه «رصيد تجريبي»، **وإعادةُ الملء للمالك وحدَه**: تكمّل إلى مبلغ السوق ولا تتجاوزه.
+ *  **ومالُ التجربة لا يغادر المنصّة** — لا سحبَ ولا تحويلَ لغير حسابات التجربة، ولا يظهر في أيِّ صفحةٍ ماليّة. */
+function TestAccountsSection({ canManage, countries }: { canManage: boolean; countries: MarketRow[] }) {
+  const [data, setData] = useState<TestAccounts | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    getTestAccounts()
+      .then(setData)
+      .catch((caught) => setError(messageOf(caught, "تعذّر قراءة حسابات التجربة")));
+  }, []);
+
+  async function refill(id: string, name: string) {
+    setBusy(id);
+    setError(null);
+    setDone(null);
+    try {
+      setData(await refillTestFunds(id));
+      setDone(`أُعيد ملءُ رصيد التجربة لـ${name} — والقيدُ موسومٌ «رصيد تجريبي»`);
+    } catch (caught) {
+      setError(messageOf(caught, "تعذّر إعادة الملء"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-12 rounded-20 border border-line bg-surface p-18" aria-label="حسابات التجربة">
+      <div className="flex flex-col gap-6">
+        <h2 className="text-17 font-bold text-ink">حساباتُ التجربة</h2>
+        <p className="text-12.5 leading-relaxed text-muted">
+          تصل كلَّ سوقٍ ولو كان مغلقاً — داخلَ دولةٍ سوقُها، ومن الخارج مُختارٌ لا يراه غيرُها. ورصيدُها «رصيد تجريبي»: لا يُسحب ولا
+          يُحوَّل لحسابٍ حقيقيّ، ولا يُحسب في صفحات المالية.
+        </p>
+      </div>
+      <ErrorNote message={error} />
+      <SuccessNote message={done} />
+      {data === null ? (
+        error ? null : <Spinner />
+      ) : data.accounts.length === 0 ? (
+        <p className="text-12.5 text-muted">لا حسابَ تجربة.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-14 border border-line">
+          <table className="w-full border-collapse text-12.5">
+            <thead>
+              <tr className="bg-surface-2 text-muted">
+                {["الحساب", "الهاتف", "الدور", "السوق", "رصيد التجربة", "من الخارج", ""].map((head) => (
+                  <th key={head} className="px-12 py-10 text-start font-semibold">
+                    {head}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.accounts.map((row) => {
+                const full = !row.refillable;
+                return (
+                  <tr key={row.id} className="border-t border-line">
+                    <td className="px-12 py-10 font-semibold text-ink">
+                      {row.name ?? "—"} {row.twin_of ? <Badge>توأم</Badge> : null}
+                    </td>
+                    <td className="num px-12 py-10" dir="ltr">
+                      {row.phone ?? "—"}
+                    </td>
+                    <td className="px-12 py-10">{ROLE_LABEL[row.role] ?? row.role}</td>
+                    <td className="px-12 py-10">
+                      {countries.find((country) => country.country_code === row.country_code)?.name ?? row.country_code}
+                    </td>
+                    <td className="num px-12 py-10">
+                      {money(row.balance, row.currency)}
+                      <span className="text-muted"> / {money(row.target_amount, row.currency)}</span>
+                    </td>
+                    <td className="px-12 py-10">{row.outside_allowed ? <Badge tone="ink">مسموح</Badge> : "—"}</td>
+                    <td className="px-12 py-10">
+                      {canManage ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy !== null || full}
+                          onClick={() => void refill(row.id, row.name ?? row.phone ?? "")}
+                        >
+                          {busy === row.id ? "…" : full ? "ممتلئ" : "إعادة ملء"}
+                        </Button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

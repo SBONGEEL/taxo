@@ -406,3 +406,34 @@ async def test_0118_downgrade_keeps_the_owners_written_decisions_and_widens_no_o
             await conn.execute(text("DELETE FROM admin_permissions"))
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0121_downgrade_keeps_test_twins_linked() -> None:
+    """**نزولُ `0121` يقف على توأمٍ مربوط** (SPEC §٧٤-أ/١٠) — فكُّ الربط يجعل الإخوةَ حساباتٍ متفرّقة؛ ثمّ يمرّ بلا ربط."""
+    from app.core.security import hash_password
+    from app.models.enums import CountryCode, UserRole
+    from app.models.user import User
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        first = User(phone="+962710000691", name="أوّل", role=UserRole.RIDER, country_code=CountryCode.JO,
+                     password_hash=hash_password("StaffSecret123"), is_test=True)
+        session.add(first)
+        await session.flush()
+        twin = User(phone="+218990000691", name="توأم", role=UserRole.RIDER, country_code=CountryCode.LY,
+                    password_hash=hash_password("StaffSecret123"), is_test=True, test_twin_of=first.id)
+        session.add(twin)
+        await session.commit()
+    await engine.dispose()
+
+    config = alembic_config()
+    try:
+        with pytest.raises(Exception) as raised:
+            await asyncio.to_thread(command.downgrade, config, "0120")
+        assert "توأم" in str(raised.value)
+        async with engine.begin() as conn:
+            await conn.execute(text("UPDATE users SET test_twin_of = NULL"))
+        await asyncio.to_thread(command.downgrade, config, "0120")
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()

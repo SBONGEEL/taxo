@@ -38,6 +38,7 @@ import type {
   CardOrder,
   ChallengeResponse,
   CountryCode,
+  TestMarket,
   DocumentType,
   DocumentUpload,
   Driver,
@@ -609,6 +610,12 @@ export const exchangeHandoff = (token: string) =>
     { token, app: CLIENT_APP },
     { anonymous: true },
   );
+
+/** **أسواقُ حساب التجربة** (SPEC §٧٤-أ/١٠) — فارغةٌ لغيره، فلا يُرسم المُختار. */
+export const getTestMarkets = () => api.get<{ markets: TestMarket[] }>("/auth/test-markets");
+
+/** **الدخولُ إلى أخ حساب التجربة في سوقٍ آخر** — جلسةٌ جديدة، وسطرٌ في التدقيق. */
+export const switchTestMarket = (country: CountryCode) => api.post<AuthResponse>(`/auth/test-markets/${country}`, {});
 
 // ------------------------------------- بدائلُ REST حين يسقط المقبس (SPEC §10)
 

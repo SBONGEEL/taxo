@@ -21,6 +21,8 @@ from app.core import rate_limit
 from app.core.app_scope import ClientApp
 from app.core.config import settings
 from app.core import app_scope
+from pydantic import BaseModel
+
 from app.core.deps import (
     ClientIP,
     CurrentSessionId,
@@ -71,7 +73,7 @@ from app.schemas.security import (
     TotpRecoveryVerifyRequest,
     TotpStatusOut,
 )
-from app.services import markets
+from app.services import markets, test_markets
 from app.services import verification_campaign
 from app.services import rider_photo
 from app.services import (
@@ -966,3 +968,51 @@ async def exchange_handoff(
     app_scope.guard(user.roles, payload.app)
     tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
+# ═══════════════ مُختارُ السوق لحسابات التجربة (SPEC §٧٤-أ/١٠)
+
+
+class TestMarketOut(BaseModel):
+    country_code: CountryCode
+    name: str
+    #: **مفتوحةٌ أم مغلقة** — حسابُ التجربة يصل المغلقةَ، والاسمُ يقولها
+    status: str
+    current: bool
+
+
+class TestMarketsOut(BaseModel):
+    markets: list[TestMarketOut]
+
+
+@router.get("/test-markets", response_model=TestMarketsOut)
+async def list_test_markets(user: CurrentUser, session: DbSession) -> TestMarketsOut:
+    """**أسواقُ حساب التجربة** — فارغةٌ لغيره، فلا يُرسم المُختارُ إلا لحساب تجربة."""
+    from app.core.currency import COUNTRY_NAME
+    from app.core.i18n import translate
+
+    members = await test_markets.family(session, user)
+    return TestMarketsOut(
+        markets=[
+            TestMarketOut(
+                country_code=member.country_code,
+                name=translate(COUNTRY_NAME[CountryCode(member.country_code)]),
+                status=(await markets.status_of(session, CountryCode(member.country_code))).value,
+                current=member.id == user.id,
+            )
+            for member in members
+        ]
+    )
+
+
+@router.post("/test-markets/{country_code}", response_model=AuthResponse)
+async def switch_test_market(
+    country_code: CountryCode, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> AuthResponse:
+    """**الدخولُ إلى أخ حساب التجربة في سوقٍ آخر** — جلسةٌ جديدةٌ كالدخول، وسطرٌ في التدقيق."""
+    target = await test_markets.switch(session, user=user, country=country_code)
+    await session.commit()
+    tokens = await _issue(session, redis, target)
+    await session.refresh(target)
+    return AuthResponse(user=UserOut.model_validate(target), tokens=tokens)
+

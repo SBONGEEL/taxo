@@ -19,6 +19,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
 import { getNotificationPreferences, setNotificationPreferences, updateMyLanguage } from "@/api/endpoints";
+import { TestMarketSection } from "@/components/t2/TestMarket";
 import { useGoBack } from "@/lib/back";
 import { useBrand } from "@/lib/brand";
 import { useConfig } from "@/lib/config";
@@ -97,6 +98,8 @@ export function SettingsScreen() {
   return (
     <div className="t2 t2-page pb-nav">
       <SubHeadT2 title={tr("الإعدادات")} onBack={goBack} />
+
+      <TestMarketSection />
 
       <Group label={tr("الإشعارات")}>
         <Toggle
