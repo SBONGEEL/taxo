@@ -144,6 +144,8 @@ class Account:
         self.last_record = 0.0
         self.last_batch = 0.0
         self.socket = None
+        self.mode_since = time.monotonic()
+        self.window_closed = False
 
     @property
     def headers(self) -> dict:
@@ -205,6 +207,7 @@ class Shard:
             return
         self.metrics.counts["ws_driver_open"] += 1
         who.socket = socket
+        who.mode_since = time.monotonic()
         adaptive = self.args.protocol == "adaptive"
         sender = asyncio.create_task(self.adaptive(socket, who) if adaptive else self.broadcast(socket, who))
         try:
@@ -231,7 +234,8 @@ class Shard:
                     self.metrics.counts["offers_received"] += 1
                     if not who.busy and ride_id:
                         asyncio.create_task(self.drive(http, who, ride))
-                if self.stop.is_set():
+                # **ولا يُغلق مقبسُ كبتنٍ في رحلة** عند انتهاء الدرجة — فتكتمل الرحلةُ وتُحسب، ولا يُقرأ إغلاقُنا عطباً في الخادم
+                if self.stop.is_set() and not who.busy:
                     break
         except Exception as exc:  # noqa: BLE001
             self.metrics.errors[f"WS driver dropped ⇐ {type(exc).__name__}"] += 1
@@ -240,14 +244,21 @@ class Shard:
             await socket.close()
 
     async def broadcast(self, socket, who: Account) -> None:
+        try:
+            await self._broadcast(socket, who)
+        finally:
+            self.close_window(who)
+
+    async def _broadcast(self, socket, who: Account) -> None:
         await asyncio.sleep(random.uniform(0, self.args.location_seconds))
-        while not self.stop.is_set():
+        while not (self.stop.is_set() and not who.busy):
             if not who.busy:
                 who.lat += random.uniform(-0.0003, 0.0003)
                 who.lng += random.uniform(-0.0003, 0.0003)
             try:
                 await socket.send(json.dumps({"type": "location", "lat": who.lat, "lng": who.lng, "heading": 90}))
                 self.metrics.location_sent += 1
+                self.metrics.counts[f"frames_{who.mode}"] += 1
             except Exception:  # noqa: BLE001
                 return
             await asyncio.sleep(self.args.location_seconds)
@@ -256,6 +267,7 @@ class Shard:
     async def send_location(self, socket, who: Account) -> None:
         await socket.send(json.dumps({"type": "location", "lat": who.lat, "lng": who.lng, "heading": 90}))
         self.metrics.location_sent += 1
+        self.metrics.counts[f"frames_{who.mode}"] += 1
         who.sent = (who.lat, who.lng, time.monotonic())
         who.last_frame = time.monotonic()
         who.holding = False
@@ -269,6 +281,7 @@ class Shard:
         for batch in list(who.pending.values()):
             await socket.send(json.dumps({"type": "locations", **batch}))
             self.metrics.batches += 1
+            self.metrics.counts[f"frames_{who.mode}"] += 1
             self.metrics.batch_points += len(batch["points"])
         who.last_frame = time.monotonic()
 
@@ -277,7 +290,7 @@ class Shard:
         await asyncio.sleep(random.uniform(0, 3))
         try:
             await self.send_location(socket, who)
-            while not self.stop.is_set():
+            while not (self.stop.is_set() and not who.busy):
                 await asyncio.sleep(1)
                 now = time.monotonic()
                 policy = who.policy
@@ -302,12 +315,30 @@ class Shard:
                 if now - who.last_frame >= policy["heartbeat_seconds"]:
                     await socket.send(json.dumps({"type": "heartbeat"}))
                     self.metrics.heartbeats += 1
+                    self.metrics.counts[f"frames_{who.mode}"] += 1
                     who.last_frame = now
         except Exception:  # noqa: BLE001 — مقبسٌ سقط: حلقةُ الاستقبال تعدّه
-            return
+            pass
+        finally:
+            # **نافذةُ القياس تُغلق حين يكفّ الإرسال** — فلا تُحسب ثواني المهلة بعد الدرجة بلا إطارات
+            self.close_window(who)
+
+    def close_window(self, who: Account) -> None:
+        if not who.window_closed:
+            self.note_mode(who, who.mode)
+            who.window_closed = True
+
+    def note_mode(self, who: Account, mode: str) -> None:
+        """ثواني كلِّ حال — مقامُ «إطاراتٌ في الثانية لكلِّ كبتنٍ في هذه الحال»."""
+        now = time.monotonic()
+        if not who.window_closed:
+            self.metrics.counts[f"seconds_{who.mode}"] += now - who.mode_since
+        who.mode_since = now
+        who.mode = mode
 
     async def set_mode(self, who: Account, mode: str) -> None:
         if self.args.protocol != "adaptive" or who.socket is None:
+            self.note_mode(who, mode)
             return
         if who.mode == "trip" and mode != "trip":
             # **آخرُ النقاط قبل الإنهاء** — كالتطبيق (`flushTrip`): الأجرةُ تُقاس بما وصل
@@ -317,7 +348,7 @@ class Shard:
                 if not who.pending:
                     break
                 await asyncio.sleep(0.1)
-        who.mode = mode
+        self.note_mode(who, mode)
         who.last_record = who.last_batch = 0.0
         await self.send_location(who.socket, who)
 
@@ -430,7 +461,8 @@ class Shard:
                     if kind == "no_driver_found":
                         self.metrics.counts["no_driver_found"] += 1
                     self.finish(ride_id)
-                if self.stop.is_set():
+                # **ولا مقبسُ راكبٍ في رحلة** — كان يُغلق فلا يصله «اكتملت» فتُعدّ رحلتُه «عالقة» وليست كذلك (قِيس على التطوير ٢٠٢٦-١٠-١٣)
+                if self.stop.is_set() and not who.busy:
                     break
         except Exception as exc:  # noqa: BLE001
             self.metrics.errors[f"WS rider dropped ⇐ {type(exc).__name__}"] += 1
@@ -519,6 +551,9 @@ class Shard:
             while self.active and time.monotonic() < grace:
                 await asyncio.sleep(2)
             self.metrics.counts["rides_stuck"] = len(self.active)
+            for who in self.captains:
+                if who.socket is not None:
+                    self.close_window(who)
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -622,6 +657,12 @@ def main() -> int:
             (merged.location_sent + merged.heartbeats + merged.batches) / max(1.0, args.minutes * 60), 1
         ),
         "protocol": args.protocol,
+        # **إطاراتُ الثانية لكلِّ كبتنٍ في كلِّ حال** — مقيسةً: إطاراتُ الحال ÷ ثوانيها مجموعةً على الكباتن
+        "frames_per_captain_second": {
+            mode: round(merged.counts.get(f"frames_{mode}", 0) / merged.counts[f"seconds_{mode}"], 4)
+            for mode in ("available", "heading", "trip")
+            if merged.counts.get(f"seconds_{mode}")
+        },
         "generator_cpu_percent_per_shard": cpu,
     }
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")

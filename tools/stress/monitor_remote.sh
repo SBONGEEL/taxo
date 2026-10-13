@@ -8,6 +8,9 @@ DURATION="${1:-600}"
 INTERVAL="${2:-10}"
 END=$(( $(date +%s) + DURATION ))
 read_cpu() { awk '/^cpu /{print $2+$3+$4+$5+$6+$7+$8, $5+$6}' /proc/stat; }
+# **Redis الإنتاج بكلمة مرور** (`--requirepass`) — و`redis-cli` بلا مصادقةٍ يردّ `NOAUTH` **فتُقرأ أعمدتُه أصفاراً صامتة** (قِيس على
+# مكدّس التطوير ٢٠٢٦-١٠-١٣). **فالكلمةُ من بيئة الحاوية نفسِها** (`REDISCLI_AUTH`) — لا تمرّ بهذا السكربت ولا بسجلّه
+rcli() { docker exec taxo-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli "$@"' _ "$@"; }
 echo "ts,cpu_busy_pct,load1,mem_total_mb,mem_avail_mb,mem_avail_pct,disk_used_pct,backend_cpu,backend_mem_mb,worker_cpu,db_cpu,db_mem_mb,redis_cpu,pg_conns,pg_active,celery_queue,geoadd_calls,redis_ops_per_sec,redis_clients,refused"
 read -r T0 I0 < <(read_cpu)
 while [ "$(date +%s)" -lt "$END" ]; do
@@ -30,10 +33,10 @@ while [ "$(date +%s)" -lt "$END" ]; do
   REFUSED=0
   [ -z "$PG" ] && REFUSED=1
   PGC=$(echo "$PG" | cut -d'|' -f1); PGA=$(echo "$PG" | cut -d'|' -f2)
-  QUEUE=$(docker exec taxo-redis redis-cli LLEN celery 2>/dev/null | tr -dc '0-9')
-  GEO=$(docker exec taxo-redis redis-cli INFO commandstats 2>/dev/null | awk -F'[=,:]' '/^cmdstat_geoadd/{print $3}' | tr -dc '0-9')
-  OPS=$(docker exec taxo-redis redis-cli INFO stats 2>/dev/null | awk -F: '/instantaneous_ops_per_sec/{print $2}' | tr -dc '0-9')
-  CLI=$(docker exec taxo-redis redis-cli INFO clients 2>/dev/null | awk -F: '/^connected_clients/{print $2}' | tr -dc '0-9')
+  QUEUE=$(rcli LLEN celery 2>/dev/null | tr -dc '0-9')
+  GEO=$(rcli INFO commandstats 2>/dev/null | awk -F'[=,:]' '/^cmdstat_geoadd/{print $3}' | tr -dc '0-9')
+  OPS=$(rcli INFO stats 2>/dev/null | awk -F: '/instantaneous_ops_per_sec/{print $2}' | tr -dc '0-9')
+  CLI=$(rcli INFO clients 2>/dev/null | awk -F: '/^connected_clients/{print $2}' | tr -dc '0-9')
   echo "$(date -u +%H:%M:%S),$CPU,$LOAD,$MT,$MA,$MAP,$DISK,$BC,$BM,$WC,$DC,$DM,$RC,$PGC,$PGA,${QUEUE:-0},${GEO:-0},${OPS:-0},${CLI:-0},$REFUSED"
   if awk -v p="$MAP" 'BEGIN{exit !(p < 10)}' || [ "${DISK:-0}" -ge 95 ] || [ "$REFUSED" = 1 ]; then
     echo "STOP,mem_avail_pct=$MAP,disk=$DISK,db_refused=$REFUSED"

@@ -624,13 +624,14 @@ async def _freshened(
         (await session.execute(select(Driver.id, Driver.user_id).where(Driver.id.in_([p.driver_id for p in stale])))).all()
     )
     asked_at = now
-    asked = 0
+    asked: set[uuid.UUID] = set()
     for presence in stale:
         user_id = owners.get(presence.driver_id)
-        # **ولا يُسأل مرّتين في نافذةٍ قصيرة**: محاولةٌ تاليةٌ في التوزيع نفسِه تجد من لم يُجب ما زال قديماً — فيتأخّر بلا انتظارٍ ثانٍ
+        # **ولا يُسأل مرّتين في نافذةٍ قصيرة**: توزيعٌ آخرُ سأله للتوّ — فجوابُه يُقرأ من موقعه ولا يُنتظر له (قِيس ٢٠٢٦-١٠-١٣: انتظارُه
+        # كان يبلغ المهلةَ كاملة فرفع أبطأَ ٥٪ من زمن العرض من ١٫٨ ثانية إلى ٤٫٤)
         if user_id is not None and await redis.set(f"dispatch:fresh_asked:{presence.driver_id}", "1", nx=True, ex=10):
             await events.publish(redis, events.user_channel(user_id), {"type": "location_request"})
-            asked += 1
+            asked.add(presence.driver_id)
 
     answered: set[uuid.UUID] = set()
     deadline = time.monotonic() + (FRESH_WAIT_SECONDS if asked else 0)
@@ -638,11 +639,13 @@ async def _freshened(
         pipe = redis.pipeline()
         for presence in stale:
             pipe.hget(geo.presence_key(presence.driver_id), "at")
+        clock = int(time.time())
         for presence, raw in zip(stale, await pipe.execute(), strict=True):
             raw = raw.decode() if isinstance(raw, bytes) else raw
-            if raw and str(raw).isdigit() and int(raw) >= asked_at:
+            # أجاب بعد السؤال — **أو موقعُه حديثٌ أصلاً** (أجاب توزيعاً آخرَ سأله قبلنا)
+            if raw and str(raw).isdigit() and (int(raw) >= asked_at or clock - int(raw) <= FRESH_AFTER_SECONDS):
                 answered.add(presence.driver_id)
-        if len(answered) == len(stale) or time.monotonic() >= deadline:
+        if asked <= answered or time.monotonic() >= deadline:
             break
         await asyncio.sleep(_FRESH_POLL_SECONDS)
 
