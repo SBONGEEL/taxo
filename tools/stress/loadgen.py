@@ -5,7 +5,10 @@
 
 ## ما يفعله — **كما يفعل التطبيقان بقواعد البثّ المرفوعة**
 
-* **الكبتن**: يفتح مقبسَه (`/ws/driver` — فتحُه رفعُ «متّصل»)، **ويبثّ موقعَه كلَّ `--location-seconds`** (٣ ثوانٍ اليوم، كالتطبيق)،
+* **الكبتن**: يفتح مقبسَه (`/ws/driver` — فتحُه رفعُ «متّصل»)، **ويبثّ موقعَه كلَّ `--location-seconds`** (٣ ثوانٍ — `--protocol legacy`)،
+  **أو بالبثّ المتكيّف** (`--protocol adaptive`، §٧٥-ج — المرحلة ٣): سياسةُ الخادم من «connected» وحيّةً بعده، متاحٌ بفاصلها وقاعدةِ الثلاثين
+  متراً (نصفُ المتاحين واقفٌ ونصفُهم يتجوّل)، في الطريق كلَّ ١٠، **والرحلةُ نقطةٌ كلَّ ٢ ث ودفعةٌ كلَّ ١٥ بإقرار** وآخرُها قبل الإنهاء، والنبضة،
+  **ويجيب «location_request» فوراً** كالتطبيق؛
   ويقبل كلَّ طلبٍ يصله ثمّ يسير إلى الراكب ← «وصلت» ← «بدأت» ← يسير إلى الوجهة ← «انتهت» **فتُسجَّل الأجرة** ← يؤكّد الدفعَ النقديّ.
 * **الراكب**: يفتح مقبسَه (`/ws/rider`) ويرسل مركزَ خريطته فتصله السيّاراتُ القريبة كلَّ خمس ثوانٍ (كالتطبيق)، **ويطلب**: تقديرٌ ثمّ طلبٌ
   نقداً؛ **وبعضُهم يلغي قبل القبول** (`--cancel-share`).
@@ -30,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import math
 import multiprocessing as mp
@@ -57,6 +61,15 @@ WAIT_SECONDS = 5           # انتظارُ الراكب بعد «وصلت»
 TRIP_SECONDS = 40          # الرحلة
 LOST_AFTER_SECONDS = 120   # طلبٌ بلا عرضٍ ولا جوابٍ في دقيقتين ضائع
 REFRESH_EVERY_SECONDS = 20 * 60
+#: سياسةُ الخادم قبل وصولها — قيمُ الترحيلة نفسُها (تُستبدل بما في «connected»)
+DEFAULT_POLICY = {"available_seconds": 15, "heading_seconds": 10, "trip_send_seconds": 15, "trip_record_seconds": 2,
+                  "move_meters": 30, "heartbeat_seconds": 60}
+
+
+def meters(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    rad = math.radians
+    h = math.sin(rad(lat2 - lat1) / 2) ** 2 + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(rad(lng2 - lng1) / 2) ** 2
+    return 2 * 6_371_000 * math.asin(math.sqrt(h))
 
 
 def percentile(values: list[float], p: float) -> float | None:
@@ -83,6 +96,12 @@ class Metrics:
     counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     wrong_fares: list[str] = field(default_factory=list)
     location_sent: int = 0
+    #: البثُّ المتكيّف — ما أُرسل بأنواعه
+    heartbeats: int = 0
+    batches: int = 0
+    batch_points: int = 0
+    acks: int = 0
+    location_requests: int = 0
 
     def to_json(self) -> dict:
         return {
@@ -93,6 +112,11 @@ class Metrics:
             "counts": dict(self.counts),
             "wrong_fares": self.wrong_fares[:50],
             "location_sent": self.location_sent,
+            "heartbeats": self.heartbeats,
+            "batches": self.batches,
+            "batch_points": self.batch_points,
+            "acks": self.acks,
+            "location_requests": self.location_requests,
         }
 
 
@@ -106,6 +130,20 @@ class Account:
         self.lat = center[0] + random.uniform(-SPREAD_DEG, SPREAD_DEG)
         self.lng = center[1] + random.uniform(-SPREAD_DEG, SPREAD_DEG)
         self.busy = False
+        # ── البثُّ المتكيّف (§٧٥-ج)
+        self.policy: dict = dict(DEFAULT_POLICY)
+        self.mode = "available"
+        #: نصفُ المتاحين واقفٌ ونصفُهم يتجوّل — والواقفُ لا يرسل إلا نبضتَه
+        self.parked = random.random() < 0.5
+        self.sent: tuple[float, float, float] | None = None
+        self.last_frame = 0.0
+        self.holding = False
+        self.buffer: list[dict] = []
+        self.pending: dict[int, dict] = {}
+        self.seq = int(time.time() * 1000)
+        self.last_record = 0.0
+        self.last_batch = 0.0
+        self.socket = None
 
     @property
     def headers(self) -> dict:
@@ -166,11 +204,26 @@ class Shard:
             self.metrics.errors[f"WS driver connect ⇐ {type(exc).__name__}"] += 1
             return
         self.metrics.counts["ws_driver_open"] += 1
-        sender = asyncio.create_task(self.broadcast(socket, who))
+        who.socket = socket
+        adaptive = self.args.protocol == "adaptive"
+        sender = asyncio.create_task(self.adaptive(socket, who) if adaptive else self.broadcast(socket, who))
         try:
             async for raw in socket:
                 frame = json.loads(raw)
-                if frame.get("type") == "ride_offer":
+                kind = frame.get("type")
+                if adaptive:
+                    if kind == "connected" and frame.get("broadcast"):
+                        who.policy.update({k: v for k, v in frame["broadcast"].items() if k in DEFAULT_POLICY})
+                    elif kind == "broadcast_policy":
+                        who.policy.update({k: v for k, v in frame.items() if k in DEFAULT_POLICY})
+                        self.metrics.counts[f"policy_available_{frame.get('available_seconds')}"] += 1
+                    elif kind == "location_request":
+                        self.metrics.location_requests += 1
+                        await self.send_location(socket, who)
+                    elif kind == "points_ack":
+                        self.metrics.acks += 1
+                        who.pending.pop(frame.get("seq"), None)
+                if kind == "ride_offer":
                     ride = frame.get("ride") or {}
                     ride_id = ride.get("id")
                     if ride_id in self.requested_at:
@@ -199,8 +252,90 @@ class Shard:
                 return
             await asyncio.sleep(self.args.location_seconds)
 
+    # ------------------------------------------------- البثُّ المتكيّف (§٧٥-ج)
+    async def send_location(self, socket, who: Account) -> None:
+        await socket.send(json.dumps({"type": "location", "lat": who.lat, "lng": who.lng, "heading": 90}))
+        self.metrics.location_sent += 1
+        who.sent = (who.lat, who.lng, time.monotonic())
+        who.last_frame = time.monotonic()
+        who.holding = False
+
+    async def send_batch(self, socket, who: Account) -> None:
+        who.last_batch = time.monotonic()
+        if who.buffer:
+            who.seq += 1
+            who.pending[who.seq] = {"seq": who.seq, "points": who.buffer}
+            who.buffer = []
+        for batch in list(who.pending.values()):
+            await socket.send(json.dumps({"type": "locations", **batch}))
+            self.metrics.batches += 1
+            self.metrics.batch_points += len(batch["points"])
+        who.last_frame = time.monotonic()
+
+    async def adaptive(self, socket, who: Account) -> None:
+        """**دورةُ قرارٍ كلَّ ثانية** كما في `driver-app/src/lib/socket.ts` — والتجوّلُ لمن ليس واقفاً."""
+        await asyncio.sleep(random.uniform(0, 3))
+        try:
+            await self.send_location(socket, who)
+            while not self.stop.is_set():
+                await asyncio.sleep(1)
+                now = time.monotonic()
+                policy = who.policy
+                if who.mode == "trip":
+                    if now - who.last_record >= policy["trip_record_seconds"]:
+                        who.last_record = now
+                        who.buffer.append({"lat": who.lat, "lng": who.lng, "heading": 90, "t": int(time.time() * 1000)})
+                    if now - who.last_batch >= policy["trip_send_seconds"]:
+                        await self.send_batch(socket, who)
+                    continue
+                if who.mode == "available" and not who.parked and not who.busy and random.random() < 1 / 3:
+                    who.lat += random.uniform(-0.0003, 0.0003)
+                    who.lng += random.uniform(-0.0003, 0.0003)
+                interval = policy["heading_seconds"] if who.mode == "heading" else policy["available_seconds"]
+                moved = who.sent is None or meters(who.sent[0], who.sent[1], who.lat, who.lng) >= policy["move_meters"]
+                due = who.sent is None or now - who.sent[2] >= interval
+                if moved and (who.holding or due):
+                    await self.send_location(socket, who)
+                    continue
+                if not moved and due:
+                    who.holding = True
+                if now - who.last_frame >= policy["heartbeat_seconds"]:
+                    await socket.send(json.dumps({"type": "heartbeat"}))
+                    self.metrics.heartbeats += 1
+                    who.last_frame = now
+        except Exception:  # noqa: BLE001 — مقبسٌ سقط: حلقةُ الاستقبال تعدّه
+            return
+
+    async def set_mode(self, who: Account, mode: str) -> None:
+        if self.args.protocol != "adaptive" or who.socket is None:
+            return
+        if who.mode == "trip" and mode != "trip":
+            # **آخرُ النقاط قبل الإنهاء** — كالتطبيق (`flushTrip`): الأجرةُ تُقاس بما وصل
+            who.buffer.append({"lat": who.lat, "lng": who.lng, "heading": 90, "t": int(time.time() * 1000)})
+            await self.send_batch(who.socket, who)
+            for _ in range(30):
+                if not who.pending:
+                    break
+                await asyncio.sleep(0.1)
+        who.mode = mode
+        who.last_record = who.last_batch = 0.0
+        await self.send_location(who.socket, who)
+
     async def move(self, who: Account, lat: float, lng: float, seconds: float) -> None:
         """**مسارٌ على شكل L** (عرضاً ثمّ طولاً) — أطولُ من الخطّ المستقيم بنحو ما يطول الطريقُ الحقيقيّ."""
+        if self.args.protocol == "adaptive":
+            # الحركةُ ثانيةً ثانية — والبثُّ تقرّره دورتُه لا خطوةُ الحركة
+            steps = max(1, int(seconds))
+            corner = (lat, who.lng)
+            half = steps // 2 or 1
+            start = (who.lat, who.lng)
+            for k in range(1, steps + 1):
+                if k <= half:
+                    who.lat, who.lng = start[0] + (corner[0] - start[0]) * (k / half), start[1]
+                else:
+                    who.lat, who.lng = corner[0], corner[1] + (lng - corner[1]) * ((k - half) / max(1, steps - half))
+                await asyncio.sleep(1)
+            return
         steps = max(1, int(seconds / self.args.location_seconds))
         corner = (lat, who.lng)
         half = steps // 2 or 1
@@ -223,13 +358,16 @@ class Shard:
                 return
             pickup = ride.get("pickup") or {}
             dropoff = ride.get("dropoff") or {}
+            await self.set_mode(who, "heading")
             await self.move(who, float(pickup.get("lat", who.lat)), float(pickup.get("lng", who.lng)), HEADING_SECONDS)
             await self.call(http, "POST", f"/rides/{ride_id}/arrive", who, label="POST rides/arrive")
             await asyncio.sleep(WAIT_SECONDS)
             started = await self.call(http, "POST", f"/rides/{ride_id}/start", who, label="POST rides/start")
             if started is None or started.status_code != 200:
                 return
+            await self.set_mode(who, "trip")
             await self.move(who, float(dropoff.get("lat", who.lat)), float(dropoff.get("lng", who.lng)), TRIP_SECONDS)
+            await self.set_mode(who, "available")
             done = await self.call(http, "POST", f"/rides/{ride_id}/complete", who, label="POST rides/complete")
             if done is None or done.status_code != 200:
                 return
@@ -252,6 +390,9 @@ class Shard:
                             self.metrics.counts["cash_confirmed"] += 1
         finally:
             who.busy = False
+            if who.mode != "available":
+                with contextlib.suppress(Exception):
+                    await self.set_mode(who, "available")
 
     def check_fare(self, ride_id: str, body: dict) -> None:
         try:
@@ -411,6 +552,8 @@ def main() -> int:
     parser.add_argument("--api", default="https://api.tajora.ly/api/v1")
     parser.add_argument("--shards", type=int, default=4)
     parser.add_argument("--location-seconds", type=float, default=3.0)
+    parser.add_argument("--protocol", choices=("legacy", "adaptive"), default="legacy",
+                        help="legacy: موقعٌ كلَّ --location-seconds (المرحلة ١) · adaptive: البثُّ المتكيّف §٧٥-ج (المرحلة ٣)")
     parser.add_argument("--cancel-share", type=float, default=0.1)
     parser.add_argument("--ramp-seconds", type=float, default=60)
     parser.add_argument("--http-connections", type=int, default=100)
@@ -455,6 +598,8 @@ def main() -> int:
             merged.counts[k] += v
         merged.wrong_fares.extend(part["wrong_fares"])
         merged.location_sent += part["location_sent"]
+        for key in ("heartbeats", "batches", "batch_points", "acks", "location_requests"):
+            setattr(merged, key, getattr(merged, key) + part.get(key, 0))
         cpu.append(part.get("cpu_percent"))
     seconds = time.time() - started
     all_http = [ms for values in merged.http.values() for ms in values]
@@ -472,6 +617,11 @@ def main() -> int:
         "counts": dict(merged.counts),
         "wrong_fares": merged.wrong_fares,
         "location_sent_per_second": round(merged.location_sent / max(1.0, args.minutes * 60), 1),
+        # **كلُّ إطاراتِ البثّ في الثانية** — الموقعُ والنبضةُ والدفعة: ما يعالجه الخادمُ فعلاً
+        "broadcast_frames_per_second": round(
+            (merged.location_sent + merged.heartbeats + merged.batches) / max(1.0, args.minutes * 60), 1
+        ),
+        "protocol": args.protocol,
         "generator_cpu_percent_per_shard": cpu,
     }
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
