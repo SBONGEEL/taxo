@@ -311,13 +311,14 @@ async def active_allowance(session: AsyncSession, user_id: uuid.UUID) -> BorderA
     )
 
 
-async def grant(session: AsyncSession, *, user: User, reason: str, actor: User) -> BorderAllowance:
+async def grant(session: AsyncSession, *, user: User, reason: str, actor: User | None) -> BorderAllowance:
+    """**`actor` فارغٌ لسكربت الإنشاء وحدَه** (§٧٤-ز) — لا مشرفَ قرّره، **وقيدٌ يسمّي من لم يفعل أسوأُ من قيدٍ لا يسمّي أحداً**."""
     text = (reason or "").strip()
     if len(text) < 3:
         raise InvalidInput("اكتب سببَ السماح (3 أحرف على الأقل)")
     if await active_allowance(session, user.id) is not None:
         raise Conflict("هذا الحسابُ في قائمة السماح سلفاً")
-    row = BorderAllowance(user_id=user.id, reason=text[:200], granted_by=actor.id)
+    row = BorderAllowance(user_id=user.id, reason=text[:200], granted_by=actor.id if actor else None)
     session.add(row)
     await session.flush()
     await audit.record(
