@@ -9,10 +9,22 @@ import { AppLauncher } from "@capacitor/app-launcher";
 
 const SITE = "https://taxo.tajora.ly";
 
-export const LEGAL_PAGES = [
-  { key: "privacy", label: "سياسة الخصوصية", url: `${SITE}/privacy` },
-  { key: "terms", label: "شروط الاستخدام", url: `${SITE}/terms` },
-] as const;
+export type LegalKey = "privacy" | "terms";
+
+/** **صفحتا دولة الراكب ولغتِه** (SPEC §٧٤-ل/١): للجزائر صفحاتُها (`dz-privacy` · `dz-terms`، و`-fr` لمن لغتُه الفرنسيّة) —
+ * **فراكبُ الجزائر لا يُفتح له نصُّ الأردن** وتحته «النصُّ الذي وافقتَ عليه». وما سواها صفحتا الموقع كما كانتا. */
+export function legalPages(country: string | undefined, language: string): { key: LegalKey; url: string }[] {
+  const own = country ? COUNTRY_PAGES[country] : undefined;
+  const prefix = own?.prefix ?? "";
+  const suffix = own?.french && language === "fr" ? "-fr" : "";
+  return (["privacy", "terms"] as const).map((key) => ({ key, url: `${SITE}/${prefix}${key}${suffix}` }));
+}
+
+/** **الدولُ التي لها صفحاتُها على الموقع** — خبرٌ عن ملفّات `site/` لا قائمةُ أسواق: دولةٌ تُضاف صفحاتُها تُضاف هنا، وما ليس
+ * هنا يُفتح له ما كان يُفتح. */
+const COUNTRY_PAGES: Partial<Record<string, { prefix: string; french: boolean }>> = {
+  DZ: { prefix: "dz-", french: true },
+};
 
 export function openLegal(url: string): void {
   // **وغلافٌ أقدمُ بلا `AppLauncher` لا يرسل وعداً مرفوضاً** (الشكلُ الذي أنتج بلاغَ 496)

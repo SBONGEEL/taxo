@@ -47,6 +47,15 @@ export default defineConfig({
         // **يقرن رابطَ السياسة بالتطبيق**، **ووثيقةٌ أوسعُ ليست وثيقتَه**.
         "driver-privacy": resolve(__dirname, "driver-privacy.html"),
         "driver-terms": resolve(__dirname, "driver-terms.html"),
+        // **صفحاتُ سياسات الجزائر** بالعربيّة والفرنسيّة (SPEC §٧٤-ل/١)
+        "dz-privacy": resolve(__dirname, "dz-privacy.html"),
+        "dz-privacy-fr": resolve(__dirname, "dz-privacy-fr.html"),
+        "dz-terms": resolve(__dirname, "dz-terms.html"),
+        "dz-terms-fr": resolve(__dirname, "dz-terms-fr.html"),
+        "dz-driver-privacy": resolve(__dirname, "dz-driver-privacy.html"),
+        "dz-driver-privacy-fr": resolve(__dirname, "dz-driver-privacy-fr.html"),
+        "dz-driver-terms": resolve(__dirname, "dz-driver-terms.html"),
+        "dz-driver-terms-fr": resolve(__dirname, "dz-driver-terms-fr.html"),
         // **صفحةُ طلب الحذف** (٢٠٢٦-٠٩-٠٧): يشترطها المتجرُ رابطاً في نموذج
         // أمان البيانات — **وصفحةٌ لا تدخل البناءَ رابطٌ يقود إلى ٤٠٤**.
         "delete-account": resolve(__dirname, "delete-account.html"),

@@ -31,12 +31,23 @@
 
 const API = process.env.TAXO_POLICY_API || "https://api.tajora.ly/api/v1/public";
 
-//: **الصفحاتُ الأربعُ وما تحمله** — والمصدرُ هنا لا في أربعة ملفّاتِ HTML.
+//: **صفحاتُ السياسة وما تحمله** — والمصدرُ هنا لا في ملفّاتِ HTML.
+//:
+//: **وصفحاتُ الجزائر الثماني** (SPEC §٧٤-ل/١): الأربعُ نفسُها بالعربيّة والفرنسيّة، **ودولتُها تُسأل صراحةً** — فالبابُ العامُّ
+//: يعطي دولةَ الموقع (الأردن) إن لم تُسأل. **والفرنسيّةُ من `body_fr`**، وغيابُه يُسقط البناء كغياب العربيّ.
 export const POLICY_PAGES = {
   "privacy.html": { doc: "privacy_policy", app: "rider" },
   "terms.html": { doc: "terms_of_use", app: "rider" },
   "driver-privacy.html": { doc: "privacy_policy", app: "driver" },
   "driver-terms.html": { doc: "terms_of_use", app: "driver" },
+  "dz-privacy.html": { doc: "privacy_policy", app: "rider", country: "DZ", lang: "ar" },
+  "dz-privacy-fr.html": { doc: "privacy_policy", app: "rider", country: "DZ", lang: "fr" },
+  "dz-terms.html": { doc: "terms_of_use", app: "rider", country: "DZ", lang: "ar" },
+  "dz-terms-fr.html": { doc: "terms_of_use", app: "rider", country: "DZ", lang: "fr" },
+  "dz-driver-privacy.html": { doc: "privacy_policy", app: "driver", country: "DZ", lang: "ar" },
+  "dz-driver-privacy-fr.html": { doc: "privacy_policy", app: "driver", country: "DZ", lang: "fr" },
+  "dz-driver-terms.html": { doc: "terms_of_use", app: "driver", country: "DZ", lang: "ar" },
+  "dz-driver-terms-fr.html": { doc: "terms_of_use", app: "driver", country: "DZ", lang: "fr" },
 };
 
 const esc = (s) =>
@@ -91,8 +102,8 @@ export function paragraphs(body) {
   return out.join("\n");
 }
 
-async function fetchPolicy({ doc, app }) {
-  const url = `${API}/policy?doc_type=${doc}&app=${app}`;
+async function fetchPolicy({ doc, app, country, lang }) {
+  const url = `${API}/policy?doc_type=${doc}&app=${app}` + (country ? `&country=${country}` : "");
   let res;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(20000) });
@@ -132,6 +143,16 @@ async function fetchPolicy({ doc, app }) {
       `${url}: طُلب \`${app}\` وأُعطي \`${doc_.app}\` — يُوقَف.`,
     );
   }
+  // **والدولةُ كالتطبيق — تُقاس ولا يُفترض** (§٧٤-ل/١): خادمٌ لا يعرف `country` يتجاهله ويعطي الأردن،
+  // **فتُخبز صفحةُ الجزائر بوثيقة الأردن صامتة** — وهي علّةُ `app` فوقها بحرفها.
+  if (country && doc_.country_code !== country) {
+    throw new Error(
+      `${url}: طُلبت \`${country}\` وأُعطيت \`${doc_.country_code ?? "—"}\` — يُوقَف.`,
+    );
+  }
+  if (lang === "fr" && !doc_.body_fr) {
+    throw new Error(`${url} بلا نصٍّ فرنسيّ (body_fr) — **وصفحةٌ فرنسيّةٌ لا تُخبز بالعربيّ**. يُوقَف.`);
+  }
   return doc_;
 }
 
@@ -146,17 +167,20 @@ export function inlinePolicyPlugin() {
       if (!want) return html;
 
       const doc = await fetchPolicy(want);
+      const fr = want.lang === "fr";
+      const body = fr ? doc.body_fr : doc.body_ar;
       const when = String(doc.published_at || "").slice(0, 10);
-      const meta =
-        `النسخة <span dir="ltr" style="unicode-bidi:isolate">${doc.version}</span>` +
-        (when ? ` — نُشرت <span dir="ltr" style="unicode-bidi:isolate">${when}</span>` : "");
+      const meta = fr
+        ? `Version ${doc.version}` + (when ? ` — publiée le ${when}` : "")
+        : `النسخة <span dir="ltr" style="unicode-bidi:isolate">${doc.version}</span>` +
+          (when ? ` — نُشرت <span dir="ltr" style="unicode-bidi:isolate">${when}</span>` : "");
 
       console.log(
-        `  ✓ خُبزت ${name} · ${want.app}/${want.doc} · v${doc.version} · ${doc.body_ar.length} حرفاً`,
+        `  ✓ خُبزت ${name} · ${want.country ?? "الموقع"}/${want.app}/${want.doc}${fr ? "/fr" : ""} · v${doc.version} · ${body.length} حرفاً`,
       );
 
       return html
-        .replace("<!--POLICY_BODY-->", paragraphs(doc.body_ar))
+        .replace("<!--POLICY_BODY-->", paragraphs(body))
         .replace("<!--POLICY_META-->", meta)
         .replace("<!--POLICY_VERSION-->", String(doc.version));
     },

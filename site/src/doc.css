@@ -10,6 +10,11 @@
 .doc {
   max-width: 68ch;
 }
+/* **زرّا الرأس في صفحات الجزائر** (§٧٤-ل/١): مبدِّلُ اللغة والرئيسية معاً — فالرأسُ `space-between` يوزّع ثلاثةً على عرضه */
+.top-links {
+  display: inline-flex;
+  gap: 8px;
+}
 .doc .hero {
   margin-bottom: 24px;
 }

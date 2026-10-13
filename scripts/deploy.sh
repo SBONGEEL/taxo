@@ -1090,12 +1090,14 @@ say "  ✓ الصحّةُ عبر النفق ($HEALTH_URL · $EXPECT_ENV): $HEALT
 # **ويُقاس الطولُ لا الرمزُ وحدَه**: صفحةُ ٤٠٤ تردّ ٢٠٠ حين تُوجَّه، **والرمزُ
 # يقول «وصل شيء» لا «وصل الصحيح»**.
 EDGE="${TAXO_SITE_URL:-https://taxo.tajora.ly}"
-for _p in privacy terms driver-privacy driver-terms; do
+for _p in privacy terms driver-privacy driver-terms \
+          dz-privacy dz-terms dz-driver-privacy dz-driver-terms \
+          dz-privacy-fr dz-terms-fr dz-driver-privacy-fr dz-driver-terms-fr; do
   _len="$(curl -sS --max-time 15 "$EDGE/$_p" 2>/dev/null | wc -c | tr -d ' ')"
   [ "${_len:-0}" -gt 4000 ] \
     || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $LOCAL"
 done
-say "  ✓ الحافّة: صفحاتُ السياسة الأربعُ تبلغ ملفّاتِها"
+say "  ✓ الحافّة: صفحاتُ السياسة الاثنتا عشرة (الأربعُ وثماني الجزائر) تبلغ ملفّاتِها"
 
 # **والنصُّ مخبوزٌ فقد يبلى — فتُقاس النسخةُ لا الطول** (أُضيف ٢٠٢٦-٠٩-٠٧).
 #
@@ -1106,12 +1108,24 @@ say "  ✓ الحافّة: صفحاتُ السياسة الأربعُ تبلغ �
 # **ويُقاس الرقمُ لا الحضور**: صفحةٌ تحمل نصّاً **بلياً** طولُها كطول الصحيح،
 # **والطولُ يقول «وصل شيء» لا «وصل الأحدث»** — وهي علّةُ السطر الذي فوقه
 # بحرفها، مطبَّقةً على المحتوى بدل المسار.
-for _pair in "privacy:privacy_policy:rider" "terms:terms_of_use:rider" \
-             "driver-privacy:privacy_policy:driver" "driver-terms:terms_of_use:driver"; do
-  _page="${_pair%%:*}"; _rest="${_pair#*:}"; _doc="${_rest%%:*}"; _app="${_rest##*:}"
+# **وصفحاتُ الجزائر بدولتها** (§٧٤-ل/١): الحقلُ الرابعُ دولةٌ تُسأل، **وبلا دولةٍ يعطي البابُ الأردن** — فتُقارن صفحةُ الجزائر
+# بنسخة الأردن وتخضرّ بالصدفة إن تساوى الرقمان.
+for _pair in "privacy:privacy_policy:rider:" "terms:terms_of_use:rider:" \
+             "driver-privacy:privacy_policy:driver:" "driver-terms:terms_of_use:driver:" \
+             "dz-privacy:privacy_policy:rider:DZ" \
+             "dz-privacy-fr:privacy_policy:rider:DZ" \
+             "dz-terms:terms_of_use:rider:DZ" \
+             "dz-terms-fr:terms_of_use:rider:DZ" \
+             "dz-driver-privacy:privacy_policy:driver:DZ" \
+             "dz-driver-privacy-fr:privacy_policy:driver:DZ" \
+             "dz-driver-terms:terms_of_use:driver:DZ" \
+             "dz-driver-terms-fr:terms_of_use:driver:DZ"; do
+  IFS=: read -r _page _doc _app _cc <<EOF
+$_pair
+EOF
   _baked="$(curl -sS --max-time 15 "$EDGE/$_page" 2>/dev/null \
             | grep -o 'data-policy-version="[0-9]*"' | head -1 | tr -cd '0-9')"
-  _live="$(curl -sS --max-time 15 "$EDGE/api/policy?doc_type=$_doc&app=$_app" 2>/dev/null \
+  _live="$(curl -sS --max-time 15 "$EDGE/api/policy?doc_type=$_doc&app=$_app${_cc:+&country=$_cc}" 2>/dev/null \
            | grep -o '"version":[0-9]*' | head -1 | tr -cd '0-9')"
   [ -n "$_baked" ] && [ -n "$_live" ] \
     || die "تعذّر قياسُ نسخةِ $_page (مخبوز='${_baked:-—}' حيّ='${_live:-—}') — **ولا يُقرأ صمتُه سلامة**. والنسخةُ في $LOCAL"

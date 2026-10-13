@@ -6,13 +6,15 @@
 
 import { useNavigate } from "react-router-dom";
 
-import { LEGAL_PAGES, openLegal } from "@/lib/legal";
+import { legalPages, openLegal } from "@/lib/legal";
+import { useSession } from "@/lib/session";
 
 import "@/taxo2";
-import "./t2.css"; import { tr } from "@/lib/i18n";
+import "./t2.css"; import { language, tr } from "@/lib/i18n";
 
 export function LegalT2Screen() {
   const navigate = useNavigate();
+  const { user } = useSession();
   return (
     <div className="t2 t2-page t2-account pb-nav">
       <div className="t2-head">
@@ -22,10 +24,10 @@ export function LegalT2Screen() {
         <h1 className="t2-title">{tr("الشروط والخصوصية")}</h1>
       </div>
       <div className="t2-list t2-arows">
-        {LEGAL_PAGES.map((page) => (
+        {legalPages(user?.country_code, language).map((page) => (
           <button key={page.key} type="button" className="t2-arow" onClick={() => openLegal(page.url)}>
             <span className="t2-icon" aria-hidden="true">{page.key === "privacy" ? "shield" : "gavel"}</span>
-            <span className="t2-arow-label">{page.label}</span>
+            <span className="t2-arow-label">{page.key === "privacy" ? tr("سياسة الخصوصية") : tr("شروط الاستخدام")}</span>
             <span className="t2-icon t2-chev" aria-hidden="true">open_in_new</span>
           </button>
         ))}
