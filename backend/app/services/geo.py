@@ -90,6 +90,8 @@ class DriverPresence:
     skin: MapSkin | None = None
     #: **لحظةُ آخر موقع** (ثوانٍ، `at` في الحضور) — بها يعرف التوزيعُ أيُّ المواقع قديمٌ فيُستحدث (§٧٥-ج)
     at: int | None = None
+    #: **لحظةُ آخر اتّصال** (`seen`) — أحدثُ من `at` يعني أن آخرَ ما وصل نبضةٌ لا موقع: **ساكنٌ في موضعه** (§٧٥-هـ)
+    seen: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,6 +265,7 @@ async def nearby(
 
         raw_heading = data.get("heading") or ""
         raw_at = data.get("at") or ""
+        raw_seen = data.get("seen") or ""
         found.append(
             DriverPresence(
                 driver_id=driver_id,
@@ -273,6 +276,7 @@ async def nearby(
                 distance_km=round(float(distance), 3),
                 skin=_skin_of(data),
                 at=int(raw_at) if raw_at.isdigit() else None,
+                seen=int(raw_seen) if raw_seen.isdigit() else None,
             )
         )
 

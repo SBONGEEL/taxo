@@ -619,7 +619,13 @@ async def _freshened(
     """
     now = int(time.time())
     head = ranked[:FRESH_CANDIDATES]
-    stale = [p for p in head if p.at is None or now - p.at > FRESH_AFTER_SECONDS]
+    # **والساكنُ لا يُسأل** (§٧٥-هـ): نبضةٌ بعد آخر موقع (`seen > at`) لا تُرسل إلا ولم يبتعد صاحبُها `move_meters` عن ذلك الموقع
+    # (قاعدةُ السكون في التطبيق) — فموقعُه المخزَّنُ صحيحٌ ولو قدُم، **وسؤالُه انتظارٌ بلا فائدة** (قِيس على التطوير: نصفُ المتاحين واقف)
+    stale = [
+        p
+        for p in head
+        if (p.at is None or now - p.at > FRESH_AFTER_SECONDS) and not (p.seen and p.at and p.seen > p.at)
+    ]
     if not stale:
         return ranked, set()
     owners = dict(

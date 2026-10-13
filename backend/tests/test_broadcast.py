@@ -384,7 +384,9 @@ async def test_dispatch_refreshes_stale_positions_and_offers_the_truly_nearest(
             await ws_b.send_json({"type": "location", **near_b, "heading": 0})
             for driver in (a, b):
                 await wait_until(lambda d=driver: redis.hget(geo.presence_key(d["driver_id"]), "at"))
-                await redis.hset(geo.presence_key(driver["driver_id"]), "at", str(int(time.time()) - 40))
+                # **آخرُ ما أرسله موقعٌ قبل أربعين ثانية** (`at` و`seen` معاً) — متحرّكٌ لا ساكن، فيُسأل (§٧٥-هـ)
+                aged = str(int(time.time()) - 40)
+                await redis.hset(geo.presence_key(driver["driver_id"]), mapping={"at": aged, "seen": aged})
             listeners = [asyncio.create_task(answer(ws_a, a)), asyncio.create_task(answer(ws_b, b))]
             try:
                 ride = await request_ride(client, rider["headers"])
@@ -393,3 +395,39 @@ async def test_dispatch_refreshes_stale_positions_and_offers_the_truly_nearest(
                 for task in listeners:
                     task.cancel()
     assert str(offered) == str(b["driver_id"])
+
+
+async def test_dispatch_does_not_wait_on_a_parked_captain(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**الساكنُ لا يُسأل** (§٧٥-هـ): نبضةٌ بعد آخر موقع تعني أنه لم يبتعد ٣٠ متراً — فموقعُه المخزَّنُ صحيح؛ **ومن آخرُ ما أرسله موقعٌ قديم يُسأل**."""
+    from types import SimpleNamespace
+
+    from app.services import dispatch
+
+    redis = get_redis_client()
+    moving = await approved_driver(client, session_factory, DRIVER, plate_number="AMM-MV")
+    parked = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-PK")
+    for driver in (moving, parked):
+        await bring_online(client, driver)
+    now = int(time.time())
+    await redis.hset(geo.presence_key(moving["driver_id"]), mapping={"at": str(now - 30), "seen": str(now - 30)})
+    await redis.hset(geo.presence_key(parked["driver_id"]), mapping={"at": str(now - 300), "seen": str(now - 20)})
+    presences = await geo.nearby(redis, country_code=geo.CountryCode.JO, lat=PICKUP["lat"], lng=PICKUP["lng"], radius_km=7)
+    ride = SimpleNamespace(id=uuid.uuid4(), pickup_lat=PICKUP["lat"], pickup_lng=PICKUP["lng"], country_code=geo.CountryCode.JO)
+    async with Subscription(redis) as sub_moving, Subscription(redis) as sub_parked:
+        await sub_moving.subscribe(_user_channel(moving))
+        await sub_parked.subscribe(_user_channel(parked))
+        async with session_factory() as session:
+            ranked, silent = await dispatch._freshened(session, redis, ride=ride, ranked=presences)
+        asked_moving = await _frame(sub_moving, 1.0)
+        asked_parked = await _frame(sub_parked, 1.0)
+    assert asked_moving is not None and asked_moving["type"] == "location_request"
+    assert asked_parked is None
+    assert silent == {uuid.UUID(str(moving["driver_id"]))}
+
+
+def _user_channel(driver: dict) -> str:
+    from app.ws import events
+
+    return events.user_channel(driver["user_id"])

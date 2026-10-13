@@ -327,6 +327,7 @@ def _decode(data: dict) -> geo.DriverPresence:
         distance_km=data["distance_km"],
         skin=None if not skin else geo.MapSkin(**(skin | {"skin_id": uuid.UUID(skin["skin_id"])})),
         at=data.get("at"),
+        seen=data.get("seen"),
     )
 
 
