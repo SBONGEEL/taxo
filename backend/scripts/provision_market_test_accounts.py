@@ -362,9 +362,9 @@ async def provision(
             secrets_file,
             [f"# حساباتُ التجربة في كلِّ سوق (SPEC §74-ز) — {datetime.now(UTC).isoformat(timespec='seconds')}"]
             + [
-                line
+                "=".join(pair)
                 for item in plan
-                for line in (f"{item.label}_PHONE={item.phone}", f"{item.label}_PASSWORD={passwords[item.phone]}")
+                for pair in ((f"{item.label}_PHONE", item.phone), (f"{item.label}_PASSWORD", passwords[item.phone]))
             ],
         )
         try:
