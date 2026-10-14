@@ -256,6 +256,7 @@ async def policy(
         published_at=doc.published_at,
         country_code=doc.country_code.value,
         body_fr=doc.body_fr,
+        body_en=doc.body_en,
     )
 
 
@@ -286,6 +287,7 @@ async def required_policies(
             body_ar=doc.body_ar,
             published_at=doc.published_at,
             body_fr=doc.body_fr,
+            body_en=doc.body_en,
         )
         for doc in docs
     ]

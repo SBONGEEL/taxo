@@ -130,6 +130,8 @@ class PublicPolicyOut(BaseModel):
     country_code: str | None = None
     #: **النصُّ الفرنسيّ** إن وُجد (§٧٤-ل/١)
     body_fr: str | None = None
+    #: **النصُّ الإنجليزيّ** إن وُجد (SPEC §٧٦/٣) — لصفحات الموقع الإنجليزيّة التي يقرؤها مراجعو Google Play
+    body_en: str | None = None
 
 
 class RequiredPolicyOut(BaseModel):
@@ -149,3 +151,5 @@ class RequiredPolicyOut(BaseModel):
     published_at: datetime | None
     #: **النصُّ الفرنسيّ** (§٧٤-ل/١) — يعرضه التطبيقُ لمن لغتُه الفرنسيّة؛ وفارغٌ فالعربيّ
     body_fr: str | None = None
+    #: **النصُّ الإنجليزيّ** (SPEC §٧٦/٣) — يُنشر كما في البابِ الآخر فلا يفترق البابان؛ والتطبيقان بلا واجهةٍ إنجليزيّة اليوم
+    body_en: str | None = None
