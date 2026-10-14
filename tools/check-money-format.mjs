@@ -13,6 +13,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { argv, exit } from "node:process";
+import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { certify } from "./certify.mjs";
 
@@ -49,7 +50,8 @@ await esbuild.build({
   alias: { "@": join(appDir, "src") },
   external: ["mapbox-gl", "@capacitor/*"],
 });
-const m = await import(outfile);
+// **`file://` لا مسارٌ خام** — `import()` على ويندوز يردّ `C:\…` بـ`ERR_UNSUPPORTED_ESM_URL_SCHEME`، فكان الحارسُ لا يقيس إلا في CI (٢٠٢٦-١٠-١٥)
+const m = await import(pathToFileURL(outfile).href);
 rmSync(work, { recursive: true, force: true });
 
 /** **كما تنشرها `/config`** (`core/currency.py`) — وهي ما يملأ السجلَّ في التشغيل */

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request
 from app.core import validation_rules
 from app.core.config import settings
 from app.core.deps import DbSession
+from app.core.i18n import translate_tree
 from app.models.enums import CountryCode
 from app.schemas.auth import AuthMethodResponse
 from app.schemas.config import ConfigOut, DispatchOut
@@ -81,7 +82,8 @@ async def get_public_config(
         default_country_code=default,
         network_country=_network_country(request),
         # مُشتقّةٌ من المخططات عند كل نداء — لا جدولَ حدودٍ يُكتب بجانبها ويبرد
-        validation=validation_rules.published_rules(),
+        # **وبلغة الطلب** — النصُّ نفسُه الذي يُجاب به الـ422 مترجَماً (`i18n.translate_tree`)
+        validation=translate_tree(validation_rules.published_rules()),
         # **من `geo` نفسِه** — ما تقوله ورقةُ الطلب عن نطاق البحث هو ما يبحث فيه التوزيعُ فعلاً (§٦٢-ب/٤٨)
         dispatch=DispatchOut(
             search_radius_km=geo.SEARCH_RADIUS_KM,

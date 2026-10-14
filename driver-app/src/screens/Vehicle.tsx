@@ -50,9 +50,9 @@ export const DOC_LABEL: Record<DocumentType, string> = {
 };
 
 export const REVIEW_LABEL = {
-  approved: { text: "مقبول", tone: "text-ok", dot: "bg-ok" },
-  pending: { text: "قيد المراجعة", tone: "text-warn", dot: "bg-warn" },
-  rejected: { text: "مرفوض", tone: "text-danger", dot: "bg-danger" },
+  approved: { text: tr("مقبول"), tone: "text-ok", dot: "bg-ok" },
+  pending: { text: tr("قيد المراجعة"), tone: "text-warn", dot: "bg-warn" },
+  rejected: { text: tr("مرفوض"), tone: "text-danger", dot: "bg-danger" },
 } as const;
 
 /** **حالُ المركبة والمستندات وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة وC12 في `screens/t2`).

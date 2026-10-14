@@ -193,9 +193,9 @@ export function SettingsT2Screen() {
               <span className="t2-seg">
                 {(
                   [
-                    { value: "any", label: "الجميع" },
-                    { value: "female", label: "النساء فقط" },
-                    { value: "male", label: "الرجال فقط" },
+                    { value: "any", label: tr("الجميع") },
+                    { value: "female", label: tr("النساء فقط") },
+                    { value: "male", label: tr("الرجال فقط") },
                   ] as const
                 ).map((option) => (
                   <button

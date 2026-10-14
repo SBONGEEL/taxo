@@ -24,6 +24,7 @@ DEFAULT = "ar"
 _current: ContextVar[str] = ContextVar("request_language", default=DEFAULT)
 _FR_FILE = Path(__file__).resolve().parents[1] / "i18n" / "fr.json"
 _SLOT = re.compile(r"\{(\d+)\}")
+_AR = re.compile("[؀-ۿ]")
 
 
 def language_of_header(value: str | None) -> str:
@@ -78,6 +79,21 @@ def translate(text: str, language: str | None = None) -> str:
             return _SLOT.sub(lambda m: values.get(f"s{m.group(1)}", m.group(0)), fr)
     return text
 
+
+
+def translate_tree(value: object, language: str | None = None) -> object:
+    """**كلُّ نصٍّ عربيٍّ في بنيةٍ بلغة الطلب** — القيمُ وحدها لا المفاتيح، وما لا عربيَّ فيه يمرّ كما هو (`min_length` · `key`).
+
+    **لقواعد التحقّق المنشورة في `/config`** (أمرُ المالك ٢٠٢٦-١٠-١٥): كانت تُنشر عربيّةً لمن طلب الفرنسيّة، فتحت حقل كلمة المرور
+    في الواجهة الفرنسيّة «8 محارف على الأقل» — **والنصُّ نفسُه يُترجم في ردِّ 422** (`exceptions.py`)، فلا يفترق المنشورُ عن المُجاب.
+    """
+    if isinstance(value, str):
+        return translate(value, language) if _AR.search(value) else value
+    if isinstance(value, dict):
+        return {key: translate_tree(item, language) for key, item in value.items()}
+    if isinstance(value, list):
+        return [translate_tree(item, language) for item in value]
+    return value
 
 class LanguageMiddleware:
     """**لغةُ الطلب في سياقه** — وسيطٌ خامٌ (ASGI) لا `BaseHTTPMiddleware`: لا يلفّ الجسمَ ولا يغيّر شيئاً، يقرأ رأساً ويضبط متغيّراً."""

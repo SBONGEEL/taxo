@@ -127,9 +127,9 @@ function Fare({ estimate }: { estimate: RideEstimate }) {
 }
 
 const PREFERENCES = [
-  { value: "female", label: "إناث" },
-  { value: "male", label: "ذكور" },
-  { value: "any", label: "الجميع" },
+  { value: "female", label: tr("إناث") },
+  { value: "male", label: tr("ذكور") },
+  { value: "any", label: tr("الجميع") },
 ] as const;
 
 export function ConfirmRideT2(props: ConfirmRideProps) {

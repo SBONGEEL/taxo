@@ -37,10 +37,10 @@ const CANCEL_REASONS: CancelReason[] = [
 ];
 
 const PHASES = {
-  accepted: { title: "في الطريق إلى الراكب", action: "وصلتُ إلى الراكب" },
-  arrived: { title: "بانتظار الراكب", action: "بدء الرحلة" },
-  in_progress: { title: "الرحلة جارية", action: "إنهاء الرحلة" },
-  at_stop: { title: "وقوفٌ عند محطة", action: "استئناف الرحلة" },
+  accepted: { title: tr("في الطريق إلى الراكب"), action: tr("وصلتُ إلى الراكب") },
+  arrived: { title: tr("بانتظار الراكب"), action: tr("بدء الرحلة") },
+  in_progress: { title: tr("الرحلة جارية"), action: tr("إنهاء الرحلة") },
+  at_stop: { title: tr("وقوفٌ عند محطة"), action: tr("استئناف الرحلة") },
 } as const;
 
 type Phase = keyof typeof PHASES;

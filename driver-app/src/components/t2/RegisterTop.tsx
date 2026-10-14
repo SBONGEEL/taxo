@@ -34,7 +34,7 @@ export function RegisterTop({ step, onBack }: { step: 1 | 2 | 3; onBack?: () => 
                   {state === "done" ? <Icon name="check" /> : <span dir="ltr">{number}</span>}
                 </span>
                 <span className="cap-step-label">
-                  {label}
+                  {tr(label)}
                   {state === "done" ? <span className="cap-sr">{" "}{tr("— تمّت")}</span> : null}
                 </span>
               </div>

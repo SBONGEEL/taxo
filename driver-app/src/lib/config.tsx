@@ -310,10 +310,19 @@ export function useAuthCountry(mode: AuthMode = "login"): {
   }, [chosen, network, all]);
 
   // **الافتراضُ بالترتيب** (§٧٤-أ/٤): ما اختاره صاحبُ الجهاز · شبكتُه · إقليمُ لغته · موقعُه · افتراضيّةُ الخلفية · أوّلُ ما يُختار —
-  // **وكلٌّ لا يُقبل إلا إن كان ممّا يُختار في هذه الشاشة** (دولةٌ مغلقةٌ اختيرت للدخول لا تصير افتراضَ التسجيل)
-  const country = ([chosen, network, localeRegion(), located, config?.default_country_code, countries[0]].find(
-    (code) => code && countries.includes(code as CountryCode),
-  ) ?? countries[0] ?? config?.default_country_code ?? "") as CountryCode;
+  // **وكلٌّ لا يُقبل إلا إن كان ممّا يُختار في هذه الشاشة** (دولةٌ مغلقةٌ اختيرت للدخول لا تصير افتراضَ التسجيل).
+  // **والتخمينُ لا يقع على سوقٍ مغلق ما وُجد مفتوح** (أمرُ المالك ٢٠٢٦-١٠-١٥): الدخولُ يقبل كلَّ دولة، فكانت شبكةٌ ليبيّةٌ
+  // (`network_country: LY`) تفتح شاشةَ دخول الكبتن على +218 وليبيا «قريباً». **واختيارُ صاحب الجهاز وحدَه يُحترم ولو مغلقاً** —
+  // حسابٌ قائمٌ في سوقٍ مغلقٍ يدخل، وقد اختاره بيده.
+  const open = all.filter((entry) => entry.status === "open").map((entry) => entry.country_code);
+  const guesses = [network, localeRegion(), located, config?.default_country_code, countries[0]];
+  const allowed = (code: string | null | undefined): code is CountryCode => !!code && countries.includes(code as CountryCode);
+  const country = ((allowed(chosen) ? chosen : null) ??
+    guesses.find((code) => allowed(code) && open.includes(code)) ??
+    guesses.find(allowed) ??
+    countries[0] ??
+    config?.default_country_code ??
+    "") as CountryCode;
 
   const setCountry = useCallback((value: CountryCode) => {
     localStorage.setItem(COUNTRY_KEY, value);

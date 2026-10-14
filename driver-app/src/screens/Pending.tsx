@@ -35,9 +35,9 @@ export const DOC_LABEL: Record<DocumentType, string> = {
 };
 
 export const STATUS = {
-  approved: { label: "مقبول", tone: "text-ok" },
-  rejected: { label: "مرفوض", tone: "text-danger" },
-  pending: { label: "قيد المراجعة", tone: "text-warn" },
+  approved: { label: tr("مقبول"), tone: "text-ok" },
+  rejected: { label: tr("مرفوض"), tone: "text-danger" },
+  pending: { label: tr("قيد المراجعة"), tone: "text-warn" },
 } as const;
 
 export function PendingScreen() {

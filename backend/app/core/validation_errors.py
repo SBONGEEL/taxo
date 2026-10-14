@@ -242,12 +242,14 @@ def message_for(error: dict) -> str:
         return f"{subject} يجب أن {'تكون' if _fem(subject) else 'يكون'} أكبر من {ctx.get('gt')}"
     if kind == "less_than":
         return f"{subject} يجب أن {'تكون' if _fem(subject) else 'يكون'} أصغر من {ctx.get('lt')}"
+    # **قالبان لا قالبٌ بموضعين** (كما «مطلوب»): «{0} {1} — {2} على الأقل» كان يُطابَق في الفرنسيّة بموضعين متجاورين، فيقف الأوّلُ
+    # عند أوّل كلمة («فئة» من «فئة المركبة») ويبقى نصفُ الرسالة عربيّاً. والعربيّةُ هي هي حرفاً.
     if kind == "string_too_short":
-        short = "قصيرةٌ جداً" if _fem(subject) else "قصيرٌ جداً"
-        return f"{subject} {short} — {chars(int(ctx.get('min_length') or 0))} على الأقل"
+        least = chars(int(ctx.get("min_length") or 0))
+        return f"{subject} قصيرةٌ جداً — {least} على الأقل" if _fem(subject) else f"{subject} قصيرٌ جداً — {least} على الأقل"
     if kind == "string_too_long":
-        long = "طويلةٌ جداً" if _fem(subject) else "طويلٌ جداً"
-        return f"{subject} {long} — {chars(int(ctx.get('max_length') or 0))} على الأكثر"
+        most = chars(int(ctx.get("max_length") or 0))
+        return f"{subject} طويلةٌ جداً — {most} على الأكثر" if _fem(subject) else f"{subject} طويلٌ جداً — {most} على الأكثر"
     # **قائمةٌ تتجاوز سقفَها** (عقدُ الأخطاء §17): كان `too_long` بلا معالجٍ
     # فيسقط إلى «هذه القيمة غير صالحة» — **رسالةٌ لا تقول الحدَّ ولا تقول ما
     # يُفعل**. قِيس على `stops` بثلاث محطات (2026-08-23).
@@ -260,7 +262,7 @@ def message_for(error: dict) -> str:
     if kind == "string_pattern_mismatch":
         return f"{subject} بصيغةٍ غير صحيحة"
     if kind == "enum":
-        return f"{subject} {'ليست' if _fem(subject) else 'ليس'} من القيم المسموحة"
+        return f"{subject} ليست من القيم المسموحة" if _fem(subject) else f"{subject} ليس من القيم المسموحة"
     if kind in {"string_type", "bool_type", "list_type", "dict_type"}:
         return f"{subject} بنوعٍ غير صحيح"
     if kind == "json_invalid":

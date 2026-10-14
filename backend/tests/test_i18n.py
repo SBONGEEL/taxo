@@ -130,3 +130,25 @@ async def test_the_code_message_template_is_french_for_a_french_request(session_
             i18n._current.reset(previous)
     assert arabic == otp_templates.DEFAULTS["registration"]
     assert french.startswith("Votre code de confirmation") and "{code}" in french and "{minutes}" in french
+
+
+async def test_the_published_rules_follow_the_request_language(client: AsyncClient) -> None:
+    """**قواعدُ التحقّق في `/config` بلغة الطلب** — وكانت عربيّةً للفرنسيّة («8 محارف على الأقل» تحت حقلٍ فرنسيّ)."""
+    from app.core import validation_rules
+
+    arabic = (await client.get("/config")).json()["validation"]
+    french = (await client.get("/config", headers=FRENCH)).json()["validation"]
+    assert arabic == validation_rules.published_rules()  # **العربيّةُ حرفاً**
+
+    def texts(node: object) -> list[str]:
+        if isinstance(node, dict):
+            return [text for item in node.values() for text in texts(item)]
+        if isinstance(node, list):
+            return [text for item in node for text in texts(item)]
+        return [node] if isinstance(node, str) else []
+
+    left = [text for text in texts(french) if any("؀" <= ch <= "ۿ" for ch in text)]
+    assert left == [], left[:5]
+    assert french["register"]["password"]["conditions"][0]["label"] == translate(
+        arabic["register"]["password"]["conditions"][0]["label"], "fr"
+    )
