@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine
+from pathlib import Path
 from typing import Any
 
-from celery import Celery
+from celery import Celery, bootsteps
 from celery.schedules import crontab
 
 from app.core.config import settings
@@ -303,3 +304,39 @@ def run_async(coro: Coroutine[Any, Any, Any]) -> Any:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     return loop.run_until_complete(coro)
+
+
+# ── علامةُ الحياة لفحص الحاوية (SPEC §٧٦/١، ٢٠٢٦-١٠-١٤) ──
+#
+# **كان الفحصُ `celery … inspect ping` كلَّ ٣٠ ثانية** — عمليّةُ بايثون جديدةٌ تستورد التطبيقَ كلَّه: **٢–٢٫٥ ثانيةٍ بنواةٍ كاملة مرّتين
+# في الدقيقة** (مقيسٌ على الإنتاج بعيّناتٍ كلَّ نصف ثانية: عمليّةٌ جديدةٌ كلَّ ~٣٣ ثانية، والعاملُ نفسُه شبهُ ساكن)، **فمتوسّطُ الحاوية ١٠٫٣٪
+# من نواةٍ وهي خاملة** — وهو «العاملُ نواةٌ كاملةٌ بحِملٍ خفيف» الذي ظهر ذروةً في مراقب اختبار الحمل.
+#
+# **والبديلُ يحفظ ما كان الفحصُ يقيسه**: المؤقّتُ هنا **مؤقّتُ المستهلك** — الحلقةُ نفسُها التي تستقبل المهام — فإن توقّفت توقّف اللمس،
+# **وإن انقطع الوسيطُ أوقف المستهلكُ خطواتِه** فيبيتُ الملفّ. والفحصُ في compose **سطرُ صدفةٍ يقرأ عمرَ الملفّ** بلا بايثون ولا استيراد.
+LIVENESS_FILE = Path("/tmp/taxo-worker-alive")
+LIVENESS_EVERY_SECONDS = 15.0
+
+
+def touch_liveness(path: Path = LIVENESS_FILE) -> None:
+    path.touch()
+
+
+class LivenessStep(bootsteps.StartStopStep):
+    """يلمس `LIVENESS_FILE` كلَّ `LIVENESS_EVERY_SECONDS` من مؤقّت المستهلك، ويكفّ حين يتوقّف المستهلك."""
+
+    def __init__(self, parent: Any, **kwargs: Any) -> None:
+        super().__init__(parent, **kwargs)
+        self._tref: Any = None
+
+    def start(self, parent: Any) -> None:
+        touch_liveness()
+        self._tref = parent.timer.call_repeatedly(LIVENESS_EVERY_SECONDS, touch_liveness, priority=10)
+
+    def stop(self, parent: Any) -> None:
+        if self._tref is not None:
+            self._tref.cancel()
+            self._tref = None
+
+
+celery_app.steps["consumer"].add(LivenessStep)

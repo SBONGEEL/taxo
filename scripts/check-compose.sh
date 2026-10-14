@@ -48,6 +48,17 @@ for combo in "${combos[@]}"; do
     echo "✗ check:compose · $combo"; echo "$out" | sed 's/^/    /' | head -5
     bad=$((bad + 1))
   fi
+  # **وفحصُ صحّةٍ لا يستورد التطبيق** (SPEC §٧٦/١): `celery inspect ping` كلَّ ٣٠ ثانيةً كان عمليّةً تستورد التطبيقَ كلَّه — ١٠٪ من نواةٍ
+  # والعاملُ خامل. **فأيُّ فحصٍ ينادي `celery` يُسقط الحارس**
+  heavy="$(TAXO_ENV_FILE="$E" COMPOSE_PROJECT_NAME=check-compose docker compose --env-file "$E" "${files[@]}" config --format json 2>/dev/null     | python3 -c 'import json,sys
+for name, svc in (json.load(sys.stdin).get("services") or {}).items():
+    test = " ".join((svc.get("healthcheck") or {}).get("test") or [])
+    if "celery" in test.split() or "celery " in test:
+        print(name)')"
+  if [ -n "$heavy" ]; then
+    echo "✗ check:compose · $combo — فحصُ صحّةٍ ينادي celery (يستورد التطبيقَ كلَّ دورة): $(echo "$heavy" | paste -sd' ' -)"
+    bad=$((bad + 1))
+  fi
 done
 [ "$bad" -eq 0 ] || exit 1
 [ "$checked" -gt 0 ] || { echo "✗ check:compose — لم تُقرأ تركيبةٌ واحدة: لم يُقَس"; exit 1; }

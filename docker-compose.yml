@@ -190,14 +190,17 @@ services:
     volumes:
       - ./backend:/app
     command: celery -A app.tasks.celery_app:celery_app worker --loglevel=info
-    # فحص الصورة يستعلم منفذ الـ API، وهذه العملية لا تفتح منفذاً. البديل
-    # يسأل العاملَ نفسه عبر الوسيط: `ping` يمر بحلقة المهام، فيكشف عاملاً
-    # حياً بلا مهام يستقبلها — وهو بالضبط ما لا يكشفه وجودُ العملية.
+    # فحص الصورة يستعلم منفذ الـ API، وهذه العملية لا تفتح منفذاً. **والفحصُ يقرأ
+    # عمرَ علامة الحياة** التي يلمسها مؤقّتُ المستهلك كلَّ ١٥ ثانية
+    # (`celery_app.LivenessStep`) — الحلقةُ التي تستقبل المهام، فعاملٌ حيٌّ بلا
+    # مهام يستقبلها يبيت ملفُّه. **ولا `celery inspect ping` بعد اليوم**: كان
+    # يستورد التطبيقَ كلَّه كلَّ ٣٠ ثانية — ١٠٪ من نواةٍ والعاملُ خامل (SPEC §٧٦/١)،
+    # و`check:compose` يرفض فحصاً ينادي `celery`.
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "celery -A app.tasks.celery_app:celery_app inspect ping -d celery@$$HOSTNAME -t 10 || exit 1",
+          "test -f /tmp/taxo-worker-alive && [ $$(( $$(date +%s) - $$(stat -c %Y /tmp/taxo-worker-alive) )) -lt 90 ]",
         ]
       interval: 30s
       timeout: 15s
