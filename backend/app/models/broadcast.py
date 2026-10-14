@@ -37,6 +37,7 @@ class BroadcastSettings(UUIDMixin, TimestampMixin, Base):
         CheckConstraint("trip_record_seconds BETWEEN 1 AND 10", name="broadcast_trip_record_range"),
         CheckConstraint("move_meters BETWEEN 5 AND 500", name="broadcast_move_range"),
         CheckConstraint("heartbeat_seconds BETWEEN 15 AND 120", name="broadcast_heartbeat_range"),
+        CheckConstraint("alert_captains >= 1 AND alert_riders >= 1", name="broadcast_alert_positive"),
     )
 
     singleton: Mapped[bool] = mapped_column(
@@ -58,6 +59,10 @@ class BroadcastSettings(UUIDMixin, TimestampMixin, Base):
     heartbeat_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60", default=60)
     #: **جدولُ الطور الآليّ** — `[{"max_online": 1000, "seconds": 15}, …, {"max_online": null, "seconds": 45}]` بترتيبه، والأخيرُ بلا حدّ
     auto_steps: Mapped[list] = mapped_column(JSONB, nullable=False)
+    #: **إنذارُ السعة** (SPEC §٧٦/٢): متّصلون في اللحظة نفسِها يبلغون هذا ⇒ تنبيهٌ في اللوحة وإشعارٌ للمشرفين. **والافتراضُ ٧٠٪ من
+    #: السعة الآمنة المقيسة** (٣٥٠ كبتناً و٧٠٠ راكب، `STRESS-REPORT-PROD-2.md`) — ويُحرَّر من اللوحة حين يكبر الخادم
+    alert_captains: Mapped[int] = mapped_column(Integer, nullable=False, server_default="250", default=250)
+    alert_riders: Mapped[int] = mapped_column(Integer, nullable=False, server_default="500", default=500)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

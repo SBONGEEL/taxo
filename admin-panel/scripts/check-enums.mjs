@@ -23,6 +23,9 @@ const SRC = join(process.cwd(), "src");
 /** اتحاداتُ واجهةٍ خالصة تشترك في أسماءٍ مع تعدادات الخلفية بالمصادفة.
  *  كلُّ إعفاءٍ هنا يذكر لماذا هو اتحادُ عرضٍ لا مرآةُ عقد. */
 const UI_UNIONS = new Set([
+  // **مرشِّحُ حال الملاحظات** (`screens/Feedback.tsx`، SPEC §٧٦/٤): «جديدةٌ/معالَجةٌ/الكلّ» تُشتقّ من `handled_at` فارغاً أو لا —
+  // **لا تعدادَ لها في الخلفية**، والبابُ يقبلها معاملَ استعلامٍ (`Literal`) لا عموداً
+  "FeedbackStatus",
   // حالُ الاشتراك الأربع تُشتق في `Subscription.tsx::stateOf` من
   // `is_active` و`days_remaining` و`coverage_until` — لا عمودَ لها
   "State",

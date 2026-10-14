@@ -1,0 +1,69 @@
+/* ── «أرسل ملاحظة» (SPEC §٧٦/٤) — نسختُه في التطبيقين واحدة ───────────────────────────────────────────── */
+.t2.t2-fb {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px max(110px, calc(96px + env(safe-area-inset-bottom, 0px)));
+}
+.t2-fb .t2-head { margin-bottom: 12px; }
+.t2-fb-lede {
+  color: var(--t2-muted);
+  font-size: 13.5px;
+  line-height: 1.75;
+  margin: 0 2px 14px;
+}
+.t2-fb-text {
+  width: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  resize: vertical;
+  line-height: 1.7;
+}
+.t2-fb-count {
+  color: var(--t2-muted);
+  font-size: 12px;
+  margin: 6px 2px 14px;
+  text-align: end;
+}
+.t2-fb-shot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.t2-fb-pick {
+  min-height: 44px;
+  gap: 6px;
+}
+.t2-fb-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--t2-line);
+}
+.t2-fb .t2-note { margin: 0 2px 12px; }
+.t2-fb-send {
+  width: 100%;
+  min-height: 48px;
+}
+.t2-fb-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 8px 0;
+}
+.t2-fb-done > .t2-icon {
+  font-size: 44px;
+  color: var(--t2-success);
+  margin-bottom: 10px;
+}
+.t2-fb-done-title {
+  color: var(--t2-text);
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}

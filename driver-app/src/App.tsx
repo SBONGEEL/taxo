@@ -201,6 +201,9 @@ const AdvancesScreen = lazy(() =>
 const ReferralsScreen = lazy(() =>
   import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
 );
+const FeedbackT2Screen = lazy(() =>
+  import("@/screens/t2/FeedbackT2").then((m) => ({ default: m.FeedbackT2Screen })),
+);
 const CardReturnScreen = lazy(() =>
   import("@/screens/CardReturn").then((m) => ({ default: m.CardReturnScreen })),
 );
@@ -861,6 +864,15 @@ export default function App() {
                           element={
                             <Guarded>
                               <ReferralsScreen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **«أرسل ملاحظة»** (SPEC §٧٦/٤) — من «حسابي» */}
+                        <Route
+                          path="/account/feedback"
+                          element={
+                            <Guarded>
+                              <FeedbackT2Screen />
                             </Guarded>
                           }
                         />

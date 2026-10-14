@@ -427,6 +427,11 @@ async def _anonymize(
     await trip_chat.erase_for_account(session, uid)
     files.extend(await ride_calls.erase_recordings_for_account(session, uid))
 
+    # ── ملاحظاتُه من «أرسل ملاحظة» (SPEC §٧٦/٤): نصٌّ حرٌّ وصورُ شاشة — **تُمحى**، والصورُ بعد الالتزام كالوثائق
+    from app.services import feedback
+
+    files.extend(await feedback.rows_of_user(session, uid))
+
     # ── نصٌّ حرٌّ كتبه: يُمحى، **والدرجةُ تبقى** — منها متوسّطُ كبتنٍ آخر
     await session.execute(
         update(Rating).where(Rating.rater_id == uid).values(comment=None)

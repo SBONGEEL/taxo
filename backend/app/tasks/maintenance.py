@@ -21,10 +21,15 @@ logger = logging.getLogger(__name__)
 
 
 async def _trim() -> int:
+    from app.services import feedback
+
     async with SessionLocal() as session:
         removed = await inbox.trim(session)
+        # **وملاحظاتُ «أرسل ملاحظة» بعد سنة** (SPEC §٧٦/٣–٤) — في الدورة اليوميّة نفسِها، والصورُ بعد الالتزام
+        feedback_files = await feedback.expired_rows(session)
         await session.commit()
-        return removed
+    await feedback.delete_files(feedback_files)
+    return removed
 
 
 @celery_app.task(name="app.tasks.maintenance.trim_notifications")
@@ -68,31 +73,17 @@ def sweep_orphan_documents() -> str:
 
 
 async def _sweep_orphan_documents() -> str:
-    from sqlalchemy import select
-
     from app.core import storage
-    from app.models.driver import DriverDocument
+    from app.services import stored_files
 
     root = storage.root()
     if not root.exists():
         return "0"
 
-    from app.models.ride_call import RideCall
-
+    # **المعروفُ كلُّ عمودِ ملفٍّ في القائمة الواحدة** (`services/stored_files.py`، قِيس ٢٠٢٦-١٠-١٤): كان هنا عمودان من عشرة — الوثائقُ
+    # وتسجيلاتُ المكالمات — **فكان هذا الكنسُ سيمحو صورَ المستخدمين وأشكالَ المركبات واللافتاتِ ورموزَ QR والإيصالات** في أوّل جمعةٍ بعد رفعها
     async with SessionLocal() as session:
-        known = {
-            row for row in (await session.scalars(select(DriverDocument.file_path)))
-        }
-        # **وتسجيلاتُ المكالمات معروفةٌ لا يتيمة** (SPEC §٦٦-ج/١٦) — تُكتب تحت الجذر نفسِه، ولها كنسُها بموعدها
-        # (`ride_calls.purge_expired`). **وبغير هذا السطر يمحوها هذا الكنسُ أسبوعياً قبل موعدها** ويبقى صفُّها يَعِد بملف
-        known |= {
-            row
-            for row in (
-                await session.scalars(
-                    select(RideCall.recording_path).where(RideCall.recording_path.is_not(None))
-                )
-            )
-        }
+        known = await stored_files.referenced_paths(session)
 
     removed = 0
     for path in root.rglob("*"):

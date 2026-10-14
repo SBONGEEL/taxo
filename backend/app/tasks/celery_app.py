@@ -105,6 +105,7 @@ celery_app = Celery(
         "app.tasks.unconfirmed_payments",
         "app.tasks.trip_comms",
         "app.tasks.broadcast",
+        "app.tasks.capacity",
     ],
 )
 
@@ -141,6 +142,11 @@ celery_app.conf.update(
         "broadcast-tick": {
             "task": "app.tasks.broadcast.tick",
             "schedule": float(BROADCAST_TICK_SECONDS),
+        },
+        # **إنذارُ السعة** (SPEC §٧٦/٢): كلَّ دقيقةٍ يُعدّ المتّصلون — والإشعارُ مرّةً كلَّ نصف ساعةٍ ما دام العددُ فوق العتبة
+        "capacity-check": {
+            "task": "app.tasks.capacity.check",
+            "schedule": 60.0,
         },
         "expire-gateway-checkouts": {
             "task": "app.tasks.payments.expire_gateway_checkouts",

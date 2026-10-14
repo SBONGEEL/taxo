@@ -53,6 +53,8 @@ const GROUPS: {
       { label: "الركّاب", icon: "group", to: "/riders" },
       { label: "النزاعات والدعم", icon: "gavel", to: "/disputes" },
       { label: "بلاغات الصور", icon: "hide_image", to: "/photo-reports", adminOnly: true },
+      // **ملاحظاتُ «أرسل ملاحظة»** (SPEC §٧٦/٤) — للطاقم كلِّه كالأعطال: الدعمُ يقرأ ما يكتبه الناس
+      { label: "ملاحظات المستخدمين", icon: "rate_review", to: "/feedback" },
       // **الرسائلُ المبلَّغُ عنها** (A30، §٦٦-ب/١٣) — جوارَ بلاغات الصور: كلاهما بلاغٌ ينتظر قراراً. **وبصلاحيتها لا بالدور**:
       // `trip_chats.read` لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل، **وفتحُ القائمة نفسُه يُدقَّق** (فيها نصوصُ محادثات)
       { label: "الرسائل المبلَّغ عنها", icon: "flag", to: "/chat-reports", permission: TRIP_CHATS_READ },

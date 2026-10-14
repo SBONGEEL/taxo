@@ -20,8 +20,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getOverview } from "@/api/endpoints";
-import type { Overview, StatsPeriod } from "@/api/types";
+import { getCapacity, getOverview } from "@/api/endpoints";
+import type { Capacity, Overview, StatsPeriod } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Segmented } from "@/components/ui/Segmented";
@@ -89,6 +89,8 @@ export function OverviewScreen() {
       }
     >
       <ErrorNote message={error} />
+
+      <CapacityCard />
 
       {data === null ? (
         error ? null : (
@@ -171,6 +173,55 @@ export function OverviewScreen() {
         </>
       )}
     </Shell>
+  );
+}
+
+/** **المتّصلون الآن على الخادم وعتبتا الإنذار** (SPEC §٧٦/٢) — **لكلِّ الدول** لا للسوق المعروض: الخادمُ واحد، والحدُّ حدُّه.
+ *
+ * **حيّةٌ ما دامت مفتوحة** (كلَّ ٣٠ ثانية)، **والتنبيهُ من العدد الآن** لا من آخر إشعار — والعتبتان تُحرَّران في «الإعدادات ← بثُّ موقع
+ * الكبتن». **وإن تعذّرت القراءةُ لا تُرسم** — بطاقةٌ تقول «٠ متّصل» لأن الطلبَ سقط تُقرأ اطمئناناً كاذباً. */
+function CapacityCard() {
+  const [live, setLive] = useState<Capacity | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const read = () =>
+      getCapacity()
+        .then((next) => alive && setLive(next))
+        .catch(() => alive && setLive(null));
+    void read();
+    const timer = window.setInterval(read, 30_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+  if (!live) return null;
+  return (
+    <section className="mb-16" data-capacity>
+      {live.alerting ? (
+        <div className="ad-note danger" role="alert">
+          المتّصلون قاربوا سعةَ الخادم الآمنة —{" "}
+          {live.captains_alerting ? `الكباتن ${live.captains} من عتبة ${live.alert_captains}` : null}
+          {live.captains_alerting && live.riders_alerting ? " · " : null}
+          {live.riders_alerting ? `الركّاب ${live.riders} من عتبة ${live.alert_riders}` : null}
+          {". "}أُرسل إشعارٌ للمشرفين.
+        </div>
+      ) : null}
+      <div className="ad-kpis">
+        <Kpi
+          label="كباتن متّصلون على الخادم الآن"
+          value={digits(String(live.captains))}
+          hint={`لكلِّ الدول · الإنذارُ عند ${live.alert_captains}`}
+          danger={live.captains_alerting}
+        />
+        <Kpi
+          label="ركّاب فاتحون للتطبيق الآن"
+          value={digits(String(live.riders))}
+          hint={`لكلِّ الدول · الإنذارُ عند ${live.alert_riders}`}
+          danger={live.riders_alerting}
+        />
+      </div>
+    </section>
   );
 }
 

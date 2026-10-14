@@ -57,6 +57,9 @@ import type {
   SkinStats,
   MapSetting,
   PhotoReport,
+  AdminFeedback,
+  AdminFeedbackPage,
+  Capacity,
   AdminAccount,
   AdminDriverRow,
   AdminPermissions,
@@ -1329,6 +1332,31 @@ export const resolvePhotoReport = (reportId: string, remove: boolean) =>
   });
 
 
+// ---------------------------------------------- ملاحظاتُ المستخدمين (SPEC §٧٦/٤)
+
+/** «أرسل ملاحظة» — الأحدثُ أوّلاً، ومعها عددُ الجديدة. */
+export const listFeedback = (filters: {
+  status?: "all" | "new" | "handled";
+  app?: "rider" | "driver";
+  limit?: number;
+  offset?: number;
+}) => api.get<AdminFeedbackPage>("/admin/feedback", { query: filters });
+
+/** «عولجت» أو إعادتُها جديدة — **ويُدقَّق** كأيِّ قرارِ موظّف. */
+export const markFeedback = (feedbackId: string, handled: boolean) =>
+  api.patch<AdminFeedback>(`/admin/feedback/${feedbackId}`, { handled });
+
+/** صورةُ شاشةِ ملاحظة — **بابٌ مُعلَنٌ لا مسارٌ تكتبه شاشة** (درسُ `photoReportBlob`): `<img src>` لا يحمل تفويضاً، فتُجلب إلى
+ *  `blob:` بالجلسة. **ومن يفتحها يغلقها.** */
+export async function feedbackScreenshotBlob(feedbackId: string): Promise<string> {
+  const answer = await fetch(`${API_URL}/admin/feedback/${feedbackId}/screenshot`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) throw new Error("تعذّر فتح صورة الشاشة");
+  return URL.createObjectURL(await answer.blob());
+}
+
+
 // ---------------------------------------------- حدودُ خريطة الراكب (2026-08-22)
 
 export const listMapSettings = () =>
@@ -1568,6 +1596,9 @@ export const getBroadcastSettings = () => api.get<BroadcastSettings>("/admin/set
 
 export const updateBroadcastSettings = (payload: Partial<Omit<BroadcastSettings, "live" | "changes" | "updated_at">>) =>
   api.patch<BroadcastSettings>("/admin/settings/broadcast", payload);
+
+/** **المتّصلون الآن في كلِّ الدول، وعتبتا الإنذار** (§٧٦/٢) — ما تعرضه «نظرة عامة». */
+export const getCapacity = () => api.get<Capacity>("/admin/stats/capacity");
 
 // ── بلاطاتُ الخدمات واللافتات — **تُدار من هنا بلا نشر** (الترحيلة `0063`)
 

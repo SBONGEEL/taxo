@@ -17,7 +17,9 @@ from fastapi import APIRouter, Query
 
 from app.core.deps import DbSession, RedisDep, StaffUser
 from app.models.enums import CountryCode
+from app.schemas.broadcast import CapacityOut
 from app.schemas.stats import OverviewOut, ReportsOut
+from app.services import capacity as capacity_service
 from app.services import stats as stats_service
 
 router = APIRouter(prefix="/admin/stats", tags=["admin"])
@@ -44,6 +46,22 @@ async def overview(
         now=datetime.now(UTC),
     )
     return OverviewOut(**asdict(result))
+
+
+@router.get("/capacity", response_model=CapacityOut)
+async def capacity(_staff: StaffUser, session: DbSession, redis: RedisDep) -> CapacityOut:
+    """**المتّصلون الآن في كلِّ الدول، وعتبتا الإنذار** (SPEC §٧٦/٢) — الخادمُ واحدٌ، فالعددُ عددُه لا عددُ سوق."""
+    snap = await capacity_service.snapshot(session, redis)
+    return CapacityOut(
+        captains=snap.captains,
+        riders=snap.riders,
+        alert_captains=snap.alert_captains,
+        alert_riders=snap.alert_riders,
+        captains_alerting=snap.captains_alerting,
+        riders_alerting=snap.riders_alerting,
+        alerting=snap.alerting,
+        last_alert_at=snap.last_alert_at,
+    )
 
 
 @router.get("/reports", response_model=ReportsOut)

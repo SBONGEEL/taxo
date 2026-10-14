@@ -1033,6 +1033,8 @@ async def _broadcast_out(session, redis) -> BroadcastSettingsOut:
         move_meters=row.move_meters,
         heartbeat_seconds=row.heartbeat_seconds,
         auto_steps=row.auto_steps,
+        alert_captains=row.alert_captains,
+        alert_riders=row.alert_riders,
         updated_at=row.updated_at,
         live=BroadcastLiveOut(
             mode=live["mode"],

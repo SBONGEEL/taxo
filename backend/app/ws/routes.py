@@ -50,6 +50,7 @@ from app.services import (
     route as route_service,
 )
 from app.services import token_service
+from app.services import capacity
 from app.ws import events
 from app.ws.hub import Subscription
 
@@ -492,12 +493,22 @@ async def rider_socket(
                 websocket,
                 _rider_loop(websocket, redis, user, state, subscription),
                 _rider_reader(websocket, state, presence),
+                _rider_online(redis, user.id),
                 *_presence_tasks(presence),
             )
     except WebSocketDisconnect:
         pass
     finally:
         await _clear_presence(redis, user.id, device_id)
+        await capacity.drop_rider(redis, user.id)
+
+
+async def _rider_online(redis: Redis, user_id: uuid.UUID) -> None:
+    """**الراكبُ متّصلٌ ما دام مقبسُه مفتوحاً** — يُكتب ويُنعش كلَّ ٣٠ ثانية لعدّ إنذار السعة (SPEC §٧٦/٢)، **بلا شرط `device_id`**:
+    العدُّ عددُ من فتح التطبيق، لا عددُ أجهزةٍ تمنع الدفع."""
+    while True:
+        await capacity.mark_rider(redis, user_id)
+        await asyncio.sleep(capacity.RIDER_REFRESH_SECONDS)
 
 
 def _presence_tasks(presence: _Presence):

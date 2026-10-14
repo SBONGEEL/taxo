@@ -25,6 +25,9 @@ class BroadcastSettingsUpdate(BaseModel):
     move_meters: int | None = Field(default=None, ge=5, le=500)
     heartbeat_seconds: int | None = Field(default=None, ge=15, le=120)
     auto_steps: list[BroadcastStep] | None = Field(default=None, min_length=1, max_length=8)
+    #: **عتبتا إنذار السعة** (§٧٦/٢) — متّصلون في اللحظة نفسِها
+    alert_captains: int | None = Field(default=None, ge=1, le=100_000)
+    alert_riders: int | None = Field(default=None, ge=1, le=100_000)
 
     @model_validator(mode="after")
     def _steps_ordered(self) -> "BroadcastSettingsUpdate":
@@ -73,6 +76,21 @@ class BroadcastSettingsOut(BaseModel):
     move_meters: int
     heartbeat_seconds: int
     auto_steps: list[BroadcastStep]
+    alert_captains: int
+    alert_riders: int
     updated_at: datetime | None = None
     live: BroadcastLiveOut
     changes: list[BroadcastChangeOut]
+
+
+class CapacityOut(BaseModel):
+    """**المتّصلون الآن وعتبتا الإنذار** (SPEC §٧٦/٢) — ما تعرضه الرئيسية في اللوحة. **والتنبيهُ حيٌّ**: من العدد الآن لا من آخر إشعار."""
+
+    captains: int
+    riders: int
+    alert_captains: int
+    alert_riders: int
+    captains_alerting: bool
+    riders_alerting: bool
+    alerting: bool
+    last_alert_at: datetime | None = None

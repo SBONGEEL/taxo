@@ -1434,6 +1434,51 @@ async def publish_deletion_deferred(
         )
 
 
+async def publish_capacity_alert(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    captains: int,
+    riders: int,
+    alert_captains: int,
+    alert_riders: int,
+) -> None:
+    """**المتّصلون بلغوا عتبةَ الإنذار** (SPEC §٧٦/٢) — إلى كلِّ مشرف، **وعبر الصندوق** (درسُ `publish_backup_alert`: اللوحةُ بلا أجهزة دفع،
+    وغلافُ المشرف على الهاتف يدفع). **والنصُّ يقول ما يُفعل**: «افتح الرئيسية» حيث العددُ حيّاً والعتبتان.
+    """
+    from sqlalchemy import select
+
+    from app.models.enums import UserRole
+    from app.models.user import User
+    from app.models.user_role_grant import has_role_clause
+
+    parts: list[str] = []
+    if captains >= alert_captains:
+        parts.append(f"{captains} كبتناً متّصلاً (العتبة {alert_captains})")
+    if riders >= alert_riders:
+        parts.append(f"{riders} راكباً متّصلاً (العتبة {alert_riders})")
+    admins = (
+        await session.scalars(
+            select(User.id).where(has_role_clause(UserRole.ADMIN), User.is_blocked.is_(False))
+        )
+    ).all()
+    for admin_id in admins:
+        await _safe_notify(
+            session,
+            redis,
+            user_id=admin_id,
+            message=PushMessage(
+                title="السعةُ قاربت حدَّها",
+                body=" · ".join(parts) + " — افتح الرئيسية في اللوحة.",
+                data={
+                    "type": "capacity_alert",
+                    "captains": captains,
+                    "riders": riders,
+                },
+            ),
+        )
+
+
 async def publish_share_partner_joined(
     session: AsyncSession,
     redis: Redis,

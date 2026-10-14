@@ -915,3 +915,27 @@ export const refreshPaymentRequest = (requestId: string) =>
 
 /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
 export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });
+
+// ------------------------------------------------------------ «أرسل ملاحظة» (SPEC §٧٦/٤)
+
+/** **ملاحظةٌ من المستخدم** — نصٌّ وصورةُ شاشةٍ اختياريّة، **ومعهما ما يلزم لقراءتها** (التطبيقُ والإصدارُ والمسار).
+ *  نموذجٌ بأجزاءٍ متعدّدةٍ بـ`sendForm` — بابُ الرفع نفسُه (النسبةُ والإلغاءُ وكاشفُ الركود). */
+export function sendFeedback(
+  fields: {
+    app: "rider" | "driver";
+    message: string;
+    app_version?: string;
+    web_build?: string;
+    platform?: string;
+    route?: string;
+  },
+  screenshot: File | null,
+  options: UploadOptions = {},
+): Promise<{ id: string; created_at: string }> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined && value !== "") form.append(key, value);
+  }
+  if (screenshot) form.append("screenshot", screenshot);
+  return sendForm<{ id: string; created_at: string }>("POST", "/feedback", form, options);
+}

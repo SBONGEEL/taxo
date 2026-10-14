@@ -318,6 +318,13 @@ export function AccountScreen() {
           sub={tr("رمزك ومن سجّل به")}
           onClick={() => navigate("/account/referrals")}
         />
+        {/* **«أرسل ملاحظة»** (SPEC §٧٦/٤) — رأيٌ أو خللٌ يصل الفريقَ مباشرةً، ومعه إصدارُ التطبيق */}
+        <Row
+          icon="rate_review"
+          label={tr("أرسل ملاحظة")}
+          sub={tr("رأيُك أو خللٌ رأيتَه — يصل فريقَ TAXO مباشرة")}
+          onClick={() => navigate("/account/feedback")}
+        />
         <Row
           icon="settings"
           label={tr("الإعدادات")}

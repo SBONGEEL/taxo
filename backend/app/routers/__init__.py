@@ -10,6 +10,7 @@ from app.routers import (
     admin_test_accounts,
     admin_errors,
     admin_cancellations,
+    admin_feedback,
     admin_photo_reports,
     admin_policies,
     admin_site,
@@ -68,6 +69,7 @@ from app.routers import (
     rides,
     subscriptions,
     telemetry,
+    feedback,
     wallet,
     public_site,
     storefront,
@@ -104,6 +106,7 @@ api_router.include_router(card_payments.router)
 api_router.include_router(wallet.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(telemetry.router)
+api_router.include_router(feedback.router)
 api_router.include_router(admin_errors.router)
 api_router.include_router(admin_settings.router)
 # **فئاتُ الرحلة** (SPEC §٦٧) — صفحتُها في اللوحة وصفاتُ المركبة
@@ -162,6 +165,7 @@ api_router.include_router(admin_otp_templates.router)
 api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
 api_router.include_router(admin_photo_reports.router)
+api_router.include_router(admin_feedback.router)
 # **المركباتُ بابان**: بابُ الكبتن وبابُ اللوحة — ولا ثالثَ يكتب مِلكيّة
 api_router.include_router(vehicle_skins.router)
 api_router.include_router(admin_vehicle_skins.router)

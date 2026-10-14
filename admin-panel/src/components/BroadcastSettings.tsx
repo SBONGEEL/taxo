@@ -29,6 +29,9 @@ const FIELDS: { key: keyof Settings; label: string; unit: string }[] = [
   { key: "trip_record_seconds", label: "في الرحلة — نقطةٌ كلَّ", unit: "ثانية" },
   { key: "move_meters", label: "قاعدةُ السكون — لا إرسالَ قبل أن يبتعد", unit: "متراً" },
   { key: "heartbeat_seconds", label: "نبضةُ «ما زلتُ متّصلاً»", unit: "ثانية" },
+  // **إنذارُ السعة** (§٧٦/٢): متّصلون في اللحظة نفسِها يبلغون هذا ⇒ تنبيهٌ في «نظرة عامة» وإشعارٌ للمشرفين — **٧٠٪ من السعة الآمنة المقيسة**
+  { key: "alert_captains", label: "إنذارُ السعة — كباتنُ متّصلون معاً", unit: "كبتناً" },
+  { key: "alert_riders", label: "إنذارُ السعة — ركّابٌ متّصلون معاً", unit: "راكباً" },
 ];
 
 type Numbers = Record<string, string>;

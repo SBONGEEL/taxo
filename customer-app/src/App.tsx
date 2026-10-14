@@ -76,6 +76,9 @@ const LegalT2Screen = lazy(() =>
 const HelpT2Screen = lazy(() =>
   import("@/screens/t2/HelpT2").then((m) => ({ default: m.HelpT2Screen })),
 );
+const FeedbackT2Screen = lazy(() =>
+  import("@/screens/t2/FeedbackT2").then((m) => ({ default: m.FeedbackT2Screen })),
+);
 const RideDetailsScreen = lazy(() =>
   import("@/screens/RideDetails").then((m) => ({
     default: m.RideDetailsScreen,
@@ -724,6 +727,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <HelpT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **«أرسل ملاحظة»** (SPEC §٧٦/٤) — جوارَ المساعدة، والشريطُ تحتها كأخواتها */}
+                      <Route
+                        path="/account/feedback"
+                        element={
+                          <Guarded>
+                            <FeedbackT2Screen />
                           </Guarded>
                         }
                       />

@@ -96,6 +96,8 @@ export function AccountT2Screen() {
     { to: "/account/notifications", icon: "notifications", label: tr("الإشعارات") },
     { to: "/account/settings", icon: "settings", label: tr("الإعدادات") },
     // **«المساعدة والدعم» قبل «الشروط والخصوصية» كما رُسمتا في R15** (§٦٢-ج/١٦) — الأسئلةُ وبريدُ الدعم من إعدادات الموقع
+    // **«أرسل ملاحظة»** (SPEC §٧٦/٤) — قبل المساعدة: رأيٌ أو خللٌ يصل الفريقَ مباشرةً، ومعه الإصدار
+    { to: "/account/feedback", icon: "rate_review", label: tr("أرسل ملاحظة") },
     { to: "/account/help", icon: "help", label: tr("المساعدة والدعم") },
     // **قوقل تشترط بلوغَ السياسات من داخل التطبيق** (§٦١-و/٦) — قبل الحذف الذي يبقى آخرَ القائمة
     { to: "/account/legal", icon: "gavel", label: tr("الشروط والخصوصية") },

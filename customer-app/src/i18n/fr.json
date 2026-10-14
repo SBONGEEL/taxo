@@ -1323,5 +1323,17 @@
  "رسوم الدفع": "Frais de paiement",
  "يُضاف إلى محفظتك": "Ajouté à votre portefeuille",
  "رسوم الدفع بالبطاقة": "Frais de paiement par carte",
- "ادفع {0} في صفحة الوسيط": "Payer {0} sur la page du prestataire"
+ "ادفع {0} في صفحة الوسيط": "Payer {0} sur la page du prestataire",
+ "أرسل ملاحظة": "Envoyer une remarque",
+ "تعذّر إرسالُ الملاحظة — أعد المحاولة": "Échec de l’envoi de la remarque — réessayez",
+ "وصلت ملاحظتك — شكراً لك": "Votre remarque est bien arrivée — merci",
+ "يقرؤها فريقُ TAXO ويعمل بها. يمكنك إرسالُ غيرها متى شئت.": "L’équipe TAXO la lit et y donne suite. Vous pouvez en envoyer d’autres quand vous voulez.",
+ "أرسل ملاحظةً أخرى": "Envoyer une autre remarque",
+ "رأيُك أو خللٌ رأيتَه أو فكرةٌ تريدها — اكتبها هنا وتصل فريقَ TAXO مباشرة، ومعها إصدارُ التطبيق ليُعرف ما كنتَ تستعمل.": "Votre avis, un problème rencontré ou une idée — écrivez-le ici : il arrive directement à l’équipe TAXO, avec la version de l’application pour savoir ce que vous utilisiez.",
+ "ما الذي حدث؟ ما الذي توقّعتَه؟": "Que s’est-il passé ? À quoi vous attendiez-vous ?",
+ "ملاحظتك": "Votre remarque",
+ "صورة الشاشة المرفقة": "Capture d’écran jointe",
+ "أزل الصورة": "Retirer l’image",
+ "أرفق صورة شاشة (اختياري)": "Joindre une capture d’écran (facultatif)",
+ "يُرسل… {0}٪": "Envoi… {0} %"
 }

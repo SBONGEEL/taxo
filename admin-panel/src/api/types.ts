@@ -1640,6 +1640,44 @@ export interface AdminAccount {
 }
 
 
+/** **ملاحظةٌ من «أرسل ملاحظة»** (SPEC §٧٦/٤) — مَن أرسل · أيُّ تطبيق · أيُّ إصدار · متى. */
+export type AdminFeedback = {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_phone: string | null;
+  /** `rider` أو `driver` — **التطبيقُ الذي كُتبت منه** */
+  app: string;
+  message: string;
+  /** إصدارُ الغلاف المثبَّت `الإصدار+البناء` */
+  app_version: string | null;
+  /** حزمةُ الشاشات المحمَّلة */
+  web_build: string | null;
+  platform: string | null;
+  route: string | null;
+  has_screenshot: boolean;
+  created_at: string;
+  handled_at: string | null;
+};
+
+export type AdminFeedbackPage = {
+  items: AdminFeedback[];
+  total: number;
+  new_count: number;
+};
+
+/** **المتّصلون الآن وعتبتا الإنذار** (SPEC §٧٦/٢) — والتنبيهُ حيٌّ من العدد، لا من آخر إشعار. */
+export type Capacity = {
+  captains: number;
+  riders: number;
+  alert_captains: number;
+  alert_riders: number;
+  captains_alerting: boolean;
+  riders_alerting: boolean;
+  alerting: boolean;
+  last_alert_at: string | null;
+};
+
 /** بلاغُ صورةِ راكبٍ — **الصورةُ محجوبةٌ الآن**، والقرارُ يُعيد أو يحذف. */
 export type PhotoReport = {
   id: string;
@@ -1861,6 +1899,9 @@ export interface BroadcastSettings {
   move_meters: number;
   heartbeat_seconds: number;
   auto_steps: BroadcastStep[];
+  /** **عتبتا إنذار السعة** (§٧٦/٢) — متّصلون في اللحظة نفسِها */
+  alert_captains: number;
+  alert_riders: number;
   updated_at: string | null;
   live: {
     mode: string;
