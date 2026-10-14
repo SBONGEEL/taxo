@@ -24,6 +24,8 @@ export function legalPages(country: string | undefined, language: string): { key
  * هنا يُفتح له ما كان يُفتح. */
 const COUNTRY_PAGES: Partial<Record<string, { prefix: string; french: boolean }>> = {
   DZ: { prefix: "dz-", french: true },
+  // **ليبيا** (SPEC §٧٦/٣): صفحاتُها نُشرت مع السياسات الكاملة — فلا يُفتح لراكبها نصُّ الأردن بعد اليوم
+  LY: { prefix: "ly-", french: false },
 };
 
 export function openLegal(url: string): void {

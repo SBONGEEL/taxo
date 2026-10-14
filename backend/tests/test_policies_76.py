@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.models.enums import CountryCode, PolicyApp, PolicyDocType
 from app.models.privacy import PrivacyPolicy
 from app.services import policies as policies_service
+from app.services import trip_chat
 from scripts import policies_76 as script
 from scripts import policy_texts_76 as texts
 
@@ -33,6 +34,12 @@ def test_every_document_renders_whole(country, lang, doc, app) -> None:
     assert "\n\n\n" not in body
     if doc is PolicyDocType.PRIVACY_POLICY:
         assert texts.DELETE_PAGE in body
+    if doc is PolicyDocType.PRIVACY_POLICY and lang == "ar":
+        # **عنوانا القسمين بحرفهما** — `policies.publish` يرفض سياسةً بلاهما ما دامت المحادثةُ أو المكالمةُ أو التسجيلُ مشتعلاً
+        # (`trip_chat.require_line_kept`). **وقِيس ساقطاً ٢٠٢٦-١٠-١٤**: «ومكالماتُها» جمعاً و«تسجيلُ المكالمة» مفرداً مرّا هنا
+        # وفي CI لأن مفاتيحَ قاعدة الاختبار مطفأة — **وردّهما نشرُ التطوير** حيث المحادثةُ مشتعلة
+        assert trip_chat.CHAT_PRIVACY_MARKER in body
+        assert trip_chat.RECORDING_PRIVACY_MARKER in body
     if app is PolicyApp.DRIVER and doc is PolicyDocType.PRIVACY_POLICY:
         # **بندُ موقع الخلفية** — ما يقرؤه مراجعُ Google قبل غيره
         marker = {"ar": "في الخلفية", "en": "background", "fr": "arrière-plan"}[lang]

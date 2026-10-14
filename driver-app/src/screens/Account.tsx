@@ -29,7 +29,8 @@ import { DISPLAY_LOCALE, digits, ratedAverage } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
-import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
+import "@/screens/t2/account.css"; import { language, tr } from "@/lib/i18n";
+import { legalPages, openLegal } from "@/lib/legal";
 
 type Tone = "ok" | "warn" | "danger";
 
@@ -334,6 +335,16 @@ export function AccountScreen() {
         {/* **آخرُ الصفوف وأشدُّها أثراً** (البند ١٣): ما يخصّ الحساب يسكن هنا
             لا في «الإعدادات» — تلك للجهاز. ولا يُخفى خلف تحذير: من يريد
             الخروج يجد بابَه، والمراجعةُ هي ما يحمي لا صعوبةُ العثور */}
+        {/* **سياسةُ الخصوصية والشروط** (SPEC §٧٦/٣) — قوقل تشترط بلوغَهما من داخل التطبيق، وصفحتا دولتك ولغتك على الموقع */}
+        {legalPages(profile?.user.country_code, language).map((page) => (
+          <Row
+            key={page.key}
+            icon={page.key === "privacy" ? "shield" : "gavel"}
+            label={page.key === "privacy" ? tr("سياسة الخصوصية") : tr("شروط الاستخدام")}
+            sub={page.key === "privacy" ? tr("ما نجمعه ولماذا — وموقعك في الخلفية") : tr("اتفاقُك مع TAXO")}
+            onClick={() => openLegal(page.url)}
+          />
+        ))}
         <Row
           icon="delete"
           label={tr("حذف الحساب")}

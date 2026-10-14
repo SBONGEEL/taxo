@@ -1090,14 +1090,20 @@ say "  ✓ الصحّةُ عبر النفق ($HEALTH_URL · $EXPECT_ENV): $HEALT
 # **ويُقاس الطولُ لا الرمزُ وحدَه**: صفحةُ ٤٠٤ تردّ ٢٠٠ حين تُوجَّه، **والرمزُ
 # يقول «وصل شيء» لا «وصل الصحيح»**.
 EDGE="${TAXO_SITE_URL:-https://taxo.tajora.ly}"
+# **ثمانٍ وعشرون** (SPEC §٧٦/٣): الأردنُّ وليبيا بالعربيّة والإنجليزيّة، والجزائرُ بالثلاث — **وصفحاتُ الحذف الثلاث معها** (شرطُ المتجر)
 for _p in privacy terms driver-privacy driver-terms \
+          privacy-en terms-en driver-privacy-en driver-terms-en \
+          ly-privacy ly-terms ly-driver-privacy ly-driver-terms \
+          ly-privacy-en ly-terms-en ly-driver-privacy-en ly-driver-terms-en \
           dz-privacy dz-terms dz-driver-privacy dz-driver-terms \
-          dz-privacy-fr dz-terms-fr dz-driver-privacy-fr dz-driver-terms-fr; do
+          dz-privacy-fr dz-terms-fr dz-driver-privacy-fr dz-driver-terms-fr \
+          dz-privacy-en dz-terms-en dz-driver-privacy-en dz-driver-terms-en \
+          delete-account delete-account-en delete-account-fr; do
   _len="$(curl -sS --max-time 15 "$EDGE/$_p" 2>/dev/null | wc -c | tr -d ' ')"
   [ "${_len:-0}" -gt 4000 ] \
     || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $LOCAL"
 done
-say "  ✓ الحافّة: صفحاتُ السياسة الاثنتا عشرة (الأربعُ وثماني الجزائر) تبلغ ملفّاتِها"
+say "  ✓ الحافّة: صفحاتُ السياسة الثماني والعشرون وصفحاتُ الحذف الثلاث تبلغ ملفّاتِها"
 
 # **والنصُّ مخبوزٌ فقد يبلى — فتُقاس النسخةُ لا الطول** (أُضيف ٢٠٢٦-٠٩-٠٧).
 #
@@ -1110,16 +1116,16 @@ say "  ✓ الحافّة: صفحاتُ السياسة الاثنتا عشرة (
 # بحرفها، مطبَّقةً على المحتوى بدل المسار.
 # **وصفحاتُ الجزائر بدولتها** (§٧٤-ل/١): الحقلُ الرابعُ دولةٌ تُسأل، **وبلا دولةٍ يعطي البابُ الأردن** — فتُقارن صفحةُ الجزائر
 # بنسخة الأردن وتخضرّ بالصدفة إن تساوى الرقمان.
-for _pair in "privacy:privacy_policy:rider:" "terms:terms_of_use:rider:" \
-             "driver-privacy:privacy_policy:driver:" "driver-terms:terms_of_use:driver:" \
-             "dz-privacy:privacy_policy:rider:DZ" \
-             "dz-privacy-fr:privacy_policy:rider:DZ" \
-             "dz-terms:terms_of_use:rider:DZ" \
-             "dz-terms-fr:terms_of_use:rider:DZ" \
-             "dz-driver-privacy:privacy_policy:driver:DZ" \
-             "dz-driver-privacy-fr:privacy_policy:driver:DZ" \
-             "dz-driver-terms:terms_of_use:driver:DZ" \
-             "dz-driver-terms-fr:terms_of_use:driver:DZ"; do
+for _pair in "privacy:privacy_policy:rider:" "privacy-en:privacy_policy:rider:JO" "terms:terms_of_use:rider:" \
+             "terms-en:terms_of_use:rider:JO" "driver-privacy:privacy_policy:driver:" "driver-privacy-en:privacy_policy:driver:JO" \
+             "driver-terms:terms_of_use:driver:" "driver-terms-en:terms_of_use:driver:JO" "ly-privacy:privacy_policy:rider:LY" \
+             "ly-privacy-en:privacy_policy:rider:LY" "ly-terms:terms_of_use:rider:LY" "ly-terms-en:terms_of_use:rider:LY" \
+             "ly-driver-privacy:privacy_policy:driver:LY" "ly-driver-privacy-en:privacy_policy:driver:LY" "ly-driver-terms:terms_of_use:driver:LY" \
+             "ly-driver-terms-en:terms_of_use:driver:LY" "dz-privacy:privacy_policy:rider:DZ" "dz-privacy-fr:privacy_policy:rider:DZ" \
+             "dz-privacy-en:privacy_policy:rider:DZ" "dz-terms:terms_of_use:rider:DZ" "dz-terms-fr:terms_of_use:rider:DZ" \
+             "dz-terms-en:terms_of_use:rider:DZ" "dz-driver-privacy:privacy_policy:driver:DZ" "dz-driver-privacy-fr:privacy_policy:driver:DZ" \
+             "dz-driver-privacy-en:privacy_policy:driver:DZ" "dz-driver-terms:terms_of_use:driver:DZ" "dz-driver-terms-fr:terms_of_use:driver:DZ" \
+             "dz-driver-terms-en:terms_of_use:driver:DZ"; do
   IFS=: read -r _page _doc _app _cc <<EOF
 $_pair
 EOF

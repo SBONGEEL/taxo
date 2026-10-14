@@ -58,7 +58,25 @@ export default defineConfig({
         "dz-driver-terms-fr": resolve(__dirname, "dz-driver-terms-fr.html"),
         // **صفحةُ طلب الحذف** (٢٠٢٦-٠٩-٠٧): يشترطها المتجرُ رابطاً في نموذج
         // أمان البيانات — **وصفحةٌ لا تدخل البناءَ رابطٌ يقود إلى ٤٠٤**.
+        "privacy-en": resolve(__dirname, "privacy-en.html"),
+        "terms-en": resolve(__dirname, "terms-en.html"),
+        "driver-privacy-en": resolve(__dirname, "driver-privacy-en.html"),
+        "driver-terms-en": resolve(__dirname, "driver-terms-en.html"),
+        "ly-privacy": resolve(__dirname, "ly-privacy.html"),
+        "ly-privacy-en": resolve(__dirname, "ly-privacy-en.html"),
+        "ly-terms": resolve(__dirname, "ly-terms.html"),
+        "ly-terms-en": resolve(__dirname, "ly-terms-en.html"),
+        "ly-driver-privacy": resolve(__dirname, "ly-driver-privacy.html"),
+        "ly-driver-privacy-en": resolve(__dirname, "ly-driver-privacy-en.html"),
+        "ly-driver-terms": resolve(__dirname, "ly-driver-terms.html"),
+        "ly-driver-terms-en": resolve(__dirname, "ly-driver-terms-en.html"),
+        "dz-privacy-en": resolve(__dirname, "dz-privacy-en.html"),
+        "dz-terms-en": resolve(__dirname, "dz-terms-en.html"),
+        "dz-driver-privacy-en": resolve(__dirname, "dz-driver-privacy-en.html"),
+        "dz-driver-terms-en": resolve(__dirname, "dz-driver-terms-en.html"),
         "delete-account": resolve(__dirname, "delete-account.html"),
+        "delete-account-en": resolve(__dirname, "delete-account-en.html"),
+        "delete-account-fr": resolve(__dirname, "delete-account-fr.html"),
         // **صفحةُ التحميل** (SPEC §٦٨-ج/٦): بابٌ واحدٌ للحزمتين على `/download`،
         // **وقسمُ التحميل في الرئيسية يقود إليها** فلا نسختان من البصمة.
         download: resolve(__dirname, "download.html"),

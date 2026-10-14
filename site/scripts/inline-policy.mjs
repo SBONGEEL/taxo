@@ -35,20 +35,28 @@ const API = process.env.TAXO_POLICY_API || "https://api.tajora.ly/api/v1/public"
 //:
 //: **وصفحاتُ الجزائر الثماني** (SPEC §٧٤-ل/١): الأربعُ نفسُها بالعربيّة والفرنسيّة، **ودولتُها تُسأل صراحةً** — فالبابُ العامُّ
 //: يعطي دولةَ الموقع (الأردن) إن لم تُسأل. **والفرنسيّةُ من `body_fr`**، وغيابُه يُسقط البناء كغياب العربيّ.
-export const POLICY_PAGES = {
-  "privacy.html": { doc: "privacy_policy", app: "rider" },
-  "terms.html": { doc: "terms_of_use", app: "rider" },
-  "driver-privacy.html": { doc: "privacy_policy", app: "driver" },
-  "driver-terms.html": { doc: "terms_of_use", app: "driver" },
-  "dz-privacy.html": { doc: "privacy_policy", app: "rider", country: "DZ", lang: "ar" },
-  "dz-privacy-fr.html": { doc: "privacy_policy", app: "rider", country: "DZ", lang: "fr" },
-  "dz-terms.html": { doc: "terms_of_use", app: "rider", country: "DZ", lang: "ar" },
-  "dz-terms-fr.html": { doc: "terms_of_use", app: "rider", country: "DZ", lang: "fr" },
-  "dz-driver-privacy.html": { doc: "privacy_policy", app: "driver", country: "DZ", lang: "ar" },
-  "dz-driver-privacy-fr.html": { doc: "privacy_policy", app: "driver", country: "DZ", lang: "fr" },
-  "dz-driver-terms.html": { doc: "terms_of_use", app: "driver", country: "DZ", lang: "ar" },
-  "dz-driver-terms-fr.html": { doc: "terms_of_use", app: "driver", country: "DZ", lang: "fr" },
-};
+export const POLICY_PAGES = (() => {
+  //: **ثمانٍ وعشرون صفحةً من مصفوفةٍ واحدة** (SPEC §٧٦/٣): لكلِّ سوقٍ لغاتُه — الأردنُّ وليبيا بالعربيّة والإنجليزيّة، والجزائرُ بالعربيّة
+  //: والفرنسيّة والإنجليزيّة — **ولكلِّ لغةٍ وثائقُها الأربع**. **والإنجليزيّةُ لمراجعي Google Play** (`body_en`). **وصفحاتُ الأردن بلا
+  //: بادئة** كما كانت (`/privacy`)، ودولتُها تُسأل صراحةً في الجديدة وحدَها — والقديمةُ بلا دولةٍ يعطيها البابُ الأردنَّ كما كان.
+  const markets = { JO: ["", ["ar", "en"]], LY: ["ly-", ["ar", "en"]], DZ: ["dz-", ["ar", "fr", "en"]] };
+  const docs = [
+    ["privacy", "privacy_policy", "rider"],
+    ["terms", "terms_of_use", "rider"],
+    ["driver-privacy", "privacy_policy", "driver"],
+    ["driver-terms", "terms_of_use", "driver"],
+  ];
+  const pages = {};
+  for (const [country, [prefix, langs]] of Object.entries(markets)) {
+    for (const lang of langs) {
+      for (const [base, doc, app] of docs) {
+        const name = `${prefix}${base}${lang === "ar" ? "" : `-${lang}`}.html`;
+        pages[name] = country === "JO" && lang === "ar" ? { doc, app } : { doc, app, country, lang };
+      }
+    }
+  }
+  return pages;
+})();
 
 const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -153,6 +161,9 @@ async function fetchPolicy({ doc, app, country, lang }) {
   if (lang === "fr" && !doc_.body_fr) {
     throw new Error(`${url} بلا نصٍّ فرنسيّ (body_fr) — **وصفحةٌ فرنسيّةٌ لا تُخبز بالعربيّ**. يُوقَف.`);
   }
+  if (lang === "en" && !doc_.body_en) {
+    throw new Error(`${url} بلا نصٍّ إنجليزيّ (body_en) — **وصفحةٌ إنجليزيّةٌ لا تُخبز بالعربيّ**. يُوقَف (انشر السياساتِ قبل البناء: SPEC §٧٦-ج).`);
+  }
   return doc_;
 }
 
@@ -168,12 +179,15 @@ export function inlinePolicyPlugin() {
 
       const doc = await fetchPolicy(want);
       const fr = want.lang === "fr";
-      const body = fr ? doc.body_fr : doc.body_ar;
+      const en = want.lang === "en";
+      const body = fr ? doc.body_fr : en ? doc.body_en : doc.body_ar;
       const when = String(doc.published_at || "").slice(0, 10);
       const meta = fr
         ? `Version ${doc.version}` + (when ? ` — publiée le ${when}` : "")
-        : `النسخة <span dir="ltr" style="unicode-bidi:isolate">${doc.version}</span>` +
-          (when ? ` — نُشرت <span dir="ltr" style="unicode-bidi:isolate">${when}</span>` : "");
+        : en
+          ? `Version ${doc.version}` + (when ? ` — published ${when}` : "")
+          : `النسخة <span dir="ltr" style="unicode-bidi:isolate">${doc.version}</span>` +
+            (when ? ` — نُشرت <span dir="ltr" style="unicode-bidi:isolate">${when}</span>` : "");
 
       console.log(
         `  ✓ خُبزت ${name} · ${want.country ?? "الموقع"}/${want.app}/${want.doc}${fr ? "/fr" : ""} · v${doc.version} · ${body.length} حرفاً`,
