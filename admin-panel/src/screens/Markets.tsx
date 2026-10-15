@@ -39,7 +39,7 @@ import { Flag, Icon } from "@/taxo2";
 const MARKETS_MANAGE = "markets.manage";
 const MIN_REASON = 8;
 
-const ROLE_LABEL: Record<string, string> = { rider: "راكب", driver: "كبتن", admin: "مشرف", support: "دعم" };
+const ROLE_LABEL: Record<string, string> = { rider: "راكب", driver: "كبتن", admin: "مشرف", support: "دعم", owner: "المالك" };
 
 /** **اختصاراتُ كلِّ دولة** — تنقل مبدّلَ الدولة إليها ثمّ تفتح الصفحة (لوحةُ «الدول»: الأسعار · الخدمات · طرق الدفع · السياسات · المالية). */
 const SHORTCUTS: Array<{ label: string; to: string }> = [

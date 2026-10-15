@@ -88,6 +88,9 @@ DEFAULTS: dict[UserRole, frozenset[AdminPermission]] = {
     # **الكلُّ إلا الحسّاس** — وما كان يملكه `admin` قبل §٦٦ يبقى له حرفاً، فالمجموعةُ الخضراءُ برهانُ أنه لم يتغيّر
     UserRole.ADMIN: ALL - SENSITIVE,
     UserRole.SUPPORT: SUPPORT_DEFAULT,
+    # **المالكُ يملك الكلَّ ومعه الحسّاس** (SPEC §٧٦-ك/١) — `ALL` مشتقٌّ من التعداد، **فصلاحيةٌ تُضاف غداً تصله في اللحظة نفسِها**،
+    # ويقيس ذلك `test_owner_role.py` على كلِّ عضوٍ في `AdminPermission`
+    UserRole.OWNER: ALL,
 }
 
 
@@ -105,7 +108,13 @@ def default_for(user: User) -> frozenset[AdminPermission]:
 
 
 async def for_user(session: AsyncSession, user: User) -> frozenset[AdminPermission]:
-    """ما يملكه هذا المشرفُ فعلاً — **الصفوفُ إن وُجدت، وإلا افتراضُ دوره**."""
+    """ما يملكه هذا المشرفُ فعلاً — **الصفوفُ إن وُجدت، وإلا افتراضُ دوره**.
+
+    **والمالكُ يملك الكلَّ ولو وُجدت صفوف** (SPEC §٧٦-ك/١): «أوّلُ صفٍّ يُمنح يحكم» يجعل منحاً واحداً من المصفوفة **يضيّق** المالكَ على تلك
+    وحدَها — وهو ما لا يكون لحسابٍ وُجد ليملك كلَّ شيء.
+    """
+    if user.has_role(UserRole.OWNER):
+        return ALL
     rows = set(
         await session.scalars(
             select(AdminPermissionGrant.permission).where(

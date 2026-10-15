@@ -62,6 +62,7 @@ const ROLE_LABEL: Record<string, string> = {
   driver: "كبتن",
   admin: "مشرف",
   support: "دعم",
+  owner: "المالك",
 };
 
 /** قسمُ «الحساب» — **حقائقُ الشخص لا حقائقُ دوره**.

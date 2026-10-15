@@ -35,6 +35,10 @@ class UserRole(StrEnum):
     DRIVER = "driver"
     ADMIN = "admin"
     SUPPORT = "support"
+    #: **المالك** (SPEC §٧٦-ك/١، أمرُ المالك ٢٠٢٦-١٠-١٥) — **كلُّ صلاحيةٍ موجودةٍ وما يُضاف غداً**، ومعها الحسّاسةُ التي لا يملكها مشرفٌ
+    #: افتراضاً (`permissions.SENSITIVE`). **ويُضاف فوق `admin` لا بدلَه** — فكلُّ بابٍ إداريٍّ قائمٍ يسأل `admin` يفتح له كما هو.
+    #: **ولا يُمنح من اللوحة**: يكتبه سكربتُ الخادم وحدَه (`scripts.provision_panel_owner`) بسطرِ تدقيقٍ يقول «بأمر المالك».
+    OWNER = "owner"
 
 
 class ClientApp(StrEnum):

@@ -27,7 +27,7 @@ export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;
-export type UserRole = "rider" | "driver" | "admin" | "support";
+export type UserRole = "rider" | "driver" | "admin" | "support" | "owner";
 
 export type RideStatus =
   | "requested"

@@ -135,7 +135,8 @@ const GROUPS: {
 ];
 
 const ROLE_LABEL: Record<string, string> = {
-  admin: "مالك · صلاحيات كاملة",
+  owner: "المالك · كلُّ الصلاحيات",
+  admin: "مشرف",
   support: "دعم فني",
 };
 
@@ -269,7 +270,9 @@ export function Shell({
   }, [menu]);
 
   const initial = (user?.name ?? "").trim().slice(0, 1);
-  const role = ROLE_LABEL[user?.role ?? ""] ?? user?.role;
+  // **المالكُ يحمل `admin` معه** — فيُقرأ دورُه من `roles` (SPEC §٧٦-ك/١)
+  const shown = user?.roles?.includes("owner") ? "owner" : user?.role;
+  const role = ROLE_LABEL[shown ?? ""] ?? shown;
   const leave = () => void signOut().then(() => navigate("/login"));
   const themeLabel = "تبديل المظهر";
   const themeIcon = dark ? "light_mode" : "dark_mode";

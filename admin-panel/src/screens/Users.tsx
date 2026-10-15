@@ -35,11 +35,17 @@ import { CALL_RECORDINGS_LISTEN, TRIP_CHATS_READ, refreshMyPermissions } from "@
 import { cn } from "@/lib/utils";
 
 const ROLE_LABEL: Record<UserRole, string> = {
-  admin: "مالك · صلاحيات كاملة",
+  // **المالكُ دورٌ بعينه** (SPEC §٧٦-ك/١) — و`admin` لم يعد «صلاحياتٍ كاملة» منذ أُخرج الحسّاسُ من افتراضه (§٦٦)
+  owner: "المالك · كلُّ الصلاحيات",
+  admin: "مشرف",
   support: "دعم فني",
   rider: "راكب",
   driver: "سائق",
 };
+
+/** **الدورُ المعروض**: المالكُ يحمل `admin` معه (فكلُّ بابٍ إداريٍّ يفتح له)، فيُقرأ من `roles` لا من `role` وحدَه. */
+const shownRole = (row: { role: UserRole; roles?: UserRole[] }): UserRole =>
+  row.roles?.includes("owner") ? "owner" : row.role;
 
 /** ما تفرضه الخلفية فعلاً — كلُّ سطرٍ يقابل حارساً في `core/deps.py`. */
 /** أسماءُ الصلاحيات الأربعَ عشرةَ كما يعرضها العربيُّ — **والمفاتيحُ من
@@ -128,7 +134,7 @@ export function UsersScreen() {
 
             <span>
               <Badge tone={row.role === "admin" ? "ink" : "muted"}>
-                {ROLE_LABEL[row.role]}
+                {ROLE_LABEL[shownRole(row)]}
               </Badge>
             </span>
 

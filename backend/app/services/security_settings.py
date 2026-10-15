@@ -57,6 +57,11 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     if credential is not None and credential.is_break_glass:
         return False
 
+    # **والمالكُ مُلزَمٌ دائماً، مهما كان المفتاح** (SPEC §٧٦-ك/١): حسابٌ يملك كلَّ صلاحيةٍ — المالَ والمحادثاتِ والتسجيلاتِ والدول — **لا
+    # يُترك على كلمةٍ واحدة**. **والمفتاحُ العامُّ لا يُشعَل لذلك**: يُلزم المشرفَين القائمَين معه، والمالكُ أمر أن يبقيا كما هما.
+    if user.has_role(UserRole.OWNER):
+        return True
+
     row = await get(session)
     return bool(row and row.admin_totp_required)
 
