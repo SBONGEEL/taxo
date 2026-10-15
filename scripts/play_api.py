@@ -1,6 +1,6 @@
 """play_api.py — Google Play Developer API بحساب الخدمة (SPEC §٧٦-ح) — مكتبةُ بايثون القياسيّة و openssl وحدَهما.
 
-    python3 scripts/play_api.py read          # قراءةٌ وحدَها: مساراتُ التطبيقين وبطاقاتُهما — تعديلٌ يُفتح ثمّ يُحذف بلا commit
+    python3 scripts/play_api.py read          # قراءةٌ وحدَها: مساراتُ التطبيقين وبطاقاتُهما ومجموعاتُ مختبِري المسار المغلق — تعديلٌ يُفتح ثمّ يُحذف بلا commit
 
 **المفتاحُ لا يُطبع ولا يُكتب في سجلّ**: يُقرأ من ~/.taxo-secrets/play-api/ (ملفٌّ واحد)، ويُكتب المفتاحُ الخاصُّ لحظةَ التوقيع في ملفٍّ
 مؤقّتٍ بصلاحيّة 600 داخل المجلّد نفسِه ويُحذف فوراً. **ولا يُطبع الرمزُ (access token) أبداً.**
@@ -87,6 +87,7 @@ def read() -> int:
             tracks = call(token, "GET", f"{pkg}/edits/{eid}/tracks")
             listings = call(token, "GET", f"{pkg}/edits/{eid}/listings")
             details = call(token, "GET", f"{pkg}/edits/{eid}/details")
+            testers = call(token, "GET", f"{pkg}/edits/{eid}/testers/alpha")
         finally:
             gone = call(token, "DELETE", f"{pkg}/edits/{eid}")
         print(f"\n== {pkg}")
@@ -101,6 +102,11 @@ def read() -> int:
             rc = 1
         for li in listings.get("listings", []):
             print(f"  بطاقة {li['language']}: «{li.get('title')}» · القصير {len(li.get('shortDescription', ''))} حرفاً")
+        if "_error" in testers:
+            print("  ✗ مختبِرو alpha —", testers["_error"])
+            rc = 1
+        else:
+            print("  مجموعاتُ مختبِري alpha: " + (", ".join(testers.get("googleGroups", [])) or "—"))
         if "_error" not in details:
             print(f"  اللغةُ التلقائيّة: {details.get('defaultLanguage')}")
         print("  التعديلُ حُذف بلا commit" if "_error" not in gone else f"  ✗ حذفُ التعديل — {gone['_error']}")
