@@ -33,7 +33,7 @@ from app.models.driver import Driver
 from app.models.enums import AuditAction, CountryCode, RideStatus, VehicleCategory
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import audit, geo, test_accounts
+from app.services import audit, geo
 
 # نافذةُ خنق قيد التدقيق: جلسةُ مراقبةٍ واحدة تكتب قيداً واحداً
 AUDIT_WINDOW_SECONDS = 900
@@ -65,6 +65,8 @@ class LiveDriver:
     # اللوحة، أو تُتّخذ عليه قرارٌ وهو غير موجود
     state: str
     seconds_since_update: int | None
+    # **حسابُ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً **ولا يُعدّ** في «متصلون» و«متفرّغون»: الخريطةُ تُري ما يجري، والعدُّ يبقى عدَّ الشارع
+    is_test: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +78,8 @@ class PendingRide:
     lng: float
     status: RideStatus
     created_at: object
+    # **طلبُ راكبِ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً ولا يُعدّ في «بانتظار سائق»
+    is_test: bool = False
 
 
 # **حدُّ «الشحوب» مشتقٌّ من عمر المفتاح لا مختارٌ بالذوق**: ثلثا العمر. فما
@@ -158,10 +162,9 @@ async def drivers_now(
             .where(
                 Driver.id.in_(live.keys()),
                 User.country_code == country,
-                # **كبتنُ التجربة ليس في الشارع** (SPEC §٦٥-ج): الخريطةُ تقول «من في السوق الآن» وتعدّه في «متصلون»،
-                # **ورقمُها يجب أن يساوي «متصلٌ الآن» في النظرة العامّة** (`stats.online_driver_count` يطرحه). ورحلتُه
-                # تُتابَع من صفحتها (`position_of` لا يمرّ من هنا)
-                User.is_test.is_(False),
+                # **كبتنُ التجربة يُرسم موسوماً** (SPEC §٧٦-ل، يحلّ محلَّ إخفائه في §٦٥-ج): كان يُخفى فرأى المالكُ «متّصلاً» في بطاقة
+                # السعة (تعدّه — «الحملُ حمل») ولا شيءَ على الخريطة، **فظنّ الخريطةَ معطوبة**. **والعدُّ لا يتغيّر**: `is_test`
+                # يُنشر، واللوحةُ تطرحه من «متصلون» فيبقى رقمُها = «متصلٌ الآن» في النظرة العامّة (`stats.online_driver_count`)
             )
         )
     ).all()
@@ -193,6 +196,7 @@ async def drivers_now(
                     on_ride=driver.current_ride_id is not None, age=silence, limit=limit
                 ),
                 seconds_since_update=age,
+                is_test=bool(driver.user.is_test),
             )
         )
     return result
@@ -203,13 +207,13 @@ async def pending_rides(
 ) -> list[PendingRide]:
     """الطلبات التي لم يقبلها أحدٌ بعد — «طلبات بانتظار سائق» في التصميم."""
     rows = (
-        await session.scalars(
-            select(Ride)
+        await session.execute(
+            select(Ride, User.is_test)
+            .join(User, Ride.rider_id == User.id)
             .where(
                 Ride.country_code == country,
                 Ride.status.in_(PENDING_STATUSES),
-                # **طلبُ راكبِ التجربة لا ينتظر سائقاً حقيقيّاً** (SPEC §٦٥-ج) — ولا يُعدّ في «بانتظار سائق»
-                test_accounts.real_user(Ride.rider_id),
+                # **طلبُ راكبِ التجربة يُرسم موسوماً** (SPEC §٧٦-ل) — **ولا يُعدّ في «بانتظار سائق»**: اللوحةُ تطرحه بـ`is_test`
             )
             .order_by(Ride.created_at)
         )
@@ -221,8 +225,9 @@ async def pending_rides(
             lng=ride.pickup_lng,
             status=ride.status,
             created_at=ride.created_at,
+            is_test=bool(is_test),
         )
-        for ride in rows
+        for ride, is_test in rows
     ]
 
 

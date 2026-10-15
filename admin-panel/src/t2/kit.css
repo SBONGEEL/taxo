@@ -841,6 +841,9 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
 }
 .ad-map-car.ride { background: var(--t2-success); }
 .ad-map-car.stale { background: var(--t2-warning); opacity: 0.6; }
+/* **حسابُ تجربة** (SPEC §٧٦-ل) — يُرى ولا يُخلط بالشارع: إطارٌ متقطّعٌ حوله */
+.ad-map-car.test { outline: 2px dashed var(--t2-accent); outline-offset: 2px; }
+.ad-map-wait.test { border-style: dashed; }
 .ad-map-car.on { box-shadow: 0 0 0 10px var(--t2-map-me-halo), var(--t2-map-car-shadow); }
 .ad-map-car-front,
 .ad-map-car-back { position: absolute; display: block; background: var(--t2-accent); }

@@ -100,7 +100,11 @@ export function LiveMapScreen() {
 
   const drivers = data?.drivers ?? [];
   const pending = data?.pending_rides ?? [];
-  const free = drivers.filter((row) => !row.on_ride).length;
+  // **حساباتُ التجربة تُرسم ولا تُعدّ** (SPEC §٧٦-ل) — فـ«متصلون» هنا = «متصلٌ الآن» في النظرة العامّة، وتُعدّ «تجربة» وحدَها
+  const street = drivers.filter((row) => !row.is_test);
+  const free = street.filter((row) => !row.on_ride).length;
+  const waiting = pending.filter((ride) => !ride.is_test).length;
+  const testing = drivers.length - street.length;
 
   return (
     <Shell
@@ -150,9 +154,10 @@ export function LiveMapScreen() {
 
           <aside className="ad-live-side" aria-label="القائمتان">
             <div className="ad-tallies">
-              <Tally label="متصلون" value={drivers.length} />
+              <Tally label="متصلون" value={street.length} />
               <Tally label="متفرّغون" value={free} />
-              <Tally label="بانتظار سائق" value={pending.length} warn={pending.length > 0} />
+              <Tally label="بانتظار سائق" value={waiting} warn={waiting > 0} />
+              {testing > 0 ? <Tally label="تجربة" value={testing} /> : null}
             </div>
 
             <Section title="طلبات بانتظار سائق">
@@ -257,6 +262,7 @@ function DriverRow({
       <span className="ad-live-row-top">
         <span className="ad-live-row-name">{driver.name}</span>
         <Badge tone={STATE_TONE[driver.state]}>{STATE_LABEL[driver.state]}</Badge>
+        {driver.is_test ? <Badge tone="muted">تجربة</Badge> : null}
       </span>
       {/* الرقمُ كما هو: المشرف يطلبه أو يقارنه بما يقوله الكبتن، وتعريبُ
           خاناته يجعله يطابق سلسلةً بشكلٍ آخر — الأرقام الهندية للكميّات لا

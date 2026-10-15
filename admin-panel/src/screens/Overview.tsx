@@ -211,13 +211,13 @@ function CapacityCard() {
         <Kpi
           label="كباتن متّصلون على الخادم الآن"
           value={digits(String(live.captains))}
-          hint={`لكلِّ الدول · الإنذارُ عند ${live.alert_captains}`}
+          hint={`لكلِّ الدول ومعهم حساباتُ التجربة · الإنذارُ عند ${live.alert_captains}`}
           danger={live.captains_alerting}
         />
         <Kpi
           label="ركّاب فاتحون للتطبيق الآن"
           value={digits(String(live.riders))}
-          hint={`لكلِّ الدول · الإنذارُ عند ${live.alert_riders}`}
+          hint={`لكلِّ الدول ومعهم حساباتُ التجربة · الإنذارُ عند ${live.alert_riders}`}
           danger={live.riders_alerting}
         />
       </div>

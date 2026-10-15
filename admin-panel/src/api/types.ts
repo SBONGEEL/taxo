@@ -889,6 +889,8 @@ export interface LiveDriver {
   /** ثوانٍ منذ آخر بثّ — و`null` تعني أن الختمَ غيرُ موجود (بثٌّ قديمٌ قبل
    * إضافة الختم)، فتُقرأ «غيرُ معلوم» لا «الآن». */
   seconds_since_update: number | null;
+  /** **حسابُ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً، **ولا يُعدّ** في «متصلون» و«متفرّغون»: فرقمُ الخريطة = «متصلٌ الآن» في النظرة العامّة. */
+  is_test: boolean;
 }
 
 export interface LivePendingRide {
@@ -897,6 +899,8 @@ export interface LivePendingRide {
   lng: number;
   status: RideStatus;
   created_at: string;
+  /** **طلبُ راكبِ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً، ولا يُعدّ في «بانتظار سائق». */
+  is_test: boolean;
 }
 
 export interface LiveMap {

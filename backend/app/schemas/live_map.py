@@ -37,6 +37,8 @@ class LiveDriverOut(BaseModel):
     # `PRESENCE_TTL_SECONDS`، ولا شيءَ يفشل
     state: Literal["available", "on_ride", "stale"]
     seconds_since_update: int | None
+    #: **حسابُ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً، **ولا يُعدّ** في «متصلون» و«متفرّغون»
+    is_test: bool = False
 
 
 class PendingRideOut(BaseModel):
@@ -47,6 +49,8 @@ class PendingRideOut(BaseModel):
     lng: float
     status: RideStatus
     created_at: datetime
+    #: **طلبُ راكبِ تجربة** (SPEC §٧٦-ل) — يُرسم موسوماً، ولا يُعدّ في «بانتظار سائق»
+    is_test: bool = False
 
 
 class LiveMapOut(BaseModel):

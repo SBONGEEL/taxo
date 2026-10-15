@@ -70,6 +70,8 @@ function paintDriver(shell: HTMLElement, driver: LiveDriver, selected: boolean) 
   face.className = [
     "ad-map-car",
     driver.state === "on_ride" ? "ride" : driver.state === "stale" ? "stale" : "free",
+    // **حسابُ التجربة يُرسم موسوماً** (SPEC §٧٦-ل) — إطارٌ متقطّعٌ يميّزه عن كبتنٍ في الشارع
+    driver.is_test ? "test" : "",
     selected ? "on" : "",
   ].join(" ");
   face.style.transform = `rotate(${driver.heading ?? 0}deg)`;
@@ -77,17 +79,18 @@ function paintDriver(shell: HTMLElement, driver: LiveDriver, selected: boolean) 
     face.innerHTML = '<i class="ad-map-car-front"></i><i class="ad-map-car-back"></i>';
   }
   // الاسمُ كاملاً في التلميح، وفي القائمة الجانبية معه الرقم واللوحة
+  const label = driver.is_test ? `تجربة — ${driver.name}` : driver.name;
   face.title =
     driver.state === "stale" && driver.seconds_since_update !== null
-      ? `${driver.name} — آخر بثّ منذ ${driver.seconds_since_update} ثانية`
-      : driver.name;
+      ? `${label} — آخر بثّ منذ ${driver.seconds_since_update} ثانية`
+      : label;
 }
 
-function pendingElement(): HTMLElement {
+function pendingElement(isTest: boolean): HTMLElement {
   const shell = markerShell();
   const face = shell.firstElementChild as HTMLElement;
-  face.className = "ad-map-wait";
-  face.title = "طلبٌ بانتظار سائق";
+  face.className = isTest ? "ad-map-wait test" : "ad-map-wait";
+  face.title = isTest ? "تجربة — طلبٌ بانتظار سائق" : "طلبٌ بانتظار سائق";
   return shell;
 }
 
@@ -195,7 +198,7 @@ export function LiveCanvas({
       }
       rideMarkers.current.set(
         ride.ride_id,
-        new mapboxgl.Marker({ element: pendingElement() })
+        new mapboxgl.Marker({ element: pendingElement(ride.is_test) })
           .setLngLat([ride.lng, ride.lat])
           .addTo(instance),
       );

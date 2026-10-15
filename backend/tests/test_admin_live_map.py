@@ -13,14 +13,21 @@
 
 from __future__ import annotations
 
+import uuid
+
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.models.audit import AdminAuditLog
 from app.models.enums import AuditAction, CountryCode
+from app.models.user import User
 from app.services import live_map
 from tests.helpers import (
     DRIVER,
+    FAR_PICKUP,
+    NEAR_PICKUP,
+    OTHER_RIDER,
+    SECOND_DRIVER,
     approved_driver,
     bring_online,
     request_ride,
@@ -181,3 +188,61 @@ async def test_silent_member_is_not_on_the_map(
 async def test_audit_window_is_a_module_constant(client: AsyncClient) -> None:
     """نافذةُ الخنق قيمةُ وحدةٍ لا رقمٌ مبعثر — كي يقلبها اختبارٌ عند الحاجة."""
     assert live_map.AUDIT_WINDOW_SECONDS > 0
+
+
+# --------------------------------------------------------------------------- حساباتُ التجربة (SPEC §٧٦-ل)
+
+
+async def _mark_test(session_factory, user_id) -> None:
+    async with session_factory() as session:
+        await session.execute(update(User).where(User.id == uuid.UUID(str(user_id))).values(is_test=True))
+        await session.commit()
+
+
+async def test_a_test_captain_is_drawn_marked_moves_and_is_not_counted(
+    client: AsyncClient, jordan_settings: None, session_factory, admin_headers: dict
+) -> None:
+    """**بلاغُ المالك ٢٠٢٦-١٠-١٥** (SPEC §٧٦-ل): كبتنُ تجربةٍ «متّصلٌ» في بطاقة السعة **ولا شيءَ على الخريطة** — كانت تُخفيه (§٦٥-ج)
+    فقُرئت معطوبة. **الآن يُرسم موسوماً ويتحرّك حين يتحرّك**، **والعدُّ كما كان**: «متصلون» في الخريطة بلا التجربة = «متصلٌ الآن»."""
+    real = await approved_driver(client, session_factory, DRIVER)
+    tester = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-1002")
+    await _mark_test(session_factory, tester["user_id"])
+    await bring_online(client, real, NEAR_PICKUP)
+    await bring_online(client, tester, FAR_PICKUP)
+
+    rows = {row["driver_id"]: row for row in (await _map(client, admin_headers))["drivers"]}
+    assert set(rows) == {str(real["driver_id"]), str(tester["driver_id"])}
+    assert rows[str(tester["driver_id"])]["is_test"] is True
+    assert rows[str(real["driver_id"])]["is_test"] is False
+    assert abs(rows[str(tester["driver_id"])]["lat"] - FAR_PICKUP["lat"]) < 1e-4
+
+    # **ويتحرّك حين يتحرّك** — الموضعُ من البثّ نفسِه
+    moved = await client.post(
+        "/drivers/me/location", json={"lat": 32.0100, "lng": 35.9200, "heading": 45}, headers=tester["headers"]
+    )
+    assert moved.status_code == 204, moved.text
+    after = next(
+        row for row in (await _map(client, admin_headers))["drivers"] if row["driver_id"] == str(tester["driver_id"])
+    )
+    assert abs(after["lat"] - 32.0100) < 1e-4 and abs(after["lng"] - 35.9200) < 1e-4
+
+    # **والعدُّ لا يتغيّر**: النظرةُ العامّةُ تطرح التجربة، والخريطةُ تطرحها من «متصلون» بـ`is_test`
+    overview = await client.get("/admin/stats/overview", params={"country_code": "JO"}, headers=admin_headers)
+    assert overview.status_code == 200, overview.text
+    street = [row for row in (await _map(client, admin_headers))["drivers"] if not row["is_test"]]
+    assert overview.json()["online_drivers"] == len(street) == 1
+
+
+async def test_a_test_riders_request_is_drawn_marked(
+    client: AsyncClient, jordan_settings: None, session_factory, admin_headers: dict
+) -> None:
+    """**وطلبُ راكبِ التجربة يُرسم موسوماً** — وكان يُخفى كالكبتن، فرحلةُ اختبارٍ تنتظر سائقاً لا تظهر لمن يراقبها."""
+    rider = await rider_session(client)
+    tester = await rider_session(client, OTHER_RIDER)
+    await _mark_test(session_factory, tester["user"]["id"])
+    real_ride = await request_ride(client, rider["headers"])
+    test_ride = await request_ride(client, tester["headers"])
+
+    pending = {row["ride_id"]: row for row in (await _map(client, admin_headers))["pending_rides"]}
+    assert pending[real_ride["id"]]["is_test"] is False
+    assert pending[test_ride["id"]]["is_test"] is True
