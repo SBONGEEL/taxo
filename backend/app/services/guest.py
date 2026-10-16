@@ -48,13 +48,21 @@ async def enabled(session: AsyncSession) -> dict[str, bool]:
     return {"rider": bool(row and row.rider_enabled), "driver": bool(row and row.driver_enabled)}
 
 
+async def _locked_row(session: AsyncSession) -> GuestModeSetting | None:
+    return await session.scalar(
+        select(GuestModeSetting).with_for_update().execution_options(populate_existing=True)
+    )
+
+
 async def update(
     session: AsyncSession, *, rider: bool | None = None, driver: bool | None = None
 ) -> tuple[GuestModeSetting, list[str]]:
-    """يكتب المفتاحين ويعيد ما تغيّر — **والصفُّ يُقفل قبل القراءة** (قاعدةُ «القفلُ قبل الفحص»)."""
-    row = await session.scalar(
-        select(GuestModeSetting).with_for_update().execution_options(populate_existing=True)
-    )
+    """يكتب المفتاحين ويعيد ما تغيّر — **والصفُّ يُقفل قبل القراءة** (قاعدةُ «القفلُ قبل الفحص»).
+
+    **وما يملكه القفل**: مشرفان يشعلان المفتاحَ نفسَه معاً — **تغييرٌ واحدٌ وسطرُ تدقيقٍ واحد**، لا اثنان لتغييرٍ واحد
+    (`test_guest_mode_concurrency.py`، ويسقط بحذفه).
+    """
+    row = await _locked_row(session)
     if row is None:
         row = GuestModeSetting()
         session.add(row)

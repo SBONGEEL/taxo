@@ -47,6 +47,8 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("singleton IS TRUE", name="guest_mode_settings_singleton"),
     )
+    # **الصفُّ الوحيدُ يُكتب هنا مطفأً** — فلا يتسابق أوّلُ مشرفَين على إنشائه
+    op.execute("INSERT INTO guest_mode_settings (id, singleton, rider_enabled, driver_enabled) VALUES (gen_random_uuid(), true, false, false)")
     op.alter_column("app_feedback", "user_id", existing_type=postgresql.UUID(as_uuid=True), nullable=True)
     op.add_column(
         "app_feedback",
