@@ -10,6 +10,8 @@ class AdminAccountOut(BaseModel):
     is_break_glass: bool
     # يقرؤه الشاشةُ فتقول «لا استعادة ذاتية» لمن لا رقمَ له (SPEC §25.9)
     has_phone: bool
+    # **كلمتُه وضعها غيرُه** (SPEC §٧٦-م/٢) — فالشاشةُ تقول لماذا هو هنا، وكلُّ بابٍ آخرَ يردّه `password_change_required`
+    must_change_password: bool = False
 
 
 class ChangeUsernameIn(BaseModel):

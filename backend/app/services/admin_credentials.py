@@ -47,11 +47,14 @@ async def create(
     user: User,
     username: str,
     is_break_glass: bool = False,
+    must_change_password: bool = True,
 ) -> AdminCredential:
+    """**وكلُّ حسابٍ يُنشأ يُلزَم بتغيير كلمته عند أوّل دخول** (SPEC §٧٦-م/٢): الكلمةُ يضعها مَن أنشأه لا صاحبُه."""
     row = AdminCredential(
         user_id=user.id,
         username=validate_username(username),
         is_break_glass=is_break_glass,
+        must_change_password=must_change_password,
     )
     session.add(row)
     try:
@@ -68,6 +71,22 @@ async def for_user(
     return await session.scalar(
         select(AdminCredential).where(AdminCredential.user_id == user_id)
     )
+
+
+async def ensure_password_fresh(session: AsyncSession, user: User) -> None:
+    """يرفع `PasswordChangeRequired` على مشرفٍ لم يغيّر الكلمةَ التي أُنشئ بها (SPEC §٧٦-م/٢).
+
+    **استعلامٌ واحدٌ عن عمودٍ واحد** — ويُقرأ في كلِّ طلبٍ إداريٍّ كما يُقرأ إلزامُ العامل الثاني.
+    """
+    from app.core.exceptions import PasswordChangeRequired
+
+    pending = await session.scalar(
+        select(AdminCredential.must_change_password).where(
+            AdminCredential.user_id == user.id
+        )
+    )
+    if pending:
+        raise PasswordChangeRequired()
 
 
 async def rename(

@@ -91,7 +91,11 @@ async def current_session_id(
 CurrentSessionId = Annotated[uuid.UUID | None, Depends(current_session_id)]
 
 
-def require_roles(*roles: UserRole, enforce_two_factor: bool = True):
+def require_roles(
+    *roles: UserRole,
+    enforce_two_factor: bool = True,
+    enforce_password_change: bool = True,
+):
     """يقيّد endpoint على أدوار محددة — ومعه حارسُ التحقق الثنائي.
 
     `enforce_two_factor=False` لبابِ تسجيل العامل وحده (القسم 14.1): الحارسُ
@@ -115,6 +119,12 @@ def require_roles(*roles: UserRole, enforce_two_factor: bool = True):
             from app.services import security_settings
 
             await security_settings.ensure_factor_ready(session, user)
+        # **وتغييرُ الكلمة بعد العامل لا قبله** (SPEC §٧٦-م/٢): المُلزَمُ بالاثنين يسجّل عاملَه أوّلاً — فبابُ التغيير محروسٌ بالعامل
+        # كبقيّة اللوحة — ثمّ يغيّر كلمتَه. والاستثناءُ وسيطٌ صريحٌ كاستثناء العامل، لبابَي حسابه وعامله وحدَهما
+        if enforce_password_change and user.has_role(*_STAFF_ROLES):
+            from app.services import admin_credentials
+
+            await admin_credentials.ensure_password_fresh(session, user)
         return user
 
     return _dependency
@@ -127,11 +137,27 @@ AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
 StaffUser = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPPORT))]
 RiderUser = Annotated[User, Depends(require_roles(UserRole.RIDER))]
 
-# بابُ «أمان حسابي» وحده — يفتح لطاقم اللوحة قبل أن يكون لهم عاملٌ مسجّل
+# بابُ «أمان حسابي» وحده — يفتح لطاقم اللوحة قبل أن يكون لهم عاملٌ مسجّل، **وقبل أن يغيّروا كلمتَهم**
+# (وإلا صارت حلقةً: التغييرُ محروسٌ بالعامل، والعاملُ محروسٌ بالتغيير)
 SecuritySelfUser = Annotated[
     User,
     Depends(
-        require_roles(UserRole.ADMIN, UserRole.SUPPORT, enforce_two_factor=False)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.SUPPORT,
+            enforce_two_factor=False,
+            enforce_password_change=False,
+        )
+    ),
+]
+
+# **بابُ حسابي** (`/admin/account`) — يفتح قبل تغيير الكلمة، فهو الذي يغيّرها (SPEC §٧٦-م/٢)؛ **والعاملُ الثاني يُفرض عليه كما كان**
+AccountSelfUser = Annotated[
+    User,
+    Depends(
+        require_roles(
+            UserRole.ADMIN, UserRole.SUPPORT, enforce_password_change=False
+        )
     ),
 ]
 

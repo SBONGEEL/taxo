@@ -351,6 +351,15 @@ export function Shell({
               <Icon name={themeIcon} />
               المظهر
             </button>
+            {/* **«غيّر كلمة مروري» لكلِّ مشرف** (SPEC §٧٦-م/٢) — لا لمن يملك «الأمان» وحدَه */}
+            <button
+              type="button"
+              className="ad-btn ad-btn-secondary ad-btn-md"
+              onClick={() => navigate("/account/password")}
+            >
+              <Icon name="lock" />
+              كلمة المرور
+            </button>
             <button type="button" className="ad-btn ad-btn-secondary ad-btn-md" onClick={leave}>
               <Icon name="logout" />
               خروج

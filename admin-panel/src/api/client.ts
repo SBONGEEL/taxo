@@ -99,6 +99,13 @@ export function setEnrollmentRequiredHandler(handler: () => void) {
   onEnrollmentRequired = handler;
 }
 
+/** يُستدعى حين تردّ الخلفية `password_change_required` (SPEC §٧٦-م/٢) — **بعينِ منطق إلزام العامل**: أيُّ نداءٍ قد يرتدّ به،
+ *  فيُرفع علمٌ واحدٌ يقود إلى شاشة التغيير بدل خطأٍ أحمرَ في كلِّ بطاقة. */
+let onPasswordChangeRequired: () => void = () => {};
+export function setPasswordChangeRequiredHandler(handler: () => void) {
+  onPasswordChangeRequired = handler;
+}
+
 // ------------------------------------------------------------ التجديد
 
 let refreshing: Promise<boolean> | null = null;
@@ -307,6 +314,7 @@ const PANEL_LANGUAGE = "ar"; async function send<T>(
   if (!response.ok) {
     const error = await toError(response);
     if (error.code === "totp_enrollment_required") onEnrollmentRequired();
+    if (error.code === "password_change_required") onPasswordChangeRequired();
     throw error;
   }
   if (response.status === 204) return undefined as T;

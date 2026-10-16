@@ -41,6 +41,11 @@ class AdminCredential(UUIDMixin, TimestampMixin, Base):
     is_break_glass: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # **تغييرُ الكلمة إلزاميٌّ قبل أيِّ عمل** (قرارُ المالك ٢٠٢٦-١٠-١٥، SPEC §٧٦-م/٢): كلمةٌ وضعها غيرُ صاحبها — سكربتُ
+    # إنشاءٍ على الخادم — لا تبقى كلمتَه. **و`true` لكلِّ حسابٍ يُنشأ** (`admin_credentials.create`)، ويُطفئه التغييرُ وحدَه
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="false"
+    )
     # آخرُ استعمالٍ — يُقرأ ليُعرف أن حساب الطوارئ نائمٌ فعلاً
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

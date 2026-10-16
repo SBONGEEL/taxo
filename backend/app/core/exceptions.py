@@ -680,6 +680,17 @@ class TotpEnrollmentRequired(AppError):
     message = "الدخول إلى اللوحة يستلزم تسجيل التحقق الثنائي أولاً"
 
 
+class PasswordChangeRequired(AppError):
+    """**كلمةُ المشرف لم تُغيَّر بعد** (SPEC §٧٦-م/٢) — 403 على كلِّ مسارٍ إداريٍّ إلا بابَ حسابه وأبوابَ عامله الثاني.
+
+    يُقرأ الصفُّ في كلِّ طلبٍ كما يُقرأ إلزامُ العامل — فلا مطالبةٌ تعيش في توكن، **والتغييرُ يفتح البابَ في الطلب التالي**.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "password_change_required"
+    message = "غيّر كلمة المرور أولاً قبل المتابعة في اللوحة"
+
+
 class TotpNotEnrolled(Conflict):
     code = "totp_not_enrolled"
     message = "لا يوجد تحقق ثنائي مسجّل على هذا الحساب"

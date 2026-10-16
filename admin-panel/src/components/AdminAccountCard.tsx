@@ -9,13 +9,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import {
-  changeAdminPassword,
-  changeAdminUsername,
-  getAdminAccount,
-} from "@/api/endpoints";
+import { changeAdminUsername, getAdminAccount } from "@/api/endpoints";
 import type { AdminAccount } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -28,9 +25,8 @@ export function AdminAccountCard({
 }) {
   const [row, setRow] = useState<AdminAccount | null>(null);
   const [username, setUsername] = useState("");
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [busy, setBusy] = useState<"name" | "pass" | null>(null);
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<"name" | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -109,41 +105,11 @@ export function AdminAccountCard({
           </Button>
         </div>
 
-        <div className="grid gap-10">
-          <Field
-            label="كلمة المرور الحالية"
-            type="password"
-            dir="ltr"
-            value={current}
-            onChange={(event) => setCurrent(event.target.value)}
-          />
-          <Field
-            label="الجديدة (8 أحرف على الأقل)"
-            type="password"
-            dir="ltr"
-            value={next}
-            onChange={(event) => setNext(event.target.value)}
-          />
-          <Button
-            size="sm"
-            loading={busy === "pass"}
-            disabled={current.length < 1 || next.length < 8}
-            onClick={() => {
-              setBusy("pass");
-              setDone(null);
-              changeAdminPassword({
-                current_password: current,
-                new_password: next,
-              })
-                .then(() => {
-                  setCurrent("");
-                  setNext("");
-                  setDone("غُيّرت كلمةُ المرور — وأُبطلت بقيةُ الجلسات");
-                })
-                .catch((caught) => fail(caught, "تعذّر التغيير"))
-                .finally(() => setBusy(null));
-            }}
-          >
+        {/* **بابٌ واحدٌ لتغيير الكلمة** (SPEC §٧٦-م/٢): كان هنا نموذجٌ بلا «أعد الكتابة» — فصار رابطاً إلى الشاشة التي يبلغها كلُّ مشرف،
+            وهي نفسُها بوّابةُ أوّل دخول. نموذجان يفترقان أوّلَ تعديل */}
+        <div className="grid content-start gap-10">
+          <p className="text-13 text-ink">كلمة المرور</p>
+          <Button size="sm" variant="secondary" onClick={() => navigate("/account/password")}>
             غيّر كلمة المرور
           </Button>
           <p className="text-11 leading-note text-muted">

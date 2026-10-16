@@ -178,6 +178,9 @@ const SkinPurchasesScreen = lazy(() =>
     default: m.SkinPurchasesScreen,
   })),
 );
+const ChangePasswordScreen = lazy(() =>
+  import("@/screens/ChangePassword").then((m) => ({ default: m.ChangePasswordScreen })),
+);
 const SecurityScreen = lazy(() =>
   import("@/screens/Security").then((m) => ({ default: m.SecurityScreen })),
 );
@@ -231,11 +234,21 @@ function Boot({ children }: { children: ReactNode }) {
 }
 
 function Guarded({ children }: { children: ReactNode }) {
-  const { user, enrollmentRequired } = useSession();
+  const { user, enrollmentRequired, passwordChangeRequired } = useSession();
   if (!user) return <Navigate to="/login" replace />;
   // **بوابةُ الإلزام** (12-د): الخلفيةُ ردّت `totp_enrollment_required`، فكلُّ
   // مسارٍ إداريٍّ مغلقٌ حتى يُسجّل عاملَه. وقيادتُه إلى الشاشة التي تفتح البابَ
   // أصدقُ من ترك كل شاشةٍ ترسم خطأً أحمر لا مخرجَ منه
+  if (enrollmentRequired) return <Navigate to="/security" replace />;
+  // **وبوّابةُ الكلمة بعدها** (SPEC §٧٦-م/٢): العاملُ أوّلاً — بابُ التغيير محروسٌ به — ثمّ الكلمة
+  if (passwordChangeRequired) return <Navigate to="/account/password" replace />;
+  return <>{children}</>;
+}
+
+/** **شاشةُ تغيير الكلمة لا تخضع لبوّابة الكلمة** — وإلا صارت حلقةً مغلقة؛ **وتخضع لبوّابة العامل** كما يخضع بابُها في الخلفية. */
+function AccountGuarded({ children }: { children: ReactNode }) {
+  const { user, enrollmentRequired } = useSession();
+  if (!user) return <Navigate to="/login" replace />;
   if (enrollmentRequired) return <Navigate to="/security" replace />;
   return <>{children}</>;
 }
@@ -243,8 +256,11 @@ function Guarded({ children }: { children: ReactNode }) {
 /** شاشةُ الأمان وحدها لا تخضع لبوابة الإلزام — وإلا صارت الحلقةُ مغلقة:
  *  «سجّل عاملاً» على بابٍ لا يُفتح قبل تسجيل عامل. */
 function SecurityGuarded({ children }: { children: ReactNode }) {
-  const { user } = useSession();
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  const { user, enrollmentRequired, passwordChangeRequired } = useSession();
+  if (!user) return <Navigate to="/login" replace />;
+  // **من سجّل عاملَه ولم يغيّر كلمتَه** يمضي إلى التغيير — شاشةُ الأمان تبقى له ما دام العاملُ ناقصاً
+  if (passwordChangeRequired && !enrollmentRequired) return <Navigate to="/account/password" replace />;
+  return <>{children}</>;
 }
 
 /** نقرةُ الإشعار تفتح وجهتَها — **داخل `Router` لأن `useNavigate` يحتاجه**.
@@ -645,6 +661,15 @@ export default function App() {
                       <Guarded>
                         <ErrorsScreen />
                       </Guarded>
+                    }
+                  />
+                  {/* **«غيّر كلمة مروري»** (SPEC §٧٦-م/٢) — لكلِّ مشرفٍ داخلٍ لا لمن يملك «الأمان» وحدَه، **وهي بوّابةُ أوّل دخول** */}
+                  <Route
+                    path="/account/password"
+                    element={
+                      <AccountGuarded>
+                        <ChangePasswordScreen />
+                      </AccountGuarded>
                     }
                   />
                   <Route

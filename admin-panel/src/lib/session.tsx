@@ -41,6 +41,7 @@ import type { ReactNode } from "react";
 import {
   ApiError,
   setEnrollmentRequiredHandler,
+  setPasswordChangeRequiredHandler,
   setSessionLostHandler,
   tokens,
 } from "@/api/client";
@@ -75,6 +76,10 @@ interface SessionState {
   factor: TotpStatus | null;
   /** الخلفيةُ ردّت «سجّل عاملاً أولاً» — كلُّ مسارٍ إداريٍّ مغلقٌ حتى يُسجّل. */
   enrollmentRequired: boolean;
+  /** الخلفيةُ ردّت «غيّر كلمتك أولاً» (SPEC §٧٦-م/٢) — كلُّ مسارٍ إداريٍّ مغلقٌ حتى تُغيَّر. */
+  passwordChangeRequired: boolean;
+  /** تُنادى بعد تغييرٍ ناجح — فالبابُ فُتح في الخلفية، والعلمُ يُنزل هنا. */
+  passwordChanged: () => void;
   /** حالُ إذن الإشعارات على الغلاف — `null` في المتصفح وقبل أن يُسأل. */
   pushState: PushState | null;
   lastReason: SignOutReason | null;
@@ -91,6 +96,8 @@ const SessionContext = createContext<SessionState>({
   isAdmin: false,
   factor: null,
   enrollmentRequired: false,
+  passwordChangeRequired: false,
+  passwordChanged: () => undefined,
   pushState: null,
   lastReason: null,
   signIn: () => undefined,
@@ -104,6 +111,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [factor, setFactor] = useState<TotpStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrollmentRequired, setEnrollmentRequired] = useState(false);
+  const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
   const [lastReason, setLastReason] = useState<SignOutReason | null>(null);
   const [pushState, setPushState] = useState<PushState | null>(null);
   const registered = useRef(false);
@@ -188,6 +196,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       tokens.save(response.tokens);
       setUser(response.user);
       setEnrollmentRequired(false);
+      setPasswordChangeRequired(false);
       setLastReason(null);
       void refreshFactor();
     },
@@ -206,6 +215,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setFactor(null);
     setEnrollmentRequired(false);
+    setPasswordChangeRequired(false);
     setLastReason(reason);
     registered.current = false;
     setPushState(null);
@@ -242,7 +252,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setLastReason("expired");
     });
     setEnrollmentRequiredHandler(() => setEnrollmentRequired(true));
+    setPasswordChangeRequiredHandler(() => setPasswordChangeRequired(true));
   }, []);
+
+  const passwordChanged = useCallback(() => setPasswordChangeRequired(false), []);
 
   const value = useMemo<SessionState>(
     () => ({
@@ -251,6 +264,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isAdmin: user?.role === "admin",
       factor,
       enrollmentRequired,
+      passwordChangeRequired,
+      passwordChanged,
       pushState,
       lastReason,
       signIn,
@@ -263,6 +278,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       factor,
       enrollmentRequired,
+      passwordChangeRequired,
+      passwordChanged,
       pushState,
       lastReason,
       signIn,

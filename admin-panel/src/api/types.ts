@@ -1641,6 +1641,8 @@ export interface AdminAccount {
   /** حسابُ طوارئ — لا يُستعمل يومياً، ودخولُه يُكتب في التدقيق. */
   is_break_glass: boolean;
   has_phone: boolean;
+  /** **كلمتُه وضعها غيرُه** (SPEC §٧٦-م/٢) — وكلُّ بابٍ آخرَ يردّه `password_change_required` حتى يغيّرها. */
+  must_change_password: boolean;
 }
 
 
