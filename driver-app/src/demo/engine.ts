@@ -322,7 +322,7 @@ const wallet = (): DriverWallet => ({
 });
 
 const transactions = (): WalletTransaction[] => [
-  { id: "demo-tx-1", owner_id: ME, owner_type: "driver", type: "ride_earning", amount: "3.250", balance_after: DEMO_BALANCE, currency: CURRENCY, ride_id: null, reference: tr("أجرةٌ للعرض"), created_at: ago(90) },
+  { id: "demo-tx-1", type: "ride_earning", amount: "3.250", balance_after: DEMO_BALANCE, ride_id: null, reference: tr("أجرةٌ للعرض"), created_at: ago(90), commission_percent: null },
 ];
 
 const earnings = (period: Earnings["period"]): Earnings => ({
