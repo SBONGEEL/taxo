@@ -406,3 +406,13 @@ html.pink:not(.dark) .cw { --cw-car-halo: rgba(156, 44, 110, 0.14); --cw-car-rin
   text-align: center;
   color: var(--t2-danger, #c0392b);
 }
+
+/* **«خارج أسواقنا» أصغرُ من شعار الصفحة** (SPEC §٧٦-ن/٦) — جملتُه أطولُ بالفرنسيّة (أربعةُ أسطرٍ بـ38px) فكانت تنزل على زرِّ الضيف */
+.cw-copy.centered h1[data-outside-markets] {
+  font-size: 26px;
+  line-height: 1.25;
+}
+.cw-copy.centered h1[data-outside-markets] + p {
+  font-size: 14px;
+  margin-top: 10px;
+}

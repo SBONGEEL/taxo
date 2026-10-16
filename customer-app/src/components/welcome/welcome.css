@@ -517,3 +517,11 @@ html.dark .rw-btn.primary { background: var(--t2-accent); color: var(--t2-on-acc
   text-align: center;
   color: var(--t2-danger, #c0392b);
 }
+
+/* **«خارج أسواقنا» أصغرُ من «أهلاً وسهلاً»** (SPEC §٧٦-ن/٦) — جملتُه أطولُ، وبالفرنسيّة أطولُ منها، فلا تنزل على الأزرار */
+[data-outside-markets] h1 {
+  font-size: 30px;
+}
+[data-outside-markets] .rw-explain {
+  font-size: 15px;
+}
