@@ -92,6 +92,16 @@ export const getConfig = (countryCode?: CountryCode) =>
     query: { country_code: countryCode },
   });
 
+// ------------------------------------------------------------ وضعُ الضيف (SPEC §٧٦-ن)
+
+/** **يبدأ جلسةَ عرض** — بلا حساب، وبحدٍّ لكلِّ جهازٍ وعنوان؛ ورمزُها لا يفتح إلا «أرسل ملاحظة». */
+export const startGuest = (deviceId: string) =>
+  api.post<{ guest_id: string; token: string; retention_days: number }>(
+    "/guest/sessions",
+    { app: "rider", device_id: deviceId },
+    { anonymous: true },
+  );
+
 // ------------------------------------------------------------ المصادقة
 
 export const getAuthMethod = () =>

@@ -27,7 +27,11 @@ import { BottomNavT2 } from "@/components/BottomNavT2";
 import { RideComms } from "@/components/ride/RideComms";
 import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
-import { tokens } from "@/api/client";
+import { ApiError, tokens } from "@/api/client";
+import { startGuest } from "@/api/endpoints";
+import { DemoBanner } from "@/components/DemoBanner";
+import { enterDemo } from "@/demo/mode";
+import { deviceId } from "@/lib/device";
 import { StaleShellNotice } from "@/components/StaleShellNotice";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
@@ -46,6 +50,7 @@ import { showsNav } from "@/lib/tabs";
 import { useNavCovered } from "@/lib/navCover";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider } from "@/lib/theme";
+import { tr } from "@/lib/i18n";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
@@ -360,8 +365,30 @@ const T2_COVERING = ["/account/notifications"];
  * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته تُرسم في الوقت نفسِه، **فلا انتظارَ بعد أن يمضي**. **وسهمُ الرجوع في الدخول
  * والتسجيل يعيده** (`gate.ts`) إلى زرّيه بلا حركة.
  */
+/** **بدءُ وضع الضيف** (SPEC §٧٦-ن/١) — الخادمُ يعطي رمزَ `guest` بحدِّه، ثمّ يُعاد تحميلُ التطبيق **فيُقلع في العرض**: الإعداداتُ
+ *  تُقرأ بخدمات سوق العرض، والحسابُ ضيف، والمقبسُ محاكى — **بابٌ واحدٌ للإقلاع لا اثنان**. */
+async function startGuestDemo(): Promise<string | null> {
+  try {
+    const answer = await startGuest(deviceId());
+    enterDemo(answer.token);
+    tokens.save({ access_token: "demo", refresh_token: "demo" });
+    window.location.replace("/");
+    return null;
+  } catch (error) {
+    if (error instanceof ApiError) return error.message;
+    return tr("تعذّر بدء التجربة — تحقّق من الاتصال وأعد المحاولة");
+  }
+}
+
 function WelcomeGate() {
   const { user, biometry } = useSession();
+  const { config } = useConfig();
+  // **خارج أسواقنا** (SPEC §٧٦-ن/٦): دولةُ الشبكة معروفةٌ وليست سوقاً مفتوحاً — ولا حكمَ بلا رأس
+  const region = config?.network_region ?? null;
+  const outside = Boolean(
+    region && !config?.countries.some((c) => c.country_code === region && c.status === "open"),
+  );
+  const guest = { available: Boolean(config?.guest_mode?.rider), outside, start: startGuestDemo };
   const booted = useBooted();
   const navigate = useNavigate();
   // **ما يُعرف قبل الإقلاع** يختار الطورَ الأوّلَ وحدَه: رمزٌ محفوظٌ يعني عائداً — والفرعُ الأخيرُ من الجلسة بعد الإقلاع
@@ -397,6 +424,7 @@ function WelcomeGate() {
       signedIn={signedIn || armed}
       returning={heldToken || armed}
       reopened={reopened}
+      guest={guest}
       onDone={done}
     />
   );
@@ -771,6 +799,8 @@ export default function App() {
             </Boot>
             {/* **فوق `Boot` لا داخلَه**: يُرسم من أوّل إطار ويبقى حتى يكتمل الإقلاع (§٦٢/١) */}
             <WelcomeGate />
+            {/* **«وضع تجريبي» فوق كلِّ شاشة** (SPEC §٧٦-ن/٢) — **خارجَ كلِّ تخطيط**: الرحلةُ الجاريةُ تُخفي شريطَ التبويب وما معه، والشريطُ لا يُخفى */}
+            <DemoBanner />
             </Router>
           </BrandProvider>
         </SessionProvider>

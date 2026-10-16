@@ -27,6 +27,10 @@ async def _trim() -> int:
         removed = await inbox.trim(session)
         # **وملاحظاتُ «أرسل ملاحظة» بعد سنة** (SPEC §٧٦/٣–٤) — في الدورة اليوميّة نفسِها، والصورُ بعد الالتزام
         feedback_files = await feedback.expired_rows(session)
+        # **وجلساتُ الضيف بعد ثلاثين يوماً ومعها ملاحظاتُها** (SPEC §٧٦-ن/٢)
+        from app.services import guest
+
+        feedback_files += await guest.expired(session)
         await session.commit()
     await feedback.delete_files(feedback_files)
     return removed

@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "@/App";
+import { installDemoGeolocation } from "@/demo/geolocation";
+import { demoActive } from "@/demo/mode";
 import "@/index.css";
 import { listenForHandoff } from "@/lib/handoff-listener";
 import { installCrashReports } from "@/lib/crash-reports";
@@ -13,6 +15,9 @@ import { installCrashReports } from "@/lib/crash-reports";
 document.addEventListener("visibilitychange", () => {
   document.documentElement.classList.toggle("is-hidden", document.hidden);
 });
+
+// **وضعُ الضيف**: موقعُ العرض بدل GPS قبل أن يسأل أحد (SPEC §٧٦-ن/٢)
+if (demoActive()) installDemoGeolocation();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

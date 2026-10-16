@@ -256,6 +256,12 @@ export interface FieldRule {
   messages: Record<string, string>;
 }
 
+/** **وضعُ الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤) — زرُّ «تجربة كضيف» حيث هو مشتعل */
+export interface GuestModeConfig {
+  rider: boolean;
+  driver: boolean;
+}
+
 export interface AppConfig {
   app: string;
   auth: AuthMethod;
@@ -270,6 +276,9 @@ export interface AppConfig {
   default_country_code: CountryCode;
   /** **دولةُ الشبكة** (رأسُ Cloudflare) — أوّلُ تخمينٍ لمُختار الدولة؛ و`null` حين لا رأسَ أو لا سوقَ بها (§٧٤-أ/٤). */
   network_country: CountryCode | null;
+  /** **دولةُ الشبكة خاماً** (SPEC §٧٦-ن/٦) — حرفان أيّاً كانت؛ و`null` بلا رأس. منها «خارج أسواقنا» */
+  network_region: string | null;
+  guest_mode?: GuestModeConfig;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣).
    *
    * **ولا نسخةَ منها مكتوبةً هنا**: حدٌّ يُكتب في التطبيق يفترق عن حدِّ المخطط

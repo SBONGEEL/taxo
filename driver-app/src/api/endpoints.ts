@@ -86,6 +86,14 @@ import type {
 
 // ------------------------------------------------------------ الإعدادات
 
+/** **يبدأ جلسةَ عرض** (SPEC §٧٦-ن) — بلا حساب، وبحدٍّ لكلِّ جهازٍ وعنوان؛ ورمزُها لا يفتح إلا «أرسل ملاحظة». */
+export const startGuest = (deviceId: string) =>
+  api.post<{ guest_id: string; token: string; retention_days: number }>(
+    "/guest/sessions",
+    { app: "driver", device_id: deviceId },
+    { anonymous: true },
+  );
+
 export const getConfig = () =>
   api.get<AppConfig>("/config", { anonymous: true });
 

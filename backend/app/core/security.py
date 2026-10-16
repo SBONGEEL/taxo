@@ -11,7 +11,8 @@ import jwt
 
 from app.core.config import settings
 
-TokenType = Literal["access", "refresh"]
+# **`guest` رمزُ جلسة عرضٍ لا حساب** (SPEC §٧٦-ن/أ): بنوعٍ لا يقبله `decode_token(…, "access")` — فلا يفتح باباً لصاحب حسابٍ أبداً
+TokenType = Literal["access", "refresh", "guest"]
 
 _BCRYPT_ROUNDS = 12
 

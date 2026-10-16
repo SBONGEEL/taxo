@@ -9,7 +9,8 @@ from app.core.i18n import translate_tree
 from app.models.enums import CountryCode
 from app.schemas.auth import AuthMethodResponse
 from app.schemas.config import ConfigOut, DispatchOut
-from app.services import country_config, geo, otp, verification
+from app.schemas.guest import GuestModeOut
+from app.services import country_config, geo, guest, otp, verification
 from app.services.providers import credentials as credentials_service
 from app.services.providers.registry import PROVIDERS
 
@@ -42,6 +43,12 @@ def _network_country(request: Request) -> CountryCode | None:
         return CountryCode(raw)
     except ValueError:
         return None
+
+
+def _network_region(request: Request) -> str | None:
+    """**الحرفان كما هما** — `XX` و`T1` (Tor) عند Cloudflare ليسا بلداً، فلا يُحكم بهما."""
+    raw = (request.headers.get("cf-ipcountry") or "").strip().upper()
+    return raw if len(raw) == 2 and raw.isalpha() and raw != "XX" else None
 
 
 @router.get("/config", response_model=ConfigOut)
@@ -81,6 +88,8 @@ async def get_public_config(
         app=settings.app_name,
         default_country_code=default,
         network_country=_network_country(request),
+        network_region=_network_region(request),
+        guest_mode=GuestModeOut(**await guest.enabled(session)),
         # مُشتقّةٌ من المخططات عند كل نداء — لا جدولَ حدودٍ يُكتب بجانبها ويبرد
         # **وبلغة الطلب** — النصُّ نفسُه الذي يُجاب به الـ422 مترجَماً (`i18n.translate_tree`)
         validation=translate_tree(validation_rules.published_rules()),

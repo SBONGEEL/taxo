@@ -56,6 +56,14 @@ const SEEN_KEY = "taxo.welcome.seen";
 type Phase = "intro" | "brief" | "hold" | "welcome" | "leaving";
 export type WelcomeNext = "/login" | "/register";
 
+/** **وضعُ الضيف في الترحيب** (SPEC §٧٦-ن/١ و/٦) — الزرُّ حيث المفتاحُ مشتعل، **و«خارج أسواقنا» لمن جاء من بلدٍ لم تُفتح فيه TAXO**. */
+export interface WelcomeGuest {
+  available: boolean;
+  outside: boolean;
+  /** يبدأ العرض — ويعيد رسالةَ خطأٍ أو `null` */
+  start: () => Promise<string | null>;
+}
+
 /** سهمُ `arrow_back` من Material Symbols Rounded — شكلُه نفسُه بلا خطٍّ كامل. وفي الواجهة العربية يشير يساراً: «إلى الأمام». */
 function ArrowBack() {
   return (
@@ -101,6 +109,7 @@ export function Welcome({
   signedIn,
   returning,
   reopened = false,
+  guest,
   onDone,
 }: {
   /** `/config` والجلسةُ وصلا — **وقبله يبقى الترحيبُ شاشةَ الإقلاع**. */
@@ -111,8 +120,23 @@ export function Welcome({
   returning: boolean;
   /** عودةٌ من «الدخول» أو «التسجيل» بسهم الرجوع ⇒ «أهلاً وسهلاً» مباشرة بلا حركة. */
   reopened?: boolean;
+  guest?: WelcomeGuest;
   onDone: (next?: WelcomeNext) => void;
 }) {
+  const [guestBusy, setGuestBusy] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const tryAsGuest = () => {
+    if (!guest || guestBusy) return;
+    setGuestBusy(true);
+    setGuestError(null);
+    void guest.start().then((error) => {
+      if (error) {
+        setGuestError(error);
+        setGuestBusy(false);
+      }
+    });
+  };
+  const outside = Boolean(guest?.outside);
   const scale = useStageScale();
   const { dark } = useTheme();
   // **من حيث وصل إطارُ الإقلاع** — ومن بدأ قبله يُقاس منه حدُّ العرض الأدنى
@@ -253,7 +277,15 @@ export function Welcome({
           </div>
         </div>
 
-        {settled ? (
+        {settled && outside ? (
+          // **خارج أسواقنا** (SPEC §٧٦-ن/٦) — جملةٌ لطيفةٌ بلغته وزرُّ الضيف، **لا انهيارَ ولا شاشةً فارغة**
+          <div className="rw-copy" data-outside-markets>
+            <h1 className="rw-rise d1">{tr("TAXO غيرُ متاحٍ في منطقتك بعد")}</h1>
+            <p className="rw-explain rw-rise d3">
+              {tr("نتوسّع قريباً — وتستطيع أن تجرّب التطبيقَ كاملاً الآن كضيف، بلا رقمٍ ولا حساب.")}
+            </p>
+          </div>
+        ) : settled ? (
           <div className="rw-copy">
             <h1 className="rw-rise d1">{tr("أهلاً وسهلاً")}</h1>
             <p className="rw-origin rw-rise d2">{tr("حللتَ أهلاً، ووطئتَ سهلاً.")}</p>
@@ -282,7 +314,20 @@ export function Welcome({
 
       {phase === "intro" ? <span className="rw-skip">{tr("المس الشاشة للتخطّي")}</span> : null}
 
-      {settled ? (
+      {settled && outside ? (
+        <div className="rw-actions rw-rise">
+          {guest?.available ? (
+            <button type="button" className="rw-btn primary" onClick={tryAsGuest} disabled={guestBusy} data-guest-start>
+              <span>{guestBusy ? "…" : tr("تجربة كضيف")}</span>
+              <ArrowBack />
+            </button>
+          ) : null}
+          <button type="button" className="rw-btn secondary" onClick={() => go("/login")}>
+            {tr("لديّ حساب — دخول")}
+          </button>
+          {guestError ? <p className="rw-guest-error" role="alert">{guestError}</p> : null}
+        </div>
+      ) : settled ? (
         <div className="rw-actions rw-rise">
           <button type="button" className="rw-btn primary" onClick={() => go("/register")}>
             <span>{tr("حساب جديد")}</span>
@@ -291,6 +336,15 @@ export function Welcome({
           <button type="button" className="rw-btn secondary" onClick={() => go("/login")}>
             {tr("دخول")}
           </button>
+          {/* **«تجربة كضيف»** (SPEC §٧٦-ن/١) — بلا رقمٍ ولا SMS، حيث المفتاحُ مشتعلٌ في اللوحة */}
+          {guest?.available ? (
+            // **بارزٌ بقرار المالك** (٢٠٢٦-١٠-١٦): زرٌّ كاملُ العرض بلون الهوية، وسطرٌ يقول إنه بلا رقم
+            <button type="button" className="rw-btn rw-guest" onClick={tryAsGuest} disabled={guestBusy} data-guest-start>
+              <span>{guestBusy ? "…" : tr("تجربة كضيف")}</span>
+              <span className="rw-guest-sub">{tr("بلا رقمٍ ولا حساب")}</span>
+            </button>
+          ) : null}
+          {guestError ? <p className="rw-guest-error" role="alert">{guestError}</p> : null}
         </div>
       ) : null}
     </div>

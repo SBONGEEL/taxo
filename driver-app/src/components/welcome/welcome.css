@@ -365,3 +365,44 @@ html.pink:not(.dark) .cw { --cw-car-halo: rgba(156, 44, 110, 0.14); --cw-car-rin
     transition-delay: 0s !important;
   }
 }
+
+/* **«تجربة كضيف»** (SPEC §٧٦-ن/١) — من الصفحة الأولى، فوق شريط الزرّين */
+.cw-guest-row {
+  /* الصفحةُ الأخيرة: تحت «دخول» */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+.cw-guest {
+  /* **بارزٌ بقرار المالك** (٢٠٢٦-١٠-١٦) — إطارُ الهوية وسطرٌ واحد: الصفحةُ الأولى نصُّها ثابتُ الموضع، فالزرُّ لا يرتفع إليه */
+  align-self: stretch;
+  min-height: 44px;
+  border: 2px solid var(--t2-accent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--t2-accent) 12%, transparent);
+  color: var(--t2-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.cw-guest-sub {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+.cw-actions:has(.cw-guest) {
+  gap: 10px;
+}
+.cw-guest-error {
+  margin: 6px 16px 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--t2-danger, #c0392b);
+}

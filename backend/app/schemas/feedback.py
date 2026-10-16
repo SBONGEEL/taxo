@@ -18,7 +18,9 @@ class FeedbackSentOut(BaseModel):
 class AdminFeedbackOut(BaseModel):
     id: uuid.UUID
     #: **مَن أرسل** — الاسمُ والرقمُ يخرجان للّوحة وحدَها، كبلاغات الصور
-    user_id: uuid.UUID
+    user_id: uuid.UUID | None = None
+    #: **ملاحظةُ ضيف** (SPEC §٧٦-ن/٣) — بلا حسابٍ ولا اسمٍ ولا رقم، وتُرسم موسومةً «ضيف»
+    is_guest: bool = False
     user_name: str | None = None
     user_phone: str | None = None
     #: **أيُّ تطبيق** — `rider` أو `driver`

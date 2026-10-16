@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Field, Select } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { GuestModeCard } from "@/components/GuestModeCard";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -206,6 +207,9 @@ export function ReleasesScreen() {
       >
         <ErrorNote message={form.message} />
         <SuccessNote message={done} />
+
+        {/* **وضعُ الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤) */}
+        <GuestModeCard />
 
         {/* **رابطُ زرِّ «تحديث» لكلِّ تطبيقٍ ولكلِّ نظام** — رابطُ الصفِّ الحاكم، وتغييرُه يفتح نموذجَ تعديله */}
         <section className="mb-18 rounded-16 border border-line bg-surface p-18">

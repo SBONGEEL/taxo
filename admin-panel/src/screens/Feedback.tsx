@@ -160,10 +160,19 @@ export function FeedbackScreen() {
               <article key={row.id} className="ad-report" data-feedback-id={row.id}>
                 {row.has_screenshot ? <Screenshot feedbackId={row.id} /> : null}
                 <div className="ad-report-body">
-                  <p className="ad-report-name">{row.user_name ?? "—"}</p>
-                  <p dir="ltr" className="ad-report-line ad-ltr">
-                    {row.user_phone ?? "—"}
-                  </p>
+                  {/* **ملاحظةُ ضيف** (SPEC §٧٦-ن/٣) — بلا حسابٍ ولا رقم، موسومةٌ لا مخلوطةٌ بالمختبِرين */}
+                  {row.is_guest ? (
+                    <p className="ad-report-name" data-guest>
+                      ضيف · وضعُ التجربة
+                    </p>
+                  ) : (
+                    <>
+                      <p className="ad-report-name">{row.user_name ?? "—"}</p>
+                      <p dir="ltr" className="ad-report-line ad-ltr">
+                        {row.user_phone ?? "—"}
+                      </p>
+                    </>
+                  )}
                   <p className="ad-report-line">
                     {APP_LABEL[row.app] ?? row.app} · {moment(row.created_at)}
                   </p>

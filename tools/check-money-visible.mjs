@@ -189,8 +189,11 @@ function readIdentifiers() {
     const walk = (dir) => {
       for (const entry of readdirSync(dir)) {
         const path = join(dir, entry);
-        if (statSync(path).isDirectory()) walk(path);
-        else if (/\.tsx?$/.test(entry)) {
+        // **محرّكُ العرض (`src/demo/`) كاتبٌ لا قارئ** (SPEC §٧٦-ن): يملأ حمولاتِ وضع الضيف بكلِّ حقولها كما تملؤها الخلفية — **وملءُ
+        // الحقل ليس عرضَه**. ولو عُدّ قارئاً لصار كلُّ حقلٍ لا تعرضه شاشةٌ «مقروءاً» لأن العرضَ يملؤه، **فيعمى الحارسُ بالبناء**
+        if (statSync(path).isDirectory()) {
+          if (entry !== "demo") walk(path);
+        } else if (/\.tsx?$/.test(entry)) {
           const kind = entry.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
           const tree = ts.createSourceFile(
             path,

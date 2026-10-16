@@ -58,6 +58,7 @@ import type {
   MapSetting,
   PhotoReport,
   AdminFeedback,
+  GuestMode,
   AdminFeedbackPage,
   Capacity,
   AdminAccount,
@@ -1320,6 +1321,14 @@ export const changeAdminPassword = (payload: {
   new_password: string;
 }) => api.put<void>("/admin/account/password", payload);
 
+
+// ------------------------------------------- وضعُ الضيف (SPEC §٧٦-ن/٤)
+
+export const getGuestMode = () => api.get<GuestMode>("/admin/guest-mode");
+
+/** **تشغيلٌ وإطفاءٌ لكلِّ تطبيق** — ويُسجَّل في التدقيق بأسماء ما تغيّر. */
+export const setGuestMode = (payload: Partial<GuestMode>) =>
+  api.put<GuestMode>("/admin/guest-mode", payload);
 
 // ---------------------------------------------- بلاغاتُ صور الركاب (2026-08-22)
 

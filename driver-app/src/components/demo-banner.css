@@ -1,0 +1,36 @@
+/* **شريطُ «وضع تجريبي»** — حبّةٌ فوق كلِّ شيء في أعلى الشاشة، تحت شريط النظام (SPEC §٧٦-ن/٢) */
+.demo-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 999px;
+  background: #f5b301;
+  color: #1a1a1a;
+  font: 600 12px/1.2 var(--t2-font, system-ui), system-ui, sans-serif;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+[dir="rtl"] .demo-banner {
+  padding: 5px 12px 5px 6px;
+}
+.demo-banner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1a1a1a;
+}
+.demo-banner-exit {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #1a1a1a;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}

@@ -21,6 +21,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 
 import { locationBroadcastUrl, issuePresenceToken } from "@/api/endpoints";
+import { demoActive } from "@/demo/mode";
 
 interface OnlineServicePlugin {
   /** `endpoint` و`token` يُمرَّران مع كلِّ نبضة — فالخدمةُ تبثّ بنفسها حين
@@ -59,7 +60,8 @@ export const onlineService = {
    * كلَّ عشرين ثانية، **فيصير الإلغاءُ ضجيجاً لا حدثاً**.
    */
   start: () => {
-    if (!Capacitor.isNativePlatform()) return;
+    // **وضعُ الضيف لا يبثّ موقعاً إلى الخادم** (SPEC §٧٦-ن/٢) — فلا خدمةَ استقبالٍ تبدأ
+    if (!Capacitor.isNativePlatform() || demoActive()) return;
     void (async () => {
       try {
         if (!cached) cached = (await issuePresenceToken()).token;

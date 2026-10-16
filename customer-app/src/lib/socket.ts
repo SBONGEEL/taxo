@@ -15,6 +15,8 @@
  */
 
 import { WS_URL, tokens } from "@/api/client";
+import { demoSubscribe, demoViewport } from "@/demo/engine";
+import { demoActive } from "@/demo/mode";
 import { deviceId } from "@/lib/device";
 import type { Coordinates, NearbyDriver, Ride } from "@/api/types";
 
@@ -46,6 +48,8 @@ export class RiderSocket {
   private timer: number | null = null;
   private closed = false;
   private viewport: Coordinates | null = null;
+  /** **مقبسُ العرض** (SPEC §٧٦-ن/٢) — أحداثُ الكبتن المحاكى نفسُها، بلا شبكة */
+  private demo: (() => void) | null = null;
 
   constructor(private readonly options: Options) {}
 
@@ -68,11 +72,17 @@ export class RiderSocket {
     this.timer = null;
     this.socket?.close();
     this.socket = null;
+    this.demo?.();
+    this.demo = null;
   }
 
   /** مركز الخريطة الحالي — يُحفظ ويُعاد إرساله بعد كل إعادة اتصال. */
   setViewport(center: Coordinates) {
     this.viewport = center;
+    if (this.demo) {
+      demoViewport(center);
+      return;
+    }
     this.send({ type: "viewport", lat: center.lat, lng: center.lng });
   }
 
@@ -83,6 +93,12 @@ export class RiderSocket {
   }
 
   private connect() {
+    if (demoActive()) {
+      this.demo = demoSubscribe((event) => this.options.onEvent(event as SocketEvent));
+      this.options.onOpen?.();
+      if (this.viewport) demoViewport(this.viewport);
+      return;
+    }
     const token = tokens.access();
     if (!token || this.closed) return;
 

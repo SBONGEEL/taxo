@@ -12,6 +12,8 @@
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
  */
 
+import { demoPatchConfig, demoRequest } from "@/demo/engine";
+import { demoActive, guestToken } from "@/demo/mode";
 import { noteApi } from "@/lib/breadcrumbs";
 import { captureRequestId } from "@/lib/request-id"; import { language, tr } from "@/lib/i18n";
 
@@ -329,11 +331,20 @@ async function toError(response: Response): Promise<ApiError> {
 }
 
 async function send<T>(path: string, options: RequestOptions, retry: boolean): Promise<T> {
+  // **وضعُ الضيف** (SPEC §٧٦-ن/٢): كلُّ نداءٍ يُجاب من محرّك العرض في الهاتف — **ولا شيءَ يبلغ الخادمَ إلا قراءاتٌ عامّة** (الإعداداتُ
+  // والسياسات) — فلا رحلةَ ولا مالَ ولا إنسانَ حقيقيّاً. **والمسارُ هنا واحد** فلا شاشةَ تفلت منه
+  const demo = demoActive();
+  if (demo) {
+    const answer = demoRequest(options.method ?? "GET", path, options.body, options.query ?? {});
+    if (answer.kind === "data") return answer.data as T;
+    if (answer.kind === "error") throw new ApiError(answer.status, answer.code, answer.message);
+  }
+
   const headers: Record<string, string> = { "Accept-Language": language };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
   const access = tokens.access();
-  if (!options.anonymous && access) headers.Authorization = `Bearer ${access}`;
+  if (!demo && !options.anonymous && access) headers.Authorization = `Bearer ${access}`;
 
   let response: Response;
   try {
@@ -374,7 +385,9 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
   // ثانٍ لها كان سيعيد كتابة الأربعة، ويفترق عنها أوّلَ تعديل
   if (options.raw) return (await response.blob()) as T;
   try {
-    return (await response.json()) as T;
+    const data = await response.json();
+    // **إعداداتُ سوق العرض** — خدماتُه المبنيّةُ مشتعلة (`demo/engine.demoPatchConfig`)
+    return (demo && path === "/config" ? demoPatchConfig(data) : data) as T;
   } catch {
     throw unexpectedResponse();
   }
@@ -444,7 +457,15 @@ export function sendForm<T>(
   form: FormData,
   options: UploadOptions = {},
 ): Promise<T> {
-  const access = tokens.access();
+  // **وضعُ الضيف**: «أرسل ملاحظة» وحدَها تبلغ الخادم — **بابُ الضيف برمزه** (`POST /guest/feedback`)، وتصل اللوحةَ موسومةً «ضيف»؛
+  // وكلُّ رفعٍ غيرُها (إيصالُ دفع، صورة) لا يُرسل من العرض
+  if (demoActive()) {
+    if (path !== "/feedback") {
+      return Promise.reject(new ApiError(409, "demo_unavailable", tr("هذا غيرُ متاحٍ في وضع التجربة — سجّل حساباً لتجرّبه حقيقيّاً.")));
+    }
+    path = "/guest/feedback";
+  }
+  const access = demoActive() ? guestToken() : tokens.access();
 
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();

@@ -217,6 +217,7 @@ export function Welcome({
   signedIn,
   returning,
   reopened = false,
+  guest,
   onDone,
 }: {
   /** `/config` والجلسةُ وصلا — **وقبله يبقى الترحيبُ شاشةَ الإقلاع**. */
@@ -227,8 +228,24 @@ export function Welcome({
   returning: boolean;
   /** عودةٌ من «الدخول» أو «التسجيل» بسهم الرجوع ⇒ الشاشةُ الأخيرةُ بزرّيها مباشرة. */
   reopened?: boolean;
+  /** **وضعُ الضيف** (SPEC §٧٦-ن/١ و/٦) — الزرُّ حيث المفتاحُ مشتعل، **و«خارج أسواقنا» لمن جاء من بلدٍ لم تُفتح فيه TAXO** */
+  guest?: { available: boolean; outside: boolean; start: () => Promise<string | null> };
   onDone: (next?: WelcomeNext) => void;
 }) {
+  const [guestBusy, setGuestBusy] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const tryAsGuest = () => {
+    if (!guest || guestBusy) return;
+    setGuestBusy(true);
+    setGuestError(null);
+    void guest.start().then((error) => {
+      if (error) {
+        setGuestError(error);
+        setGuestBusy(false);
+      }
+    });
+  };
+  const outside = Boolean(guest?.outside);
   const scale = useStageScale();
   const { dark } = useTheme();
   const boot = useRef(bootBrief()).current;
@@ -411,8 +428,18 @@ export function Welcome({
         {onPages ? (
           <>
             <div className={["cw-copy", "centered", page === 0 ? "" : "off-next"].join(" ")}>
-              <h1>{i18nTr("الرفيق قبل الطريق.")}</h1>
-              <p>{i18nTr("مثلٌ عربي: اختر رفيقك قبل أن تبدأ رحلتك. ونحن رفيقك من قبل أول رحلة.")}</p>
+              {outside ? (
+                // **خارج أسواقنا** (SPEC §٧٦-ن/٦) — جملةٌ لطيفةٌ بلغته وزرُّ الضيف، لا انهيارَ ولا شاشةً فارغة
+                <>
+                  <h1 data-outside-markets>{i18nTr("TAXO غيرُ متاحٍ في منطقتك بعد")}</h1>
+                  <p>{i18nTr("نتوسّع قريباً — وتستطيع أن تجرّب التطبيقَ كاملاً الآن كضيف، بلا رقمٍ ولا حساب.")}</p>
+                </>
+              ) : (
+                <>
+                  <h1>{i18nTr("الرفيق قبل الطريق.")}</h1>
+                  <p>{i18nTr("مثلٌ عربي: اختر رفيقك قبل أن تبدأ رحلتك. ونحن رفيقك من قبل أول رحلة.")}</p>
+                </>
+              )}
             </div>
             <div className={["cw-copy", page === 1 ? "" : page < 1 ? "off-prev" : "off-next"].join(" ")}>
               <div className="cw-pager" aria-hidden="true"><span /><span className="on" /><span /></div>
@@ -473,6 +500,14 @@ export function Welcome({
           {page === 0 ? (
             <div className="cw-pager" aria-hidden="true"><span className="on" /><span /><span /></div>
           ) : null}
+          {/* **«تجربة كضيف» — بارزٌ ومن الشاشة الأولى** (SPEC §٧٦-ن/١، قرارُ المالك ٢٠٢٦-١٠-١٦) */}
+          {guest?.available ? (
+            <button type="button" className="cw-guest" onClick={tryAsGuest} disabled={guestBusy} data-guest-start>
+              <span>{guestBusy ? "…" : i18nTr("تجربة كضيف")}</span>
+              <span className="cw-guest-sub">{i18nTr("بلا رقمٍ ولا حساب")}</span>
+            </button>
+          ) : null}
+          {guestError ? <p className="cw-guest-error" role="alert">{guestError}</p> : null}
           <button type="button" className="cw-ember" onClick={() => setPage(page + 1)}>
             <span>{i18nTr("التالي")}</span>
             <ArrowBack />
@@ -495,6 +530,15 @@ export function Welcome({
           <button type="button" className="cw-login" onClick={() => leave("/login")}>
             {i18nTr("دخول")}
           </button>
+          {guest?.available ? (
+            <div className="cw-guest-row">
+              <button type="button" className="cw-guest" onClick={tryAsGuest} disabled={guestBusy} data-guest-start>
+                <span>{guestBusy ? "…" : i18nTr("تجربة كضيف")}</span>
+                <span className="cw-guest-sub">{i18nTr("بلا رقمٍ ولا حساب")}</span>
+              </button>
+              {guestError ? <p className="cw-guest-error" role="alert">{guestError}</p> : null}
+            </div>
+          ) : null}
         </>
       ) : null}
     </div>

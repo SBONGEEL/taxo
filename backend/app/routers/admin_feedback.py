@@ -29,6 +29,7 @@ def _out(row: feedback_service.FeedbackRow) -> AdminFeedbackOut:
     return AdminFeedbackOut(
         id=item.id,
         user_id=item.user_id,
+        is_guest=item.guest_session_id is not None,
         user_name=row.user_name,
         user_phone=row.user_phone,
         app=item.app,
@@ -89,6 +90,6 @@ async def mark_feedback(
         entity_id=row.id,
         changes={"handled": {"after": payload.handled}},
     )
-    sender = await session.get(User, row.user_id)
+    sender = await session.get(User, row.user_id) if row.user_id else None
     await session.commit()
     return _out(feedback_service.FeedbackRow(row, sender.name if sender else None, sender.phone if sender else None))

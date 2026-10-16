@@ -11,6 +11,7 @@ from app.routers import (
     admin_errors,
     admin_cancellations,
     admin_feedback,
+    admin_guest,
     admin_photo_reports,
     admin_policies,
     admin_site,
@@ -70,6 +71,7 @@ from app.routers import (
     subscriptions,
     telemetry,
     feedback,
+    guest,
     wallet,
     public_site,
     storefront,
@@ -166,6 +168,9 @@ api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
 api_router.include_router(admin_photo_reports.router)
 api_router.include_router(admin_feedback.router)
+# **وضعُ الضيف** (SPEC §٧٦-ن): بابا الضيف ومفتاحُه في اللوحة
+api_router.include_router(admin_guest.router)
+api_router.include_router(guest.router)
 # **المركباتُ بابان**: بابُ الكبتن وبابُ اللوحة — ولا ثالثَ يكتب مِلكيّة
 api_router.include_router(vehicle_skins.router)
 api_router.include_router(admin_vehicle_skins.router)

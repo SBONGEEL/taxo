@@ -25,10 +25,16 @@ class AppFeedback(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("app IN ('rider', 'driver')", name="app_feedback_app"),
         CheckConstraint("char_length(message) BETWEEN 1 AND 2000", name="app_feedback_message_length"),
+        # **حسابٌ أو ضيفٌ — واحدٌ لا اثنان ولا صفر** (SPEC §٧٦-ن/٣)
+        CheckConstraint("num_nonnulls(user_id, guest_session_id) = 1", name="app_feedback_sender"),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    #: **ملاحظةُ ضيف** (SPEC §٧٦-ن/٣) — تصل اللوحةَ موسومةً «ضيف»، **وتُمحى مع جلستها بعد ٣٠ يوماً**
+    guest_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("guest_sessions.id", ondelete="CASCADE"), nullable=True, index=True
     )
     #: `rider` أو `driver` — التطبيقُ الذي كُتبت منه، لا دورُ الحساب (حسابٌ واحدٌ قد يملك الدورين)
     app: Mapped[str] = mapped_column(String(8), nullable=False)

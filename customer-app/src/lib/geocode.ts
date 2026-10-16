@@ -9,7 +9,9 @@
  * الخلفية وحدها (القسم 14).
  */
 
-import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types"; import { tr } from "@/lib/i18n";
+import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types";
+import { DEMO_CENTER } from "@/demo/engine";
+import { demoActive } from "@/demo/mode"; import { tr } from "@/lib/i18n";
 
 const FORWARD = "https://api.mapbox.com/search/geocode/v6/forward";
 const REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse";
@@ -185,6 +187,8 @@ interface AreaFeature {
 
 /** موقع الجهاز — يُطلب مرةً ولا يُلحّ: من رفض يضع دبوسه بيده. */
 export function currentPosition(): Promise<Coordinates | null> {
+  // **مدينةُ العرض عمّان** (SPEC §٧٦-ن/٢) — والضيفُ في أيِّ مكانٍ في العالم يرى المدينةَ نفسَها وسياراتِها المحاكاة
+  if (demoActive()) return Promise.resolve(DEMO_CENTER);
   if (!("geolocation" in navigator)) return Promise.resolve(null);
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(

@@ -25,6 +25,8 @@ import { reportLocationOverRest, reportPointsOverRest } from "@/api/endpoints";
 import { onlineService } from "@/lib/online-service";
 import type { Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
+import { demoSubscribe } from "@/demo/engine";
+import { demoActive } from "@/demo/mode";
 import type { TripCommsEvent } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
 
 export type DriverSocketEvent =
@@ -156,6 +158,8 @@ export class DriverSocket {
   private watch: number | null = null;
   /** طلبُ REST قائم — فلا يُتبَع بآخرَ فوقه على شبكةٍ ضعيفة */
   private restInFlight = false;
+  /** **مقبسُ العرض** (SPEC §٧٦-ن/٢) — طلباتٌ محاكاة، **ولا موقعَ يُبثّ** */
+  private demo: (() => void) | null = null;
 
   // ── البثُّ المتكيّف (§٧٥-ج)
   private policy: BroadcastPolicy = DEFAULT_POLICY;
@@ -184,6 +188,11 @@ export class DriverSocket {
 
   open() {
     this.closed = false;
+    if (demoActive()) {
+      this.demo = demoSubscribe((event) => this.options.onEvent(event as unknown as DriverSocketEvent));
+      window.setTimeout(() => this.options.onOpen?.(), 0);
+      return;
+    }
     document.addEventListener("visibilitychange", this.reportVisibility);
     this.startWatching();
     this.connect();
@@ -193,6 +202,8 @@ export class DriverSocket {
 
   close() {
     this.closed = true;
+    this.demo?.();
+    this.demo = null;
     document.removeEventListener("visibilitychange", this.reportVisibility);
     if (this.timer !== null) window.clearTimeout(this.timer);
     if (this.ticker !== null) window.clearInterval(this.ticker);

@@ -41,7 +41,8 @@ async def create(
     session: AsyncSession,
     redis: Redis,
     *,
-    user: User,
+    user: User | None = None,
+    guest=None,
     app: str,
     message: str,
     app_version: str | None = None,
@@ -59,7 +60,10 @@ async def create(
     if len(text) > 2000:
         raise InvalidInput("الملاحظةُ أطولُ من ٢٠٠٠ حرف", field="message")
 
-    limit = await rate_limit.hit(redis, f"feedback:{user.id}", limit=PER_HOUR, window_seconds=3600)
+    # **حسابٌ أو ضيفٌ — واحدٌ لا اثنان** (SPEC §٧٦-ن/٣)، وللضيف دلوٌ باسم جلسته
+    assert (user is None) != (guest is None)
+    sender = f"feedback:{user.id}" if user is not None else f"feedback:guest:{guest.id}"
+    limit = await rate_limit.hit(redis, sender, limit=PER_HOUR, window_seconds=3600)
     if not limit.allowed:
         raise RateLimited(retry_after=limit.retry_after)
 
@@ -73,7 +77,8 @@ async def create(
 
     row = AppFeedback(
         id=feedback_id,
-        user_id=user.id,
+        user_id=user.id if user is not None else None,
+        guest_session_id=guest.id if guest is not None else None,
         app=app,
         message=text,
         app_version=_clip(app_version, 40),
@@ -104,7 +109,8 @@ async def page(
     offset: int = 0,
 ) -> tuple[list[FeedbackRow], int, int]:
     """الأحدثُ أوّلاً — **ومعها عددُ الجديدة** (ما تقرؤه شارةُ القائمة) **والمجموعُ بعد التصفية**."""
-    query = select(AppFeedback, User.name, User.phone).join(User, User.id == AppFeedback.user_id)
+    # **`outerjoin`**: ملاحظةُ الضيف بلا حساب (SPEC §٧٦-ن/٣) — وربطٌ داخليٌّ كان سيُسقطها من القائمة بصمت
+    query = select(AppFeedback, User.name, User.phone).outerjoin(User, User.id == AppFeedback.user_id)
     count = select(func.count()).select_from(AppFeedback)
     if status == "new":
         query = query.where(AppFeedback.handled_at.is_(None))

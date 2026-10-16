@@ -176,6 +176,12 @@ export interface FieldRule {
   messages: Record<string, string>;
 }
 
+/** **وضعُ الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤) — زرُّ «تجربة كضيف» حيث هو مشتعل */
+export interface GuestModeConfig {
+  rider: boolean;
+  driver: boolean;
+}
+
 export interface AppConfig {
   app: string;
   auth: { verification: string; otp_length: number | null };
@@ -184,6 +190,10 @@ export interface AppConfig {
   default_country_code: CountryCode;
   /** **دولةُ الشبكة** (رأسُ Cloudflare) — أوّلُ تخمينٍ لمُختار الدولة؛ و`null` حين لا رأسَ أو لا سوقَ بها (§٧٤-أ/٤). */
   network_country: CountryCode | null;
+  /** **دولةُ الشبكة خاماً** (SPEC §٧٦-ن/٦) — للتطبيقين؛ واللوحةُ تقرأ `/config` لبادئة الهاتف وحدَها */
+  network_region: string | null;
+  /** **وضعُ الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤) — ويُدار من بطاقة «وضع الضيف» في الإصدارات */
+  guest_mode?: GuestModeConfig;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣) — لا نسخةَ منها هنا. */
   validation: Record<string, Record<string, FieldRule>>;
   /** **أنصافُ أقطار البحث** من `geo` في الخلفية (§٦٢-ب/٤٨) — ورقةُ الطلب تقول نطاقَها منها، **ولا رقمَ يُكتب هنا**. */
@@ -1647,9 +1657,17 @@ export interface AdminAccount {
 
 
 /** **ملاحظةٌ من «أرسل ملاحظة»** (SPEC §٧٦/٤) — مَن أرسل · أيُّ تطبيق · أيُّ إصدار · متى. */
+/** **مفتاحُ وضع الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤). */
+export interface GuestMode {
+  rider: boolean;
+  driver: boolean;
+}
+
 export type AdminFeedback = {
   id: string;
-  user_id: string;
+  /** `null` لملاحظة ضيف (SPEC §٧٦-ن/٣) — بلا حسابٍ ولا اسمٍ ولا رقم */
+  user_id: string | null;
+  is_guest: boolean;
   user_name: string | null;
   user_phone: string | null;
   /** `rider` أو `driver` — **التطبيقُ الذي كُتبت منه** */
