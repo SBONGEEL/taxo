@@ -15,6 +15,7 @@
  * موضعُها لاحقاً بلا انتباه.
  */
 
+import { demoActive } from "@/demo/mode";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -44,7 +45,8 @@ export function WelcomeSheet() {
     // (خصوصيةٌ مشدَّدة)، ورميُه أثناء الرسم يُفرِّغ الشاشة — والفشلُ هنا يعني
     // «لا تُعرض» لا «انكسر التطبيق»
     try {
-      if (!localStorage.getItem(WELCOME_SEEN_KEY)) setOpen(true);
+      // **ولا في وضع الضيف** (SPEC §٧٦-ن): الورقةُ لكبتنٍ اعتُمد للتوّ، وفي العرض كانت تفتح كلَّ جلسةٍ فوق الطلب المحاكى فتحجبه
+      if (!demoActive() && !localStorage.getItem(WELCOME_SEEN_KEY)) setOpen(true);
     } catch {
       /* لا تخزينَ متاح — لا ورقةَ، ولا عطب */
     }
