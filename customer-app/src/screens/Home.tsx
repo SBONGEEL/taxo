@@ -14,6 +14,7 @@
  * حقلَ «إلى أين؟» — وهي تصل من `GET /rides/me/active` عند كل اتصالٍ بالمقبس.
  */
 
+import { isOutcomeClosed, outcomeDecision } from "@/lib/outcome";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -30,6 +31,7 @@ import {
   requestRide,
   unreadCount,
   updateMe,
+  getRidePayments,
 } from "@/api/endpoints";
 import type {
   Coordinates,
@@ -42,6 +44,7 @@ import type {
   Storefront,
   VehicleCategory,
   Wallet,
+  RidePayments,
 } from "@/api/types";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import type { RiderHomeProps } from "@/screens/t2/RiderHomeT2";
@@ -125,7 +128,10 @@ export function HomeScreen() {
   const unconfirmed = useUnconfirmed(unconfirmedOn);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState<string | null>(null);
+  // **«طُويت» في السياق لا هنا** (SPEC §٧٦-س): حالٌ داخل الرئيسية كانت تُنسى حين تُفكّ — والذهابُ إلى الدفع يفكّها
+  const { closeOutcome } = useRide();
+  /** **جوابُ الخادم عن دفع الخاتمة المعروضة** — `undefined` لم يُسأل بعد، و`null` تعذّر السؤال */
+  const [outcomeCheck, setOutcomeCheck] = useState<{ id: string; payments: RidePayments | null } | null>(null);
   // **قراءةٌ واحدةٌ عند فتح الرئيسية** لا استفتاءٌ دوريّ: ما يصل والتطبيقُ مفتوح
   // يصل على المقبس (`Toasts`)، وما فاتها يُقرأ حين تعود — فاستفتاءٌ كلَّ ثوانٍ
   // يسأل عن جوابٍ لا يتغيّر إلا بحدثٍ نراه أصلاً
@@ -245,7 +251,26 @@ export function HomeScreen() {
   // رحلةٌ انتهت أو أُلغيت تبقى على الشاشة حتى يراها صاحبها: شاشة الدفع تلي
   // `completed` مباشرةً في تدفّق القسم 5، و«لم نجد كبتناً» خبرٌ يُقرأ لا حالةٌ
   // تختفي. ويطويها المستخدم بيده
-  const outcome = ride && !tracking && ride.id !== dismissed ? ride : null;
+  // **ولا تُفتح نافذةُ الدفع إلا لما يقول الخادمُ الآن إنه مستحقّ** (SPEC §٧٦-س، `lib/outcome`): رحلةٌ دُفعت لا تعيدها عودةٌ إلى هنا
+  const finished = ride && !tracking ? ride : null;
+  const checked = finished && outcomeCheck?.id === finished.id ? outcomeCheck.payments : undefined;
+  const decision = finished ? outcomeDecision(finished.status, isOutcomeClosed(finished.id), checked) : "forget";
+  useEffect(() => {
+    if (!finished || finished.status !== "completed" || isOutcomeClosed(finished.id)) return;
+    let cancelled = false;
+    getRidePayments(finished.id)
+      .then((payments) => !cancelled && setOutcomeCheck({ id: finished.id, payments }))
+      .catch(() => !cancelled && setOutcomeCheck({ id: finished.id, payments: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [finished?.id, finished?.status]);
+  useEffect(() => {
+    if (finished && decision === "forget") closeOutcome(finished.id);
+  }, [finished, decision, closeOutcome]);
+  const outcome = finished && decision === "show" ? finished : null;
+  // **الورقةُ تغطّي الشريطَ ما دامت مفتوحة**، وتكشفه حين تُطوى — لا «ما دامت رحلةٌ معروضة» (`navBarHidden`)
+  useCoverNav(outcome !== null);
 
   // أول رسمة: موقع الجهاز إن سُمح، وإلا مركزُ الدولة (SPEC القسم 11.3)
   useEffect(() => {
@@ -562,7 +587,7 @@ export function HomeScreen() {
       setParcelFetch(previous.parcel_fetch);
       setFetchPlaced(previous.parcel_fetch);
       endHourly();
-      setDismissed(previous.id);
+      closeOutcome(previous.id);
       setPhase("confirm");
       return;
     }
@@ -583,7 +608,7 @@ export function HomeScreen() {
         hours: previous.hourly_hours ?? HOURLY_START.hours,
         prepay: previous.hourly_prepay_method ?? HOURLY_START.prepay,
       });
-      setDismissed(previous.id);
+      closeOutcome(previous.id);
       setPhase("confirm");
       return;
     }
@@ -598,7 +623,7 @@ export function HomeScreen() {
         // **بالطريقة التي أُرسلت مع الأولى** (§٢-١) — ما اختاره قبل دقائق لا يُسأل عنه ثانيةً، ومطفأً لا شيء
         payment_method: unconfirmedOn ? (previous.payment_method_hint ?? undefined) : undefined,
       });
-      setDismissed(null);
+      closeOutcome(previous.id);
       setRide(created);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
@@ -626,7 +651,7 @@ export function HomeScreen() {
         stops: previous.stops.map((stop) => ({ lat: stop.lat, lng: stop.lng, address: stop.address })),
         widen_search: true,
       });
-      setDismissed(null);
+      closeOutcome(previous.id);
       setRide(created);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
@@ -647,7 +672,7 @@ export function HomeScreen() {
     endParcel();
     endHourly();
     setError(null);
-    setDismissed(previous.id);
+    closeOutcome(previous.id);
     setPhase("confirm");
   }
 
@@ -1030,7 +1055,7 @@ export function HomeScreen() {
             ) : outcome ? (
               <OutcomeSheetT2
                 ride={outcome}
-                onDismiss={() => setDismissed(outcome.id)}
+                onDismiss={() => closeOutcome(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
                 // **ولا «جدولي» لطرد** (§٦٣-ج/٤) **ولا لساعات** (§٦٣-ج/٥) — الحجزُ لا يحملهما، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
                 onScheduleAgain={outcome.ride_type === "standard" ? () => scheduleAgain(outcome) : undefined}

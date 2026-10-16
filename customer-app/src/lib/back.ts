@@ -16,6 +16,7 @@
  * معناها في مكانٍ واحد.
  */
 
+import { clearReturnPoint, stepsBackToHome } from "@/lib/outcome";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +24,19 @@ import { useNavigate } from "react-router-dom";
 function hasHistory(): boolean {
   const state = window.history.state as { idx?: number } | null;
   return typeof state?.idx === "number" && state.idx > 0;
+}
+
+/** **إلى الرئيسية بعد الدفع — بتاريخٍ نظيف** (SPEC §٧٦-س): رجوعٌ إلى موضعها الذي حُفظ عند الذهاب إلى الدفع (`lib/outcome`)، فلا تبقى شاشةُ
+ *  الدفع ولا التقييم وراءها يعود إليها زرُّ الرجوع؛ **وبلا موضعٍ محفوظ** (رابطٌ مباشر، عودةٌ من صفحة البطاقة) تُفتح الرئيسيةُ بـ`replace`. */
+export function useReturnHome() {
+  const navigate = useNavigate();
+  return useCallback(() => {
+    const state = window.history.state as { idx?: number } | null;
+    const steps = stepsBackToHome(typeof state?.idx === "number" ? state.idx : null);
+    clearReturnPoint();
+    if (steps !== null) navigate(steps);
+    else navigate("/", { replace: true });
+  }, [navigate]);
 }
 
 /** يعيدك من حيث جئت، أو إلى `fallback` إن دخلت من الخارج مباشرةً. */

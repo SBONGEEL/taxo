@@ -44,7 +44,7 @@ import { UNCONFIRMED_FLAG, claimCaptainOpening, refreshCaptainUnconfirmed } from
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { GarageProvider } from "@/lib/garage";
-import { RideProvider, useRide } from "@/lib/ride";
+import { RideProvider, useRide, isActive } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
@@ -433,7 +433,8 @@ function NavBar() {
   // **وشاشةٌ تقول إنها تغطّيه وهي ليست مساراً** (`lib/navCover`): التحصيلُ بعد الإنهاء (C08) — الرحلةُ صارت `null`
   // والمسارُ `/`، وزرُّه في القاع حيث يطفو الشريط. **ولا يقولها إلا شاشاتُ `screens/t2`** فالفاتحُ كما هو
   const coveredByScreen = useNavCovered();
-  const covered = ride !== null || offer !== null || coveredByScreen;
+  // **رحلةٌ جاريةٌ لا رحلةٌ انتهت** (SPEC §٧٦-س): حدثُ `ride_completed` يُبقي المكتملةَ في السياق، فكان الشريطُ يغيب بعد التحصيل والتقييم
+  const covered = isActive(ride) || offer !== null || coveredByScreen;
   if (covered) return null;
   // **وجولةُ الأذونات شاشةُ قرارٍ تملأ الرئيسية** (عطبٌ قِيس على Note 20
   // 2026-09-17): كان الشريطُ يُرسم فوقها **فيغطّي زرَّ «اسمح بالموقع» و«ليس

@@ -127,7 +127,7 @@ export function PayReturnT2Screen() {
       <button
         type="button"
         className="t2-clq-cta t2-pr-gap"
-        onClick={() => navigate(subscription && request?.status === "approved" ? "/subscription" : "/wallet")}
+        onClick={() => navigate(subscription && request?.status === "approved" ? "/subscription" : "/wallet", { replace: true })}
       >
         {subscription && request?.status === "approved" ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
       </button>

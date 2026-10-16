@@ -10,6 +10,7 @@
  * **ولطلب «كبتنة» الذي انتهى بلا كبتنة وجهُه «RW3»** (§٦٢-ج/٢٣، `WomenRideT2.tsx`) — حيث الخدمةُ مفتوحة: خياراتٌ تختارها هي، و«أقبل
  * أي كبتن» فيه هو هو. **وطلبُ «ذكور» يبقى هنا** كما كان: ليس الخدمةَ النسائية.
  */
+import { markReturnPoint } from "@/lib/outcome";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -75,7 +76,15 @@ export function OutcomeSheetT2({
 
   const footer = completed ? (
     <div className="t2-out-actions">
-      <button type="button" className="t2-button primary" onClick={() => navigate(`/rides/${ride.id}/pay`)}>
+      <button
+        type="button"
+        className="t2-button primary"
+        onClick={() => {
+          // **موضعُ الرئيسية في التاريخ** — فـ«الرئيسية» بعد الدفع رجوعٌ إليه لا دفعٌ فوق شاشة الدفع (SPEC §٧٦-س)
+          markReturnPoint((window.history.state as { idx?: number } | null)?.idx ?? null);
+          navigate(`/rides/${ride.id}/pay`);
+        }}
+      >
         {tr("الانتقال إلى الدفع")}
       </button>
       <button type="button" className="t2-out-later" onClick={onDismiss}>

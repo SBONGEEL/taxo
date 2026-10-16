@@ -21,11 +21,21 @@ import { Capacitor } from "@capacitor/core";
 import { AUTH_ROOTS, isWelcomeOpen, reopenWelcome } from "@/components/welcome/gate";
 
 /** يبدأ الاستماع، ويُعيد دالةَ إيقافٍ للتنظيف. */
+/** **شاشةٌ تأخذ زرَّ الرجوع** (SPEC §٧٦-س): بعد الدفع، الرجوعُ إلى الرئيسية بتاريخٍ نظيف لا إلى شاشة الدفع — والشاشةُ تسجّله وتنزعه */
+let override: (() => void) | null = null;
+export function setBackOverride(handler: (() => void) | null): void {
+  override = handler;
+}
+
 export function bindHardwareBack(): () => void {
   if (!Capacitor.isNativePlatform()) return () => undefined;
 
   // **والرفضُ يُمسك عند التعليق لا عند الفكّ** (الشكلُ الذي أنتج بلاغَ 496): وعدٌ يبقى بلا ماسكٍ حتى التنظيف يطفو
   const handle = App.addListener("backButton", () => {
+    if (override) {
+      override();
+      return;
+    }
     const state = window.history.state as { idx?: number } | null;
     const depth = typeof state?.idx === "number" ? state.idx : 0;
     if (depth > 0) {

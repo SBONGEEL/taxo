@@ -8,6 +8,7 @@
  * `GET /rides/me/active` — لأن ما فات أثناء الانقطاع لا يُبثّ ثانيةً.
  */
 
+import { rememberClosedOutcome } from "@/lib/outcome";
 import { Capacitor } from "@capacitor/core";
 import {
   createContext,
@@ -60,6 +61,9 @@ interface RideState {
   refresh: () => Promise<Ride | null>;
   /** يثبّت رحلةً عرفتها الشاشة قبل أن يصل بثُّها. */
   setRide: (ride: Ride | null) => void;
+  /** **تُطوى خاتمةُ رحلةٍ وتُنسى** (SPEC §٧٦-س): «لاحقاً» أو دفعٌ اكتمل — تُذكر خارج الرئيسية (`lib/outcome`) فلا تعود بعودتها،
+   *  **وتُرفع الرحلةُ المنتهيةُ من السياق** فيعود شريطُ التنقّل. */
+  closeOutcome: (rideId: string) => void;
 }
 
 const RideContext = createContext<RideState>({
@@ -73,6 +77,7 @@ const RideContext = createContext<RideState>({
   setViewport: () => undefined,
   refresh: async () => null,
   setRide: () => undefined,
+  closeOutcome: () => undefined,
 });
 
 const TERMINAL_EVENTS = new Set([
@@ -379,6 +384,13 @@ export function RideProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
+  const closeOutcome = useCallback((rideId: string) => {
+    rememberClosedOutcome(rideId);
+    setRide((current) =>
+      current && current.id === rideId && TERMINAL_STATUSES.has(current.status) ? null : current,
+    );
+  }, []);
+
   const value = useMemo<RideState>(
     () => ({
       ride,
@@ -391,8 +403,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
       setViewport,
       refresh,
       setRide,
+      closeOutcome,
     }),
-    [ride, drivers, driverPing, connected, toasts, dismissToast, notify, setViewport, refresh],
+    [ride, drivers, driverPing, connected, toasts, dismissToast, notify, setViewport, refresh, closeOutcome],
   );
 
   return <RideContext.Provider value={value}>{children}</RideContext.Provider>;

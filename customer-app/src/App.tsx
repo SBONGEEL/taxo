@@ -4,6 +4,8 @@
  * عقد FCM من الإعدادات، و`Session` قبل `Ride` لأن المقبس لا يُفتح بلا مستخدم.
  */
 
+import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
+import { navBarHidden } from "@/lib/outcome";
 import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
 import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -338,7 +340,8 @@ function NavBar() {
   const { ride } = useRide();
   // **وأطوارُ الطلب في الرئيسية** (R06) حالٌ داخل `/` لا مسار — فتقول هي ما تغطّيه (`lib/navCover`)
   const coveredByScreen = useNavCovered();
-  if (ride !== null) return null;
+  // **ورحلةٌ انتهت لا تُخفيه** (SPEC §٧٦-س): كان يُخفى «ما دامت رحلةٌ معروضة»، فـ«لاحقاً» يطوي الخاتمةَ ويُبقي الشريطَ غائباً
+  if (navBarHidden(ride?.status ?? null, false, ACTIVE_RIDE_STATUSES)) return null;
   // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14 · R06) تغطّيه — **في المظهرين** (§٦٢/٣)
   const coveredByT2 = T2_COVERING.includes(pathname) || coveredByScreen;
   return (

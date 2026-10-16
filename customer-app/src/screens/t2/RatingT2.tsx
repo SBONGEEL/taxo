@@ -15,8 +15,10 @@
  * نجمتين تناقض) وتُرسل مع التقييم نفسِه؛ مفاتيحُها من الخلفية (`RatingTag`) وتسمياتُها هنا.
  */
 
+import { setBackOverride } from "@/lib/hardware-back";
+import { useReturnHome } from "@/lib/back";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { getRide, getRidePayments } from "@/api/endpoints";
 import type { RatingTag, Ride, RidePayments } from "@/api/types";
@@ -51,7 +53,6 @@ function arrivedTitle(gender: string | null | undefined) {
 
 export function RatingT2Screen() {
   const { rideId = "" } = useParams();
-  const navigate = useNavigate();
   const { user } = useSession();
   const r = useRating(rideId);
 
@@ -71,7 +72,12 @@ export function RatingT2Screen() {
     };
   }, [rideId]);
 
-  const home = () => navigate("/", { replace: true });
+  // **إلى الرئيسية بتاريخٍ نظيف** (SPEC §٧٦-س) — لا تبقى شاشةُ الدفع وراءها
+  const home = useReturnHome();
+  useEffect(() => {
+    setBackOverride(home);
+    return () => setBackOverride(null);
+  }, [home]);
 
   // **طريقةُ الدفع كما سُجّلت** — القنواتُ بأسمائها (و«كاش للكبتن» كما رُسمت)، **ولا يُعدّ الخصمُ قناةً يدفعها الراكب**.
   // **ولا ما أُلغي**: «غيّر طريقة الدفع» (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) يُبقي الصفَّ القديمَ `voided` — وبغير هذا

@@ -31,6 +31,8 @@
  * **ورحلةُ المشوار الثابت** (§٦٣-ج/٦) «مدفوعة من اشتراكك» — قراءةٌ بلا منتقٍ ولا زرِّ دفع: سعرُها دُفع مقدّماً مع الاشتراك.
  */
 
+import { paymentStillDue } from "@/lib/outcome";
+import { setBackOverride } from "@/lib/hardware-back";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -42,7 +44,7 @@ import { CardChoice } from "@/components/payment/CardChoice";
 import { CliqPanel } from "@/components/payment/CliqPanel";
 import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
-import { useGoBack } from "@/lib/back";
+import { useGoBack, useReturnHome } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { roundingRow } from "@/lib/fareLines";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
@@ -130,6 +132,8 @@ export function PaymentScreen() {
   const navigate = useNavigate();
   // **أثناء القراءة رجوعٌ إلى حيث جئت** كما كان رأسُ شاشة الانتظار (`lib/back.ts`)، **وبعدها إلى الرئيسية** كما كانت الطبقة
   const goBack = useGoBack("/");
+  const returnHome = useReturnHome();
+  const { closeOutcome } = useRide();
   const { user } = useSession();
   const { refresh } = useRide();
   const country = useCountryConfig(user?.country_code);
@@ -316,6 +320,17 @@ export function PaymentScreen() {
     }
   }
 
+  // **ما لم يبقَ عليه شيء يُطوى** (SPEC §٧٦-س): خاتمتُه لا تعود في الرئيسية، **وزرُّ الرجوع الأصليُّ إلى الرئيسية بتاريخٍ نظيف**
+  const nothingDue = state !== null && !paymentStillDue(state);
+  useEffect(() => {
+    if (nothingDue && rideId) closeOutcome(rideId);
+  }, [nothingDue, rideId, closeOutcome]);
+  useEffect(() => {
+    if (!nothingDue) return;
+    setBackOverride(returnHome);
+    return () => setBackOverride(null);
+  }, [nothingDue, returnHome]);
+
   // **التحميلُ برأس الشاشة نفسِه**: طبقةٌ فارغةٌ بدوّامةٍ في منتصفها تُقرأ عطلاً، والانتقالُ إليها بعد لحظةٍ يومض
   if (loading) {
     return (
@@ -328,7 +343,7 @@ export function PaymentScreen() {
 
   return (
     <div className="t2 t2-m-stage">
-      <HeadT2 title={tr("الدفع")} onBack={() => navigate("/")} />
+      <HeadT2 title={tr("الدفع")} onBack={returnHome} />
 
       {/* **ما يُدفع الآن** (بطاقةُ R10): المتبقّي لا الأجرة — لأن ما يُسأل عنه الآن هو ما يُدفع الآن — والعملةُ باسمها، والقناةُ
           في حبّة R10 */}

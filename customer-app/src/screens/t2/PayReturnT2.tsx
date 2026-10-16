@@ -104,7 +104,7 @@ export function PayReturnT2Screen() {
             <BusyLabel busy={busy}>{tr("تحقّق الآن")}</BusyLabel>
           </button>
         ) : null}
-        <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate("/wallet")}>
+        <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate("/wallet", { replace: true })}>
           {tr("إلى المحفظة")}
         </button>
       </div>
