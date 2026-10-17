@@ -22,14 +22,14 @@
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { cancelPaymentRequest, listMyPaymentRequests } from "@/api/endpoints";
+import { cancelPaymentRequest, listMyPaymentRequests, resumePaymentCheckout } from "@/api/endpoints";
 import type { Earnings, MyPaymentRequest, WalletTransactionType } from "@/api/types";
 import { WithdrawSheet } from "@/components/WithdrawSheet";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { PAYMENT_REQUEST_STATUS_LABEL } from "@/lib/paymentRequests";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits, zeroAmount } from "@/lib/utils";
+import { digits, formatAmount, zeroAmount } from "@/lib/utils";
 import { TRANSACTION_LABEL, isDebit, unsigned } from "@/lib/walletFormat";
 import { PERIOD_LABEL, useEarningsScreen } from "@/screens/Earnings";
 import { useWalletScreen } from "@/screens/Wallet";
@@ -105,6 +105,7 @@ export function WalletT2Screen() {
   const payRequests = useCountryConfig(w.profile?.user?.country_code)?.features.payment_requests_enabled === true;
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [resuming, setResuming] = useState<string | null>(null);
   useEffect(() => {
     if (!payRequests) return;
     let cancelled = false;
@@ -122,6 +123,19 @@ export function WalletT2Screen() {
       setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
     } catch (caught) {
       setRequestError(caught instanceof ApiError ? caught.message : tr("تعذّر إلغاء الطلب"));
+    }
+  }
+
+  /** **«أكمل الدفع»** (§٧٦-ع/٢، المشكلة ٣) — صفحةُ Chargily نفسُها؛ وما لم تعد تنتظر يُقال ويُحدَّث سطرُه */
+  async function continueRequest(id: string) {
+    setResuming(id);
+    setRequestError(null);
+    try {
+      window.location.assign((await resumePaymentCheckout(id)).checkout_url);
+    } catch (caught) {
+      setRequestError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+      listMyPaymentRequests(10).then(setRequests).catch(() => undefined);
+      setResuming(null);
     }
   }
 
@@ -440,22 +454,35 @@ export function WalletT2Screen() {
                   const reason =
                     request.rejection_reason ?? request.refund_reason ?? request.outcome_note ??
                     (request.status === "cancelled" ? request.cancel_reason : null);
+                  // **دفعةُ وسيطٍ معلَّقة** لم تُدفع بعد — لا يراجعها أحد (§٧٦-ع/٢)
+                  const awaiting = request.status === "pending" && request.gateway === true;
                   return (
                     <div key={request.id} className="t2-row">
                       <span className="t2-row-main">
                         <span className="t2-row-title">
-                          {digits(request.credited_amount ?? request.amount)} {CURRENCY_LABEL[request.currency]} ·{" "}
+                          {formatAmount(request.credited_amount ?? request.amount, request.currency)} {CURRENCY_LABEL[request.currency]} ·{" "}
                           {request.provider_name}
                         </span>
                         <span className="t2-row-body">
                           {request.purpose === "subscription" ? tr("اشتراك") : tr("شحن")} · {formatWhen(request.created_at)}
-                          {request.reference ? <span dir="ltr"> · {request.reference}</span> : null}
+                          {/* **ومرجعُ دفعة الوسيط معرّفُ صفحته** — لا يعني لصاحبها شيئاً (§٧٦-ع/٢، المشكلة ٤) */}
+                          {request.reference && !request.gateway ? <span dir="ltr"> · {request.reference}</span> : null}
                         </span>
                         {reason ? <span className="t2-pr-reason">{reason}</span> : null}
                       </span>
                       <span className={request.status === "approved" ? "t2-chip ok" : "t2-chip"}>
-                        {PAYMENT_REQUEST_STATUS_LABEL[request.status]}
+                        {awaiting ? tr("بانتظار الدفع") : PAYMENT_REQUEST_STATUS_LABEL[request.status]}
                       </span>
+                      {awaiting ? (
+                        <button
+                          type="button"
+                          className="t2-pr-cancel"
+                          disabled={resuming !== null}
+                          onClick={() => void continueRequest(request.id)}
+                        >
+                          {resuming === request.id ? tr("يُفتح…") : tr("أكمل الدفع")}
+                        </button>
+                      ) : null}
                       {request.status === "pending" ? (
                         <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
                           {tr("إلغاء")}

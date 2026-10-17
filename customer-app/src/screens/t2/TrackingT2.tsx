@@ -49,7 +49,7 @@ import { clockText, hoursLabel, noDestination, useHourlyClock } from "@/lib/hour
 import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
-import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverage } from "@/lib/utils";
+import { currencyLabel, DISPLAY_LOCALE, formatAmount, formatDistance, ratedAverage } from "@/lib/utils";
 
 import { CommsButtonsT2 } from "./CommsT2";
 import { ForOtherTrackT2 } from "./ForOtherT2";
@@ -290,7 +290,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
               {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
                   ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤). والمشوارُ الثابتُ بسعره المجمَّد في الحالين */}
               <span dir="ltr" className="t2-num">
-                {formatMoney(ride.rider_estimate)}
+                {formatAmount(ride.rider_estimate, ride.currency)}
               </span>{" "}
               {currencyLabel(ride.currency)}
             </div>
@@ -386,7 +386,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             {/* **التقديرُ كما سيدفعه** (`rider_estimate`، مراجعةُ المال البند ٨): **مطفأً `estimated_fare` حرفاً** — ما عرضه العدّادُ قبل
                 §٧٠، فلا انتظارَ ولا وقفاتٍ تدخله بلا إذن المالك؛ **ومشتعلاً المقدَّرةُ بعد الخصم المجمَّد مقرَّبةً** (SPEC §٧٠-ج/٤).
                 **والمشوارُ الثابتُ بسعره المجمَّد** — لا يُقرَّب (مدفوعٌ مع الاشتراك) */}
-            <div dir="ltr" className="t2-trk-stat-value">{formatMoney(ride.rider_estimate)}</div>
+            <div dir="ltr" className="t2-trk-stat-value">{formatAmount(ride.rider_estimate, ride.currency)}</div>
             {/* **سعرُ المشوار مجمَّدٌ لا تقدير** (§٦٣-ج/٦) — دُفع مع الاشتراك */}
             <div className="t2-trk-stat-label">
               {currencyLabel(ride.currency)} {commute ? tr("من اشتراكك") : tr("تقديرياً")}

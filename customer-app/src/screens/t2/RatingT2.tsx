@@ -26,7 +26,7 @@ import { TIP_MIN_STARS, useRating } from "@/components/ride/useRating";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatDistance, formatMoney, formatTime } from "@/lib/utils";
+import { currencyLabel, formatAmount, formatDistance, formatMoney, formatTime } from "@/lib/utils";
 import { fareLineRows } from "@/lib/fareLines";
 
 import "@/taxo2";
@@ -161,7 +161,7 @@ export function RatingT2Screen() {
             <div>
               <div className="t2-r10-fare-label">{tr("الأجرة النهائية")}</div>
               <div className="t2-r10-fare-amount">
-                <span dir="ltr" className="t2-num">{formatMoney(payments.final_fare)}</span>
+                <span dir="ltr" className="t2-num">{formatAmount(payments.final_fare, payments.currency)}</span>
                 <span className="t2-r10-fare-cur">{currencyLabel(payments.currency)}</span>
               </div>
             </div>
@@ -268,7 +268,7 @@ export function RatingT2Screen() {
                 disabled={r.tipping !== null}
                 onClick={() => r.setChosenTip(r.chosenTip === amount ? null : amount)}
               >
-                {formatMoney(amount)}
+                {formatAmount(amount, payments?.currency)}
               </button>
             ))}
           </div>

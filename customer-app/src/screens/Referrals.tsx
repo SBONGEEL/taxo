@@ -27,7 +27,7 @@ import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount, formatMoney } from "@/lib/utils";
 import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
@@ -63,7 +63,7 @@ function Amount({ value, currency, off = false }: { value: string; currency: str
   return (
     <span className={off ? "t2-amt off" : "t2-amt"}>
       <span dir="ltr" className="t2-num">
-        {formatMoney(value)}
+        {formatAmount(value, currency)}
       </span>
       <span className="t2-amt-cur">{currencyLabel(currency)}</span>
     </span>

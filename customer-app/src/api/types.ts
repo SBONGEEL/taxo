@@ -1484,6 +1484,8 @@ export interface PayMethod {
   test_mode?: boolean;
   /** **رسومُ الوسيط على من** (§٧٤-ك/١): `taxo` يدفع ما اختاره، `user` تُضاف فوقه وتُعرض قبل الدفع */
   fee_payer?: "taxo" | "user" | null;
+  /** **اسمُ الوسيط كما يراه الدافع** («Chargily») — «ادفع عبر Chargily» لا «صفحة الوسيط» (SPEC §٧٦-ع/٢) */
+  gateway_name?: string | null;
 }
 
 export interface PayMethods {
@@ -1509,6 +1511,12 @@ export interface MyPaymentRequest {
   refund_reason: string | null;
   outcome_note: string | null;
   created_at: string;
+  /** **دفعةٌ عند وسيطٍ آليّ** (SPEC §٧٦-ع/٢) — معلَّقةً «بانتظار الدفع» و«أكمل الدفع»، ومرجعُها معرّفُ صفحته فلا يُعرض */
+  gateway?: boolean;
+  gateway_name?: string | null;
+  /** **الطريقةُ والخطّة** — «حاول مرّةً أخرى» يعود بهما */
+  provider_id?: string | null;
+  plan_id?: string | null;
 }
 
 /** **ما شحنته بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رقمُها التسلسليُّ ومبلغُها بعملته. */

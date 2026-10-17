@@ -77,7 +77,8 @@ class MyPaymentRequestOut(BaseModel):
     #: صفحة الوسيط فلا يُعرض
     gateway: bool = False
     gateway_name: str | None = None
-    #: **خطّةُ الاشتراك** — «حاول مرّةً أخرى» يعود بها نفسِها
+    #: **الطريقةُ وخطّةُ الاشتراك** — «حاول مرّةً أخرى» يعود بهما نفسَيهما
+    provider_id: uuid.UUID | None = None
     plan_id: uuid.UUID | None = None
 
 

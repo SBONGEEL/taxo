@@ -25,6 +25,7 @@ import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import {
   currencyLabel,
+  formatAmount,
   formatMoney,
   newIdempotencyKey,
   subtractMoney,
@@ -265,7 +266,7 @@ export function WalletTransferScreen() {
                   <span className="t2-m-sum-label">{tr("المبلغ")}</span>
                   <span>
                     <span dir="ltr" className="t2-m-num sm">
-                      {formatMoney(amount)}
+                      {formatAmount(amount, currency)}
                     </span>{" "}
                     <span className="t2-m-sum-sub t2-m-strong">{currencyLabel(country?.currency)}</span>
                   </span>

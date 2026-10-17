@@ -27,6 +27,7 @@ import { useMapboxToken } from "@/lib/config";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import {
   currencyLabel,
+  formatAmount,
   formatDateTime,
   formatDistance,
   formatDuration,
@@ -227,7 +228,7 @@ export function RideDetailsScreen() {
           <div className="t2-m-label">{ride.final_fare ? tr("الأجرة النهائية") : tr("السعر المقدّر")}</div>
           <div className="t2-m-amount">
             <span dir="ltr" className="t2-m-num lg">
-              {formatMoney(ride.final_fare ?? ride.rider_estimate)}
+              {formatAmount(ride.final_fare ?? ride.rider_estimate, ride.currency)}
             </span>
             <span className="t2-m-cur">{currencyLabel(ride.currency)}</span>
           </div>

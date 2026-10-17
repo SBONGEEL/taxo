@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { Ride } from "@/api/types";
 import { RIDE_STATUS_LABEL } from "@/lib/labels";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
 import { Icon } from "@/taxo2";
 
@@ -136,7 +136,7 @@ export function OutcomeSheetT2({
           <div className="t2-out-fare-label">{tr("الأجرة النهائية")}</div>
           <div className="t2-out-fare-amount">
             <span dir="ltr" className="t2-num">
-              {formatMoney(ride.final_fare ?? ride.rider_estimate)}
+              {formatAmount(ride.final_fare ?? ride.rider_estimate, ride.currency)}
             </span>
             <span className="t2-out-fare-cur">{currencyLabel(ride.currency)}</span>
           </div>

@@ -19,8 +19,8 @@ import { certify } from "./certify.mjs";
 
 const APP = argv[2];
 const ENTRIES = {
-  "customer-app": `export { formatMoney, currencyLabel, currencyName, currencyDecimals, zeroAmount, isZeroAmount, registerCurrencies } from "./src/lib/utils.ts";`,
-  "driver-app": `export { currencyLabel, currencyName, currencyDecimals, zeroAmount, isZeroAmount, registerCurrencies } from "./src/lib/utils.ts";\nexport { CURRENCY_LABEL, CURRENCY_FULL } from "./src/lib/rideFormat.ts";`,
+  "customer-app": `export { formatMoney, formatAmount, currencyLabel, currencyName, currencyDecimals, zeroAmount, isZeroAmount, registerCurrencies } from "./src/lib/utils.ts";`,
+  "driver-app": `export { formatAmount, currencyLabel, currencyName, currencyDecimals, zeroAmount, isZeroAmount, registerCurrencies } from "./src/lib/utils.ts";\nexport { CURRENCY_LABEL, CURRENCY_FULL } from "./src/lib/rideFormat.ts";`,
   "admin-panel": `export { money, currencyLabel, currencyOf, currencyDecimals, zeroAmount, isZeroAmount, registerCurrencies, registerCountryCurrencies } from "./src/lib/format.ts";`,
 };
 if (!ENTRIES[APP]) {
@@ -91,6 +91,13 @@ if (APP === "customer-app") {
   expect("formatMoney(150.000,DZD)", m.formatMoney("150.000", "DZD"), "150 د.ج");
   expect("formatMoney(1234567,DZD)", m.formatMoney("1234567", "DZD"), "1,234,567 د.ج");
   expect("formatMoney(150.500,DZD)", m.formatMoney("150.500", "DZD"), "150.500 د.ج");
+}
+if (APP === "customer-app" || APP === "driver-app") {
+  // **الرقمُ وحدَه** (§٧٦-ع/٢) — والجزائريُّ بلا كسورٍ وبفاصل، والأردنيُّ بخاناته الثلاث كما كان
+  expect("formatAmount(20000.000,DZD)", m.formatAmount("20000.000", "DZD"), "20,000");
+  expect("formatAmount(6000,DZD)", m.formatAmount("6000", "DZD"), "6,000");
+  expect("formatAmount(1.5,JOD)", m.formatAmount("1.5", "JOD"), "1.500");
+  expect("formatAmount(150.500,DZD)", m.formatAmount("150.500", "DZD"), "150.500");
 }
 if (APP === "driver-app") {
   expect("CURRENCY_LABEL.JOD", m.CURRENCY_LABEL.JOD, "د.أ");

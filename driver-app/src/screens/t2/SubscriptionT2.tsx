@@ -16,12 +16,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { SubscriptionDuration, SubscriptionPlan } from "@/api/types";
+import { listPaymentMethods } from "@/api/endpoints";
+import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, formatAmount } from "@/lib/utils";
 import {
   COPY,
   ConfirmSubscriptionSheet,
@@ -70,8 +71,10 @@ const CHIP: Record<State, { text: string; tone: string }> = {
   none: { text: tr("لا اشتراك"), tone: "" },
 };
 
-/** «أسبوعي» ← «الأسبوعي» — والاسمُ المعرَّفُ يبقى كما هو. */
+/** «أسبوعي» ← «الأسبوعي» — والاسمُ المعرَّفُ يبقى كما هو، **واسمٌ لا يبدأ بحرفٍ عربيّ لا يُعرَّف** (§٧٦-ع/٢، المشكلة ٨): كان
+ *  «اشترك بالTAXO X1». */
 function definite(name: string): string {
+  if (!/^[\u0600-\u06FF]/.test(name)) return name;
   return name.startsWith("ال") ? name : tr("ال{0}", { 0: name });
 }
 
@@ -110,6 +113,22 @@ export function SubscriptionT2Screen() {
   const { profile } = useDriver();
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — خيارٌ في ورقة التأكيد حيث مفتاحُه مشتعلٌ وحدَه
   const payRequests = useCountryConfig(profile?.user?.country_code)?.features.payment_requests_enabled === true;
+  // **طرقُ دفع الاشتراك في السوق** (§٧٦-ع/٢، المشكلة ٦): البطاقةُ عبر Chargily تُفتح من «الدفع ببطاقة» لا من «بتحويلٍ أو نقداً»،
+  // والتحويلُ والنقدُ لا يُعرضان إلا إن وُجدت طريقةٌ يدويّة
+  const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  useEffect(() => {
+    if (!payRequests) return;
+    let alive = true;
+    listPaymentMethods("subscription")
+      .then((body) => alive && setMethods(body.methods))
+      .catch(() => alive && setMethods([]));
+    return () => {
+      alive = false;
+    };
+  }, [payRequests]);
+  const gatewayMethod = methods?.find((row) => row.gateway) ?? null;
+  const gatewayName = gatewayMethod?.gateway_name ?? "Chargily";
+  const hasManual = methods === null || methods.some((row) => !row.gateway && row.kind !== "purchase_code");
   const plans = s.subscription?.plans ?? [];
   const currentName = s.subscription?.current?.plan_name ?? null;
   // **المختارُ افتراضاً خطّتُه الحالية** — فالضغطةُ الأولى تجديدُ ما هو عليه، كما يقع في الشاشة القائمة
@@ -244,11 +263,11 @@ export function SubscriptionT2Screen() {
                           `price_after_discount` للعرض الحقيقيّ وحدَه، **والمرسومُ ما يُخصم** (`price_to_pay`، مقرَّباً — SPEC §٧٠-ج/٥) */}
                       {row.price_after_discount ? (
                         <span className="t2-sub-was">
-                          {digits(row.price)}
+                          {formatAmount(row.price, row.currency)}
                         </span>
                       ) : null}
                       <span className="t2-sub-num" dir="ltr">
-                        {digits(row.price_to_pay ?? row.price)}
+                        {formatAmount(row.price_to_pay ?? row.price, row.currency)}
                       </span>{" "}
                       <span className="t2-sub-cur">
                         {CURRENCY_LABEL[row.currency]}
@@ -297,7 +316,11 @@ export function SubscriptionT2Screen() {
         </button>
 
         <p className="t2-sub-fine">
-          {payRequests
+          {payRequests && gatewayMethod && hasManual
+            ? tr("الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده، أو بتحويلٍ أو نقداً ويُفعَّل بعد اعتماد فريق المالية.", { 0: gatewayName })
+            : payRequests && gatewayMethod
+            ? tr("الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده.", { 0: gatewayName })
+            : payRequests
             ? tr("الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك.")
             : s.cardEnabled
             ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")
@@ -318,14 +341,14 @@ export function SubscriptionT2Screen() {
                     {/* **ما وُفِّر فعلاً** — `discount_amount` كما يصل، ولا طرح */}
                     {Number(item.discount_amount) > 0 ? (
                       <span className="t2-sub-saved">
-                        {tr("وفّرتَ")}{" "}{digits(item.discount_amount)}{" "}
+                        {tr("وفّرتَ")}{" "}{formatAmount(item.discount_amount, item.currency)}{" "}
                         {CURRENCY_LABEL[item.currency]}
                       </span>
                     ) : null}
                   </span>
                   <span className="t2-sub-past-end">
                     <span className="t2-sub-past-amount">
-                      {digits(item.amount_paid)} {CURRENCY_LABEL[item.currency]}
+                      {formatAmount(item.amount_paid, item.currency)} {CURRENCY_LABEL[item.currency]}
                     </span>
                     <span
                       className={
@@ -352,14 +375,14 @@ export function SubscriptionT2Screen() {
           onClick={() => plan && s.setConfirming(plan)}
         >
           {plan
-            ? tr("اشترك ب{0} — {1} {2}", { 0: definite(plan.name), 1: digits(plan.price_to_pay ?? plan.price), 2: CURRENCY_LABEL[plan.currency] }
+            ? tr("اشترك في {0} · {1} {2}", { 0: definite(plan.name), 1: formatAmount(plan.price_to_pay ?? plan.price, plan.currency), 2: CURRENCY_LABEL[plan.currency] }
 
 )
             : tr("اختر خطة")}
         </button>
         {s.subscription?.is_active && current ? (
           <p className="t2-sub-after">
-            {tr("يبدأ بعد انتهاء")}{" "}{definite(current.plan_name)}{" "}{tr("الحالي، فلا يضيع منه شيء.")}
+            {tr("يبدأ بعد انتهاء اشتراكك الحالي، فلا يضيع منه شيء.")}
 
           </p>
         ) : null}
@@ -373,19 +396,22 @@ export function SubscriptionT2Screen() {
             buying={s.buying}
             cardEnabled={s.cardEnabled}
             cliqAlias={s.cliqAlias}
+            gateway={gatewayMethod ? { id: gatewayMethod.id, name: gatewayName } : null}
+            manual={hasManual}
             onClose={() => s.setConfirming(null)}
             onWallet={s.payFromWallet}
             onCard={s.payByCard}
             onCliq={s.payByCliq}
             onPayRequest={
               payRequests
-                ? (chosen) =>
+                ? (chosen, methodId) =>
                     navigate("/wallet/pay", {
                       state: {
                         purpose: "subscription",
                         planId: chosen.id,
                         planName: chosen.name,
                         amount: chosen.price_to_pay ?? chosen.price,
+                        methodId,
                       },
                     })
                 : undefined

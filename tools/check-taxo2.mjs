@@ -113,9 +113,13 @@ for (const app of BRIDGE_APPS) {
     if (!subset.has(glyph)) iconProblems.push(`  «${glyph}» ليس في مقتطَع خطِّ ${app} — يُرسم اسمُه نصّاً`);
 }
 
-// ── ولوحةُ الإدارة: كلُّ اسمٍ تسمّيه شيفرتُها في مقتطَعها، والمقتطَعُ مرتَّبٌ بلا تكرار ──────────────────────
-const ADMIN = "admin-panel";
-const ts = createRequire(join(ROOT, ADMIN, "package.json"))("typescript");
+// ── وكلُّ واجهة: كلُّ اسمٍ تسمّيه شيفرتُها في مقتطَعها، والمقتطَعُ مرتَّبٌ بلا تكرار ──────────────────────
+// **كان للوحة وحدَها**، **فرسم تطبيقُ الراكب «INFO» حروفاً كبيرةً فوق سطر الطلب** على الإنتاج (§٧٦-ع/٢، المشكلة ٥ في
+// `design/CHARGILY-FLOW.md`): `info` و`science` غائبتان عن مقتطَعه ولا شيءَ يقارن. **فصار يُقاس في الثلاث.**
+const ts = createRequire(join(ROOT, "admin-panel", "package.json"))("typescript");
+const ICON_APPS = ["admin-panel", "customer-app", "driver-app"];
+const usedCounts = [];
+for (const ADMIN of ICON_APPS) {
 const used = new Map(); // الاسم ← أوّلُ موضعٍ سُمّي فيه
 let usesBridge = false;
 
@@ -194,6 +198,8 @@ for (const [name, where] of used)
 const sorted = [...adminSubset].sort();
 if (adminSubset.join(",") !== sorted.join(",")) iconProblems.push(`  مقتطَعُ ${ADMIN} غيرُ مرتَّبٍ أبجدياً — والمُقدِّمُ يشترط الترتيب`);
 if (adminSet.size !== adminSubset.length) iconProblems.push(`  في مقتطَع ${ADMIN} اسمٌ مكرَّر`);
+usedCounts.push(`${ADMIN} ${used.size}/${adminSubset.length}`);
+}
 
 if (iconProblems.length) {
   console.error("\n✗ الأيقونات (جسرُ المتجر · مقتطَعُ اللوحة):");
@@ -208,5 +214,5 @@ certify(
   "check:taxo2",
   `✓ نظامُ التصميم متطابقٌ في ${copies.length} نسخ (${copies.map((c) => c.app).join(" · ")}) — ${a.files.size} ملفّات (${all.slice(0, 12)})`,
   `جسرُ الأيقونات يغطّي ${allowed.length} اسماً في خطَّي التطبيقين`,
-  `واللوحةُ تسمّي ${used.size} أيقونةً كلُّها في مقتطَعها المرتَّب (${adminSubset.length})`,
+  `والواجهاتُ الثلاثُ تسمّي أيقوناتٍ كلُّها في مقتطَعها المرتَّب (${usedCounts.join(" · ")})`,
 );

@@ -51,7 +51,7 @@ import { useFeature } from "@/lib/config";
 import { CATEGORY_ICON, PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { MAX_STOPS } from "@/lib/multistop";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
 import { HourlySheetT2 } from "./HourlyT2";
@@ -120,7 +120,7 @@ function useCategoryFares(
 function Fare({ estimate }: { estimate: RideEstimate }) {
   return (
     <span className="t2-cat-price">
-      <span dir="ltr" className="t2-cat-amount">{formatMoney(estimate.estimated_fare)}</span>
+      <span dir="ltr" className="t2-cat-amount">{formatAmount(estimate.estimated_fare, estimate.currency)}</span>
       <span className="t2-cat-cur">{currencyLabel(estimate.currency)}</span>
     </span>
   );

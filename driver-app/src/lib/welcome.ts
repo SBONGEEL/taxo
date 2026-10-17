@@ -64,6 +64,16 @@ export const WELCOME_POINTS: readonly WelcomePoint[] = [
   },
 ];
 
+/** **وفي سوقٍ بلا كليك** (الجزائر — §٧٦-ع/٢، المشكلة ١٤): كان العنوانُ يَعِد بالكليك وهو أردنيّ. **فالنقطةُ تتبع طرقَ السوق**. */
+const CASH_ONLY_POINT: WelcomePoint = {
+  title: tr("الكاش يصلك مباشرة"),
+  body: WELCOME_POINTS[2].body,
+};
+
+export function welcomePoints(cliqEnabled: boolean): readonly WelcomePoint[] {
+  return cliqEnabled ? WELCOME_POINTS : WELCOME_POINTS.map((point, index) => (index === 2 ? CASH_ONLY_POINT : point));
+}
+
 /** سطرُ العرض — **يُقرأ من العرض القائم ولا يُكتب نصّاً** (قرارُ المالك).
  *
  * **والعلّةُ أن ورقةً تعِد بما نفد أسوأُ من ورقةٍ صامتة**: عرضٌ أُطفئ، أو نفد

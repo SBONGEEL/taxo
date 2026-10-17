@@ -66,6 +66,9 @@
   cursor: pointer;
 }
 .t2-back .t2-icon { font-size: 22px; }
+/* **الأسهمُ تنقلب في واجهةٍ من اليسار** (§٧٦-ع/٢) — زرُّ الرجوع بأيِّ أيقونةٍ فيه، وكلُّ أيقونةٍ لها اتّجاه (`Icon.tsx`) */
+[dir="ltr"] .t2-back .t2-icon,
+[dir="ltr"] .t2-icon-dir { transform: scaleX(-1); }
 .t2-title {
   flex: 1;
   margin: 0;

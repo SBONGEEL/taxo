@@ -122,6 +122,13 @@ export const DISPLAY_LOCALE = language === "fr" ? "fr-u-nu-latn" : "ar-u-nu-latn
  * وفاصلة كل ثلاث خانات صحيحة. الرقم يبقى كما حسبته الخلفية حرفاً بحرف — **ولا يُخفى كسرٌ في عملةٍ بلا كسور**: يُعرض كما وصل.
  */
 export function formatMoney(amount: string | null | undefined, currency?: string) {
+  const number = formatAmount(amount, currency);
+  return number === "—" || !currency ? number : `${number} ${currencyLabel(currency)}`;
+}
+
+/** **الرقمُ وحدَه بخانات عملته** (SPEC §٧٦-ع/٢) — لمواضعَ ترسم العلامةَ بجانبه بخطٍّ آخر (`currencyLabel`). **كانت تنادي
+ *  `formatMoney` بلا عملة** فتُكمل ثلاثَ خانات: «20,000.000 د.ج» في المحفظة. والقواعدُ هي هي (أعلاه). */
+export function formatAmount(amount: string | null | undefined, currency: string | null | undefined) {
   if (amount === null || amount === undefined || amount === "") return "—";
 
   const negative = amount.trimStart().startsWith("-");
@@ -130,8 +137,7 @@ export function formatMoney(amount: string | null | undefined, currency?: string
   const places = currencyDecimals(currency);
   const padded = (fraction + "000").slice(0, places);
   const shown = places < 3 && /[1-9]/.test(fraction.slice(places)) ? fraction : padded;
-  const label = currency ? ` ${currencyLabel(currency)}` : "";
-  return `${negative ? "−" : ""}${grouped}${shown ? `.${shown}` : ""}${label}`;
+  return `${negative ? "−" : ""}${grouped}${shown ? `.${shown}` : ""}`;
 }
 
 /** مسافة للعرض: بالأمتار تحت الكيلومتر، وبكسرٍ واحد فوقه. */

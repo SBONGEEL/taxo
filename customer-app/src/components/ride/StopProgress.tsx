@@ -16,7 +16,7 @@
 import { Fragment, useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount } from "@/lib/utils";
 
 import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
@@ -74,7 +74,7 @@ export function StopProgress({ ride }: { ride: Ride }) {
             <p className="t2-meter-label">{tr("رسم الانتظار حتى الآن")}</p>
             <p className="t2-meter-amount">
               <span dir="ltr" className="t2-num">
-                {formatMoney(ride.waiting_charge)}
+                {formatAmount(ride.waiting_charge, ride.currency)}
               </span>
               <span className="t2-meter-cur">{currencyLabel(ride.currency)}</span>
             </p>

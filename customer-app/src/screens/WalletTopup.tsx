@@ -35,7 +35,7 @@ import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import { play } from "@/lib/sound";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
-import { formatMoney } from "@/lib/utils";
+import { formatAmount, formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
@@ -168,7 +168,7 @@ export function WalletTopupScreen() {
       ) : (
         <>
           <AmountCardT2 id="topup-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency}>
-            <QuickAmountsT2 amounts={QUICK_AMOUNTS} value={amount} onPick={setAmount} label={(value) => formatMoney(value)} />
+            <QuickAmountsT2 amounts={QUICK_AMOUNTS} value={amount} onPick={setAmount} label={(value) => formatAmount(value, currency)} />
           </AmountCardT2>
           <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 

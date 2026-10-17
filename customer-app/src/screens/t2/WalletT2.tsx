@@ -30,6 +30,7 @@ import {
   listSavedCards,
   listTopups,
   listTransactions,
+  resumePaymentCheckout,
 } from "@/api/endpoints";
 import type {
   MyPaymentRequest,
@@ -46,7 +47,7 @@ import { useCountryConfig } from "@/lib/config";
 import { roundingUnit } from "@/lib/rounding";
 import { PAYMENT_REQUEST_STATUS_LABEL, TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount, formatMoney } from "@/lib/utils";
 
 import { BlankT2 } from "./KitT2";
 import { byMonth, startOfToday, whenParts } from "./when";
@@ -126,7 +127,9 @@ export function WalletT2Screen() {
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
   const payRequests = country?.features.payment_requests_enabled === true;
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
+  const [choices, setChoices] = useState<string[]>([]);
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
+  const [resuming, setResuming] = useState<string | null>(null);
   useEffect(() => {
     if (!payRequests) return;
     let cancelled = false;
@@ -134,6 +137,7 @@ export function WalletT2Screen() {
       .then(([body, mine]) => {
         if (cancelled) return;
         setMethods(body.methods);
+        setChoices(body.topup_choices ?? []);
         setRequests(mine);
       })
       .catch(() => !cancelled && setMethods([]));
@@ -148,6 +152,20 @@ export function WalletT2Screen() {
       setRequests((rows) => rows.map((row) => (row.id === id ? updated : row)));
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر إلغاء الطلب"));
+    }
+  }
+
+  /** **«أكمل الدفع»** (§٧٦-ع/٢، المشكلة ٣) — صفحةُ Chargily نفسُها لا صفحةٌ ثانية؛ وما لم تعد تنتظر يُقال ويُحدَّث سطرُه */
+  async function continueRequest(id: string) {
+    setResuming(id);
+    setError(null);
+    try {
+      const opened = await resumePaymentCheckout(id);
+      window.location.assign(opened.checkout_url);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+      listMyPaymentRequests(10).then(setRequests).catch(() => undefined);
+      setResuming(null);
     }
   }
 
@@ -173,7 +191,7 @@ export function WalletT2Screen() {
         {/* **«الرصيد» لا «الرصيد المتاح»** (القرار 23) — اللوحةُ تقول الثانية، والراكبُ لا محجوزَ له */}
         <div className="t2-balance-label">{tr("الرصيد")}</div>
         <div className="t2-balance-amount">
-          <span dir="ltr" className="t2-num">{formatMoney(wallet?.balance)}</span>
+          <span dir="ltr" className="t2-num">{formatAmount(wallet?.balance, wallet?.currency)}</span>
           <span className="t2-balance-cur">{currencyLabel(wallet?.currency)}</span>
         </div>
         {walletEnabled ? (
@@ -248,6 +266,8 @@ export function WalletT2Screen() {
               const reason =
                 request.rejection_reason ?? request.refund_reason ?? request.outcome_note ??
                 (request.status === "cancelled" ? request.cancel_reason : null);
+              // **دفعةُ وسيطٍ معلَّقة** لم تُدفع بعد — لا يراجعها أحد (§٧٦-ع/٢)
+              const awaiting = request.status === "pending" && request.gateway === true;
               return (
                 <div key={request.id} className="t2-tx">
                   <span className="t2-tx-icon">
@@ -260,14 +280,25 @@ export function WalletT2Screen() {
                       {formatMoney(request.credited_amount ?? request.amount, request.currency)} · {request.provider_name}
                     </span>
                     <span className="t2-tx-sub">
-                      {when.day} · <span dir="ltr">{request.reference ?? when.time}</span>
+                      {/* **ومرجعُ دفعة الوسيط معرّفُ صفحته** — لا يعني لصاحبها شيئاً، فالوقتُ مكانَه (§٧٦-ع/٢، المشكلة ٤) */}
+                      {when.day} · <span dir="ltr">{request.gateway ? when.time : (request.reference ?? when.time)}</span>
                     </span>
                     {reason ? <span className="t2-pr-reason">{reason}</span> : null}
                   </span>
                   <span className="t2-tx-end">
                     <span className={request.status === "approved" ? "t2-chip ok" : request.status === "pending" ? "t2-chip warn" : "t2-chip"}>
-                      {PAYMENT_REQUEST_STATUS_LABEL[request.status]}
+                      {awaiting ? tr("بانتظار الدفع") : PAYMENT_REQUEST_STATUS_LABEL[request.status]}
                     </span>
+                    {awaiting ? (
+                      <button
+                        type="button"
+                        className="t2-pr-cancel"
+                        disabled={resuming !== null}
+                        onClick={() => void continueRequest(request.id)}
+                      >
+                        {resuming === request.id ? tr("يُفتح…") : tr("أكمل الدفع")}
+                      </button>
+                    ) : null}
                     {request.status === "pending" ? (
                       <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
                         {tr("إلغاء")}
@@ -366,11 +397,11 @@ export function WalletT2Screen() {
                         <span className={credit ? "t2-tx-amt in" : "t2-tx-amt"}>
                           <span dir="ltr">
                             {credit ? "+" : ""}
-                            {formatMoney(entry.amount)}
+                            {formatAmount(entry.amount, entry.currency)}
                           </span>{" "}
                           {currencyLabel(entry.currency)}
                         </span>
-                        <span className="t2-tx-after">{tr("الرصيد")}{" "}{formatMoney(entry.balance_after)}</span>
+                        <span className="t2-tx-after">{tr("الرصيد")}{" "}{formatAmount(entry.balance_after, entry.currency)}</span>
                       </span>
                     </div>
                   );
@@ -388,6 +419,7 @@ export function WalletT2Screen() {
           cardEnabled={cardEnabled}
           cliqEnabled={cliqEnabled}
           methods={payRequests ? (methods ?? []) : undefined}
+          choices={choices}
           onClose={() => setTopupOpen(false)}
         />
       ) : null}

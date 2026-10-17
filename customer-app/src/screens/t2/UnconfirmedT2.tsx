@@ -38,7 +38,7 @@ import {
   type PaymentChannel,
 } from "@/lib/payment";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatMoney, newIdempotencyKey } from "@/lib/utils";
+import { currencyLabel, formatAmount, formatMoney, newIdempotencyKey } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import { BannerT2, BusyLabel, HeadT2, SheetModalT2, WaitT2 } from "./MoneyT2";
@@ -232,7 +232,7 @@ function ItemCard({
       {/* **المبلغُ كبيراً** (§٦) — كما أرسلته الخلفية، والعملةُ من رمزها */}
       <div className="t2-m-amount">
         <span dir="ltr" className="t2-m-num lg">
-          {formatMoney(item.amount)}
+          {formatAmount(item.amount, item.currency)}
         </span>
         <span className="t2-m-cur">{currencyLabel(item.currency)}</span>
         <span className="t2-uc-method">· {PAYMENT_METHOD_LABEL[item.method]}</span>

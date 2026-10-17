@@ -13,8 +13,16 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { cancelPaymentRequest, createPaymentRequest, listPaymentMethods, openPaymentCheckout, paymentMethodQr } from "@/api/endpoints";
-import type { PayMethod, PaymentCheckout } from "@/api/types";
+import {
+  cancelPaymentRequest,
+  createPaymentRequest,
+  listMyPaymentRequests,
+  listPaymentMethods,
+  openPaymentCheckout,
+  paymentMethodQr,
+  resumePaymentCheckout,
+} from "@/api/endpoints";
+import type { MyPaymentRequest, PayMethod, PaymentCheckout } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
@@ -54,6 +62,9 @@ export function PayRequestT2Screen() {
   const [done, setDone] = useState(false);
   // **الرسمُ قبل الدفع** (SPEC §٧٤-ك/١): حين يحمله الدافع تُفتح الصفحةُ عند الوسيط ثمّ تُعرض الأرقامُ الثلاثة هنا قبل الانتقال إليها
   const [quote, setQuote] = useState<PaymentCheckout | null>(null);
+  // **دفعةُ بطاقةٍ لم تكتمل** (§٧٦-ع/٢، المشكلة ١٣): الرجوعُ من صفحة Chargily كان يمسح المبلغ ويترك طلباً معلَّقاً لا يُرى هنا،
+  // والضغطُ ثانيةً يفتح طلباً ثانياً — فتُعرض هنا لتُكمَل أو تُلغى
+  const [open, setOpen] = useState<MyPaymentRequest | null>(null);
 
   const currency = country?.currency;
   const unit = roundingUnit(country);
@@ -71,7 +82,31 @@ export function PayRequestT2Screen() {
         setMethods([]);
         setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة طرق الدفع"));
       });
+    listMyPaymentRequests(10)
+      .then((mine) =>
+        setOpen(mine.find((row) => row.status === "pending" && row.gateway === true && row.purpose === "wallet_topup") ?? null),
+      )
+      .catch(() => undefined);
   }, []);
+
+  async function continueOpen() {
+    if (!open) return;
+    setBusy(true);
+    setError(null);
+    try {
+      window.location.assign((await resumePaymentCheckout(open.id)).checkout_url);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+      setOpen(null);
+      setBusy(false);
+    }
+  }
+
+  async function cancelOpen() {
+    if (!open) return;
+    await cancelPaymentRequest(open.id).catch(() => undefined);
+    setOpen(null);
+  }
 
   const method = methods?.find((row) => row.id === methodId) ?? null;
   // **الشحنُ عند الوسيط خياراتٌ ثابتةٌ إن ضبطها السوق** (SPEC §٧٤-ط/٥) — فلا يُكتب مبلغ، ويُختار واحدٌ منها؛ والخادمُ يردّ غيرَها
@@ -186,6 +221,24 @@ export function PayRequestT2Screen() {
         <BannerT2 tone="danger" message={error ?? tr("لا طريقةَ دفعٍ متاحةٌ في بلدك الآن.")} />
       ) : (
         <>
+          {open ? (
+            <section className="t2-m-card t2-pr-dest" aria-label={tr("دفعةٌ لم تكتمل")}>
+              <div className="t2-pr-line">
+                <span className="t2-m-label">{tr("دفعةٌ لم تكتمل")}</span>
+                <span className="t2-pr-text">{formatMoney(open.amount, open.currency)}</span>
+              </div>
+              <p className="t2-pr-instructions">{tr("بدأتَها ولم تُكملها — أكملها في الصفحة نفسِها أو ألغِها.")}</p>
+              <div className="t2-m-actions">
+                <button type="button" className="t2-button primary t2-m-cta" disabled={busy} onClick={() => void continueOpen()}>
+                  <BusyLabel busy={busy}>{tr("أكمل الدفع")}</BusyLabel>
+                </button>
+                <button type="button" className="t2-button t2-m-cta" disabled={busy} onClick={() => void cancelOpen()}>
+                  {tr("ألغِها")}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
           <h2 className="t2-section">{tr("طريقة الدفع")}</h2>
           <div className="t2-m-chans" role="radiogroup" aria-label={tr("طريقة الدفع")}>
             {methods.map((row) => (
@@ -208,7 +261,7 @@ export function PayRequestT2Screen() {
                   <span className="t2-m-chan-title">{row.name}</span>
                   <span className="t2-m-chan-hint">
                     {row.gateway
-                      ? tr("ادفع بالبطاقة في صفحة الوسيط — يُضاف فورَ تأكيده")
+                      ? tr("ادفع بالبطاقة عبر {0} — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
                       : row.requires_receipt
                         ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
                         : tr("ادفع ثمّ يُضاف بعد المراجعة")}
@@ -335,7 +388,7 @@ export function PayRequestT2Screen() {
             {quote ? (
               <>
                 <button type="button" className="t2-button primary t2-m-cta" onClick={() => window.location.assign(quote.checkout_url)}>
-                  {tr("ادفع {0} في صفحة الوسيط", { 0: formatMoney(quote.total_amount ?? quote.request.amount, currency) })}
+                  {tr("ادفع {0} عبر {1}", { 0: formatMoney(quote.total_amount ?? quote.request.amount, currency), 1: method?.gateway_name ?? "Chargily" })}
                 </button>
                 <button
                   type="button"
@@ -356,7 +409,9 @@ export function PayRequestT2Screen() {
                 aria-busy={busy}
                 onClick={submit}
               >
-                <BusyLabel busy={busy}>{method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}</BusyLabel>
+                <BusyLabel busy={busy}>
+                  {method?.gateway ? tr("ادفع عبر {0}", { 0: method.gateway_name ?? "Chargily" }) : tr("أرسل للمراجعة")}
+                </BusyLabel>
               </button>
             )}
           </div>

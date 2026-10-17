@@ -15,18 +15,20 @@ import { ApiError } from "@/api/client";
 import {
   cancelPaymentRequest,
   createPaymentRequest,
+  listMyPaymentRequests,
   listPaymentMethods,
   openPaymentCheckout,
   paymentMethodQr,
+  resumePaymentCheckout,
 } from "@/api/endpoints";
-import type { PayMethod, PaymentCheckout, PaymentRequestPurpose } from "@/api/types";
+import type { MyPaymentRequest, PayMethod, PaymentCheckout, PaymentRequestPurpose } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
-import { currencyDecimals, digits } from "@/lib/utils";
+import { currencyDecimals, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./fields.css";
@@ -57,6 +59,8 @@ export function PayRequestT2Screen() {
     planId?: string;
     planName?: string;
     amount?: string;
+    /** **الطريقةُ مختارةً سلفاً** — «الدفع ببطاقة» في ورقة الاشتراك، و«حاول مرّةً أخرى» (§٧٦-ع/٢) */
+    methodId?: string;
   } | null;
   const purpose: PaymentRequestPurpose = handoff?.purpose === "subscription" && handoff.planId ? "subscription" : "wallet_topup";
   const goBack = useGoBack(purpose === "subscription" ? "/subscription" : "/wallet");
@@ -64,7 +68,7 @@ export function PayRequestT2Screen() {
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   const [cardMethod, setCardMethod] = useState(false);
-  const [methodId, setMethodId] = useState("");
+  const [methodId, setMethodId] = useState(handoff?.methodId ?? "");
   const [amount, setAmount] = useState(handoff?.amount ?? "");
   const [reference, setReference] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -76,6 +80,8 @@ export function PayRequestT2Screen() {
   const [done, setDone] = useState(false);
   // **الرسمُ قبل الدفع** (SPEC §٧٤-ك/١): حين يحمله الدافع تُعرض الأرقامُ الثلاثة هنا قبل الانتقال إلى صفحة الوسيط
   const [quote, setQuote] = useState<PaymentCheckout | null>(null);
+  // **دفعةُ بطاقةٍ لم تكتمل لهذا الغرض** (§٧٦-ع/٢، المشكلة ١٣) — تُكمل بالصفحة نفسِها أو تُلغى، لا صفحةٌ ثانيةٌ وطلبٌ ثانٍ
+  const [open, setOpen] = useState<MyPaymentRequest | null>(null);
 
   const currency = country?.currency;
   const label = currency ? CURRENCY_LABEL[currency] : "";
@@ -96,7 +102,39 @@ export function PayRequestT2Screen() {
         setMethods([]);
         setError(caught instanceof ApiError ? caught.message : tr("تعذّر قراءة طرق الدفع"));
       });
-  }, [purpose]);
+    listMyPaymentRequests(10)
+      .then((mine) =>
+        setOpen(
+          mine.find(
+            (row) =>
+              row.status === "pending" &&
+              row.gateway === true &&
+              row.purpose === purpose &&
+              (purpose !== "subscription" || row.plan_id === handoff?.planId),
+          ) ?? null,
+        ),
+      )
+      .catch(() => undefined);
+  }, [purpose, handoff?.planId]);
+
+  async function continueOpen() {
+    if (!open) return;
+    setBusy(true);
+    setError(null);
+    try {
+      window.location.assign((await resumePaymentCheckout(open.id)).checkout_url);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+      setOpen(null);
+      setBusy(false);
+    }
+  }
+
+  async function cancelOpen() {
+    if (!open) return;
+    await cancelPaymentRequest(open.id).catch(() => undefined);
+    setOpen(null);
+  }
 
   const method = methods?.find((row) => row.id === methodId) ?? null;
   // **الشحنُ عند الوسيط خياراتٌ ثابتةٌ إن ضبطها السوق** (SPEC §٧٤-ط/٥) — والاشتراكُ ثمنُه من الخادم أصلاً
@@ -189,6 +227,7 @@ export function PayRequestT2Screen() {
   }
 
   const title = purpose === "subscription" ? tr("دفع الاشتراك") : tr("شحن الرصيد");
+  const gatewayName = method?.gateway_name ?? "Chargily";
 
   return (
     <div className="t2 t2-clq-page scr">
@@ -206,7 +245,7 @@ export function PayRequestT2Screen() {
           <p className="t2-pr-done-text">
             {purpose === "subscription"
               ? tr("يراجعه فريقُ المالية، وعند اعتماده تُشحن محفظتُك ويُفعَّل {0} منها.", { 0: handoff?.planName ?? tr("اشتراكك") })
-              : tr("يراجعه فريقُ المالية ويُضاف {0} {1} إلى رصيدك بعد اعتماده.", { 0: digits(amount), 1: label })}
+              : tr("يراجعه فريقُ المالية ويُضاف {0} {1} إلى رصيدك بعد اعتماده.", { 0: formatAmount(amount, currency), 1: label })}
           </p>
           <button type="button" className="t2-clq-cta t2-pr-gap" onClick={() => navigate("/wallet")}>
             {tr("إلى المحفظة")}
@@ -223,16 +262,38 @@ export function PayRequestT2Screen() {
         </p>
       ) : (
         <>
+          {open ? (
+            <div className="t2-wdl-card t2-pr-dest" role="group" aria-label={tr("دفعةٌ لم تكتمل")}>
+              <div className="t2-pr-line">
+                <span className="t2-pr-k">{tr("دفعةٌ لم تكتمل")}</span>
+                <span className="t2-pr-text" dir="ltr">
+                  {formatAmount(open.amount, open.currency)} {CURRENCY_LABEL[open.currency]}
+                </span>
+              </div>
+              <p className="t2-fld-hint">{tr("بدأتَها ولم تُكملها — أكملها في الصفحة نفسِها أو ألغِها.")}</p>
+              <button type="button" className="t2-clq-cta t2-pr-gap" disabled={busy} onClick={() => void continueOpen()}>
+                {busy ? tr("يُفتح…") : tr("أكمل الدفع")}
+              </button>
+              <button type="button" className="t2-row t2-pr-opt" disabled={busy} onClick={() => void cancelOpen()}>
+                {tr("ألغِها")}
+              </button>
+            </div>
+          ) : null}
+
           {purpose === "subscription" ? (
             <div className="t2-wdl-card">
               <span className="t2-pr-k">{handoff?.planName ?? tr("الاشتراك")}</span>
               <div className="t2-pr-amount">
                 <span className="t2-pr-amount-num" dir="ltr">
-                  {digits(amount)}
+                  {formatAmount(amount, currency)}
                 </span>
                 <span className="t2-pr-amount-cur">{label}</span>
               </div>
-              <p className="t2-fld-hint">{tr("تُشحن محفظتُك بالمبلغ عند الاعتماد ثمّ يُشترى الاشتراكُ منها.")}</p>
+              <p className="t2-fld-hint">
+                {method?.gateway
+                  ? tr("يُفعَّل اشتراكُك فورَ أن يؤكّد {0} الدفع.", { 0: gatewayName })
+                  : tr("تُشحن محفظتُك بالمبلغ عند الاعتماد ثمّ يُشترى الاشتراكُ منها.")}
+              </p>
             </div>
           ) : null}
 
@@ -269,7 +330,9 @@ export function PayRequestT2Screen() {
                   <span className="t2-row-title">{row.name}</span>
                   <span className="t2-row-body">
                     {row.gateway
-                      ? tr("ادفع بالبطاقة في صفحة الوسيط — يُضاف فورَ تأكيده")
+                      ? purpose === "subscription"
+                        ? tr("ادفع بالبطاقة عبر {0} — يُفعَّل فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
+                        : tr("ادفع بالبطاقة عبر {0} — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
                       : row.requires_receipt
                         ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
                         : tr("ادفع ثمّ يُضاف بعد المراجعة")}
@@ -328,7 +391,7 @@ export function PayRequestT2Screen() {
                   >
                     <span className="t2-wds-tile-v">
                       <span className="t2-wds-tile-num" dir="ltr">
-                        {digits(choice)}
+                        {formatAmount(choice, currency)}
                       </span>{" "}
                       <span className="t2-wds-tile-cur">{label}</span>
                     </span>
@@ -414,18 +477,18 @@ export function PayRequestT2Screen() {
             <div className="t2-pr-gap-lg" role="group" aria-label={tr("رسوم الدفع")}>
               <div className="t2-wal-line">
                 <span>{tr("يُضاف إلى محفظتك")}</span>
-                <span dir="ltr">{digits(quote.request.amount)} {label}</span>
+                <span dir="ltr">{formatAmount(quote.request.amount, currency)} {label}</span>
               </div>
               <div className="t2-wal-line">
                 <span>{tr("رسوم الدفع بالبطاقة")}</span>
-                <span dir="ltr">{digits(quote.fee_amount ?? "0")} {label}</span>
+                <span dir="ltr">{formatAmount(quote.fee_amount ?? "0", currency)} {label}</span>
               </div>
               <div className="t2-wal-line">
                 <span>{tr("تدفع")}</span>
-                <span dir="ltr">{digits(quote.total_amount ?? quote.request.amount)} {label}</span>
+                <span dir="ltr">{formatAmount(quote.total_amount ?? quote.request.amount, currency)} {label}</span>
               </div>
               <button type="button" className="t2-clq-cta t2-pr-gap-lg" onClick={() => window.location.assign(quote.checkout_url)}>
-                {tr("ادفع {0} في صفحة الوسيط", { 0: `${digits(quote.total_amount ?? quote.request.amount)} ${label}` })}
+                {tr("ادفع {0} عبر {1}", { 0: `${formatAmount(quote.total_amount ?? quote.request.amount, currency)} ${label}`, 1: gatewayName })}
               </button>
               <button
                 type="button"
@@ -446,7 +509,7 @@ export function PayRequestT2Screen() {
               aria-busy={busy}
               onClick={submit}
             >
-              {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع في صفحة الوسيط") : tr("أرسل للمراجعة")}
+              {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع عبر {0}", { 0: gatewayName }) : tr("أرسل للمراجعة")}
             </button>
           )}
         </>

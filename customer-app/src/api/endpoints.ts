@@ -873,5 +873,9 @@ export const openPaymentCheckout = (body: {
 export const refreshPaymentRequest = (requestId: string) =>
   api.post<MyPaymentRequest>(`/payment-requests/${requestId}/refresh`, {});
 
+/** **«أكمل الدفع»** (SPEC §٧٦-ع/٢) — صفحةُ الوسيط نفسُها لطلبٍ معلَّق؛ و٤٠٩ لما لم تعد تنتظر. **لا يكتب شيئاً.** */
+export const resumePaymentCheckout = (requestId: string) =>
+  api.post<PaymentCheckout>(`/payment-requests/${requestId}/resume`, {});
+
 /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
 export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });

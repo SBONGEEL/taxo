@@ -25,6 +25,7 @@ export function TopupSheet({
   cardEnabled,
   cliqEnabled,
   methods,
+  choices = [],
   onClose,
 }: {
   currency: string | undefined;
@@ -35,12 +36,17 @@ export function TopupSheet({
   /** **طرقُ نظام الدفع الجديد** (SPEC §٧٣-هـ) — تُمرَّر حيث `payment_requests_enabled` مشتعلٌ وحدَه، و`undefined` في غيره:
    *  فورقةُ الأردن وليبيا هي هي حرفاً. **ومعها لا مبالغَ مقترحة** — اقتراحُها لسوقٍ جديدٍ أرقامٌ لم يضعها المالك */
   methods?: PayMethod[];
+  /** **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — تُعرض هنا في الورقة نفسِها (§٧٦-ع/٢، المشكلة ١٦): كانت الورقةُ تقبل
+   *  مبلغاً حرّاً ثمّ تفرض الصفحةُ التاليةُ خياراتِها وتمسح ما كُتب بصمت */
+  choices?: string[];
   onClose: () => void;
 }) {
   const navigate = useNavigate();
   const [amount, setAmount] = useState(methods ? "" : "10");
   const unitError = notMultipleMessage(amount, unit, currency);
   const valid = Number(amount) > 0 && unitError === null;
+  const gatewayChoices = methods?.some((method) => method.gateway) && choices.length > 0 ? choices : null;
+  const chosenAllowed = gatewayChoices === null || gatewayChoices.includes(amount);
 
   return (
     <SheetModalT2 onClose={onClose}>
@@ -48,7 +54,16 @@ export function TopupSheet({
       <p className="t2-m-sheet-sub">{tr("اختر المبلغ ثم طريقة الشحن.")}</p>
 
       <AmountCardT2 id="topup-sheet-amount" label={tr("المبلغ")} value={amount} onChange={setAmount} currency={currency}>
-        {methods ? null : (
+        {methods ? (
+          gatewayChoices ? (
+            <QuickAmountsT2
+              amounts={gatewayChoices}
+              value={amount}
+              onPick={setAmount}
+              label={(value) => formatMoney(value, currency)}
+            />
+          ) : null
+        ) : (
           <QuickAmountsT2
             amounts={QUICK_TOPUP_AMOUNTS}
             value={amount}
@@ -69,7 +84,7 @@ export function TopupSheet({
               type="button"
               className="t2-row t2-m-opt"
               // **بطاقةُ TAXO لا تحتاج مبلغاً** — قيمتُها مطبوعةٌ عليها؛ وتُدخل برمزها في صفحتها
-              disabled={method.kind === "purchase_code" ? false : !valid}
+              disabled={method.kind === "purchase_code" ? false : !valid || (method.gateway && !chosenAllowed)}
               onClick={() =>
                 method.kind === "purchase_code"
                   ? navigate("/wallet/card")
@@ -82,7 +97,11 @@ export function TopupSheet({
                 <span className="t2-row-body">
                   {method.kind === "purchase_code"
                     ? tr("أدخل رمز البطاقة — يُضاف فوراً")
-                    : method.requires_receipt
+                    : method.gateway
+                      ? chosenAllowed
+                        ? tr("ادفع بالبطاقة عبر {0} — يُضاف فورَ تأكيده", { 0: method.gateway_name ?? "Chargily" })
+                        : tr("اختر أحد المبالغ أعلاه للدفع عبر {0}", { 0: method.gateway_name ?? "Chargily" })
+                      : method.requires_receipt
                       ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
                       : tr("ادفع ثمّ يُضاف بعد المراجعة")}
                 </span>

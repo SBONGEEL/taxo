@@ -20,6 +20,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getMySubscription } from "@/api/endpoints";
+import { useCountryConfig } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
@@ -27,7 +29,7 @@ import {
   pickWelcomeOffer,
   WELCOME_CTA,
   WELCOME_LEAD,
-  WELCOME_POINTS,
+  welcomePoints,
   WELCOME_SEEN_KEY,
   WELCOME_TITLE,
   type WelcomeOffer,
@@ -39,6 +41,8 @@ export function WelcomeSheet() {
   const [open, setOpen] = useState(false);
   const [offer, setOffer] = useState<WelcomeOffer | null>(null);
   const navigate = useNavigate();
+  const { profile } = useDriver();
+  const cliqEnabled = useCountryConfig(profile?.user?.country_code)?.features.cliq_enabled === true;
 
   useEffect(() => {
     // **القراءةُ في تأثيرٍ لا في التهيئة**: `localStorage` قد يكون ممنوعاً
@@ -115,7 +119,7 @@ export function WelcomeSheet() {
         ) : null}
 
         <ul className="t2-wsheet-points">
-          {WELCOME_POINTS.map((point) => (
+          {welcomePoints(cliqEnabled).map((point) => (
             <li key={point.title}>
               <Icon name="check_circle" fill />
               <span>

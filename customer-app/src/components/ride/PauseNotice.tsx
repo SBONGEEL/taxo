@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount } from "@/lib/utils";
 
 import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
@@ -61,7 +61,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
           <p className="t2-meter-label">{billing ? tr("رسم الانتظار حتى الآن") : tr("أول {0} دقائق مجاناً", { 0: free })}</p>
           <p className="t2-meter-amount">
             <span dir="ltr" className="t2-num">
-              {formatMoney(ride.pause_charge)}
+              {formatAmount(ride.pause_charge, ride.currency)}
             </span>
             <span className="t2-meter-cur">{currencyLabel(ride.currency)}</span>
           </p>

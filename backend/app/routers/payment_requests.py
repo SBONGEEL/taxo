@@ -71,6 +71,7 @@ def mine_out(request: PaymentRequest) -> MyPaymentRequestOut:
         id=request.id,
         gateway=integration is not None,
         gateway_name=payment_gateways.DISPLAY_NAMES.get(integration) if integration else None,
+        provider_id=request.provider_id,
         plan_id=request.plan_id,
         provider_name=translate(request.provider.name),
         kind=request.kind,

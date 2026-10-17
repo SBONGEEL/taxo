@@ -145,6 +145,7 @@ async def test_reasons_and_names_are_french_for_a_french_app_and_arabic_unchange
     assert french["rejection_reason"] == "Le paiement a été refusé"
     assert (arabic["provider_name"], french["provider_name"]) == ("البطاقة الذهبية وCIB", "Edahabia et CIB")
     assert french["gateway"] is True and french["gateway_name"] == "Chargily"
+    assert french["provider_id"] == str(method_id)
     listed = (await client.get("/payment-requests/methods", headers=rider["headers"] | FRENCH)).json()
     shown = next(row for row in listed["methods"] if row["id"] == str(method_id))
     assert shown["name"] == "Edahabia et CIB" and shown["gateway_name"] == "Chargily"

@@ -18,7 +18,7 @@ import { ApiError } from "@/api/client";
 import { getCardOrder } from "@/api/endpoints";
 import type { CardOrder } from "@/api/types";
 import { isUnlocked, play } from "@/lib/sound";
-import { currencyLabel, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 import { BannerT2, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
@@ -87,7 +87,7 @@ export function CardReturnScreen() {
               <p className="t2-m-result-title">{tr("تم الدفع")}</p>
               <div className="t2-m-result-amount">
                 <span dir="ltr" className="t2-m-num md">
-                  {formatMoney(order.amount)}
+                  {formatAmount(order.amount, order.currency)}
                 </span>
                 <span className="t2-m-cur">{currencyLabel(order.currency)}</span>
               </div>

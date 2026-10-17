@@ -55,7 +55,7 @@ import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits, cn,
+import { digits, cn, formatAmount,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
 import { useGoBack } from "@/lib/back"; import { tr } from "@/lib/i18n";
@@ -558,6 +558,8 @@ export function ConfirmSubscriptionSheet({
   onCard,
   onCliq,
   onPayRequest,
+  gateway = null,
+  manual = true,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -568,8 +570,14 @@ export function ConfirmSubscriptionSheet({
   onCard: (plan: SubscriptionPlan) => void;
   onCliq: (plan: SubscriptionPlan) => void;
   /** **الدفعُ بطرق السوق** (SPEC §٧٣-هـ) — يُمرَّر حيث `payment_requests_enabled` مشتعلٌ وحدَه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
-  onPayRequest?: (plan: SubscriptionPlan) => void;
+  onPayRequest?: (plan: SubscriptionPlan, methodId?: string) => void;
+  /** **وسيطُ البطاقة في السوق** (§٧٦-ع/٢، المشكلة ٦) — «الدفع ببطاقة» يفتحه حيث لا بطاقةَ رحلة (`card_enabled`)؛ كان معطَّلاً
+   *  «لم يُفعَّل عقد المزوّد» وChargily تحت «بتحويلٍ أو نقداً» */
+  gateway?: { id: string; name: string } | null;
+  /** **طريقةٌ يدويّةٌ قائمة** — وإلا لا يُعرض «بتحويلٍ أو نقداً» */
+  manual?: boolean;
 }) {
+  const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
   return (
     <div
       className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
@@ -596,9 +604,7 @@ export function ConfirmSubscriptionSheet({
           <div className="flex items-baseline justify-between">
             <span className="text-12.5 text-muted">{tr("المبلغ")}</span>
             <span className="text-17 font-bold text-ink">
-              {digits(
-                plan.price_to_pay ?? plan.price,
-              )}{" "}
+              {formatAmount(plan.price_to_pay ?? plan.price, plan.currency)}{" "}
               <span className="text-11 font-medium text-muted">
                 {CURRENCY_LABEL[plan.currency]}
               </span>
@@ -610,7 +616,7 @@ export function ConfirmSubscriptionSheet({
             <div className="mt-8 flex items-baseline justify-between">
               <span className="text-11 text-ok">{plan.offer_name}</span>
               <span className="text-11.5 text-muted line-through">
-                {digits(plan.price)}{" "}
+                {formatAmount(plan.price, plan.currency)}{" "}
                 {CURRENCY_LABEL[plan.currency]}
               </span>
             </div>
@@ -628,18 +634,22 @@ export function ConfirmSubscriptionSheet({
           <Button
             size="md"
             variant="secondary"
-            disabled={!cardEnabled || buying !== null}
-            onClick={() => onCard(plan)}
+            disabled={(!cardEnabled && !cardViaGateway) || buying !== null}
+            onClick={() => (cardViaGateway && gateway ? onPayRequest?.(plan, gateway.id) : onCard(plan))}
           >
             {tr("الدفع ببطاقة")}
           </Button>
-          {!cardEnabled ? (
+          {cardViaGateway && gateway ? (
+            <p className="-mt-4 text-11 leading-note text-muted">
+              {tr("الذهبية أو CIB عبر {0} — يُفعَّل اشتراكُك فورَ تأكيده.", { 0: gateway.name })}
+            </p>
+          ) : !cardEnabled ? (
             <p className="-mt-4 text-11 leading-note text-muted">
               {tr("الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.")}
             </p>
           ) : null}
 
-          {onPayRequest ? (
+          {onPayRequest && manual ? (
             <Button
               size="md"
               variant="secondary"

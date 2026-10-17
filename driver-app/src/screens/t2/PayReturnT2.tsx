@@ -13,7 +13,7 @@ import { refreshPaymentRequest } from "@/api/endpoints";
 import type { MyPaymentRequest } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./money.css";
@@ -83,8 +83,18 @@ export function PayReturnT2Screen() {
           <h2 className="t2-pr-done-title">{subscription ? tr("فُعّل اشتراكك") : tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">
             {subscription
-              ? tr("دُفع {0} {1} وبدأ اشتراكك.", { 0: digits(credited), 1: CURRENCY_LABEL[request.currency] })
-              : tr("أُضيف {0} {1} إلى محفظتك.", { 0: digits(credited), 1: CURRENCY_LABEL[request.currency] })}
+              ? tr("دُفع {0} {1} وبدأ اشتراكك.", { 0: formatAmount(credited, request.currency), 1: CURRENCY_LABEL[request.currency] })
+              : tr("أُضيف {0} {1} إلى محفظتك.", { 0: formatAmount(credited, request.currency), 1: CURRENCY_LABEL[request.currency] })}
+          </p>
+        </div>
+      ) : request && request.status === "cancelled" ? (
+        // **الإلغاءُ ليس فشلاً** (§٧٦-ع/٢، المشكلة ٩) — كان بأيقونة خطأٍ لإلغاءٍ اختاره صاحبُه
+        <div className="t2-wdl-card t2-pr-done neutral">
+          <Icon name="block" />
+          <h2 className="t2-pr-done-title">{tr("أُلغيت الدفعة")}</h2>
+          <p className="t2-pr-done-text">
+            {request.cancel_reason ? `${request.cancel_reason}. ` : ""}
+            {subscription ? tr("لم يُخصم منك شيء ولم يتغيّر اشتراكك.") : tr("لم يُخصم منك شيء.")}
           </p>
         </div>
       ) : request && request.status !== "pending" ? (
@@ -92,7 +102,8 @@ export function PayReturnT2Screen() {
           <Icon name="error" />
           <h2 className="t2-pr-done-title">{tr("لم تتمّ الدفعة")}</h2>
           <p className="t2-pr-done-text">
-            {request.rejection_reason ?? request.cancel_reason ?? tr("لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى.")}
+            {request.rejection_reason ? `${request.rejection_reason}. ` : ""}
+            {tr("لم يُخصم منك شيء — حاول مرّةً أخرى أو اختر طريقةً أخرى.")}
           </p>
         </div>
       ) : (
@@ -124,12 +135,27 @@ export function PayReturnT2Screen() {
           {busy ? tr("يُسأل…") : tr("تحقّق الآن")}
         </button>
       ) : null}
+      {/* **«حاول مرّةً أخرى» بالخطّة أو المبلغ والطريقةِ نفسِها** (§٧٦-ع/٢، المشكلة ٩) */}
+      {request && (request.status === "cancelled" || request.status === "rejected") ? (
+        <button
+          type="button"
+          className="t2-clq-cta t2-pr-gap"
+          onClick={() =>
+            subscription
+              ? navigate("/subscription", { replace: true })
+              : navigate("/wallet/pay", { replace: true, state: { amount: request.amount, methodId: request.provider_id ?? undefined } })
+          }
+        >
+          {tr("حاول مرّةً أخرى")}
+        </button>
+      ) : null}
+      {/* **والاشتراكُ يعود إلى الاشتراك في كلِّ حال** — كانت النتيجةُ تعيد إلى المحفظة وهو جاء من الاشتراك */}
       <button
         type="button"
-        className="t2-clq-cta t2-pr-gap"
-        onClick={() => navigate(subscription && request?.status === "approved" ? "/subscription" : "/wallet", { replace: true })}
+        className={request && (request.status === "cancelled" || request.status === "rejected") ? "t2-button secondary t2-pr-gap" : "t2-clq-cta t2-pr-gap"}
+        onClick={() => navigate(subscription ? "/subscription" : "/wallet", { replace: true })}
       >
-        {subscription && request?.status === "approved" ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
+        {subscription ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
       </button>
     </div>
   );

@@ -78,12 +78,23 @@ export function PayReturnT2Screen() {
           <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">{tr("أُضيف")}{" "}{formatMoney(credited ?? "0", request.currency)}{" "}{tr("إلى محفظتك.")}</p>
         </section>
+      ) : request && request.status === "cancelled" ? (
+        // **الإلغاءُ ليس فشلاً** (§٧٦-ع/٢، المشكلة ٩) — كان بأيقونة خطأٍ حمراءَ لإلغاءٍ اختاره صاحبُه
+        <section className="t2-m-card t2-pr-done neutral">
+          <Icon name="block" />
+          <h2 className="t2-pr-done-title">{tr("أُلغيت الدفعة")}</h2>
+          <p className="t2-pr-done-text">
+            {request.cancel_reason ? `${request.cancel_reason}. ` : ""}
+            {tr("لم يُخصم منك شيء.")}
+          </p>
+        </section>
       ) : request && request.status !== "pending" ? (
         <section className="t2-m-card t2-pr-done">
           <Icon name="error" />
           <h2 className="t2-pr-done-title">{tr("لم تتمّ الدفعة")}</h2>
           <p className="t2-pr-done-text">
-            {request.rejection_reason ?? request.cancel_reason ?? tr("لم يُؤخذ منك شيء — أعد المحاولة أو اختر طريقةً أخرى.")}
+            {request.rejection_reason ? `${request.rejection_reason}. ` : ""}
+            {tr("لم يُخصم منك شيء — حاول مرّةً أخرى أو اختر طريقةً أخرى.")}
           </p>
         </section>
       ) : (
@@ -99,12 +110,28 @@ export function PayReturnT2Screen() {
       )}
       <BannerT2 tone="danger" message={error} />
       <div className="t2-m-actions">
+        {/* **«حاول مرّةً أخرى» بالمبلغ والطريقة نفسَيهما** (§٧٦-ع/٢، المشكلة ٩) */}
+        {request && (request.status === "cancelled" || request.status === "rejected") ? (
+          <button
+            type="button"
+            className="t2-button primary t2-m-cta"
+            onClick={() =>
+              navigate("/wallet/pay", { replace: true, state: { amount: request.amount, methodId: request.provider_id ?? undefined } })
+            }
+          >
+            {tr("حاول مرّةً أخرى")}
+          </button>
+        ) : null}
         {pending && requestId ? (
           <button type="button" className="t2-button t2-m-cta" disabled={busy} aria-busy={busy} onClick={() => void ask()}>
             <BusyLabel busy={busy}>{tr("تحقّق الآن")}</BusyLabel>
           </button>
         ) : null}
-        <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate("/wallet", { replace: true })}>
+        <button
+          type="button"
+          className={request && (request.status === "cancelled" || request.status === "rejected") ? "t2-button t2-m-cta" : "t2-button primary t2-m-cta"}
+          onClick={() => navigate("/wallet", { replace: true })}
+        >
           {tr("إلى المحفظة")}
         </button>
       </div>

@@ -100,6 +100,21 @@ export function currencyDecimals(currency: string | null | undefined): number {
   return (currency ? CURRENCY_FACES.get(currency)?.decimals : undefined) ?? 3;
 }
 
+/** **المبلغُ للعرض بخانات عملته وفاصلِ الآلاف** (SPEC §٧٦-ع/٢) — الرقمُ وحدَه، والعلامةُ بجانبه (`CURRENCY_LABEL`). **كانت شاشاتُ
+ *  الدفع والاشتراك ترسم `digits(…)` كما وصل** — «200.000» و«6000.000 د.ج» بلا فاصل. **نصّيٌّ لا يمرّ بـ`Number`** (SPEC §14)، وبقواعد
+ *  `formatMoney` في تطبيق الراكب حرفاً: لا يُخفى كسرٌ في عملةٍ بلا كسور — يُعرض كما وصل. */
+export function formatAmount(amount: string | null | undefined, currency: string | null | undefined): string {
+  if (amount === null || amount === undefined || amount === "") return "—";
+
+  const negative = amount.trimStart().startsWith("-");
+  const [whole = "0", fraction = ""] = digits(amount).replace("-", "").split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const places = currencyDecimals(currency);
+  const padded = (fraction + "000").slice(0, places);
+  const shown = places < 3 && /[1-9]/.test(fraction.slice(places)) ? fraction : padded;
+  return `${negative ? "−" : ""}${grouped}${shown ? `.${shown}` : ""}`;
+}
+
 /** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
 export function zeroAmount(currency: string | null | undefined): string {
   const places = currencyDecimals(currency);
