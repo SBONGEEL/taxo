@@ -36,7 +36,8 @@ MARK="backend/.suite.container"
 # **كلمةُ Redis تُقرأ من ملفِّ البيئة**: المجموعةُ تتكلّم
 # مع redis نفسِه الذي يشترط المصادقة، **فعنوانٌ بلا كلمةٍ يردّ `NOAUTH`**
 # ويُقرأ عطباً في الكود.
-REDIS_PW="$(grep -E '^REDIS_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '')"
+REDIS_PW="$(grep -E '^REDIS_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '
+')"
 [ -n "$REDIS_PW" ] || fail "لا `REDIS_PASSWORD` في $ENV_FILE — والمجموعةُ لا تصل Redis بدونها."
 REDIS_URL="redis://:${REDIS_PW}@redis:6379/0"
 
@@ -170,6 +171,9 @@ dc run --rm --no-deps --name "$NAME" \
   backend sh -c "echo \"SUITE_STAMP=\$SUITE_STAMP\" > /app/.suite.out; python -u -m pytest -q ${*:-} >> /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
 code=$?
 
+`# **كلُّ سطرِ «FAILED» لا آخرُه وحدَه** (٢٠٢٦-١٠-١٧): CI لا يحفظ \`.suite.out\`، و\`tail -n 3\` كان يُري **اسمَ اختبارٍ واحدٍ من ستّة** —
+# فيحتاج كلُّ اسمٍ تشغيلاً كاملاً (نصفَ ساعة). والسطورُ وحدَها لا تحمل سرّاً (أسماءُ اختباراتٍ وأوّلُ الرسالة)
+grep -E "^(FAILED|ERROR) " "$OUT" 2>/dev/null | cut -c1-400 | head -n 60
 tail -n 3 "$OUT" 2>/dev/null
 
 # **لا حكمَ من مخرَجٍ ليس لهذا التشغيل** (2026-08-24). وقع مقيساً: كُسر أمرُ

@@ -206,7 +206,8 @@ async def summary(
     )
     return ReferralSummaryOut(
         country_code=country_code,
-        total_rewarded=Decimal(total or 0),
+        # **ثلاثُ خاناتٍ كعمود MONEY** — المجموعُ الفارغُ كان «0» (الشكلُ السابع؛ أمسكه حارسُ الصيغة بعد §٧٦-ع/٢)
+        total_rewarded=Decimal(total or 0).quantize(Decimal("0.001")),
         rewarded_count=int(rewarded_count or 0),
         pending_count=int(pending_count or 0),
     )
