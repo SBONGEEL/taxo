@@ -217,6 +217,14 @@ CLASSIFIED: dict[str, str] = {
     ),
     "SubscriptionPlanOut": "بانٍ واحد: `subscriptions._plans_with_offers` يخدم /plans و/me",
     "WalletTransactionOut": "بانٍ واحد: `commission_view.rows_with_percent` يخدم بابَي الكشف",
+    # ✅ بانٍ واحد — مسارُ Chargily بعد مراجعة المالك (SPEC §٧٦-ع/٢، 2026-10-17)
+    "MyPaymentRequestOut": (
+        "بانٍ واحد: `routers/payment_requests.mine_out` في الأبواب كلِّها (قائمتي والإلغاءُ والسؤالُ وصفحةُ الوسيط). **وفراغُ "
+        "`gateway_name` و`plan_id` حال**: طريقةٌ يدويّة بلا وسيط، وشحنٌ بلا خطّة"
+    ),
+    "PaymentCheckoutOut": (
+        "بانٍ واحد: `routers/payment_requests.checkout_out` لفتح صفحة الوسيط واستئنافها. **وفراغُ الرسوم حال**: TAXO تحملها"
+    ),
     "NearbyDriverOut": (
         "بانٍ واحد: `NearbyDriverOut.of` يخدم بابَي REST ومقبسَ `nearby_drivers` — "
         "و`skin` هو الحقلُ الذي أوجب التصنيف، وغيابُه ليس نسياناً بل حالةٌ واحدةٌ "

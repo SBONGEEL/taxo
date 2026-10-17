@@ -89,6 +89,18 @@ def mine_out(request: PaymentRequest) -> MyPaymentRequestOut:
     )
 
 
+def checkout_out(request: PaymentRequest, url: str) -> PaymentCheckoutOut:
+    """**بانٍ واحدٌ لصفحة الوسيط** — فتحُها (`/checkout`) واستئنافُها (`/resume`) يعيدان الشكلَ نفسَه بحقوله كلِّها (الشكلُ الثامن)."""
+    fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
+    return PaymentCheckoutOut(
+        request=mine_out(request),
+        checkout_url=url,
+        currency=request.currency,
+        fee_amount=fee,
+        total_amount=(request.amount + fee) if fee is not None else None,
+    )
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -239,28 +251,14 @@ async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: 
     )
     await session.commit()
     await session.refresh(request, attribute_names=["provider"])
-    fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
-    return PaymentCheckoutOut(
-        request=mine_out(request),
-        checkout_url=url,
-        currency=request.currency,
-        fee_amount=fee,
-        total_amount=(request.amount + fee) if fee is not None else None,
-    )
+    return checkout_out(request, url)
 
 
 @router.post("/{request_id}/resume", response_model=PaymentCheckoutOut)
 async def resume_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSession) -> PaymentCheckoutOut:
     """**«أكمل الدفع»** (§٧٦-ع/٢) — صفحةُ الوسيط نفسُها لطلبي المعلَّق؛ وطلبُ غيري ٤٠٤. **لا يكتب شيئاً.**"""
     request, url = await payment_requests.resume_checkout(session, owner=user, request_id=request_id)
-    fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
-    return PaymentCheckoutOut(
-        request=mine_out(request),
-        checkout_url=url,
-        currency=request.currency,
-        fee_amount=fee,
-        total_amount=(request.amount + fee) if fee is not None else None,
-    )
+    return checkout_out(request, url)
 
 
 @router.post("/{request_id}/refresh", response_model=MyPaymentRequestOut)

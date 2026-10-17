@@ -357,7 +357,7 @@ async def eligibility(
 
     if not policy.enabled or base is None:
         return Eligibility(
-            offered=False, requirements=[], cap=Decimal("0"),
+            offered=False, requirements=[], cap=Decimal("0.000"),
             currency=currency, debt=debt,
             deduction_percent=policy.deduction_percent,
             min_kept_amount=policy.min_kept_amount,
