@@ -255,7 +255,7 @@ export function PayRequestT2Screen() {
                 className={row.id === methodId ? "t2-m-chan on" : "t2-m-chan"}
               >
                 <span className="t2-m-chan-icon">
-                  <Icon name={KIND_ICON[row.kind]} />
+                  <Icon name={row.gateway ? "credit_card" : KIND_ICON[row.kind]} />
                 </span>
                 <span className="t2-m-chan-main">
                   <span className="t2-m-chan-title">{row.name}</span>

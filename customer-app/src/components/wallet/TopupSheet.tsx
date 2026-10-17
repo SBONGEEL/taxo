@@ -91,7 +91,7 @@ export function TopupSheet({
                   : navigate("/wallet/pay", { state: { amount, methodId: method.id } })
               }
             >
-              <Icon name={method.kind === "cash" ? "payments" : method.kind === "phone_number" ? "smartphone" : "account_balance"} />
+              <Icon name={method.gateway ? "credit_card" : method.kind === "purchase_code" ? "confirmation_number" : method.kind === "cash" ? "payments" : method.kind === "phone_number" ? "smartphone" : "account_balance"} />
               <span className="t2-row-main">
                 <span className="t2-row-title">{method.name}</span>
                 <span className="t2-row-body">
