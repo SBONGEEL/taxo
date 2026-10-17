@@ -36,6 +36,14 @@ GLOBAL = {
     "security_settings": "إعدادُ الأمان لهذا الخادم",
     "site_settings": "إعدادُ الموقع العامّ",
     "vehicle_skins": "فهرسُ أشكال المركبات — لا يخصّ مستخدماً",
+    # **وضعُ الضيف** (SPEC §٧٦-ن/أ) — بُني على `master` بعد هذا الحارس فلم يُصنَّف (أمسكه CI حين دُمج الفرعان، ٢٠٢٦-١٠-١٧)
+    "guest_sessions": "جلسةُ عرضٍ لا حساب — بلا هويّةٍ ولا سوق (دولةُ الشبكة وحدَها)، وتُمحى بعد ٣٠ يوماً؛ لا تُنقل",
+    "guest_mode_settings": "مفتاحُ وضع الضيف لكلِّ تطبيق — صفٌّ عالميٌّ واحد",
+}
+
+#: **طريقٌ إلى السوق بمفتاحٍ قابلٍ للفراغ — بقصدٍ مكتوب**: الصفُّ ذو الحساب يصل سوقَه به، **والفارغُ صفٌّ بلا حسابٍ أصلاً**
+NULLABLE_PATH = {
+    "app_feedback": "`user_id` يصل `users` وسوقَه؛ **وملاحظةُ الضيف بلا حساب** (`guest_session_id`) فلا سوقَ لها — وتُمحى مع جلستها",
 }
 
 #: **`country_code` قابلٌ للفراغ بقصد** — الصفُّ بلا سوقٍ صفٌّ عامّ (لكلِّ الأسواق)، لا صفٌّ ضاع سوقُه
@@ -55,14 +63,16 @@ def _direct() -> set[str]:
 
 
 def _strict_path(table_name: str, direct: set[str]) -> list[str] | None:
-    """أقصرُ طريقٍ **بمفاتيحَ أجنبيّةٍ غيرِ قابلةٍ للفراغ** إلى جدولٍ يحمل `country_code`."""
+    """أقصرُ طريقٍ **بمفاتيحَ أجنبيّةٍ غيرِ قابلةٍ للفراغ** إلى جدولٍ يحمل `country_code` — **إلا ما صُرِّح به في `NULLABLE_PATH`
+    بعلّته** فيُقبل مفتاحُه القابلُ للفراغ في خطوته الأولى."""
+    allow_nullable_first = table_name in NULLABLE_PATH
     tables = Base.metadata.tables
     queue = deque([(table_name, [])])
     seen = {table_name}
     while queue:
         current, trail = queue.popleft()
         for fk in tables[current].foreign_keys:
-            if fk.parent.nullable:
+            if fk.parent.nullable and not (allow_nullable_first and current == table_name):
                 continue
             target = fk.column.table.name
             if target in seen:

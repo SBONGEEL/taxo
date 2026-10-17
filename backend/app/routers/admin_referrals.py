@@ -28,6 +28,7 @@ from app.schemas.referral import (
     ReferralSettingsOut,
 )
 from app.services import admin_search, audit, referrals as referrals_service, test_accounts
+from app.services.pricing import as_money
 
 router = APIRouter(prefix="/admin/referrals", tags=["admin"])
 
@@ -207,7 +208,7 @@ async def summary(
     return ReferralSummaryOut(
         country_code=country_code,
         # **ثلاثُ خاناتٍ كعمود MONEY** — المجموعُ الفارغُ كان «0» (الشكلُ السابع؛ أمسكه حارسُ الصيغة بعد §٧٦-ع/٢)
-        total_rewarded=Decimal(total or 0).quantize(Decimal("0.001")),
+        total_rewarded=as_money(Decimal(total or 0)),
         rewarded_count=int(rewarded_count or 0),
         pending_count=int(pending_count or 0),
     )
