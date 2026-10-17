@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+from app.core.currency import currency_for_country
 from app.core.deps import CurrentUser, DbSession
 from app.models.referral import REFERRAL_TYPE_DRIVER, REFERRAL_TYPE_RIDER
 from app.schemas.referral import (
@@ -97,6 +98,7 @@ async def my_referrals(user: CurrentUser, session: DbSession) -> MyReferralsOut:
         ],
         paid_this_month=paid_this_month,
         total_rewarded=await referrals_service.rewarded_total(session, user.id),
+        currency=currency_for_country(user.country_code),
         referrals=[
             _stage(item, over_cap=caps.get(item.referral_type, False))
             for item in progresses

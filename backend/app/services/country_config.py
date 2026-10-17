@@ -49,8 +49,9 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         signup=await markets.signup_state(session, country),
         area=_area(country),
         currency=currency,
-        currency_label=CURRENCY_LABEL[currency],
-        currency_name=CURRENCY_NAME[currency],
+        # **بلغة الطلب** (§٧٦-ع/٢) — «DA» في الواجهة الفرنسيّة لا «د.ج»
+        currency_label=translate(CURRENCY_LABEL[currency]),
+        currency_name=translate(CURRENCY_NAME[currency]),
         currency_decimals=decimals_of(currency),
         features=await settings_service.get_flags(session, country),
         vehicle_categories=keys,

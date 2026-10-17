@@ -45,10 +45,16 @@ class MockGateway:
         webhook_url: str,
         fee_bearer: str,
         customer: base.CheckoutCustomer,
+        locale: str = "ar",
     ) -> base.Checkout:
         external_id = f"mock_{self.name}_{secrets.token_hex(8)}"
         await get_redis_client().set(_KEY.format(external_id), f"pending|{amount}|{return_url}", ex=_TTL)
         return base.Checkout(external_id=external_id, checkout_url=page_url(external_id))
+
+    async def resume_url(self, external_id: str) -> str | None:
+        state = await get_redis_client().get(_KEY.format(external_id))
+        value = state.decode() if isinstance(state, bytes) else state
+        return page_url(external_id) if value and value.startswith("pending|") else None
 
     async def check(self, external_id: str) -> base.GatewayEvent | None:
         state = await get_redis_client().get(_KEY.format(external_id))

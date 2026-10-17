@@ -71,6 +71,9 @@ TEST_MONEY_MARK = "رصيد تجريبي"
 
 #: **سببُ إلغاء صفحةٍ لم تُدفع في مهلتها** (§٧٤-ي/٥) — وChargily لا حالَ «انتهى» عنده؛ فالمهلةُ مهلتُنا
 EXPIRED_REASON = "انتهت مهلةُ الدفع — لم يُدفع شيء"
+#: **صفحةٌ قال وسيطُها «قيد المعالجة» حين انتهت المهلة** (§٧٦-ع/٢، المشكلة ١٧) — «لم يُدفع شيء» كان يقول ما لا نعرفه؛ **ودفعٌ يكتمل
+#: بعدها يُقيَّد بإشعاره الموقَّع** (`settle_from_gateway`)
+EXPIRED_PROCESSING_REASON = "لم يكتمل الدفعُ عند {0} خلال المهلة — وإن اكتمل بعدها يُحتسب وحدَه"
 
 #: **مهلةُ صفحة الوسيط** — بعدها يُسأل الوسيط: لم يُدفع ⇒ تُلغى بسببها، ودفعٌ يصل بعدها يُقيَّد ولا يضيع
 CHECKOUT_TTL_HOURS = 24
@@ -635,6 +638,9 @@ async def start_checkout(
     chosen = await available_provider(session, provider_id, owner.country_code)
     if chosen.integration is None:
         raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")
+    from app.core.i18n import current_language
+    from app.services import gateway_customers
+
     gateway = await payment_gateways.gateway_for(session, chosen.integration, owner.country_code)
     prepared = await _prepare(
         session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
@@ -655,16 +661,25 @@ async def start_checkout(
     )
     session.add(request)
     await session.flush()
-    checkout = await gateway.checkout(
+    # **عميلُ الدافع عند الوسيط** (§٧٦-ع/٢) — فلا تسأله صفحتُه بياناتِه؛ **ولغةُ الصفحة لغةُ التطبيق** (كانت «ar» ثابتة)
+    customer = await gateway_customers.customer_for(session, gateway, owner)
+    opened = dict(
         amount=prepared.amount,
         description=f"TAXO {'اشتراك' if purpose is PaymentRequestPurpose.SUBSCRIPTION else 'شحن رصيد'}",
         return_url=payment_gateways.return_url(str(request.id), opened_from=opened_from),
         webhook_url=payment_gateways.webhook_url(provider.integration or ""),
         fee_bearer=provider.fee_bearer,
-        customer=payment_gateways.CheckoutCustomer(
-            full_name=owner.name or "", phone=owner.phone or "", email=getattr(owner, "email", None)
-        ),
+        locale=current_language(),
     )
+    try:
+        checkout = await gateway.checkout(customer=customer, **opened)
+    except payment_gateways.GatewayError:
+        if customer.gateway_id is None:
+            raise
+        # **عميلٌ محفوظٌ رفضه الوسيط** (حُذف عنده أو تبدّل المفتاح) — يُنسى، **وتُفتح الصفحةُ بلا عميل** فلا يقف الدفعُ عليه
+        await gateway_customers.forget(session, gateway, owner)
+        bare = payment_gateways.CheckoutCustomer(customer.full_name, customer.phone, customer.email)
+        checkout = await gateway.checkout(customer=bare, **opened)
     request.external_id = checkout.external_id
     request.reference = checkout.external_id[:120]
     # **الرسومُ كما قالها الوسيطُ عند الفتح** (§٧٤-ك/١) — ومن يحملها من إعداد الطريقة الآن؛ وتُصحَّح عند التأكيد
@@ -672,6 +687,30 @@ async def start_checkout(
     request.fee_amount = _fee_of(provider.fee_bearer, checkout.fee_on_customer, checkout.fee_on_merchant)
     await session.flush()
     return request, checkout.checkout_url
+
+
+async def resume_checkout(session: AsyncSession, *, owner: User, request_id: uuid.UUID) -> tuple[PaymentRequest, str]:
+    """**«أكمل الدفع»** (§٧٦-ع/٢، المشكلتان ٣ و١٣) — صفحةُ الوسيط نفسُها لطلبٍ معلَّقٍ لم يُدفع بعد، **لا صفحةٌ ثانيةٌ وطلبٌ ثانٍ**.
+
+    **والوسيطُ يُسأل بلا قفل** (لا صفَّ يُقفل هنا ولا يُكتب شيء)؛ وصفحةٌ لم تعد تنتظر — حُسمت أو بدأت معالجتُها — **لا تُفتح** ويُقال ذلك
+    لصاحبها، **والتطبيقُ يسأل عن حالها بـ`refresh`**.
+    """
+    from app.services import payment_gateways
+
+    row = await get_request(session, request_id)
+    if row.user_id != owner.id:
+        raise NotFound("طلبُ الدفع غيرُ موجود")
+    integration = row.provider.integration
+    if integration is None or row.external_id is None:
+        raise InvalidInput("هذه الدفعةُ لا تُدفع من صفحة وسيط", field="request_id")
+    if row.status is not PaymentRequestStatus.PENDING:
+        raise InvalidStatusTransition("حُسمت هذه الدفعة — لا صفحةَ تُستأنف")
+    gateway = await payment_gateways.gateway_for(session, integration, row.country_code)
+    resume = getattr(gateway, "resume_url", None)
+    url = await resume(row.external_id) if resume is not None else None
+    if url is None:
+        raise InvalidStatusTransition("صفحةُ هذه الدفعة لم تعد تنتظر — انظر حالَها في طلباتك")
+    return row, url
 
 
 def _fee_of(payer: str | None, on_customer: Decimal | None, on_merchant: Decimal | None) -> Decimal | None:
@@ -788,12 +827,18 @@ async def expire_stale(session: AsyncSession, *, now: datetime | None = None) ->
                 test_money=bool(getattr(gateway, "test_mode", False)),
             )
         else:
+            processing = getattr(gateway, "last_status", None) == "processing"
+            reason = (
+                EXPIRED_PROCESSING_REASON.format(payment_gateways.DISPLAY_NAMES.get(gateway.name, gateway.name))
+                if processing
+                else EXPIRED_REASON
+            )
             locked.status = PaymentRequestStatus.CANCELLED
-            locked.cancel_reason = EXPIRED_REASON
+            locked.cancel_reason = reason
             locked.cancelled_at = moment
             await audit.record(
                 session, actor=None, action=AuditAction.UPDATE, entity_type="payment_request", entity_id=locked.id,
-                details={"action": "expire", "reason": EXPIRED_REASON},
+                details={"action": "expire", "reason": reason},
             )
         await session.commit()
         expired += 1

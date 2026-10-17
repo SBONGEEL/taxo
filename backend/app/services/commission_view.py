@@ -22,7 +22,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import CountryCode, WalletOwnerType, WalletTransactionType
+from app.models.enums import CountryCode, Currency, WalletOwnerType, WalletTransactionType
 from app.models.ride import Ride
 from app.models.wallet import WalletTransaction
 from app.schemas.wallet import WalletTransactionOut
@@ -102,7 +102,7 @@ async def this_month(
 
 
 async def rows_with_percent(
-    session: AsyncSession, entries: Sequence[WalletTransaction]
+    session: AsyncSession, entries: Sequence[WalletTransaction], *, currency: Currency | None = None
 ) -> list[WalletTransactionOut]:
     """صفوفُ الكشف جاهزةً — **بانٍ واحدٌ يناديه البابان** (الشكلُ الثامن).
 
@@ -119,6 +119,7 @@ async def rows_with_percent(
     rows: list[WalletTransactionOut] = []
     for entry in entries:
         row = WalletTransactionOut.model_validate(entry)
+        row.currency = currency
         if entry.ride_id is not None:
             row.commission_percent = percents.get(entry.ride_id)
         rows.append(row)

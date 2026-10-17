@@ -390,6 +390,15 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(
                 kind="toggle", key="test_mode", label="وضع الاختبار (test)", secret=False, required=False
             ),
+            # **عميلُ Chargily** (§٧٦-ع/٢): الاسمُ والهاتفُ يُرسلان فلا تسألهما صفحتُه كلَّ مرّة — **مطفأٌ ابتداءً**: سياسةُ الخصوصية
+            # المنشورة تقول إنّا لا نرسلهما، فيُشعَل بعد تعديلها
+            ProviderField(
+                kind="toggle",
+                key="send_customer",
+                label="إرسال اسم الدافع وهاتفه إلى Chargily (بعد تعديل سياسة الخصوصية)",
+                secret=False,
+                required=False,
+            ),
             MOCK_FIELD,
         ),
         per_country=True,

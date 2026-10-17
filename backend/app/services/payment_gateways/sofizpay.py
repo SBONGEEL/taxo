@@ -66,6 +66,7 @@ class SofizPayGateway:
         webhook_url: str,
         fee_bearer: str,
         customer: base.CheckoutCustomer,
+        locale: str = "ar",
     ) -> base.Checkout:
         if not customer.email:
             # **البريدُ إلزاميٌّ عند SofizPay** — ولا يُخترع بريدٌ لصاحب الدفعة

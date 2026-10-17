@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
+from app.core.i18n import translate
 from app.models.enums import PaymentRequestPurpose, WalletOwnerType
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
@@ -44,9 +45,11 @@ def method_out(provider: PayMethod, *, test_mode: bool = False) -> PaymentMethod
     return PaymentMethodOut(
         test_mode=test_mode,
         fee_payer=provider.fee_bearer if provider.integration is not None else None,
+        gateway_name=payment_gateways.DISPLAY_NAMES.get(provider.integration) if provider.integration else None,
         id=provider.id,
         kind=provider.kind,
-        name=provider.name,
+        # **الاسمُ بلغة الطلب** (§٧٦-ع/٢) — من قاموس الخلفية؛ واسمٌ كتبه المشرفُ ولا فرنسيّةَ له يبقى كما كُتب
+        name=translate(provider.name),
         account_holder=provider.account_holder,
         account_number=provider.account_number,
         bank_name=provider.bank_name,
@@ -57,10 +60,19 @@ def method_out(provider: PayMethod, *, test_mode: bool = False) -> PaymentMethod
     )
 
 
+def _said(text: str | None) -> str | None:
+    """**سببٌ بلغة الطلب** — ما كتبه النظامُ مفتاحٌ في القاموس فيُترجم؛ **وما كتبه موظّفٌ يبقى بحرفه**."""
+    return translate(text) if text else text
+
+
 def mine_out(request: PaymentRequest) -> MyPaymentRequestOut:
+    integration = request.provider.integration
     return MyPaymentRequestOut(
         id=request.id,
-        provider_name=request.provider.name,
+        gateway=integration is not None,
+        gateway_name=payment_gateways.DISPLAY_NAMES.get(integration) if integration else None,
+        plan_id=request.plan_id,
+        provider_name=translate(request.provider.name),
         kind=request.kind,
         purpose=request.purpose,
         amount=request.amount,
@@ -68,10 +80,10 @@ def mine_out(request: PaymentRequest) -> MyPaymentRequestOut:
         currency=request.currency,
         status=request.status,
         reference=request.reference,
-        rejection_reason=request.rejection_reason,
-        cancel_reason=request.cancel_reason,
-        refund_reason=request.refund_reason,
-        outcome_note=request.outcome_note,
+        rejection_reason=_said(request.rejection_reason),
+        cancel_reason=_said(request.cancel_reason),
+        refund_reason=_said(request.refund_reason),
+        outcome_note=_said(request.outcome_note),
         created_at=request.created_at,
     )
 
@@ -226,6 +238,20 @@ async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: 
     )
     await session.commit()
     await session.refresh(request, attribute_names=["provider"])
+    fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
+    return PaymentCheckoutOut(
+        request=mine_out(request),
+        checkout_url=url,
+        currency=request.currency,
+        fee_amount=fee,
+        total_amount=(request.amount + fee) if fee is not None else None,
+    )
+
+
+@router.post("/{request_id}/resume", response_model=PaymentCheckoutOut)
+async def resume_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSession) -> PaymentCheckoutOut:
+    """**«أكمل الدفع»** (§٧٦-ع/٢) — صفحةُ الوسيط نفسُها لطلبي المعلَّق؛ وطلبُ غيري ٤٠٤. **لا يكتب شيئاً.**"""
+    request, url = await payment_requests.resume_checkout(session, owner=user, request_id=request_id)
     fee = request.fee_amount if request.fee_payer == "user" and request.fee_amount else None
     return PaymentCheckoutOut(
         request=mine_out(request),

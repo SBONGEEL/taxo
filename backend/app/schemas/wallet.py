@@ -63,6 +63,9 @@ class WalletTransactionOut(BaseModel):
     # الصفرُ يعني «حوسب بصفر» والغيابُ يعني «لا نسبةَ لهذا القيد أصلاً»، ورقمٌ
     # واحدٌ لا يحملهما (درسُ `NULL` في `commission_percent_from_subscription`)
     commission_percent: Decimal | None = None
+    # **عملةُ القيد** (§٧٦-ع/٢) — كان الكشفُ بلا عملة، **فلم تجد صياغةُ السلك ما تصوغ به** وخرج قيدُ الجزائريّ «20000.000»؛
+    # والتطبيقان يقرآنها منذ البداية (`WalletTransaction.currency`) ولم تكن تصل
+    currency: Currency | None = None
 
 
 # ------------------------------------------------------------------ التحويل

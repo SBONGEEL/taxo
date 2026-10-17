@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
+from app.core.i18n import translate
 from app.models.enums import (
     CountryCode,
     Currency,
@@ -80,6 +81,11 @@ class SubscriptionOut(BaseModel):
     transaction_id: uuid.UUID | None
     reference: str | None
     created_at: datetime
+
+    @field_serializer("plan_name")
+    def _plan_in_language(self, value: str) -> str:
+        """**اسمُ الخطّة بلغة الطلب** (§٧٦-ع/٢) — كما في `SubscriptionPlanOut`."""
+        return translate(value)
 
     @classmethod
     def from_subscription(cls, subscription: DriverSubscription) -> "SubscriptionOut":

@@ -144,7 +144,7 @@ async def list_wallet_transactions(
     # **البانِي نفسُه الذي يخدم بابَ صاحب المحفظة** (الشكلُ الثامن): من يقرأ
     # كشفَ كبتنٍ من اللوحة يجب أن يرى ما يراه صاحبُه — نسبةَ العمولة المجمَّدة
     # وكلَّ ما يُحسب. وبانيان لحمولةٍ واحدةٍ يفترقان بحقلٍ يملؤه أحدُهما
-    return await commission_view.rows_with_percent(session, entries)
+    return await commission_view.rows_with_percent(session, entries, currency=currency_for_country(user.country_code))
 
 
 @router.post("/wallets/{user_id}/freeze", response_model=WalletOut)

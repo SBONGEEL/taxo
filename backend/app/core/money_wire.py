@@ -75,6 +75,16 @@ MONEY_NAMES = frozenset(
     }
 )
 
+#: **أسماءُ مالٍ تُصاغ على السلك ولا تدخل مفرداتِ الحارسين** (§٧٦-ع/٢، ٢٠٢٦-١٠-١٧). مسحُ أجوبة الكبتن والراكب الجزائريَّين أخرج
+#: «200.000» لثمن الخطّة و«0.000» لصافي اليوم وسقفِ السلفة وسقفِ الدَّين ورسومِ الإلغاء. **ولمَ ليست في الكتلتين أعلاه**: الحارسان
+#: الساكنان (`check:money-math` و`check:money-visible`) يقرآنهما نصّاً — **فـ`total` و`cap` كلمتان عامّتان** أمسكتا `event.total` في
+#: تقدّم الرفع وقسمةَ صفحاتٍ في اللوحة مالاً (قِيس: سقط الحارسان بتسعة أسطرٍ ليس فيها مال)، **ولواحقُ `_debt` و`_compensation` أظهرت
+#: ثلاثةَ حقولٍ قائمةٍ لا تعرضها شاشة** (`cancellation_debt` في الكبتن، `ceiling` في الكبتن، `pending_compensation` في الراكب) — **بندٌ
+#: مفتوحٌ مكتوبٌ في `STATE.md` لا مستورٌ هنا**. **والصياغةُ تحذف أصفاراً ولا تغيّر قيمة**، فاسمٌ زائدٌ هنا لا يُفسد رقماً؛ **وحارسُ
+#: الاختبار (`tests/money_format.py`) يقرؤها** عبر `is_money_key` فيُفحص نصُّها في كلِّ جواب
+WIRE_ONLY_NAMES = frozenset({"price_to_pay", "net", "tips", "cap", "ceiling", "total", "total_rewarded"})
+WIRE_ONLY_SUFFIXES = ("_debt", "_compensation", "_earnings", "_repaid", "_collected")
+
 # **استثناءاتٌ مسمّاةٌ بسببها** — لا كنسٌ صامت:
 # `discount_value` نسبةٌ مئوية، و`max_discount` سقفٌ قد يكون `null`،
 # و`total_budget` مبلغٌ يقبل `null` (يُفحص حين لا يكون فارغاً).
@@ -97,7 +107,7 @@ MARKERS: tuple[bytes, ...] = tuple(f'"{code}"'.encode() for code in (*_SHORT, *_
 def is_money_key(key: str) -> bool:
     if key in NOT_MONEY:
         return False
-    return key in MONEY_NAMES or key.endswith(MONEY_SUFFIXES)
+    return key in MONEY_NAMES or key.endswith(MONEY_SUFFIXES) or key in WIRE_ONLY_NAMES or key.endswith(WIRE_ONLY_SUFFIXES)
 
 
 def currency_in(mapping: dict) -> str | None:

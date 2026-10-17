@@ -5,8 +5,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from app.core.i18n import translate
 from app.models.enums import (
     DispatchMode,
     CommissionAppliesTo,
@@ -184,6 +185,11 @@ class SubscriptionPlanOut(BaseModel):
     # **اسمُ عرضٍ استفاد منه هذا الكبتنُ سلفاً فاستنفد حدَّه** — يُذكر ولا
     # يُطبَّق. و`None` لمن لم يستحقّ قطُّ: التمييزُ بينهما هو الغرض.
     exhausted_offer_name: str | None = None
+
+    @field_serializer("name")
+    def _name_in_language(self, value: str) -> str:
+        """**اسمُ الخطّة بلغة الطلب** (§٧٦-ع/٢) — «TAXO X1 — يومي» ⇐ «TAXO X1 — Journalier» من قاموس الخلفية؛ **واللوحةُ عربيّةٌ لا تتغيّر**."""
+        return translate(value)
 
 
 class PaymentSettingOut(BaseModel):

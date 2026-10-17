@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import CountryCode
+from app.models.enums import CountryCode, Currency
 
 
 class ReferralStageOut(BaseModel):
@@ -73,6 +73,8 @@ class MyReferralsOut(BaseModel):
     paid_this_month: int
     total_rewarded: Decimal
     referrals: list[ReferralStageOut]
+    # **عملةُ المُحيل** (§٧٦-ع/٢) — بها تُصاغ مبالغُه على السلك («0» للجزائريّ لا «0.000»)
+    currency: Currency | None = None
 
 
 class ReferralSettingsIn(BaseModel):

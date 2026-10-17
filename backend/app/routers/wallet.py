@@ -130,7 +130,7 @@ async def list_my_transactions(
     # **النسبةُ المجمَّدة تُلحَق باستعلامٍ ثانٍ على الصفحة** — لا ضمٍّ إلى الأول:
     # الرحلةُ الواحدةُ تحمل أكثرَ من قيد (أجرةٌ وعمولةٌ وسدادُ سلفة)، فالضمُّ
     # يضاعف الصفَّ ويُسقط قيوداً من صفحةٍ مسقوفة (قاعدةُ `services/ride_log.py`)
-    return await commission_view.rows_with_percent(session, entries)
+    return await commission_view.rows_with_percent(session, entries, currency=currency_for_country(user.country_code))
 
 
 # ------------------------------------------------------------------ التحويل

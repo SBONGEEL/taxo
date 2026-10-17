@@ -132,6 +132,7 @@ from app.models.market import BorderAllowance, CountryMarket, MarketBorders
 from app.models.broadcast import BroadcastChange, BroadcastSettings
 from app.models.feedback import AppFeedback
 from app.models.guest import GuestModeSetting, GuestSession
+from app.models.gateway_customer import GatewayCustomer  # noqa: F401
 from app.models.pricing_zone import PricingZone, ZonePricingRule
 from app.models.exchange_rate import ExchangeRate
 from app.models.user_role_grant import UserRoleGrant

@@ -45,6 +45,8 @@ class PaymentMethodOut(BaseModel):
     test_mode: bool = False
     #: **رسومُ الوسيط على من** (§٧٤-ك/١): `taxo` — يدفع ما اختاره؛ `user` — تُضاف فوقه وتُعرض قبل الدفع
     fee_payer: str | None = None
+    #: **اسمُ الوسيط كما يراه الدافع** («Chargily») — فيُقال «ادفع عبر Chargily» لا «صفحة الوسيط» (§٧٦-ع/٢)
+    gateway_name: str | None = None
 
 
 class PaymentMethodsOut(BaseModel):
@@ -71,6 +73,12 @@ class MyPaymentRequestOut(BaseModel):
     refund_reason: str | None
     outcome_note: str | None
     created_at: datetime
+    #: **دفعةٌ عند وسيطٍ آليّ** (§٧٦-ع/٢) — معلَّقةً تُقال «بانتظار الدفع» وتُستأنف بـ«أكمل الدفع»، لا «قيد المراجعة»؛ ومرجعُها معرّفُ
+    #: صفحة الوسيط فلا يُعرض
+    gateway: bool = False
+    gateway_name: str | None = None
+    #: **خطّةُ الاشتراك** — «حاول مرّةً أخرى» يعود بها نفسِها
+    plan_id: uuid.UUID | None = None
 
 
 class PaymentCheckoutIn(BaseModel):

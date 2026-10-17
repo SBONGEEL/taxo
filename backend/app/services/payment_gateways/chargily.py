@@ -8,6 +8,13 @@
 - **الـwebhook**: ترويسةُ `signature` = `HMAC-SHA256` لجسم الطلب **الخام** بالمفتاح السرّيّ، **ومقارنةٌ ثابتةُ الزمن**؛ والجسمُ `type` و`data`.
 
 **وما لم يُرسل لأنه غيرُ موثَّقٍ بما يكفي**: `metadata` (نوعُه في الوثائق «مصفوفة» بلا شكل) — والطلبُ يُعرف بمعرّف الصفحة نفسِها.
+
+**وما أُضيف ٢٠٢٦-١٠-١٧** (§٧٦-ع/٢، بوثائقه المنشورة — قُرئت اليوم):
+- `POST /customers` بـ`name` و`email` و`phone` (لا إلزاميَّ معلَناً)، ويعود بـ`id`؛ **و`customer_id` في `POST /checkouts`** — فلا تسأل الصفحةُ
+  الدافعَ بياناتِه كلَّ مرّة. **ولا يُرسل إلا بمفتاحه في العقد** (`send_customer`، مطفأٌ ابتداءً): سياسةُ الخصوصية المنشورة تقول «لا نرسل إلى
+  Chargily اسمَك ولا رقمَ هاتفك» — فالمفتاحُ يُشعَل بعد تعديلها لا قبله.
+- `locale` من لغة الطلب (`ar` · `fr`؛ والوثائقُ تقبل `en` أيضاً) — كان «ar» ثابتاً.
+- `GET /checkouts/{id}` يعيد `checkout_url` — فصفحةٌ معلَّقةٌ تُستأنف بعينها («أكمل الدفع») ولا تُفتح ثانية.
 **ولا حدَّ أدنى للمبلغ موثَّق** — فما يرفضه الوسيطُ يُعاد نصُّه للمستخدم ولا يُخترع حدّ.
 """
 
@@ -32,16 +39,23 @@ LIVE_BASE = "https://pay.chargily.net/api/v2"
 #: **من يحمل الرسوم بلغة TAXO ⇐ بلغة Chargily** (`chargily_pay_fees_allocation`)
 FEES_ALLOCATION = {"taxo": "merchant", "user": "customer", "split": "split"}
 
+#: **لغاتُ صفحته كما في وثائقه** — وما سواها عربيّة كما كانت
+LOCALES = frozenset({"ar", "fr", "en"})
+
 
 class ChargilyGateway:
     name = "chargily"
     #: **لا شحنَ ولا اشتراكَ إلا بإشعارٍ موقَّعٍ متحقَّق** (أمرُ المالك §٧٤-ط/٥) — وعودةُ التطبيق تسأل ولا تقيِّد «دُفع»
     confirms_by_webhook = True
 
-    def __init__(self, *, secret_key: str, test_mode: bool) -> None:
+    def __init__(self, *, secret_key: str, test_mode: bool, send_customer: bool = False) -> None:
         self._key = secret_key
         self.base_url = TEST_BASE if test_mode else LIVE_BASE
         self.test_mode = test_mode
+        #: **عميلُ Chargily باسم الدافع وهاتفه** — بمفتاحه في العقد وحدَه (أعلاه)
+        self.send_customer = send_customer
+        #: **آخرُ حالٍ قالها `check`** — فإلغاءُ المهلة يقول «لم يكتمل» لصفحةٍ قيد المعالجة لا «لم يُدفع شيء» (§٧٦-ع/٢، المشكلة ١٧)
+        self.last_status: str | None = None
 
     async def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         try:
@@ -72,22 +86,22 @@ class ChargilyGateway:
         webhook_url: str,
         fee_bearer: str,
         customer: base.CheckoutCustomer,
+        locale: str = "ar",
     ) -> base.Checkout:
         # **عددٌ صحيحٌ بالدينار** (الوثائق: `amount` integer) — والطلبُ دينارٌ صحيحٌ أصلاً (§٧٣-ج/٣)
-        body = await self._request(
-            "POST",
-            "/checkouts",
-            {
-                "amount": int(amount),
-                "currency": "dzd",
-                "success_url": return_url,
-                "failure_url": return_url,
-                "webhook_endpoint": webhook_url,
-                "description": description[:255],
-                "locale": "ar",
-                "chargily_pay_fees_allocation": FEES_ALLOCATION[fee_bearer],
-            },
-        )
+        payload: dict[str, Any] = {
+            "amount": int(amount),
+            "currency": "dzd",
+            "success_url": return_url,
+            "failure_url": return_url,
+            "webhook_endpoint": webhook_url,
+            "description": description[:255],
+            "locale": locale if locale in LOCALES else "ar",
+            "chargily_pay_fees_allocation": FEES_ALLOCATION[fee_bearer],
+        }
+        if customer.gateway_id:
+            payload["customer_id"] = customer.gateway_id
+        body = await self._request("POST", "/checkouts", payload)
         checkout_id, url = body.get("id"), body.get("checkout_url")
         if not isinstance(checkout_id, str) or not isinstance(url, str):
             raise base.GatewayError("جوابُ Chargily بلا معرّفٍ أو رابط")
@@ -98,9 +112,29 @@ class ChargilyGateway:
             fee_on_merchant=_money(body.get("fees_on_merchant")),
         )
 
+    async def create_customer(self, customer: base.CheckoutCustomer) -> str | None:
+        """**عميلٌ في Chargily باسم الدافع وهاتفه** (وبريدِه إن كان) — معرّفُه، أو `None` والمفتاحُ مطفأ. **ولا يُخترع بريد.**"""
+        if not self.send_customer:
+            return None
+        payload: dict[str, Any] = {"name": customer.full_name[:255], "phone": customer.phone}
+        if customer.email:
+            payload["email"] = customer.email
+        body = await self._request("POST", "/customers", payload)
+        customer_id = body.get("id")
+        if not isinstance(customer_id, str):
+            raise base.GatewayError("جوابُ Chargily بلا معرّف عميل")
+        return customer_id
+
+    async def resume_url(self, external_id: str) -> str | None:
+        """**رابطُ صفحةٍ ما زالت تنتظر الدفع** — بعينها لا صفحةٌ ثانية؛ و`None` لما حُسم أو بدأت معالجتُه."""
+        body = await self._request("GET", f"/checkouts/{external_id}")
+        url = body.get("checkout_url")
+        return url if body.get("status") == "pending" and isinstance(url, str) else None
+
     async def check(self, external_id: str) -> base.GatewayEvent | None:
         body = await self._request("GET", f"/checkouts/{external_id}")
         status = body.get("status")
+        self.last_status = status if isinstance(status, str) else None
         amount = Decimal(str(body["amount"])) if body.get("amount") is not None else None
         fees = {"fee_on_customer": _money(body.get("fees_on_customer")), "fee_on_merchant": _money(body.get("fees_on_merchant"))}
         if status == "paid":
@@ -164,4 +198,8 @@ def build_chargily(values: Mapping[str, Any]) -> ChargilyGateway:
     key = str(values.get("secret_key") or "").strip()
     if not key:
         raise base.GatewayUnavailable("لا مفتاحَ سرّيّاً في عقد Chargily")
-    return ChargilyGateway(secret_key=key, test_mode=credentials_service.is_on(values, "test_mode"))
+    return ChargilyGateway(
+        secret_key=key,
+        test_mode=credentials_service.is_on(values, "test_mode"),
+        send_customer=credentials_service.is_on(values, "send_customer"),
+    )

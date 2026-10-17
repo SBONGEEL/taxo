@@ -90,6 +90,8 @@ class CheckoutCustomer:
     full_name: str
     phone: str
     email: str | None
+    #: **معرّفُه عميلاً عند الوسيط** (Chargily، §٧٦-ع/٢) — فلا تسأله الصفحةُ بياناتِه؛ و`None` حين لا عميل
+    gateway_id: str | None = None
 
 
 class Gateway(Protocol):
@@ -108,6 +110,7 @@ class Gateway(Protocol):
         webhook_url: str,
         fee_bearer: str,
         customer: CheckoutCustomer,
+        locale: str = "ar",
     ) -> Checkout: ...
 
     async def check(self, external_id: str) -> GatewayEvent | None:
@@ -127,6 +130,9 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
 
     return {"chargily": build_chargily, "sofizpay": build_sofizpay}
 
+
+#: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
+DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {"chargily": ProviderKey.CHARGILY, "sofizpay": ProviderKey.SOFIZPAY}

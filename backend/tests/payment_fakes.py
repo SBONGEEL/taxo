@@ -31,6 +31,9 @@ class ChargilyFake:
         self.amount: dict[str, int] = {}
         self.fees: dict[str, dict[str, int]] = {}
         self.created: list[dict[str, Any]] = []
+        #: **عملاءُ Chargily** (§٧٦-ع/٢) — ما أُنشئ بجسمه، و«المحذوفُ عنده» يُسقط صفحةً تذكره
+        self.customers: list[dict[str, Any]] = []
+        self.dead_customers: set[str] = set()
 
     @staticmethod
     def _fees(amount: int, allocation: str) -> dict[str, int]:
@@ -42,8 +45,14 @@ class ChargilyFake:
     def handler(self, request: httpx.Request) -> httpx.Response:
         assert request.headers["authorization"] == f"Bearer {CHARGILY_SECRET}"
         path = request.url.path
+        if request.method == "POST" and path.endswith("/customers"):
+            body = json.loads(request.content)
+            self.customers.append(body)
+            return httpx.Response(200, json={"id": f"cus_{len(self.customers):04d}", "entity": "customer", **body})
         if request.method == "POST" and path.endswith("/checkouts"):
             body = json.loads(request.content)
+            if body.get("customer_id") in self.dead_customers:
+                return httpx.Response(422, json={"message": "The selected customer id is invalid."})
             checkout_id = f"chk_{len(self.created) + 1:04d}"
             self.created.append(body)
             self.status[checkout_id] = "pending"
@@ -58,6 +67,7 @@ class ChargilyFake:
             return httpx.Response(200, json={
                 "id": checkout_id, "entity": "checkout", "status": self.status.get(checkout_id, "pending"),
                 "amount": self.amount.get(checkout_id), "currency": "dzd", **self.fees.get(checkout_id, {}),
+                "checkout_url": f"https://pay.chargily.dz/test/checkouts/{checkout_id}/pay",
             })
         if request.method == "GET" and path.endswith("/balance"):
             return httpx.Response(200, json={"entity": "balance", "livemode": False, "wallets": []})
@@ -115,7 +125,8 @@ def install_transport(monkeypatch) -> tuple[ChargilyFake, SofizPayFake]:
 
 
 async def add_gateway_method(
-    session_factory, integration: str, *, fee_bearer: str = "taxo", contract: bool = True, test_mode: bool = False
+    session_factory, integration: str, *, fee_bearer: str = "taxo", contract: bool = True, test_mode: bool = False,
+    send_customer: bool = False,
 ) -> uuid.UUID:
     """**عقدُ الوسيط في صفحة العقود** (بالخدمة نفسِها) **وطريقتُه مفعَّلةً في نظام الدفع**.
 
@@ -123,7 +134,8 @@ async def add_gateway_method(
     حقيقيّةٍ مزيّفة الشبكة؛ والوضعُ التجريبيُّ يُختبر باسمه."""
     if contract and integration == "chargily":
         await _enable_provider(
-            session_factory, "chargily", {"secret_key": CHARGILY_SECRET, "test_mode": test_mode}, country="DZ"
+            session_factory, "chargily",
+            {"secret_key": CHARGILY_SECRET, "test_mode": test_mode, "send_customer": send_customer}, country="DZ"
         )
     if contract and integration == "sofizpay":
         await _enable_provider(session_factory, "sofizpay", {"account": SOFIZPAY_ACCOUNT, "sandbox": test_mode}, country="DZ")
