@@ -31,6 +31,9 @@ WHOLE_FILES = (
     "services/otp_templates.py",
     # **أسماءُ الدول** (SPEC §٧٤-أ/٤) — تُنشر في `/config` بلغة الطلب فيسمّي بها مُختارُ الدولة كلَّ سوق
     "core/currency.py",
+    # **أسماءُ طرق الدفع والخطط وأسبابُ حسم الدفعة** (SPEC §٧٦-ع/٢) — تُرسم بلغة الطلب
+    "core/data_names.py",
+    "services/payment_reasons.py",
 )
 WHOLE_DIRS = ("services/push",)
 LOGGER = {"debug", "info", "warning", "error", "exception", "critical", "log"}

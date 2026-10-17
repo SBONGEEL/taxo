@@ -82,7 +82,7 @@ MONEY_NAMES = frozenset(
 #: ثلاثةَ حقولٍ قائمةٍ لا تعرضها شاشة** (`cancellation_debt` في الكبتن، `ceiling` في الكبتن، `pending_compensation` في الراكب) — **بندٌ
 #: مفتوحٌ مكتوبٌ في `STATE.md` لا مستورٌ هنا**. **والصياغةُ تحذف أصفاراً ولا تغيّر قيمة**، فاسمٌ زائدٌ هنا لا يُفسد رقماً؛ **وحارسُ
 #: الاختبار (`tests/money_format.py`) يقرؤها** عبر `is_money_key` فيُفحص نصُّها في كلِّ جواب
-WIRE_ONLY_NAMES = frozenset({"price_to_pay", "net", "tips", "cap", "ceiling", "total", "total_rewarded"})
+WIRE_ONLY_NAMES = frozenset({"balance_after", "price_to_pay", "net", "tips", "cap", "ceiling", "total", "total_rewarded"})
 WIRE_ONLY_SUFFIXES = ("_debt", "_compensation", "_earnings", "_repaid", "_collected")
 
 # **استثناءاتٌ مسمّاةٌ بسببها** — لا كنسٌ صامت:

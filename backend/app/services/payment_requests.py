@@ -48,6 +48,7 @@ from app.services import (
     admin_search,
     audit,
     cancellation,
+    payment_reasons,
     rounding,
     settings_service,
     test_accounts,
@@ -70,10 +71,10 @@ MIN_REASON = 3
 TEST_MONEY_MARK = "رصيد تجريبي"
 
 #: **سببُ إلغاء صفحةٍ لم تُدفع في مهلتها** (§٧٤-ي/٥) — وChargily لا حالَ «انتهى» عنده؛ فالمهلةُ مهلتُنا
-EXPIRED_REASON = "انتهت مهلةُ الدفع — لم يُدفع شيء"
+EXPIRED_REASON = payment_reasons.EXPIRED
 #: **صفحةٌ قال وسيطُها «قيد المعالجة» حين انتهت المهلة** (§٧٦-ع/٢، المشكلة ١٧) — «لم يُدفع شيء» كان يقول ما لا نعرفه؛ **ودفعٌ يكتمل
 #: بعدها يُقيَّد بإشعاره الموقَّع** (`settle_from_gateway`)
-EXPIRED_PROCESSING_REASON = "لم يكتمل الدفعُ عند {0} خلال المهلة — وإن اكتمل بعدها يُحتسب وحدَه"
+EXPIRED_PROCESSING_REASON = payment_reasons.EXPIRED_PROCESSING
 
 #: **مهلةُ صفحة الوسيط** — بعدها يُسأل الوسيط: لم يُدفع ⇒ تُلغى بسببها، ودفعٌ يصل بعدها يُقيَّد ولا يضيع
 CHECKOUT_TTL_HOURS = 24
@@ -552,7 +553,7 @@ async def cancel(
         raise NotFound("طلبُ الدفع غيرُ موجود")
     request.status = PaymentRequestStatus.CANCELLED
     request.cancel_reason = (
-        (reason or "").strip()[:500] or "ألغاه صاحبُه" if by_owner else written_reason(reason, field="reason")
+        (reason or "").strip()[:500] or payment_reasons.BY_OWNER if by_owner else written_reason(reason, field="reason")
     )
     request.cancelled_by = actor.id
     request.cancelled_at = _now()

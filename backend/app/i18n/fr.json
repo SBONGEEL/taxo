@@ -860,7 +860,5 @@
  "حُسمت هذه الدفعة — لا صفحةَ تُستأنف": "Ce paiement est déjà clos — aucune page à reprendre",
  "صفحةُ هذه الدفعة لم تعد تنتظر — انظر حالَها في طلباتك": "La page de ce paiement n’est plus en attente — consultez son état dans vos demandes",
  "هذه الدفعةُ لا تُدفع من صفحة وسيط": "Ce paiement ne se règle pas sur une page de paiement",
- "جوابُ Chargily بلا معرّف عميل": "Réponse de Chargily sans identifiant client",
- "رفض Chargily الطلب": "Chargily a refusé la demande",
- "Chargily: {0}": "Chargily : {0}"
+ "جوابُ Chargily بلا معرّف عميل": "Réponse de Chargily sans identifiant client"
 }

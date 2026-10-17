@@ -31,6 +31,7 @@ import httpx
 
 from app.models.enums import PaymentRequestStatus
 from app.services import payment_gateways as base
+from app.services import payment_reasons as reasons
 from app.services.providers import credentials as credentials_service
 
 TEST_BASE = "https://pay.chargily.net/test/api/v2"
@@ -140,12 +141,12 @@ class ChargilyGateway:
         if status == "paid":
             return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED, amount=amount, **fees)
         if status == "failed":
-            return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason="رفض الوسيطُ الدفع")
+            return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason=reasons.GATEWAY_FAILED)
         if status == "canceled":
-            return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason="أُلغي الدفعُ عند الوسيط")
+            return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason=reasons.GATEWAY_CANCELLED)
         if status == "expired":
             # **لا تسمّيه الوثائق، وصفحةُ وضع التجربة تحمل زرَّه** («Expire» — قُرئت ٢٠٢٦-١٠-١٣) — فيُحسم ملغًى بسببه لا معلَّقاً إلى الأبد
-            return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason="انتهت صلاحيةُ صفحة الدفع عند الوسيط")
+            return base.GatewayEvent(external_id, PaymentRequestStatus.CANCELLED, reason=reasons.GATEWAY_EXPIRED)
         return None  # `pending` · `processing`
 
     def webhook_ids(self, headers: Mapping[str, str], body: bytes) -> list[str]:
