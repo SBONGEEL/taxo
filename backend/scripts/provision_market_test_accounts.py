@@ -164,9 +164,9 @@ class Planned:
     primary: bool
 
 
-def planned_accounts() -> list[Planned]:
+def planned_accounts(families: tuple[Family, ...] = FAMILIES) -> list[Planned]:
     out: list[Planned] = []
-    for family in FAMILIES:
+    for family in families:
         if not family.existing:
             out.append(Planned(f"{family.key}_{family.country.value}", family, family.country, family.phone, True))
         for country, phone in family.twins.items():
@@ -181,8 +181,8 @@ class Outcome:
     ids: dict[str, str]
 
 
-def _check_phones() -> None:
-    for family in FAMILIES:
+def _check_phones(families: tuple[Family, ...] = FAMILIES) -> None:
+    for family in families:
         for country, phone in ((family.country, family.phone), *family.twins.items()):
             if not phone.startswith(RESERVED_PREFIX[country]):
                 raise ProvisionRefused(f"رقمٌ خارج البادئة المحجوزة {RESERVED_PREFIX[country]} — قد يملكه إنسان")
@@ -298,15 +298,18 @@ async def provision(
     secrets_file: Path,
     session_factory: Callable[[], AsyncSession] = SessionLocal,
     out: Callable[[str], None] = print,
+    families: tuple[Family, ...] = FAMILIES,
+    title: str = "حساباتُ التجربة في كلِّ سوق (SPEC §74-ز)",
 ) -> Outcome:
-    _check_phones()
+    """**العائلاتُ مُمرَّرة** (§٧٨): حسابا Testers Community عائلتان أخريان تمرّان بالبابِ نفسِه حرفاً — `provision_testers_community`."""
+    _check_phones(families)
     _check_secrets_path(secrets_file)
-    plan = planned_accounts()
+    plan = planned_accounts(families)
 
     async with session_factory() as session:
         # ── الأصلان القائمان: موسومان أو وقوف ──────────────────────────────
         primaries: dict[str, User] = {}
-        for family in FAMILIES:
+        for family in families:
             if not family.existing:
                 continue
             found = await _existing(session, family.phone)
@@ -348,7 +351,7 @@ async def provision(
         members = [*primaries.values(), *created.values()]
         for user in members:
             await test_markets.refill(session, user=user, actor=None)
-        for family in FAMILIES:
+        for family in families:
             if not family.outside:
                 continue
             group = [primaries[family.key]] if family.existing else []
@@ -360,7 +363,7 @@ async def provision(
 
         _write_secrets(
             secrets_file,
-            [f"# حساباتُ التجربة في كلِّ سوق (SPEC §74-ز) — {datetime.now(UTC).isoformat(timespec='seconds')}"]
+            [f"# {title} — {datetime.now(UTC).isoformat(timespec='seconds')}"]
             + [
                 "=".join(pair)
                 for item in plan

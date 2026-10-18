@@ -18,6 +18,7 @@ from app.core.exceptions import (
     AccountClosed,
     InvalidCredentials,
     InvalidInput,
+    LockedOnTestAccount,
 )
 from app.core import password_policy
 from app.core.security import hash_password, verify_password
@@ -194,6 +195,10 @@ async def set_password(
 
     الـ commit مسؤولية الراوتر، **ومعه إغلاقُ المقابس بعده** (`token_service.kick`).
     """
+    # **حسابُ التجربة مشتركٌ بين مختبِرين** (SPEC §٧٨) — كلمتُه من سكربته وحدَه، فلا يغلقه مختبِرٌ على من بعده.
+    # **وهنا لا في الراوتر**: كلُّ بابٍ يغيّر كلمةَ مستخدمٍ يمرّ بهذه الدالّة، فبابٌ يُضاف غداً يرث الردّ
+    if user.is_test:
+        raise LockedOnTestAccount("كلمةُ مرور حساب التجربة لا تُغيَّر من التطبيق")
     user.password_hash = hash_password(
         validate_password(new_password, phone=user.phone)
     )

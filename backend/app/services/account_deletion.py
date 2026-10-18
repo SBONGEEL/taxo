@@ -45,6 +45,7 @@ from app.core.exceptions import (
     Conflict,
     DeletionBalanceUnacknowledged,
     DeletionBlocked,
+    LockedOnTestAccount,
     NotFound,
     PermissionDenied,
 )
@@ -214,6 +215,9 @@ async def request(
     """
     if user.has_role(*_STAFF):
         raise PermissionDenied("حسابات الإدارة لا تُحذف من التطبيق")
+    # **حسابُ التجربة مشتركٌ بين مختبِرين** (SPEC §٧٨) — طلبُ حذفٍ من أحدهم يُطفئه على الباقين بعد المهلة
+    if user.is_test:
+        raise LockedOnTestAccount("حسابُ التجربة لا يُحذف من التطبيق")
 
     locked = await _locked_user(session, user.id)
     if locked.deleted_at is not None or locked.deactivated_at is not None:

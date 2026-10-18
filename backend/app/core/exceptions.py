@@ -552,6 +552,19 @@ class NoRealMoneyOnTestAccount(AppError):
     message = "حسابُ التجربة لا يُدخله مالٌ حقيقيّ ولا يخرج منه — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
 
 
+class LockedOnTestAccount(AppError):
+    """**حسابُ تجربةٍ بلغ باباً يغيّر هويّتَه من التطبيق** — كلمةُ المرور أو طلبُ الحذف (SPEC §٧٨).
+
+    **حساباتُ التجربة مشتركة**: بياناتُ دخولها تُسلَّم لمختبِرين من خارج TAXO (Testers Community)، **فمختبِرٌ يغيّر الكلمةَ
+    يُغلق الحسابَ على كلِّ من بعده، ومختبِرٌ يطلب الحذفَ يُطفئه بعد المهلة**. فلا يغيّرهما إلا سكربتُها على الخادم
+    (`scripts/provision_testers_community.py --reset`). **ورمزٌ واحدٌ ونصٌّ يسمّي الباب** كـ`NoRealMoneyOnTestAccount`.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "test_account_locked"
+    message = "هذا حسابُ تجربة — لا يُغيَّر من التطبيق"
+
+
 class InvalidStatusTransition(Conflict):
     """انتقال غير مسموح في طلب شحن أو سحب."""
 

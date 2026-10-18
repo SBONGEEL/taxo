@@ -860,5 +860,8 @@
  "حُسمت هذه الدفعة — لا صفحةَ تُستأنف": "Ce paiement est déjà clos — aucune page à reprendre",
  "صفحةُ هذه الدفعة لم تعد تنتظر — انظر حالَها في طلباتك": "La page de ce paiement n’est plus en attente — consultez son état dans vos demandes",
  "هذه الدفعةُ لا تُدفع من صفحة وسيط": "Ce paiement ne se règle pas sur une page de paiement",
- "جوابُ Chargily بلا معرّف عميل": "Réponse de Chargily sans identifiant client"
+ "جوابُ Chargily بلا معرّف عميل": "Réponse de Chargily sans identifiant client",
+ "هذا حسابُ تجربة — لا يُغيَّر من التطبيق": "Ceci est un compte de test — il ne peut pas être modifié depuis l’application",
+ "كلمةُ مرور حساب التجربة لا تُغيَّر من التطبيق": "Le mot de passe d’un compte de test ne peut pas être modifié depuis l’application",
+ "حسابُ التجربة لا يُحذف من التطبيق": "Un compte de test ne peut pas être supprimé depuis l’application"
 }
