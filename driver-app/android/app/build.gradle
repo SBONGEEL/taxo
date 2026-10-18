@@ -135,6 +135,14 @@ android {
     }
 }
 
+// **ورمزُ التصحيح ١ أبداً** (§٧٩ البند ٢: «لا حزمةَ خارج Play برمزٍ أعلى من رمز Play»): المعرّفُ `.dev` يكفي ألّا يقارنه أندرويد
+// برمز Play، **والرمزُ ١ يجعل القاعدةَ صادقةً بحرفها** — قِيس قبله: حزمةُ تصحيحٍ من فرعٍ متقدّمٍ حملت ٩٢٨ وPlay على ٩١٨.
+android.applicationVariants.configureEach { variant ->
+    if (variant.buildType.name == "debug") {
+        variant.outputs.configureEach { output -> output.versionCodeOverride = 1 }
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
