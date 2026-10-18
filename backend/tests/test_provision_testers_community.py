@@ -9,13 +9,14 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.core.exceptions import LockedOnTestAccount
+from app.core.exceptions import LockedOnTestAccount, NoRealMoneyOnTestAccount
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, UserRole
@@ -107,16 +108,17 @@ async def test_two_testers_community_families_are_isolated_test_accounts(
                 assert driver.status is DriverStatus.APPROVED
                 assert await subscriptions.current_subscription(session, driver.id) is not None
 
-    # ── لا تحويل: الرصيدُ التجريبيُّ لا يغادر ──
-    rider = await _login(client, values["TC_RIDER_JO_PHONE"], values["TC_RIDER_JO_PASSWORD"])
-    transfer = await client.post(
-        "/wallet/me/transfers",
-        json={"recipient_phone": values["TC_CAPTAIN_JO_PHONE"], "amount": "1.000", "idempotency_key": "tc-transfer-0001"},
-        headers=_bearer(rider),
-    )
-    assert transfer.status_code == 403, transfer.text
-    assert transfer.json()["code"] == "test_account_no_real_money"
+    # ── لا تحويل: الرصيدُ التجريبيُّ لا يغادر — **بالخدمة نفسِها**: بابُ التطبيق يبحث عن المستلم بين الركّاب قبل أن يسأل عن التجربة ──
+    async with session_factory() as session:
+        sender = await session.scalar(select(User).where(User.phone == values["TC_RIDER_JO_PHONE"]))
+        recipient = await session.scalar(select(User).where(User.phone == values["TC_RIDER_LY_PHONE"]))
+        with pytest.raises(NoRealMoneyOnTestAccount):
+            await wallet.transfer(
+                session, sender=sender, recipient=recipient, amount=Decimal("1.000"), idempotency_key="tc-transfer-0001"
+            )
+        await session.rollback()
 
+    rider = await _login(client, values["TC_RIDER_JO_PHONE"], values["TC_RIDER_JO_PASSWORD"])
     # ── ولا حذف من التطبيق ──
     deletion = await client.post("/account/deletion", json={"forfeit_amount": None}, headers=_bearer(rider))
     assert deletion.status_code == 403, deletion.text
