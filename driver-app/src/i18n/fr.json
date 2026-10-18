@@ -1691,5 +1691,7 @@
  "الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده، أو بتحويلٍ أو نقداً ويُفعَّل بعد اعتماد فريق المالية.": "Achat ici depuis votre portefeuille, ou par carte via {0}, activé dès sa confirmation, ou par virement ou en espèces, activé après validation par l’équipe financière.",
  "الكاش يصلك مباشرة": "Les espèces vous parviennent directement",
  "يبدأ بعد انتهاء اشتراكك الحالي، فلا يضيع منه شيء.": "Il commence à la fin de votre abonnement actuel — vous ne perdez rien.",
- "يُفعَّل اشتراكُك فورَ أن يؤكّد {0} الدفع.": "Votre abonnement est activé dès que {0} confirme le paiement."
+ "يُفعَّل اشتراكُك فورَ أن يؤكّد {0} الدفع.": "Votre abonnement est activé dès que {0} confirme le paiement.",
+ "سقفُ ما يُسمح أن يتراكم عليك:": "Plafond de dette autorisé :",
+ " — إن تجاوزه توقّف استقبال الطلبات حتى تسدّده كاملاً.": " — au-delà, vous ne recevez plus de courses jusqu’au remboursement complet."
 }

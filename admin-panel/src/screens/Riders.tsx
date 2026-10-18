@@ -423,6 +423,10 @@ function RiderDrawer({
                         </span>
                         <span className="ad-mini-at">
                           {moment(entry.created_at)}
+                          {/* **الرصيدُ بعدها من الدفتر** (§٧٦-ع/٥) — كان يصل ولا يُرسم، فيفصل المشرفُ في شكوى رصيدٍ
+                              بحركاتٍ لا يرى أثرَها. نصّاً كما وصل، لا مجموعاً في الشاشة (§14) */}
+                          {" · "}الرصيد بعدها{" "}
+                          <span dir="ltr">{digits(entry.balance_after)}</span>
                         </span>
                       </span>
                       <span
