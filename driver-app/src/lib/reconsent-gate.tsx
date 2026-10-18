@@ -95,7 +95,6 @@ export function ReconsentGate({ app }: { app: "rider" | "driver" }) {
                 <h2>
                   {TITLE[doc.doc_type] ?? doc.doc_type}
                   <span className="t2-num" dir="ltr">
-                    {" "}
                     v{doc.version}
                     {doc.published_at ? ` · ${doc.published_at.slice(0, 10)}` : ""}
                   </span>
