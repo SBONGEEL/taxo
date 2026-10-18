@@ -602,8 +602,8 @@ export function MapView({
     if (!instance) return;
 
     for (const [key, point, color, label] of [
-      ["pickup", pickup, "var(--ok)", "نقطة الانطلاق"],
-      ["dropoff", dropoff, "var(--dng)", "الوجهة"],
+      ["pickup", pickup, "var(--ok)", tr("نقطة الانطلاق")],
+      ["dropoff", dropoff, "var(--dng)", tr("الوجهة")],
     ] as const) {
       const existing = pins.current[key];
       if (!point) {

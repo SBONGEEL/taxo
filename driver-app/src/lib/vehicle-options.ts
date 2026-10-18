@@ -45,8 +45,8 @@ export const VEHICLE_MAKES: readonly string[] = [
   tr("لادا"),
 ];
 
-/** طُرزٌ شائعةٌ لكلِّ شركة — **وما ليس فيها يُكتب بيده**. */
-export const VEHICLE_MODELS: Readonly<Record<string, readonly string[]>> = {
+/** طُرزٌ شائعةٌ لكلِّ شركة — **وما ليس فيها يُكتب بيده**. ومفتاحُها **اسمُ الشركة بالعربيّة كما في المصدر**. */
+const MODELS_BY_ARABIC_MAKE: Readonly<Record<string, readonly string[]>> = {
   تويوتا: [tr("كورولا"), tr("كامري"), tr("يارس"), tr("أفالون"), tr("راف 4"), tr("برادو"), tr("هايلكس"), tr("بريوس")],
   هيونداي: [tr("إلنترا"), tr("أكسنت"), tr("سوناتا"), tr("توسان"), "i10", "i20", "i30", tr("سنتافي")],
   كيا: [tr("ريو"), tr("سيراتو"), tr("أوبتيما"), tr("سبورتاج"), tr("بيكانتو"), tr("سورينتو"), "K5"],
@@ -72,6 +72,12 @@ export const VEHICLE_MODELS: Readonly<Record<string, readonly string[]>> = {
   دايهاتسو: [tr("سيريون"), tr("تيريوس")],
   لادا: [tr("جرانتا"), tr("نيفا")],
 };
+
+/** **الطُّرزُ باسم الشركة كما يُرسم** (§٧٨/ب): `VEHICLE_MAKES` تُترجَم فيكتب الكبتنُ الفرنسيُّ «Volkswagen»، **والطُّرزُ كانت تُسأل بذلك
+ *  الاسم عن مفتاحٍ عربيّ** — فلم يظهر في الفرنسيّة اقتراحُ طرازٍ واحدٌ لأيِّ شركة. فالمفتاحُ يُترجم بالدالّة نفسِها، واللغةُ ثابتةٌ منذ الإقلاع. */
+export const VEHICLE_MODELS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  Object.entries(MODELS_BY_ARABIC_MAKE).map(([make, models]) => [tr(make), models]),
+);
 
 /** ألوانٌ شائعة — **وليست تعداداً**: الخلفيةُ تقبل أيَّ نصّ. */
 export const VEHICLE_COLORS: readonly string[] = [
