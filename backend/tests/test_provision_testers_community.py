@@ -111,7 +111,7 @@ async def test_two_testers_community_families_are_isolated_test_accounts(
     rider = await _login(client, values["TC_RIDER_JO_PHONE"], values["TC_RIDER_JO_PASSWORD"])
     transfer = await client.post(
         "/wallet/me/transfers",
-        json={"recipient_phone": values["TC_CAPTAIN_JO_PHONE"], "amount": "1.000"},
+        json={"recipient_phone": values["TC_CAPTAIN_JO_PHONE"], "amount": "1.000", "idempotency_key": "tc-transfer-0001"},
         headers=_bearer(rider),
     )
     assert transfer.status_code == 403, transfer.text
