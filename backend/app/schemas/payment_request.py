@@ -47,6 +47,8 @@ class PaymentMethodOut(BaseModel):
     fee_payer: str | None = None
     #: **اسمُ الوسيط كما يراه الدافع** («Chargily») — فيُقال «ادفع عبر Chargily» لا «صفحة الوسيط» (§٧٦-ع/٢)
     gateway_name: str | None = None
+    #: **يصل الوسيطَ اسمُ الدافع وهاتفُه** (عميلُ Chargily، §٧٦-ع/٦) — فيُقال له ذلك قبل أن يُرسَل، لا في السياسة وحدَها
+    shares_payer: bool = False
 
 
 class PaymentMethodsOut(BaseModel):

@@ -41,9 +41,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 
 
-def method_out(provider: PayMethod, *, test_mode: bool = False) -> PaymentMethodOut:
+def method_out(provider: PayMethod, *, test_mode: bool = False, shares_payer: bool = False) -> PaymentMethodOut:
     return PaymentMethodOut(
         test_mode=test_mode,
+        shares_payer=shares_payer,
         fee_payer=provider.fee_bearer if provider.integration is not None else None,
         gateway_name=payment_gateways.DISPLAY_NAMES.get(provider.integration) if provider.integration else None,
         id=provider.id,
@@ -132,7 +133,9 @@ async def list_methods(
         test_mode = bool(getattr(gateway, "test_mode", False))
         if test_mode != bool(user.is_test):
             continue
-        shown.append(method_out(provider, test_mode=test_mode))
+        # **ما يُرسله `gateway_customers.customer_for` بعينه**: مفتاحُ العقد ووسيطٌ يُنشئ عملاء — فلا يَعِد السطرُ بما لا يقع
+        shares_payer = bool(getattr(gateway, "send_customer", False)) and hasattr(gateway, "create_customer")
+        shown.append(method_out(provider, test_mode=test_mode, shares_payer=shares_payer))
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
         # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها

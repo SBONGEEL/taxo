@@ -7,7 +7,8 @@
 **ومن أين جاء كلُّ بند** مكتوبٌ في SPEC §٧٦-ج (جدولُ المصادر): المزوّدون المفعَّلون فعلاً على الإنتاج (Mapbox · Firebase Cloud Messaging ·
 WhatsApp · Chargily للجزائر) · خدمةُ الموقع الأماميّة للكبتن (`OnlineService.java`: كلَّ ٢٠ ثانية ما دام متّصلاً) · مدَدُ الحفظ من الشيفرة
 (الصندوق ٩٠ · الأعطال ٣٠/٩٠ · المحادثةُ والتسجيلُ ٩٠ · الطرفُ الثالث ٣٠ · الملاحظات ٣٦٥ · مهلةُ الحذف ٣٠) · كلمةُ المرور `bcrypt` · مفاتيحُ
-المزوّدين `Fernet` · وما يُرسَل إلى Chargily (المبلغُ والعملةُ والوصفُ «TAXO شحن رصيد/اشتراك» — **لا اسمَ ولا رقم**).
+المزوّدين `Fernet` · وما يُرسَل إلى Chargily (المبلغُ والعملةُ والوصفُ «TAXO شحن رصيد/اشتراك»، **ومنذ ٢٠٢٦-١٠-١٨ اسمُ الدافع وهاتفُه وبريدُه إن كان** —
+عميلُ Chargily، §٧٦-ع/٦).
 
 **والصيغةُ صيغةُ المحرِّر** (`site/scripts/inline-policy.mjs`): سطرٌ فارغٌ يفصل الكتل · «١) …» عنوان · «- » بند.
 """
@@ -35,6 +36,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "ببطاقات شحن TAXO، أو بتحويلٍ من راكبٍ آخر، أو ببطاقةٍ مصرفيّة حين يكون الشحنُ بالبطاقة متاحاً",
             "pay_privacy": "- حين تدفع بكليك (CliQ) نحفظ المرجعَ الذي تُدخله لتحويلك ليؤكّده الكبتن. لا نصل إلى حسابك المصرفيّ.\n- حين يكون الدفعُ بالبطاقة متاحاً، تُدخل بيانات بطاقتك في صفحة مزوّد الدفع لا في TAXO. لا نحفظ رقم بطاقتك ولا رمزها السرّيّ أبداً؛ يصلنا من المزوّد رمزٌ بديل ونوعُ البطاقة وآخرُ أربعة أرقام وتاريخُ انتهائها لتعرفها حين تختارها.",
             "pay_privacy_driver": "- اسمُ حسابك في كليك (CliQ alias) الذي يحوّل إليه الركّابُ أجرة الرحلة حين يختارون كليك، ويظهر للراكب في ورقة الدفع.",
+            "pay_provider_driver": ".",
         },
         "en": {
             "country": "Jordan",
@@ -48,6 +50,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "with TAXO top-up cards, by transfer from another rider, or by bank card where card top-up is available",
             "pay_privacy": "- When you pay by CliQ, we store the reference you enter for your transfer so the captain can confirm it. We have no access to your bank account.\n- Where card payment is available, you enter your card details on the payment provider's page, not in TAXO. We never store your card number or security code; the provider gives us a substitute token, the card brand, its last four digits and its expiry date so you can recognise it when you choose it.",
             "pay_privacy_driver": "- Your CliQ alias, to which riders transfer the fare when they choose CliQ; it is shown to the rider on the payment sheet.",
+            "pay_provider_driver": ".",
         },
         "fr": {
             "country": "Jordanie",
@@ -61,6 +64,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "avec des cartes de recharge TAXO, par transfert d’un autre passager, ou par carte bancaire lorsque ce mode est disponible",
             "pay_privacy": "- Lorsque vous payez par CliQ, nous conservons la référence que vous saisissez pour votre virement afin que le capitaine puisse la confirmer. Nous n’avons aucun accès à votre compte bancaire.\n- Lorsque le paiement par carte est disponible, vous saisissez vos données de carte sur la page du prestataire de paiement, pas dans TAXO. Nous ne conservons jamais votre numéro de carte ni son code de sécurité ; le prestataire nous transmet un jeton de substitution, la marque de la carte, ses quatre derniers chiffres et sa date d’expiration pour que vous la reconnaissiez.",
             "pay_privacy_driver": "- Votre alias CliQ, sur lequel les passagers virent le prix de la course lorsqu’ils choisissent CliQ ; il est affiché au passager sur la feuille de paiement.",
+            "pay_provider_driver": ".",
         },
     },
     "LY": {
@@ -76,6 +80,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "بالطرق التي يعرضها التطبيق في ليبيا حين تكون المحفظة متاحة",
             "pay_privacy": "- لا نحفظ رقم أيّ بطاقةٍ مصرفيّة ولا رمزها السرّيّ.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": ".",
         },
         "en": {
             "country": "Libya",
@@ -89,6 +94,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "by the methods the app shows in Libya where the wallet is available",
             "pay_privacy": "- We never store any bank card number or security code.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": ".",
         },
         "fr": {
             "country": "Libye",
@@ -102,6 +108,7 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "pay_topup": "par les moyens que l’application affiche en Libye lorsque le portefeuille est disponible",
             "pay_privacy": "- Nous ne conservons jamais de numéro de carte bancaire ni de code de sécurité.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": ".",
         },
     },
     "DZ": {
@@ -115,8 +122,9 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "authority": "السلطة الوطنية لحماية المعطيات ذات الطابع الشخصي",
             "pay_ride": "نقداً للكبتن، أو من رصيد محفظة TAXO",
             "pay_topup": "ببطاقة CIB أو الذهبيّة عبر بوّابة الدفع Chargily، أو ببطاقات شحن TAXO، أو بتحويلٍ مصرفيٍّ مع إيصاله حين تكون هذه الطريقةُ متاحة",
-            "pay_privacy": "- حين تشحن محفظتك أو تشتري اشتراكاً بالبطاقة، تُدفع العمليةُ في صفحة بوّابة Chargily وتُدخل بيانات بطاقتك (CIB أو الذهبيّة) هناك لا في TAXO. لا نرسل إلى Chargily اسمَك ولا رقمَ هاتفك: نرسل المبلغَ والعملةَ ووصفاً عامّاً للعملية («TAXO شحن رصيد» أو «TAXO اشتراك»). ويعيد إلينا Chargily حالَ الدفع ومرجعَه، ولا يُضاف الرصيدُ إلا بعد تأكيده الموقَّع منه.\n- حين تدفع بتحويلٍ مصرفيّ وترفع صورة الإيصال، نحفظ الإيصال ومرجعَ التحويل ليراجعه موظّفٌ ماليّ.\n- لا نحفظ رقم بطاقتك ولا رمزها السرّيّ أبداً.",
+            "pay_privacy": "- حين تشحن محفظتك أو تشتري اشتراكاً بالبطاقة، تُدفع العمليةُ في صفحة بوّابة Chargily وتُدخل بيانات بطاقتك (CIB أو الذهبيّة) هناك لا في TAXO. ونشارك Chargily، مزوّدَ الدفع، اسمَك ورقمَ هاتفك (وبريدَك الإلكترونيّ إن كان في حسابك) فلا تكتبها في كلِّ دفعة، ومعها المبلغُ والعملةُ ووصفٌ عامٌّ للعملية («TAXO شحن رصيد» أو «TAXO اشتراك»). ويعيد إلينا Chargily حالَ الدفع ومرجعَه، ولا يُضاف الرصيدُ إلا بعد تأكيده الموقَّع منه.\n- حين تدفع بتحويلٍ مصرفيّ وترفع صورة الإيصال، نحفظ الإيصال ومرجعَ التحويل ليراجعه موظّفٌ ماليّ.\n- لا نحفظ رقم بطاقتك ولا رمزها السرّيّ أبداً.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": ": في الجزائر Chargily، حين تدفع ببطاقة CIB أو الذهبيّة. نشاركه اسمَك ورقمَ هاتفك (وبريدَك الإلكترونيّ إن كان في حسابك) فلا تكتبها في كلِّ دفعة، ومعها المبلغُ والعملة. وتُدخل بيانات بطاقتك في صفحته لا في TAXO، ولا يُفعَّل اشتراكُك إلا بعد تأكيده الموقَّع منه.",
         },
         "en": {
             "country": "Algeria",
@@ -128,8 +136,9 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "authority": "the National Authority for the Protection of Personal Data (ANPDP)",
             "pay_ride": "in cash to the captain, or from your TAXO wallet balance",
             "pay_topup": "with a CIB or Edahabia card through the Chargily payment gateway, with TAXO top-up cards, or by bank transfer with its receipt where that method is available",
-            "pay_privacy": "- When you top up your wallet or buy a subscription by card, the payment takes place on the Chargily payment page and you enter your card details (CIB or Edahabia) there, not in TAXO. We do not send Chargily your name or phone number: we send the amount, the currency and a generic description of the operation (\"TAXO top-up\" or \"TAXO subscription\"). Chargily returns the payment status and its reference to us, and your balance is credited only after Chargily's signed confirmation.\n- When you pay by bank transfer and upload a photo of the receipt, we store the receipt and the transfer reference so a finance team member can review it.\n- We never store your card number or security code.",
+            "pay_privacy": "- When you top up your wallet or buy a subscription by card, the payment takes place on the Chargily payment page and you enter your card details (CIB or Edahabia) there, not in TAXO. We share your name and phone number (and your email if your account has one) with Chargily, the payment provider, so you do not have to type them at each payment, together with the amount, the currency and a generic description of the operation (\"TAXO top-up\" or \"TAXO subscription\"). Chargily returns the payment status and its reference to us, and your balance is credited only after Chargily's signed confirmation.\n- When you pay by bank transfer and upload a photo of the receipt, we store the receipt and the transfer reference so a finance team member can review it.\n- We never store your card number or security code.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": ": in Algeria, Chargily, when you pay by CIB or Edahabia card. We share your name and phone number (and your email if your account has one) with it so you do not have to type them at each payment, together with the amount and the currency. You enter your card details on its page, not in TAXO, and your subscription is activated only after its signed confirmation.",
         },
         "fr": {
             "country": "Algérie",
@@ -141,8 +150,9 @@ COUNTRIES: dict[str, dict[str, dict[str, str]]] = {
             "authority": "l’Autorité nationale de protection des données à caractère personnel (ANPDP)",
             "pay_ride": "en espèces au capitaine, ou depuis le solde de votre portefeuille TAXO",
             "pay_topup": "par carte CIB ou Edahabia via la passerelle de paiement Chargily, avec des cartes de recharge TAXO, ou par virement bancaire avec son reçu lorsque ce mode est disponible",
-            "pay_privacy": "- Lorsque vous rechargez votre portefeuille ou achetez un abonnement par carte, le paiement se fait sur la page de la passerelle Chargily et vous y saisissez les données de votre carte (CIB ou Edahabia), pas dans TAXO. Nous ne transmettons à Chargily ni votre nom ni votre numéro de téléphone : nous envoyons le montant, la devise et une description générale de l’opération (« TAXO recharge » ou « TAXO abonnement »). Chargily nous renvoie le statut du paiement et sa référence, et votre solde n’est crédité qu’après sa confirmation signée.\n- Lorsque vous payez par virement bancaire et téléversez la photo du reçu, nous conservons le reçu et la référence du virement pour qu’un membre de l’équipe financière l’examine.\n- Nous ne conservons jamais votre numéro de carte ni son code de sécurité.",
+            "pay_privacy": "- Lorsque vous rechargez votre portefeuille ou achetez un abonnement par carte, le paiement se fait sur la page de la passerelle Chargily et vous y saisissez les données de votre carte (CIB ou Edahabia), pas dans TAXO. Nous transmettons à Chargily, le prestataire de paiement, votre nom et votre numéro de téléphone (et votre e-mail s’il figure dans votre compte) pour que vous n’ayez pas à les saisir à chaque paiement, avec le montant, la devise et une description générale de l’opération (« TAXO recharge » ou « TAXO abonnement »). Chargily nous renvoie le statut du paiement et sa référence, et votre solde n’est crédité qu’après sa confirmation signée.\n- Lorsque vous payez par virement bancaire et téléversez la photo du reçu, nous conservons le reçu et la référence du virement pour qu’un membre de l’équipe financière l’examine.\n- Nous ne conservons jamais votre numéro de carte ni son code de sécurité.",
             "pay_privacy_driver": "",
+            "pay_provider_driver": " : en Algérie, Chargily, lorsque vous payez par carte CIB ou Edahabia. Nous lui transmettons votre nom et votre numéro de téléphone (et votre e-mail s’il figure dans votre compte) pour que vous n’ayez pas à les saisir à chaque paiement, avec le montant et la devise. Vous saisissez les données de votre carte sur sa page, pas dans TAXO, et votre abonnement n’est activé qu’après sa confirmation signée.",
         },
     },
 }
@@ -455,7 +465,7 @@ TEMPLATES[("privacy_policy", "driver", "ar")] = """\nسياسة الخصوصية
 - Google Firebase Cloud Messaging — الإشعارات: رمزُ إشعارات جهازك ونصُّ الإشعار.
 - WhatsApp — رسائلُ التحقّق: رقمُ هاتفك والرمز، من حسابٍ تملكه TAXO.
 - Cloudflare — نقلُ الاتصال المشفّر وحمايتُه. Contabo — استضافةُ الخوادم.
-- مزوّدُ الدفع في بلدك حين تدفع اشتراكك إلكترونيّاً.
+- مزوّدُ الدفع في بلدك حين تدفع اشتراكك إلكترونيّاً{pay_provider_driver}
 - Google Play — تنزيلُ التطبيق وتحديثُه. وخرائط Google أو تطبيقُ الملاحة الذي تختاره — فقط حين تضغط «افتح في خرائط قوقل».
 ولا نرسل إلى أيٍّ منهم إلا ما يلزم عمله.
 
@@ -870,7 +880,7 @@ We process it because it is necessary to perform our agreement with you, because
 - Google Firebase Cloud Messaging — notifications: your device's notification token and the notification text.
 - WhatsApp — verification messages: your phone number and the code, sent from an account owned by TAXO.
 - Cloudflare — carries and protects the encrypted connection. Contabo — hosts the servers.
-- The payment provider in your country when you pay for your subscription electronically.
+- The payment provider in your country when you pay for your subscription electronically{pay_provider_driver}
 - Google Play — downloading and updating the app. Google Maps or the navigation app you choose — only when you tap "Open in Google Maps".
 We send each of them only what their work requires.
 
@@ -1285,7 +1295,7 @@ Nous les traitons parce qu’elles sont nécessaires à l’exécution de notre 
 - Google Firebase Cloud Messaging — notifications : le jeton de notifications de votre appareil et le texte de la notification.
 - WhatsApp — messages de vérification : votre numéro et le code, envoyés depuis un compte appartenant à TAXO.
 - Cloudflare — transporte et protège la connexion chiffrée. Contabo — héberge les serveurs.
-- Le prestataire de paiement de votre pays lorsque vous payez votre abonnement par voie électronique.
+- Le prestataire de paiement de votre pays lorsque vous payez votre abonnement par voie électronique{pay_provider_driver}
 - Google Play — téléchargement et mise à jour de l’application. Google Maps ou l’application de navigation de votre choix — uniquement lorsque vous appuyez sur « Ouvrir dans Google Maps ».
 Nous ne leur transmettons que ce que leur mission exige.
 

@@ -40,6 +40,12 @@ async def _checkout(client: AsyncClient, headers: dict, method_id: uuid.UUID, **
     )
 
 
+async def _shares_payer(client: AsyncClient, headers: dict, method_id: uuid.UUID) -> bool:
+    """**ما يقرؤه التطبيقُ ليقول «يصل Chargily اسمُك ورقمُك»** قبل الدفع (§٧٦-ع/٦)."""
+    listed = (await client.get("/payment-requests/methods", headers=headers)).json()
+    return next(row for row in listed["methods"] if row["id"] == str(method_id))["shares_payer"]
+
+
 async def _customers(session_factory) -> int:
     async with session_factory() as session:
         return await session.scalar(select(func.count()).select_from(GatewayCustomer))
@@ -64,6 +70,8 @@ async def test_the_customer_is_created_once_reused_and_carries_name_and_phone(
     chargily, _ = install_transport(monkeypatch)
     method_id = await add_gateway_method(session_factory, "chargily", send_customer=True)
     rider = await rider_session(client, ALGERIAN_RIDER)
+    # **والدافعُ يُقال له قبل أن يُرسَل** — السطرُ في صفحة الدفع يقرأ هذا الحقل
+    assert await _shares_payer(client, rider["headers"], method_id) is True
 
     assert (await _checkout(client, rider["headers"], method_id)).status_code == 201
     assert (await _checkout(client, rider["headers"], method_id)).status_code == 201
@@ -79,11 +87,12 @@ async def test_the_customer_is_created_once_reused_and_carries_name_and_phone(
 async def test_no_customer_is_sent_while_the_contract_switch_is_off(
     client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """**سياسةُ الخصوصية المنشورة تقول إنّا لا نرسل الاسمَ والهاتف** — فالمفتاحُ مطفأٌ ابتداءً ولا يُرسل شيء."""
+    """**المفتاحُ مطفأٌ ابتداءً** — فلا يُرسل شيء، **ولا يُقال للدافع إنه يُرسل**."""
     await algeria_market(session_factory)
     chargily, _ = install_transport(monkeypatch)
     method_id = await add_gateway_method(session_factory, "chargily")
     rider = await rider_session(client, ALGERIAN_RIDER)
+    assert await _shares_payer(client, rider["headers"], method_id) is False
     assert (await _checkout(client, rider["headers"], method_id)).status_code == 201
     assert chargily.customers == []
     assert "customer_id" not in chargily.created[0]

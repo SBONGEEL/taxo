@@ -472,6 +472,9 @@ export function PayRequestT2Screen() {
               {tr("يُرفع الإيصال…")}{" "}<span dir="ltr">{progress}%</span>
             </p>
           ) : null}
+          {method?.gateway && method.shares_payer ? (
+            <p className="t2-fld-hint">{tr("يصل {0} اسمُك ورقمُ هاتفك (وبريدُك إن كان في حسابك) فلا تكتبها في صفحته.", { 0: gatewayName })}</p>
+          ) : null}
 
           {quote ? (
             <div className="t2-pr-gap-lg" role="group" aria-label={tr("رسوم الدفع")}>

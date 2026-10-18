@@ -1486,6 +1486,8 @@ export interface PayMethod {
   fee_payer?: "taxo" | "user" | null;
   /** **اسمُ الوسيط كما يراه الدافع** («Chargily») — «ادفع عبر Chargily» لا «صفحة الوسيط» (SPEC §٧٦-ع/٢) */
   gateway_name?: string | null;
+  /** **يصل الوسيطَ اسمُ الدافع وهاتفُه** (عميلُ Chargily، SPEC §٧٦-ع/٦) — فيُقال له قبل الدفع */
+  shares_payer?: boolean;
 }
 
 export interface PayMethods {

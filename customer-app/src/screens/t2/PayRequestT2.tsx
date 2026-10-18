@@ -384,6 +384,10 @@ export function PayRequestT2Screen() {
             </section>
           ) : null}
 
+          {method?.gateway && method.shares_payer ? (
+            <p className="t2-pr-instructions">{tr("يصل {0} اسمُك ورقمُ هاتفك (وبريدُك إن كان في حسابك) فلا تكتبها في صفحته.", { 0: method.gateway_name ?? "Chargily" })}</p>
+          ) : null}
+
           <div className="t2-m-actions">
             {quote ? (
               <>
