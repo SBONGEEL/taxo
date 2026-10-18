@@ -1275,6 +1275,24 @@ export interface AppVersion {
  * ماذا**، فتستنتج الخلفيةُ «المنشورَ الآن» — **ونشرةٌ تقع بين القراءة
  * والإرسال تكتب موافقةً على نصٍّ لم يُقرأ**.
  */
+/** **وثيقةٌ تنتظر إعادةَ قبوله** (SPEC §٧٦-ع/٧ البند ٣) — مرآةُ `PendingPolicyOut`. **و`changes_*` محسوبةٌ في الخلفية**: أسطرُ
+ * المنشورة التي ليست في آخر ما قبل (بلا سطرٍ تغيّر تاريخُه وحدَه)؛ و`null` حين لا قديمَ يُقارن. */
+export interface PendingPolicy {
+  id: string;
+  doc_type: "privacy_policy" | "terms_of_use";
+  version: number;
+  published_at: string | null;
+  accepted_version: number | null;
+  accepted_at: string | null;
+  body_ar: string;
+  body_fr: string | null;
+  body_en: string | null;
+  changes_ar: string[] | null;
+  changes_fr: string[] | null;
+  /** **الإنجليزيّ** — يُنشر ولا واجهةَ إنجليزيّةَ في التطبيق اليوم فلا يُعرض */
+  changes_en: string[] | null;
+}
+
 export interface RequiredPolicy {
   id: string;
   doc_type: "privacy_policy" | "terms_of_use";

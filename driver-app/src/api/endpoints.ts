@@ -74,6 +74,7 @@ import type {
   DebtClaim,
   DriverDebtState,
   Storefront,
+  PendingPolicy,
   RequiredPolicy,
   RecordedRoute,
   SubscriptionPlan,
@@ -150,6 +151,14 @@ export const requiredPolicies = (country_code: CountryCode) =>
     `/public/policies/required?country_code=${country_code}&app=driver`,
     { anonymous: true },
   );
+
+/** **ما ينتظر إعادةَ قبوله** في هذا التطبيق (SPEC §٧٦-ع/٧ البند ٣) — **والحكمُ في الخلفية**: أيُّ نسخةٍ تُبرئ وما تغيّر. */
+export const pendingPolicies = (app: "rider" | "driver") =>
+  api.get<{ pending: PendingPolicy[] }>(`/account/policies/pending?app=${app}`);
+
+/** **«أوافق»** — يكتب القبولَ بتاريخه ونسخته، ويعيد ما بقي (فارغاً حين تمّ). */
+export const acceptPolicies = (app: "rider" | "driver", policy_ids: string[]) =>
+  api.post<{ pending: PendingPolicy[] }>("/account/policies/accept", { app, policy_ids });
 
 export const registerAccount = (payload: {
   phone: string;

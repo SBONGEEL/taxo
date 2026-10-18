@@ -1695,5 +1695,15 @@
  "سقفُ ما يُسمح أن يتراكم عليك:": "Plafond de dette autorisé :",
  " — إن تجاوزه توقّف استقبال الطلبات حتى تسدّده كاملاً.": " — au-delà, vous ne recevez plus de courses jusqu’au remboursement complet.",
  "٪": " %",
- "يصل {0} اسمُك ورقمُ هاتفك (وبريدُك إن كان في حسابك) فلا تكتبها في صفحته.": "{0} reçoit votre nom et votre numéro de téléphone (et votre e-mail s’il figure dans votre compte) : vous n’avez pas à les saisir sur sa page."
+ "يصل {0} اسمُك ورقمُ هاتفك (وبريدُك إن كان في حسابك) فلا تكتبها في صفحته.": "{0} reçoit votre nom et votre numéro de téléphone (et votre e-mail s’il figure dans votre compte) : vous n’avez pas à les saisir sur sa page.",
+ "حدّثنا شروطَنا": "Nous avons mis à jour nos conditions",
+ "اقرأ ما تغيّر، ثم اضغط «أوافق» للمتابعة.": "Lisez ce qui a changé, puis appuyez sur « J’accepte » pour continuer.",
+ "لم توافق على هذه الوثيقة من قبل.": "Vous n’avez pas encore accepté ce document.",
+ "ما تغيّر منذ النسخة {0} التي وافقتَ عليها:": "Ce qui a changé depuis la version {0} que vous avez acceptée :",
+ "لا تغيير في المضمون سوى تاريخ التحديث.": "Aucun changement de fond, seule la date de mise à jour a changé.",
+ "إخفاء النص الكامل": "Masquer le texte complet",
+ "اقرأ النص الكامل": "Lire le texte complet",
+ "تعذّر حفظ موافقتك — تحقّق من الاتصال وأعد المحاولة.": "Impossible d’enregistrer votre accord — vérifiez la connexion et réessayez.",
+ "أوافق": "J’accepte",
+ "لا أوافق — تسجيل الخروج": "Je refuse — se déconnecter"
 }

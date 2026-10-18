@@ -26,26 +26,32 @@
 «أدنى نسخةٍ تُبرئ» — من وافق عليها أو على ما بعدها فقد وافق على ما يكفي،
 **فلا يُمشى رجوعاً في النسخ** ليُعرف ذلك.
 
-## وما لا تفعله هذه الخدمة — بقرارٍ مكتوب
+## وإعادةُ القبول (قرارُ المالك ٢٠٢٦-١٠-١٨، SPEC §٧٦-ع/٧ البند ٣)
 
-**لا شاشةَ قبولٍ في تطبيقٍ ولا بابَ «ما الذي يلزمني قبولُه»** (البند ١٠ يُسلَّم
-**مسوّدةً** بنصِّ §39٫١٠). **ووثيقةٌ غيرُ منشورةٍ لا يُسأل عنها أحد**، فبابُ
-قبولٍ اليومَ بابٌ لا يجيب إلا «لا شيء» — **وهو «بابٌ بلا زرّ» في اتجاهه
-المعاكس**. ويُبنى يومَ يعتمد المالكُ النصوص.
+**كان هنا «لا شاشةَ قبولٍ ولا بابَ ما يلزمني قبولُه»** — وبُنيت بوّابةُ التسجيل
+يومَ اعتُمدت النصوص (٢٠٢٦-٠٩-٠٥)، **وبقي `min_accepted_version` يُكتب ولا يقرؤه
+أحد**: فمن وافق على نسخةٍ قديمةٍ لم يُسأل عن الجديدة. **و`pending_for` قارئُه**:
+وثيقةٌ منشورةٌ واجبةٌ لم يقبل المستخدمُ منها نسخةً ≥ `min_accepted_version` —
+**ومن لم يقبل منها شيئاً قطُّ** (سجّل قبل النشر أو أُنشئ بسكربت) **لم يوافق**،
+فهو منهم. **و`changed_lines` تقول ما تغيّر** من نصِّ ما قبله إلى نصِّ المنشورة —
+**من النصّين لا من حقلٍ يُكتب بيد**، فلا يَعِد الملخّصُ بغير ما في النصّ.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
+import re
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput, NotFound
-from app.models.enums import CountryCode, PolicyApp, PolicyDocType
+from app.models.enums import CountryCode, PolicyApp, PolicyDocType, UserRole
 from app.models.privacy import OrgProfile, PrivacyPolicy, UserPolicyConsent
 from app.models.user import User
 
@@ -367,22 +373,108 @@ async def record_consent(
     """
     if not policies:
         return 0
-    ids = [p.id for p in policies]
-    already = set(
-        (
-            await session.scalars(
-                select(UserPolicyConsent.policy_id).where(
-                    UserPolicyConsent.user_id == user.id,
-                    UserPolicyConsent.policy_id.in_(ids),
-                )
-            )
-        ).all()
+    # **`ON CONFLICT DO NOTHING` لا «اسأل ثمّ اكتب»** (§٧٦-ع/٧): ضغطتان على «أوافق» معاً كانتا تقرآن «لم يوافق» كلتاهما
+    # **فتسقط الثانيةُ بـ`IntegrityError`** في وجه من وافق — والقيدُ نفسُه هو الحكم، فيُسأل في الكتابة لا قبلها
+    rows = await session.scalars(
+        insert(UserPolicyConsent)
+        .values([{"user_id": user.id, "policy_id": policy.id} for policy in policies])
+        .on_conflict_do_nothing(constraint="user_policy_consent_once")
+        .returning(UserPolicyConsent.id)
     )
-    written = 0
-    for policy in policies:
-        if policy.id in already:
+    return len(rows.all())
+
+
+# ═══════════════ إعادةُ القبول (§٧٦-ع/٧ البند ٣) ═══════════════
+
+#: **الأرقامُ وحدَها** — سطرٌ لم يتغيّر منه إلا تاريخُه («آخر تحديث: …») ليس تغييراً في المضمون
+_DIGITS = re.compile(r"[0-9٠-٩]+")
+
+
+def _plain(line: str) -> str:
+    return " ".join(line.split())
+
+
+def changed_lines(before: str | None, after: str | None) -> list[str] | None:
+    """**أسطرُ النصّ الجديد التي ليست في القديم** — بترتيبها في الجديد.
+
+    **`None` حين لا قديمَ يُقارن** (لم يقبل شيئاً، أو لا نصَّ بهذه اللغة في إحدى النسختين) — لا قائمةٌ فارغة: الفارغةُ تقول «لم
+    يتغيّر شيء» وهي دعوى. **وسطرٌ لم يتغيّر منه إلا أرقامُه يُترك** — تاريخُ التحديث يتغيّر في كلِّ نسخة، وعرضُه «تغييراً» يُغرق
+    التغييرَ الحقَّ تحته. **ولا حكمَ على المعنى**: سطرٌ أُعيدت صياغتُه يظهر بصيغته الجديدة، وهو ما وافق عليه.
+    """
+    if not before or not after:
+        return None
+    old = {_plain(line) for line in before.splitlines() if line.strip()}
+    old_undated = {_DIGITS.sub("", line) for line in old}
+    out: list[str] = []
+    for line in after.splitlines():
+        text = _plain(line)
+        if not text or text in old or _DIGITS.sub("", text) in old_undated:
             continue
-        session.add(UserPolicyConsent(user_id=user.id, policy_id=policy.id))
-        written += 1
-    await session.flush()
-    return written
+        out.append(text)
+    return out
+
+
+@dataclass(frozen=True)
+class Pending:
+    """**وثيقةٌ منشورةٌ تنتظر قبولَه** — ومعها **آخرُ نسخةٍ قبلها منها** (`None` لمن لم يقبل منها شيئاً)."""
+
+    policy: PrivacyPolicy
+    accepted: PrivacyPolicy | None
+
+
+async def _last_accepted(session: AsyncSession, *, user: User, doc: PrivacyPolicy) -> PrivacyPolicy | None:
+    return await session.scalar(
+        select(PrivacyPolicy)
+        .join(UserPolicyConsent, UserPolicyConsent.policy_id == PrivacyPolicy.id)
+        .where(
+            UserPolicyConsent.user_id == user.id,
+            PrivacyPolicy.country_code == doc.country_code,
+            PrivacyPolicy.doc_type == doc.doc_type,
+            PrivacyPolicy.app == doc.app,
+        )
+        .order_by(PrivacyPolicy.version.desc())
+        .limit(1)
+    )
+
+
+async def pending_for(session: AsyncSession, *, user: User, app: PolicyApp) -> list[Pending]:
+    """**ما يلزم هذا المستخدمَ قبولُه الآن** في هذا التطبيق — **قارئُ `min_accepted_version`**.
+
+    **والسوقُ سوقُ حسابه** (`users.country_code`): النصُّ الذي يحكمه هو نصُّ سوقه. **وتطبيقُ الكبتن لمن له دورُ الكبتن**: راكبٌ
+    يفتح تطبيقَ الكبتن لا يُسأل عن نصٍّ لا يعمل به. **ومن قبل نسخةً ≥ `min_accepted_version` برئ** — تصحيحُ فاصلةٍ بعد إعادة
+    قبولٍ لا يسأله ثانيةً، لأن الناشرَ لم يطلب ذلك (`_stamp_min_accepted`).
+    """
+    if app == PolicyApp.DRIVER and not user.has_role(UserRole.DRIVER):
+        return []
+    out: list[Pending] = []
+    for doc in await required_for(session, country=user.country_code, app=app):
+        accepted = await _last_accepted(session, user=user, doc=doc)
+        if accepted is not None and accepted.version >= doc.min_accepted_version:
+            continue
+        out.append(Pending(policy=doc, accepted=accepted))
+    return out
+
+
+async def accept_pending(
+    session: AsyncSession, *, user: User, app: PolicyApp, policy_ids: Sequence[uuid.UUID]
+) -> list[Pending]:
+    """**«أوافق»** — يكتب قبولَ ما ينتظر **بتاريخه ونسخته** (`accepted_at` و`policy_id` ← النسخة)، ويعيد ما بقي.
+
+    **ولا يُقبل إلا المنشورُ الآن**: معرّفٌ لنسخةٍ غيرِ منشورةٍ (نُشرت أحدثُ منها بين فتح الشاشة والضغط) **يُردّ ولا يُكتب** —
+    فلا يُسجَّل قبولُ نصٍّ لم يعد قائماً، والشاشةُ تعيد السؤال. **ولا قبولَ جزئيّ**: الزرُّ واحدٌ للوثيقتين، فناقصٌ يُسمّى ويُردّ
+    كما في التسجيل. **ومعرّفٌ قُبل من قبل يمرّ** — ضغطةٌ ثانيةٌ ليست خطأ.
+    """
+    current = {doc.id for doc in await required_for(session, country=user.country_code, app=app)}
+    given = set(policy_ids)
+    if given - current:
+        raise InvalidInput("هذه النسخةُ لم تعد المنشورة — أُعيد فتحُ الشاشة بالنصّ الحاليّ.")
+    pending = await pending_for(session, user=user, app=app)
+    missing = [item.policy for item in pending if item.policy.id not in given]
+    if missing:
+        raise InvalidInput(f"لا يتمّ القبولُ بلا: {'، '.join(_title(doc) for doc in missing)}.")
+    await record_consent(session, user=user, policies=[item.policy for item in pending])
+    return await pending_for(session, user=user, app=app)
+
+
+def _title(doc: PrivacyPolicy) -> str:
+    return "سياسة الخصوصية" if doc.doc_type == PolicyDocType.PRIVACY_POLICY else "شروط الاستخدام"

@@ -1,0 +1,89 @@
+/* ═══ شاشةُ إعادة القبول (SPEC §٧٦-ع/٧ البند ٣) — فوق نافذة التحديث (`update-gate.css`) ═══
+ *
+ * **نسخةٌ واحدةٌ في التطبيقين، متطابقةٌ بايتاً** مع `reconsent-gate.tsx`. **والهيكلُ هيكلُ نافذة التحديث** (الظلُّ والبطاقةُ والدائرةُ
+ * والزرّ) — وهنا ما تزيده: وثيقةٌ بسطورها المتغيّرة ونصُّها الكامل، **باتّجاه اللغة لا في الوسط**. وبالرموز وحدَها.
+ */
+
+/* **فوق الشاشات وتحت الترحيب** (٩٠): لا تُرسم فوق مقدّمة الإقلاع، وتظهر حين تذوب. **ولا ظلَّ فوق خلفيةٍ مصمتة**: التطبيقُ حيٌّ تحتها */
+.t2.t2-update.t2-reconsent {
+  z-index: 58;
+  background: var(--t2-scrim);
+}
+
+.t2-reconsent .t2-update-card { max-width: 26rem; }
+
+.t2-reconsent-doc {
+  margin-top: 18px;
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: var(--t2-bg);
+  text-align: start;
+}
+
+.t2-reconsent-doc h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t2-text);
+}
+.t2-reconsent-doc h2 .t2-num { font-weight: 400; font-size: 12px; color: var(--t2-muted); }
+
+.t2-reconsent-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+
+.t2-reconsent-changes {
+  margin: 8px 0 0;
+  padding-inline-start: 18px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--t2-text);
+}
+.t2-reconsent-changes li + li { margin-top: 6px; }
+
+.t2-reconsent-full {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t2-accent-text);
+  cursor: pointer;
+}
+.t2-reconsent-full .t2-icon { font-size: 18px; }
+
+.t2-reconsent-body {
+  margin-top: 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--t2-text);
+  white-space: pre-line;
+}
+.t2-reconsent-body p { margin: 0 0 10px; }
+
+.t2-reconsent-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--t2-danger);
+}
+
+.t2-reconsent-out {
+  margin-top: 10px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--t2-muted);
+  cursor: pointer;
+}

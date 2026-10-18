@@ -52,6 +52,39 @@ class PolicyVersionOut(BaseModel):
     created_at: datetime
 
 
+class PendingPolicyOut(BaseModel):
+    """**وثيقةٌ تنتظر إعادةَ قبوله** (§٧٦-ع/٧ البند ٣) — النصُّ الكاملُ للنسخة المنشورة، **وما تغيّر منذ آخر ما قبل**.
+
+    **`changes_*` = `None` لا قائمةٌ فارغة** حين لا قديمَ يُقارن (لم يقبل شيئاً، أو لا نصَّ بهذه اللغة) — والفارغةُ «لا تغييرَ
+    في المضمون سوى التاريخ». **والحسابُ في الخلفية** (`policies.changed_lines`) لا في التطبيقين.
+    """
+
+    id: uuid.UUID
+    doc_type: str
+    version: int
+    published_at: datetime | None
+    #: **آخرُ نسخةٍ قبلها** — `None` لمن لم يقبل منها شيئاً
+    accepted_version: int | None
+    accepted_at: datetime | None
+    body_ar: str
+    body_fr: str | None
+    body_en: str | None
+    changes_ar: list[str] | None
+    changes_fr: list[str] | None
+    changes_en: list[str] | None
+
+
+class PendingPoliciesOut(BaseModel):
+    pending: list[PendingPolicyOut]
+
+
+class AcceptPoliciesIn(BaseModel):
+    """**«أوافق»** — معرّفاتُ النسخ المعروضة بعينها، **فلا يُقبل نصٌّ لم يُعرض**."""
+
+    app: PolicyApp
+    policy_ids: list[uuid.UUID] = Field(min_length=1, max_length=10)
+
+
 class OrgProfileIn(BaseModel):
     """بيانُ الجهة — **حقولٌ تُضبط ولا تُخبز**، وفراغُها حالٌ صحيحة."""
 

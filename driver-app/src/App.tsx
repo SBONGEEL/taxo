@@ -63,6 +63,7 @@ import { RideComms } from "@/components/ride/RideComms";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
+import { ReconsentGate } from "@/lib/reconsent-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
 import { walkDone } from "@/lib/permission-walk";
@@ -924,6 +925,8 @@ export default function App() {
                     <CaptainUnconfirmedOpening />
                     <PushRouter />
                     <PushNotices />
+                    {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
+                    <ReconsentGate app="driver" />
                   <NavBar />
                   </RideComms>
                 </RideProvider>
