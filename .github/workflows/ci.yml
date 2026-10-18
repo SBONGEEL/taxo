@@ -607,23 +607,27 @@ jobs:
           # **العددُ يُقاس** — ثلاثةٌ من أربعٍ تمرّ صامتةً لولا هذا السطر
           [ "$seen" -eq 4 ] || { echo "SIGNED_COUNT $seen of 4"; exit 1; }
 
-      - name: البيانُ ومعه الإيداع
-        run: node tools/apk-manifest.mjs
-
-      - name: الإصدارُ وأثرُه
+      # **والعامّتان لا تُرفقان — تُبنيان وتُقاس شهادتُهما أعلاه وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٨، SPEC §٧٩).
+      #
+      # **حزمةُ صفحة التحميل هي ما يوقّعه Google Play** لا ما يوقّعه مفتاحُ الرفع هنا: Play يعيد التوقيعَ بمفتاحه، **وحزمةٌ عامّةٌ
+      # بمفتاح الرفع على الصفحة لا يحدّثها Play أبداً** — وهو ما رفض تحديثَ هاتف المالك من المتجر (٢٠٢٦-١٠-١٨). فحزمتا الصفحة
+      # تُنزَّلان من Play بعد الرفع (`scripts/site-apks.sh`) وتُرفقان بهذا الإصدار نفسِه.
+      #
+      # **والإصدارُ قد يسبق CI**: `site-apks.sh` ينشئه بحزمتَي Play حين لا يوجد — **فيُرفَق إليه ولا يُنشأ ثانيةً**.
+      - name: الإصدارُ وأثرُه — التجريبيّتان وحدَهما
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # **الأربعُ تُرفَق، والعامّتان وحدَهما تنزلان الصفحة**: التجريبيّةُ
-          # تخاطب جهازَ مطوّر، فمكانُها الإصدارُ لمن يقصدها لا صفحةٌ عامّة.
+          # **التجريبيّةُ تخاطب جهازَ مطوّر**، فمكانُها الإصدارُ لمن يقصدها لا صفحةٌ عامّة — ومعرّفُها `.test` فلا تحجب Play.
           cp customer-app/android/app/build/outputs/apk/trial/release/app-trial-release.apk taxo-rider-trial.apk
           cp driver-app/android/app/build/outputs/apk/trial/release/app-trial-release.apk  taxo-driver-trial.apk
-          gh release create "${{ github.ref_name }}" \
-            landing/downloads/taxo-rider.apk \
-            landing/downloads/taxo-driver.apk \
-            landing/downloads/manifest.json \
-            taxo-rider-trial.apk \
-            taxo-driver-trial.apk \
-            --title "${{ github.ref_name }}" \
-            --notes "أربعُ حزمٍ من ${{ github.sha }} — **موقَّعةٌ بمفتاح الإصدار** (§18.1). العامّتان على صفحة التحميل، والتجريبيّتان هنا."
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" taxo-rider-trial.apk taxo-driver-trial.apk --clobber
+          else
+            gh release create "${{ github.ref_name }}" \
+              taxo-rider-trial.apk \
+              taxo-driver-trial.apk \
+              --title "${{ github.ref_name }}" \
+              --notes "التجريبيّتان من ${{ github.sha }} (\`.test\`). **وحزمتا صفحة التحميل تُرفقان هنا من Google Play بتوقيعه** (§٧٩)."
+          fi

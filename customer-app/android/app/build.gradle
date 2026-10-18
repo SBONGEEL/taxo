@@ -117,6 +117,14 @@ android {
     }
 
     buildTypes {
+        // **بناءُ التصحيح بمعرّفٍ لا يملكه Play** (قرارُ المالك ٢٠٢٦-١٠-١٨، SPEC §٧٩): `assemblePublicDebug` كان يُخرج
+        // `ly.tajora.rider` نفسَه **موقَّعاً بمفتاح التصحيح** — فحزمةُ تجربةٍ على هاتفٍ **تحجب تحديثَ Play** («التثبيتُ رُفض»)
+        // حتى تُحذف. **فاللاحقةُ `.dev` تجعله تطبيقاً آخرَ يعيش جوارَ نسخة Play** ولا يمسّها؛ والتجريبيّةُ (`trial`) لها `.test` من قبل،
+        // فتصحيحُها `.test.dev`. **ولا يمسّ هذا الإصدارَ ولا رمزَه**: `release` وحدَه يُرفع ويُوقَّع بمفتاح الرفع.
+        debug {
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -168,6 +176,14 @@ apply from: 'capacitor.build.gradle'
 def servicesJSON = file('google-services.json')
 if (servicesJSON.exists() && servicesJSON.length() > 0) {
     apply plugin: 'com.google.gms.google-services'
+    // **ومعرّفُ التصحيح (`.dev`) لا عميلَ له في Firebase** (§٧٩) — فمهمّتُه تُطفأ **لبناء التصحيح وحدَه** وإلا سقط بـ«No matching
+    // client»: **حزمةُ تصحيحٍ بلا إشعارات**، ويُقال ولا يُسكت عنه. **والإصدارُ لا يمسّه هذا** — مهمّتُه `process…ReleaseGoogleServices`
+    tasks.configureEach { task ->
+        if (task.name ==~ /process\w*DebugGoogleServices/) {
+            task.enabled = false
+            logger.lifecycle("⚠ ${task.name} مطفأة — بناءُ التصحيح (.dev) بلا Firebase ولا إشعارات")
+        }
+    }
 } else if (System.getenv('TAXO_ALLOW_NO_FIREBASE') == '1') {
     logger.lifecycle('⚠ بلا google-services.json — بإذنٍ صريح. لا إشعارات في هذه الحزمة.')
 } else {
