@@ -86,7 +86,7 @@ export function AlertsScreen() {
       title="الإشعارات"
       subtitle={`كلُّ نشاطٍ في الأسواق الثلاثة — غيرُ المقروء ${feed?.summary?.unread ?? 0}`}
       actions={
-        <div className="flex flex-wrap gap-8">
+        <div className="ad-alert-head-actions">
           <Button size="sm" variant="secondary" onClick={() => void feed?.markRead("all")}>
             الكلُّ مقروء
           </Button>

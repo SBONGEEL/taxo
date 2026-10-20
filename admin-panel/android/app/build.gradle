@@ -131,6 +131,9 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // **لخدمة إشعارات المالك** (`AdminAlertService`، SPEC §٨١): ترث خدمةَ ملحق الإشعارات وتقرأ `RemoteMessage`، **والملحقُ يجلب
+    // المكتبةَ بـ`implementation`** فلا تبلغ ترجمةَ التطبيق. **بنسخة الملحق نفسِها** (`variables.gradle`) — نمطُ تطبيق الراكب
+    implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -1,4 +1,6 @@
 ext {
+    // **نسخةُ ملحق الإشعارات 7.0.7 نفسُها** — `AdminAlertService` يقرأ بها، فلا تفترق نسختان
+    firebaseMessagingVersion = '24.1.0'
     minSdkVersion = 23
     compileSdkVersion = 35
     targetSdkVersion = 35

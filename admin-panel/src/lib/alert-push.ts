@@ -87,6 +87,8 @@ interface AdminAlertsNative {
   version(): Promise<{ level: number }>;
   /** عنوانُ الخادم لزرِّ «مقروء» — **من البناء نفسِه** (`API_URL`) لا نسخةٌ في الحزمة */
   configure(options: { apiBase: string }): Promise<void>;
+  /** **يرسم الإشعارَ على هذا الهاتف بلا FCM** — لصفحة المعاينة: الشكلُ والصوتُ قبل الطرح */
+  preview(data: Record<string, string>): Promise<void>;
   addListener(
     event: "alertTap",
     listener: (data: { record_type?: string; record_id?: string; kind?: string; alert_id?: string }) => void,
@@ -120,3 +122,20 @@ export async function listenToNativeAlertTaps(
 }
 
 export { deviceId };
+
+/** **معاينةٌ على هذا الهاتف** — `false` في المتصفّح أو على حزمةٍ بلا الملحق، فيُرسم الزرُّ حيث يعمل وحدَه. */
+export function canPreviewOnPhone(): boolean {
+  return Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("AdminAlerts");
+}
+
+export async function previewOnPhone(sample: { kind: string; tone: string; title: string; body: string }): Promise<void> {
+  await native.preview({
+    kind: sample.kind,
+    tone: sample.tone,
+    title: `معاينة · ${sample.title}`,
+    body: sample.body,
+    tag: `preview:${sample.kind}`,
+    record_type: "",
+    record_id: "",
+  });
+}

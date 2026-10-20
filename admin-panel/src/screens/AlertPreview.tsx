@@ -13,6 +13,7 @@ import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Segmented } from "@/components/ui/Segmented";
+import { canPreviewOnPhone, previewOnPhone } from "@/lib/alert-push";
 import { AlertGlyph, playTone, TONE_META } from "@/lib/alerts";
 
 function PhoneCard({ sample }: { sample: AlertSample }) {
@@ -145,6 +146,12 @@ export function AlertPreviewScreen() {
                           <Button size="sm" disabled={busy === spec.kind} onClick={() => void send(spec.kind, count)}>
                             أرسله إلى أجهزتي
                           </Button>
+                          {/* **على الهاتف نفسِه بلا FCM** — يرسمه الملحقُ الأصليّ بأيقونته وقناته وصوتها */}
+                          {canPreviewOnPhone() ? (
+                            <Button size="sm" variant="secondary" onClick={() => void previewOnPhone(sample)}>
+                              اعرضه على هذا الهاتف
+                            </Button>
+                          ) : null}
                         </div>
                       </article>
                     );

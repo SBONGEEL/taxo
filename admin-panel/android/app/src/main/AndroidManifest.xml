@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -33,6 +34,37 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- **إشعاراتُ المالك** (SPEC §٨١) — **خدمةُ رسائلَ واحدةٌ لا اثنتان**: خدمةُ ملحق الإشعارات تُنزع هنا، و`AdminAlertService`
+             ترثها وتمرّر كلَّ رسالةٍ إلى `super` (نمطُ `CallMessagingService` في التطبيقين). **وخدمتان على المرشّح نفسِه تُسقط
+             إحداهما الأخرى فتنقطع كلُّ إشعارات التطبيق** — فالنزعُ والتسجيلُ يُضافان ويُنزعان معاً. -->
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            tools:node="remove" />
+        <service
+            android:name=".AdminAlertService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- **«مقروء» على الإشعار** — يطويه ويرسل رمزَه، ولا يفتح شيئاً -->
+        <receiver
+            android:name=".AdminAlertReadReceiver"
+            android:exported="false" />
+
+        <!-- **أيقونةُ ما يرسمه النظامُ وقناتُه**: الأحاديّةُ اللون (أندرويد يرسم الملوّنةَ مربّعاً أبيض)، وقناةُ اللوحة العامّة
+             (`AdminChannels.GENERAL`) لا احتياطيّةُ FCM -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_taxo" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/taxo_alert_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="taxo.admin.general" />
     </application>
 
     <!-- Permissions -->

@@ -21,6 +21,7 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import type { ReactNode } from "react";
@@ -284,6 +285,17 @@ function SecurityGuarded({ children }: { children: ReactNode }) {
  */
 function PushTaps() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { user } = useSession();
+  // **الوجهةُ تنتظر حتى تستقرّ البداية** (§٨١، قِيس على المحاكي ٢٠٢٦-١٠-٢١): نقرةٌ تُقلع التطبيقَ المقتولَ تصل قبل أن تُعرف الجلسة
+  // **وقبل أن يحوّل الجذرُ إلى «نظرة عامة»** — فكان التحويلُ يقع بعدها ويمحوها. فتُحفظ، وتُنفَّذ حين يُعرف الداخلُ ويُغادَر «/»
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    if (pending && user && pathname !== "/") {
+      setPending(null);
+      if (pathname + window.location.search !== pending) navigate(pending);
+    }
+  }, [pending, user, pathname, navigate]);
   useEffect(() => {
     let unlisten: (() => void) | null = null;
     let dropped = false;
@@ -293,7 +305,7 @@ function PushTaps() {
     });
     // **إشعارُ المالك يرسمه الملحقُ الأصليّ** (§٨١) — نقرتُه تفتح سجلَّه، والمسارُ يُشتقّ هنا لا يُقرأ منه
     let unlistenNative: (() => void) | null = null;
-    void listenToNativeAlertTaps((alert) => navigate(recordPath(alert))).then((off) => {
+    void listenToNativeAlertTaps((alert) => setPending(recordPath(alert))).then((off) => {
       if (dropped) off();
       else unlistenNative = off;
     });
@@ -301,7 +313,7 @@ function PushTaps() {
     const onWorker = (event: MessageEvent) => {
       const message = event.data as { type?: string; target?: string } | null;
       if (message?.type === "taxo:admin-alert-open" && typeof message.target === "string" && message.target.startsWith("/")) {
-        navigate(message.target);
+        setPending(message.target);
       }
     };
     navigator.serviceWorker?.addEventListener("message", onWorker);

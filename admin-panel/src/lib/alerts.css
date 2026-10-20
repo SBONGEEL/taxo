@@ -248,3 +248,8 @@
   font-size: 12px;
   text-align: center;
 }
+
+/* أزرارُ رأس الصفحة جنباً إلى جنب — زرُّ اللوحة بعرضٍ كاملٍ افتراضاً */
+.ad-alert-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-alert-head-actions .ad-btn,
+.ad-page-actions > .ad-btn { width: auto; }
