@@ -23,6 +23,11 @@ const SRC = join(process.cwd(), "src");
 /** اتحاداتُ واجهةٍ خالصة تشترك في أسماءٍ مع تعدادات الخلفية بالمصادفة.
  *  كلُّ إعفاءٍ هنا يذكر لماذا هو اتحادُ عرضٍ لا مرآةُ عقد. */
 const UI_UNIONS = new Set([
+  // **مرآةُ فهرس إشعارات المالك** (SPEC §٨١، `services/admin_alerts.py`) — قواميسُ لا تعدادات: قيمُها عامّةٌ («phone» · «ride»)
+  // فتعدادٌ بها في الخلفية يُسقط اتحاداتِ التطبيقين (`Field` · `Step`). **ويقابلها قيمةً قيمةً ``check-enums.mjs → ALERT_MIRRORS`** — فلا تفترق بلا حارس
+  "AlertCategory",
+  "AlertTone",
+  "AlertChannel",
   // **مرشِّحُ حال الملاحظات** (`screens/Feedback.tsx`، SPEC §٧٦/٤): «جديدةٌ/معالَجةٌ/الكلّ» تُشتقّ من `handled_at` فارغاً أو لا —
   // **لا تعدادَ لها في الخلفية**، والبابُ يقبلها معاملَ استعلامٍ (`Literal`) لا عموداً
   "FeedbackStatus",
@@ -107,6 +112,33 @@ for (const file of walk(SRC, (p) => /\.tsx?$/.test(p))) {
     if (known.length > 0 && strays.length > 0) {
       problems.push(
         `${file.replace(process.cwd(), ".")}: ${name} — ${strays.join(", ")}`,
+      );
+    }
+  }
+}
+
+// ------------------------------------------------------------- مرآةُ فهرس إشعارات المالك (SPEC §٨١)
+//
+// **المستثناةُ الثلاثةُ أعلاه لا تُترك بلا حارس**: قيمُها مفاتيحُ قواميسَ في `services/admin_alerts.py` (لا تعدادات — قيمُها عامّة)،
+// **فتُقابَل هنا قيمةً قيمة**. قيمةٌ تُضاف هناك ولا تُضاف هنا ترسم اللوحةُ صفَّها بلا أيقونةٍ ولا لون — بلا خطأٍ يُرى.
+const ALERT_MIRRORS = { AlertTone: "TONES", AlertCategory: "CATEGORIES", AlertChannel: "CHANNELS" };
+const alertsPy = walk(BACKEND, (p) => p.endsWith(join("services", "admin_alerts.py")))[0];
+if (alertsPy) {
+  const py = readFileSync(alertsPy, "utf8");
+  const types = stripComments(readFileSync(join(SRC, "api", "types.ts"), "utf8"));
+  for (const [union, name] of Object.entries(ALERT_MIRRORS)) {
+    // **السطرُ الواحدُ أوّلاً** (`CHANNELS = ("panel", …)`) — وإلا ابتلع البديلُ متعدّدُ الأسطر ما بعده حتى أوّلِ قوسٍ في رأس سطر
+    const pyBlock = py.match(new RegExp(`^${name}[^=]*=\\s*(\\([^\\n]*\\)|[({][\\s\\S]*?^[)}])`, "m"));
+    const pyValues = pyBlock
+      ? [...pyBlock[1].matchAll(/^\s*"([a-z_]+)"\s*:|"([a-z_]+)"(?=\s*[,)])/gm)].map((m) => m[1] ?? m[2])
+      : [];
+    const tsBlock = types.match(new RegExp(`type\\s+${union}\\s*=\\s*([^;]+);`));
+    const tsValues = tsBlock ? [...tsBlock[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+    const missing = pyValues.filter((value) => !tsValues.includes(value));
+    const extra = tsValues.filter((value) => !pyValues.includes(value));
+    if (!pyValues.length || !tsValues.length || missing.length || extra.length) {
+      problems.push(
+        `./src/api/types.ts: ${union} ≠ admin_alerts.${name} — ناقص: ${missing.join(", ") || "—"} · زائد: ${extra.join(", ") || "—"}`,
       );
     }
   }

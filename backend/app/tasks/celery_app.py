@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from celery import Celery, bootsteps
+from celery.signals import worker_process_init
 from celery.schedules import crontab
 
 from app.core.config import settings
@@ -74,6 +75,9 @@ CANCELLATION_INTERVAL_SECONDS = 600
 # بابٍ مغلقٍ لا يعلم به أحد
 WHATSAPP_WATCH_INTERVAL_SECONDS = 60
 
+#: **إشعاراتُ المالك** (SPEC §٨١) — ما وقع يصل في ثوانٍ
+ADMIN_ALERTS_INTERVAL_SECONDS = 5.0
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
@@ -106,6 +110,7 @@ celery_app = Celery(
         "app.tasks.trip_comms",
         "app.tasks.broadcast",
         "app.tasks.capacity",
+        "app.tasks.admin_alerts",
     ],
 )
 
@@ -194,6 +199,15 @@ celery_app.conf.update(
         },
         # **كلَّ ساعة** (قرارُ المالك ٥): المستوى حكمٌ على أداء شهرٍ كامل، ودورةٌ
         # أسرعُ تُعيد حسابَ ألفِ صفٍّ لتغيّرٍ لا يراه أحد
+        # **إشعاراتُ المالك** (SPEC §٨١): **كلَّ خمس ثوانٍ** — ما وقع يصل الهاتفَ في ثوانٍ، والدورةُ الفارغةُ طولُ قائمةٍ لا غير
+        "drain-admin-alerts": {
+            "task": "app.tasks.admin_alerts.drain_admin_alerts",
+            "schedule": ADMIN_ALERTS_INTERVAL_SECONDS,
+        },
+        "trim-admin-alerts": {
+            "task": "app.tasks.admin_alerts.trim_admin_alerts",
+            "schedule": 86_400.0,
+        },
         "reevaluate-driver-levels": {
             "task": "app.tasks.levels.reevaluate_driver_levels",
             "schedule": 3600.0,
@@ -298,6 +312,18 @@ celery_app.conf.update(
         },
     },
 )
+
+
+@worker_process_init.connect
+def _capture_in_worker(**_kwargs: Any) -> None:
+    """**ما يكتبه العاملُ يُلتقط أيضاً** (SPEC §٨١) — الكنسُ يُسقط الدفعات ويُنشئ رحلاتِ الحجز.
+
+    **وبنداءٍ مقطوعٍ لا بمهمّة** (`alert_capture.SYNC_SHIP`): حلقةُ العامل تقف بين مهمّةٍ وأخرى، فمهمّةٌ تُنشأ بعد آخر التزامٍ تبقى
+    معلّقةً حتى المهمّة التالية."""
+    from app.services import alert_capture
+
+    alert_capture.SYNC_SHIP = True
+    alert_capture.install()
 
 
 def run_async(coro: Coroutine[Any, Any, Any]) -> Any:

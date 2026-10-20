@@ -20,7 +20,9 @@ import type { ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { getMyTotp } from "@/api/endpoints";
+import { AlertBell } from "@/components/AlertBell";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { ACTIVITY_ALERTS } from "@/lib/alerts";
 import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
 import { TRIP_CHATS_READ, useMyPermissions } from "@/lib/permissions";
@@ -44,6 +46,10 @@ const GROUPS: {
       { label: "نظرة عامة", icon: "space_dashboard", to: "/overview" },
       { label: "الخريطة الحيّة", icon: "map", to: "/live-map", adminOnly: true },
       { label: "سجل الرحلات", icon: "route", to: "/rides" },
+      // **إشعاراتُ النشاط** (SPEC §٨١) — للمالك ومن مُنحها بالاسم
+      { label: "الإشعارات", icon: "notifications", to: "/alerts", permission: ACTIVITY_ALERTS },
+      { label: "إعداد الإشعارات", icon: "tune", to: "/alerts/settings", permission: ACTIVITY_ALERTS },
+      { label: "معاينة الإشعارات", icon: "visibility", to: "/alerts/preview", permission: ACTIVITY_ALERTS },
     ],
   },
   {
@@ -395,6 +401,8 @@ export function Shell({
 
           <span className="ad-head-gap" />
 
+          {/* **جرسُ المالك** (SPEC §٨١) — على الهاتف والحاسوب معاً، ولمن يملك الصلاحيةَ وحدَه */}
+          <AlertBell />
           {/* **الاسمُ والدورُ خبرٌ لا زرّ** — والزرّان بجانبه ٤٤ لا يُسحقان */}
           <button type="button" onClick={toggle} aria-label={themeLabel} className="ad-round ad-desk">
             <Icon name={themeIcon} />

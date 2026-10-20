@@ -15,7 +15,7 @@ from app.core.redis_client import close_redis_client, get_redis_client
 from app.core.request_id import HEADER as REQUEST_ID_HEADER
 from app.core.request_id import RequestIdMiddleware
 from app.routers import api_router
-from app.services import dispatch, tracking
+from app.services import alert_capture, dispatch, tracking
 from app.ws import hub
 
 
@@ -61,6 +61,8 @@ app.add_middleware(
 app.add_middleware(RequestIdMiddleware)
 
 register_exception_handlers(app)
+# **إشعاراتُ المالك** (SPEC §٨١): مستمعُ الجلسة الذي يرى كلَّ بابٍ يكتب حساباً أو مالاً أو رحلة — بعد الالتزام وحدَه
+alert_capture.install()
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 

@@ -31,6 +31,8 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { CountriesProvider } from "@/lib/countries";
 import { CountryProvider } from "@/lib/country";
+import { listenToNativeAlertTaps } from "@/lib/alert-push";
+import { AlertFeedProvider, recordPath } from "@/lib/alerts";
 import { listenToPushTaps } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -39,6 +41,14 @@ import { LoginScreen } from "@/screens/Login";
 
 const OverviewScreen = lazy(() =>
   import("@/screens/Overview").then((m) => ({ default: m.OverviewScreen })),
+);
+// **إشعاراتُ المالك** (SPEC §٨١) — القائمةُ والإعدادُ والمعاينة
+const AlertsScreen = lazy(() => import("@/screens/Alerts").then((m) => ({ default: m.AlertsScreen })));
+const AlertSettingsScreen = lazy(() =>
+  import("@/screens/AlertSettings").then((m) => ({ default: m.AlertSettingsScreen })),
+);
+const AlertPreviewScreen = lazy(() =>
+  import("@/screens/AlertPreview").then((m) => ({ default: m.AlertPreviewScreen })),
 );
 const LiveMapScreen = lazy(() =>
   import("@/screens/LiveMap").then((m) => ({ default: m.LiveMapScreen })),
@@ -281,9 +291,25 @@ function PushTaps() {
       if (dropped) off();
       else unlisten = off;
     });
+    // **إشعارُ المالك يرسمه الملحقُ الأصليّ** (§٨١) — نقرتُه تفتح سجلَّه، والمسارُ يُشتقّ هنا لا يُقرأ منه
+    let unlistenNative: (() => void) | null = null;
+    void listenToNativeAlertTaps((alert) => navigate(recordPath(alert))).then((off) => {
+      if (dropped) off();
+      else unlistenNative = off;
+    });
+    // **ومن عامل المتصفّح** (`public/alerts-sw.js`): «افتح» واللوحةُ مفتوحةٌ في لسانٍ آخر — تنتقل بلا إعادة تحميل
+    const onWorker = (event: MessageEvent) => {
+      const message = event.data as { type?: string; target?: string } | null;
+      if (message?.type === "taxo:admin-alert-open" && typeof message.target === "string" && message.target.startsWith("/")) {
+        navigate(message.target);
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", onWorker);
     return () => {
       dropped = true;
       unlisten?.();
+      unlistenNative?.();
+      navigator.serviceWorker?.removeEventListener("message", onWorker);
     };
   }, [navigate]);
   return null;
@@ -327,6 +353,7 @@ export default function App() {
                 }
               >
                 <ErrorBoundary>
+                <AlertFeedProvider>
                 <Routes>
                   <Route
                     path="/login"
@@ -334,6 +361,30 @@ export default function App() {
                       <Anonymous>
                         <LoginScreen />
                       </Anonymous>
+                    }
+                  />
+                  <Route
+                    path="/alerts"
+                    element={
+                      <Guarded>
+                        <AlertsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/alerts/settings"
+                    element={
+                      <Guarded>
+                        <AlertSettingsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/alerts/preview"
+                    element={
+                      <Guarded>
+                        <AlertPreviewScreen />
+                      </Guarded>
                     }
                   />
                   <Route
@@ -685,6 +736,7 @@ export default function App() {
                     element={<Navigate to="/overview" replace />}
                   />
                 </Routes>
+                </AlertFeedProvider>
                 </ErrorBoundary>
               </Suspense>
               <WelcomeGate />

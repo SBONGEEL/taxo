@@ -38,6 +38,7 @@
     "@capacitor/push-notifications": "7.0.7",
     "@mapbox/mapbox-gl-rtl-text": "^0.4.0",
     "clsx": "^2.1.1",
+    "firebase": "^11.1.0",
     "lucide-react": "^0.469.0",
     "mapbox-gl": "^3.9.0",
     "qrcode": "^1.5.4",

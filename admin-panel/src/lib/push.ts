@@ -18,6 +18,8 @@
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
+import { recordPath } from "@/lib/alert-paths";
+
 export type PushState = "granted" | "denied" | "unsupported";
 
 export interface PushRegistration {
@@ -69,6 +71,10 @@ export async function listenToPushTaps(
       // **الوجهةُ تُشتقّ من `kind` لا تُقرأ من حقلِ مسارٍ في الحمولة**: مسارٌ
       // يصل من الشبكة يُفتح كما جاء بابٌ لمن يزوّر إشعاراً
       if (data.kind === "cliq_claim_declared") go("/m/payments");
+      // **إشعارُ المالك على حزمةٍ أقدم** (§٨١) — رسمه النظام، والوجهةُ من نوع السجلّ لا من مسارٍ في الحمولة
+      if (data.type === "admin_alert") {
+        go(recordPath({ record_type: data.record_type || null, record_id: data.record_id || null, kind: data.kind ?? "" }));
+      }
     },
   );
   return () => {

@@ -268,3 +268,8 @@ from app.models.error_report import (  # noqa: F401
     ErrorGroup,
     ErrorGroupDevice,
 )
+from app.models.admin_alert import (  # noqa: F401
+    AdminAlert,
+    AdminAlertRead,
+    AdminAlertSettings,
+)

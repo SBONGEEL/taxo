@@ -2926,3 +2926,81 @@ export interface FinanceGateways {
   currency: Currency;
   gateways: FinanceGateway[];
 }
+
+
+// ═════════════════════════ إشعاراتُ المالك (SPEC §٨١) — مرايا `schemas/admin_alerts.py`
+
+/** **مجموعةُ العرض** كما سمّاها المالك — مرشِّحُ «النوع» في القائمة. */
+export type AlertCategory = "accounts" | "money" | "rides" | "support";
+/** **فئةُ الصوت والقناة** — منها الأيقونةُ واللونُ والصوتُ وقناةُ أندرويد. */
+export type AlertTone = "money_in" | "money_out" | "account" | "problem" | "ride" | "feedback";
+export type AlertChannel = "panel" | "web" | "phone";
+
+export interface AdminAlert {
+  id: string;
+  kind: string;
+  category: AlertCategory;
+  tone: AlertTone;
+  country_code: CountryCode | null;
+  count: number;
+  amount: string | null;
+  currency: Currency | null;
+  /** **السجلُّ الذي يُفتح** — والمسارُ يُشتقّ هنا (`lib/alerts.ts → recordPath`)، **ولا يصل مسارٌ من الخادم** */
+  record_type: string | null;
+  record_id: string | null;
+  data: Record<string, unknown>;
+  /** **السطرُ كما على شاشة القفل** — نوعٌ وسوقٌ ومبلغٌ بلا اسمٍ ولا رقم */
+  title: string;
+  body: string;
+  created_at: string;
+  last_event_at: string;
+  read: boolean;
+}
+
+export interface AlertPage {
+  items: AdminAlert[];
+  unread: number;
+}
+
+export interface AlertSummary {
+  unread: number;
+  latest: AdminAlert[];
+}
+
+export interface AlertKindSpec {
+  kind: string;
+  category: AlertCategory;
+  tone: AlertTone;
+  label: string;
+  plural: string;
+}
+
+export interface AlertCatalog {
+  kinds: AlertKindSpec[];
+  categories: { key: AlertCategory; label: string }[];
+  tones: { key: AlertTone; label: string }[];
+  channels: AlertChannel[];
+}
+
+export interface AlertSettings {
+  kinds: Record<string, Record<AlertChannel, boolean>>;
+  sounds: Record<AlertTone, boolean>;
+}
+
+/** **سطرُ كلِّ نوعٍ كما يصل الهاتف** — من `tray_text` في الخادم نفسِها، لصفحة المعاينة */
+export interface AlertSample {
+  kind: string;
+  category: AlertCategory;
+  tone: AlertTone;
+  count: number;
+  title: string;
+  body: string;
+}
+
+export interface AlertTestResult {
+  title: string;
+  body: string;
+  web: number;
+  phone: number;
+  failed: number;
+}

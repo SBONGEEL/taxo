@@ -7,6 +7,15 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  AlertCatalog,
+  AlertCategory,
+  AlertPage,
+  AlertSample,
+  AlertSettings,
+  AlertSummary,
+  AlertTestResult,
+} from "@/api/types";
+import type {
   Currency,
   ExchangeRates,
   FinanceOverview,
@@ -345,6 +354,8 @@ export const registerDevice = (payload: {
   device_id: string;
   token: string;
   platform: string;
+  /** **قنواتُ الإدارة وخدمتُها على الهاتف** (§٨١) — من الملحق الأصليّ لا افتراضاً */
+  push_channels?: number;
 }) => api.put<void>("/me/devices", payload);
 
 export const unregisterDevice = (deviceId: string) =>
@@ -2323,3 +2334,35 @@ export async function exportFinanceOverview(query: FinanceOverviewQuery): Promis
   URL.revokeObjectURL(link.href);
 }
 
+
+// ═════════════════════════ إشعاراتُ المالك (SPEC §٨١) — بصلاحية `activity_alerts.receive`، والخادمُ يردّ غيرَ حاملها
+
+export const listAlerts = (filters: {
+  category?: AlertCategory;
+  kind?: string;
+  country_code?: CountryCode;
+  since?: string;
+  until?: string;
+  unread?: boolean;
+  before?: string;
+  limit?: number;
+}) => api.get<AlertPage>("/admin/alerts", { query: filters });
+
+/** **الجرس** — عددُ غير المقروء وآخرُ ثمانية؛ يُسأل كلَّ بضع ثوانٍ */
+export const alertSummary = () => api.get<AlertSummary>("/admin/alerts/summary");
+
+export const markAlertsRead = (payload: { ids?: string[]; all?: boolean }) =>
+  api.post<{ marked: number; unread: number }>("/admin/alerts/read", payload);
+
+export const alertCatalog = () => api.get<AlertCatalog>("/admin/alerts/catalog");
+
+export const alertSettings = () => api.get<AlertSettings>("/admin/alerts/settings");
+
+export const saveAlertSettings = (settings: AlertSettings) =>
+  api.put<AlertSettings>("/admin/alerts/settings", settings);
+
+export const alertSamples = () => api.get<AlertSample[]>("/admin/alerts/samples");
+
+/** **المعاينة** — إشعارٌ حقيقيٌّ بالنوع إلى أجهزتي وحدَها، بوسم «معاينة»، ولا يُكتب منه شيء */
+export const sendTestAlert = (payload: { kind: string; country_code?: CountryCode; count?: number }) =>
+  api.post<AlertTestResult>("/admin/alerts/test", payload);

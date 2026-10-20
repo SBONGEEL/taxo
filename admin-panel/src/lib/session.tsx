@@ -55,6 +55,7 @@ import {
 } from "@/api/endpoints";
 import type { AuthResponse, TotpStatus, User } from "@/api/types";
 import { deviceId, platform } from "@/lib/device";
+import { adminNativeLevel } from "@/lib/alert-push";
 import { registerNativePush, type PushState } from "@/lib/push";
 
 /** سببُ آخر خروج — تقرؤه شاشةُ الدخول فتقول ما جرى بدل أن تبدو معطّلة.
@@ -179,10 +180,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const outcome = await registerNativePush();
         setPushState(outcome.state);
         if (outcome.token) {
+          // **ومعه قنواتُ إشعارات المالك إن حملتها الحزمة** (SPEC §٨١) — بها يُرسَل إليه ما يرسمه بأيقونته وأزراره
+          const level = await adminNativeLevel();
           await registerDevice({
             device_id: deviceId(),
             token: outcome.token,
             platform: platform(),
+            ...(level ? { push_channels: level } : {}),
           });
         }
       } catch (error) {

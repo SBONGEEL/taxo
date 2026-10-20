@@ -11,6 +11,7 @@ from app.routers import (
     admin_errors,
     admin_cancellations,
     admin_feedback,
+    admin_alerts,
     admin_guest,
     admin_photo_reports,
     admin_policies,
@@ -168,6 +169,9 @@ api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
 api_router.include_router(admin_photo_reports.router)
 api_router.include_router(admin_feedback.router)
+# **إشعاراتُ المالك** (SPEC §٨١): الجرسُ والقائمةُ والإعداد — **و«مقروء» من زرِّ الإشعار بلا جلسة**، إذنُه في رمزه
+api_router.include_router(admin_alerts.router)
+api_router.include_router(admin_alerts.public_router)
 # **وضعُ الضيف** (SPEC §٧٦-ن): بابا الضيف ومفتاحُه في اللوحة
 api_router.include_router(admin_guest.router)
 api_router.include_router(guest.router)

@@ -262,6 +262,8 @@ RecordingsListener = Annotated[User, _perm(AdminPermission.CALL_RECORDINGS_LISTE
 FinanceSummaryReader = Annotated[User, _perm(AdminPermission.FINANCE_SUMMARY_READ)]
 # **الدولُ والحدود** (SPEC §٧٤-أ/٢–٣) — «بصلاحية المالك»: خارجَ افتراض `admin`، تُمنح بالاسم
 MarketsManager = Annotated[User, _perm(AdminPermission.MARKETS_MANAGE)]
+# **إشعاراتُ النشاط** (SPEC §٨١) — المالكُ افتراضاً، وغيرُه بمنحٍ بالاسم
+ActivityAlertsReceiver = Annotated[User, _perm(AdminPermission.ACTIVITY_ALERTS_RECEIVE)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #
