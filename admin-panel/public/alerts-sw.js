@@ -86,8 +86,11 @@ try {
       if (data.type !== "admin_alert") return;
       const actions = [{ action: "open", title: "افتح" }];
       if (data.read_token) actions.push({ action: "read", title: "مقروء" });
-      return self.registration.showNotification(data.title || "TAXO", {
-        body: data.body || "",
+      // **علامةُ «من اليمين» (U+200F) أوّلَ النصّ** (§٨١، 2026-10-21): `dir` يُهمله بعضُ أنظمة الحاسوب (إشعاراتُ ويندوز)، فيبدأ سطرٌ
+      // أوّلُه رقمٌ («2 طلبات رحلة · الأردن») من اليسار ويتأخّر الرقمُ عن جملته. والعلامةُ لا تُرى، وتثبّت اتجاهَ السطر أيّاً كان الراسم
+      const rtl = (text) => (text ? `\u200f${text}` : text);
+      return self.registration.showNotification(rtl(data.title) || "TAXO", {
+        body: rtl(data.body) || "",
         icon: `/icons/alerts/alert_${data.tone || "account"}.png`,
         badge: "/icons/alerts/alert_badge.png",
         dir: "rtl",
