@@ -174,6 +174,7 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
     from app.models.feedback import AppFeedback
     from app.models.guest import GuestSession
     from app.models.payment import Payment
+    from app.models.payment_request import PaymentRequest, PayMethod
     from app.models.photo_report import UserPhotoReport
     from app.models.provider_order import ProviderOrder
     from app.models.rating import Rating
@@ -275,6 +276,29 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
         return Draft(
             kind, country, amount=amount, currency=currency, record_type=record[0], record_id=record[1],
             data={"owner": entry.owner_type.value, "test": bool(user and user.is_test)},
+            # **ردُّ دفعةٍ يكتب قيدَ تسوية** — فيُقرأ ردّاً من دفعته ويسقط قيدُه هنا (`resolve_all`)
+            dedupe=f"ledger:{entry.id}",
+        )
+
+    if model == "payment_request":
+        request = await session.get(PaymentRequest, pk)
+        if request is None:
+            return None
+        method = await session.get(PayMethod, request.provider_id)
+        if kind == "topup_requested" and method is not None and method.integration:
+            return None
+        if kind == "payment_cancelled" and request.cancel_reason and _EXPIRED.search(request.cancel_reason):
+            kind = "payment_expired"
+        user = await session.get(User, request.user_id)
+        return Draft(
+            kind,
+            request.country_code,
+            amount=request.amount,
+            currency=request.currency,
+            record_type="payment_request",
+            record_id=str(request.id),
+            data={"purpose": request.purpose.value, "pay_kind": request.kind.value, "test": bool(user and user.is_test)},
+            dedupe=f"ledger:{request.refund_transaction_id}" if kind == "refund" and request.refund_transaction_id else None,
         )
 
     if model == "topup_request":
@@ -402,10 +426,13 @@ async def resolve_all(session: AsyncSession, items: list[dict[str, Any]]) -> lis
         if draft is not None:
             resolved.append((item["m"], draft))
     order_payments = {draft.dedupe for model, draft in resolved if model == "order" and draft.dedupe}
+    request_ledgers = {draft.dedupe for model, draft in resolved if model == "payment_request" and draft.dedupe}
     drafts: list[Draft] = []
     seen: dict[str, Draft] = {}
     for model, draft in resolved:
         if model == "payment" and draft.dedupe in order_payments:
+            continue
+        if model == "ledger" and draft.dedupe in request_ledgers:
             continue
         if model == "document" and draft.dedupe:
             if draft.dedupe in seen:

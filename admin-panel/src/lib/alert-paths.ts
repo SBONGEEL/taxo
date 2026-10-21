@@ -23,6 +23,8 @@ export function recordPath(alert: AlertRecord): string {
       return "/finance";
     case "topup_request":
       return "/finance?tab=topups";
+    case "payment_request":
+      return "/payment-system";
     case "feedback":
       return "/feedback";
     case "chat_report":

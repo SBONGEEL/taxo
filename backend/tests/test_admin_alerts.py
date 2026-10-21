@@ -27,6 +27,9 @@ from app.models.enums import (
     DocumentReviewStatus,
     DocumentType,
     PaymentProvider,
+    PaymentProviderKind,
+    PaymentRequestPurpose,
+    PaymentRequestStatus,
     PaymentStatus,
     ProviderOrderPurpose,
     ProviderOrderSource,
@@ -40,6 +43,7 @@ from app.models.enums import (
     WithdrawalStatus,
 )
 from app.models.payment import Payment
+from app.models.payment_request import PaymentRequest, PayMethod
 from app.models.photo_report import UserPhotoReport
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
@@ -47,7 +51,7 @@ from app.models.ride import Ride
 from app.models.user import User
 from app.models.user_role_grant import UserRoleGrant
 from app.models.wallet import WalletTopupRequest, WithdrawalRequest
-from app.services import admin_alerts, alert_capture, wallet
+from app.services import admin_alerts, alert_capture, payment_reasons, wallet
 from app.services.push.mock import sent_messages
 from tests.helpers import (
     DRIVER,
@@ -264,6 +268,76 @@ async def test_gateway_order_outcomes(
         await session.commit()
     alert = _one(await _take(session_factory), kind)
     assert alert.amount == Decimal("10.000") and alert.record_type == "rider"
+
+
+async def _pay_requests(session_factory, user_id: uuid.UUID, *integrations: str | None) -> list[uuid.UUID]:
+    """**دفعاتُ نظام الدفع الجديد** (§٧٣-أ/٥) بطرقٍ جزائريّة — تحويلٌ يُراجَع يدويّاً (`None`) أو وسيطٌ (`chargily`)."""
+    ids = []
+    async with session_factory() as session:
+        for integration in integrations:
+            method = PayMethod(
+                country_code=CountryCode.DZ, kind=PaymentProviderKind.BANK_TRANSFER, code=f"m{uuid.uuid4().hex[:8]}",
+                name="طريقة اختبار", integration=integration, enabled=True,
+            )
+            session.add(method)
+            await session.flush()
+            request = PaymentRequest(
+                user_id=user_id, owner_type=WalletOwnerType.RIDER, country_code=CountryCode.DZ, currency=Currency.DZD,
+                provider_id=method.id, kind=method.kind, purpose=PaymentRequestPurpose.WALLET_TOPUP, amount=Decimal("500.000"),
+            )
+            session.add(request)
+            await session.flush()
+            ids.append(request.id)
+        await session.commit()
+    return ids
+
+
+async def test_payment_requests_failed_cancelled_and_expired(client: AsyncClient, session_factory) -> None:
+    """**نظامُ الدفع الجديد كان خارجَ المراقبة** (قِيس ٢٠٢٦-١٠-٢١): دفعةُ الجزائر تسقط أو تُلغى أو تنتهي مهلتُها فلا يُشعَر بها.
+    **وتحويلٌ يدويٌّ ينتظر المراجعةَ يُشعَر به، وصفحةُ وسيطٍ فُتحت لا** — لا تنتظر أحداً."""
+    rider = await rider_session(client)
+    await _take(session_factory)
+    manual, gateway, late = await _pay_requests(session_factory, uuid.UUID(rider["user"]["id"]), None, "chargily", "chargily")
+    rows = await _take(session_factory)
+    waiting = _one(rows, "topup_requested")
+    assert waiting.count == 1 and waiting.country_code is CountryCode.DZ and waiting.record_type == "payment_request"
+    assert waiting.record_id == str(manual) and waiting.amount == Decimal("500.000")
+
+    async with session_factory() as session:
+        row = await session.get(PaymentRequest, manual)
+        row.status, row.rejection_reason = PaymentRequestStatus.REJECTED, "الإيصالُ لا يُقرأ"
+        row = await session.get(PaymentRequest, gateway)
+        row.status, row.cancel_reason = PaymentRequestStatus.CANCELLED, payment_reasons.GATEWAY_CANCELLED
+        row = await session.get(PaymentRequest, late)
+        row.status, row.cancel_reason = PaymentRequestStatus.CANCELLED, payment_reasons.EXPIRED
+        await session.commit()
+    rows = await _take(session_factory)
+    assert sorted(_kinds(rows)) == ["payment_cancelled", "payment_expired", "payment_failed"]
+    assert _one(rows, "payment_expired").record_id == str(late)
+
+
+async def test_a_payment_request_refund_is_one_refund_not_an_adjustment(client: AsyncClient, session_factory) -> None:
+    """**الردُّ يكتب قيدَ تسوية** — فيُقرأ ردّاً من دفعته، **ولا يصل المالكَ مرّتين** (ردٌّ وتسويةٌ يدويّة)."""
+    rider = await rider_session(client)
+    (paid,) = await _pay_requests(session_factory, uuid.UUID(rider["user"]["id"]), None)
+    async with session_factory() as session:
+        owner = await session.get(User, uuid.UUID(rider["user"]["id"]))
+        await wallet.record(session, owner=owner, owner_type=WalletOwnerType.RIDER, tx_type=WalletTransactionType.TOPUP, amount=Decimal("500.000"))
+        row = await session.get(PaymentRequest, paid)
+        row.status = PaymentRequestStatus.APPROVED
+        await session.commit()
+    await _take(session_factory)
+    async with session_factory() as session:
+        owner = await session.get(User, uuid.UUID(rider["user"]["id"]))
+        entry = await wallet.record(
+            session, owner=owner, owner_type=WalletOwnerType.RIDER, tx_type=WalletTransactionType.ADJUSTMENT, amount=Decimal("-500.000"),
+        )
+        row = await session.get(PaymentRequest, paid)
+        row.status, row.refund_reason, row.refund_transaction_id = PaymentRequestStatus.REFUNDED, "ردٌّ بطلب صاحبها", entry.id
+        await session.commit()
+    rows = await _take(session_factory)
+    assert _kinds(rows) == ["refund"]
+    assert rows[0].record_type == "payment_request" and rows[0].amount == Decimal("500.000")
 
 
 async def test_withdrawals_topup_requests_adjustments_and_debt_cap(client: AsyncClient, session_factory) -> None:

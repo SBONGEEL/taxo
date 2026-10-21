@@ -80,6 +80,7 @@ def _install_handlers() -> None:
     from app.models.enums import (
         DocumentReviewStatus,
         PaymentMethod,
+        PaymentRequestStatus,
         PaymentStatus,
         ProviderOrderStatus,
         RideStatus,
@@ -89,6 +90,7 @@ def _install_handlers() -> None:
     )
     from app.models.feedback import AppFeedback
     from app.models.payment import Payment
+    from app.models.payment_request import PaymentRequest
     from app.models.photo_report import UserPhotoReport
     from app.models.provider_order import ProviderOrder
     from app.models.rating import Rating
@@ -173,6 +175,21 @@ def _install_handlers() -> None:
         if status in withdrawal_kinds:
             yield _event(withdrawal_kinds[status], "withdrawal", obj.id)
 
+    # **نظامُ الدفع الجديد** (§٧٣-أ/٥: وسيطا الجزائر والتحويلُ اليدويّ) — كان خارجَ المراقبة فلا يُشعَر بسقوط دفعةٍ فيه (قِيس ٢٠٢٦-١٠-٢١).
+    # **والاعتمادُ يُقرأ من قيده** (شحنٌ · اشتراك) لا من هنا، فلا يُعدّ مرّتين. و«ينتظر» يُصفّى عند الحلّ: صفحةُ وسيطٍ فُتحت لا تنتظر أحداً
+    payment_request_kinds = {
+        PaymentRequestStatus.REJECTED: "payment_failed",
+        PaymentRequestStatus.CANCELLED: "payment_cancelled",
+        PaymentRequestStatus.REFUNDED: "refund",
+    }
+
+    def payment_request(obj: PaymentRequest, new: bool) -> Iterator[Event]:
+        status = _value(obj, "status", new)
+        if new and status is PaymentRequestStatus.PENDING:
+            yield _event("topup_requested", "payment_request", obj.id)
+        elif status in payment_request_kinds:
+            yield _event(payment_request_kinds[status], "payment_request", obj.id)
+
     def subscription(obj: DriverSubscription, new: bool) -> Iterator[Event]:
         # **صفُّ الاشتراك لا يوجد إلا بعد وصول ماله** (CLAUDE.md) — فإدراجُه هو الدفعُ نفسُه
         if new:
@@ -222,6 +239,7 @@ def _install_handlers() -> None:
             DriverDocument: document,
             Payment: payment,
             ProviderOrder: order,
+            PaymentRequest: payment_request,
             WalletTransaction: ledger,
             WalletTopupRequest: topup_request,
             WithdrawalRequest: withdrawal,
