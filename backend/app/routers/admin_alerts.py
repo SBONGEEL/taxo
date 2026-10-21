@@ -1,8 +1,8 @@
 """إشعاراتُ المالك في اللوحة (SPEC §٨١) — **الجرسُ والقائمةُ والإعدادُ والمعاينة**.
 
 **وكلُّها بصلاحية `activity_alerts.receive`** (`ActivityAlertsReceiver`): المالكُ يملكها، **ولا يملكها مشرفٌ افتراضاً** (`permissions.SENSITIVE`)
-— «وغيرُه إن منحه المالكُ ذلك لاحقاً» من مصفوفة الصلاحيات. **وبابٌ واحدٌ بلا جلسة**: «مقروء» من زرِّ الإشعار (`read_by_token`) —
-إذنُه في رمزٍ يخصّ مستلماً وصفّاً، **ولا يفعل غيرَ ذلك**.
+— «وغيرُه إن منحه المالكُ ذلك لاحقاً» من مصفوفة الصلاحيات. **وبابٌ واحدٌ بلا جلسة**: «مقروء» من زرِّ الإشعار (`read_by_receipt`) —
+إذنُه في إيصالٍ يخصّ مستلماً وصفّاً، **ولا يفعل غيرَ ذلك**.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from app.schemas.admin_alerts import (
     AlertSummary,
     AlertTestIn,
     AlertTestOut,
-    AlertTokenReadIn,
+    AlertReceiptReadIn,
 )
 from app.services import admin_alerts
 
@@ -153,8 +153,8 @@ async def send_test(payload: AlertTestIn, user: ActivityAlertsReceiver, session:
     return AlertTestOut(title=f"معاينة · {title}", body=body, **counts)
 
 
-@public_router.post("/{alert_id}/read-by-token", status_code=status.HTTP_204_NO_CONTENT)
-async def read_by_token(alert_id: uuid.UUID, payload: AlertTokenReadIn, session: DbSession) -> None:
-    """**«مقروء» من زرِّ الإشعار** — المتصفّحُ والهاتفُ يرسلانه بلا جلسة؛ الرمزُ يخصّ هذا المستلمَ وهذا الصفَّ وحدَهما."""
-    await admin_alerts.mark_read_by_token(session, alert_id=alert_id, user_id=payload.user_id, token=payload.token)
+@public_router.post("/{alert_id}/read-by-receipt", status_code=status.HTTP_204_NO_CONTENT)
+async def read_by_receipt(alert_id: uuid.UUID, payload: AlertReceiptReadIn, session: DbSession) -> None:
+    """**«مقروء» من زرِّ الإشعار** — المتصفّحُ والهاتفُ يرسلانه بلا جلسة؛ الإيصالُ يخصّ هذا المستلمَ وهذا الصفَّ وحدَهما."""
+    await admin_alerts.mark_read_by_receipt(session, alert_id=alert_id, user_id=payload.user_id, receipt=payload.receipt)
     await session.commit()

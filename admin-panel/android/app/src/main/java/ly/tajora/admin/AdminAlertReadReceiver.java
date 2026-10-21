@@ -14,10 +14,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * <b>«مقروء» على إشعار المالك</b> (SPEC §٨١/٧) — يطوي الإشعارَ ويُرسل الرمزَ إلى {@code POST /alerts/{id}/read-by-token}.
+ * <b>«مقروء» على إشعار المالك</b> (SPEC §٨١/٧) — يطوي الإشعارَ ويُرسل إيصالَ القراءة إلى {@code POST /alerts/{id}/read-by-receipt}.
  *
  * <p><b>بلا جلسة</b>: الجلسةُ في صفحة الويب لا هنا، <b>والإذنُ في الرمز نفسِه</b> — يخصّ هذا المستلمَ وهذا الصفَّ ولا يفعل غيرَ ذلك
- * ({@code services/admin_alerts.read_token}). <b>وعنوانُ الخادم من البناء لا من الإشعار</b>: سلّمته اللوحةُ للملحق
+ * ({@code services/admin_alerts.read_receipt}). <b>وعنوانُ الخادم من البناء لا من الإشعار</b>: سلّمته اللوحةُ للملحق
  * ({@link AdminAlertsPlugin#configure}) — فإشعارٌ مزوَّرٌ لا يوجّه الهاتفَ إلى غير خادمه.
  */
 public class AdminAlertReadReceiver extends BroadcastReceiver {
@@ -31,8 +31,8 @@ public class AdminAlertReadReceiver extends BroadcastReceiver {
         String apiBase = AdminAlertsPlugin.apiBase(context);
         String alertId = intent.getStringExtra(AdminAlertNotifier.EXTRA_ALERT_ID);
         String userId = intent.getStringExtra(AdminAlertNotifier.EXTRA_USER_ID);
-        String token = intent.getStringExtra(AdminAlertNotifier.EXTRA_TOKEN);
-        if (apiBase == null || alertId == null || alertId.isEmpty() || token == null || token.isEmpty()) return;
+        String receipt = intent.getStringExtra(AdminAlertNotifier.EXTRA_READ_RECEIPT);
+        if (apiBase == null || alertId == null || alertId.isEmpty() || receipt == null || receipt.isEmpty()) return;
 
         final PendingResult pending = goAsync();
         new Thread(() -> {
@@ -40,8 +40,8 @@ public class AdminAlertReadReceiver extends BroadcastReceiver {
             try {
                 JSONObject body = new JSONObject();
                 body.put("user_id", userId);
-                body.put("token", token);
-                URL url = new URL(apiBase + "/alerts/" + alertId + "/read-by-token");
+                body.put("receipt", receipt);
+                URL url = new URL(apiBase + "/alerts/" + alertId + "/read-by-receipt");
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("POST");
                 connection.setConnectTimeout(8_000);

@@ -627,7 +627,7 @@ async def save_prefs(
 ADMIN_NATIVE = 51
 
 
-def read_token(user_id: uuid.UUID, alert_id: uuid.UUID) -> str:
+def read_receipt(user_id: uuid.UUID, alert_id: uuid.UUID) -> str:
     """**إذنٌ بفعلٍ واحد**: «اجعل هذا مقروءاً لهذا المستلم» — يحمله زرُّ «مقروء» في الإشعار ولا يفتح غيرَه."""
     message = f"admin-alert-read:{user_id}:{alert_id}".encode()
     return hmac.new(settings.jwt_secret.encode(), message, hashlib.sha256).hexdigest()[:40]
@@ -656,7 +656,7 @@ def payload_for(alert: AdminAlert, *, user_id: uuid.UUID | None, bumped: bool, s
         "body": body,
     }
     if user_id is not None and alert.id and not sample:
-        data["read_token"] = read_token(user_id, alert.id)
+        data["read_receipt"] = read_receipt(user_id, alert.id)
         data["user_id"] = str(user_id)
     if sample:
         data["sample"] = "1"
@@ -849,9 +849,9 @@ async def mark_read(session: AsyncSession, user: User, *, ids: list[uuid.UUID] |
     return result.rowcount or 0
 
 
-async def mark_read_by_token(session: AsyncSession, *, alert_id: uuid.UUID, user_id: uuid.UUID, token: str) -> None:
-    """**زرُّ «مقروء» في الإشعار** — بلا جلسة: الإذنُ في الرمز، **ولا يفعل إلا هذا** لهذا المستلم وهذا الصفّ."""
-    if not hmac.compare_digest(read_token(user_id, alert_id), token or ""):
+async def mark_read_by_receipt(session: AsyncSession, *, alert_id: uuid.UUID, user_id: uuid.UUID, receipt: str) -> None:
+    """**زرُّ «مقروء» في الإشعار** — بلا جلسة: الإذنُ في الإيصال، **ولا يفعل إلا هذا** لهذا المستلم وهذا الصفّ."""
+    if not hmac.compare_digest(read_receipt(user_id, alert_id), receipt or ""):
         raise NotFound("الإشعار غير موجود")
     if await session.get(AdminAlert, alert_id) is None:
         raise NotFound("الإشعار غير موجود")

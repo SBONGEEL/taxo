@@ -54,12 +54,12 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   if (event.action === "read") {
-    if (!API || !data.read_token || !data.alert_id) return;
+    if (!API || !data.read_receipt || !data.alert_id) return;
     event.waitUntil(
-      fetch(`${API}/alerts/${encodeURIComponent(data.alert_id)}/read-by-token`, {
+      fetch(`${API}/alerts/${encodeURIComponent(data.alert_id)}/read-by-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: data.user_id, token: data.read_token }),
+        body: JSON.stringify({ user_id: data.user_id, receipt: data.read_receipt }),
       }).catch(() => undefined),
     );
     return;
@@ -87,7 +87,7 @@ try {
       const data = payload.data || {};
       if (data.type !== "admin_alert") return;
       const actions = [{ action: "open", title: "افتح" }];
-      if (data.read_token) actions.push({ action: "read", title: "مقروء" });
+      if (data.read_receipt) actions.push({ action: "read", title: "مقروء" });
       // **علامةُ «من اليمين» (U+200F) أوّلَ النصّ** (§٨١، 2026-10-21): `dir` يُهمله بعضُ أنظمة الحاسوب (إشعاراتُ ويندوز)، فيبدأ سطرٌ
       // أوّلُه رقمٌ («2 طلبات رحلة · الأردن») من اليسار ويتأخّر الرقمُ عن جملته. والعلامةُ لا تُرى، وتثبّت اتجاهَ السطر أيّاً كان الراسم
       const rtl = (text) => (text ? `\u200f${text}` : text);

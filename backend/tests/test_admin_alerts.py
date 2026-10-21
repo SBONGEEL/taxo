@@ -538,15 +538,15 @@ async def test_list_filters_read_state_and_settings(
     read = (await client.post("/admin/alerts/read", json={"ids": [item["id"]]}, headers=admin_headers)).json()
     assert read == {"marked": 1, "unread": 0}
 
-    # **«مقروء» من زرِّ الإشعار** — برمزه وحدَه بلا جلسة، ورمزٌ مزوَّرٌ لا يجد شيئاً
+    # **«مقروء» من زرِّ الإشعار** — بإيصاله وحدَه بلا جلسة، وإيصالٌ مزوَّرٌ لا يجد شيئاً
     async with session_factory() as session:
         await session.execute(delete(admin_alerts.AdminAlertRead))
         await session.commit()
     alert_id = uuid.UUID(item["id"])
-    forged = await client.post(f"/alerts/{alert_id}/read-by-token", json={"user_id": me["id"], "token": "0" * 40})
+    forged = await client.post(f"/alerts/{alert_id}/read-by-receipt", json={"user_id": me["id"], "receipt": "0" * 40})
     assert forged.status_code == 404
-    token = admin_alerts.read_token(uuid.UUID(me["id"]), alert_id)
-    assert (await client.post(f"/alerts/{alert_id}/read-by-token", json={"user_id": me["id"], "token": token})).status_code == 204
+    receipt = admin_alerts.read_receipt(uuid.UUID(me["id"]), alert_id)
+    assert (await client.post(f"/alerts/{alert_id}/read-by-receipt", json={"user_id": me["id"], "receipt": receipt})).status_code == 204
     assert (await client.get("/admin/alerts/summary", headers=admin_headers)).json()["unread"] == 0
 
 
@@ -580,7 +580,7 @@ async def test_push_reaches_web_and_phone_with_the_right_shape(
     assert web["data_only"] and native["data_only"] and not legacy["data_only"]
     assert native["high_priority"]
     assert native["data"]["tone"] == "account" and native["data"]["kind"] == "rider_signup"
-    assert native["data"]["read_token"] and native["data"]["record_type"] == "rider"
+    assert native["data"]["read_receipt"] and native["data"]["record_type"] == "rider"
     for message in (web, native, legacy):
         assert message["title"] == "راكبٌ جديد · الأردن"
         text = message["title"] + message["body"] + str(message["data"])

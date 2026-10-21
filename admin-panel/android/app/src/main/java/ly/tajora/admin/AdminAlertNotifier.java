@@ -29,7 +29,7 @@ final class AdminAlertNotifier {
     static final String EXTRA_KIND = "kind";
     static final String EXTRA_ALERT_ID = "alert_id";
     static final String EXTRA_USER_ID = "user_id";
-    static final String EXTRA_TOKEN = "read_token";
+    static final String EXTRA_READ_RECEIPT = "read_receipt";
     static final String EXTRA_TAG = "tag";
     static final String EXTRA_NOTIFICATION_ID = "notification_id";
 
@@ -53,7 +53,7 @@ final class AdminAlertNotifier {
                 .putExtra(EXTRA_KIND, value(data, "kind", ""))
                 .putExtra(EXTRA_ALERT_ID, value(data, "alert_id", ""))
                 .putExtra(EXTRA_USER_ID, value(data, "user_id", ""))
-                .putExtra(EXTRA_TOKEN, value(data, "read_token", ""))
+                .putExtra(EXTRA_READ_RECEIPT, value(data, "read_receipt", ""))
                 .putExtra(EXTRA_TAG, tag)
                 .putExtra(EXTRA_NOTIFICATION_ID, id);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
@@ -80,12 +80,12 @@ final class AdminAlertNotifier {
                         : NotificationCompat.PRIORITY_HIGH)
                 .addAction(0, "افتح", openIntent);
 
-        String token = value(data, "read_token", "");
-        if (!token.isEmpty()) {
+        String receipt = value(data, "read_receipt", "");
+        if (!receipt.isEmpty()) {
             Intent read = new Intent(context, AdminAlertReadReceiver.class)
                     .putExtra(EXTRA_ALERT_ID, value(data, "alert_id", ""))
                     .putExtra(EXTRA_USER_ID, value(data, "user_id", ""))
-                    .putExtra(EXTRA_TOKEN, token)
+                    .putExtra(EXTRA_READ_RECEIPT, receipt)
                     .putExtra(EXTRA_TAG, tag)
                     .putExtra(EXTRA_NOTIFICATION_ID, id);
             builder.addAction(0, "مقروء", PendingIntent.getBroadcast(context, id, read, flags));

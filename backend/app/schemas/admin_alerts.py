@@ -52,9 +52,9 @@ class AlertReadOut(BaseModel):
     unread: int
 
 
-class AlertTokenReadIn(BaseModel):
+class AlertReceiptReadIn(BaseModel):
     user_id: uuid.UUID
-    token: str = Field(min_length=8, max_length=80)
+    receipt: str = Field(min_length=8, max_length=80)
 
 
 class AlertKindOut(BaseModel):
