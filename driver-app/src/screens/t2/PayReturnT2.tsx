@@ -17,6 +17,7 @@ import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./money.css";
+import { SupportLine } from "./PayDz";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **كم مرّةً تسأل وحدَها** قبل أن تترك السؤالَ لزرّ — ثلاثُ ثوانٍ بينها */
@@ -109,11 +110,16 @@ export function PayReturnT2Screen() {
       ) : (
         <div className="t2-wdl-card t2-pr-done" aria-live="polite">
           <Icon name="hourglass_top" />
-          <h2 className="t2-pr-done-title">{tr("ننتظر تأكيد الدفع")}</h2>
+          {/* **أطوارُ §٨٢-أ/٢**: «وصل ويُعالَج» لا يُسأل صاحبُه أن يدفع ثانية، و«لم نتأكّد» لا يحجبه */}
+          <h2 className="t2-pr-done-title">
+            {request?.phase === "processing" ? tr("وصل دفعُك ويُعالَج") : tr("ننتظر تأكيد الدفع")}
+          </h2>
           <p className="t2-pr-done-text">
-            {tries.current >= AUTO_TRIES
-              ? tr("لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة.")
-              : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
+            {request?.phase === "processing"
+              ? tr("يُضاف تلقائياً حين يكتمل — لا تدفع مرّةً أخرى لهذا.")
+              : tries.current >= AUTO_TRIES
+                ? tr("لم نتأكّد من دفعتك بعد. إن خُصم المبلغ فسيُضاف وحدَه حين يصل التأكيد — ويمكنك أن تدفع من جديد الآن.")
+                : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
           </p>
         </div>
       )}
@@ -136,7 +142,10 @@ export function PayReturnT2Screen() {
         </button>
       ) : null}
       {/* **«حاول مرّةً أخرى» بالخطّة أو المبلغ والطريقةِ نفسِها** (§٧٦-ع/٢، المشكلة ٩) */}
-      {request && (request.status === "cancelled" || request.status === "rejected") ? (
+      {request &&
+      (request.status === "cancelled" ||
+        request.status === "rejected" ||
+        (request.phase === "unconfirmed" && tries.current >= AUTO_TRIES)) ? (
         <button
           type="button"
           className="t2-clq-cta t2-pr-gap"
@@ -157,6 +166,8 @@ export function PayReturnT2Screen() {
       >
         {subscription ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
       </button>
+      {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — ولا قناةَ دعمٍ في تطبيق الكبتن غيرُ «أرسل ملاحظة» */}
+      <SupportLine to="/account/feedback" />
     </div>
   );
 }

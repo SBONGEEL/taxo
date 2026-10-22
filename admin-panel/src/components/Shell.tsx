@@ -38,7 +38,16 @@ const FINANCE_SUMMARY = "finance.summary";
 const GROUPS: {
   label: string;
   /** **و`permission` لما لا يأتي بالدور**: صلاحيةٌ تُمنح بالاسم (§٦٦) — لا تُرسم لمن لا يملكها، والخادمُ يحرسها */
-  items: { label: string; icon: string; to?: string; adminOnly?: boolean; permission?: string }[];
+  /** **و`roles` لبندٍ يملكه دورٌ بعينه** (المالكُ والمراجع، §٨٢-ب)، **و`reviewer` لما يراه مراجعُ التحويلات** — وهو وحدَه ما يرى */
+  items: {
+    label: string;
+    icon: string;
+    to?: string;
+    adminOnly?: boolean;
+    permission?: string;
+    roles?: string[];
+    reviewer?: boolean;
+  }[];
 }[] = [
   {
     label: "العمليات",
@@ -73,6 +82,14 @@ const GROUPS: {
       // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلباتُ الدفع بإيصالاتها وطرقُ الدفع لكلِّ دولة. **وبلا `adminOnly`**: القراءةُ لطاقم
       // اللوحة، والاعتمادُ يحرسه الخادم (`finance.manage`) وتحريرُ الطرق (`settings.write`)
       { label: "نظام الدفع", icon: "account_balance", to: "/payment-system" },
+      // **تحويلاتُ BaridiMob بمراجعة** (SPEC §٨٢-ب) — للمالك ومراجعه
+      {
+        label: "تحويلات BaridiMob",
+        icon: "receipt_long",
+        to: "/transfers",
+        roles: ["owner", "payment_reviewer"],
+        reviewer: true,
+      },
       // **بطاقاتُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — جوارَ نظام الدفع: البطاقةُ طريقةٌ فيه («رمز شراء»)
       { label: "بطاقات TAXO", icon: "confirmation_number", to: "/taxo-cards" },
       // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
@@ -144,6 +161,7 @@ const ROLE_LABEL: Record<string, string> = {
   owner: "المالك · كلُّ الصلاحيات",
   admin: "مشرف",
   support: "دعم فني",
+  payment_reviewer: "مراجع تحويلات BaridiMob",
 };
 
 /** **سطرٌ دائمٌ لمشرفٍ بلا عاملٍ ثانٍ** (شرطُ المالك 2026-08-21).
@@ -275,6 +293,8 @@ export function Shell({
     return () => window.removeEventListener("keydown", onKey);
   }, [menu]);
 
+  // **مراجعُ التحويلات وحدَه** (SPEC §٨٢-ب/٥): بندٌ واحدٌ في القائمة، ولا بحثَ ولا مبدّلَ سوقٍ ولا جرس — كلُّها أبوابٌ مغلقةٌ له في الخادم
+  const reviewerOnly = Boolean(user?.roles?.includes("payment_reviewer") && !user?.roles?.includes("admin"));
   const initial = (user?.name ?? "").trim().slice(0, 1);
   // **المالكُ يحمل `admin` معه** — فيُقرأ دورُه من `roles` (SPEC §٧٦-ك/١)
   const shown = user?.roles?.includes("owner") ? "owner" : user?.role;
@@ -306,7 +326,11 @@ export function Shell({
         <nav ref={nav} className="ad-nav scr">
           {GROUPS.map((group) => {
             const items = group.items.filter(
-              (item) => (!item.adminOnly || isAdmin) && (!item.permission || held?.has(item.permission) === true),
+              (item) =>
+                (reviewerOnly ? item.reviewer === true : true) &&
+                (!item.roles || item.roles.some((role) => user?.roles?.includes(role as never))) &&
+                (!item.adminOnly || isAdmin) &&
+                (!item.permission || held?.has(item.permission) === true),
             );
             if (items.length === 0) return null;
             return (
@@ -396,8 +420,8 @@ export function Shell({
           </span>
 
           {/* **البحثُ العامُّ أوّلَ الترويسة** (§39٫١٢٫٤): أداةُ عملٍ لا زرُّ حساب، **ومكانُه حيث تقع العينُ أوّلاً** */}
-          <GlobalSearch />
-          <CountrySwitch />
+          {reviewerOnly ? null : <GlobalSearch />}
+          {reviewerOnly ? null : <CountrySwitch />}
 
           <span className="ad-head-gap" />
 

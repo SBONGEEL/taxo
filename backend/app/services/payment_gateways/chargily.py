@@ -58,9 +58,11 @@ class ChargilyGateway:
         #: **آخرُ حالٍ قالها `check`** — فإلغاءُ المهلة يقول «لم يكتمل» لصفحةٍ قيد المعالجة لا «لم يُدفع شيء» (§٧٦-ع/٢، المشكلة ١٧)
         self.last_status: str | None = None
 
-    async def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def _request(
+        self, method: str, path: str, payload: dict[str, Any] | None = None, *, timeout: float = base.REQUEST_TIMEOUT_SECONDS
+    ) -> dict[str, Any]:
         try:
-            async with base.http_client() as http:
+            async with base.http_client(timeout) as http:
                 response = await http.request(
                     method,
                     f"{self.base_url}{path}",
@@ -68,7 +70,11 @@ class ChargilyGateway:
                     headers={"Authorization": f"Bearer {self._key}", "Accept": "application/json"},
                 )
         except httpx.HTTPError as exc:
-            raise base.GatewayError("تعذّر الوصولُ إلى Chargily") from exc
+            # **مهلةٌ أو انقطاع** — الوسيطُ متوقّفٌ أو بطيءٌ جدّاً، لا رافضٌ لطلبنا (§٨٢-أ/١)
+            raise base.GatewayDown() from exc
+        if response.status_code >= 500:
+            # **`502` · `503` · `504` منه** — عطلُه هو، فيُقال للدافع «متوقّفٌ مؤقّتاً» لا نصُّ صفحةِ خطأ
+            raise base.GatewayDown()
         try:
             body = response.json()
         except ValueError as exc:
@@ -77,6 +83,10 @@ class ChargilyGateway:
             message = body.get("message") if isinstance(body, dict) else None
             raise base.GatewayError(f"Chargily: {message}" if message else "رفض Chargily الطلب")
         return body
+
+    async def health(self) -> None:
+        """**فحصٌ سريعٌ قبل فتح الصفحة** (§٨٢-أ/١) — `GET /balance` بمهلةٍ قصيرة؛ يرفع `GatewayDown` إن تعذّر أو أبطأ."""
+        await self._request("GET", "/balance", timeout=base.HEALTH_TIMEOUT_SECONDS)
 
     async def checkout(
         self,

@@ -1,0 +1,70 @@
+/* **دفعُ الجزائر بأمان** (SPEC §٨٢) — رسالةُ الانقطاع وتفاصيلُ BaridiMob وسطرُ الدعم، برموز TAXO 2.0 (`--t2-*`). */
+
+.t2-dz-steps {
+  margin: 12px 0 0;
+  padding-inline-start: 20px;
+  color: var(--t2-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.t2-dz-limits,
+.t2-dz-note {
+  margin: 10px 0 0;
+  color: var(--t2-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.t2-dz-down,
+.t2-dz-support {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.t2-dz-down {
+  border-color: #e0a100;
+}
+.t2-dz-down-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.t2-dz-down-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.t2-dz-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--t2-line);
+  border-radius: 22px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-dz-btn:disabled {
+  opacity: 0.6;
+}
+.t2-dz-support {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--t2-muted);
+  font-size: 13px;
+}

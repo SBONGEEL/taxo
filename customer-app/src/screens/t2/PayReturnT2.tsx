@@ -16,6 +16,7 @@ import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import { BannerT2, BusyLabel, HeadT2 } from "./MoneyT2";
+import { SupportLine } from "./PayDz";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** **كم مرّةً تسأل وحدَها** قبل أن تترك السؤالَ لزرّ — ثلاثُ ثوانٍ بينها */
@@ -100,18 +101,26 @@ export function PayReturnT2Screen() {
       ) : (
         <section className="t2-m-card t2-pr-done" aria-live="polite">
           <Icon name="hourglass_top" />
-          <h2 className="t2-pr-done-title">{tr("ننتظر تأكيد الدفع")}</h2>
+          {/* **أطوارُ §٨٢-أ/٢**: «وصل ويُعالَج» لا يُسأل صاحبُه أن يدفع ثانية، و«لم نتأكّد» لا يحجبه */}
+          <h2 className="t2-pr-done-title">
+            {request?.phase === "processing" ? tr("وصل دفعُك ويُعالَج") : tr("ننتظر تأكيد الدفع")}
+          </h2>
           <p className="t2-pr-done-text">
-            {tries.current >= AUTO_TRIES
-              ? tr("لم يصل التأكيد بعد. إن كنت دفعت فسيُضاف وحدَه حين يصل — وتراه في طلبات المحفظة.")
-              : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
+            {request?.phase === "processing"
+              ? tr("يُضاف تلقائياً حين يكتمل — لا تدفع مرّةً أخرى لهذا.")
+              : tries.current >= AUTO_TRIES
+                ? tr("لم نتأكّد من دفعتك بعد. إن خُصم المبلغ فسيُضاف وحدَه حين يصل التأكيد — ويمكنك أن تدفع من جديد الآن.")
+                : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
           </p>
         </section>
       )}
       <BannerT2 tone="danger" message={error} />
       <div className="t2-m-actions">
         {/* **«حاول مرّةً أخرى» بالمبلغ والطريقة نفسَيهما** (§٧٦-ع/٢، المشكلة ٩) */}
-        {request && (request.status === "cancelled" || request.status === "rejected") ? (
+        {request &&
+        (request.status === "cancelled" ||
+          request.status === "rejected" ||
+          (request.phase === "unconfirmed" && tries.current >= AUTO_TRIES)) ? (
           <button
             type="button"
             className="t2-button primary t2-m-cta"
@@ -135,6 +144,8 @@ export function PayReturnT2Screen() {
           {tr("إلى المحفظة")}
         </button>
       </div>
+      {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) */}
+      <SupportLine to="/account/help" />
     </div>
   );
 }

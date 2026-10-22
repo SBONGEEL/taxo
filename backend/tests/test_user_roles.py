@@ -329,8 +329,9 @@ async def test_no_route_grants_a_role(client, admin_headers) -> None:
         if "UserRoleGrant(" in path.read_text(encoding="utf-8"):
             writers.append(rel)
 
-    # بابُ الإنشاء وحدَه يكتب صفَّ دور
-    assert writers == ["services/auth/base.py"], writers
+    # بابُ الإنشاء وحدَه يكتب صفَّ دور — **ومعه بابٌ واحدٌ بأمر المالك** (SPEC §٨٢-ب/٥، 2026-10-22): حسابُ مراجع التحويلات
+    # **ينشئه المالكُ من اللوحة** (`OwnerUser`)، **بدور `payment_reviewer` وحدَه** — لا يمنح دوراً لحسابٍ قائم ولا دوراً غيرَه
+    assert sorted(writers) == ["services/auth/base.py", "services/transfers.py"], writers
 
 
 # --------------------------------------------------------------- الأسبقية

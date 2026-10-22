@@ -30,6 +30,9 @@ import type {
   AdminPayMethod,
   AdminPayMethodInput,
   AdminPaymentRequest,
+  AdminTransfer,
+  TransferReviewer,
+  TransferSettings,
   CardBatch,
   CardBatchCreated,
   CardDenomination,
@@ -2176,6 +2179,40 @@ export const refundPaymentRequest = (id: string, reason: string) =>
 
 export const cancelPaymentRequest = (id: string, reason: string) =>
   api.post<AdminPaymentRequest>(`/admin/payment-requests/${id}/cancel`, { reason });
+
+// ------------------------------------------------------------ تحويلُ BaridiMob بمراجعة (SPEC §٨٢-ب)
+
+/** **طابورُ المراجعة** — BaridiMob في الجزائر وحدَه؛ للمراجع والمالك */
+export const listTransfers = (params: { status?: PaymentRequestStatus; all?: boolean }) =>
+  api.get<AdminTransfer[]>("/admin/transfers", { query: params });
+
+/** **الإيصالُ للمراجع والمالك وحدَهما** — من `blob:` بالجلسة، لا رابطَ عامّاً */
+export const transferReceiptBlob = (id: string) =>
+  protectedBlob(`/admin/transfers/${id}/receipt`, "تعذّر فتح الإيصال");
+
+/** **اعتمادٌ واحدٌ يكفي** — بالمبلغ الذي كتبه صاحبُه؛ والمراجعُ لا يغيّره */
+export const approveTransfer = (id: string) => api.post<AdminTransfer>(`/admin/transfers/${id}/approve`, {});
+
+export const rejectTransfer = (id: string, reason: string) =>
+  api.post<AdminTransfer>(`/admin/transfers/${id}/reject`, { reason });
+
+/** **بطاقةُ المالك** — حسابُ الاستقبال وحدّاه ومفتاحُه */
+export const getTransferSettings = () => api.get<TransferSettings>("/admin/transfers/settings");
+
+export const saveTransferSettings = (body: {
+  account_number: string | null;
+  account_holder: string | null;
+  account_holder_latin: string | null;
+  min_amount: string | null;
+  max_amount: string | null;
+  enabled: boolean;
+}) => api.put<TransferSettings>("/admin/transfers/settings", body);
+
+/** **حسابُ المراجع ينشئه المالكُ** — والعاملُ الثاني وتغييرُ الكلمة عند أوّل دخول */
+export const listTransferReviewers = () => api.get<TransferReviewer[]>("/admin/transfers/reviewers");
+
+export const createTransferReviewer = (body: { name: string; username: string; password: string }) =>
+  api.post<TransferReviewer>("/admin/transfers/reviewers", body);
 
 // ------------------------------------------------------------ بطاقاتُ شحن TAXO (SPEC §٧٣-هـ المرحلة ٢)
 

@@ -39,7 +39,7 @@ __all__ = ["ClientApp", "account_kind_for", "guard"]
 _ROLES: dict[ClientApp, frozenset[UserRole]] = {
     ClientApp.RIDER: frozenset({UserRole.RIDER}),
     ClientApp.DRIVER: frozenset({UserRole.DRIVER}),
-    ClientApp.PANEL: frozenset({UserRole.ADMIN, UserRole.SUPPORT, UserRole.OWNER}),
+    ClientApp.PANEL: frozenset({UserRole.ADMIN, UserRole.SUPPORT, UserRole.OWNER, UserRole.PAYMENT_REVIEWER}),
 }
 
 # نصُّ الرفض يقول **أين يذهب**، لا «ممنوع» وحدها: من كتب بياناته الصحيحة في
@@ -51,6 +51,7 @@ _WHERE: dict[UserRole, str] = {
     UserRole.ADMIN: "هذا حسابٌ إداري — ادخل من لوحة التشغيل",
     UserRole.SUPPORT: "هذا حسابُ دعم — ادخل من لوحة التشغيل",
     UserRole.OWNER: "هذا حسابُ المالك — ادخل من لوحة التشغيل",
+    UserRole.PAYMENT_REVIEWER: "هذا حسابُ مراجعة التحويلات — ادخل من لوحة التشغيل",
 }
 
 
@@ -68,6 +69,7 @@ _ROLES_ORDER: tuple[UserRole, ...] = (
     UserRole.ADMIN,
     UserRole.SUPPORT,
     UserRole.OWNER,
+    UserRole.PAYMENT_REVIEWER,
 )
 
 

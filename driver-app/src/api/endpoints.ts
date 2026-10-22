@@ -887,6 +887,10 @@ export function createPaymentRequest(
     planId?: string;
     wallet?: "rider" | "driver";
     receipt?: File | null;
+    /** **تاريخُ التحويل** (BaridiMob، SPEC §٨٢-ب/٣) */
+    transferDate?: string;
+    /** **معرّفُ الطلب من التطبيق** — منه مرجعُ TAXO قبل التحويل، وإرسالُه مرّتين طلبٌ واحد */
+    clientId?: string;
   },
   options: UploadOptions = {},
 ) {
@@ -898,6 +902,8 @@ export function createPaymentRequest(
   if (input.planId) form.append("plan_id", input.planId);
   if (input.wallet) form.append("wallet", input.wallet);
   if (input.receipt) form.append("receipt", input.receipt);
+  if (input.transferDate) form.append("transfer_date", input.transferDate);
+  if (input.clientId) form.append("client_id", input.clientId);
   return sendForm<MyPaymentRequest>("POST", "/payment-requests", form, options);
 }
 

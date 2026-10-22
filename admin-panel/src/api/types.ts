@@ -17,7 +17,7 @@ export type MarketStatus = "open" | "closed";
 /** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
 export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
-export type UserRole = "rider" | "driver" | "admin" | "support" | "owner";
+export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer";
 
 export interface User {
   id: string;
@@ -3003,4 +3003,52 @@ export interface AlertTestResult {
   web: number;
   phone: number;
   failed: number;
+}
+
+// ------------------------------------------------------------ تحويلُ BaridiMob بمراجعة (SPEC §٨٢-ب)
+
+/** **طلبُ تحويلٍ في صفحة المراجعة** — ومن صاحبه اسمُه الأوّلُ وهاتفٌ مقنَّعٌ لا غير (§٨٢-ب/٥). */
+export interface AdminTransfer {
+  id: string;
+  public_ref: string;
+  country_code: CountryCode;
+  currency: Currency;
+  purpose: PaymentRequestPurpose;
+  amount: string;
+  credited_amount: string | null;
+  status: PaymentRequestStatus;
+  reference: string | null;
+  transfer_date: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  /** **من حسم** — «reviewer» أو «owner» أو «staff»؛ لا اسمُ إنسان */
+  reviewed_by: string | null;
+  rejection_reason: string | null;
+  has_receipt: boolean;
+  receipt_content_type: string | null;
+  first_name: string;
+  masked_phone: string;
+}
+
+/** **بطاقةُ المالك** — `configured` مكتملةٌ لتُشعل، و`enabled` ظاهرةٌ للناس. */
+export interface TransferSettings {
+  exists: boolean;
+  configured: boolean;
+  enabled: boolean;
+  account_number: string | null;
+  account_holder: string | null;
+  account_holder_latin: string | null;
+  min_amount: string | null;
+  max_amount: string | null;
+  currency: Currency;
+}
+
+export interface TransferReviewer {
+  id: string;
+  name: string;
+  username: string | null;
+  is_blocked: boolean;
+  has_factor: boolean;
+  must_change_password: boolean;
+  created_at: string;
 }

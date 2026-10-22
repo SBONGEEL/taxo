@@ -55,6 +55,7 @@ import { byMonth, startOfToday, whenParts } from "./when";
 import "@/taxo2";
 import "./t2.css";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
+import { phaseLabel } from "./PayDz";
 
 /** أيقونةُ كلِّ نوعٍ بمفردات اللوحة — **وما لم تُرسم أيقونتُه فبأيقونة المحفظة**. */
 const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
@@ -267,7 +268,9 @@ export function WalletT2Screen() {
                 request.rejection_reason ?? request.refund_reason ?? request.outcome_note ??
                 (request.status === "cancelled" ? request.cancel_reason : null);
               // **دفعةُ وسيطٍ معلَّقة** لم تُدفع بعد — لا يراجعها أحد (§٧٦-ع/٢)
-              const awaiting = request.status === "pending" && request.gateway === true;
+              const awaiting = request.status === "pending" && request.gateway === true && request.phase !== "processing";
+              // **«قيد المعالجة»** (SPEC §٨٢-أ/٢): دُفع ويُعالَج — لا «أكمل» ولا «إلغاء»
+              const processing = request.status === "pending" && request.phase === "processing";
               return (
                 <div key={request.id} className="t2-tx">
                   <span className="t2-tx-icon">
@@ -287,7 +290,7 @@ export function WalletT2Screen() {
                   </span>
                   <span className="t2-tx-end">
                     <span className={request.status === "approved" ? "t2-chip ok" : request.status === "pending" ? "t2-chip warn" : "t2-chip"}>
-                      {awaiting ? tr("بانتظار الدفع") : PAYMENT_REQUEST_STATUS_LABEL[request.status]}
+                      {phaseLabel(request) ?? PAYMENT_REQUEST_STATUS_LABEL[request.status]}
                     </span>
                     {awaiting ? (
                       <button
@@ -299,7 +302,7 @@ export function WalletT2Screen() {
                         {resuming === request.id ? tr("يُفتح…") : tr("أكمل الدفع")}
                       </button>
                     ) : null}
-                    {request.status === "pending" ? (
+                    {request.status === "pending" && !processing ? (
                       <button type="button" className="t2-pr-cancel" onClick={() => cancelRequest(request.id)}>
                         {tr("إلغاء")}
                       </button>

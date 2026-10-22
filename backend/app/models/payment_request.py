@@ -10,12 +10,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -56,6 +57,11 @@ class PayMethod(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("country_code", "code"),
         CheckConstraint("fee_bearer IN ('taxo', 'user', 'split')", name="payment_provider_fee_bearer_valid"),
+        CheckConstraint(
+            "(min_amount IS NULL OR min_amount > 0) AND (max_amount IS NULL OR max_amount > 0) "
+            "AND (min_amount IS NULL OR max_amount IS NULL OR min_amount <= max_amount)",
+            name="payment_provider_amount_bounds_valid",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -82,8 +88,13 @@ class PayMethod(UUIDMixin, TimestampMixin, Base):
     #: (§٧٣-هـ/١١): من بدّله حوّل مالَ الناس إلى حسابه — فيُحرَّر بـ`settings.write` وحدَها ويُدقَّق كلُّ تغيير
     account_holder: Mapped[str | None] = mapped_column(String(120), nullable=True)
     account_number: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: **اسمُ صاحب الحساب بالحروف اللاتينيّة** كما تعرضه بريدُ الجزائر وBaridiMob (SPEC §٨٢-ب/١) — فيطابق الدافعُ ما يراه في تطبيقه
+    account_holder_latin: Mapped[str | None] = mapped_column(String(120), nullable=True)
     bank_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: **حدّا المبلغ لهذه الطريقة** (§٨٢-ب/٦) — فارغان «بلا حدّ» كما كانت كلُّ طريقة؛ وما خرج عنهما يُردّ قبل أن يُكتب الطلب
+    min_amount: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    max_amount: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     qr_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     qr_content_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
     sort_order: Mapped[int] = mapped_column(
@@ -193,10 +204,15 @@ class PaymentRequest(UUIDMixin, TimestampMixin, Base):
     #: **رسومُ الوسيط** (SPEC §٧٤-ك/١): على من (`taxo` · `user`، من إعداد الطريقة لحظةَ الفتح) وكم كما قالها الوسيط — **تُقرأ في المالية**
     fee_payer: Mapped[str | None] = mapped_column(String(16), nullable=True)
     fee_amount: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    #: **قال الوسيطُ «دُفع» ولم يُقيَّد بعد** (SPEC §٨٢-أ/٢) — الحالُ الوحيدةُ «قيد المعالجة»: لا يُسأل صاحبُها أن يدفع ثانية، والتسويةُ
+    #: تقيِّدها مرّةً واحدة، **وإن بقيت بعد مهلتها أُشعر المالك**. فارغٌ في كلِّ ما سواها — وصفحةٌ لم يُعرف حالُها لا تحمله
+    gateway_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     receipt_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receipt_content_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
     receipt_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: **تاريخُ التحويل كما كتبه صاحبُه** مع رقمه وإيصاله (§٨٢-ب/٣) — يقارنه المراجعُ بما وصل في BaridiMob
+    transfer_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

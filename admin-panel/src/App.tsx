@@ -192,6 +192,10 @@ const SkinPurchasesScreen = lazy(() =>
 const ChangePasswordScreen = lazy(() =>
   import("@/screens/ChangePassword").then((m) => ({ default: m.ChangePasswordScreen })),
 );
+// **مراجعةُ تحويلات BaridiMob** (SPEC §٨٢-ب) — صفحةُ المراجع وحدُها، ويفتحها المالك
+const TransfersScreen = lazy(() =>
+  import("@/screens/Transfers").then((m) => ({ default: m.TransfersScreen })),
+);
 const SecurityScreen = lazy(() =>
   import("@/screens/Security").then((m) => ({ default: m.SecurityScreen })),
 );
@@ -238,7 +242,9 @@ function Boot({ children }: { children: ReactNode }) {
     // تقرأ بادئةَ الهاتف من `/config` كما كانت. **ولا قبل أن تُفتح الأبواب** (قِيس على الإنتاج 2026-10-22): المالكُ دخل
     // أوّلَ مرّةٍ فردّ `/admin/countries` بـ403 `password_change_required`، وغيّر كلمتَه، **ولم تُسأل الأسواقُ ثانيةً** — فبقي
     // المبدّلُ «JO» وحده بلا ليبيا ولا الجزائر. **فزوالُ العلَم هو ما يُعيد السؤال**
-    <CountriesProvider enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired}>
+    <CountriesProvider
+      enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired && !isReviewerOnly(user?.roles)}
+    >
       <CountryProvider fallback={config.default_country_code}>
         {children}
       </CountryProvider>
@@ -246,8 +252,14 @@ function Boot({ children }: { children: ReactNode }) {
   );
 }
 
+/** **مراجعُ التحويلات وحدَه** (SPEC §٨٢-ب/٥) — لا يحمل `admin`، فكلُّ صفحةٍ غيرُ صفحته مغلقةٌ في الخادم؛ والشاشةُ تقوده إليها */
+export function isReviewerOnly(roles: readonly string[] | undefined): boolean {
+  return Boolean(roles?.includes("payment_reviewer") && !roles.includes("admin"));
+}
+
 function Guarded({ children }: { children: ReactNode }) {
   const { user, enrollmentRequired, passwordChangeRequired } = useSession();
+  const { pathname } = useLocation();
   if (!user) return <Navigate to="/login" replace />;
   // **بوابةُ الإلزام** (12-د): الخلفيةُ ردّت `totp_enrollment_required`، فكلُّ
   // مسارٍ إداريٍّ مغلقٌ حتى يُسجّل عاملَه. وقيادتُه إلى الشاشة التي تفتح البابَ
@@ -255,6 +267,7 @@ function Guarded({ children }: { children: ReactNode }) {
   if (enrollmentRequired) return <Navigate to="/security" replace />;
   // **وبوّابةُ الكلمة بعدها** (SPEC §٧٦-م/٢): العاملُ أوّلاً — بابُ التغيير محروسٌ به — ثمّ الكلمة
   if (passwordChangeRequired) return <Navigate to="/account/password" replace />;
+  if (isReviewerOnly(user.roles) && pathname !== "/transfers") return <Navigate to="/transfers" replace />;
   return <>{children}</>;
 }
 
@@ -398,6 +411,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <AlertPreviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/transfers"
+                    element={
+                      <Guarded>
+                        <TransfersScreen />
                       </Guarded>
                     }
                   />

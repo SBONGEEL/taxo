@@ -119,6 +119,14 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("refund", "money", "money_out", "استرداد", "عمليات استرداد"),
     AlertKind("manual_adjustment", "money", "money_out", "تسويةٌ يدويّة", "تسويات يدويّة"),
     AlertKind("payment_failed", "money", "problem", "دفعةٌ فشلت", "دفعات فشلت"),
+    # **دفعُ الجزائر بأمان** (SPEC §٨٢) — وسيطٌ توقّف وعاد، ودفعةٌ وصلت ولم تُفعَّل، ودفعٌ مكرَّر، وقراراتُ مراجعة التحويل
+    AlertKind("gateway_down", "money", "problem", "وسيطُ الدفع متوقّف", "انقطاعاتُ وسيط الدفع", window=0),
+    AlertKind("gateway_up", "money", "money_in", "وسيطُ الدفع عاد", "عوداتُ وسيط الدفع", window=0),
+    AlertKind("payment_stuck", "money", "problem", "دفعةٌ وصلت ولم تُفعَّل", "دفعات وصلت ولم تُفعَّل"),
+    AlertKind("payment_extra", "money", "money_out", "دفعٌ مكرَّر — الزائدُ في المحفظة", "دفعات مكرَّرة"),
+    AlertKind("transfer_duplicate", "money", "problem", "رقمُ تحويلٍ مكرَّر", "أرقامُ تحويلٍ مكرَّرة"),
+    AlertKind("transfer_approved", "money", "money_in", "تحويلٌ اعتُمد", "تحويلات اعتُمدت"),
+    AlertKind("transfer_rejected", "money", "money_out", "تحويلٌ رُفض", "تحويلات رُفضت"),
     AlertKind("debt_cap_reached", "money", "problem", "كبتنٌ بلغ سقفَ الدَّين", "كباتن بلغوا سقفَ الدَّين"),
     AlertKind("ride_requested", "rides", "ride", "طلبُ رحلة", "طلبات رحلة", window=120),
     AlertKind("ride_accepted", "rides", "ride", "رحلةٌ قُبلت", "رحلات قُبلت", window=120),
@@ -133,6 +141,7 @@ CATALOG: dict[str, AlertKind] = {item.kind: item for item in _KINDS}
 METHOD_LABEL = {"cash": "نقداً", "cliq": "كليك", "card": "بطاقة", "wallet": "المحفظة"}
 CANCELLED_BY_LABEL = {"rider": "ألغاها الراكب", "driver": "ألغاها الكبتن", "no_driver": "لم يُعثر على كبتن"}
 COMPLAINT_SOURCE_LABEL = {"dispute": "نزاعٌ على دفعة", "chat": "بلاغٌ على رسالة", "photo": "بلاغٌ على صورة"}
+REVIEWED_BY_LABEL = {"reviewer": "بيد المراجع", "owner": "بيد المالك", "staff": "بيد الماليّة"}
 _EXPIRED = re.compile(r"expire|انته|مهلة|timeout", re.IGNORECASE)
 
 # ═════════════════════════ الحلّ — من حدثٍ ملتقطٍ إلى مسوّدة
@@ -280,12 +289,24 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
             dedupe=f"ledger:{entry.id}",
         )
 
+    if model == "signal":
+        # **حدثٌ لا صفَّ له** (SPEC §٨٢): وسيطٌ توقّف أو عاد، أو رقمُ تحويلٍ مكرَّرٌ رُدّ قبل أن يُكتب — سوقُه وما يُقال عنه من الحدث نفسِه
+        country_value = extra.get("country")
+        return Draft(
+            kind,
+            CountryCode(country_value) if country_value else None,
+            data={key: extra[key] for key in ("gateway", "provider") if extra.get(key)},
+        )
+
     if model == "payment_request":
         request = await session.get(PaymentRequest, pk)
         if request is None:
             return None
         method = await session.get(PayMethod, request.provider_id)
         if kind == "topup_requested" and method is not None and method.integration:
+            return None
+        # **قرارُ إنسانٍ على تحويلٍ يدويّ يُشعَر به باسمه** (`transfer_rejected`) — فلا «دفعةٌ فشلت» ثانيةٌ للحدث نفسِه
+        if kind == "payment_failed" and method is not None and not method.integration and request.reviewed_by is not None:
             return None
         if kind == "payment_cancelled" and request.cancel_reason and _EXPIRED.search(request.cancel_reason):
             kind = "payment_expired"
@@ -297,8 +318,14 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
             currency=request.currency,
             record_type="payment_request",
             record_id=str(request.id),
-            data={"purpose": request.purpose.value, "pay_kind": request.kind.value, "test": bool(user and user.is_test)},
-            dedupe=f"ledger:{request.refund_transaction_id}" if kind == "refund" and request.refund_transaction_id else None,
+            data={"purpose": request.purpose.value, "pay_kind": request.kind.value, "test": bool(user and user.is_test)}
+            | ({"by": extra["by"]} if extra.get("by") in ("reviewer", "owner", "staff") else {}),
+            dedupe=(
+                f"ledger:{request.refund_transaction_id}" if kind == "refund" and request.refund_transaction_id
+                # **الاعتمادُ يُقرأ من قراره لا من قيده** — فلا «شحنُ محفظة» ثانٍ للحدث نفسِه
+                else f"ledger:{request.transaction_id}" if kind == "transfer_approved" and request.transaction_id
+                else None
+            ),
         )
 
     if model == "topup_request":
@@ -548,6 +575,10 @@ def tray_text(alert: AdminAlert) -> tuple[str, str]:
             parts.append(label if docs == 1 else f"{docs} وثائق")
     if alert.kind == "feedback":
         parts.append("من ضيف" if data.get("guest") else ("من كبتن" if data.get("app") == "driver" else "من راكب"))
+    if data.get("gateway"):
+        parts.append(str(data["gateway"]).capitalize())
+    if data.get("by") in REVIEWED_BY_LABEL:
+        parts.append(REVIEWED_BY_LABEL[data["by"]])
     if data.get("who") == "rider":
         parts.append("راكب")
     elif data.get("who") == "captain":

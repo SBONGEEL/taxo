@@ -33,6 +33,16 @@ import { Icon } from "@/taxo2";
 
 import "./fields.css";
 import "./money.css";
+import {
+  BARIDIMOB,
+  BaridiMobDetails,
+  GatewayDownNote,
+  SupportLine,
+  gatewayIsDown,
+  newRequestId,
+  publicRef,
+  todayIso,
+} from "./PayDz";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 const KIND_ICON: Record<PayMethod["kind"], string> = {
@@ -68,6 +78,10 @@ export function PayRequestT2Screen() {
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   const [cardMethod, setCardMethod] = useState(false);
+  // **دفعُ الجزائر** (SPEC §٨٢): معرّفُ الطلب من هنا فيُعرف مرجعُ TAXO قبل التحويل، وتاريخُه، و«الوسيطُ متوقّف»
+  const [clientId] = useState(newRequestId);
+  const [transferDate, setTransferDate] = useState(todayIso);
+  const [down, setDown] = useState(false);
   const [methodId, setMethodId] = useState(handoff?.methodId ?? "");
   const [amount, setAmount] = useState(handoff?.amount ?? "");
   const [reference, setReference] = useState("");
@@ -159,11 +173,21 @@ export function PayRequestT2Screen() {
   }, [method?.id, method?.has_qr]);
 
   const needsReceipt = method?.requires_receipt === true;
+  const isBaridi = method?.code === BARIDIMOB;
+  const baridi = methods?.find((row) => row.code === BARIDIMOB) ?? null;
+  const limits =
+    method?.min_amount && method.max_amount
+      ? tr("المبلغ بين {0} و{1}.", {
+          0: `${formatAmount(method.min_amount, currency)} ${label}`,
+          1: `${formatAmount(method.max_amount, currency)} ${label}`,
+        })
+      : null;
   const ready =
     method !== null &&
     Number(amount) > 0 &&
     unitError === null &&
-    (!needsReceipt || (receipt !== null && reference.trim().length >= 3));
+    (!needsReceipt || (receipt !== null && reference.trim().length >= 3)) &&
+    (!isBaridi || transferDate !== "");
 
   async function copyNumber() {
     if (!method?.account_number) return;
@@ -196,7 +220,9 @@ export function PayRequestT2Screen() {
         }
         window.location.assign(opened.checkout_url);
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+        // **الوسيطُ متوقّف** (§٨٢-أ/١) — رسالتُه و«أعد المحاولة» والبديلُ، لا نصُّ خطأ
+        if (gatewayIsDown(caught)) setDown(true);
+        else setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
         setBusy(false);
       }
       return;
@@ -214,6 +240,8 @@ export function PayRequestT2Screen() {
           planId: purpose === "subscription" ? handoff?.planId : undefined,
           wallet: "driver",
           receipt,
+          transferDate: isBaridi ? transferDate : undefined,
+          clientId: isBaridi ? clientId : undefined,
         },
         { onProgress: setProgress },
       );
@@ -262,7 +290,17 @@ export function PayRequestT2Screen() {
         </p>
       ) : (
         <>
-          {open ? (
+          {open && open.phase === "processing" ? (
+            <div className="t2-wdl-card t2-pr-dest" role="group" aria-label={tr("وصل دفعُك ويُعالَج")}>
+              <div className="t2-pr-line">
+                <span className="t2-pr-k">{tr("وصل دفعُك ويُعالَج")}</span>
+                <span className="t2-pr-text" dir="ltr">
+                  {formatAmount(open.amount, open.currency)} {CURRENCY_LABEL[open.currency]}
+                </span>
+              </div>
+              <p className="t2-fld-hint">{tr("يُضاف تلقائياً حين يكتمل — لا تدفع مرّةً أخرى لهذا الغرض.")}</p>
+            </div>
+          ) : open ? (
             <div className="t2-wdl-card t2-pr-dest" role="group" aria-label={tr("دفعةٌ لم تكتمل")}>
               <div className="t2-pr-line">
                 <span className="t2-pr-k">{tr("دفعةٌ لم تكتمل")}</span>
@@ -343,7 +381,17 @@ export function PayRequestT2Screen() {
             ))}
           </div>
 
-          {method && !method.gateway ? (
+          {method && isBaridi ? (
+            <div className="t2-pr-gap">
+              <BaridiMobDetails
+                method={method}
+                reference={publicRef(clientId)}
+                limits={limits}
+                cardClass="t2-wdl-card"
+                labelClass="t2-pr-k"
+              />
+            </div>
+          ) : method && !method.gateway ? (
             <div className="t2-wdl-card t2-pr-gap t2-pr-dest" aria-label={tr("إلى أين تدفع")}>
               {method.account_number ? (
                 <div className="t2-pr-line">
@@ -438,6 +486,23 @@ export function PayRequestT2Screen() {
               />
               <p className="t2-fld-hint">{tr("كما يظهر في الإيصال")}</p>
 
+              {isBaridi ? (
+                <>
+                  <label className="t2-fld-label" htmlFor="pay-request-date">
+                    {tr("تاريخ التحويل")}
+                  </label>
+                  <input
+                    id="pay-request-date"
+                    className="t2-fld"
+                    type="date"
+                    dir="ltr"
+                    max={todayIso()}
+                    value={transferDate}
+                    onChange={(event) => setTransferDate(event.target.value)}
+                  />
+                </>
+              ) : null}
+
               <label className="t2-pr-file" htmlFor="pay-request-receipt">
                 <Icon name={receipt ? "task" : "add_photo_alternate"} />
                 <span className="t2-pr-file-main">
@@ -466,6 +531,24 @@ export function PayRequestT2Screen() {
               <Icon name="error" fill />
               {error}
             </p>
+          ) : null}
+          {method?.gateway && (down || method.down) ? (
+            <GatewayDownNote
+              busy={busy}
+              onRetry={() => {
+                setDown(false);
+                void submit();
+              }}
+              onAlternative={
+                baridi
+                  ? () => {
+                      setDown(false);
+                      setMethodId(baridi.id);
+                      setReceipt(null);
+                    }
+                  : null
+              }
+            />
           ) : null}
           {progress !== null && progress < 100 ? (
             <p className="t2-fld-hint">
@@ -515,6 +598,8 @@ export function PayRequestT2Screen() {
               {busy ? tr("يُرسل…") : method?.gateway ? tr("ادفع عبر {0}", { 0: gatewayName }) : tr("أرسل للمراجعة")}
             </button>
           )}
+          {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — ولا قناةَ دعمٍ في تطبيق الكبتن غيرُ «أرسل ملاحظة» */}
+          <SupportLine to="/account/feedback" />
         </>
       )}
     </div>

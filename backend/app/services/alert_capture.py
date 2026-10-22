@@ -299,6 +299,24 @@ def _after_rollback(session: Session) -> None:
     session.info.pop(_BUFFER, None)
 
 
+def ship_after_commit(session: Any, kind: str, model: str, pk: Any, **extra: Any) -> None:
+    """**حدثٌ لا يلتقطه مستمعُ الصفوف** (SPEC §٨٢) — وسيطٌ توقّف أو عاد، دفعٌ مكرَّر، دفعةٌ «قيد المعالجة» طالت.
+
+    **ومع معاملةٍ يُسلَّم بعد التزامها** كبقيّة الأحداث (ما رُجع عنه لا يُشعَر به)، **وبدونها في الحال**.
+    """
+    if not ENABLED:
+        return
+    event = _event(kind, model, pk, **extra)
+    if session is None:
+        try:
+            ship([event])
+        except Exception:  # pragma: no cover - إشعارٌ لا يُسقط ما وقع
+            logger.exception("تعذّر تسليمُ حدثٍ لإشعارات المالك")
+        return
+    sync = getattr(session, "sync_session", session)
+    sync.info.setdefault(_BUFFER, []).append(event)
+
+
 def ship(events: list[Event]) -> None:
     """**يُسلَّم ولا يُنتظر**: مهمّةٌ في حلقة التطبيق، أو نداءٌ مقطوعٌ في العامل — وفشلُهما سطرُ سجلٍّ لا غير."""
     payload = [json.dumps(item, ensure_ascii=False, separators=(",", ":")) for item in events]

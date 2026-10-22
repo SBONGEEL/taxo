@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -73,8 +74,14 @@ async def algeria_market(session_factory, *, enabled: bool = True) -> dict[str, 
 
 
 async def submit(client: AsyncClient, headers: dict, provider: uuid.UUID, amount: str, *, reference: str | None = "BM-1",
-                 receipt: bytes | None = PNG, purpose: str = "wallet_topup", plan_id: str | None = None):
+                 receipt: bytes | None = PNG, purpose: str = "wallet_topup", plan_id: str | None = None,
+                 transfer_date: str | None = "today", client_id: str | None = None):
     data = {"provider_id": str(provider), "purpose": purpose, "amount": amount}
+    # **تاريخُ التحويل إجباريٌّ في BaridiMob** (SPEC §٨٢-ب/٣) — «اليوم» افتراضاً، و`None` لقياس غيابه
+    if transfer_date is not None:
+        data["transfer_date"] = date.today().isoformat() if transfer_date == "today" else transfer_date
+    if client_id is not None:
+        data["client_id"] = client_id
     if reference is not None:
         data["reference"] = reference
     if plan_id is not None:
@@ -384,12 +391,18 @@ async def test_changing_the_account_number_is_audited_with_before_and_after(
     client: AsyncClient, session_factory, admin_headers: dict
 ) -> None:
     ids = await algeria_market(session_factory)
-    await client.patch(f"/admin/payment-methods/{ids['baridimob']}", json={"account_number": "0079000"}, headers=admin_headers)
+    # **حسابُ BaridiMob في الجزائر للمالك وحدَه** (SPEC §٨٢-ب/١) — المشرفُ يُردّ من الباب العامّ ولا يُكتب شيء
+    refused = await client.patch(
+        f"/admin/payment-methods/{ids['baridimob']}", json={"account_number": "0079000"}, headers=admin_headers
+    )
+    assert refused.status_code == 403
+    # **وطريقةُ تحويلٍ أخرى تُدقَّق بقبلها وبعدها كما كانت**
+    await client.patch(f"/admin/payment-methods/{ids['dormant']}", json={"account_number": "0079000"}, headers=admin_headers)
     async with session_factory() as session:
         row = await session.scalar(select(AdminAuditLog).where(
-            AdminAuditLog.entity_type == "payment_provider", AdminAuditLog.entity_id == ids["baridimob"]))
+            AdminAuditLog.entity_type == "payment_provider", AdminAuditLog.entity_id == ids["dormant"]))
         assert row is not None
-        assert row.details["changes"]["account_number"] == {"before": "00799999000123456789", "after": "0079000"}
+        assert row.details["changes"]["account_number"]["after"] == "0079000"
 
 
 async def test_support_reads_the_queue_but_moves_no_money(

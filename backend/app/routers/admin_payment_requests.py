@@ -28,7 +28,7 @@ from app.schemas.payment_request import (
     PaymentApproveIn,
     PaymentReasonIn,
 )
-from app.services import audit, cancellation, payment_requests
+from app.services import audit, cancellation, payment_requests, transfers
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -55,6 +55,9 @@ def method_admin_out(provider: PayMethod) -> AdminPaymentMethodOut:
         sort_order=provider.sort_order,
         fee_bearer=provider.fee_bearer,
         updated_at=provider.updated_at,
+        account_holder_latin=provider.account_holder_latin,
+        min_amount=provider.min_amount,
+        max_amount=provider.max_amount,
     )
 
 
@@ -103,6 +106,7 @@ async def create_method(
     payload: AdminPaymentMethodCreate, admin: SettingsWriter, session: DbSession
 ) -> AdminPaymentMethodOut:
     provider = PayMethod(**payload.model_dump(mode="python"))
+    transfers.require_owner_for(provider, admin)
     provider.fee_bearer = payload.fee_bearer.value
     _require_destination(provider)
     await _require_gateway_ready(session, provider)
@@ -131,6 +135,7 @@ async def update_method(
 ) -> AdminPaymentMethodOut:
     """**يُدقَّق كلُّ تغييرٍ بقبله وبعده** — ورقمُ الحساب أوّلُها."""
     provider = await payment_requests.get_provider(session, provider_id, for_update=True)
+    transfers.require_owner_for(provider, admin)
     fields = payload.model_dump(exclude_unset=True)
     if "fee_bearer" in fields and fields["fee_bearer"] is not None:
         fields["fee_bearer"] = str(fields["fee_bearer"].value if hasattr(fields["fee_bearer"], "value") else fields["fee_bearer"])
@@ -160,6 +165,7 @@ async def upload_method_qr(
 ) -> AdminPaymentMethodOut:
     """**يرفع صورةَ رمز QR للطريقة** — `PUT` لأنها إحلال، والقديمةُ تُحذف بعد الـcommit لا قبله (قاعدةُ رفع الوثائق)."""
     provider = await payment_requests.get_provider(session, provider_id, for_update=True)
+    transfers.require_owner_for(provider, admin)
     stored = await storage.save(file, folder=str(provider.id))
     if stored.content_type not in _QR_TYPES:
         await storage.delete(stored.relative_path)
@@ -236,6 +242,8 @@ async def _rows_out(session, rows: list[PaymentRequest]) -> list[AdminPaymentReq
                 subscription_id=row.subscription_id,
                 reviewed_at=row.reviewed_at,
                 created_at=row.created_at,
+                transfer_date=row.transfer_date,
+                public_ref=payment_requests.public_ref(row.id),
             )
         )
     return out

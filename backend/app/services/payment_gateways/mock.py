@@ -35,6 +35,12 @@ class MockGateway:
 
     def __init__(self, integration: str) -> None:
         self.name = integration
+        self.last_status: str | None = None
+
+    async def health(self) -> None:
+        """**الوهميُّ صحيحٌ دائماً** — إلا إن كُتب في Redis أنه متوقّف (للتطوير: «انقطاعٌ» يُجرَّب بلا شبكة)."""
+        if await get_redis_client().get("paymock:down"):
+            raise base.GatewayDown()
 
     async def checkout(
         self,
@@ -63,6 +69,7 @@ class MockGateway:
             return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED)
         if value == "failed":
             return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason="فشل الدفعُ في الوسيط الوهميّ")
+        self.last_status = "pending" if value and value.startswith("pending|") else None
         return None
 
     def webhook_ids(self, headers: Mapping[str, str], body: bytes) -> list[str]:

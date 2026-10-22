@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import or_, select
@@ -78,6 +78,17 @@ EXPIRED_PROCESSING_REASON = payment_reasons.EXPIRED_PROCESSING
 
 #: **مهلةُ صفحة الوسيط** — بعدها يُسأل الوسيط: لم يُدفع ⇒ تُلغى بسببها، ودفعٌ يصل بعدها يُقيَّد ولا يضيع
 CHECKOUT_TTL_HOURS = 24
+
+#: **«دُفع» ينتظر إشعارَه الموقَّعَ هذه المدّة** ثمّ تقيِّده التسويةُ من جواب الوسيط المباشر (SPEC §٨٢-أ/٥) — الإشعارُ أوّلُ الشاهدين لا وحيدُهما
+WEBHOOK_GRACE_SECONDS = 60
+#: **دفعةٌ «قيد المعالجة» بعد هذه المدّة يُشعَر بها المالك** (§٨٢-أ/٢: «after N minutes») — مرّةً واحدة
+REVIEW_ALERT_MINUTES = 15
+#: **نقرتان سريعتان على «ادفع» صفحةٌ واحدة** (§٨٢-أ/٤) — القفلُ ما دامت الأولى تُفتح (وسقفُه هذا)، ثمّ يبقى معرّفُها
+#: `DOUBLE_TAP_SECONDS` لنقرةٍ تأخّرت. **ولا أطولَ من ذلك**: من عاد بعد دقيقةٍ ليدفع ثانيةً يفتح صفحةً جديدة كما كان
+CHECKOUT_LOCK_SECONDS = 30
+DOUBLE_TAP_SECONDS = 5
+#: **ما أُلغي عندنا بلا جوابٍ نهائيٍّ من الوسيط** — تراجعه التسويةُ في مهلة الصفحة، فدفعٌ اكتمل بعده يُقيَّد ولا يضيع
+RECHECK_CANCELLED = frozenset({payment_reasons.NOT_COMPLETED, payment_reasons.EXPIRED})
 
 
 class TestModeOnly(AppError):
@@ -349,7 +360,16 @@ async def _prepare(
             )
     else:
         plan_id = None
+    require_within_bounds(provider, amount, currency_for_country(owner.country_code))
     return Prepared(provider=provider, owner_type=owner_type, amount=amount, plan_id=plan_id)
+
+
+def require_within_bounds(provider: PayMethod, amount: Decimal, currency) -> None:
+    """**حدّا الطريقة** (SPEC §٨٢-ب/٦) — مبلغٌ خارجهما يُردّ قبل أن يُكتب الطلب؛ وطريقةٌ بلا حدّين كما كانت."""
+    if provider.min_amount is not None and amount < provider.min_amount:
+        raise InvalidInput(f"أقلُّ مبلغٍ بهذه الطريقة {amount_text(provider.min_amount, currency)}", field="amount")
+    if provider.max_amount is not None and amount > provider.max_amount:
+        raise InvalidInput(f"أكثرُ مبلغٍ بهذه الطريقة {amount_text(provider.max_amount, currency)}", field="amount")
 
 
 async def create(
@@ -366,6 +386,7 @@ async def create(
     receipt_content_type: str | None,
     receipt_sha256: str | None,
     declared: WalletOwnerType | None = None,
+    transfer_date: date | None = None,
 ) -> PaymentRequest:
     """**طلبٌ يفتحه صاحبُه** بعد أن يدفع — معلَّقاً حتى يعتمده موظّفٌ ماليّ.
 
@@ -384,6 +405,17 @@ async def create(
         # **والمرجعُ كذلك** (§٧٣-هـ/٦): صورتان مختلفتان للإيصال نفسِه تُفلتان من بصمة الصورة، ولا تُفلتان من رقمه
         if clean_reference is None:
             raise InvalidInput("رقمُ التحويل كما في الإيصال مطلوب", field="reference")
+    # **وتاريخُه في BaridiMob** (SPEC §٨٢-ب/٣) — يقارنه المراجعُ بما وصل؛ لا في الغد ولا قبل تسعين يوماً. **والطرقُ الأخرى كما كانت**
+    from app.services import transfers
+
+    if provider.code == transfers.CODE:
+        if transfer_date is None:
+            raise InvalidInput("تاريخُ التحويل كما في الإيصال مطلوب", field="transfer_date")
+        today = _now().date()
+        if transfer_date > today + timedelta(days=1) or transfer_date < today - timedelta(days=90):
+            raise InvalidInput("تاريخُ التحويل غيرُ صحيح", field="transfer_date")
+    elif not requires_receipt(provider):
+        transfer_date = None
 
     request = PaymentRequest(
         id=request_id,
@@ -402,6 +434,7 @@ async def create(
         receipt_path=receipt_path,
         receipt_content_type=receipt_content_type,
         receipt_sha256=receipt_sha256,
+        transfer_date=transfer_date,
     )
     try:
         async with session.begin_nested():
@@ -410,6 +443,8 @@ async def create(
     except IntegrityError as exc:
         # **الفهرسان الفريدان هما الحارس** — لا قراءةٌ قبل الكتابة تسبقها كتابةٌ متزامنة
         if "uq_payment_requests_" in str(exc.orig):
+            # **ويُشعَر المالكُ بالمكرَّر** (§٨٢-ب/٦: «block and flag duplicates») — بعد الالتزام لا قبله، فلا يُكتب ما رُجع عنه
+            _flag("transfer_duplicate", country=owner.country_code, provider=provider.code)
             raise PaymentAlreadySubmitted() from exc
         raise
     return request
@@ -422,6 +457,7 @@ async def approve(
     actor: User | None,
     credited: Decimal | None = None,
     test_money: bool = False,
+    subscribe: bool = True,
 ) -> PaymentRequest:
     """**اعتمادُ الموظّف الماليّ — أو الوسيطِ الآليّ** (`actor=None`) → قيدُ شحنٍ في المعاملة نفسِها.
 
@@ -478,7 +514,7 @@ async def approve(
     # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** — كالشحن القائم حرفاً (`CANCELLATION-FEE.md` §7)
     await cancellation.on_wallet_funded(session, user=owner)
 
-    if request.purpose is PaymentRequestPurpose.SUBSCRIPTION and driver is not None and request.plan_id is not None:
+    if subscribe and request.purpose is PaymentRequestPurpose.SUBSCRIPTION and driver is not None and request.plan_id is not None:
         from app.services import subscriptions
 
         try:
@@ -514,6 +550,8 @@ async def approve(
             "test_money": test_money,
         },
     )
+    if actor is not None and provider.integration is None:
+        _flag("transfer_approved", session=session, request=request, by=decided_by(actor))
     return request
 
 
@@ -535,7 +573,20 @@ async def reject(
         entity_id=request.id,
         details={"action": "reject", "reason": request.rejection_reason},
     )
+    if actor is not None and request.provider.integration is None:
+        _flag("transfer_rejected", session=session, request=request, by=decided_by(actor))
     return request
+
+
+def decided_by(actor: User) -> str:
+    """**من حسم التحويل** — المراجعُ أو المالكُ أو موظّفُ الماليّة؛ يقرؤه المالكُ في إشعاره."""
+    from app.models.enums import UserRole
+
+    if actor.has_role(UserRole.OWNER):
+        return "owner"
+    if actor.has_role(UserRole.PAYMENT_REVIEWER):
+        return "reviewer"
+    return "staff"
 
 
 async def cancel(
@@ -551,6 +602,9 @@ async def cancel(
         raise InvalidStatusTransition()
     if by_owner and request.user_id != actor.id:
         raise NotFound("طلبُ الدفع غيرُ موجود")
+    # **«قيد المعالجة» لا يلغيه صاحبُه** (SPEC §٨٢-أ/٢): المالُ وصل، والتسويةُ تقيِّده — وإلغاؤه يُسقط ما دُفع من شاشته
+    if by_owner and request.gateway_paid_at is not None:
+        raise InvalidStatusTransition("وصل دفعُك ويُعالَج — لا يُلغى")
     request.status = PaymentRequestStatus.CANCELLED
     request.cancel_reason = (
         (reason or "").strip()[:500] or payment_reasons.BY_OWNER if by_owner else written_reason(reason, field="reason")
@@ -648,6 +702,10 @@ async def start_checkout(
         declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),
     )
     provider = prepared.provider
+    # **فحصُ الصحّة قبل أن يُرسل الدافعُ إلى صفحة** (SPEC §٨٢-أ/١) — متوقّفٌ أو بطيءٌ جدّاً ⇐ `GatewayDown` بلغته، ولا صفحةَ معطوبة
+    from app.services import gateway_health
+
+    await gateway_health.require_up(gateway, provider.integration or "", owner.country_code)
     request = PaymentRequest(
         user_id=owner.id,
         owner_type=prepared.owner_type,
@@ -674,6 +732,9 @@ async def start_checkout(
     )
     try:
         checkout = await gateway.checkout(customer=customer, **opened)
+    except payment_gateways.GatewayDown:
+        await gateway_health.note(provider.integration or "", owner.country_code, up=False)
+        raise
     except payment_gateways.GatewayError:
         if customer.gateway_id is None:
             raise
@@ -718,13 +779,6 @@ def _fee_of(payer: str | None, on_customer: Decimal | None, on_merchant: Decimal
     """**رسمُ الطلب الواحد** — ما على الدافع إن حملها، وما على TAXO إن حملتها؛ و`None` حين لا يذكره الوسيط."""
     value = on_customer if payer == "user" else on_merchant
     return as_money(value) if value is not None else None
-
-
-async def refresh(session: AsyncSession, *, request_id: uuid.UUID) -> PaymentRequest:
-    """**يسأل الوسيطَ عن طلبٍ معلَّق ويطبّق جوابَه** — حين تأخّر الإشعار أو ضاع. **ولا يقيِّد «دُفع» عند وسيطٍ يوقّع إشعارَه**
-    (Chargily، §٧٤-ط/٥): العودةُ تسأل، والإشعارُ الموقَّعُ وحدَه يشحن — فيبقى الطلبُ «معلَّقاً» حتى يصل."""
-    row, _ = await settle_from_gateway(session, request_id=request_id, signed=False)
-    return row
 
 
 #: ما يُحسم بعد أن حُسم الطلب: **دفعٌ وصل بعد إلغاءٍ أو فشل** — المالُ دخل، فيُقيَّد ولا يضيع (§٧٤-ي/٥)
@@ -789,8 +843,6 @@ async def expire_stale(session: AsyncSession, *, now: datetime | None = None) ->
     (`CHECKOUT_TTL_HOURS`). **وما قال «دُفع» لا يُلغى** — ينتظر إشعارَه؛ **وما يصل بعد الإلغاء يُقيَّد** (`settle_from_gateway`).
     **ولكلِّ طلبٍ معاملتُه**: يُودَع بعد كلِّ واحد، فوسيطٌ بطيءٌ لا يُبقي أقفالاً.
     """
-    from datetime import timedelta
-
     from app.services import payment_gateways
 
     moment = now or _now()
@@ -802,6 +854,7 @@ async def expire_stale(session: AsyncSession, *, now: datetime | None = None) ->
                 PaymentRequest.status == PaymentRequestStatus.PENDING,
                 PaymentRequest.external_id.is_not(None),
                 PayMethod.integration.is_not(None),
+                PaymentRequest.gateway_paid_at.is_(None),
                 PaymentRequest.created_at < moment - timedelta(hours=CHECKOUT_TTL_HOURS),
             )
             .order_by(PaymentRequest.created_at)
@@ -891,18 +944,34 @@ async def apply_gateway_outcome(
     if request.status is not PaymentRequestStatus.PENDING:
         return request
     if outcome is PaymentRequestStatus.APPROVED:
-        # **مبلغٌ مختلفٌ عمّا فُتح به الطلب لا يُقيَّد بتخمين** — كقاعدة شحن كليك وTelr: يسقط الطلبُ بسببه، وللمالية أن تعالجه
+        # **دُفع ⇐ لا يُرفض أبداً** (SPEC §٨٢-أ/٢): المالُ دخل. **ومبلغٌ مختلفٌ لا يُقيَّد بتخمين** — يبقى «قيد المعالجة» بسببه،
+        # ولا يُطلب من صاحبه أن يدفع ثانية، **والمالكُ يُشعَر به إن لم يُحسم** (`reconcile_gateway`)
+        if request.gateway_paid_at is None:
+            request.gateway_paid_at = _now()
         if amount is not None and as_money(amount) != request.amount:
-            return await reject(
-                session,
-                request=request,
-                actor=None,
-                reason=(
-                    f"مبلغُ الوسيط ({amount_text(amount, request.currency)}) لا يطابق مبلغَ الطلب "
-                    f"({amount_text(request.amount, request.currency)})"
-                ),
-            )
-        return await approve(session, request=request, actor=None, credited=request.amount, test_money=test_money)
+            request.outcome_note = payment_reasons.AMOUNT_MISMATCH.format(
+                amount_text(amount, request.currency), amount_text(request.amount, request.currency)
+            )[:500]
+            return request
+        extra = await paid_again_since(session, request)
+        # **«دُفع» يُكتب خارجَ نقطة الحفظ** — فتراجعُ التفعيل أدناه لا يمحو أنّ المالَ وصل
+        await session.flush()
+        try:
+            async with session.begin_nested():
+                await approve(
+                    session, request=request, actor=None, credited=request.amount, test_money=test_money,
+                    subscribe=not extra,
+                )
+        except AppError as exc:
+            # **دُفع ولم يُفعَّل** — يبقى «قيد المعالجة» بسببه، والتسويةُ تعيد المحاولة، والمالكُ يُشعَر بعد مهلته.
+            # **ونقطةُ الحفظ المتراجعةُ تُسقط ما في الذاكرة** — فيُقرأ الصفُّ من القاعدة قبل أن يُكتب عليه
+            await session.refresh(request)
+            request.outcome_note = payment_reasons.NOT_ACTIVATED.format(exc.message)[:500]
+            return request
+        if extra:
+            request.outcome_note = payment_reasons.PAID_TWICE
+            _flag("payment_extra", session=session, request=request)
+        return request
     if outcome is PaymentRequestStatus.REJECTED:
         return await reject(session, request=request, actor=None, reason=reason or "رفضه الوسيط")
     if outcome is PaymentRequestStatus.CANCELLED:
@@ -911,3 +980,236 @@ async def apply_gateway_outcome(
         request.cancelled_at = _now()
         return request
     raise InvalidInput("حالٌ لا يُطبَّق من الوسيط")
+
+
+# ------------------------------------------------------------------ دفعُ الجزائر بأمان (SPEC §٨٢-أ)
+
+
+def _flag(
+    kind: str, *, session: AsyncSession | None = None, request: PaymentRequest | None = None,
+    country: CountryCode | None = None, **data: object,
+) -> None:
+    """**إشعارُ المالك بما لا يلتقطه مستمعُ الصفوف** (دفعٌ مكرَّر · «قيد المعالجة» طالت · رقمُ تحويلٍ مكرَّر) — بعد الالتزام إن
+    مُرّرت المعاملة، **وفي الحال بدونها** (المكرَّرُ يُرَدّ فتُلغى معاملتُه، والإشعارُ به لا يُلغى معها)."""
+    from app.services import alert_capture
+
+    if request is not None:
+        alert_capture.ship_after_commit(session, kind, "payment_request", request.id, **data)
+    else:
+        alert_capture.ship_after_commit(session, kind, "signal", uuid.uuid4(), country=country.value if country else None, **data)
+
+
+async def paid_again_since(session: AsyncSession, request: PaymentRequest) -> bool:
+    """**دفع صاحبُها ثانيةً للغرض نفسِه بعد أن بدأها** (SPEC §٨٢-أ/٢) — طلبٌ آخرُ معتمدٌ للغرض نفسِه (والخطّةِ نفسِها) اعتُمد بعد
+    أن فُتح هذا. **فهذا الزائدُ** يذهب إلى المحفظة ولا يُفعِّل شيئاً ثانية. والشحنُ المتتابعُ العاديُّ لا يمسّه: ما اعتُمد قبل أن يُفتح
+    هذا ليس «دفعاً ثانياً»."""
+    stmt = select(PaymentRequest.id).where(
+        PaymentRequest.user_id == request.user_id,
+        PaymentRequest.purpose == request.purpose,
+        PaymentRequest.id != request.id,
+        PaymentRequest.status == PaymentRequestStatus.APPROVED,
+        PaymentRequest.reviewed_at >= request.created_at,
+    )
+    if request.purpose is PaymentRequestPurpose.SUBSCRIPTION:
+        stmt = stmt.where(PaymentRequest.plan_id == request.plan_id)
+    return await session.scalar(stmt.limit(1)) is not None
+
+
+def phase_of(request: PaymentRequest) -> str:
+    """**ما يراه صاحبُ الدفعة** (SPEC §٨٢-أ/٢) — من الحال ومن «قال الوسيطُ دُفع»:
+
+    - `processing` — **دُفع ولم يُقيَّد بعد**: «وصل دفعُك ويُعالَج»، ولا يُسأل أن يدفع ثانية.
+    - `unconfirmed` — صفحةُ وسيطٍ لا نعرف حالَها: **لا تحجب** — يدفع ثانيةً إن شاء، وإن ظهر أنها دُفعت قُيِّدت مرّةً وذهب الزائدُ لمحفظته.
+    - `in_review` — تحويلٌ يدويٌّ ينتظر المراجعة.
+    - وما عداها حالُ الطلب نفسُها.
+    """
+    if request.status is not PaymentRequestStatus.PENDING:
+        return request.status.value
+    if request.provider.integration is None:
+        return "in_review"
+    return "processing" if request.gateway_paid_at is not None else "unconfirmed"
+
+
+def public_ref(request_id: uuid.UUID) -> str:
+    """**مرجعُ TAXO للطلب** (SPEC §٨٢-ب/٣) — يكتبه الدافعُ في ملاحظة BaridiMob، ويقرؤه المراجعُ؛ مشتقٌّ من المعرّف فلا عمودَ له."""
+    return "TX-" + request_id.hex[:6].upper()
+
+
+async def refresh(session: AsyncSession, *, request_id: uuid.UUID) -> PaymentRequest:
+    """**يسأل الوسيطَ عن طلبٍ عاد إليه صاحبُه بلا نتيجةٍ واضحة** (SPEC §٨٢-أ/٣) — والجوابُ أحدُ أطوار §٨٢-أ/٢:
+
+    - **«معلّقة» عند الوسيط** — عاد ولم يُكمل: تُلغى بسببها فيدفع من جديد فوراً (`NOT_COMPLETED`).
+    - **«دُفع»** — يُختم «قيد المعالجة» (`gateway_paid_at`) **ولا يُقيَّد من عودة التطبيق** (§٧٤-ط/٥): الإشعارُ الموقَّعُ أو التسويةُ يقيِّده.
+    - **فشلٌ أو إلغاء** — يُحسم كما كان.
+    - **الوسيطُ لا يجيب، أو «قيد المعالجة» عنده** — لا نعرف: يبقى بلا حجب، والتسويةُ تسأل في الخلفية.
+    """
+    from app.services import payment_gateways
+
+    row = await get_request(session, request_id)
+    if row.provider.integration is None or row.external_id is None or row.status is not PaymentRequestStatus.PENDING:
+        return row
+    try:
+        gateway = await payment_gateways.gateway_for(session, row.provider.integration, row.country_code)
+        event = await gateway.check(row.external_id)
+    except (payment_gateways.GatewayUnavailable, payment_gateways.GatewayError):
+        return row
+    raw = getattr(gateway, "last_status", None)
+    locked = await get_request(session, request_id, for_update=True)
+    if locked.status is not PaymentRequestStatus.PENDING:
+        return locked
+    if event is None:
+        if raw == "pending" and locked.gateway_paid_at is None:
+            _cancel_unpaid(locked, payment_reasons.NOT_COMPLETED)
+        return locked
+    if event.outcome is PaymentRequestStatus.APPROVED and getattr(gateway, "confirms_by_webhook", False):
+        if locked.gateway_paid_at is None:
+            locked.gateway_paid_at = _now()
+        return locked
+    await _apply_event(session, locked, event, gateway)
+    return locked
+
+
+def _cancel_unpaid(request: PaymentRequest, reason: str) -> None:
+    request.status = PaymentRequestStatus.CANCELLED
+    request.cancel_reason = reason
+    request.cancelled_at = _now()
+
+
+async def _apply_event(session: AsyncSession, locked: PaymentRequest, event, gateway) -> None:
+    if event.outcome is PaymentRequestStatus.APPROVED:
+        paid_fee = _fee_of(locked.fee_payer, event.fee_on_customer, event.fee_on_merchant)
+        if paid_fee is not None:
+            locked.fee_amount = paid_fee
+    await apply_gateway_outcome(
+        session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+        test_money=bool(getattr(gateway, "test_mode", False)),
+    )
+
+
+async def reconcile_gateway(session: AsyncSession, *, now: datetime | None = None) -> int:
+    """**التسويةُ الدوريّة** (SPEC §٨٢-أ/٥) — كلَّ دقيقتين: **كلُّ دفعةٍ عند وسيطٍ بلا حالٍ نهائيّ** يُسأل عنها الوسيطُ ويُطبَّق جوابُه.
+
+    - **«دُفع»** ⇐ يُختم «قيد المعالجة» ثمّ يُقيَّد **مرّةً واحدة** بعد `WEBHOOK_GRACE_SECONDS` إن لم يسبقه الإشعارُ الموقَّع — **من
+      جواب الوسيط المباشر** (`GET /checkouts/{id}` بمفتاحنا السرّيّ، الخلفيةُ إليه لا التطبيق)؛ وقيدُ الدفتر بمفتاح الطلب فلا يُكتب مرّتين.
+    - **ما أُلغي عندنا بلا جوابٍ نهائيّ** (عاد ولم يُكمل · مهلتُنا) يُراجع في مهلة الصفحة — **ودفعٌ اكتمل بعده يُقيَّد ولا يضيع**.
+    - **«قيد المعالجة» أطولَ من `REVIEW_ALERT_MINUTES`** ⇐ يُشعَر المالكُ مرّةً واحدة.
+    - **ولكلِّ طلبٍ معاملتُه**، والوسيطُ يُسأل قبل القفل لا تحته.
+    """
+    from app.core.redis_client import get_redis_client
+    from app.services import payment_gateways
+
+    moment = now or _now()
+    window = moment - timedelta(hours=CHECKOUT_TTL_HOURS)
+    ids = (
+        await session.scalars(
+            select(PaymentRequest.id)
+            .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
+            .where(
+                PayMethod.integration.is_not(None),
+                PaymentRequest.external_id.is_not(None),
+                or_(
+                    (PaymentRequest.status == PaymentRequestStatus.PENDING)
+                    & ((PaymentRequest.created_at > window) | PaymentRequest.gateway_paid_at.is_not(None)),
+                    (PaymentRequest.status == PaymentRequestStatus.CANCELLED)
+                    & PaymentRequest.cancelled_by.is_(None)
+                    & PaymentRequest.cancel_reason.in_(RECHECK_CANCELLED)
+                    & (PaymentRequest.created_at > window),
+                ),
+            )
+            .order_by(PaymentRequest.created_at)
+            .limit(200)
+        )
+    ).all()
+    settled = 0
+    redis = get_redis_client()
+    for request_id in ids:
+        row = await get_request(session, request_id)
+        try:
+            gateway = await payment_gateways.gateway_for(session, row.provider.integration or "", row.country_code)
+            event = await gateway.check(row.external_id or "")
+        except (payment_gateways.GatewayUnavailable, payment_gateways.GatewayError):
+            await session.rollback()
+            continue
+        locked = await get_request(session, request_id, for_update=True)
+        paid = event is not None and event.outcome is PaymentRequestStatus.APPROVED
+        if locked.status is PaymentRequestStatus.CANCELLED:
+            if not paid:
+                await session.commit()
+                continue
+            _reopen_for_late_payment(locked)
+        elif locked.status is not PaymentRequestStatus.PENDING:
+            await session.commit()
+            continue
+        if paid:
+            if locked.gateway_paid_at is None:
+                locked.gateway_paid_at = moment
+            if (moment - locked.gateway_paid_at).total_seconds() >= WEBHOOK_GRACE_SECONDS:
+                await _apply_event(session, locked, event, gateway)
+        elif event is not None:
+            await _apply_event(session, locked, event, gateway)
+        if (
+            locked.status is PaymentRequestStatus.PENDING
+            and locked.gateway_paid_at is not None
+            and moment - locked.gateway_paid_at >= timedelta(minutes=REVIEW_ALERT_MINUTES)
+            and await redis.set(f"payreq:stuck:{locked.id}", "1", nx=True, ex=7 * 86400)
+        ):
+            _flag("payment_stuck", session=session, request=locked)
+        if locked.status is not PaymentRequestStatus.PENDING:
+            settled += 1
+        await session.commit()
+    return settled
+
+
+async def open_checkout_once(
+    session: AsyncSession,
+    *,
+    owner: User,
+    provider_id: uuid.UUID,
+    purpose: PaymentRequestPurpose,
+    amount: Decimal | None,
+    plan_id: uuid.UUID | None,
+    declared: WalletOwnerType | None,
+    opened_from: str,
+) -> tuple[PaymentRequest, str]:
+    """**نقرتان سريعتان على «ادفع» صفحةٌ واحدة** (SPEC §٨٢-أ/٤) — قفلٌ في Redis للدافع والغرض والمبلغ والخطّة:
+
+    الأولى تفتح الصفحةَ وتكتب معرّفَها في القفل؛ **والثانيةُ تنتظرها ثمّ تعيد الصفحةَ نفسَها** — لا طلبَ ثانياً ولا صفحةَ ثانية.
+    """
+    import asyncio
+
+    from app.core.redis_client import get_redis_client
+
+    redis = get_redis_client()
+    key = f"checkout:open:{owner.id}:{purpose.value}:{amount}:{plan_id}"
+    if not await redis.set(key, "opening", nx=True, ex=CHECKOUT_LOCK_SECONDS):
+        for _ in range(40):
+            value = await redis.get(key)
+            text = value.decode() if isinstance(value, bytes) else value
+            if text and "|" in text:
+                request_id, url = text.split("|", 1)
+                for _ in range(20):
+                    row = await session.scalar(
+                        select(PaymentRequest).where(PaymentRequest.id == uuid.UUID(request_id)).execution_options(populate_existing=True)
+                    )
+                    if row is not None:
+                        return row, url
+                    await asyncio.sleep(0.15)
+                break
+            if text is None:
+                break
+            await asyncio.sleep(0.25)
+        raise Conflict("صفحةُ الدفع تُفتح الآن — انتظر لحظة")
+    try:
+        request, url = await start_checkout(
+            session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
+            declared=declared, opened_from=opened_from,
+        )
+    except BaseException:
+        await redis.delete(key)
+        raise
+    if DOUBLE_TAP_SECONDS > 0:
+        await redis.set(key, f"{request.id}|{url}", ex=DOUBLE_TAP_SECONDS)
+    else:
+        await redis.delete(key)
+    return request, url
+

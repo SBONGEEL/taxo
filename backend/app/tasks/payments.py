@@ -85,3 +85,22 @@ def expire_gateway_checkouts() -> dict[str, int]:
     expired = run_async(_expire_checkouts())
     logger.info("كنس صفحات الوسيط: %s طلباً حُسم بمهلته أو بجواب الوسيط", expired)
     return {"expired": expired}
+
+
+async def _reconcile() -> dict[str, int]:
+    from app.services import gateway_health, payment_requests
+
+    async with SessionLocal() as session:
+        settled = await payment_requests.reconcile_gateway(session)
+    async with SessionLocal() as session:
+        down = await gateway_health.probe_all(session)
+    return {"settled": settled, "down": down}
+
+
+@celery_app.task(name="app.tasks.payments.reconcile_gateway_payments")
+def reconcile_gateway_payments() -> dict[str, int]:
+    """**تسويةُ دفعات الوسيط** (SPEC §٨٢-أ/٥) — كلُّ دفعةٍ بلا حالٍ نهائيٍّ يُسأل عنها الوسيطُ ويُطبَّق جوابُه مرّةً واحدة، **ثمّ تُفحص صحّتُه**
+    فيُعرف توقّفُه وعودتُه ولو لم يدفع أحد (§٨٢-أ/٦)."""
+    result = run_async(_reconcile())
+    logger.info("تسويةُ دفعات الوسيط: %s", result)
+    return result

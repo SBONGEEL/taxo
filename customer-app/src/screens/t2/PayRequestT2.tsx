@@ -31,6 +31,16 @@ import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
 import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2, WaitT2 } from "./MoneyT2";
+import {
+  BARIDIMOB,
+  BaridiMobDetails,
+  GatewayDownNote,
+  SupportLine,
+  gatewayIsDown,
+  newRequestId,
+  publicRef,
+  todayIso,
+} from "./PayDz";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ نوع — **الكاشُ يدٌ تسلّم، والتحويلُ بنك، ورقمُ الهاتف هاتف** */
@@ -65,6 +75,10 @@ export function PayRequestT2Screen() {
   // **دفعةُ بطاقةٍ لم تكتمل** (§٧٦-ع/٢، المشكلة ١٣): الرجوعُ من صفحة Chargily كان يمسح المبلغ ويترك طلباً معلَّقاً لا يُرى هنا،
   // والضغطُ ثانيةً يفتح طلباً ثانياً — فتُعرض هنا لتُكمَل أو تُلغى
   const [open, setOpen] = useState<MyPaymentRequest | null>(null);
+  // **دفعُ الجزائر** (SPEC §٨٢): معرّفُ الطلب من هنا فيُعرف مرجعُ TAXO قبل التحويل، وتاريخُه، و«الوسيطُ متوقّف»
+  const [clientId] = useState(newRequestId);
+  const [transferDate, setTransferDate] = useState(todayIso);
+  const [down, setDown] = useState(false);
 
   const currency = country?.currency;
   const unit = roundingUnit(country);
@@ -132,11 +146,18 @@ export function PayRequestT2Screen() {
   }, [method?.id, method?.has_qr]);
 
   const needsReceipt = method?.requires_receipt === true;
+  const isBaridi = method?.code === BARIDIMOB;
+  const baridi = methods?.find((row) => row.code === BARIDIMOB) ?? null;
+  const limits =
+    method?.min_amount && method.max_amount
+      ? tr("المبلغ بين {0} و{1}.", { 0: formatMoney(method.min_amount, currency), 1: formatMoney(method.max_amount, currency) })
+      : null;
   const ready =
     method !== null &&
     Number(amount) > 0 &&
     unitError === null &&
-    (!needsReceipt || (receipt !== null && reference.trim().length >= 3));
+    (!needsReceipt || (receipt !== null && reference.trim().length >= 3)) &&
+    (!isBaridi || transferDate !== "");
 
   async function copyNumber() {
     if (!method?.account_number) return;
@@ -164,7 +185,9 @@ export function PayRequestT2Screen() {
         }
         window.location.assign(opened.checkout_url);
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+        // **الوسيطُ متوقّف** (§٨٢-أ/١) — رسالتُه و«أعد المحاولة» والبديلُ، لا نصُّ خطأ
+        if (gatewayIsDown(caught)) setDown(true);
+        else setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
         setBusy(false);
       }
       return;
@@ -181,6 +204,8 @@ export function PayRequestT2Screen() {
           reference: reference.trim() || undefined,
           wallet: "rider",
           receipt,
+          transferDate: isBaridi ? transferDate : undefined,
+          clientId: isBaridi ? clientId : undefined,
         },
         { onProgress: setProgress },
       );
@@ -221,7 +246,15 @@ export function PayRequestT2Screen() {
         <BannerT2 tone="danger" message={error ?? tr("لا طريقةَ دفعٍ متاحةٌ في بلدك الآن.")} />
       ) : (
         <>
-          {open ? (
+          {open && open.phase === "processing" ? (
+            <section className="t2-m-card t2-pr-dest" aria-label={tr("وصل دفعُك ويُعالَج")}>
+              <div className="t2-pr-line">
+                <span className="t2-m-label">{tr("وصل دفعُك ويُعالَج")}</span>
+                <span className="t2-pr-text">{formatMoney(open.amount, open.currency)}</span>
+              </div>
+              <p className="t2-pr-instructions">{tr("يُضاف إلى رصيدك تلقائياً حين يكتمل — لا تدفع مرّةً أخرى لهذا المبلغ.")}</p>
+            </section>
+          ) : open ? (
             <section className="t2-m-card t2-pr-dest" aria-label={tr("دفعةٌ لم تكتمل")}>
               <div className="t2-pr-line">
                 <span className="t2-m-label">{tr("دفعةٌ لم تكتمل")}</span>
@@ -271,7 +304,17 @@ export function PayRequestT2Screen() {
             ))}
           </div>
 
-          {method && !method.gateway ? (
+          {method && isBaridi ? (
+            <div className="t2-m-gap">
+              <BaridiMobDetails
+                method={method}
+                reference={publicRef(clientId)}
+                limits={limits}
+                cardClass="t2-m-card"
+                labelClass="t2-m-label"
+              />
+            </div>
+          ) : method && !method.gateway ? (
             <section className="t2-m-card t2-m-gap t2-pr-dest" aria-label={tr("إلى أين تدفع")}>
               {method.account_number ? (
                 <div className="t2-pr-line">
@@ -343,6 +386,19 @@ export function PayRequestT2Screen() {
                 />
               </AuthBlock>
 
+              {isBaridi ? (
+                <AuthBlock label={tr("تاريخ التحويل")} htmlFor="pay-request-date" hint={tr("كما يظهر في الإيصال")}>
+                  <AuthInput
+                    id="pay-request-date"
+                    type="date"
+                    dir="ltr"
+                    max={todayIso()}
+                    value={transferDate}
+                    onChange={(event) => setTransferDate(event.target.value)}
+                  />
+                </AuthBlock>
+              ) : null}
+
               <label className="t2-pr-file" htmlFor="pay-request-receipt">
                 <Icon name={receipt ? "task" : "add_photo_alternate"} />
                 <span className="t2-pr-file-main">
@@ -361,6 +417,24 @@ export function PayRequestT2Screen() {
           ) : null}
 
           <BannerT2 tone="danger" message={error} />
+          {method?.gateway && (down || method.down) ? (
+            <GatewayDownNote
+              busy={busy}
+              onRetry={() => {
+                setDown(false);
+                void submit();
+              }}
+              onAlternative={
+                baridi
+                  ? () => {
+                      setDown(false);
+                      setMethodId(baridi.id);
+                      setReceipt(null);
+                    }
+                  : null
+              }
+            />
+          ) : null}
           {progress !== null && progress < 100 ? (
             <p className="t2-m-hint">
               {tr("يُرفع الإيصال…")}{" "}<span dir="ltr">{progress}%</span>
@@ -419,6 +493,8 @@ export function PayRequestT2Screen() {
               </button>
             )}
           </div>
+          {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — خُصم من البطاقة ولم تظهر الدفعة */}
+          <SupportLine to="/account/help" />
         </>
       )}
     </div>

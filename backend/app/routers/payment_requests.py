@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
@@ -34,15 +35,22 @@ from app.schemas.payment_request import (
     PaymentMethodOut,
     PaymentMethodsOut,
 )
-from app.services import cancellation, payment_gateways, payment_requests
+from app.services import cancellation, gateway_health, payment_gateways, payment_requests
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 
 
-def method_out(provider: PayMethod, *, test_mode: bool = False, shares_payer: bool = False) -> PaymentMethodOut:
+def method_out(
+    provider: PayMethod, *, test_mode: bool = False, shares_payer: bool = False, down: bool = False
+) -> PaymentMethodOut:
     return PaymentMethodOut(
+        code=provider.code,
+        account_holder_latin=provider.account_holder_latin,
+        min_amount=provider.min_amount,
+        max_amount=provider.max_amount,
+        down=down,
         test_mode=test_mode,
         shares_payer=shares_payer,
         fee_payer=provider.fee_bearer if provider.integration is not None else None,
@@ -87,6 +95,9 @@ def mine_out(request: PaymentRequest) -> MyPaymentRequestOut:
         refund_reason=_said(request.refund_reason),
         outcome_note=_said(request.outcome_note),
         created_at=request.created_at,
+        phase=payment_requests.phase_of(request),
+        public_ref=payment_requests.public_ref(request.id),
+        transfer_date=request.transfer_date,
     )
 
 
@@ -135,7 +146,8 @@ async def list_methods(
             continue
         # **ما يُرسله `gateway_customers.customer_for` بعينه**: مفتاحُ العقد ووسيطٌ يُنشئ عملاء — فلا يَعِد السطرُ بما لا يقع
         shares_payer = bool(getattr(gateway, "send_customer", False)) and hasattr(gateway, "create_customer")
-        shown.append(method_out(provider, test_mode=test_mode, shares_payer=shares_payer))
+        down = await gateway_health.is_down(provider.integration, user.country_code)
+        shown.append(method_out(provider, test_mode=test_mode, shares_payer=shares_payer, down=down))
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
         # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها
@@ -169,12 +181,22 @@ async def create_request(
     plan_id: Annotated[uuid.UUID | None, Form()] = None,
     wallet: Annotated[WalletOwnerType | None, Form()] = None,
     receipt: Annotated[UploadFile | None, File(description="صورةُ الإيصال أو PDF")] = None,
+    transfer_date: Annotated[date | None, Form()] = None,
+    client_id: Annotated[uuid.UUID | None, Form(description="معرّفُ الطلب من التطبيق — منه مرجعُ TAXO قبل التحويل")] = None,
 ) -> MyPaymentRequestOut:
     """**طلبٌ بعد الدفع** — معلَّقٌ حتى يعتمده موظّفٌ ماليّ؛ **والإيصالُ إجباريٌّ في التحويلات** (§٧٣-هـ/٢).
 
     **والملفُّ يُحفظ قبل الصفّ ويُحذف إن لم يُكتب** — كرفع الوثائق: ملفٌّ يتيمٌ نفايةٌ تُنظَّف، وصفٌّ يعد بملفٍّ غائبٍ عطلٌ يراه موظّف.
     """
-    request_id = uuid.uuid4()
+    # **المعرّفُ من التطبيق** (SPEC §٨٢-ب/٣) — منه مرجعُ TAXO الذي يكتبه الدافعُ في ملاحظة BaridiMob قبل أن يحوّل؛ **وإرسالُه
+    # مرّتين طلبٌ واحد**: الثاني يعيد الأوّلَ لصاحبه، ولغيره ٤٠٩ لا يقول شيئاً
+    if client_id is not None:
+        existing = await session.get(PaymentRequest, client_id)
+        if existing is not None:
+            if existing.user_id != user.id:
+                raise payment_requests.PaymentAlreadySubmitted()
+            return mine_out(existing)
+    request_id = client_id or uuid.uuid4()
     stored = None
     digest = None
     if receipt is not None:
@@ -194,6 +216,7 @@ async def create_request(
             receipt_content_type=stored.content_type if stored else None,
             receipt_sha256=digest,
             declared=wallet,
+            transfer_date=transfer_date,
         )
         await session.commit()
     except BaseException:
@@ -242,7 +265,8 @@ async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: 
         if payload.purpose is PaymentRequestPurpose.SUBSCRIPTION or payload.wallet is WalletOwnerType.DRIVER
         else "rider"
     )
-    request, url = await payment_requests.start_checkout(
+    # **نقرتان سريعتان صفحةٌ واحدة** (SPEC §٨٢-أ/٤)
+    request, url = await payment_requests.open_checkout_once(
         session,
         owner=user,
         provider_id=payload.provider_id,

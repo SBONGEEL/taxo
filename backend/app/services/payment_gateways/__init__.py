@@ -31,6 +31,8 @@ from app.models.provider_credential import ProviderCredential
 from app.services.providers import credentials as credentials_service
 
 REQUEST_TIMEOUT_SECONDS = 20.0
+#: **فحصُ الصحّة قبل فتح الصفحة** (§٨٢-أ/١) — أبطأُ من هذا «بطيءٌ جدّاً»: لا يُرسل إليه دافعٌ ينتظر صفحةً لا تُفتح
+HEALTH_TIMEOUT_SECONDS = 6.0
 
 #: **مَنفذُ نقلٍ للاختبار وحدَه** — `httpx.MockTransport` يُركَّب هنا فيُسأل الوسيطُ بلا شبكة؛ وفي التشغيل `None` (الشبكةُ الحقيقيّة)
 http_transport: httpx.AsyncBaseTransport | None = None
@@ -58,6 +60,19 @@ class GatewayError(AppError):
     status_code = 502
     code = "payment_gateway_error"
     message = "تعذّر إتمامُ العملية عند وسيط الدفع"
+
+
+class GatewayDown(GatewayError):
+    """**الوسيطُ نفسُه متوقّفٌ أو بطيءٌ جدّاً** (SPEC §٨٢-أ/١) — مهلةٌ أو انقطاعٌ أو `5xx` منه، **لا رفضُه لطلبٍ بعينه**.
+
+    **ولا يُرسل الدافعُ إلى صفحةٍ معطوبة**: الفحصُ قبل فتح الصفحة يرفعه، ويُقال للدافع بلغته إن الدفعَ متوقّفٌ مؤقّتاً عند مزوّده
+    وأن يحاول بعد دقائق — **والتطبيقُ يعرض «أعد المحاولة» ومعها التحويلَ اليدويّ إن كان مفعَّلاً**. وهو `GatewayError` بنسبه، فكلُّ
+    موضعٍ يلتقط ذاك (التسويةُ والمهلة) يلتقطه كما كان.
+    """
+
+    status_code = 503
+    code = "payment_gateway_down"
+    message = "الدفعُ الإلكترونيُّ متوقّفٌ مؤقّتاً لدى مزوّد الدفع. حاول مجدّداً بعد دقائق."
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,8 +160,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
 }
 
 
-def http_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS, transport=http_transport)
+def http_client(timeout: float = REQUEST_TIMEOUT_SECONDS) -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=timeout, transport=http_transport)
 
 
 def build(integration: str, values: Mapping[str, Any]) -> Gateway:

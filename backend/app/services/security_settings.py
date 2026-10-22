@@ -39,6 +39,9 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     وحينَ يُسجّل `support` عاملاً فهو يعمل عليه: العاملُ المؤكَّد يسري على صاحبه
     أيّاً كان دورُه، والمفتاحُ يقرّر مَن **يُلزَم** لا مَن يُسأل.
     """
+    # **مراجعُ التحويلات مُلزَمٌ دائماً** (SPEC §٨٢-ب/٥: «two-step verification mandatory, same as the OWNER») — يعتمد مالاً
+    if user.has_role(UserRole.PAYMENT_REVIEWER) and not user.has_role(UserRole.ADMIN):
+        return True
     if not user.has_role(UserRole.ADMIN):
         return False
 

@@ -26,12 +26,14 @@ import {
   setAdminPermissions,
 } from "@/api/endpoints";
 import type { AdminPermissions, User, UserRole } from "@/api/types";
+import { ReviewersCard } from "@/components/ReviewersCard";
 import { Shell } from "@/components/Shell";
 import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
 import { CALL_RECORDINGS_LISTEN, TRIP_CHATS_READ, refreshMyPermissions } from "@/lib/permissions";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -41,6 +43,8 @@ const ROLE_LABEL: Record<UserRole, string> = {
   support: "دعم فني",
   rider: "راكب",
   driver: "سائق",
+  // **مراجعُ تحويلات BaridiMob** (SPEC §٨٢-ب/٥) — صفحةٌ واحدة، الجزائر وحدَها
+  payment_reviewer: "مراجع تحويلات BaridiMob",
 };
 
 /** **الدورُ المعروض**: المالكُ يحمل `admin` معه (فكلُّ بابٍ إداريٍّ يفتح له)، فيُقرأ من `roles` لا من `role` وحدَه. */
@@ -80,6 +84,8 @@ const NAMED_ONLY: ReadonlySet<string> = new Set([TRIP_CHATS_READ, CALL_RECORDING
 const COLUMNS = "1.6fr 1.2fr 1.2fr 1fr";
 
 export function UsersScreen() {
+  const { user } = useSession();
+  const owner = Boolean(user?.roles?.includes("owner"));
   const [rows, setRows] = useState<User[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -146,6 +152,8 @@ export function UsersScreen() {
       />
 
       <PermissionsMatrix onError={setError} onDone={setDone} />
+      {/* **حسابُ المراجع ينشئه المالكُ بيده** (SPEC §٨٢-ب/٥) — والخادمُ يحرسه (`OwnerUser`) */}
+      {owner ? <ReviewersCard onDone={setDone} /> : null}
     </Shell>
   );
 }

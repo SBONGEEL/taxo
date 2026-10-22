@@ -27,7 +27,7 @@ export type SignupState = "open" | "soon" | "hidden";
 export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;
-export type UserRole = "rider" | "driver" | "admin" | "support" | "owner";
+export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer";
 
 export type RideStatus =
   | "requested"
@@ -1506,6 +1506,15 @@ export interface PayMethod {
   gateway_name?: string | null;
   /** **يصل الوسيطَ اسمُ الدافع وهاتفُه** (عميلُ Chargily، SPEC §٧٦-ع/٦) — فيُقال له قبل الدفع */
   shares_payer?: boolean;
+  /** **معرّفُ الطريقة** (`baridimob` …) — فتُعرض خطواتُ BaridiMob لطريقتها (SPEC §٨٢-ب/٣) */
+  code?: string | null;
+  /** **اسمُ صاحب الحساب باللاتينيّة** كما تعرضه بريدُ الجزائر (§٨٢-ب/١) */
+  account_holder_latin?: string | null;
+  /** **حدّا المبلغ** (§٨٢-ب/٦) — `null` بلا حدّ */
+  min_amount?: string | null;
+  max_amount?: string | null;
+  /** **الوسيطُ متوقّفٌ الآن** (§٨٢-أ/١) — يُقال قبل الضغط */
+  down?: boolean;
 }
 
 export interface PayMethods {
@@ -1537,6 +1546,12 @@ export interface MyPaymentRequest {
   /** **الطريقةُ والخطّة** — «حاول مرّةً أخرى» يعود بهما */
   provider_id?: string | null;
   plan_id?: string | null;
+  /** **ما يراه صاحبُها** (SPEC §٨٢-أ/٢): `processing` دُفع ويُعالَج — لا يدفع ثانية · `unconfirmed` لا نعرف بعد — لا يحجب ·
+   *  `in_review` تحويلٌ ينتظر المراجعة · وإلا الحالُ نفسُها */
+  phase?: string;
+  /** **مرجعُ TAXO** (§٨٢-ب/٣) */
+  public_ref?: string | null;
+  transfer_date?: string | null;
 }
 
 /** **ما شحنته بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رقمُها التسلسليُّ ومبلغُها بعملته. */

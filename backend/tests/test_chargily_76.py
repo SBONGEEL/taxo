@@ -68,6 +68,8 @@ async def test_the_customer_is_created_once_reused_and_carries_name_and_phone(
 ) -> None:
     await algeria_market(session_factory)
     chargily, _ = install_transport(monkeypatch)
+    # **صفحتان متتاليتان عمداً** — لا نقرتان (SPEC §٨٢-أ/٤): نافذةُ النقرة الثانية تُطفأ هنا
+    monkeypatch.setattr(payment_requests, "DOUBLE_TAP_SECONDS", 0)
     method_id = await add_gateway_method(session_factory, "chargily", send_customer=True)
     rider = await rider_session(client, ALGERIAN_RIDER)
     # **والدافعُ يُقال له قبل أن يُرسَل** — السطرُ في صفحة الدفع يقرأ هذا الحقل
@@ -104,6 +106,8 @@ async def test_a_customer_the_gateway_rejects_is_forgotten_and_the_payment_still
 ) -> None:
     await algeria_market(session_factory)
     chargily, _ = install_transport(monkeypatch)
+    # **صفحتان متتاليتان عمداً** — لا نقرتان (SPEC §٨٢-أ/٤): نافذةُ النقرة الثانية تُطفأ هنا
+    monkeypatch.setattr(payment_requests, "DOUBLE_TAP_SECONDS", 0)
     method_id = await add_gateway_method(session_factory, "chargily", send_customer=True)
     rider = await rider_session(client, ALGERIAN_RIDER)
     assert (await _checkout(client, rider["headers"], method_id)).status_code == 201
@@ -127,6 +131,8 @@ async def test_the_page_language_follows_the_app(
 ) -> None:
     await algeria_market(session_factory)
     chargily, _ = install_transport(monkeypatch)
+    # **صفحتان متتاليتان عمداً** — لا نقرتان (SPEC §٨٢-أ/٤): نافذةُ النقرة الثانية تُطفأ هنا
+    monkeypatch.setattr(payment_requests, "DOUBLE_TAP_SECONDS", 0)
     method_id = await add_gateway_method(session_factory, "chargily")
     rider = await rider_session(client, ALGERIAN_RIDER)
     await _checkout(client, rider["headers"], method_id)

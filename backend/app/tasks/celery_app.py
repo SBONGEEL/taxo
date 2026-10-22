@@ -42,6 +42,8 @@ STOP_WAIT_INTERVAL_SECONDS = 60.0
 VERIFICATION_CAMPAIGN_INTERVAL_SECONDS = 900
 CLIQ_SWEEP_INTERVAL_SECONDS = 300
 GATEWAY_CHECKOUT_SWEEP_SECONDS = 900
+#: **تسويةُ دفعات الوسيط وفحصُ صحّته** (SPEC §٨٢-أ/٥ و٦) — «every few minutes»: كلَّ دقيقتين
+GATEWAY_RECONCILE_SECONDS = 120
 BROADCAST_TICK_SECONDS = 30  # = broadcast.TICK_SECONDS — يُختبر تساويهما (test_broadcast.py)
 
 # دورةُ مكافآت الإحالة (المرحلة 12-ح). عشرُ دقائق: الاستحقاقُ يقع بإكمال رحلةٍ
@@ -156,6 +158,10 @@ celery_app.conf.update(
         "expire-gateway-checkouts": {
             "task": "app.tasks.payments.expire_gateway_checkouts",
             "schedule": GATEWAY_CHECKOUT_SWEEP_SECONDS,
+        },
+        "reconcile-gateway-payments": {
+            "task": "app.tasks.payments.reconcile_gateway_payments",
+            "schedule": GATEWAY_RECONCILE_SECONDS,
         },
         # كل دقيقة: السقفُ يُقاس بالدقائق، ودورةٌ كل خمسٍ تجعل تنبيهاً عن
         # تجاوزٍ يصل بعد خمس دقائق من وقوعه — والراكب واقفٌ يقرأ عدّاده

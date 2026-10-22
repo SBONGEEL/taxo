@@ -152,6 +152,15 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — طرقُ الدفع وطابورُ الماليّة بحقول دفع الجزائر (SPEC §٨٢، 2026-10-22)
+    "AdminPaymentMethodOut": (
+        "بانٍ واحد: `admin_payment_requests.method_admin_out` في الأبواب الأربعة (القائمةُ والإنشاءُ والتعديلُ ورمزُ QR) — من صفِّ "
+        "الطريقة كلِّه. **و`account_holder_latin` و`min_amount` و`max_amount` فارغةٌ حال**: طريقةٌ بلا اسمٍ لاتينيٍّ ولا حدّين"
+    ),
+    "AdminPaymentRequestOut": (
+        "بانٍ واحد: `admin_payment_requests._rows_out` في الأبواب الخمسة (القائمةُ والاعتمادُ والرفضُ والردُّ والإلغاء). "
+        "**و`transfer_date` فارغٌ حال**: طلبُ وسيطٍ أو كاشٍ بلا تاريخ تحويل؛ و`public_ref` مشتقٌّ من المعرّف لا يفرغ"
+    ),
     # ✅ بانٍ واحد — إعداداتُ بثّ الموقع (SPEC §٧٥-ج، 2026-10-13)
     "BroadcastSettingsOut": (
         "بانٍ واحد: `admin_settings._broadcast_out` في البابين (القراءةُ والتعديل) — يقرأ الصفَّ والحالَ الحيّةَ والسجلّ معاً. "

@@ -116,8 +116,9 @@ async def test_a_different_amount_at_the_gateway_is_not_credited(
     body, headers = ChargilyFake.signed("chk_0001")
     assert (await client.post("/payment-requests/webhook/chargily", content=body, headers=headers)).status_code == 200
     mine = (await client.get("/payment-requests/me", headers=rider["headers"])).json()[0]
-    assert mine["id"] == request_id and mine["status"] == "rejected"
-    assert "لا يطابق" in mine["rejection_reason"]
+    # **دُفع ⇐ لا يُرفض** (SPEC §٨٢-أ/٢): المالُ دخل بمبلغٍ آخر — «قيد المعالجة» بسببه، ولا قيدَ بتخمين، والمالكُ يُشعَر إن طال
+    assert mine["id"] == request_id and mine["status"] == "pending" and mine["phase"] == "processing"
+    assert "لا يطابق" in mine["outcome_note"]
     assert await balance(client, rider["headers"]) == "0"
 
 

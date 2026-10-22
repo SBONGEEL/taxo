@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -49,6 +49,15 @@ class PaymentMethodOut(BaseModel):
     gateway_name: str | None = None
     #: **يصل الوسيطَ اسمُ الدافع وهاتفُه** (عميلُ Chargily، §٧٦-ع/٦) — فيُقال له ذلك قبل أن يُرسَل، لا في السياسة وحدَها
     shares_payer: bool = False
+    #: **معرّفُ الطريقة** (`baridimob` …) — فيعرض التطبيقُ خطواتِ BaridiMob لطريقتها لا لكلِّ تحويل (§٨٢-ب/٣)
+    code: str | None = None
+    #: **اسمُ صاحب الحساب بالحروف اللاتينيّة** كما تعرضه بريدُ الجزائر (§٨٢-ب/١) — يُرسم مع العربيّ ويُنسخ
+    account_holder_latin: str | None = None
+    #: **حدّا المبلغ** (§٨٢-ب/٦) — `null` بلا حدّ
+    min_amount: Decimal | None = None
+    max_amount: Decimal | None = None
+    #: **الوسيطُ متوقّفٌ الآن** (§٨٢-أ/١) — كما رآه آخرُ فحص؛ فيُقال قبل الضغط لا بعده
+    down: bool = False
 
 
 class PaymentMethodsOut(BaseModel):
@@ -82,6 +91,12 @@ class MyPaymentRequestOut(BaseModel):
     #: **الطريقةُ وخطّةُ الاشتراك** — «حاول مرّةً أخرى» يعود بهما نفسَيهما
     provider_id: uuid.UUID | None = None
     plan_id: uuid.UUID | None = None
+    #: **ما يراه صاحبُها** (SPEC §٨٢-أ/٢): `processing` (دُفع ويُعالَج — لا يُسأل أن يدفع ثانية) · `unconfirmed` (لا نعرف بعد — لا
+    #: يحجب) · `in_review` (تحويلٌ ينتظر المراجعة) · وإلا الحالُ نفسُها
+    phase: str = ""
+    #: **مرجعُ TAXO** (§٨٢-ب/٣) — يكتبه الدافعُ في ملاحظة BaridiMob
+    public_ref: str | None = None
+    transfer_date: date | None = None
 
 
 class PaymentCheckoutIn(BaseModel):
@@ -126,6 +141,9 @@ class AdminPaymentMethodOut(BaseModel):
     sort_order: int
     fee_bearer: GatewayFeeBearer
     updated_at: datetime
+    account_holder_latin: str | None = None
+    min_amount: Decimal | None = None
+    max_amount: Decimal | None = None
 
 
 class AdminPaymentMethodCreate(BaseModel):
@@ -195,6 +213,8 @@ class AdminPaymentRequestOut(BaseModel):
     subscription_id: uuid.UUID | None
     reviewed_at: datetime | None
     created_at: datetime
+    transfer_date: date | None = None
+    public_ref: str | None = None
 
 
 class PaymentApproveIn(BaseModel):
