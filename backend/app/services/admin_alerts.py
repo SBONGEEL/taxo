@@ -316,7 +316,8 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
             request.country_code,
             amount=request.amount,
             currency=request.currency,
-            record_type="payment_request",
+            # **تحويلُ BaridiMob يفتح صفحةَ مراجعته** (SPEC §٨٢-ب/٤) — لا «نظام الدفع» العامّ
+            record_type="transfer" if method is not None and method.code == "baridimob" else "payment_request",
             record_id=str(request.id),
             data={"purpose": request.purpose.value, "pay_kind": request.kind.value, "test": bool(user and user.is_test)}
             | ({"by": extra["by"]} if extra.get("by") in ("reviewer", "owner", "staff") else {}),

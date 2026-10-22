@@ -33,6 +33,9 @@ function recordPath(data) {
       return "/finance?tab=topups";
     case "payment_request":
       return "/payment-system";
+    // **تحويلُ BaridiMob** (SPEC §٨٢-ب/٤) — صفحةُ مراجعته
+    case "transfer":
+      return "/transfers";
     case "feedback":
       return "/feedback";
     case "chat_report":

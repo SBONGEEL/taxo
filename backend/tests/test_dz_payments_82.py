@@ -491,6 +491,13 @@ async def test_the_reviewer_approves_once_and_the_owner_is_told(client: AsyncCli
     events = await _queued()
     decision = next(event for event in events if event["k"] == "transfer_approved")
     assert decision["x"]["by"] == "reviewer"
+    # **ونقرُ الإشعار يفتح صفحةَ المراجعة** — سجلُّه «تحويل» لا «طلبُ دفعٍ» عامّ
+    from app.services import admin_alerts
+
+    async with session_factory() as session:
+        drafts = await admin_alerts.resolve_all(session, events)
+    approved = next(draft for draft in drafts if draft.kind == "transfer_approved")
+    assert approved.record_type == "transfer" and approved.data["by"] == "reviewer"
 
 
 async def test_the_owner_approves_from_the_same_page(client: AsyncClient, session_factory) -> None:

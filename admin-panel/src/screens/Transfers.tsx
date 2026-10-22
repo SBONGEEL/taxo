@@ -194,7 +194,8 @@ function ReviewModal({ row, onClose, onDone }: { row: AdminTransfer; onClose: ()
     ["مرجع TAXO", row.public_ref, true],
     ["تاريخ التحويل", day(row.transfer_date), false],
     ["السوق", MARKET_NAME[row.country_code] ?? row.country_code, false],
-    ["صاحبه", `${row.first_name} · ${row.masked_phone}`, false],
+    ["صاحبه", row.first_name, false],
+    ["هاتفه", row.masked_phone, true],
     ["قُدِّم", when(row.created_at), false],
   ];
 

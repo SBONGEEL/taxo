@@ -138,7 +138,14 @@ export function PayReturnT2Screen() {
         ) : null}
         <button
           type="button"
-          className={request && (request.status === "cancelled" || request.status === "rejected") ? "t2-button t2-m-cta" : "t2-button primary t2-m-cta"}
+          className={
+            request &&
+            (request.status === "cancelled" ||
+              request.status === "rejected" ||
+              (request.phase === "unconfirmed" && tries.current >= AUTO_TRIES))
+              ? "t2-button t2-m-cta"
+              : "t2-button primary t2-m-cta"
+          }
           onClick={() => navigate("/wallet", { replace: true })}
         >
           {tr("إلى المحفظة")}

@@ -161,7 +161,14 @@ export function PayReturnT2Screen() {
       {/* **والاشتراكُ يعود إلى الاشتراك في كلِّ حال** — كانت النتيجةُ تعيد إلى المحفظة وهو جاء من الاشتراك */}
       <button
         type="button"
-        className={request && (request.status === "cancelled" || request.status === "rejected") ? "t2-button secondary t2-pr-gap" : "t2-clq-cta t2-pr-gap"}
+        className={
+          request &&
+          (request.status === "cancelled" ||
+            request.status === "rejected" ||
+            (request.phase === "unconfirmed" && tries.current >= AUTO_TRIES))
+            ? "t2-button secondary t2-pr-gap"
+            : "t2-clq-cta t2-pr-gap"
+        }
         onClick={() => navigate(subscription ? "/subscription" : "/wallet", { replace: true })}
       >
         {subscription ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
