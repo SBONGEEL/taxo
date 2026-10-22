@@ -206,7 +206,7 @@ function Centered({ children }: { children: ReactNode }) {
 
 function Boot({ children }: { children: ReactNode }) {
   const { config, error, reload } = useConfig();
-  const { loading, user } = useSession();
+  const { loading, user, enrollmentRequired, passwordChangeRequired } = useSession();
 
   if (!config && error) {
     return (
@@ -235,8 +235,10 @@ function Boot({ children }: { children: ReactNode }) {
 
   return (
     // **الأسواقُ تُسأل بعد الدخول وحده**: البابُ `StaffUser`، وشاشةُ الدخول
-    // تقرأ بادئةَ الهاتف من `/config` كما كانت
-    <CountriesProvider enabled={Boolean(user)}>
+    // تقرأ بادئةَ الهاتف من `/config` كما كانت. **ولا قبل أن تُفتح الأبواب** (قِيس على الإنتاج 2026-10-22): المالكُ دخل
+    // أوّلَ مرّةٍ فردّ `/admin/countries` بـ403 `password_change_required`، وغيّر كلمتَه، **ولم تُسأل الأسواقُ ثانيةً** — فبقي
+    // المبدّلُ «JO» وحده بلا ليبيا ولا الجزائر. **فزوالُ العلَم هو ما يُعيد السؤال**
+    <CountriesProvider enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired}>
       <CountryProvider fallback={config.default_country_code}>
         {children}
       </CountryProvider>

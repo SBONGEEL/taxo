@@ -4,6 +4,10 @@
  * يقرأ منها ساعاتِ الهدوء، والتسعيرةُ والاشتراكات تقرأ منها صفوفَها. ولأنها
  * عرضٌ لا هوية، مكانُها `sessionStorage` لا الخلفية: مشرفٌ يفتح تبويبين
  * لسوقين لا يجوز أن يبدّل أحدُهما ما يراه الآخر.
+ *
+ * **وآخرُ اختيارٍ يُذكر على الجهاز** (قرارُ المالك 2026-10-22): `sessionStorage` يضيع بإغلاق التطبيق على الهاتف فيعود كلَّ
+ * مرّةٍ إلى الافتراض. فيُكتب في `localStorage` أيضاً، **ويُقرأ بعد `sessionStorage` لا قبله** — فالتبويبان يبقيان مستقلَّين،
+ * والفتحُ الجديدُ يبدأ من آخر سوق.
  */
 
 import {
@@ -20,6 +24,23 @@ import type { CountryCode } from "@/api/types";
 import { useCountries } from "@/lib/countries";
 
 const KEY = "taxo.admin.country";
+
+// **التخزينُ قد يُمنع** (نافذةٌ خاصّة) — فالقراءةُ والكتابةُ لا تُسقطان اللوحة
+function readLast(): string | null {
+  try {
+    return localStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLast(country: string) {
+  try {
+    localStorage.setItem(KEY, country);
+  } catch {
+    // لا شيء — يبقى الاختيارُ لهذا التبويب وحده
+  }
+}
 
 interface CountryState {
   country: CountryCode;
@@ -42,7 +63,7 @@ export function CountryProvider({
   const [country, setStored] = useState<CountryCode>(() => {
     // **أيُّ رمزِ دولةٍ لا السوقان** (SPEC §٧٣-ج/١٢): كان `saved === "JO" || saved === "LY"` فيضيع اختيارُ سوقٍ ثالثٍ عند كلِّ
     // تحديث. **ولا قائمةَ دولٍ هنا** — الصحّةُ تُحكم أدناه حين تصل الأسواقُ من مصدرها
-    const saved = sessionStorage.getItem(KEY);
+    const saved = sessionStorage.getItem(KEY) ?? readLast();
     return saved && /^[A-Z]{2}$/.test(saved) ? (saved as CountryCode) : fallback;
   });
   const { rows } = useCountries();
@@ -53,6 +74,7 @@ export function CountryProvider({
 
   const setCountry = useCallback((next: CountryCode) => {
     sessionStorage.setItem(KEY, next);
+    writeLast(next);
     setStored(next);
   }, []);
 
