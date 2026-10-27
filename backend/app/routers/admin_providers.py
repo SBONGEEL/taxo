@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import get_cipher
 from app.core.deps import ProvidersManager, DbSession
-from app.core.exceptions import Conflict, NotFound
-from app.models.enums import ProviderKey
+from app.core.exceptions import Conflict, NotFound, PermissionDenied
+from app.models.enums import ProviderKey, UserRole
 from app.models.provider_credential import ProviderCredential
 from app.models.user import User
 from app.schemas.provider import (
@@ -72,6 +72,15 @@ async def list_providers(_admin: ProvidersManager, session: DbSession) -> Provid
     )
 
 
+#: **عقودٌ يملكها المالكُ وحدَه** (§٨٥/٢) — وسيطُ دفعٍ ثانٍ يحمل مالَ الناس: يُضبط ويُشعَل ويُطفأ بيده لا بيد مشرف
+OWNER_ONLY_PROVIDERS = frozenset({ProviderKey.SOFIZPAY})
+
+
+def _owner_only(provider_key: ProviderKey | str, admin: User) -> None:
+    if ProviderKey(provider_key) in OWNER_ONLY_PROVIDERS and not admin.has_role(UserRole.OWNER):
+        raise PermissionDenied("عقدُ SofizPay للمالك وحدَه")
+
+
 @router.put("/{provider_key}", response_model=ProviderCredentialOut)
 async def upsert_provider_credential(
     provider_key: ProviderKey,
@@ -83,6 +92,7 @@ async def upsert_provider_credential(
 
     تفعيل العقد يفعّل ميزته تلقائياً بلا نشر كود (SPEC القسم 15).
     """
+    _owner_only(provider_key, admin)
     try:
         credential = await credentials_service.upsert(
             session,
@@ -110,6 +120,7 @@ async def _set_active(
     credential = await session.get(ProviderCredential, credential_id)
     if credential is None:
         raise NotFound("العقد غير موجود")
+    _owner_only(credential.provider_key, admin)
 
     await credentials_service.set_active(
         session, credential, is_active=is_active, actor=admin
@@ -134,6 +145,7 @@ async def test_provider_credential(
     credential = await session.get(ProviderCredential, credential_id)
     if credential is None:
         raise NotFound("العقد غير موجود")
+    _owner_only(credential.provider_key, admin)
 
     result = await health.test_credential(
         session, credential, actor=admin, test_phone=payload.test_phone
@@ -166,6 +178,7 @@ async def delete_provider_credential(
     credential = await session.get(ProviderCredential, credential_id)
     if credential is None:
         raise NotFound("العقد غير موجود")
+    _owner_only(credential.provider_key, admin)
 
     await credentials_service.delete(session, credential, actor=admin)
     await session.commit()

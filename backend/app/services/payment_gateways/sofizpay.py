@@ -37,17 +37,27 @@ class SofizPayGateway:
     #: **إشعارُه بلا توقيعٍ موثَّق** — فالفحصُ المباشرُ يحسم كما بُني (§٧٣-هـ المرحلة ٣)
     confirms_by_webhook = False
 
-    def __init__(self, *, account: str, sandbox: bool) -> None:
+    def __init__(self, *, account: str, sandbox: bool, fallback_only: bool = False) -> None:
         self.account = account
         self.sandbox = sandbox
         self.test_mode = sandbox
+        #: **«بديلٌ حين يتوقّف Chargily»** (§٨٥/٢) — يُعرض للدافع حين يكون Chargily متوقّفاً وحدَه؛ وإلا فالاثنان معاً
+        self.fallback_only = fallback_only
 
-    async def _get(self, path: str, params: dict[str, str]) -> dict[str, Any]:
+    def _path(self, path: str) -> str:
+        return f"/sandbox{path}" if self.sandbox else path
+
+    async def _get(
+        self, path: str, params: dict[str, str], *, timeout: float = base.REQUEST_TIMEOUT_SECONDS
+    ) -> dict[str, Any]:
         try:
-            async with base.http_client() as http:
+            async with base.http_client(timeout) as http:
                 response = await http.get(f"{BASE}{path}", params=params, headers={"Accept": "application/json"})
         except httpx.HTTPError as exc:
-            raise base.GatewayError("تعذّر الوصولُ إلى SofizPay") from exc
+            # **مهلةٌ أو انقطاع** — الوسيطُ متوقّفٌ أو بطيءٌ جدّاً، لا رافضٌ لطلبنا (§٨٢-أ/١ بقاعدته)
+            raise base.GatewayDown() from exc
+        if response.status_code >= 500:
+            raise base.GatewayDown()
         try:
             body = response.json()
         except ValueError as exc:
@@ -71,9 +81,8 @@ class SofizPayGateway:
         if not customer.email:
             # **البريدُ إلزاميٌّ عند SofizPay** — ولا يُخترع بريدٌ لصاحب الدفعة
             raise base.GatewayError("SofizPay يشترط بريداً إلكترونيّاً في حسابك — أضفه أو اختر طريقةً أخرى")
-        path = "/sandbox/make-cib-transaction/" if self.sandbox else "/make-cib-transaction/"
         body = await self._get(
-            path,
+            self._path("/make-cib-transaction/"),
             {
                 "account": self.account,
                 "amount": str(int(amount)),
@@ -91,8 +100,26 @@ class SofizPayGateway:
             raise base.GatewayError("جوابُ SofizPay بلا معرّفٍ أو رابط")
         return base.Checkout(external_id=str(cib_id), checkout_url=url)
 
+    async def health(self) -> None:
+        """**فحصٌ قبل فتح الصفحة** (§٨٥/١) — بابُ الفحص بمعرّفٍ لا يوجد: **أيُّ جوابٍ مقروءٍ يعني أنه قائم** (ولو «غيرُ موجود»)،
+        والمهلةُ أو `5xx` ⇐ `GatewayDown`. لا يفتح دفعةً ولا يمسّ مالاً."""
+        try:
+            await self._get(self._path("/cib-transaction-check/"), {"order_number": "0"}, timeout=base.HEALTH_TIMEOUT_SECONDS)
+        except base.GatewayDown:
+            raise
+        except base.GatewayError:
+            return
+
     async def check(self, external_id: str) -> base.GatewayEvent | None:
-        body = await self._get("/cib-transaction-check/", {"order_number": external_id})
+        try:
+            body = await self._get(self._path("/cib-transaction-check/"), {"order_number": external_id})
+        except base.GatewayDown:
+            raise
+        except base.GatewayError:
+            # **«غيرُ موجودة» ليست رفضاً** — صفحةٌ لم يبدأها الدافعُ بعد لا تُسجَّل؛ والمهلةُ تحسمها لا هذا الجواب
+            return None
+        if body.get("error"):
+            return None
         status = body.get("orderStatus")
         if status == 2 and body.get("respCode") == "00":
             # **حسابُ الوجهة حسابُنا** — دفعةٌ مقبولةٌ إلى حسابٍ آخر ليست دفعةً لنا ولو حملت المعرّف
@@ -130,4 +157,8 @@ def build_sofizpay(values: Mapping[str, Any]) -> SofizPayGateway:
     account = str(values.get("account") or "").strip()
     if not account:
         raise base.GatewayUnavailable("لا حسابَ في عقد SofizPay")
-    return SofizPayGateway(account=account, sandbox=credentials_service.is_on(values, "sandbox"))
+    return SofizPayGateway(
+        account=account,
+        sandbox=credentials_service.is_on(values, "sandbox"),
+        fallback_only=credentials_service.is_on(values, "fallback_only"),
+    )

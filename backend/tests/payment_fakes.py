@@ -84,9 +84,15 @@ class SofizPayFake:
     def __init__(self) -> None:
         self.check: dict[str, dict[str, Any]] = {}
         self.created: list[dict[str, str]] = []
+        #: **انقطاعُ الوسيط** (§٨٥) — `503` لكلِّ نداء
+        self.down = False
+        self.paths: list[str] = []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
+        self.paths.append(path)
+        if self.down:
+            return httpx.Response(503, text="Service Unavailable")
         if path.endswith("/make-cib-transaction/"):
             params = dict(request.url.params)
             self.created.append(params)
@@ -100,7 +106,8 @@ class SofizPayFake:
             })
         if path.endswith("/cib-transaction-check/"):
             order = request.url.params["order_number"]
-            return httpx.Response(200, json=self.check.get(order, {"order_number": order, "orderStatus": 0}))
+            # **ومعاملةٌ لا يعرفها** بصيغة الوثائق: `{"error": "CIB transaction not found"}`
+            return httpx.Response(200, json=self.check.get(order, {"error": "CIB transaction not found"}))
         return httpx.Response(404, json={"status": "error", "message": "Invalid or missing parameters."})
 
 

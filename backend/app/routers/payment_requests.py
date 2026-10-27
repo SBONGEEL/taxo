@@ -146,6 +146,9 @@ async def list_methods(
             continue
         # **ما يُرسله `gateway_customers.customer_for` بعينه**: مفتاحُ العقد ووسيطٌ يُنشئ عملاء — فلا يَعِد السطرُ بما لا يقع
         shares_payer = bool(getattr(gateway, "send_customer", False)) and hasattr(gateway, "create_customer")
+        # **SofizPay بديلاً** (§٨٥/٢): بوضع «حين يتوقّف Chargily» لا يُعرض وChargily قائم — فلا يتردّد الدافعُ بين بابين لشيءٍ واحد
+        if getattr(gateway, "fallback_only", False) and not await gateway_health.is_down("chargily", user.country_code):
+            continue
         down = await gateway_health.is_down(provider.integration, user.country_code)
         shown.append(method_out(provider, test_mode=test_mode, shares_payer=shares_payer, down=down))
     return PaymentMethodsOut(

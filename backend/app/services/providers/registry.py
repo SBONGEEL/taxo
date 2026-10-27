@@ -412,6 +412,15 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(
                 kind="toggle", key="sandbox", label="وضع التجربة (sandbox)", secret=False, required=False
             ),
+            # **كيف يُعرض للدافع** (§٨٥/٢): مطفأٌ ⇐ بجانب Chargily دائماً؛ مشعَلٌ ⇐ **حين يتوقّف Chargily وحدَه** — والمفتاحُ السرّيُّ لا يُطلب
+            # أصلاً: هو لإخراج المال من الحساب، ولا شيءَ في TAXO يُخرج مالاً منه (شرطُ المالك)
+            ProviderField(
+                kind="toggle",
+                key="fallback_only",
+                label="بديلٌ فقط حين يتوقّف Chargily (مطفأ = يُعرضان معاً)",
+                secret=False,
+                required=False,
+            ),
             MOCK_FIELD,
         ),
         per_country=True,
