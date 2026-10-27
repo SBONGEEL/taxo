@@ -29,6 +29,8 @@ import { biometryLabel } from "@/lib/biometric";
 import { NAV_APPS, autoAcceptEnabled, navApp, setAutoAccept, setNavApp, type NavApp } from "@/lib/driving-prefs";
 import { guidanceSoundEnabled, play, setGuidanceSoundEnabled } from "@/lib/sound";
 import { useCaptainSettings } from "@/screens/Settings";
+import { openAppTour } from "@/lib/app-tour";
+import { shareApp, shareNote } from "@/lib/share-app";
 
 import { WomenModeRowT2 } from "./WomenModeT2";
 import "@/taxo2";
@@ -100,6 +102,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function SettingsT2Screen() {
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const {
     goBack,
     profile,
@@ -284,6 +287,31 @@ export function SettingsT2Screen() {
       </Group>
 
       <Group label={tr("التطبيق")}>
+        {/* **«شارك التطبيق» و«جولة في التطبيق»** (اقتراحُ Testers Community وأمرُ المالك ٢٠٢٦-١٠-٢٧) — أوّلَ المجموعة: فعلان يُطلبان */}
+        <button
+          type="button"
+          className="t2-srow"
+          onClick={() => {
+            setShareMessage(null);
+            void shareApp("driver").then((outcome) => setShareMessage(shareNote(outcome)));
+          }}
+        >
+          <span className="t2-icon t2-srow-icon" aria-hidden="true">share</span>
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">{tr("شارك التطبيق")}</span>
+            {shareMessage ? (
+              <span className="t2-srow-hint" role="status">
+                {shareMessage}
+              </span>
+            ) : null}
+          </span>
+        </button>
+        <button type="button" className="t2-srow" onClick={openAppTour}>
+          <span className="t2-icon t2-srow-icon" aria-hidden="true">tour</span>
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">{tr("جولة في التطبيق")}</span>
+          </span>
+        </button>
         <button type="button" className="t2-srow" onClick={toggle}>
           <span className="t2-icon t2-srow-icon" aria-hidden="true">dark_mode</span>
           <span className="t2-srow-main">

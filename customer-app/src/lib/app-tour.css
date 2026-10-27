@@ -1,0 +1,120 @@
+/* ═══ جولةُ التطبيق — بهوية TAXO 2.0 (أمرُ المالك ٢٠٢٦-١٠-٢٧) ═══
+ *
+ * **نسخةٌ واحدةٌ في التطبيقين، متطابقةٌ بايتاً** مع `app-tour.tsx` بجانبها. **وبالرموز وحدَها** (`src/taxo2/tokens.css`) فتعمل في
+ * الفاتح والداكن والنسائيّ. **ومن رسم بوّابة التحديث** (`update-gate.css`): الظلُّ والبطاقةُ العائمةُ ودائرةُ الأيقونة وزرُّ الهوية —
+ * **وتحتها طبقةً** (٥٥ < ٥٨ < ٦٠). **والاتجاهُ من الصفحة** (`dir`): «تخطٍّ» في طرف البداية، والأزرارُ تتبع اللغة بلا قاعدةٍ لكلٍّ منها.
+ */
+
+.t2.t2-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  background: var(--t2-scrim);
+}
+
+.t2-tour-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 22rem;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 44px 22px 18px;
+  box-sizing: border-box;
+  border-radius: 30px;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-float-card-shadow);
+  text-align: center;
+}
+
+.t2-tour-skip {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 14px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+
+.t2-tour-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-tour-mark .t2-icon { font-size: 36px; }
+
+.t2-tour-title {
+  margin: 18px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--t2-text);
+}
+
+.t2-tour-text {
+  margin: 10px 0 0;
+  min-height: 4.8em;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--t2-muted);
+}
+
+.t2-tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 18px;
+}
+.t2-tour-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--t2-line);
+  transition: width 0.2s ease;
+}
+.t2-tour-dots span.on {
+  width: 20px;
+  background: var(--t2-accent);
+}
+
+.t2-tour-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.t2-tour-next {
+  flex: 1;
+}
+
+.t2-tour-back {
+  flex: none;
+  padding: 0 18px;
+  border: 1px solid var(--t2-line);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--t2-text);
+  cursor: pointer;
+}

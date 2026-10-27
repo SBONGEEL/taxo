@@ -64,6 +64,7 @@ import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { ReconsentGate } from "@/lib/reconsent-gate";
+import { AppTour } from "@/lib/app-tour";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
 import { walkDone } from "@/lib/permission-walk";
@@ -484,6 +485,14 @@ async function startGuestDemo(): Promise<string | null> {
     if (error instanceof ApiError) return error.message;
     return tr("تعذّر بدء التجربة — تحقّق من الاتصال وأعد المحاولة");
   }
+}
+
+/** **جولةُ الكبتن لا تحجب عملَه**: تنتظر جولةَ الأذونات (شرطُ `DriverHome` بحرفه)، **ويُخفيها عرضٌ واردٌ أو رحلةٌ جارية** ثمّ تعود. */
+function CaptainTour() {
+  const { profile } = useDriver();
+  const { ride, offer } = useRide();
+  const walking = profile?.driver.status === "approved" && !walkDone();
+  return <AppTour app="driver" held={walking || isActive(ride) || offer !== null} />;
 }
 
 function WelcomeGate() {
@@ -927,6 +936,8 @@ export default function App() {
                     <PushNotices />
                     {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
                     <ReconsentGate app="driver" />
+                    {/* **جولةُ التطبيق** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — تحت إعادة القبول طبقةً، وتنتظر جولةَ الأذونات والعروض */}
+                    <CaptainTour />
                   <NavBar />
                   </RideComms>
                 </RideProvider>

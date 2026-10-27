@@ -35,6 +35,8 @@ import {
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useSwitchToDriver } from "@/lib/switch-app";
+import { openAppTour } from "@/lib/app-tour";
+import { shareApp, shareNote } from "@/lib/share-app";
 import { SignOutEverywhereRow } from "@/components/account/SignOutEverywhere";
 
 import { WomenServiceCardT2 } from "./WomenServiceT2";
@@ -59,6 +61,7 @@ export function AccountT2Screen() {
   const intercity = useIntercityService();
   const hasIntercity = useHasIntercityBookings();
   const swap = useSwitchToDriver();
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   // **الأرقامُ من الخلفية** (§٦١-ط/٢) — وحتى تصل، أو إن تعثّرت، «—» لا صفرٌ يُقرأ خبراً
   const [summary, setSummary] = useState<RiderSummary | null>(null);
   useEffect(() => {
@@ -156,6 +159,29 @@ export function AccountT2Screen() {
             <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
           </button>
         ))}
+      </div>
+
+      {/* **«شارك التطبيق» و«جولة في التطبيق»** (اقتراحُ Testers Community وأمرُ المالك ٢٠٢٦-١٠-٢٧) — فعلان لا صفحتان، فصفّاهما
+          خارج قائمة المسارات: المشاركةُ تفتح ورقةَ النظام، والجولةُ تُفتح فوق هذه الشاشة */}
+      <div className="t2-list t2-arows">
+        <button
+          type="button"
+          className="t2-arow"
+          onClick={() => {
+            setShareMessage(null);
+            void shareApp("rider").then((outcome) => setShareMessage(shareNote(outcome)));
+          }}
+        >
+          <span className="t2-icon" aria-hidden="true">share</span>
+          <span className="t2-arow-label">{tr("شارك التطبيق")}</span>
+          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+        </button>
+        {shareMessage ? <p className="t2-arow-note" role="status">{shareMessage}</p> : null}
+        <button type="button" className="t2-arow" onClick={openAppTour}>
+          <span className="t2-icon" aria-hidden="true">tour</span>
+          <span className="t2-arow-label">{tr("جولة في التطبيق")}</span>
+          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+        </button>
       </div>
 
       {/* **التبديلُ آخرَ صفٍّ قبل الخروج** (§23) — أقربُ ما يكون إليه معنىً: مغادرةُ هذا التطبيق */}

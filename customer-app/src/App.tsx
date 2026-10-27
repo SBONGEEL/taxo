@@ -55,6 +55,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { tr } from "@/lib/i18n";
 import { UpdateGate } from "@/lib/update-gate";
 import { ReconsentGate } from "@/lib/reconsent-gate";
+import { AppTour } from "@/lib/app-tour";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
 
@@ -798,6 +799,8 @@ export default function App() {
                   <UnconfirmedOpening />
                   {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
                   <ReconsentGate app="rider" />
+                  {/* **جولةُ التطبيق** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — أوّلَ فتحةٍ بعد الدخول أو الضيافة، وتحت إعادة القبول طبقةً */}
+                  <AppTour app="rider" />
                   <NavBar />
                 </RideComms>
               </RideProvider>

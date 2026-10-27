@@ -16,6 +16,7 @@ import { ApiError } from "@/api/client";
 import { getSiteHelp } from "@/api/endpoints";
 import type { FaqItem } from "@/api/types";
 import { useGoBack } from "@/lib/back";
+import { openAppTour } from "@/lib/app-tour";
 
 import "@/taxo2";
 import "./t2.css";
@@ -67,6 +68,15 @@ export function HelpT2Screen() {
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
         <h1 className="t2-title">{tr("المساعدة والدعم")}</h1>
+      </div>
+
+      {/* **جولةُ التطبيق تُفتح ثانيةً من هنا** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — قبل الأسئلة: من يسأل «كيف» يبدأ بها */}
+      <div className="t2-list t2-arows">
+        <button type="button" className="t2-arow" onClick={openAppTour}>
+          <span className="t2-icon" aria-hidden="true">tour</span>
+          <span className="t2-arow-label">{tr("جولة في التطبيق")}</span>
+          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+        </button>
       </div>
 
       {error ? (
