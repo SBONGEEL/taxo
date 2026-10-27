@@ -64,6 +64,7 @@ import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { ReconsentGate } from "@/lib/reconsent-gate";
+import { PayReturnLinks, PublicPayReturn, isPublicPayReturn } from "@/lib/pay-return";
 import { AppTour } from "@/lib/app-tour";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
@@ -547,6 +548,8 @@ function WelcomeGate() {
 
 export default function App() {
   // **`reducedMotion="user"` من مكانٍ واحد** (§8)
+  // **صفحةُ العودة من الوسيط في متصفّحٍ بلا جلسة** (SPEC §٨٤) — زرٌّ يفتح التطبيق، لا شاشةُ دخول
+  if (isPublicPayReturn("driver", window.location.pathname)) return <PublicPayReturn app="driver" />;
   return (
     <MotionConfig reducedMotion="user">
     <ThemeProvider>
@@ -936,6 +939,8 @@ export default function App() {
                     <PushNotices />
                     {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
                     <ReconsentGate app="driver" />
+                    {/* **العودةُ من صفحة البطاقة إلى «نتيجة الدفع» دائماً** (SPEC §٨٤) */}
+                    <PayReturnLinks />
                     {/* **جولةُ التطبيق** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — تحت إعادة القبول طبقةً، وتنتظر جولةَ الأذونات والعروض */}
                     <CaptainTour />
                   <NavBar />

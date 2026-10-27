@@ -14,6 +14,7 @@ import { useGoBack } from "@/lib/back";
 import { play } from "@/lib/sound";
 import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
+import { CARD_PAGE_MINUTES, settledReturn } from "@/lib/pay-return";
 
 import { BannerT2, BusyLabel, HeadT2 } from "./MoneyT2";
 import { SupportLine } from "./PayDz";
@@ -22,6 +23,20 @@ import "./payrequest.css"; import { tr } from "@/lib/i18n";
 /** **كم مرّةً تسأل وحدَها** قبل أن تترك السؤالَ لزرّ — ثلاثُ ثوانٍ بينها */
 const AUTO_TRIES = 10;
 const EVERY_MS = 3000;
+
+/** **ما بقي من صفحة البطاقة** (SPEC §٨٤) — من فتح الدفعة، بالدقائق والثواني؛ و`null` حين انقضت */
+function useCardPageLeft(createdAt: string | undefined): string | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (!createdAt) return null;
+  const left = new Date(createdAt).getTime() + CARD_PAGE_MINUTES * 60_000 - now;
+  if (left <= 0) return null;
+  const seconds = Math.floor(left / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
 
 export function PayReturnT2Screen() {
   const goBack = useGoBack("/wallet");
@@ -53,8 +68,10 @@ export function PayReturnT2Screen() {
   }, [requestId]);
 
   useEffect(() => {
+    settledReturn();
     void ask();
   }, [ask]);
+  const cardLeft = useCardPageLeft(request?.created_at);
 
   const pending = request === null || request.status === "pending";
   useEffect(() => {
@@ -112,6 +129,12 @@ export function PayReturnT2Screen() {
                 ? tr("لم نتأكّد من دفعتك بعد. إن خُصم المبلغ فسيُضاف وحدَه حين يصل التأكيد — ويمكنك أن تدفع من جديد الآن.")
                 : tr("نسأل الوسيطَ عن دفعتك — لحظات.")}
           </p>
+          {/* **ما بقي من صفحة البطاقة** (SPEC §٨٤) — يُقال لمن لم يصل دفعُه بعد */}
+          {request?.phase !== "processing" && cardLeft ? (
+            <p className="t2-pr-done-text">
+              {tr("صفحة البطاقة تنتهي خلال {0} تقريباً — أكمل الدفع هناك، أو ابدأ دفعةً جديدةً بعد انتهائها.", { 0: cardLeft })}
+            </p>
+          ) : null}
         </section>
       )}
       <BannerT2 tone="danger" message={error} />

@@ -1753,5 +1753,14 @@
  "شارك التطبيق": "Partager l’application",
  "نُسخ رابط التطبيق — الصقه في أي محادثة.": "Lien de l’application copié — collez-le dans n’importe quelle conversation.",
  "تعذّرت المشاركة — جرّب مرة أخرى.": "Partage impossible — réessayez.",
- "جولة في التطبيق": "Visite de l’application"
+ "جولة في التطبيق": "Visite de l’application",
+ "بطاقة الذهبية أو CIB على صفحة {0} الآمنة — يُفعَّل فورَ تأكيده": "Carte Edahabia ou CIB sur la page sécurisée de {0} — activé dès confirmation",
+ "بطاقة الذهبية أو CIB على صفحة {0} الآمنة — يُضاف فورَ تأكيده": "Carte Edahabia ou CIB sur la page sécurisée de {0} — crédité dès confirmation",
+ "تحويلٌ من تطبيق BaridiMob أو حساب CCP ثمّ ترفع إيصالَه — ليس دفعاً بالبطاقة": "Virement depuis l’application BaridiMob ou un compte CCP, puis envoi du reçu — ce n’est pas un paiement par carte",
+ "صفحة البطاقة صالحةٌ نحو {0} دقائق — جهّز بطاقتك وهاتفك (لرمز الرسائل) قبل أن تضغط.": "La page de carte reste valable environ {0} minutes — préparez votre carte et votre téléphone (pour le code SMS) avant d’appuyer.",
+ "صفحة البطاقة تنتهي خلال {0} تقريباً — أكمل الدفع هناك، أو ابدأ دفعةً جديدةً بعد انتهائها.": "La page de carte expire dans environ {0} — terminez le paiement là-bas, ou recommencez après son expiration.",
+ "عُدتَ من صفحة الدفع": "Vous revenez de la page de paiement",
+ "افتح تطبيق TAXO لترى نتيجة دفعتك. لا تدفع مرّةً ثانية قبل أن تراها — ولا يُخصم شيءٌ لم يكتمل.": "Ouvrez l’application TAXO pour voir le résultat de votre paiement. Ne payez pas une seconde fois avant de l’avoir vu — rien n’est débité pour un paiement non abouti.",
+ "افتح تطبيق TAXO": "Ouvrir l’application TAXO",
+ "إن لم يُفتح: افتح التطبيق بنفسك، وستظهر لك النتيجة.": "S’il ne s’ouvre pas : ouvrez l’application vous-même, le résultat s’affichera."
 }

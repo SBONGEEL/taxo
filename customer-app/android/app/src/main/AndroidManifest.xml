@@ -66,6 +66,15 @@
                 <data android:scheme="taxo-rider" android:host="handoff" />
             </intent-filter>
 
+            <!-- **العودةُ من صفحة البطاقة** (SPEC §٨٤): زرُّ «افتح تطبيق TAXO» في صفحة العودة بالمتصفّح يفتح «نتيجة الدفع»
+                 بـ`taxo-rider://pay?r=<الطلب>` — والمعرّفُ وحدَه يمرّ، والحالُ تُسأل من الخادم داخل التطبيق. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="taxo-rider" android:host="pay" />
+            </intent-filter>
+
         </activity>
 
         <provider

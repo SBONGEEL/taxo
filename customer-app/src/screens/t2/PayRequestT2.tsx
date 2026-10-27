@@ -12,6 +12,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { CARD_PAGE_MINUTES, goToCheckout } from "@/lib/pay-return";
+
 import { ApiError } from "@/api/client";
 import {
   cancelPaymentRequest,
@@ -108,7 +110,7 @@ export function PayRequestT2Screen() {
     setBusy(true);
     setError(null);
     try {
-      window.location.assign((await resumePaymentCheckout(open.id)).checkout_url);
+      goToCheckout(open.id, (await resumePaymentCheckout(open.id)).checkout_url);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
       setOpen(null);
@@ -183,7 +185,7 @@ export function PayRequestT2Screen() {
           setBusy(false);
           return;
         }
-        window.location.assign(opened.checkout_url);
+        goToCheckout(opened.request.id, opened.checkout_url);
       } catch (caught) {
         // **الوسيطُ متوقّف** (§٨٢-أ/١) — رسالتُه و«أعد المحاولة» والبديلُ، لا نصُّ خطأ
         if (gatewayIsDown(caught)) setDown(true);
@@ -294,8 +296,10 @@ export function PayRequestT2Screen() {
                   <span className="t2-m-chan-title">{row.name}</span>
                   <span className="t2-m-chan-hint">
                     {row.gateway
-                      ? tr("ادفع بالبطاقة عبر {0} — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
-                      : row.requires_receipt
+                      ? tr("بطاقة الذهبية أو CIB على صفحة {0} الآمنة — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
+                      : row.code === BARIDIMOB
+                        ? tr("تحويلٌ من تطبيق BaridiMob أو حساب CCP ثمّ ترفع إيصالَه — ليس دفعاً بالبطاقة")
+                        : row.requires_receipt
                         ? tr("حوّل ثمّ أرفق الإيصال — يُضاف بعد المراجعة")
                         : tr("ادفع ثمّ يُضاف بعد المراجعة")}
                   </span>
@@ -465,7 +469,7 @@ export function PayRequestT2Screen() {
           <div className="t2-m-actions">
             {quote ? (
               <>
-                <button type="button" className="t2-button primary t2-m-cta" onClick={() => window.location.assign(quote.checkout_url)}>
+                <button type="button" className="t2-button primary t2-m-cta" onClick={() => goToCheckout(quote.request.id, quote.checkout_url)}>
                   {tr("ادفع {0} عبر {1}", { 0: formatMoney(quote.total_amount ?? quote.request.amount, currency), 1: method?.gateway_name ?? "Chargily" })}
                 </button>
                 <button
@@ -492,6 +496,8 @@ export function PayRequestT2Screen() {
                 </BusyLabel>
               </button>
             )}
+            {/* **مهلةُ صفحة البطاقة تُقال قبل الضغط** (SPEC §٨٤) — Edahabia تنتهي نحو خمسِ دقائقَ من فتح الدفعة */}
+            {method?.gateway && !quote ? <p className="t2-pr-instructions">{tr("صفحة البطاقة صالحةٌ نحو {0} دقائق — جهّز بطاقتك وهاتفك (لرمز الرسائل) قبل أن تضغط.", { 0: CARD_PAGE_MINUTES })}</p> : null}
           </div>
           {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — خُصم من البطاقة ولم تظهر الدفعة */}
           <SupportLine to="/account/help" />

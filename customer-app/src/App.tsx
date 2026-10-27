@@ -55,6 +55,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { tr } from "@/lib/i18n";
 import { UpdateGate } from "@/lib/update-gate";
 import { ReconsentGate } from "@/lib/reconsent-gate";
+import { PayReturnLinks, PublicPayReturn, isPublicPayReturn } from "@/lib/pay-return";
 import { AppTour } from "@/lib/app-tour";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
@@ -460,6 +461,8 @@ function BoundaryByRoute({ children }: { children: ReactNode }) {
 export default function App() {
   // **رابطُ التتبّع العامّ قبل الإقلاع كلِّه** — شجرتُه وحدَها (`PublicTrackApp`)
   if (isPublicTrack(window.location.pathname)) return <PublicTrackApp />;
+  // **صفحةُ العودة من الوسيط في متصفّحٍ بلا جلسة** (SPEC §٨٤) — زرٌّ يفتح التطبيق، لا شاشةُ دخول
+  if (isPublicPayReturn("rider", window.location.pathname)) return <PublicPayReturn app="rider" />;
   // **`reducedMotion="user"` من مكانٍ واحد** (§8): كلُّ حركةِ Framer في التطبيق
   // تصير فوريةً لمن طلب تقليلَ الحركة، بلا أن يفحص مكوّنٌ واحدٌ التفضيل
   return (
@@ -799,6 +802,8 @@ export default function App() {
                   <UnconfirmedOpening />
                   {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
                   <ReconsentGate app="rider" />
+                  {/* **العودةُ من صفحة البطاقة إلى «نتيجة الدفع» دائماً** (SPEC §٨٤) */}
+                  <PayReturnLinks />
                   {/* **جولةُ التطبيق** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — أوّلَ فتحةٍ بعد الدخول أو الضيافة، وتحت إعادة القبول طبقةً */}
                   <AppTour app="rider" />
                   <NavBar />
