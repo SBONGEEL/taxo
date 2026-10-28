@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import STORAGE_STEP
 from app.models.enums import CountryCode, PaymentRequestStatus, ProviderKey
 from app.models.gateway_reconciliation import GatewayReconciliation
 from app.models.payment_request import PayMethod, PaymentRequest
@@ -140,7 +141,7 @@ def _classify(row: PaymentRequest, event) -> tuple[str | None, str]:
     if theirs_paid and not ours_paid:
         return ("processing" if row.gateway_paid_at is not None else "paid_not_credited"), theirs
     if ours_paid and theirs_paid and event.amount is not None and row.credited_amount is not None:
-        if Decimal(event.amount).quantize(Decimal("0.001")) != row.credited_amount:
+        if Decimal(event.amount).quantize(STORAGE_STEP) != row.credited_amount:
             return "amount", theirs
     return None, theirs
 

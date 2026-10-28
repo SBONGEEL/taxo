@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from app.core.config import settings
+from app.core.currency import STORAGE_STEP
 
 #: **عشرُ دقائق بنصِّ المالك** — «the price is locked for about 10 minutes»
 LOCK_SECONDS = 600
@@ -116,4 +117,4 @@ def shortfall(fare: Decimal, balance: Decimal, unit: Decimal | None, minimum: De
         need = steps * unit
     if minimum is not None and need < minimum:
         need = minimum
-    return need.quantize(Decimal("0.001"))
+    return need.quantize(STORAGE_STEP)

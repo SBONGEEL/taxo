@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import STORAGE_STEP
 from app.core.exceptions import AppError
 from app.models.enums import CountryCode, ProviderKey
 from app.services import payment_gateways
@@ -89,7 +90,7 @@ async def _get(path: str, params: dict[str, Any] | None = None) -> dict[str, Any
 
 def _money(value: object) -> Decimal | None:
     try:
-        return Decimal(str(value)).quantize(Decimal("0.001"))
+        return Decimal(str(value)).quantize(STORAGE_STEP)
     except (InvalidOperation, ValueError):
         return None
 
