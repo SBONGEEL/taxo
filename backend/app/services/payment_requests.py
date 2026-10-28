@@ -89,6 +89,9 @@ CHECKOUT_LOCK_SECONDS = 30
 DOUBLE_TAP_SECONDS = 5
 #: **ما أُلغي عندنا بلا جوابٍ نهائيٍّ من الوسيط** — تراجعه التسويةُ في مهلة الصفحة، فدفعٌ اكتمل بعده يُقيَّد ولا يضيع
 RECHECK_CANCELLED = frozenset({payment_reasons.NOT_COMPLETED, payment_reasons.EXPIRED})
+#: **ومراجعتُه أطولُ من مهلة الصفحة** (تدقيقُ ٢٠٢٦-١٠-٢٨): المهلةُ تُلغي ما تجاوز `CHECKOUT_TTL_HOURS`، **فلو رُوجع في المهلة نفسِها
+#: لما رُوجع ملغًى بها أبداً** — ودفعٌ اكتمل بعدها كان ينتظر إشعارَه الموقَّعَ أو تقريرَ المطابقة اليوميّ وحدَهما
+RECHECK_LATE_HOURS = 2 * CHECKOUT_TTL_HOURS
 
 
 class TestModeOnly(AppError):
@@ -1105,6 +1108,11 @@ async def reconcile_gateway(session: AsyncSession, *, now: datetime | None = Non
 
     moment = now or _now()
     window = moment - timedelta(hours=CHECKOUT_TTL_HOURS)
+    late_window = moment - timedelta(hours=RECHECK_LATE_HOURS)
+    # **وما ألغته المهلةُ وقال وسيطُه «قيد المعالجة»** يُراجَع أيضاً — سببُه مكتوبٌ باسم الوسيط
+    recheck = RECHECK_CANCELLED | {
+        payment_reasons.EXPIRED_PROCESSING.format(name) for name in payment_gateways.DISPLAY_NAMES.values()
+    }
     ids = (
         await session.scalars(
             select(PaymentRequest.id)
@@ -1117,8 +1125,8 @@ async def reconcile_gateway(session: AsyncSession, *, now: datetime | None = Non
                     & ((PaymentRequest.created_at > window) | PaymentRequest.gateway_paid_at.is_not(None)),
                     (PaymentRequest.status == PaymentRequestStatus.CANCELLED)
                     & PaymentRequest.cancelled_by.is_(None)
-                    & PaymentRequest.cancel_reason.in_(RECHECK_CANCELLED)
-                    & (PaymentRequest.created_at > window),
+                    & PaymentRequest.cancel_reason.in_(recheck)
+                    & (PaymentRequest.created_at > late_window),
                 ),
             )
             .order_by(PaymentRequest.created_at)

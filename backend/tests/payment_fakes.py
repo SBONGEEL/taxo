@@ -45,6 +45,8 @@ class ChargilyFake:
         #: **عملاءُ Chargily** (§٧٦-ع/٢) — ما أُنشئ بجسمه، و«المحذوفُ عنده» يُسقط صفحةً تذكره
         self.customers: list[dict[str, Any]] = []
         self.dead_customers: set[str] = set()
+        #: **حقولٌ يقولها عن صفحةٍ بعينها** (`livemode` · `currency`) — تُضاف إلى جواب `GET /checkouts/{id}`
+        self.extra: dict[str, dict[str, Any]] = {}
 
     @staticmethod
     def _fees(amount: int, allocation: str) -> dict[str, int]:
@@ -79,6 +81,7 @@ class ChargilyFake:
                 "id": checkout_id, "entity": "checkout", "status": self.status.get(checkout_id, "pending"),
                 "amount": self.amount.get(checkout_id), "currency": "dzd", **self.fees.get(checkout_id, {}),
                 "checkout_url": f"https://pay.chargily.dz/test/checkouts/{checkout_id}/pay",
+                **self.extra.get(checkout_id, {}),
             })
         if request.method == "GET" and path.endswith("/balance"):
             return httpx.Response(200, json={"entity": "balance", "livemode": False, "wallets": []})

@@ -305,6 +305,48 @@ async def test_the_reconciliation_finds_a_paid_page_that_was_closed_here(
     assert await balance(client, rider["headers"]) == "3000" and await _ledger(session_factory) == 1
 
 
+async def test_a_payment_completed_after_the_page_expired_is_credited_once(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**دفعٌ اكتمل بعد أن ألغته المهلة** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كانت التسويةُ تراجع الملغى في المهلة نفسِها فلا تراه أبداً."""
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    request_id = (await _checkout(client, rider["headers"], method_id)).json()["request"]["id"]
+    later = datetime.now(UTC) + timedelta(hours=payment_requests.CHECKOUT_TTL_HOURS + 1)
+    async with session_factory() as session:
+        assert await payment_requests.expire_stale(session, now=later) == 1
+    assert (await _row(session_factory, request_id)).cancel_reason == payment_requests.EXPIRED_REASON
+
+    chargily.status["chk_0001"] = "paid"  # **لا إشعار** — التسويةُ وحدَها تجده
+    after = int((later - datetime.now(UTC)).total_seconds())
+    await _reconcile(session_factory, after_seconds=after)
+    await _reconcile(session_factory, after_seconds=after + payment_requests.WEBHOOK_GRACE_SECONDS + 1)
+    await _reconcile(session_factory, after_seconds=after + 600)
+    assert (await _row(session_factory, request_id)).status is PaymentRequestStatus.APPROVED
+    assert await balance(client, rider["headers"]) == "3000" and await _ledger(session_factory) == 1
+
+
+@pytest.mark.parametrize("extra", [{"livemode": False}, {"currency": "eur"}])
+async def test_a_page_in_the_other_mode_or_currency_never_credits(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, extra: dict
+) -> None:
+    """**العقدُ حيٌّ وصفحتُه تقول «تجربة» — أو عملتُها غيرُ الدينار** ⇐ لا قيدَ من إشعارٍ ولا من تسوية."""
+    await algeria_market(session_factory)
+    chargily, _ = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    request_id = (await _checkout(client, rider["headers"], method_id)).json()["request"]["id"]
+    chargily.status["chk_0001"] = "paid"
+    chargily.extra["chk_0001"] = extra
+    body, headers = ChargilyFake.signed("chk_0001")
+    assert (await client.post("/payment-requests/webhook/chargily", content=body, headers=headers)).status_code == 502
+    await _reconcile(session_factory, after_seconds=payment_requests.WEBHOOK_GRACE_SECONDS + 1)
+    assert (await _row(session_factory, request_id)).status is PaymentRequestStatus.PENDING
+    assert await balance(client, rider["headers"]) == "0" and await _ledger(session_factory) == 0
+
+
 async def test_failed_and_cancelled_at_the_gateway_are_final_and_never_pending(
     client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:

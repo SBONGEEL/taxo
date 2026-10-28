@@ -144,6 +144,14 @@ class ChargilyGateway:
 
     async def check(self, external_id: str) -> base.GatewayEvent | None:
         body = await self._request("GET", f"/checkouts/{external_id}")
+        # **صفحةٌ بوضعٍ غيرِ وضع العقد أو بعملةٍ غيرِ الدينار لا تُحسم** (تدقيقُ ٢٠٢٦-١٠-٢٨، والحقلان في وثائقه) — دفاعٌ ثانٍ:
+        # المفتاحُ لا يرى صفحاتِ الوضع الآخر أصلاً، **ولو رآها لما قُيِّد مالُ تجربةٍ مالاً حقيقيّاً**
+        live = body.get("livemode")
+        if isinstance(live, bool) and live is self.test_mode:
+            raise base.GatewayError("وضعُ صفحة Chargily يخالف وضعَ العقد")
+        currency = body.get("currency")
+        if currency is not None and str(currency).lower() != "dzd":
+            raise base.GatewayError("عملةُ صفحة Chargily ليست الدينار")
         status = body.get("status")
         self.last_status = status if isinstance(status, str) else None
         amount = Decimal(str(body["amount"])) if body.get("amount") is not None else None
