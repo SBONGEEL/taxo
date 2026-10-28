@@ -79,6 +79,8 @@ SENSITIVE: frozenset[AdminPermission] = frozenset(
         # **والخامسةُ إشعاراتُ النشاط** (SPEC §٨١) — بنصِّ المالك «دورُ المالك وحدَه افتراضاً»: كلُّ حسابٍ جديدٍ ودفعةٍ ورحلةٍ تصل
         # هاتفَ من يملكها، فلا تُعطى لكلِّ مشرف
         AdminPermission.ACTIVITY_ALERTS_RECEIVE,
+        # **والسادسةُ دفترُ وسيط الدفع** (SPEC §٨٧/٤) — بنصِّ المالك «للمالك ومن يأذن له»: معاملاتُ حساب التاجر كلُّها
+        AdminPermission.GATEWAY_LEDGER_READ,
     }
 )
 

@@ -1762,5 +1762,6 @@
  "عُدتَ من صفحة الدفع": "Vous revenez de la page de paiement",
  "افتح تطبيق TAXO لترى نتيجة دفعتك. لا تدفع مرّةً ثانية قبل أن تراها — ولا يُخصم شيءٌ لم يكتمل.": "Ouvrez l’application TAXO pour voir le résultat de votre paiement. Ne payez pas une seconde fois avant de l’avoir vu — rien n’est débité pour un paiement non abouti.",
  "افتح تطبيق TAXO": "Ouvrir l’application TAXO",
- "إن لم يُفتح: افتح التطبيق بنفسك، وستظهر لك النتيجة.": "S’il ne s’ouvre pas : ouvrez l’application vous-même, le résultat s’affichera."
+ "إن لم يُفتح: افتح التطبيق بنفسك، وستظهر لك النتيجة.": "S’il ne s’ouvre pas : ouvrez l’application vous-même, le résultat s’affichera.",
+ "{0} متوقّفٌ مؤقّتاً — ادفع بإحدى الطرق أدناه.": "{0} est momentanément indisponible — payez avec l'un des moyens ci-dessous."
 }

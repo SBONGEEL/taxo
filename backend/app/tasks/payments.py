@@ -97,6 +97,34 @@ async def _reconcile() -> dict[str, int]:
     return {"settled": settled, "down": down}
 
 
+async def _reconcile_daily() -> int:
+    from app.services import payment_protection
+
+    async with SessionLocal() as session:
+        return len(await payment_protection.reconcile_daily(session))
+
+
+@celery_app.task(name="app.tasks.payments.reconcile_gateways_daily")
+def reconcile_gateways_daily() -> dict[str, int]:
+    """**المطابقةُ اليوميّة** (SPEC §٨٧/٣) — تقريرٌ لكلِّ وسيطٍ وسوق، والافتراقُ يُشعَر به المالك؛ **لا تصحيحَ ولا قيد**."""
+    reports = run_async(_reconcile_daily())
+    logger.info("المطابقةُ اليوميّة: %s تقريراً", reports)
+    return {"reports": reports}
+
+
+async def _watch_sofizpay() -> int:
+    from app.services import payment_protection
+
+    async with SessionLocal() as session:
+        return await payment_protection.watch_sofizpay(session)
+
+
+@celery_app.task(name="app.tasks.payments.watch_sofizpay")
+def watch_sofizpay() -> dict[str, int]:
+    """**مراقبةُ حساب SofizPay** (SPEC §٨٧/٤) — ما وصل يوقظ حسمَ المعلّقة بفحصها المباشر؛ والتسويةُ الدوريّةُ شبكةُ الأمان."""
+    return {"woke": run_async(_watch_sofizpay())}
+
+
 @celery_app.task(name="app.tasks.payments.reconcile_gateway_payments")
 def reconcile_gateway_payments() -> dict[str, int]:
     """**تسويةُ دفعات الوسيط** (SPEC §٨٢-أ/٥) — كلُّ دفعةٍ بلا حالٍ نهائيٍّ يُسأل عنها الوسيطُ ويُطبَّق جوابُه مرّةً واحدة، **ثمّ تُفحص صحّتُه**

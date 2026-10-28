@@ -271,6 +271,7 @@ FinanceSummaryReader = Annotated[User, _perm(AdminPermission.FINANCE_SUMMARY_REA
 MarketsManager = Annotated[User, _perm(AdminPermission.MARKETS_MANAGE)]
 # **إشعاراتُ النشاط** (SPEC §٨١) — المالكُ افتراضاً، وغيرُه بمنحٍ بالاسم
 ActivityAlertsReceiver = Annotated[User, _perm(AdminPermission.ACTIVITY_ALERTS_RECEIVE)]
+GatewayLedgerReader = Annotated[User, _perm(AdminPermission.GATEWAY_LEDGER_READ)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

@@ -163,6 +163,16 @@ celery_app.conf.update(
             "task": "app.tasks.payments.reconcile_gateway_payments",
             "schedule": GATEWAY_RECONCILE_SECONDS,
         },
+        # **المطابقةُ اليوميّة** (SPEC §٨٧/٣) — يومٌ بنافذة يومين، فدفعةُ الليل تُرى ولو حُسمت بعد منتصفه
+        "reconcile-gateways-daily": {
+            "task": "app.tasks.payments.reconcile_gateways_daily",
+            "schedule": 86_400.0,
+        },
+        # **مراقبةُ SofizPay** (§٨٧/٤) — عشرون ثانيةً كـ`check_interval` في الـSDK؛ ولا نداءَ حين لا عقدَ ولا طريقةَ مفعَّلة
+        "watch-sofizpay": {
+            "task": "app.tasks.payments.watch_sofizpay",
+            "schedule": 20.0,
+        },
         # كل دقيقة: السقفُ يُقاس بالدقائق، ودورةٌ كل خمسٍ تجعل تنبيهاً عن
         # تجاوزٍ يصل بعد خمس دقائق من وقوعه — والراكب واقفٌ يقرأ عدّاده
         "sweep-stop-waiting": {

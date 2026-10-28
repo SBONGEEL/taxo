@@ -18,7 +18,7 @@ from app.models.user import User
 from app.models.wallet import WalletTransaction
 from app.services import payment_gateways, payment_requests
 from tests.helpers import _enable_provider, rider_session
-from tests.payment_fakes import SOFIZPAY_ACCOUNT, add_gateway_method, install_transport
+from tests.payment_fakes import SOFIZPAY_ACCOUNT, add_gateway_method, install_transport, sofizpay_signed
 from tests.test_dz_payments_82 import _owner
 from tests.test_payment_requests import ALGERIAN_RIDER, algeria_market, balance
 
@@ -97,7 +97,7 @@ async def test_a_late_and_repeated_confirmation_credits_exactly_once(
     cib_id = opened["request"]["reference"]
     before = await _entries(session_factory)
     sofizpay.check[cib_id] |= {"orderStatus": 2, "respCode": "00"}
-    notice = {"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000}
+    notice = sofizpay_signed({"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000})
     first = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     again = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     refreshed = await client.post(f"/payment-requests/{opened['request']['id']}/refresh", headers=rider["headers"])

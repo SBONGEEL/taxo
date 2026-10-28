@@ -35,7 +35,7 @@ from app.schemas.payment_request import (
     PaymentMethodOut,
     PaymentMethodsOut,
 )
-from app.services import cancellation, gateway_health, payment_gateways, payment_requests
+from app.services import cancellation, gateway_health, payment_breaker, payment_gateways, payment_requests
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +156,7 @@ async def list_methods(
         # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها
         methods=shown,
         topup_choices=await payment_requests.topup_choices(session, user.country_code),
+        paused=await payment_breaker.paused_names(session, user.country_code, purpose),
     )
 
 
@@ -325,7 +326,7 @@ async def gateway_webhook(
     for gateway in gateways:
         try:
             ids = gateway.webhook_ids(headers, body)
-            # **«موقَّعٌ» لمن يوقّع إشعارَه** (Chargily) — وSofizPay لا توقيعَ موثَّقاً له، فإشعارُه يوقظ ولا يشهد
+            # **«موقَّعٌ» لمن يُقيَّد بإشعاره** (Chargily) — وSofizPay يُتحقَّق من توقيعه (§٨٧/٥) **ويوقظ ولا يشهد**: الفحصُ المباشرُ يحسم
             signed = bool(getattr(gateway, "confirms_by_webhook", False))
             break
         except payment_gateways.WebhookSignatureInvalid:

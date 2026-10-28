@@ -94,6 +94,8 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         "markets.manage",
         # **إشعاراتُ النشاط** (SPEC §٨١، 2026-10-20) — سبعَ عشرة، **والخامسةُ خارجَ افتراض `admin`**: «دورُ المالك وحدَه افتراضاً»
         "activity_alerts.receive",
+        # **دفترُ وسيط الدفع** (SPEC §٨٧/٤، 2026-10-28) — ثماني عشرة، **والسادسةُ خارجَ افتراض `admin`**: «للمالك ومن يأذن له»
+        "gateway_ledger.read",
     }
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == (
         permissions_service.ALL - permissions_service.SENSITIVE
@@ -104,6 +106,7 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         AdminPermission.FINANCE_SUMMARY_READ,
         AdminPermission.MARKETS_MANAGE,
         AdminPermission.ACTIVITY_ALERTS_RECEIVE,
+        AdminPermission.GATEWAY_LEDGER_READ,
     }
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
         AdminPermission.READ_ONLY,

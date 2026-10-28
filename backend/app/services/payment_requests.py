@@ -973,7 +973,12 @@ async def apply_gateway_outcome(
             _flag("payment_extra", session=session, request=request)
         return request
     if outcome is PaymentRequestStatus.REJECTED:
-        return await reject(session, request=request, actor=None, reason=reason or "رفضه الوسيط")
+        rejected = await reject(session, request=request, actor=None, reason=reason or "رفضه الوسيط")
+        # **قاطعُ الدائرة** (SPEC §٨٧/١) — ثلاثُ إخفاقاتٍ متتاليةٍ تُخفي الطريقةَ آليّاً ويُشعَر المالك
+        from app.services import payment_breaker
+
+        await payment_breaker.after_failure(session, rejected, test_money=test_money)
+        return rejected
     if outcome is PaymentRequestStatus.CANCELLED:
         request.status = PaymentRequestStatus.CANCELLED
         request.cancel_reason = (reason or "أُلغي عند الوسيط")[:500]

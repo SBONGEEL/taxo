@@ -22,6 +22,7 @@ from tests.payment_fakes import (
     ChargilyFake,
     add_gateway_method,
     install_transport,
+    sofizpay_signed,
 )
 from tests.test_payment_requests import ALGERIAN_RIDER, algeria_market, balance
 
@@ -171,8 +172,8 @@ async def test_sofizpay_is_decided_by_its_check_not_its_notice(
     assert sent["account"] == SOFIZPAY_ACCOUNT and sent["amount"] == "1500" and sent["redirect"] == "no"
     cib_id = opened.json()["request"]["reference"]
 
-    # **إشعارٌ بلا توقيعٍ موثَّق** — يُقرأ معرّفُه وحدَه، والفحصُ يقول «معلّق» ⇐ لا شيء
-    notice = {"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000}
+    # **إشعارٌ موقَّعٌ بطريقة الـSDK** (§٨٧/٥) — يُقرأ معرّفُه وحدَه، والفحصُ يقول «معلّق» ⇐ لا شيء
+    notice = sofizpay_signed({"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000})
     assert (await client.post("/payment-requests/webhook/sofizpay", json=notice)).json()["applied"] == 0
 
     sofizpay.check[cib_id] |= {"orderStatus": 2, "respCode": "00"}

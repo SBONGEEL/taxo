@@ -123,6 +123,9 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("gateway_down", "money", "problem", "وسيطُ الدفع متوقّف", "انقطاعاتُ وسيط الدفع", window=0),
     AlertKind("gateway_up", "money", "money_in", "وسيطُ الدفع عاد", "عوداتُ وسيط الدفع", window=0),
     AlertKind("payment_stuck", "money", "problem", "دفعةٌ وصلت ولم تُفعَّل", "دفعات وصلت ولم تُفعَّل"),
+    # **حمايةُ الدفع** (SPEC §٨٧) — طريقةٌ أُخفيت آليّاً بعد إخفاقاتٍ متتالية، وافتراقٌ في المطابقة اليوميّة
+    AlertKind("payment_method_hidden", "money", "problem", "طريقةُ دفعٍ أُخفيت آليّاً", "طرقُ دفعٍ أُخفيت آليّاً", window=0),
+    AlertKind("reconciliation_mismatch", "money", "problem", "افتراقٌ في المطابقة اليوميّة", "افتراقاتٌ في المطابقة", window=0),
     AlertKind("payment_extra", "money", "money_out", "دفعٌ مكرَّر — الزائدُ في المحفظة", "دفعات مكرَّرة"),
     AlertKind("transfer_duplicate", "money", "problem", "رقمُ تحويلٍ مكرَّر", "أرقامُ تحويلٍ مكرَّرة"),
     AlertKind("transfer_approved", "money", "money_in", "تحويلٌ اعتُمد", "تحويلات اعتُمدت"),

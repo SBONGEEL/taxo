@@ -104,6 +104,13 @@ class PayMethod(UUIDMixin, TimestampMixin, Base):
     fee_bearer: Mapped[str] = mapped_column(
         String(8), nullable=False, default="taxo", server_default=text("'taxo'")
     )
+    #: **أُخفيت بسببٍ مكتوب** (SPEC §٨٧/١) — آليّاً بثلاث إخفاقاتٍ متتالية (`hidden_auto`) أو بيد المالك. **ومن يعيدها المالكُ وحدَه
+    #: بسببٍ ووقت** (`payment_breaker.restore`)؛ والبابُ العامُّ يرفض تفعيلَها ما دام السببُ مكتوباً
+    hidden_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hidden_auto: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<PayMethod {self.country_code}/{self.code} ({self.kind})>"

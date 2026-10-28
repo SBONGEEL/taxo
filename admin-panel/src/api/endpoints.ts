@@ -195,6 +195,10 @@ import type {
   FinanceTransactionsPage,
   FinanceUsersPage,
   FinanceView,
+  GatewayLedger,
+  GatewayLedgerBalance,
+  GatewayReconciliation,
+  PaymentHealth,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -2138,6 +2142,71 @@ export const createPayMethod = (
 /** **ما تغيّر وحدَه** — ويُدقَّق كلُّ تغييرٍ بقبله وبعده في الخادم (رقمُ الحساب أوّلُها). */
 export const updatePayMethod = (id: string, body: Partial<AdminPayMethodInput>) =>
   api.patch<AdminPayMethod>(`/admin/payment-methods/${id}`, body);
+
+/** **إخفاءُ طريقةٍ بسببٍ مكتوب** (SPEC §٨٧/١) — المالكُ وحدَه؛ فلا يعيدها غيرُه. */
+export const hidePayMethod = (id: string, reason: string) =>
+  api.post<AdminPayMethod>(`/admin/payment-methods/${id}/hide`, { reason });
+
+/** **«إعادة التشغيل»** — المالكُ وحدَه، بسببٍ ووقت. */
+export const restorePayMethod = (id: string, reason: string) =>
+  api.post<AdminPayMethod>(`/admin/payment-methods/${id}/restore`, { reason });
+
+/** **صحّةُ طرق الدفع** — نسبةُ النجاح لليوم والأسبوع والشهر، والحالُ الآن. */
+export const getPaymentHealth = (country: CountryCode) =>
+  api.get<PaymentHealth>("/admin/payment-health", { query: { country } });
+
+export const listReconciliations = (country: CountryCode) =>
+  api.get<GatewayReconciliation[]>("/admin/payment-health/reconciliations", { query: { country } });
+
+/** **«طابِق الآن»** — المالكُ وحدَه؛ تقريرٌ لا يكتب في الدفتر. */
+export const runReconciliation = () => api.post<GatewayReconciliation[]>("/admin/payment-health/reconciliations/run", {});
+
+export interface LedgerQuery {
+  country: CountryCode;
+  since?: string;
+  until?: string;
+  direction?: "in" | "out";
+  search?: string;
+  min_amount?: string;
+  max_amount?: string;
+}
+
+function ledgerQuery(query: LedgerQuery): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(query)) if (value) out[key] = String(value);
+  return out;
+}
+
+/** **دفترُ SofizPay من Stellar** — لمن مُنح `gateway_ledger.read`؛ وكلُّ عرضٍ سطرٌ في التدقيق. */
+export const getSofizpayTransactions = (query: LedgerQuery) =>
+  api.get<GatewayLedger>("/admin/sofizpay/transactions", { query: ledgerQuery(query) });
+
+/** **رصيدُ حساب SofizPay** — للمالك وحدَه، قراءةً. */
+export const getSofizpayBalance = (country: CountryCode) =>
+  api.get<GatewayLedgerBalance>("/admin/sofizpay/balance", { query: { country } });
+
+/** **تصديرُ الدفتر CSV** — ملفٌّ يُجلب بالمفتاح ثمّ يُحفظ، كتصدير الماليّة. */
+export async function exportSofizpayTransactions(query: LedgerQuery): Promise<void> {
+  const url = new URL(`${API_URL}/admin/sofizpay/transactions.csv`);
+  for (const [key, value] of Object.entries(ledgerQuery(query))) url.searchParams.set(key, value);
+  const answer = await fetch(url.toString(), { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } });
+  if (!answer.ok) {
+    let message = "تعذّر تصديرُ الملفّ";
+    try {
+      message = ((await answer.json()) as { message?: string }).message ?? message;
+    } catch {
+      /* ردٌّ غيرُ مقروء — الرسالةُ العامّةُ تكفي */
+    }
+    throw new Error(message);
+  }
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(await answer.blob());
+  link.download = "sofizpay-transactions.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
 
 export const uploadPayMethodQr = (id: string, file: File) =>
   upload<AdminPayMethod>(`/admin/payment-methods/${id}/qr`, file);

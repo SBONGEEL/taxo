@@ -193,6 +193,9 @@ const ChangePasswordScreen = lazy(() =>
   import("@/screens/ChangePassword").then((m) => ({ default: m.ChangePasswordScreen })),
 );
 // **مراجعةُ تحويلات BaridiMob** (SPEC §٨٢-ب) — صفحةُ المراجع وحدُها، ويفتحها المالك
+const PaymentProtectionScreen = lazy(() =>
+  import("@/screens/PaymentProtection").then((m) => ({ default: m.PaymentProtectionScreen })),
+);
 const TransfersScreen = lazy(() =>
   import("@/screens/Transfers").then((m) => ({ default: m.TransfersScreen })),
 );
@@ -411,6 +414,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <AlertPreviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/payment-protection"
+                    element={
+                      <Guarded>
+                        <PaymentProtectionScreen />
                       </Guarded>
                     }
                   />

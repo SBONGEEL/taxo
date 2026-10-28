@@ -2618,6 +2618,102 @@ export interface AdminPayMethod {
   has_qr: boolean;
   sort_order: number;
   fee_bearer: GatewayFeeBearer;
+  /** **مخفيّةٌ بسببٍ مكتوب** (SPEC §٨٧/١) — آليّاً بثلاث إخفاقاتٍ متتالية أو بيد المالك؛ ويعيدها المالكُ وحدَه */
+  hidden_reason: string | null;
+  hidden_at: string | null;
+  hidden_auto: boolean;
+  /** **الإخفاقاتُ المتتاليةُ الآن** عند الوسيط */
+  failure_streak: number;
+}
+
+// ------------------------------------------------------------ حمايةُ الدفع (SPEC §٨٧)
+
+export interface MethodWindow {
+  opened: number;
+  paid: number;
+  failed: number;
+  cancelled: number;
+  pending: number;
+  processing: number;
+  /** **من المحسوم** بالمئة — `null` حين لا محسوم */
+  success_rate: number | null;
+}
+
+export type HealthWindow = "today" | "week" | "month";
+
+export interface MethodHealth {
+  id: string;
+  name: string;
+  code: string;
+  integration: string | null;
+  enabled: boolean;
+  hidden_reason: string | null;
+  hidden_at: string | null;
+  hidden_auto: boolean;
+  gateway_down: boolean;
+  failure_streak: number;
+  windows: Record<HealthWindow, MethodWindow>;
+}
+
+export interface PaymentHealth {
+  country_code: CountryCode;
+  streak_limit: number;
+  methods: MethodHealth[];
+}
+
+export interface ReconciliationItem {
+  kind: "credited_not_paid" | "paid_not_credited" | "processing" | "amount";
+  request_id: string;
+  ref: string;
+  ours: string;
+  theirs: string;
+  amount: string;
+  gateway_amount: string | null;
+  created_at: string;
+}
+
+export interface GatewayReconciliation {
+  id: string;
+  integration: string;
+  country_code: CountryCode;
+  window_start: string;
+  window_end: string;
+  checked: number;
+  matched: number;
+  mismatched: number;
+  unreachable: number;
+  trigger: string;
+  details: {
+    items?: ReconciliationItem[];
+    error?: string;
+    ours?: { paid_count: number; paid_total: string };
+    ledger?: { incoming_count?: number; incoming_total?: string; truncated?: boolean; error?: string };
+  };
+  created_at: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  created_at: string;
+  direction: "in" | "out";
+  amount: string;
+  counterparty: string;
+  memo: string;
+  transaction_hash: string;
+}
+
+export interface GatewayLedger {
+  account: string;
+  asset_code: string;
+  entries: LedgerEntry[];
+  truncated: boolean;
+}
+
+export interface GatewayLedgerBalance {
+  account: string;
+  asset_code: string;
+  balance: string;
+  read_at: string;
 }
 
 /** **من يحمل رسومَ الوسيط الآليّ** (`GatewayFeeBearer`) — TAXO افتراضاً. */

@@ -79,6 +79,8 @@ export function PayRequestT2Screen() {
 
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
+  // **لافتةُ البدائل** (SPEC §٨٧/١) — طريقةُ وسيطٍ أُخفيت مؤقّتاً تُسمّى، ويُدلّ الدافعُ على ما بقي
+  const [paused, setPaused] = useState<string[]>([]);
   const [cardMethod, setCardMethod] = useState(false);
   // **دفعُ الجزائر** (SPEC §٨٢): معرّفُ الطلب من هنا فيُعرف مرجعُ TAXO قبل التحويل، وتاريخُه، و«الوسيطُ متوقّف»
   const [clientId] = useState(newRequestId);
@@ -112,6 +114,7 @@ export function PayRequestT2Screen() {
         const reviewed = body.methods.filter((row) => row.kind !== "purchase_code");
         setMethods(reviewed);
         setChoices(body.topup_choices ?? []);
+        setPaused(body.paused ?? []);
         setMethodId((current) => current || reviewed[0]?.id || "");
       })
       .catch((caught: unknown) => {
@@ -349,6 +352,11 @@ export function PayRequestT2Screen() {
             </button>
           ) : null}
           <div className="t2-section">{tr("طريقة الدفع")}</div>
+          {paused.length > 0 ? (
+            <p className="t2-m-hint" role="status">
+              {tr("{0} متوقّفٌ مؤقّتاً — ادفع بإحدى الطرق أدناه.", { 0: paused.join("، ") })}
+            </p>
+          ) : null}
           <div className="t2-list" role="radiogroup" aria-label={tr("طريقة الدفع")}>
             {methods.map((row) => (
               <button

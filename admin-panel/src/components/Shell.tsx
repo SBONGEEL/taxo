@@ -82,6 +82,8 @@ const GROUPS: {
       // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلباتُ الدفع بإيصالاتها وطرقُ الدفع لكلِّ دولة. **وبلا `adminOnly`**: القراءةُ لطاقم
       // اللوحة، والاعتمادُ يحرسه الخادم (`finance.manage`) وتحريرُ الطرق (`settings.write`)
       { label: "نظام الدفع", icon: "account_balance", to: "/payment-system" },
+      // **حمايةُ الدفع** (SPEC §٨٧) — صحّةُ الطرق والمطابقةُ اليوميّة ودفترُ SofizPay؛ القراءةُ لطاقم اللوحة والأفعالُ للمالك يحرسها الخادم
+      { label: "حماية الدفع", icon: "verified_user", to: "/payment-protection" },
       // **تحويلاتُ BaridiMob بمراجعة** (SPEC §٨٢-ب) — للمالك ومراجعه
       {
         label: "تحويلات BaridiMob",

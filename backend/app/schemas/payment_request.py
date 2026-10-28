@@ -65,6 +65,8 @@ class PaymentMethodsOut(BaseModel):
     methods: list[PaymentMethodOut]
     #: **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — وفارغةٌ «لا خيارات»: يُكتب المبلغ كما كان
     topup_choices: list[Decimal] = Field(default_factory=list)
+    #: **طرقُ وسيطٍ مخفيّةٌ مؤقّتاً في سوقي** (SPEC §٨٧/١) — أسماؤها لِلافتةٍ تقول «متوقّفٌ مؤقّتاً، ادفع بإحدى الطرق أدناه»
+    paused: list[str] = Field(default_factory=list)
 
 
 class MyPaymentRequestOut(BaseModel):
@@ -144,6 +146,12 @@ class AdminPaymentMethodOut(BaseModel):
     account_holder_latin: str | None = None
     min_amount: Decimal | None = None
     max_amount: Decimal | None = None
+    #: **مخفيّةٌ بسببٍ مكتوب** (SPEC §٨٧/١) — آليّاً أو بيد المالك؛ ويعيدها المالكُ وحدَه
+    hidden_reason: str | None = None
+    hidden_at: datetime | None = None
+    hidden_auto: bool = False
+    #: **الإخفاقاتُ المتتاليةُ الآن** عند الوسيط — صفرٌ للطريقة اليدويّة
+    failure_streak: int = 0
 
 
 class AdminPaymentMethodCreate(BaseModel):

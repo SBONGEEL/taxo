@@ -455,7 +455,9 @@ function MethodsTab({
               {row.bank_name ? <span className="block truncate text-10.5">{row.bank_name}</span> : null}
               {row.instructions ? <span className="block truncate text-10.5">{row.instructions}</span> : null}
             </span>
-            <span className={row.enabled ? "font-semibold text-ok" : "text-muted"}>{row.enabled ? "مفعَّلة" : "موقوفة"}</span>
+            <span className={row.enabled ? "font-semibold text-ok" : "text-muted"} title={row.hidden_reason ?? undefined}>
+              {row.enabled ? "مفعَّلة" : row.hidden_reason ? (row.hidden_auto ? "مخفيّة آليّاً" : "مخفيّة بيد المالك") : "موقوفة"}
+            </span>
             <span className="text-muted">
               {[row.for_topup ? "شحن" : null, row.for_subscription ? "اشتراك" : null].filter(Boolean).join(" · ") || "—"}
             </span>

@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core import storage
-from app.core.deps import DbSession, FinanceManager, ListReader, RedisDep, SettingsWriter
+from app.core.deps import DbSession, FinanceManager, ListReader, OwnerUser, RedisDep, SettingsWriter
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.enums import AuditAction, CountryCode, PaymentRequestStatus
 from app.models.payment_request import PayMethod, PaymentRequest
@@ -28,7 +28,7 @@ from app.schemas.payment_request import (
     PaymentApproveIn,
     PaymentReasonIn,
 )
-from app.services import audit, cancellation, payment_requests, transfers
+from app.services import audit, cancellation, payment_breaker, payment_requests, transfers
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 _QR_TYPES = ("image/png", "image/jpeg", "image/webp")
 
 
-def method_admin_out(provider: PayMethod) -> AdminPaymentMethodOut:
+def method_admin_out(provider: PayMethod, streak: int = 0) -> AdminPaymentMethodOut:
     return AdminPaymentMethodOut(
         id=provider.id,
         country_code=provider.country_code,
@@ -58,6 +58,10 @@ def method_admin_out(provider: PayMethod) -> AdminPaymentMethodOut:
         account_holder_latin=provider.account_holder_latin,
         min_amount=provider.min_amount,
         max_amount=provider.max_amount,
+        hidden_reason=provider.hidden_reason,
+        hidden_at=provider.hidden_at,
+        hidden_auto=provider.hidden_auto,
+        failure_streak=streak,
     )
 
 
@@ -98,7 +102,10 @@ async def list_methods(
     session: DbSession,
     country: CountryCode | None = Query(default=None),
 ) -> list[AdminPaymentMethodOut]:
-    return [method_admin_out(p) for p in await payment_requests.all_providers(session, country)]
+    rows = await payment_requests.all_providers(session, country)
+    return [
+        method_admin_out(p, await payment_breaker.failure_streak(session, p.id) if p.integration else 0) for p in rows
+    ]
 
 
 @router.post("/payment-methods", response_model=AdminPaymentMethodOut, status_code=status.HTTP_201_CREATED)
@@ -137,6 +144,8 @@ async def update_method(
     provider = await payment_requests.get_provider(session, provider_id, for_update=True)
     transfers.require_owner_for(provider, admin)
     fields = payload.model_dump(exclude_unset=True)
+    # **مخفيّةٌ بسببٍ مكتوب لا تُفعَّل من هنا** (SPEC §٨٧/١) — زرُّ «إعادة التشغيل» للمالك وحدَه
+    payment_breaker.require_not_hidden(provider, enabling=bool(fields.get("enabled")) and not provider.enabled)
     if "fee_bearer" in fields and fields["fee_bearer"] is not None:
         fields["fee_bearer"] = str(fields["fee_bearer"].value if hasattr(fields["fee_bearer"], "value") else fields["fee_bearer"])
     changes = audit.apply_changes(provider, fields)
@@ -151,6 +160,32 @@ async def update_method(
             entity_id=provider.id,
             changes=changes,
         )
+    await session.commit()
+    await session.refresh(provider)
+    return method_admin_out(provider)
+
+
+@router.post("/payment-methods/{provider_id}/hide", response_model=AdminPaymentMethodOut)
+async def hide_method(
+    provider_id: uuid.UUID, payload: PaymentReasonIn, owner: OwnerUser, session: DbSession
+) -> AdminPaymentMethodOut:
+    """**المالكُ يُخفي طريقةً بسببٍ مكتوب** (SPEC §٨٧/١) — فلا يعيدها غيرُه، ويرى الدافعُ لافتةَ البدائل."""
+    provider = await payment_requests.get_provider(session, provider_id, for_update=True)
+    await payment_breaker.hide(session, provider=provider, actor=owner, reason=payload.reason)
+    await session.commit()
+    await session.refresh(provider)
+    return method_admin_out(provider)
+
+
+@router.post("/payment-methods/{provider_id}/restore", response_model=AdminPaymentMethodOut)
+async def restore_method(
+    provider_id: uuid.UUID, payload: PaymentReasonIn, owner: OwnerUser, session: DbSession
+) -> AdminPaymentMethodOut:
+    """**«إعادة التشغيل» — المالكُ وحدَه، بسببٍ ووقت** (SPEC §٨٧/١)؛ وحرّاسُ التفعيل نفسُها (العقدُ والحساب) تُسأل."""
+    provider = await payment_requests.get_provider(session, provider_id, for_update=True)
+    await payment_breaker.restore(session, provider=provider, actor=owner, reason=payload.reason)
+    _require_destination(provider)
+    await _require_gateway_ready(session, provider)
     await session.commit()
     await session.refresh(provider)
     return method_admin_out(provider)

@@ -23,6 +23,17 @@ from tests.helpers import _enable_provider
 #: **مفتاحٌ مولَّدٌ لكلِّ تشغيلٍ لا حرفيّ** — قيمةٌ حرفيّةٌ بشكل مفتاحٍ أوقفت ماسحَ الأسرار في الرفع (٢٠٢٦-١٠-١١)
 CHARGILY_SECRET = "test_sk_" + secrets.token_hex(12)
 SOFIZPAY_ACCOUNT = "GTAXOFAKEACCOUNT0000000000000000000000000000000000000000"
+#: **حسابٌ بشكل مفتاح Stellar العامّ** (`G` وخمسةٌ وخمسون من أبجديّة base32) — لدفتر SofizPay وحدَه؛ مولَّدٌ لا حسابُ أحد
+SOFIZPAY_LEDGER_ACCOUNT = "G" + "TAXOLEDGER" + "A" * 45
+
+#: **مفتاحُ توقيعٍ مولَّدٌ لكلِّ تشغيل** — يحلّ عامُّه محلَّ مفتاح SofizPay في الاختبار، فيوقّع المزيَّفُ كما يوقّع SofizPay (§٨٧/٥)
+from cryptography.hazmat.primitives import hashes, serialization  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric import padding, rsa  # noqa: E402
+
+_SOFIZ_SIGNER = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+SOFIZ_TEST_PUBLIC_PEM = _SOFIZ_SIGNER.public_key().public_bytes(
+    serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+)
 
 
 class ChargilyFake:
@@ -111,23 +122,95 @@ class SofizPayFake:
         return httpx.Response(404, json={"status": "error", "message": "Invalid or missing parameters."})
 
 
-class Router:
-    """**نقلٌ واحدٌ للوسيطين** — يوجّه بالمضيف."""
+def sofizpay_signed(notice: dict[str, Any], *, url_safe: bool = True) -> dict[str, Any]:
+    """**إشعارٌ موقَّعٌ كما يوقّع SofizPay** — RSA PKCS#1 v1.5 بـSHA-256 على `message`، وBase64 الآمنُ للعناوين كما يقرؤه الـSDK."""
+    import base64
 
-    def __init__(self, chargily: ChargilyFake, sofizpay: SofizPayFake) -> None:
+    message = "|".join(str(notice.get(k, "")) for k in ("cib_transaction_id", "payment_status", "amount"))
+    raw = _SOFIZ_SIGNER.sign(message.encode(), padding.PKCS1v15(), hashes.SHA256())
+    signature = (base64.urlsafe_b64encode(raw).rstrip(b"=") if url_safe else base64.b64encode(raw)).decode()
+    return notice | {"message": message, "signature": signature}
+
+
+class HorizonFake:
+    """**Horizon مزيَّفٌ بأشكاله المنشورة** — `/accounts/{G}` بأرصدته، و`/accounts/{G}/payments` بسجلّاتٍ ومؤشّرات."""
+
+    def __init__(self) -> None:
+        self.balances: dict[str, list[dict[str, Any]]] = {}
+        #: **سجلّاتُ الدفع الأحدثُ آخراً** — كما يرتّبها `order=asc`
+        self.payments: dict[str, list[dict[str, Any]]] = {}
+        self.calls: list[str] = []
+
+    def pay(self, account: str, *, amount: str, incoming: bool = True, memo: str = "", asset_code: str = "DZT",
+            created_at: str = "2026-10-28T10:00:00Z") -> dict[str, Any]:
+        from app.services import sofizpay_ledger
+
+        rows = self.payments.setdefault(account, [])
+        token = str(1000 + len(rows))
+        other = "G" + "OTHER" + "B" * 50
+        record = {
+            "id": token, "paging_token": token, "type": "payment", "created_at": created_at,
+            "asset_type": "credit_alphanum4", "asset_code": asset_code, "asset_issuer": sofizpay_ledger.ASSET_ISSUER,
+            "from": other if incoming else account, "to": account if incoming else other, "amount": amount,
+            "transaction_hash": f"tx{token}", "transaction": {"memo": memo},
+        }
+        rows.append(record)
+        return record
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        self.calls.append(f"{path}?{request.url.query.decode() if isinstance(request.url.query, bytes) else request.url.query}")
+        parts = path.strip("/").split("/")
+        if len(parts) >= 2 and parts[0] == "accounts":
+            account = parts[1]
+            if account not in self.balances and account not in self.payments:
+                return httpx.Response(404, json={"status": 404, "title": "Resource Missing"})
+            if len(parts) == 2:
+                return httpx.Response(200, json={"id": account, "balances": self.balances.get(account, [])})
+            if parts[2] == "payments":
+                params = dict(request.url.params)
+                rows = list(self.payments.get(account, []))
+                cursor = params.get("cursor")
+                if params.get("order") == "desc":
+                    rows = rows[::-1]
+                    if cursor:
+                        rows = [r for r in rows if int(r["paging_token"]) < int(cursor)]
+                elif cursor and cursor != "now":
+                    rows = [r for r in rows if int(r["paging_token"]) > int(cursor)]
+                limit = int(params.get("limit", 10))
+                page = rows[:limit]
+                links: dict[str, Any] = {}
+                if len(rows) > limit:
+                    order = params.get("order", "asc")
+                    links["next"] = {"href": f"https://horizon.stellar.org/accounts/{account}/payments?order={order}&limit={limit}&cursor={page[-1]['paging_token']}"}
+                return httpx.Response(200, json={"_embedded": {"records": page}, "_links": links})
+        return httpx.Response(404, json={"status": 404})
+
+
+class Router:
+    """**نقلٌ واحدٌ للوسطاء** — يوجّه بالمضيف."""
+
+    def __init__(self, chargily: ChargilyFake, sofizpay: SofizPayFake, horizon: HorizonFake | None = None) -> None:
         self.chargily, self.sofizpay = chargily, sofizpay
+        self.horizon = horizon or HorizonFake()
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         if request.url.host == "pay.chargily.net":
             return self.chargily.handler(request)
         if request.url.host == "sofizpay.com":
             return self.sofizpay.handler(request)
+        if request.url.host == "horizon.stellar.org":
+            return self.horizon.handler(request)
         return httpx.Response(599)
 
 
-def install_transport(monkeypatch) -> tuple[ChargilyFake, SofizPayFake]:
+def install_transport(monkeypatch, horizon: HorizonFake | None = None) -> tuple[ChargilyFake, SofizPayFake]:
+    from app.services.payment_gateways import sofizpay as sofizpay_module
+
     chargily, sofizpay = ChargilyFake(), SofizPayFake()
-    monkeypatch.setattr(payment_gateways, "http_transport", httpx.MockTransport(Router(chargily, sofizpay)))
+    monkeypatch.setattr(payment_gateways, "http_transport", httpx.MockTransport(Router(chargily, sofizpay, horizon)))
+    # **عامُّ مفتاح التوقيع المولَّد** محلَّ عامِّ SofizPay — فالتحقّقُ الحقيقيُّ هو المُختبَر، والموقِّعُ وحدَه مزيَّف
+    monkeypatch.setattr(sofizpay_module, "SOFIZPAY_PUBLIC_KEY_PEM", SOFIZ_TEST_PUBLIC_PEM)
     return chargily, sofizpay
 
 
