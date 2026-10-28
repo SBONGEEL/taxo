@@ -357,6 +357,11 @@ export interface Coordinates {
 }
 
 export interface RideEstimate {
+  /** **السعرُ مثبَّتٌ عشرَ دقائق** (§٨٨/١) — مع `lock_price` وحدَه */
+  quote_id?: string | null;
+  locked_until?: string | null;
+  /** **ما ينقص المحفظةَ لتغطّي الأجرة** — محسوباً في الخلفية */
+  wallet_shortfall?: string | null;
   country_code: CountryCode;
   vehicle_category: VehicleCategory;
   currency: Currency;

@@ -966,3 +966,7 @@ export function sendFeedback(
   if (screenshot) form.append("screenshot", screenshot);
   return sendForm<{ id: string; created_at: string }>("POST", "/feedback", form, options);
 }
+
+/** **رابطُ إيصال PDF** (SPEC §٨٨/٢) — خمسُ دقائقَ ومرّةً واحدة؛ ولدفعةٍ معتمدةٍ وحدَها (وغيرُها ٤٢٢ برسالته). */
+export const receiptLink = (requestId: string) =>
+  api.post<{ url: string; expires_in: number }>(`/payment-requests/${requestId}/receipt-link`, {});

@@ -28,6 +28,7 @@ import {
   getStorefront,
   getWallet,
   listMyRides,
+  estimateRide,
   requestRide,
   unreadCount,
   updateMe,
@@ -56,6 +57,7 @@ import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/paym
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
+import { clearPendingRide, readPendingRide, savePendingRide } from "@/lib/ride-topup";
 import { isActive, useRide } from "@/lib/ride";
 import { useCoverNav } from "@/lib/navCover";
 import { usePlaces } from "@/lib/places";
@@ -471,7 +473,8 @@ export function HomeScreen() {
     }
   }
 
-  async function submit(
+  /** **حمولةُ الطلب من اختيارات الورقة** — بابٌ واحدٌ يبني بها الطلبُ و«اشحن مبلغ الرحلة الآن» (§٨٨/١)، فلا يفترقان. */
+  function payloadFor(
     category: VehicleCategory,
     preference: GenderPreference,
     promoCode?: string,
@@ -483,43 +486,58 @@ export function HomeScreen() {
   ) {
     // **ساعاتٌ بلا وجهةٍ تُرسل نقطةَ الانطلاق وجهةً** (§٦٣-ج/٥، عقدُ `HourlyIn`) — وكلُّ طلبٍ غيرِها بوجهته كما كان
     const target = dropoff ?? (hourly ? pickup : null);
-    if (!pickup || !target) return;
+    if (!pickup || !target) return null;
+    return {
+      pickup,
+      dropoff: target,
+      vehicle_category: category,
+      pickup_address: pickupAddress,
+      dropoff_address: dropoffAddress,
+      gender_preference: preference,
+      // **الرمزُ يُرسل مع الطلب** (12-ز): الخلفيةُ تُجمّد قاعدتَه على الرحلة،
+      // ورمزٌ خاطئ يرفض الطلبَ كلَّه بدل أن يمرّ بلا خصمٍ في صمت
+      promo_code: promoCode,
+      // **المشاركةُ حقلان لا واحد** (12-ي): الثاني موافقةٌ صريحةٌ على أن
+      // تشاركها راكبةٌ أخرى، والخلفيةُ **ترفض** طلباً مجنَّساً بلا موافقة ولا
+      // تُسقطها بصمت — فالتطبيقُ يرسل ما اختارته لا ما يُريحه
+      share: sharing?.share,
+      share_gender_confirmed: sharing?.shareGenderConfirmed,
+      // **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ ومن يدفع — والخلفيةُ تطبّع الرقمَ وتفحص المفتاحَ عند الإنشاء
+      for_other: forOther,
+      // **الطرد** (§٦٣-ج/٤): المستلمُ ومن يدفع وإقرارُ الشروط — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والرسمَ
+      // والإقرارَ عند الإنشاء
+      parcel,
+      // **بالساعة** (§٦٣-ج/٥): الساعاتُ ومن أين يُدفع محجوزُها — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والسعرَ
+      // والسقفَ والجمعَ عند الإنشاء
+      hourly,
+      // **طريقةُ الدفع تُرسل مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — **حيث المفتاحُ مشتعلٌ وحدَه**: مطفأً
+      // حمولةُ الطلب هي هي حرفاً. ومنها يولد صفُّ الكاش وكليك عند الإنهاء ويراها الكبتنُ على بطاقة العرض
+      payment_method: unconfirmedOn ? paymentMethod : undefined,
+      stops: stops.map((stop) => ({
+        lat: stop.lat,
+        lng: stop.lng,
+        address: stop.address,
+      })),
+    };
+  }
+
+  async function submit(
+    category: VehicleCategory,
+    preference: GenderPreference,
+    promoCode?: string,
+    sharing?: { share: boolean; shareGenderConfirmed: boolean },
+    forOther?: RideForOther,
+    parcel?: RideParcel,
+    hourly?: RideHourly,
+    paymentMethod?: PayableMethod,
+  ) {
+    const payload = payloadFor(category, preference, promoCode, sharing, forOther, parcel, hourly, paymentMethod);
+    if (!payload) return;
     setRequesting(true);
     setError(null);
     setBlockedByPayment(false);
     try {
-      const created = await requestRide({
-        pickup,
-        dropoff: target,
-        vehicle_category: category,
-        pickup_address: pickupAddress,
-        dropoff_address: dropoffAddress,
-        gender_preference: preference,
-        // **الرمزُ يُرسل مع الطلب** (12-ز): الخلفيةُ تُجمّد قاعدتَه على الرحلة،
-        // ورمزٌ خاطئ يرفض الطلبَ كلَّه بدل أن يمرّ بلا خصمٍ في صمت
-        promo_code: promoCode,
-        // **المشاركةُ حقلان لا واحد** (12-ي): الثاني موافقةٌ صريحةٌ على أن
-        // تشاركها راكبةٌ أخرى، والخلفيةُ **ترفض** طلباً مجنَّساً بلا موافقة ولا
-        // تُسقطها بصمت — فالتطبيقُ يرسل ما اختارته لا ما يُريحه
-        share: sharing?.share,
-        share_gender_confirmed: sharing?.shareGenderConfirmed,
-        // **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ ومن يدفع — والخلفيةُ تطبّع الرقمَ وتفحص المفتاحَ عند الإنشاء
-        for_other: forOther,
-        // **الطرد** (§٦٣-ج/٤): المستلمُ ومن يدفع وإقرارُ الشروط — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والرسمَ
-        // والإقرارَ عند الإنشاء
-        parcel,
-        // **بالساعة** (§٦٣-ج/٥): الساعاتُ ومن أين يُدفع محجوزُها — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والسعرَ
-        // والسقفَ والجمعَ عند الإنشاء
-        hourly,
-        // **طريقةُ الدفع تُرسل مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — **حيث المفتاحُ مشتعلٌ وحدَه**: مطفأً
-        // حمولةُ الطلب هي هي حرفاً. ومنها يولد صفُّ الكاش وكليك عند الإنهاء ويراها الكبتنُ على بطاقة العرض
-        payment_method: unconfirmedOn ? paymentMethod : undefined,
-        stops: stops.map((stop) => ({
-          lat: stop.lat,
-          lng: stop.lng,
-          address: stop.address,
-        })),
-      });
+      const created = await requestRide(payload);
       // الرحلة تعود `requested`؛ انتقالها إلى `searching` يصل عبر المقبس
       setRide(created);
       setPhase("idle");
@@ -544,6 +562,58 @@ export function HomeScreen() {
       setRequesting(false);
     }
   }
+
+  /** **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — يثبّت الخلفيةُ السعرَ عشرَ دقائق وتقول ما ينقص المحفظة، **فيُحفظ الطلبُ نفسُه** وتُفتح صفحةُ
+   * الشحن بالمبلغ الناقص. **ويكمل الطلبُ وحدَه** حين يغطّي الرصيدُ الأجرة (الأثرُ أدناه). */
+  async function topUpForRide(...args: Parameters<typeof payloadFor>) {
+    const payload = payloadFor(...args);
+    if (!payload) return;
+    setError(null);
+    try {
+      const locked = await estimateRide({
+        pickup: payload.pickup,
+        dropoff: payload.dropoff,
+        vehicle_category: payload.vehicle_category,
+        stops: payload.stops,
+        is_parcel: payload.parcel !== undefined,
+        parcel_fetch: payload.parcel?.fetch === true,
+        hourly_hours: payload.hourly?.hours,
+        lock_price: true,
+      });
+      if (!locked.quote_id || !locked.locked_until) throw new Error(tr("تعذّر تثبيتُ السعر"));
+      savePendingRide({ payload, quoteId: locked.quote_id, until: locked.locked_until, fare: locked.estimated_fare });
+      navigate("/wallet/pay", { state: { amount: locked.wallet_shortfall ?? undefined, forRide: true } });
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر تثبيتُ السعر"));
+    }
+  }
+
+  // **الطلبُ يكمل وحدَه بعد الشحن** (§٨٨/١): طلبٌ محفوظٌ في مهلته، ولا رحلةَ جارية، **والرصيدُ يغطّي الأجرةَ المعروضة** (مقارنةٌ لا حساب)
+  // ⇐ يُرسل بمعرّف سعره؛ **وما زال الشحنُ يُراجَع** ⇐ ينتظر حتى المهلة ثمّ يُنسى
+  const resumingRide = useRef(false);
+  useEffect(() => {
+    const pending = readPendingRide();
+    if (!pending || !wallet || ride || resumingRide.current) return;
+    if (Number(wallet.balance) < Number(pending.fare)) return;
+    resumingRide.current = true;
+    setRequesting(true);
+    requestRide({ ...pending.payload, quote_id: pending.quoteId })
+      .then((created) => {
+        clearPendingRide();
+        setRide(created);
+        setPhase("idle");
+        setDropoff(null);
+        setDropoffAddress(null);
+      })
+      .catch((caught: unknown) => {
+        clearPendingRide();
+        setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال الطلب"));
+      })
+      .finally(() => {
+        resumingRide.current = false;
+        setRequesting(false);
+      });
+  }, [wallet, ride]);
 
   /** يعيد التفضيل المخزَّن إلى «أي كبتن» ثم يفتح الطريق للطلب من جديد.
    *
@@ -892,6 +962,7 @@ export function HomeScreen() {
           eta: nearestEta,
           onEditDestination: () => setSearchOpen(true),
           onRequest: submit,
+          onTopUpForRide: topUpForRide,
           onSchedule: schedule,
           requesting,
           requestError: error,

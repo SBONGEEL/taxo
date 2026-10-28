@@ -55,6 +55,8 @@ class RideEstimateRequest(BaseModel):
     parcel_fetch: bool = False
     # **تقديرُ ساعات** (§٦٣-ج/٥) — `null` لرحلةٍ عاديّة
     hourly_hours: int | None = Field(default=None, ge=1, le=24)
+    #: **«اشحن مبلغ الرحلة الآن»** (SPEC §٨٨/١) — يثبّت هذا التقديرَ عشرَ دقائق ويعيد معرّفَه وما ينقص المحفظة
+    lock_price: bool = False
 
 
 class RideEstimateOut(BaseModel):
@@ -99,6 +101,11 @@ class RideEstimateOut(BaseModel):
     hourly_rate: Decimal | None = None
     hourly_km_per_hour: int | None = None
     hourly_max_hours: int | None = None
+    #: **السعرُ مثبَّتٌ عشرَ دقائق** (SPEC §٨٨/١) — حين يُطلب `lock_price`: معرّفُه يُرسل مع الطلب فيُؤخذ السعرُ نفسُه
+    quote_id: str | None = None
+    locked_until: datetime | None = None
+    #: **ما ينقص المحفظةَ لتغطّي الأجرة** مقرَّباً بوحدة السوق — «اشحن مبلغ الرحلة الآن»؛ صفرٌ حين يكفي الرصيد
+    wallet_shortfall: Decimal | None = None
 
 
 class RideForOtherIn(BaseModel):
@@ -168,6 +175,8 @@ class RideCreateRequest(RideEstimateRequest):
     # **تُحفظ على الرحلة ويراها الكبتنُ على بطاقة العرض**، ومنها يولد صفُّ الكاش وكليك عند الإنهاء. `null` = لم تُختر، **ومطفأً
     # (`unconfirmed_payments_enabled`) تُتجاهل** فلا يتغيّر شيءٌ لتطبيقٍ يرسلها في سوقٍ لم تُشعَل فيه
     payment_method: PaymentMethod | None = None
+    #: **معرّفُ السعر المثبَّت** (SPEC §٨٨/١) — مفتاحٌ لا مبلغ: يُؤخذ التقديرُ المحفوظُ إن طابقت التفاصيلُ وفي مهلته، وإلا يُسعَّر من جديد
+    quote_id: str | None = Field(default=None, max_length=40)
 
 
 class RideCancelRequest(BaseModel):

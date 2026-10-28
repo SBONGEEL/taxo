@@ -18,6 +18,7 @@
  * والرصيدُ بعد كلِّ حركة، **والعملةُ بجانب كلِّ مبلغ**.
  */
 
+import { openReceiptUrl } from "@/lib/receipt";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -30,6 +31,7 @@ import {
   listSavedCards,
   listTopups,
   listTransactions,
+  receiptLink,
   resumePaymentCheckout,
 } from "@/api/endpoints";
 import type {
@@ -292,6 +294,15 @@ export function WalletT2Screen() {
                     <span className={request.status === "approved" ? "t2-chip ok" : request.status === "pending" ? "t2-chip warn" : "t2-chip"}>
                       {phaseLabel(request) ?? PAYMENT_REQUEST_STATUS_LABEL[request.status]}
                     </span>
+                    {request.status === "approved" || request.status === "refunded" ? (
+                      <button
+                        type="button"
+                        className="t2-pr-cancel"
+                        onClick={() => void receiptLink(request.id).then(({ url }) => openReceiptUrl(url)).catch(() => undefined)}
+                      >
+                        {tr("الإيصال")}
+                      </button>
+                    ) : null}
                     {awaiting ? (
                       <button
                         type="button"

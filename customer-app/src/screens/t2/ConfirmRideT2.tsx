@@ -151,6 +151,24 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     eta,
   } = props;
   const c = useConfirmRide(props);
+  // **حججُ الطلب مرّةً واحدة** — يرسلها «اطلب» و«اشحن مبلغ الرحلة الآن» معاً فلا يفترقان (§٨٨/١)
+  const requestArgs: Parameters<ConfirmRideProps["onRequest"]> = [
+    c.category,
+    c.preference,
+    c.applied?.code,
+    // **والمشاركةُ لا تُرسل مع رحلةٍ لغيره ولا مع طرد** — الخياراتُ لا تُجمع في الورقة، وهذا يمنع ما قد يبقى منها
+    {
+      share: c.shareReady && !c.forOther,
+      shareGenderConfirmed: c.shareReady && c.shareGuarded && !c.forOther,
+    },
+    c.forOther ?? undefined,
+    c.parcel ?? undefined,
+    // **الساعاتُ ومن أين يُدفع محجوزُها** (§٦٣-ج/٥) — وغيابُها رحلةٌ عاديّة
+    c.hourly ?? undefined,
+    // **والطريقةُ المرسومةُ على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — والرئيسيةُ تقرّر أتُرسل (المفتاح).
+    // **ولا طريقةَ للساعات**: محجوزُها هو طريقتُها، والورقةُ لا ترسم منتقيَ الدفع لها
+    c.hourlyMode ? undefined : c.payMethod?.method,
+  ];
   // **مفتاحُ «المطار» في سوق الراكب** (§٦٣-ج/٢) — مطفأً لا سطرَ ولو وصل رسمٌ (والخلفيةُ لا ترسله مطفأً أصلاً)
   const { user } = useSession();
   const airport = useFeature(user?.country_code, "airport_enabled");
@@ -211,23 +229,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               // **طردٌ بلا مستلمٍ يفتح ورقتَه** لا طلباً ترفضه الخلفية — والزرُّ يقول ذلك باسمه
               parcelPending
                 ? setParcelOpen(true)
-                : props.onRequest(
-                    c.category,
-                    c.preference,
-                    c.applied?.code,
-                    // **والمشاركةُ لا تُرسل مع رحلةٍ لغيره ولا مع طرد** — الخياراتُ لا تُجمع في الورقة، وهذا يمنع ما قد يبقى منها
-                    {
-                      share: c.shareReady && !c.forOther,
-                      shareGenderConfirmed: c.shareReady && c.shareGuarded && !c.forOther,
-                    },
-                    c.forOther ?? undefined,
-                    c.parcel ?? undefined,
-                    // **الساعاتُ ومن أين يُدفع محجوزُها** (§٦٣-ج/٥) — وغيابُها رحلةٌ عاديّة
-                    c.hourly ?? undefined,
-                    // **والطريقةُ المرسومةُ على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — والرئيسيةُ تقرّر أتُرسل (المفتاح).
-                    // **ولا طريقةَ للساعات**: محجوزُها هو طريقتُها، والورقةُ لا ترسم منتقيَ الدفع لها
-                    c.hourlyMode ? undefined : c.payMethod?.method,
-                  )
+                : props.onRequest(...requestArgs)
             }
           >
             <span>
@@ -597,6 +599,17 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       ) : null}
 
       {c.walletNote ? <p className="t2-note warn">{c.walletNote}</p> : null}
+      {/* **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — السعرُ يُثبَّت عشرَ دقائق، ثمّ صفحةُ الشحن بما ينقص، **ويكمل الطلبُ نفسُه بعد وصول الرصيد** */}
+      {c.walletNote && c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
+        <button
+          type="button"
+          className="t2-button secondary t2-callout-action"
+          disabled={!c.estimate || c.loading || requesting}
+          onClick={() => props.onTopUpForRide?.(...requestArgs)}
+        >
+          {tr("اشحن مبلغ الرحلة الآن")}
+        </button>
+      ) : null}
 
       {/* **حدّد موعداً** (12-ط) — زرٌّ ثانويٌّ لا مساوٍ للأول، ويُخفى حيث المفتاح مطفأ */}
       {c.scheduled ? (

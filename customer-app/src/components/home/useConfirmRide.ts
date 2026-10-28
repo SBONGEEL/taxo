@@ -101,6 +101,8 @@ export interface ConfirmRideProps {
   dropoffAddress: string | null;
   categories: VehicleCategory[];
   onEditDestination: () => void;
+  /** **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — بحجج `onRequest` نفسِها: السعرُ يُثبَّت ثمّ الشحنُ ثمّ الطلبُ نفسُه */
+  onTopUpForRide?: (...args: Parameters<ConfirmRideProps["onRequest"]>) => void;
   onRequest: (
     category: VehicleCategory,
     preference: GenderPreference,

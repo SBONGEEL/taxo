@@ -400,6 +400,7 @@ async def request_ride(
     hourly: "hourly_service.HourlyRequest | None" = None,
     widen_search: bool = False,
     payment_method: PaymentMethod | None = None,
+    quote_id: str | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -543,17 +544,33 @@ async def request_ride(
         # يُسأل هنا كما يُسأل في الدفع** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج). ومطفأً المفتاحُ لا يُسأل شيء
         if hourly_terms.prepay != "wallet":
             await unconfirmed_payments.require_cash_allowed(session, rider)
-    quote = await pricing.estimate(
-        session,
-        country_code=rider.country_code,
+    # **السعرُ المثبَّت** (SPEC §٨٨/١) — «اشحن مبلغ الرحلة الآن» ثبّت التقديرَ عشرَ دقائق: **بالتفاصيل نفسِها وفي مهلته يُؤخذ كما
+    # حسبته الخلفية**، وما خالفها أو انتهت مهلتُه يُسعَّر من جديد كما كان. والمعرّفُ مفتاحٌ لا مبلغ
+    from app.core.redis_client import get_redis_client
+    from app.services import price_lock
+
+    lock_params = price_lock.digest(
         vehicle_category=vehicle_category,
-        pickup=pickup,
-        dropoff=dropoff,
-        stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
+        pickup=(pickup.lat, pickup.lng),
+        dropoff=(dropoff.lat, dropoff.lng),
+        stops=[(stop.lat, stop.lng) for stop in stops],
         parcel=prepared_parcel is not None,
         parcel_fetch=prepared_parcel is not None and prepared_parcel.fetch,
-        hourly=hourly_terms,
+        hourly_hours=hourly.hours if hourly is not None else None,
     )
+    quote = await price_lock.take(get_redis_client(), rider_id=rider.id, quote_id=quote_id, params=lock_params)
+    if quote is None:
+        quote = await pricing.estimate(
+            session,
+            country_code=rider.country_code,
+            vehicle_category=vehicle_category,
+            pickup=pickup,
+            dropoff=dropoff,
+            stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
+            parcel=prepared_parcel is not None,
+            parcel_fetch=prepared_parcel is not None and prepared_parcel.fetch,
+            hourly=hourly_terms,
+        )
     # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
     rule = await pricing.get_rule(session, rider.country_code, vehicle_category)
 

@@ -19,10 +19,11 @@
  * «عرض المزيد» · بابُ «طلبات السحب».
  */
 
+import { openReceiptUrl } from "@/lib/receipt";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { cancelPaymentRequest, listMyPaymentRequests, resumePaymentCheckout } from "@/api/endpoints";
+import { cancelPaymentRequest, listMyPaymentRequests, resumePaymentCheckout, receiptLink } from "@/api/endpoints";
 import type { Earnings, MyPaymentRequest, WalletTransactionType } from "@/api/types";
 import { WithdrawSheet } from "@/components/WithdrawSheet";
 import { Spinner } from "@/components/ui/Feedback";
@@ -476,6 +477,15 @@ export function WalletT2Screen() {
                       <span className={request.status === "approved" ? "t2-chip ok" : "t2-chip"}>
                         {phaseLabel(request) ?? PAYMENT_REQUEST_STATUS_LABEL[request.status]}
                       </span>
+                      {request.status === "approved" || request.status === "refunded" ? (
+                        <button
+                          type="button"
+                          className="t2-pr-cancel"
+                          onClick={() => void receiptLink(request.id).then(({ url }) => openReceiptUrl(url)).catch(() => undefined)}
+                        >
+                          {tr("الإيصال")}
+                        </button>
+                      ) : null}
                       {awaiting ? (
                         <button
                           type="button"

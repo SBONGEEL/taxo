@@ -230,6 +230,8 @@ export const estimateRide = (payload: {
   /** **تقديرُ ساعات** (§٦٣-ج/٥) — السعرُ «الساعات × سعرها» بلا نداء مسار، والوجهةُ نقطةُ الانطلاق إن لم تُختر. وغيابُه رحلةٌ
    *  عاديّة — **وسعرُ الساعة وكيلومتراتُها وسقفُها يصلان في كلِّ تقديرٍ على أيِّ حال**. */
   hourly_hours?: number;
+  /** **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — يثبّت هذا التقديرَ عشرَ دقائق ويعيد معرّفَه وما ينقص المحفظة */
+  lock_price?: boolean;
 }) => api.post<RideEstimate>("/rides/estimate", payload);
 
 export const requestRide = (payload: {
@@ -264,6 +266,8 @@ export const requestRide = (payload: {
    *  **تُرسل حيث `unconfirmed_payments_enabled` مشتعلٌ وحدَه** فلا يتغيّر طلبُ سوقٍ مطفأ. ورفضُها يصل برسالته: قناةٌ مطفأة
    *  (`feature_disabled`) · دافعٌ لا يطابقها (`payer_method_mismatch`) · **كاشٌ موقوفٌ لحسابه** (`cash_channel_off`). */
   payment_method?: PaymentMethod;
+  /** **معرّفُ السعر المثبَّت** (§٨٨/١) — مفتاحٌ لا مبلغ: يُؤخذ السعرُ المحفوظُ إن طابقت التفاصيلُ وفي مهلته */
+  quote_id?: string;
 }) => api.post<Ride>("/rides", payload);
 
 /** **«ادفع الساعاتِ نقداً بدل المحفظة» وعكسُه** (§٦٣-ج/٥) — قبل البدء وحدَه؛ وبعده ٤٠٩ برسالته. **والبابُ للراكب صاحب الرحلة**
@@ -894,3 +898,7 @@ export const resumePaymentCheckout = (requestId: string) =>
 
 /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
 export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });
+
+/** **رابطُ إيصال PDF** (SPEC §٨٨/٢) — خمسُ دقائقَ ومرّةً واحدة؛ ولدفعةٍ معتمدةٍ وحدَها (وغيرُها ٤٢٢ برسالته). */
+export const receiptLink = (requestId: string) =>
+  api.post<{ url: string; expires_in: number }>(`/payment-requests/${requestId}/receipt-link`, {});

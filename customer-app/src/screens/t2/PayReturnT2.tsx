@@ -5,6 +5,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { readPendingRide } from "@/lib/ride-topup";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -56,6 +58,11 @@ export function PayReturnT2Screen() {
       const row = await refreshPaymentRequest(requestId);
       setRequest(row);
       setError(null);
+      // **طلبُ رحلةٍ ينتظر هذا الشحن** (§٨٨/١) — الرئيسيةُ ترسله بسعره المثبَّت حين يغطّيه الرصيد
+      if (row.status === "approved" && readPendingRide()) {
+        navigate("/", { replace: true });
+        return;
+      }
       if (row.status === "approved" && !announced.current) {
         announced.current = true;
         play("topup");

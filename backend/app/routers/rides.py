@@ -185,7 +185,32 @@ async def estimate_ride(
             rounding.rounded(pricing.round_money(shared[1] + quote.captain_fees, quote.currency), policy),
         )
     await _remember_priced(redis, rider.id, rounding.rounded(quote.fare, policy), quote.fare)
+    # **«اشحن مبلغ الرحلة الآن»** (SPEC §٨٨/١) — التقديرُ نفسُه يُحفظ عشرَ دقائق، **وما ينقص المحفظةَ يُحسب هنا لا في التطبيق** (§١٤)
+    locked: dict = {}
+    if payload.lock_price:
+        from app.services import price_lock
+        from app.services import wallet as wallet_service
+
+        params = price_lock.digest(
+            vehicle_category=payload.vehicle_category,
+            pickup=(payload.pickup.lat, payload.pickup.lng),
+            dropoff=(payload.dropoff.lat, payload.dropoff.lng),
+            stops=[(stop.lat, stop.lng) for stop in payload.stops],
+            parcel=payload.is_parcel,
+            parcel_fetch=payload.is_parcel and payload.parcel_fetch,
+            hourly_hours=payload.hourly_hours,
+        )
+        quote_id, until = await price_lock.lock(redis, rider_id=rider.id, params=params, quote=quote)
+        balance = await wallet_service.balance_of(session, rider)
+        locked = {
+            "quote_id": quote_id,
+            "locked_until": until,
+            "wallet_shortfall": price_lock.shortfall(
+                rounding.rounded(quote.fare, policy), balance, policy.unit if policy.enabled else None, None
+            ),
+        }
     return RideEstimateOut(
+        **locked,
         share_discount=shared[0] if shared else None,
         share_fare=shared[1] if shared else None,
         country_code=quote.country_code,
@@ -249,6 +274,7 @@ async def request_ride(
         share_gender_confirmed=payload.share_gender_confirmed,
         widen_search=payload.widen_search,
         payment_method=payload.payment_method,
+        quote_id=payload.quote_id,
         passenger=(
             ride_for_other.PassengerRequest(
                 name=payload.for_other.name,
@@ -284,6 +310,11 @@ async def request_ride(
         ],
     )
     await session.commit()
+    # **السعرُ المثبَّتُ يُستهلك مرّةً واحدة** (SPEC §٨٨/١) — بعد أن صارت الرحلة
+    from app.core.redis_client import get_redis_client
+    from app.services import price_lock
+
+    await price_lock.release(get_redis_client(), rider_id=rider.id, quote_id=payload.quote_id)
     # قراءة جديدة: خطا العرض والطول محسوبان في القاعدة ولا يعودان مع INSERT
     body = _to_out(await rides_service.get_ride(session, ride.id))
     # التوزيع بعد الـ commit وحده (مهمته تقرأ الرحلة من جلسة أخرى) وبعد بناء

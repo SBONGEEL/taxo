@@ -17,7 +17,7 @@ import html
 
 import anyio
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app.core import storage
 from app.core.config import settings
@@ -290,6 +290,52 @@ async def resume_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSessi
     """**«أكمل الدفع»** (§٧٦-ع/٢) — صفحةُ الوسيط نفسُها لطلبي المعلَّق؛ وطلبُ غيري ٤٠٤. **لا يكتب شيئاً.**"""
     request, url = await payment_requests.resume_checkout(session, owner=user, request_id=request_id)
     return checkout_out(request, url)
+
+
+@router.post("/{request_id}/receipt-link")
+async def receipt_link(request_id: uuid.UUID, user: CurrentUser, session: DbSession, redis: RedisDep) -> dict:
+    """**رابطُ إيصال PDF لدفعتي المعتمدة** (SPEC §٨٨/٢) — خمسُ دقائقَ ومرّةً واحدة، ويُفتح في المتصفّح؛ وطلبُ غيري ٤٠٤."""
+    from app.services import receipts
+
+    row = await payment_requests.get_request(session, request_id)
+    if row.user_id != user.id:
+        raise NotFound("طلبُ الدفع غيرُ موجود")
+    token = await receipts.issue_token(redis, owner=user, request=row)
+    return {
+        "url": f"{settings.public_api_base_url}{settings.api_v1_prefix}/payment-requests/receipt/{token}",
+        "expires_in": receipts.TOKEN_TTL_SECONDS,
+    }
+
+
+@router.get("/receipt/{token}")
+async def receipt_pdf(token: str, session: DbSession, redis: RedisDep) -> Response:
+    """**الإيصالُ نفسُه** — الرمزُ هو الصلاحية (يُحذف عند أوّل استعمال)، والطلبُ لصاحب الرمز وحدَه."""
+    from app.models.subscription import SubscriptionPlan
+    from app.models.user import User
+    from app.services import receipts, stats
+
+    taken = await receipts.take_token(redis, token)
+    if taken is None:
+        raise NotFound("انتهت صلاحية الرابط أو استُعمل")
+    owner_id, request_id = taken
+    row = await payment_requests.get_request(session, uuid.UUID(request_id))
+    owner = await session.get(User, uuid.UUID(owner_id))
+    if owner is None or row.user_id != owner.id:
+        raise NotFound("طلبُ الدفع غيرُ موجود")
+    receipts.require_receiptable(row)
+    plan = await session.get(SubscriptionPlan, row.plan_id) if row.plan_id else None
+    zone = await stats._zone(session, row.country_code)
+    pdf = await anyio.to_thread.run_sync(
+        lambda: receipts.render(
+            row, owner=owner, plan_name=plan.name if plan else None, zone=zone, ref=payment_requests.public_ref(row.id)
+        )
+    )
+    name = f"taxo-receipt-{payment_requests.public_ref(row.id)}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"},
+    )
 
 
 @router.post("/{request_id}/refresh", response_model=MyPaymentRequestOut)
