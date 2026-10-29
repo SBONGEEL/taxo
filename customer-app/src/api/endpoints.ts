@@ -635,6 +635,11 @@ export const startHandoff = () =>
   });
 
 /** يبادل الرمزَ بجلسةٍ في هذا التطبيق — بلا كلمةِ مرورٍ ولا رمزِ تحقق. */
+/** **إضافةُ ملفّ هذا التطبيق إلى الحساب نفسِه** (SPEC §21.6، أمرُ المالك ٢٠٢٦-١٠-٢٩) — رمزٌ أصدره `POST /auth/login` بعد كلمة المرور
+ *  (`role_can_be_added`)، مرّةً ولهذا التطبيق. **الرقمُ نفسُه راكباً وكبتناً، والمحفظتان منفصلتان.** */
+export const enrollRole = (token: string) =>
+  api.post<AuthResponse>("/auth/enroll", { token, app: CLIENT_APP }, { anonymous: true });
+
 export const exchangeHandoff = (token: string) =>
   api.post<AuthResponse>(
     "/auth/handoff/exchange",

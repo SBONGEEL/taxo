@@ -884,6 +884,13 @@ export const blockUser = (userId: string, reason: string) =>
 export const unblockUser = (userId: string, reason?: string) =>
   api.post<User>(`/admin/users/${userId}/unblock`, { reason: reason ?? null });
 
+/** **حظرُ دور الراكب وحدَه** (SPEC §21.6، `0134`) — لمن يحمل الدورين: يبقى كبتناً يعمل. وحظرُ الكبتن وحدَه إيقافُ صفِّه، وحظرُ الشخص كلِّه `blockUser`. */
+export const blockRiderRole = (userId: string, reason: string) =>
+  api.post<User>(`/admin/users/${userId}/rider-block`, { reason });
+
+export const unblockRiderRole = (userId: string) =>
+  api.post<User>(`/admin/users/${userId}/rider-unblock`, { reason: null });
+
 // ---------------------------------------------------- محفظةُ حسابٍ بعينه
 
 /** **والجانبُ يُعلَن** (§46٫٦): حسابٌ يحمل الدورين يرتدّ

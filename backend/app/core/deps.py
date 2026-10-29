@@ -115,6 +115,9 @@ def require_roles(
         # تُوقّع مرةً تبقى صادقةً بعد سحب الدور حتى تنتهي صلاحيتُها.
         if not user.has_role(*roles):
             raise PermissionDenied()
+        # **دورُ الراكب محظورٌ وحدَه** (الترحيلة `0134`، SPEC §21.6): بابٌ لا يقبل إلا الراكبَ يُغلق عليه، وبابُ الكبتن مفتوح
+        if roles == (UserRole.RIDER,) and user.rider_blocked_at is not None:
+            raise PermissionDenied("حسابُ الراكب موقوفٌ — تواصل مع الدعم")
         if enforce_two_factor and user.has_role(*_STAFF_ROLES):
             from app.services import security_settings
 

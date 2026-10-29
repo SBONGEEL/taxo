@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import SessionLocal
 from app.core.exceptions import NotFound, RideOfferExpired
 from app.core.redis_client import get_redis_client
+from app.models.device import DeviceToken
 from app.models.driver import Driver
 from app.models.enums import (
     CountryCode,
@@ -371,6 +372,7 @@ async def _eligible_levels(
     airport: bool = False,
     test: bool = False,
     country: CountryCode | None = None,
+    rider_user_id: uuid.UUID | None = None,
 ) -> dict[uuid.UUID, int]:
     """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن — **ومستواه معه**.
 
@@ -442,6 +444,17 @@ async def _eligible_levels(
         subscribed,
         ~busy,
     ]
+    # **لا يُطابَق الشخصُ مع نفسه** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6): حسابٌ بالدورين لا يأخذ رحلتَه هو — **بالحساب، وبأيِّ
+    # جهازٍ سجّله الحسابان معاً** (`device_tokens.device_id`). وحدُّه مكتوب: معرّفُ الجهاز عشوائيٌّ لكلِّ تثبيت، فتطبيقا الراكب
+    # والكبتن على هاتفٍ واحدٍ بحسابين مختلفين لا يتطابقان به
+    if rider_user_id is not None:
+        conditions.append(Driver.user_id != rider_user_id)
+        rider_devices = select(DeviceToken.device_id).where(DeviceToken.user_id == rider_user_id)
+        conditions.append(
+            ~select(DeviceToken.id)
+            .where(DeviceToken.user_id == Driver.user_id, DeviceToken.device_id.in_(rider_devices))
+            .exists()
+        )
     # **«طلبات المطار» يُشعلها الكبتنُ بنفسه** (§٦٣-ج/٢): رحلةٌ تحمل مرفقاً لا تُعرض على من لم يُشعلها
     if airport:
         conditions.append(Driver.accepts_airport.is_(True))
@@ -548,6 +561,7 @@ async def _ranked_candidates(
             # **عالمُ راكبِ الرحلة** (§٦٥-ج)
             test=test,
             country=ride.country_code,
+            rider_user_id=ride.rider_id,
         )
         ranked = [p for p in presences if p.driver_id in levels]
         if not ranked:

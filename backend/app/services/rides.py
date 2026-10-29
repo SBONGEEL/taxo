@@ -770,6 +770,9 @@ async def _take(
     rider_is_test = await session.scalar(select(User.is_test).where(User.id == ride.rider_id))
     if bool(rider_is_test) != driver_user.is_test:
         raise NotFound("الرحلة غير موجودة")
+    # **ولا يأخذ رحلتَه هو** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6) — حارسٌ ثانٍ تحت القفل كالذي فوقه، والأوّلُ في `_eligible_levels`
+    if ride.rider_id == driver.user_id:
+        raise PermissionDenied("لا تأخذ رحلةً طلبتَها أنت")
 
     # **رحلةُ الحجز المضمون تُنشأ `requested` وتُسند فوراً** — فتمرّ بـ`searching` كما تمرّ كلُّ رحلةٍ قُبلت، بلا انتقالٍ جديد
     if reserved and ride.status is RideStatus.REQUESTED:

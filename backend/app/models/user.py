@@ -69,6 +69,10 @@ class User(UUIDMixin, TimestampMixin, Base):
         pg_enum(CountryCode, "country_code"), nullable=False
     )
     is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: **حظرُ دور الراكب وحدَه** (الترحيلة `0134`، SPEC §21.6) — الرقمُ نفسُه كبتنٌ أيضاً، وحظرُ الراكب لا يحظر الكبتن؛
+    #: وحظرُ الكبتن وحدَه `drivers.status` موقوف، وحظرُ الشخص كلِّه `is_blocked`
+    rider_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rider_block_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # ## **حسابُ تجربةٍ على الإنتاج** (SPEC §٦٥-ج، الترحيلة `0101`)
     #
     # **راكبٌ واحدٌ وكبتنٌ واحد يبقيان للاختبارات القادمة** — و`True` هنا تعني

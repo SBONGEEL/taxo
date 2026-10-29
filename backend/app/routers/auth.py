@@ -38,6 +38,7 @@ from app.core.exceptions import (
     InvalidToken,
     NotFound,
     RateLimited,
+    RoleCanBeAdded,
     TotpEnforcementActive,
 )
 from app.core.email import normalize_email
@@ -83,6 +84,7 @@ from app.services import (
     rides as rides_service,
     notifications,
     otp,
+    role_enrollment,
     security_settings,
     token_service,
     totp,
@@ -473,7 +475,18 @@ async def login(
     # **بعد كلمة المرور لا قبلها**: «هذا حسابُ كبتن» جوابٌ عن الحساب، فلا
     # يُقال إلا لمن أثبت أنه صاحبُه — نفسُ ترتيبِ العامل الثاني فوق. وقبل
     # التحدي أيضاً: تحدٍّ يُفتح لبابٍ سيُغلق عملٌ لا ينتهي إلى شيء
-    app_scope.guard(user.roles, payload.app)
+    try:
+        app_scope.guard(user.roles, payload.app)
+    except app_scope.WrongAppForRole:
+        # **راكبٌ في تطبيق الكبتن أو العكس** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6): كلمتُه صحيحةٌ فيُعرض عليه أن يضيف الملفَّ
+        # إلى حسابه نفسِه برمزٍ يُصرف في `POST /auth/enroll`. **وحسابٌ بعاملٍ ثانٍ لا يُعرض عليه هنا** — كلمةُ المرور وحدَها
+        # لا تمنح ما يمنحه الدخولُ بعامليه، فيبقى رفضُه كما كان
+        if not role_enrollment.can_enroll(user, payload.app) or await totp.has_confirmed_factor(session, user.id):
+            raise
+        await rate_limit.reset(redis, identity)
+        token = await role_enrollment.issue(redis, user_id=user.id, app=payload.app)
+        raise RoleCanBeAdded(enroll_token=token, name=user.name) from None
+    role_enrollment.require_role_open(user, payload.app)
 
     await rate_limit.reset(redis, identity)
 
@@ -973,6 +986,26 @@ async def exchange_handoff(
     if user is None or user.is_blocked or user.deactivated_at is not None:
         raise InvalidToken("تعذّر التبديل — أعد الدخول")
 
+    app_scope.guard(user.roles, payload.app)
+    role_enrollment.require_role_open(user, payload.app)
+    tokens = await _issue(session, redis, user)
+    return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
+@router.post("/enroll", response_model=AuthResponse)
+async def enroll_role(payload: HandoffExchange, session: DbSession, redis: RedisDep) -> AuthResponse:
+    """يضيف دورَ هذا التطبيق إلى الحساب الذي أثبت كلمتَه للتوّ — **راكبٌ يصير كبتناً برقمه نفسِه** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6).
+
+    **والفحصُ يُعاد كاملاً** كالمبادلة: الحسابُ من القاعدة، والحظر، والدورُ المقابل. **وصفُّ كبتنٍ `pending`** يأخذه بعدها إلى
+    المستندات والمركبة والموافقة بمسارها القائم. **ولا مال**: لا قيدَ ولا تحويلَ بين المحفظتين.
+    """
+    user_id = await role_enrollment.consume(redis, token=payload.token, app=payload.app)
+    user = await session.get(User, user_id)
+    if user is None or user.is_blocked or user.deactivated_at is not None:
+        raise InvalidToken("تعذّرت إضافةُ الملف — أعد الدخول")
+    await role_enrollment.enroll(session, user=user, app=payload.app)
+    await session.commit()
+    await session.refresh(user)
     app_scope.guard(user.roles, payload.app)
     tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)

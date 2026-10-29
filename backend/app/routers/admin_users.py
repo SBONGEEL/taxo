@@ -326,6 +326,42 @@ async def unblock_user(
     )
 
 
+@router.post("/users/{user_id}/rider-block", response_model=UserOut)
+async def block_rider_role(
+    user_id: uuid.UUID, payload: UserBlockUpdate, admin: UsersManager, session: DbSession
+) -> UserOut:
+    """**حظرُ دور الراكب وحدَه** (الترحيلة `0134`، SPEC §21.6) — لمن يحمل الدورين: يبقى كبتناً يعمل. وحظرُ الكبتن وحدَه إيقافُ صفِّه
+    (`drivers`)، وحظرُ الشخص كلِّه `/block` — **ثلاثةُ أبوابٍ لثلاثة قرارات**، ولا يحظر أحدُها ما لا يسمّيه."""
+    if not (payload.reason or "").strip():
+        raise InvalidInput("سبب الحظر مطلوب")
+    return await _set_rider_blocked(session, user_id=user_id, blocked=True, admin=admin, reason=payload.reason)
+
+
+@router.post("/users/{user_id}/rider-unblock", response_model=UserOut)
+async def unblock_rider_role(
+    user_id: uuid.UUID, payload: UserBlockUpdate, admin: UsersManager, session: DbSession
+) -> UserOut:
+    return await _set_rider_blocked(session, user_id=user_id, blocked=False, admin=admin, reason=payload.reason)
+
+
+async def _set_rider_blocked(session, *, user_id: uuid.UUID, blocked: bool, admin: User, reason: str | None) -> UserOut:
+    """كـ`_set_blocked`: الصفُّ يُقفل قبل الكتابة، والقيدُ في المعاملة نفسِها."""
+    user = await session.get(User, user_id, with_for_update=True)
+    if user is None:
+        raise NotFound("الحساب غير موجود")
+    if not user.has_role(UserRole.RIDER):
+        raise InvalidInput("هذا الحسابُ ليس راكباً")
+    user.rider_blocked_at = datetime.now(UTC) if blocked else None
+    user.rider_block_reason = ((reason or "").strip()[:500] or None) if blocked else None
+    await audit.record(
+        session, actor=admin, action=AuditAction.UPDATE, entity_type="user", entity_id=user.id,
+        details={"rider_blocked": blocked, "reason": reason} if reason else {"rider_blocked": blocked},
+    )
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
+
+
 async def _set_blocked(
     session,
     *,

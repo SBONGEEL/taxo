@@ -10,6 +10,7 @@ from app.core.exceptions import (
     EmailAlreadyRegistered,
     InvalidInput,
     PhoneAlreadyRegistered,
+    PhoneHasOtherRole,
     PhoneScheduledForDeletion,
 )
 from app.models.driver import Driver
@@ -48,6 +49,13 @@ async def create_account(
         # **ولحسابٍ في مهلة الحذف طريقُه الدخولُ لا تسجيلٌ ثانٍ** (SPEC §59-ج)
         if existing.deletion_due_at is not None:
             raise PhoneScheduledForDeletion()
+        # **والرقمُ بالدور الآخر لا يُرفض «مسجّلاً»** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6): راكبٌ يسجّل في تطبيق الكبتن يُدلّ على
+        # الدخول بكلمته فيُضاف الملفُّ إلى حسابه نفسِه — **ولا يُنشأ حسابٌ ثانٍ برقمه أبداً**
+        wanted = UserRole(data.role)
+        if wanted in (UserRole.RIDER, UserRole.DRIVER) and not existing.has_role(wanted) and existing.has_role(
+            UserRole.DRIVER if wanted is UserRole.RIDER else UserRole.RIDER
+        ):
+            raise PhoneHasOtherRole()
         raise PhoneAlreadyRegistered()
 
     # **والبريدُ المُثبَتُ كذلك** — بلا حساسيةِ حالة، **وللمُثبَت وحدَه**:

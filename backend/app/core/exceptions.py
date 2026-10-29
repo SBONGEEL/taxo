@@ -211,6 +211,24 @@ class PhoneAlreadyRegistered(Conflict):
     message = "رقم الهاتف مسجّل مسبقاً"
 
 
+class PhoneHasOtherRole(Conflict):
+    """**الرقمُ لحسابٍ بالدور الآخر** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6) — والمخرجُ الدخولُ بكلمته فيُضاف الملفُّ إلى الحساب نفسِه.
+
+    **ورمزٌ غيرُ `phone_already_registered`**: ذاك يقول «لا تسجّل»، وهذا يقول «لا تسجّل حساباً ثانياً — أضِف الملفَّ إلى حسابك»،
+    فيفتح التطبيقُ شاشةَ الدخول بالرقم نفسِه."""
+
+    code = "phone_has_other_role"
+    message = "هذا الرقمُ مسجّلٌ لديك في التطبيق الآخر — سجّل الدخول بكلمة مرورك لتضيف هذا الملفَّ إلى حسابك نفسِه"
+
+
+class RoleCanBeAdded(AppError):
+    """**كلمةُ المرور صحيحةٌ والحسابُ بالدور الآخر** — 403 كـ`wrong_app_for_role`، ومعه `enroll_token` يُصرف في `POST /auth/enroll`."""
+
+    status_code = 403
+    code = "role_can_be_added"
+    message = "حسابُك مسجّلٌ في التطبيق الآخر — يمكنك إضافة هذا الملفّ إلى حسابك نفسِه برقمك"
+
+
 class PhoneScheduledForDeletion(Conflict):
     """**الرقمُ لحسابٍ في مهلة الحذف** (SPEC §59) — والمخرجُ الدخولُ لا تسجيلٌ ثانٍ.
 

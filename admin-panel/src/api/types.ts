@@ -31,6 +31,8 @@ export interface User {
   roles: UserRole[];
   country_code: CountryCode;
   is_blocked: boolean;
+  /** **حظرُ دور الراكب وحدَه** (SPEC §21.6، `0134`) — `null` مفتوح؛ والكبتنُ في الحساب نفسِه يبقى يعمل. */
+  rider_blocked_at?: string | null;
   /** **حسابُ تجربة** (SPEC §٦٥-ج) — قراءةٌ وحدَها: تُرسم به شارةُ «حساب تجربة»، ولا بابَ في اللوحة يكتبه. */
   is_test: boolean;
   phone_verified: boolean;

@@ -347,6 +347,9 @@ async def book(
     # الرحلة غير المتاحة** فلا يُعرف منه أن وراءها حسابَ تجربة
     if await test_accounts.is_test_driver(session, trip.driver_id) != rider.is_test:
         raise Conflict("الرحلةُ ليست متاحةً للحجز")
+    # **ولا مقعدَ في رحلته هو** (SPEC §21.6) — حسابٌ بالدورين لا يكون راكبَ الرحلة وكبتنَها
+    if await session.scalar(select(Driver.user_id).where(Driver.id == trip.driver_id)) == rider.id:
+        raise Conflict("الرحلةُ ليست متاحةً للحجز")
     taken = await booked_seats(session, trip.id)
     if whole_car:
         if taken > 0:

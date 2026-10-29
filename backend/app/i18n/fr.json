@@ -882,5 +882,13 @@
  "وصل دفعُك ويُعالَج — لا يُلغى": "Votre paiement a été reçu et est en cours de traitement — il ne peut pas être annulé",
  "لتدفع بالبطاقة أضف بريدك الإلكترونيّ — حدّث التطبيق من المتجر ليظهر لك حقلُه": "Pour payer par carte, ajoutez votre e-mail — mettez à jour l’application depuis le store pour voir le champ",
  "سدادُ المستحقّات في سوقك من صفحة الدفع: البطاقة الذهبية أو CIB، أو BaridiMob": "Dans votre pays, les dettes se règlent depuis la page de paiement : carte Edahabia ou CIB, ou BaridiMob",
- "بطاقة الذهبية أو CIB (SofizPay)": "Carte Edahabia ou CIB (SofizPay)"
+ "بطاقة الذهبية أو CIB (SofizPay)": "Carte Edahabia ou CIB (SofizPay)",
+ "هذا الرقمُ مسجّلٌ لديك في التطبيق الآخر — سجّل الدخول بكلمة مرورك لتضيف هذا الملفَّ إلى حسابك نفسِه": "Ce numéro est déjà inscrit dans l’autre application — connectez-vous avec votre mot de passe pour ajouter ce profil à votre même compte",
+ "حسابُك مسجّلٌ في التطبيق الآخر — يمكنك إضافة هذا الملفّ إلى حسابك نفسِه برقمك": "Votre compte est inscrit dans l’autre application — vous pouvez ajouter ce profil à votre même compte avec votre numéro",
+ "حسابُ الراكب موقوفٌ — تواصل مع الدعم": "Le compte passager est suspendu — contactez le support",
+ "لا تأخذ رحلةً طلبتَها أنت": "Vous ne pouvez pas prendre une course que vous avez demandée",
+ "انتهت مهلةُ إضافة الملف — سجّل الدخول مرّةً أخرى": "Le délai d’ajout du profil a expiré — reconnectez-vous",
+ "هذا الرمزُ لا يخصّ هذا التطبيق": "Ce code ne concerne pas cette application",
+ "لا يُضاف هذا الملفُّ إلى هذا الحساب": "Ce profil ne peut pas être ajouté à ce compte",
+ "تعذّرت إضافةُ الملف — أعد الدخول": "Impossible d’ajouter le profil — reconnectez-vous"
 }

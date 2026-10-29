@@ -1539,5 +1539,8 @@
  "يطلبه مزوّدُ الدفع بالبطاقة. نطلبه مرّةً ونحفظه في حسابك.": "Le prestataire de paiement par carte l’exige. Nous le demandons une seule fois et l’enregistrons dans votre compte.",
  "احفظ وتابع الدفع": "Enregistrer et continuer le paiement",
  "تعذّر حفظ البريد — أعد المحاولة": "Impossible d’enregistrer l’e-mail — réessayez",
- "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com"
+ "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com",
+ "رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.": "Votre numéro est inscrit dans l’autre application. Ajoutez ce profil à votre même compte — un seul numéro, et un portefeuille séparé pour chaque profil.",
+ "تعذّرت إضافة الملف — أعد المحاولة": "Impossible d’ajouter le profil — réessayez",
+ "أضف ملفّ الراكب إلى حسابي": "Ajouter le profil passager à mon compte"
 }

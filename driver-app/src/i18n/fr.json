@@ -1772,5 +1772,8 @@
  "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com",
  "سدّده من «سدّد الآن» بالبطاقة الذهبية أو CIB، أو بتحويل BaridiMob.": "Réglez-le via « Régler maintenant » par carte Edahabia ou CIB, ou par virement BaridiMob.",
  "تُفتح صفحة الدفع: البطاقة الذهبية أو CIB أوّلاً، ثم تحويل BaridiMob. يُخصم المبلغ من مستحقّاتك فور تأكيد الدفع، ويعود استقبال الطلبات حين تبلغ صفراً.": "La page de paiement s’ouvre : carte Edahabia ou CIB d’abord, puis virement BaridiMob. Le montant est déduit de vos dettes dès la confirmation du paiement, et la réception des courses reprend lorsqu’elles atteignent zéro.",
- "سدّد الآن": "Régler maintenant"
+ "سدّد الآن": "Régler maintenant",
+ "رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.": "Votre numéro est inscrit dans l’autre application. Ajoutez ce profil à votre même compte — un seul numéro, et un portefeuille séparé pour chaque profil.",
+ "تعذّرت إضافة الملف — أعد المحاولة": "Impossible d’ajouter le profil — réessayez",
+ "أضف ملفّ الكبتن إلى حسابي": "Ajouter le profil chauffeur à mon compte"
 }

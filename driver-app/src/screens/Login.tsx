@@ -19,7 +19,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { login } from "@/api/endpoints";
+import { enrollRole, login } from "@/api/endpoints";
 import { reopenWelcome } from "@/components/welcome/gate";
 import { biometryLabel } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
@@ -56,6 +56,8 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // **الرقمُ نفسُه في التطبيق الآخر** (SPEC §21.6): كلمةُ المرور صحيحة، والخلفيةُ تعرض إضافةَ هذا الملفّ إلى الحساب نفسِه برمز
+  const [offer, setOffer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
 
@@ -92,6 +94,10 @@ export function LoginScreen() {
       }
       signIn({ user: response.user, tokens: response.tokens });
     } catch (caught) {
+      if (caught instanceof ApiError && caught.code === "role_can_be_added" && typeof caught.extra.enroll_token === "string") {
+        setOffer(caught.extra.enroll_token);
+        return;
+      }
       if (caught instanceof ApiError) {
         const field = caught.field("field");
         const at = field === "phone" || field === "password" ? field : null;
@@ -100,6 +106,21 @@ export function LoginScreen() {
       } else {
         setFailure({ field: null, message: tr("تعذّر تسجيل الدخول — أعد المحاولة") });
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addProfile() {
+    if (!offer || busy) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      const added = await enrollRole(offer);
+      signIn({ user: added.user, tokens: added.tokens });
+    } catch (caught) {
+      setOffer(null);
+      setFailure({ field: null, message: caught instanceof ApiError ? caught.message : tr("تعذّرت إضافة الملف — أعد المحاولة") });
     } finally {
       setBusy(false);
     }
@@ -176,6 +197,16 @@ export function LoginScreen() {
           <Link to="/forgot-password" className="t2-auth-link t2-auth-forgot">
             {tr("نسيت كلمة المرور؟")}
           </Link>
+
+          {offer ? (
+            <div className="t2-auth-banner" role="status">
+              <Icon name="info" />
+              <span>{tr("رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.")}</span>
+              <button type="button" className="t2-tlink accent" onClick={() => void addProfile()} disabled={busy}>
+                {tr("أضف ملفّ الكبتن إلى حسابي")}
+              </button>
+            </div>
+          ) : null}
 
           {failure && failure.field === null ? (
             <div className="t2-auth-banner" role="alert">

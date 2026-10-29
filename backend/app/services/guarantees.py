@@ -247,6 +247,9 @@ async def accept(session: AsyncSession, *, booking_id: uuid.UUID, driver: Driver
     # **ولا يُقبل حجزٌ من غير عالمه** (SPEC §٦٥-ج) — القائمةُ تخفيه، وهذا يمنع من التفَّ عليها بمعرّف
     if await test_accounts.is_test_user(session, booking.rider_id) != user.is_test:
         raise NotFound("الحجز غير موجود")
+    # **ولا يأخذ حجزَه هو** (SPEC §21.6) — حسابٌ بالدورين لا يكون راكبَ الرحلة وكبتنَها
+    if booking.rider_id == user.id:
+        raise NotFound("الحجز غير موجود")
     if booking.status is not BookingStatus.PENDING or booking.scheduled_at <= _now():
         raise Conflict("انتهى هذا الحجز")
     if booking.driver_id is not None:

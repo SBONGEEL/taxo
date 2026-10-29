@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import {
+  blockRiderRole,
   blockUser,
   freezeWallet,
   getUser,
@@ -18,6 +19,7 @@ import {
   listRides,
   listWalletTransactions,
   notifyUser,
+  unblockRiderRole,
   unblockUser,
   unfreezeWallet,
   updateUserProfile,
@@ -120,6 +122,8 @@ export function AccountSection({
             {user.suspension ? (
               <Badge tone="warn">موقوفٌ بحملة تأكيد الأرقام</Badge>
             ) : null}
+            {/* **دورُ الراكب محظورٌ وحدَه** (SPEC §21.6) — والكبتنُ في الحساب نفسِه يعمل */}
+            {user.rider_blocked_at ? <Badge tone="danger">الراكبُ موقوف — الكبتنُ يعمل</Badge> : null}
             {/* **حسابُ تجربة** (SPEC §٦٥-ج) — وسمٌ يُقرأ ولا يُكتب من هنا */}
             <TestAccountBadge isTest={user.is_test} />
             {user.roles.map((role) => (
@@ -620,6 +624,20 @@ function Controls({
               احظر الحساب
             </Button>
           )}
+          {/* **حسابٌ بالدورين: حظرُ الراكب وحدَه** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6) — والكبتنُ يُوقف من صفحته، والشخصُ كلُّه بالزرّ فوق */}
+          {user.roles.includes("rider") && user.roles.includes("driver") && !user.is_blocked ? (
+            user.rider_blocked_at ? (
+              <Button size="sm" variant="secondary" disabled={busy}
+                onClick={() => void run(() => unblockRiderRole(user.id), "رُفع الإيقاف عن الراكب.")}>
+                ارفع إيقاف الراكب
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" disabled={busy || reason.trim().length < 3}
+                onClick={() => void run(() => blockRiderRole(user.id, reason.trim()), "أُوقف الراكبُ وحدَه — الكبتنُ يعمل.")}>
+                أوقف الراكب وحدَه
+              </Button>
+            )
+          ) : null}
           {/* **كانت النجمتان تُطبعان حرفاً** («**وهو غيرُ…**» نصٌّ في JSX لا Markdown) — صارتا وسماً */}
           <p className="ad-hint">
             الحظرُ يسري على الجلسة القائمة فوراً — العمودُ يُقرأ في كلِّ طلب.{" "}

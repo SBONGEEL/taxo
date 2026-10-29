@@ -57,6 +57,12 @@ async def test_every_app_and_self_signup_role_pair_is_decided(
     if role in _ROLES[app]:
         assert status == 200, body
         assert body["tokens"] is not None
+    elif app in (ClientApp.RIDER, ClientApp.DRIVER):
+        # **راكبٌ في تطبيق الكبتن أو العكس** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §21.6): لا يُرفض — يُعرض عليه إضافةُ الملفّ إلى
+        # حسابه نفسِه، **ولا جلسةَ قبل أن يقبل** (`POST /auth/enroll`)
+        assert status == 403, body
+        assert body["code"] == "role_can_be_added" and body["enroll_token"], body
+        assert "tokens" not in body
     else:
         assert status == 403, body
         assert body["code"] == "wrong_app_for_role"
