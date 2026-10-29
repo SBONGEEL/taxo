@@ -2,6 +2,8 @@ package ly.tajora.rider;
 
 import android.os.Bundle;
 
+import androidx.activity.EdgeToEdge;
+
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.BridgeActivity;
@@ -12,6 +14,9 @@ public class MainActivity extends BridgeActivity {
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);
+        // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
+        // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         // **لا سوادَ بين نافذة الإقلاع وأوّل رسمٍ للصفحة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦، قِيس على S21):
         // نافذةُ الإقلاع تزول عند أوّل إطارٍ للنشاط، **والويبُ لم يرسم بعد** — فكان يُرى سوادُه الافتراضيّ

@@ -2,6 +2,8 @@ package ly.tajora.admin;
 
 import android.os.Bundle;
 
+import androidx.activity.EdgeToEdge;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -12,6 +14,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AdminAlertsPlugin.class);
         // **قنواتُ الفئات قبل أوّل إشعار** (SPEC §٨١/١١): قناةٌ لم تُنشأ تُسقط الإشعارَ إلى الاحتياطية بلا صوتها
         AdminChannels.ensure(this);
+        // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
+        // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
     }
 

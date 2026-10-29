@@ -126,7 +126,7 @@ android {
             versionNameSuffix "-dev"
         }
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             // **يُسند صراحةً** — وبلا المتغيّرات يبقى `storeFile` فارغاً
             // فيسقط `assembleRelease` ويسمّي ما نقص.
