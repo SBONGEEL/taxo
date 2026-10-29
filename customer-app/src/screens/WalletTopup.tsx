@@ -18,7 +18,7 @@
  */
 
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -126,6 +126,12 @@ export function WalletTopupScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // **سوقٌ بنظام الدفع الموحّد** (الجزائر، SPEC §٨٥/٨): هذه شاشةُ كليك والبطاقةِ الأردنيّة — وكانت روابطُ «اشحن» في المشوار الثابت
+  // و«بين المدن» تنزل هنا بكليك ومبلغ ١٠ (قِيس ٢٠٢٦-١٠-٢٩). **فتُحوَّل إلى صفحة الدفع** بالمبلغ إن مُرِّر: SofizPay ثمّ BaridiMob
+  if (country?.features.payment_requests_enabled === true) {
+    return <Navigate to="/wallet/pay" replace state={handoff?.amount ? { amount: handoff.amount } : undefined} />;
   }
 
   return (
