@@ -13,6 +13,8 @@ from __future__ import annotations
 KNOWN_DATA_NAMES: tuple[str, ...] = (
     "بطاقة TAXO",
     "البطاقة الذهبية وCIB",
+    # **SofizPay** (§٨٥/٧) — اسمُ طريقته كما كتبه `scripts/sofizpay_go_live.py` على الإنتاج ٢٠٢٦-١٠-٢٩
+    "بطاقة الذهبية أو CIB (SofizPay)",
     "{0} — يومي",
     "{0} — أسبوعي",
     "{0} — شهري",
