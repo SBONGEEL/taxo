@@ -411,6 +411,23 @@ def upload(pkg: str, aab: str, name: str, notes_file: str) -> int:
             return 1
         vc = str(bundle["versionCode"])
         print(f"✓ الحزمةُ رُفعت: versionCode {vc} · {len(data)} بايت")
+        # **ملفُّ R8 في التعديل نفسِه** (قِيس ٢٠٢٦-١٠-٢٩): Play يرفضه بعد أن يُثبَّت الرمز («the Deobfuscation File can't be
+        # modified») — فإن لم يُرفع هنا بقيت أسطرُ أعطال هذا الإصدار مخفيّةَ الأسماء إلى الأبد. ومكانُه بجانب الحزمة في مخرجات gradle
+        mapping = pathlib.Path(aab).parents[2] / "mapping" / pathlib.Path(aab).parent.name / "mapping.txt"
+        if mapping.is_file():
+            req = urllib.request.Request(
+                f"https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/{pkg}/edits/{eid}/apks/{vc}/deobfuscationFiles/proguard?uploadType=media",
+                method="POST", data=mapping.read_bytes(),
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/octet-stream"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=300):
+                    print(f"✓ ملفُّ R8 رُفع: {mapping.stat().st_size} بايت")
+            except urllib.error.HTTPError as e:
+                print("✗ ملفُّ R8 —", e.code, (e.read() or b"")[:400].decode(errors="replace"))
+                return 1
+        else:
+            print("  · لا ملفَّ R8 بجانب الحزمة — أسطرُ الأعطال تبقى مخفيّةَ الأسماء")
         body = json.dumps({"track": TRACK, "releases": [{"name": name, "versionCodes": [vc], "status": "completed",
                                                           "releaseNotes": [{"language": k, "text": v} for k, v in notes.items()]}]}).encode()
         req = urllib.request.Request(f"{API}/{pkg}/edits/{eid}/tracks/{TRACK}", method="PUT", data=body,
