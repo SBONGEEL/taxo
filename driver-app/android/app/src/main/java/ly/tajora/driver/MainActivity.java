@@ -1,8 +1,10 @@
 package ly.tajora.driver;
 
+import android.graphics.Color;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.SystemBarStyle;
 
 import androidx.core.content.ContextCompat;
 
@@ -23,7 +25,9 @@ public class MainActivity extends BridgeActivity {
         // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`.
         // **وبعد `super` لا قبله** (قِيس على المحاكي ٢٠٢٦-١٠-٢٩): قبله يُنشئ النافذةَ بسمة الإقلاع قبل أن يضبط الجسرُ
         // سمةَ «بلا شريط»، **فيظهر شريطُ إجراءاتٍ باسم التطبيق فوق الصفحة**
-        EdgeToEdge.enable(this);
+        // **والأيقوناتُ فاتحةٌ دائماً** (قِيس على المحاكي ٢٠٢٦-١٠-٢٩): التطبيقُ ليليٌّ افتراضاً، والنمطُ التلقائيُّ يتبع وضعَ الهاتف —
+        // فهاتفٌ بالوضع الفاتح يرسم أيقوناتٍ داكنةً فوق خلفيةٍ داكنةٍ فلا تُرى الساعةُ ولا البطارية
+        EdgeToEdge.enable(this, SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT));
         // **لا سوادَ بين نافذة الإقلاع وأوّل رسمٍ للصفحة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦، قِيس على S21):
         // نافذةُ الإقلاع تزول عند أوّل إطارٍ للنشاط، **والويبُ لم يرسم بعد** — فكان يُرى سوادُه الافتراضيّ
         // في الوضع الليليّ (أبيضُه في النهاريّ) **٠٫٨–١٫٣ ثانيةً** بين لون الإقلاع وأوّل رسمٍ لـ`index.html`.
