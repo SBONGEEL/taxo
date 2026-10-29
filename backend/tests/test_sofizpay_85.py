@@ -228,3 +228,30 @@ async def test_an_allowlist_shows_and_opens_sofizpay_for_its_numbers_alone(
     assert await shown() and (await _open(client, rider["headers"], method_id)).status_code == 201
     await allow("")
     assert await shown()
+
+
+async def test_no_email_asks_for_it_once_writes_nothing_and_then_pays(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**البريدُ شرطُ SofizPay** (قِيس ٢٠٢٦-١٠-٢٩): بلا بريدٍ ⇒ `422 payment_email_required` ولا طلبَ ولا صفحة؛ ويضعه صاحبُه
+    (`PATCH /auth/me`، غيرَ مُثبَت) ⇒ تُفتح الصفحةُ ويصل البريدُ إلى الوسيط."""
+    from app.models.payment_request import PaymentRequest
+
+    await algeria_market(session_factory)
+    _, sofizpay = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    asked = await _open(client, rider["headers"], method_id)
+    assert asked.status_code == 422 and asked.json()["code"] == "payment_email_required"
+    assert asked.json()["field"] == "email" and sofizpay.created == []
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count()).select_from(PaymentRequest)) == 0
+    bad = await client.patch("/auth/me", json={"email": "not-an-email"}, headers=rider["headers"])
+    assert bad.status_code == 422
+    saved = await client.patch("/auth/me", json={"email": " Rider@Example.DZ "}, headers=rider["headers"])
+    assert saved.status_code == 200
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(rider["user"]["id"]))
+        assert user.email == "rider@example.dz" and user.email_verified_at is None
+    assert (await _open(client, rider["headers"], method_id)).status_code == 201
+    assert len(sofizpay.created) == 1

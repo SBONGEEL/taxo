@@ -1764,5 +1764,10 @@
  "افتح تطبيق TAXO": "Ouvrir l’application TAXO",
  "إن لم يُفتح: افتح التطبيق بنفسك، وستظهر لك النتيجة.": "S’il ne s’ouvre pas : ouvrez l’application vous-même, le résultat s’affichera.",
  "{0} متوقّفٌ مؤقّتاً — ادفع بإحدى الطرق أدناه.": "{0} est momentanément indisponible — payez avec l'un des moyens ci-dessous.",
- "الإيصال": "Reçu"
+ "الإيصال": "Reçu",
+ "بريدك الإلكتروني": "Votre e-mail",
+ "يطلبه مزوّدُ الدفع بالبطاقة. نطلبه مرّةً ونحفظه في حسابك.": "Le prestataire de paiement par carte l’exige. Nous le demandons une seule fois et l’enregistrons dans votre compte.",
+ "احفظ وتابع الدفع": "Enregistrer et continuer le paiement",
+ "تعذّر حفظ البريد — أعد المحاولة": "Impossible d’enregistrer l’e-mail — réessayez",
+ "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com"
 }

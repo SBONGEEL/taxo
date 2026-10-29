@@ -90,6 +90,9 @@ class SofizPayGateway:
     name = "sofizpay"
     #: **إشعارُه بلا توقيعٍ موثَّق** — فالفحصُ المباشرُ يحسم كما بُني (§٧٣-هـ المرحلة ٣)
     confirms_by_webhook = False
+    #: **البريدُ شرطٌ عند SofizPay** (قِيس ٢٠٢٦-١٠-٢٩ بالتجربة والحيّ: بلا بريدٍ أو فارغاً ⇒ `400 «Full name, phone, and email are
+    #: required»`) — فيُسأل صاحبُ الحساب عنه **قبل** أن يُكتب طلب (`payment_requests.EmailRequired`)، ولا يُخترع بريد
+    requires_email = True
 
     def __init__(
         self, *, account: str, sandbox: bool, fallback_only: bool = False, allowlist: frozenset[str] = frozenset()

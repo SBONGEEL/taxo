@@ -102,6 +102,14 @@ class TestModeOnly(AppError):
     message = "هذه الطريقةُ في وضع التجربة — لحسابات التجربة وحدَها"
 
 
+class EmailRequired(AppError):
+    """**وسيطٌ يشترط البريد وحسابُ الدافع بلا بريد** (SofizPay، §٨٥/٦) — `422` باسمه فيعرض التطبيقُ حقلَ البريد مرّةً، **ولا طلبَ يُكتب**."""
+
+    status_code = 422
+    code = "payment_email_required"
+    message = "أضف بريدك الإلكترونيّ لتدفع بالبطاقة — يُطلب مرّةً ويُحفظ في حسابك"
+
+
 def require_test_account(owner: User) -> None:
     if not owner.is_test:
         raise TestModeOnly()
@@ -703,6 +711,8 @@ async def start_checkout(
     if not payment_gateways.allowed_for(gateway, owner.phone):
         # **ما لا يُعرض لا يُفتح** — كعقدٍ غائب
         raise payment_gateways.GatewayUnavailable()
+    if getattr(gateway, "requires_email", False) and not owner.email:
+        raise EmailRequired("أضف بريدك الإلكترونيّ لتدفع بالبطاقة — يُطلب مرّةً ويُحفظ في حسابك", field="email")
     prepared = await _prepare(
         session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
         declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),

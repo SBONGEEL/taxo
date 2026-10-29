@@ -35,17 +35,17 @@ MARK_AR = "الدفعُ عبر SofizPay"
 SECTION = {
     "ar": f"""{MARK_AR}
 
-- حين تختار الدفعَ ببطاقة الذهبية أو CIB عبر SofizPay (مزوّدِ دفعٍ في الجزائر)، نرسل إليه مبلغَ الدفعة واسمَك ورقمَ هاتفك وبريدَك الإلكترونيّ — يشترطها لإنشاء الدفعة — ووصفاً عامّاً للعمليّة («TAXO شحن رصيد» أو «TAXO اشتراك»).
+- حين تختار الدفعَ ببطاقة الذهبية أو CIB عبر SofizPay (مزوّدِ دفعٍ في الجزائر)، نرسل إليه مبلغَ الدفعة واسمَك ورقمَ هاتفك وبريدَك الإلكترونيّ — يشترطها لإنشاء الدفعة، وإن لم يكن في حسابك بريدٌ طلبناه منك مرّةً وحفظناه في حسابك — ووصفاً عامّاً للعمليّة («TAXO شحن رصيد» أو «TAXO اشتراك»).
 - تُدخل بياناتِ بطاقتك في صفحة SofizPay أو صفحة SATIM/بريد الجزائر مباشرةً، لا في TAXO. ولا نرى رقمَ بطاقتك ولا رمزَها السرّيّ ولا نحفظهما.
 - نسأل SofizPay عن حال الدفعة ونحفظ مرجعَها، ولا يُضاف الرصيدُ إلى محفظتك ولا يُفعَّل اشتراكُك إلا بعد أن يؤكّد SofizPay الدفعةَ لحساب TAXO بمبلغها.""",
     "fr": """Paiement via SofizPay
 
-- Lorsque vous choisissez de payer par carte Edahabia ou CIB via SofizPay (prestataire de paiement en Algérie), nous lui transmettons le montant du paiement, votre nom, votre numéro de téléphone et votre e-mail — exigés pour créer le paiement — ainsi qu’une description générale de l’opération (« TAXO recharge » ou « TAXO abonnement »).
+- Lorsque vous choisissez de payer par carte Edahabia ou CIB via SofizPay (prestataire de paiement en Algérie), nous lui transmettons le montant du paiement, votre nom, votre numéro de téléphone et votre e-mail — exigés pour créer le paiement ; si votre compte n’a pas d’e-mail, nous vous le demandons une seule fois et l’enregistrons dans votre compte — ainsi qu’une description générale de l’opération (« TAXO recharge » ou « TAXO abonnement »).
 - Vous saisissez les données de votre carte directement sur la page de SofizPay ou celle de SATIM/Algérie Poste, pas dans TAXO. Nous ne voyons ni ne conservons votre numéro de carte ni son code.
 - Nous interrogeons SofizPay sur l’état du paiement et conservons sa référence ; votre solde n’est crédité et votre abonnement n’est activé qu’après la confirmation par SofizPay du paiement vers le compte de TAXO, pour son montant.""",
     "en": """Payment through SofizPay
 
-- When you choose to pay by Edahabia or CIB card through SofizPay (a payment provider in Algeria), we send it the payment amount, your name, phone number and email — required to create the payment — and a generic description of the operation ("TAXO top-up" or "TAXO subscription").
+- When you choose to pay by Edahabia or CIB card through SofizPay (a payment provider in Algeria), we send it the payment amount, your name, phone number and email — required to create the payment; if your account has no email, we ask you for it once and save it to your account — and a generic description of the operation ("TAXO top-up" or "TAXO subscription").
 - You enter your card details directly on SofizPay's page or SATIM/Algérie Poste's page, not in TAXO. We never see or store your card number or its code.
 - We ask SofizPay for the payment status and keep its reference; your balance is credited and your subscription activated only after SofizPay confirms the payment to TAXO's account, for its amount.""",
 }

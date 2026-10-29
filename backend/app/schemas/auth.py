@@ -94,6 +94,8 @@ class ProfileUpdate(BaseModel):
     ride_gender_preference: GenderPreference | None = None
     # **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — من إعدادات التطبيق
     language: Literal["ar", "fr"] | None = None
+    #: **بريدٌ للتواصل يضعه صاحبُه** (§٨٥/٦: SofizPay يشترطه للدفع) — **غيرُ مُثبَت** دائماً: لا يحجز ولا يصير قناةَ استرجاع حتى يُثبته
+    email: str | None = Field(default=None, max_length=320)
 
 
 class LoginRequest(BaseModel):

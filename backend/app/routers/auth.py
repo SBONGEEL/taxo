@@ -915,6 +915,14 @@ async def update_me(
         user.ride_gender_preference = payload.ride_gender_preference
     if payload.language is not None:
         user.language = payload.language
+    if payload.email is not None:
+        from app.core.email import normalize_email
+
+        email = normalize_email(payload.email)
+        if email != (user.email or ""):
+            # **عنوانٌ جديدٌ غيرُ مُثبَت** — المُثبَتُ وحدَه يحجز ويصلح للاسترجاع (فهرسُ `uq_users_email_verified`)
+            user.email = email
+            user.email_verified_at = None
 
     await session.commit()
     await session.refresh(user)

@@ -943,6 +943,9 @@ export const resumePaymentCheckout = (requestId: string) =>
 /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
 export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });
 
+/** **بريدٌ للتواصل يضعه صاحبُه** — غيرُ مُثبَت؛ يشترطه مزوّدُ الدفع بالبطاقة في الجزائر (SPEC §٨٥/٦) */
+export const updateMyEmail = (email: string) => api.patch<User>("/auth/me", { email });
+
 // ------------------------------------------------------------ «أرسل ملاحظة» (SPEC §٧٦/٤)
 
 /** **ملاحظةٌ من المستخدم** — نصٌّ وصورةُ شاشةٍ اختياريّة، **ومعهما ما يلزم لقراءتها** (التطبيقُ والإصدارُ والمسار).

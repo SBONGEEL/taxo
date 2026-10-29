@@ -37,7 +37,9 @@ import {
   BARIDIMOB,
   BaridiMobDetails,
   GatewayDownNote,
+  PaymentEmailNote,
   SupportLine,
+  emailRequired,
   gatewayIsDown,
   newRequestId,
   publicRef,
@@ -83,6 +85,8 @@ export function PayRequestT2Screen() {
   const [clientId] = useState(newRequestId);
   const [transferDate, setTransferDate] = useState(todayIso);
   const [down, setDown] = useState(false);
+  // **البريدُ شرطُ الوسيط وحسابي بلا بريد** (§٨٥/٦) — حقلُه يظهر مرّةً ثمّ يتابع الدفع
+  const [needEmail, setNeedEmail] = useState(false);
 
   const currency = country?.currency;
   const unit = roundingUnit(country);
@@ -192,6 +196,7 @@ export function PayRequestT2Screen() {
       } catch (caught) {
         // **الوسيطُ متوقّف** (§٨٢-أ/١) — رسالتُه و«أعد المحاولة» والبديلُ، لا نصُّ خطأ
         if (gatewayIsDown(caught)) setDown(true);
+        else if (emailRequired(caught)) setNeedEmail(true);
         else setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
         setBusy(false);
       }
@@ -429,6 +434,14 @@ export function PayRequestT2Screen() {
           ) : null}
 
           <BannerT2 tone="danger" message={error} />
+          {needEmail ? (
+            <PaymentEmailNote
+              onSaved={() => {
+                setNeedEmail(false);
+                void submit();
+              }}
+            />
+          ) : null}
           {method?.gateway && (down || method.down) ? (
             <GatewayDownNote
               busy={busy}

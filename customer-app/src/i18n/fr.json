@@ -1534,5 +1534,10 @@
  "{0} متوقّفٌ مؤقّتاً — ادفع بإحدى الطرق أدناه.": "{0} est momentanément indisponible — payez avec l'un des moyens ci-dessous.",
  "اشحن مبلغ الرحلة الآن": "Recharger le montant de la course",
  "تعذّر تثبيتُ السعر": "Impossible de bloquer le prix",
- "الإيصال": "Reçu"
+ "الإيصال": "Reçu",
+ "بريدك الإلكتروني": "Votre e-mail",
+ "يطلبه مزوّدُ الدفع بالبطاقة. نطلبه مرّةً ونحفظه في حسابك.": "Le prestataire de paiement par carte l’exige. Nous le demandons une seule fois et l’enregistrons dans votre compte.",
+ "احفظ وتابع الدفع": "Enregistrer et continuer le paiement",
+ "تعذّر حفظ البريد — أعد المحاولة": "Impossible d’enregistrer l’e-mail — réessayez",
+ "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com"
 }

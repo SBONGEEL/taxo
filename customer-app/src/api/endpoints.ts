@@ -899,6 +899,9 @@ export const resumePaymentCheckout = (requestId: string) =>
 /** **لغةُ الحساب** (SPEC §٧٣-هـ المرحلة ٥) — بها تُكتب إشعاراتُه ورسائلُه؛ والتطبيقُ يرسل لغتَه في كلِّ طلبٍ أيضاً (`Accept-Language`). */
 export const updateMyLanguage = (language: "ar" | "fr") => api.patch<User>("/auth/me", { language });
 
+/** **بريدٌ للتواصل يضعه صاحبُه** — غيرُ مُثبَت؛ يشترطه مزوّدُ الدفع بالبطاقة في الجزائر (SPEC §٨٥/٦) */
+export const updateMyEmail = (email: string) => api.patch<User>("/auth/me", { email });
+
 /** **رابطُ إيصال PDF** (SPEC §٨٨/٢) — خمسُ دقائقَ ومرّةً واحدة؛ ولدفعةٍ معتمدةٍ وحدَها (وغيرُها ٤٢٢ برسالته). */
 export const receiptLink = (requestId: string) =>
   api.post<{ url: string; expires_in: number }>(`/payment-requests/${requestId}/receipt-link`, {});

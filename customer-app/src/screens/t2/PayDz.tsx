@@ -14,11 +14,64 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { updateMyEmail } from "@/api/endpoints";
 import type { MyPaymentRequest, PayMethod } from "@/api/types";
 import { tr } from "@/lib/i18n";
-import { Icon } from "@/taxo2";
+import { AuthInput, Icon } from "@/taxo2";
 
 import "./paydz.css";
+
+/** **البريدُ شرطُ مزوّد الدفع بالبطاقة** (SofizPay، SPEC §٨٥/٦ — قِيس ٢٠٢٦-١٠-٢٩: بلا بريدٍ يُرفض إنشاءُ الدفعة) — والخادمُ يقوله بـ
+ *  `payment_email_required` قبل أن يكتب طلباً */
+export function emailRequired(caught: unknown): boolean {
+  return caught instanceof ApiError && caught.code === "payment_email_required";
+}
+
+/** **يُطلب البريدُ مرّةً ويُحفظ في الحساب** (`PATCH /auth/me`) — ثمّ يتابع الدفعُ نفسُه؛ ومن في حسابه بريدٌ لا يرى هذا أبداً */
+export function PaymentEmailNote({ onSaved }: { onSaved: () => void }) {
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const shaped = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim());
+
+  async function save() {
+    if (!shaped) {
+      setProblem(tr("اكتب بريداً صحيحاً، مثل name@example.com"));
+      return;
+    }
+    setSaving(true);
+    setProblem(null);
+    try {
+      await updateMyEmail(email.trim());
+      onSaved();
+    } catch (caught) {
+      setProblem(caught instanceof ApiError ? caught.message : tr("تعذّر حفظ البريد — أعد المحاولة"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="t2-m-card t2-m-gap" aria-label={tr("بريدك الإلكتروني")}>
+      <span className="t2-m-label">{tr("بريدك الإلكتروني")}</span>
+      <p className="t2-m-hint">{tr("يطلبه مزوّدُ الدفع بالبطاقة. نطلبه مرّةً ونحفظه في حسابك.")}</p>
+      <AuthInput
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        dir="ltr"
+        value={email}
+        invalid={problem !== null}
+        onChange={(event) => setEmail(event.target.value)}
+        placeholder="name@example.com"
+      />
+      {problem ? <p className="t2-m-hint" role="alert">{problem}</p> : null}
+      <button type="button" className="t2-button primary t2-m-cta" disabled={saving || !email.trim()} onClick={() => void save()}>
+        {tr("احفظ وتابع الدفع")}
+      </button>
+    </section>
+  );
+}
 
 /** **معرّفُ طريقة BaridiMob** — كما في الخلفية (`services/transfers.CODE`) */
 export const BARIDIMOB = "baridimob";
