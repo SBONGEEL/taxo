@@ -108,6 +108,25 @@ async def test_three_failures_in_a_row_hide_the_method_and_only_the_owner_brings
     assert (await client.get("/payment-requests/methods", headers=rider["headers"])).json()["paused"] == []
 
 
+async def test_a_method_the_owner_hid_is_not_announced_as_temporarily_paused(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**إخفاءُ المالك قرارٌ لا عطل** (قِيس على الإنتاج ٢٠٢٦-١٠-٢٩): اللافتةُ قالت «الذهبية وCIB متوقّفٌ مؤقّتاً» فوق SofizPay القائم."""
+    await algeria_market(session_factory)
+    install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "chargily")
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    owner = await _owner(session_factory)
+    hidden = await client.post(
+        f"/admin/payment-methods/{method_id}/hide", json={"reason": "قرارُ المالك: يبقى مخفيّاً"}, headers=owner
+    )
+    assert hidden.status_code == 200, hidden.text
+    assert (await _method(session_factory, method_id)).hidden_auto is False
+    listed = (await client.get("/payment-requests/methods", headers=rider["headers"])).json()
+    assert all(m["id"] != str(method_id) for m in listed["methods"])
+    assert listed["paused"] == []
+
+
 async def test_a_success_breaks_the_streak(client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
     await algeria_market(session_factory)
     chargily, _ = install_transport(monkeypatch)

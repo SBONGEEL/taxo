@@ -148,7 +148,10 @@ def require_not_hidden(provider: PayMethod, *, enabling: bool) -> None:
 async def paused_names(
     session: AsyncSession, country: CountryCode, purpose: PaymentRequestPurpose
 ) -> list[str]:
-    """**لافتةُ الدافع** (§٨٧/١): أسماءُ طرق الوسيط المخفيّة في سوقه لهذا الغرض — فيرى أن البطاقةَ متوقّفةٌ مؤقّتاً ويختار بديلاً."""
+    """**لافتةُ الدافع** (§٨٧/١): أسماءُ طرق الوسيط **التي أخفاها القاطعُ** في سوقه لهذا الغرض — فيرى أن البطاقةَ متوقّفةٌ مؤقّتاً ويختار بديلاً.
+
+    **وما أخفاه المالكُ بيده لا يُعلَن «متوقّفاً مؤقّتاً»** (قِيس على الإنتاج ٢٠٢٦-١٠-٢٩): Chargily مخفيٌّ بقراره، فكانت اللافتةُ تقول
+    «الذهبية وCIB متوقّفٌ مؤقّتاً» **فوق** «بطاقة الذهبية أو CIB (SofizPay)» القائمة — جملةٌ تنفي ما تحتها. القرارُ ليس عطلاً."""
     column = PayMethod.for_subscription if purpose is PaymentRequestPurpose.SUBSCRIPTION else PayMethod.for_topup
     rows = (
         await session.scalars(
@@ -158,6 +161,7 @@ async def paused_names(
                 PayMethod.integration.is_not(None),
                 PayMethod.enabled.is_(False),
                 PayMethod.hidden_reason.is_not(None),
+                PayMethod.hidden_auto.is_(True),
                 column.is_(True),
             )
             .order_by(PayMethod.sort_order, PayMethod.name)
