@@ -73,7 +73,7 @@ async def main(mode: str) -> None:
         if method is None:
             method = PayMethod(
                 country_code=COUNTRY, kind=PaymentProviderKind.BANK_TRANSFER, code=METHOD_CODE, name=METHOD_NAME,
-                integration=METHOD_CODE, enabled=True, for_topup=True, for_subscription=True, fee_bearer="taxo", sort_order=1,
+                integration=METHOD_CODE, enabled=True, for_topup=True, for_subscription=True, fee_bearer="taxo", sort_order=0,
             )
             session.add(method)
             await session.flush()
@@ -81,6 +81,11 @@ async def main(mode: str) -> None:
         else:
             audit.apply_changes(method, {"enabled": True, "for_topup": True, "for_subscription": True})
             action = AuditAction.UPDATE
+        # **SofizPay أوّلاً** (أمرُ المالك ٢٠٢٦-١٠-٢٩): ثمّ BaridiMob ثمّ الكاشُ حيث يُسمح — قبل كلِّ طريقةٍ أخرى في السوق
+        others = (await session.scalars(
+            select(PayMethod.sort_order).where(PayMethod.country_code == COUNTRY, PayMethod.id != method.id)
+        )).all()
+        method.sort_order = min(others, default=1) - 1
         await audit.record(
             session, actor=None, action=action, entity_type="payment_provider", entity_id=method.id,
             details={"script": "sofizpay_go_live", "mode": mode, "integration": METHOD_CODE, "country_code": COUNTRY.value,
