@@ -34,6 +34,7 @@ import httpx
 
 from app.models.enums import PaymentRequestStatus
 from app.services import payment_gateways as base
+from app.services import payment_reasons as reasons
 from app.services.providers import credentials as credentials_service
 
 BASE = "https://sofizpay.com"
@@ -90,12 +91,16 @@ class SofizPayGateway:
     #: **إشعارُه بلا توقيعٍ موثَّق** — فالفحصُ المباشرُ يحسم كما بُني (§٧٣-هـ المرحلة ٣)
     confirms_by_webhook = False
 
-    def __init__(self, *, account: str, sandbox: bool, fallback_only: bool = False) -> None:
+    def __init__(
+        self, *, account: str, sandbox: bool, fallback_only: bool = False, allowlist: frozenset[str] = frozenset()
+    ) -> None:
         self.account = account
         self.sandbox = sandbox
         self.test_mode = sandbox
         #: **«بديلٌ حين يتوقّف Chargily»** (§٨٥/٢) — يُعرض للدافع حين يكون Chargily متوقّفاً وحدَه؛ وإلا فالاثنان معاً
         self.fallback_only = fallback_only
+        #: **قائمةُ السماح** (أمرُ المالك ٢٠٢٦-١٠-٢٩) — غيرُ فارغةٍ ⇐ لا يرى الطريقةَ ولا يفتح صفحتَها إلا من فيها (`allowed_for`)
+        self.allowlist = allowlist
 
     def _path(self, path: str) -> str:
         return f"/sandbox{path}" if self.sandbox else path
@@ -184,8 +189,18 @@ class SofizPayGateway:
                 amount = None
             return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED, amount=amount)
         if status == 6:
-            reason = body.get("respCode_desc") or body.get("errorMessage") or "رفض البنكُ الدفع"
-            return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason=str(reason)[:500])
+            # **السببُ من بيت الأسباب لا من البنك** (قِيس في وضع التجربة ٢٠٢٦-١٠-٢٩): `respCode_desc` فرنسيّةُ SATIM («Refusée») — كانت
+            # تُكتب كما هي فيقرؤها الراكبُ العربيّ بلغةٍ لا يطلبها؛ ونصُّ البنك يبقى في السجلّ لا في الشاشة
+            return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason=reasons.GATEWAY_FAILED)
+        if status == 3:
+            # **`3` حالٌ نهائيّةٌ لا «قيد الفحص»** (قِيس في وضع التجربة ٢٠٢٦-١٠-٢٩، ولم تذكره الوثائق): زرُّ «إلغاء» في صفحة الدفع
+            # (`respCode` ‏17) وبطاقةُ المهلة (‏68) كلاهما `orderStatus 3` — وكان يُترك معلّقاً حتى مهلتنا فيرى الدافعُ «ننتظر» لدفعةٍ ألغاها
+            expired = body.get("respCode") == "68"
+            return base.GatewayEvent(
+                external_id,
+                PaymentRequestStatus.CANCELLED,
+                reason=reasons.GATEWAY_EXPIRED if expired else reasons.GATEWAY_CANCELLED,
+            )
         return None
 
     def webhook_ids(self, headers: Mapping[str, str], body: bytes) -> list[str]:
@@ -212,4 +227,5 @@ def build_sofizpay(values: Mapping[str, Any]) -> SofizPayGateway:
         account=account,
         sandbox=credentials_service.is_on(values, "sandbox"),
         fallback_only=credentials_service.is_on(values, "fallback_only"),
+        allowlist=frozenset(p.strip() for p in str(values.get("allowlist") or "").replace("\n", ",").split(",") if p.strip()),
     )

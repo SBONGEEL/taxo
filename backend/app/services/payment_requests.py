@@ -700,6 +700,9 @@ async def start_checkout(
     from app.services import gateway_customers
 
     gateway = await payment_gateways.gateway_for(session, chosen.integration, owner.country_code)
+    if not payment_gateways.allowed_for(gateway, owner.phone):
+        # **ما لا يُعرض لا يُفتح** — كعقدٍ غائب
+        raise payment_gateways.GatewayUnavailable()
     prepared = await _prepare(
         session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
         declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),

@@ -141,6 +141,8 @@ async def list_methods(
             gateway = await payment_gateways.gateway_for(session, provider.integration, user.country_code)
         except payment_gateways.GatewayUnavailable:
             continue
+        if not payment_gateways.allowed_for(gateway, user.phone):
+            continue
         test_mode = bool(getattr(gateway, "test_mode", False))
         if test_mode != bool(user.is_test):
             continue

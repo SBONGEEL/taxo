@@ -168,3 +168,63 @@ async def test_the_health_probe_reads_a_missing_order_as_up(monkeypatch: pytest.
     sofizpay.down = True
     with pytest.raises(payment_gateways.GatewayDown):
         await gateway.health()
+
+
+@pytest.mark.parametrize(
+    ("answer", "status", "reason"),
+    [
+        # **بأجوبة وضع التجربة حرفاً** (قِيست ٢٠٢٦-١٠-٢٩ ببطاقات الوثائق): الرفضُ · زرُّ «إلغاء» · بطاقةُ المهلة
+        ({"orderStatus": 6, "respCode": "05", "respCode_desc": "Refusée"}, "rejected", "رفض الوسيطُ الدفع"),
+        ({"orderStatus": 3, "respCode": "17", "respCode_desc": "Annulée par l'utilisateur"}, "cancelled", "أُلغي الدفعُ عند الوسيط"),
+        ({"orderStatus": 3, "respCode": "68", "respCode_desc": "Délai dépassé"}, "cancelled", "انتهت صلاحيةُ صفحة الدفع عند الوسيط"),
+    ],
+)
+async def test_a_refusal_a_cancel_and_a_timeout_settle_with_our_words_and_credit_nothing(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, answer: dict, status: str, reason: str
+) -> None:
+    await algeria_market(session_factory)
+    _, sofizpay = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await _rider_with_email(client, session_factory)
+    opened = (await _open(client, rider["headers"], method_id)).json()
+    before = await _entries(session_factory)
+    sofizpay.check[opened["request"]["reference"]] |= answer
+    refreshed = (await client.post(f"/payment-requests/{opened['request']['id']}/refresh", headers=rider["headers"])).json()
+    assert refreshed["status"] == status
+    # **بلغة الطلب لا بفرنسيّة البنك** — والسببُ في أيِّ حقلٍ كُتب
+    said = refreshed.get("rejection_reason") or refreshed.get("cancel_reason") or refreshed.get("outcome_note")
+    assert said == reason, refreshed
+    assert await _entries(session_factory) == before and await balance(client, rider["headers"]) == "0"
+
+
+async def test_an_allowlist_shows_and_opens_sofizpay_for_its_numbers_alone(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**التشغيلُ الأوّلُ لقائمة** (أمرُ المالك ٢٠٢٦-١٠-٢٩): خارجُها لا يراها ولا يفتحها بمعرّفها؛ وفيها يفتحها؛ وفارغةٌ للجميع."""
+    from app.models.enums import CountryCode, ProviderKey
+    from app.services.providers import credentials as credentials_service
+
+    await algeria_market(session_factory)
+    install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await _rider_with_email(client, session_factory)
+
+    async def allow(numbers: str) -> None:
+        async with session_factory() as session:
+            await credentials_service.upsert(
+                session, provider_key=ProviderKey.SOFIZPAY, country_code=CountryCode.DZ, values={"allowlist": numbers}
+            )
+            await session.commit()
+
+    async def shown() -> bool:
+        methods = (await client.get("/payment-requests/methods", headers=rider["headers"])).json()["methods"]
+        return any(m["id"] == str(method_id) for m in methods)
+
+    await allow("+213500000001, +213500000002")
+    assert not await shown()
+    refused = await _open(client, rider["headers"], method_id)
+    assert refused.status_code == 503 and refused.json()["code"] == "payment_gateway_unavailable"
+    await allow("+213500000001,+213551234567")
+    assert await shown() and (await _open(client, rider["headers"], method_id)).status_code == 201
+    await allow("")
+    assert await shown()

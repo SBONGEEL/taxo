@@ -160,6 +160,13 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
 }
 
 
+def allowed_for(gateway: object, phone: str | None) -> bool:
+    """**قائمةُ سماح العقد** (أمرُ المالك ٢٠٢٦-١٠-٢٩) — فارغةٌ ⇐ للجميع؛ وإلا فلمن رقمُه فيها وحدَه. **تُسأل في العرض وفي الفتح معاً**:
+    طريقةٌ لا تُعرض لكنّها تُفتح بمعرّفها بابٌ مفتوحٌ لمن يجرّب المعرّفات."""
+    allow = getattr(gateway, "allowlist", frozenset())
+    return not allow or (phone or "") in allow
+
+
 def http_client(timeout: float = REQUEST_TIMEOUT_SECONDS) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, transport=http_transport)
 

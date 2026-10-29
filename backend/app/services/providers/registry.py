@@ -421,6 +421,13 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
                 secret=False,
                 required=False,
             ),
+            # **التشغيلُ الأوّلُ لقائمةٍ لا للعموم** (أمرُ المالك ٢٠٢٦-١٠-٢٩): أرقامٌ بصيغتها الدوليّة مفصولةٌ بفواصل — فارغٌ ⇐ للجميع
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ المستخدمين)",
+                secret=False,
+                required=False,
+            ),
             MOCK_FIELD,
         ),
         per_country=True,
