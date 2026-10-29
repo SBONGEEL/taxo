@@ -1246,6 +1246,9 @@ export interface DriverDebtState {
   ceiling: string | null;
   /** سبيلُ السداد — و`null` تعني «لم يُضبط بعد» فلا يُرسم حسابٌ فارغ. */
   cliq_alias: string | null;
+  /** **بأيِّ بابٍ يُسدَّد** (SPEC §٨٥/٨): `cliq` مطالبةُ كليك (الأردن)، و`topup` صفحةُ الدفع الموحّدة (الجزائر: SofizPay ثمّ BaridiMob) —
+   *  **والشحنُ المؤكَّدُ يسدّد الدَّينَ في معاملته** ويرفع المنعَ عند الصفر. قرارُ الخلفية لا الشاشة. */
+  pay_via: "cliq" | "topup";
   review_min_minutes: number;
   review_max_minutes: number;
   rows: DriverDebtRow[];

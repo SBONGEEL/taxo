@@ -65,6 +65,12 @@ export function DebtScreen() {
   }, [load]);
 
   const pay = async () => {
+    // **سوقٌ بنظام الدفع الموحّد** (الجزائر، SPEC §٨٥/٨): صفحةُ الدفع بالمبلغ نفسِه — SofizPay أوّلاً ثمّ BaridiMob — **وكليكُ لا يُعرض**؛
+    // والشحنُ المؤكَّدُ يسدّد الدَّينَ في معاملته ويرفع المنعَ عند الصفر
+    if (state?.pay_via === "topup") {
+      navigate("/wallet/pay", { state: { amount } });
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -149,7 +155,12 @@ export function DebtScreen() {
               <p className="t2-debt-alarm-body">
                 {tr("عليك")}{" "}{digits(state.total)} {currency}{" "}{tr("من عمولة رحلات قبضتَ أجرتها نقداً.")}
 
-                {state.cliq_alias ? (
+                {state.pay_via === "topup" ? (
+                  <>
+                    {" "}
+                    {tr("سدّده من «سدّد الآن» بالبطاقة الذهبية أو CIB، أو بتحويل BaridiMob.")}
+                  </>
+                ) : state.cliq_alias ? (
                   <>
                     {" "}
                     {tr("حوّل المبلغ بكليك إلى")}{" "}
@@ -217,20 +228,26 @@ export function DebtScreen() {
                     : ""}
                 </p>
               ) : null}
-              <p className="t2-fld-hint">
-                {tr("تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم يراجعها مشرف خلال")}{" "}
+              {state.pay_via === "topup" ? (
+                <p className="t2-fld-hint">
+                  {tr("تُفتح صفحة الدفع: البطاقة الذهبية أو CIB أوّلاً، ثم تحويل BaridiMob. يُخصم المبلغ من مستحقّاتك فور تأكيد الدفع، ويعود استقبال الطلبات حين تبلغ صفراً.")}
+                </p>
+              ) : (
+                <p className="t2-fld-hint">
+                  {tr("تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم يراجعها مشرف خلال")}{" "}
 {digits(String(state.review_min_minutes))}{" "}{tr("إلى")}{" "}
-                {digits(String(state.review_max_minutes))}{" "}{tr("دقائق.")}
-              </p>
+                  {digits(String(state.review_max_minutes))}{" "}{tr("دقائق.")}
+                </p>
+              )}
               <button
                 type="button"
                 className="t2-debt-cta"
                 onClick={() => void pay()}
-                disabled={busy || !state.cliq_alias || unitError !== null}
+                disabled={busy || (state.pay_via !== "topup" && !state.cliq_alias) || unitError !== null}
               >
-                {busy ? tr("جارٍ…") : tr("سدّد بكليك")}
+                {busy ? tr("جارٍ…") : state.pay_via === "topup" ? tr("سدّد الآن") : tr("سدّد بكليك")}
               </button>
-              {!state.cliq_alias ? (
+              {state.pay_via !== "topup" && !state.cliq_alias ? (
                 <p className="t2-debt-warn">
                   {tr("لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.")}
                 </p>

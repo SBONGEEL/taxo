@@ -167,7 +167,7 @@ async def _close(session: AsyncSession, debt: DriverDebt) -> None:
 
 
 async def collect_from_balance(
-    session: AsyncSession, *, driver: Driver, user: User
+    session: AsyncSession, *, driver: Driver, user: User, partial_key: str | None = None
 ) -> Decimal:
     """يحصّل ما يغطّيه رصيدُه **لحظةَ أن يدخل المال** — صفّاً كاملاً فأكمل.
 
@@ -176,6 +176,10 @@ async def collect_from_balance(
 
     **ويقرأ الرصيدَ كلَّه لا أجرَ هذه الرحلة وحدَها**: رصيدٌ قائمٌ ودَينٌ قائم
     «يريه مالاً لا يملكه» (قرارُ المالك) — فما دام الرصيدُ يغطّي صفّاً حُصِّل.
+
+    **و`partial_key`: شحنٌ يسدّد به الكبتنُ دَينَه** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §٨٥/٨) — «الجزئيُّ يُقبل ويُنقص» كـ`apply_settlement`:
+    ما بقي من رصيده بعد الصفوف الكاملة يُقتطع من أقدم صفٍّ لم يُغطَّ **جزءاً**، بمفتاحٍ هو الشحنُ نفسُه فلا يُقتطع مرّتين.
+    **والرحلةُ لا تمرّره** — تحصيلُها صفوفٌ كاملةٌ كما كان.
     """
     rows = await outstanding_rows(session, driver.id, for_update=True)
     if not rows:
@@ -193,6 +197,25 @@ async def collect_from_balance(
         if available < remaining:
             # **يتوقّف عند أول صفٍّ لا يغطّيه** — والأقدمُ أوّلاً، فلا يُقفز
             # فوق دَينٍ قديمٍ إلى أصغرَ منه
+            if partial_key is not None and available > 0:
+                part = as_money(available)
+                try:
+                    await wallet.record(
+                        session,
+                        owner=user,
+                        owner_type=WalletOwnerType.DRIVER,
+                        tx_type=WalletTransactionType.COMMISSION,
+                        amount=-part,
+                        ride_id=debt.ride_id,
+                        reference=_COLLECT_NOTE,
+                        idempotency_key=f"debt_part:{partial_key}",
+                    )
+                except InsufficientBalance:  # pragma: no cover - سباقٌ نادر
+                    logger.warning("تعذّر التحصيلُ الجزئيّ لدَين الكبتن %s", driver.id)
+                    break
+                debt.collected = as_money(debt.collected + part)
+                await session.flush()
+                taken += part
             break
         try:
             await wallet.record(

@@ -21,7 +21,7 @@ from app.core.deps import (
     RedisDep,
     RiderUser,
 )
-from app.core.exceptions import Conflict, PermissionDenied, PointsNotSaved, RateLimited
+from app.core.exceptions import Conflict, InvalidInput, PermissionDenied, PointsNotSaved, RateLimited
 from app.models.user import User
 from app.models.driver import DriverDocument
 from app.models.enums import DocumentType, FeatureKey
@@ -69,6 +69,7 @@ from app.services import (
     cliq_debts,
     debts as debts_service,
     notifications,
+    payment_requests as payment_requests_service,
     deactivation,
     documents as documents_service,
     drivers as drivers_service,
@@ -678,6 +679,7 @@ async def my_debt(
         ceiling=setting.driver_debt_ceiling if setting else None,
         # **`null` لا سلسلةٌ فارغة**: «لم يُضبط بعد» خبرٌ، والفارغةُ تُرسم حساباً
         cliq_alias=(setting.cliq_alias if setting else None) or None,
+        pay_via="topup" if await payment_requests_service.is_enabled(session, user.country_code) else "cliq",
         review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
         review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
         rows=[DriverDebtRowOut.model_validate(row) for row in rows],
@@ -692,6 +694,9 @@ async def pay_debt_with_cliq(
     session: DbSession,
 ) -> DebtClaimOut:
     """يفتح مطالبةَ سدادٍ بكليك — **والجزئيُّ مقبول**، ولا يتجاوز دَينَه."""
+    # **كليكُ أردنيّ** (أمرُ المالك ٢٠٢٦-١٠-٢٩): حيث نظامُ الدفع الموحّد مفعَّل يُسدَّد الدَّينُ من صفحته (`pay_via = topup`) لا من هنا
+    if await payment_requests_service.is_enabled(session, user.country_code):
+        raise InvalidInput("سدادُ المستحقّات في سوقك من صفحة الدفع: البطاقة الذهبية أو CIB، أو BaridiMob")
     order = await cliq_debts.start_payment(
         session, driver=driver, owner=user, amount=payload.amount
     )

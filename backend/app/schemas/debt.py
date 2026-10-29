@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,6 +52,9 @@ class DriverDebtStateOut(BaseModel):
     ceiling: Decimal | None = None
     #: **سبيلُ السداد** — حسابُ كليك للسوق، و`null` تعني «لم يُضبط بعد»
     cliq_alias: str | None = None
+    #: **بأيِّ بابٍ يُسدَّد** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §٨٥/٨): `cliq` مطالبةُ كليك (الأردن)، و`topup` صفحةُ الدفع الموحّدة حيث نظامُ
+    #: الدفع الجديد مفعَّل (الجزائر: SofizPay ثمّ BaridiMob ثمّ ما بعدهما) — **وشحنُ الكبتن يسدّد دَينَه في معاملته**. **وكليكُ لا يُعرض في الجزائر**
+    pay_via: Literal["cliq", "topup"] = "cliq"
     review_min_minutes: int
     review_max_minutes: int
     rows: list[DriverDebtRowOut]

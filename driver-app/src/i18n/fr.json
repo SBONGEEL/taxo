@@ -1769,5 +1769,8 @@
  "يطلبه مزوّدُ الدفع بالبطاقة. نطلبه مرّةً ونحفظه في حسابك.": "Le prestataire de paiement par carte l’exige. Nous le demandons une seule fois et l’enregistrons dans votre compte.",
  "احفظ وتابع الدفع": "Enregistrer et continuer le paiement",
  "تعذّر حفظ البريد — أعد المحاولة": "Impossible d’enregistrer l’e-mail — réessayez",
- "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com"
+ "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com",
+ "سدّده من «سدّد الآن» بالبطاقة الذهبية أو CIB، أو بتحويل BaridiMob.": "Réglez-le via « Régler maintenant » par carte Edahabia ou CIB, ou par virement BaridiMob.",
+ "تُفتح صفحة الدفع: البطاقة الذهبية أو CIB أوّلاً، ثم تحويل BaridiMob. يُخصم المبلغ من مستحقّاتك فور تأكيد الدفع، ويعود استقبال الطلبات حين تبلغ صفراً.": "La page de paiement s’ouvre : carte Edahabia ou CIB d’abord, puis virement BaridiMob. Le montant est déduit de vos dettes dès la confirmation du paiement, et la réception des courses reprend lorsqu’elles atteignent zéro.",
+ "سدّد الآن": "Régler maintenant"
 }

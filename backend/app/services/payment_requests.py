@@ -502,6 +502,11 @@ async def approve(
     driver: Driver | None = None
     if request.purpose is PaymentRequestPurpose.SUBSCRIPTION:
         driver = await drivers_service.lock(session, await _driver_of(session, owner))
+    # **وشحنُ الكبتن يسدّد دَينَه في المعاملة نفسِها** (أمرُ المالك ٢٠٢٦-١٠-٢٩، SPEC §٨٥/٨) — فصفُّه قبل المحفظة أيضاً:
+    # `refresh_block` يكتب `debt_blocked` عليه، وتسويةُ الرحلة تأخذ الكبتنَ ثمّ المحفظة
+    elif request.owner_type is WalletOwnerType.DRIVER:
+        found = await session.scalar(select(Driver).where(Driver.user_id == owner.id))
+        driver = await drivers_service.lock(session, found) if found is not None else None
 
     wallet.require_not_frozen(owner, request.owner_type)
     provider = request.provider
@@ -525,6 +530,14 @@ async def approve(
 
     # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** — كالشحن القائم حرفاً (`CANCELLATION-FEE.md` §7)
     await cancellation.on_wallet_funded(session, user=owner)
+
+    # **دَينُ الكبتن يُسدَّد لحظةَ يكتمل الشحن لا في الرحلة التالية** — ومن بلغ السقفَ يُرفع منعُه هنا إن صار صفراً.
+    # **والاشتراكُ لا**: مالُه لشراءٍ بعينه، واقتطاعُ الدَّين قبله يُسقط الشراء
+    debt_collected = Decimal("0")
+    if driver is not None and request.purpose is PaymentRequestPurpose.WALLET_TOPUP:
+        from app.services import debts
+
+        debt_collected = await debts.collect_from_balance(session, driver=driver, user=owner, partial_key=str(request.id))
 
     if subscribe and request.purpose is PaymentRequestPurpose.SUBSCRIPTION and driver is not None and request.plan_id is not None:
         from app.services import subscriptions
@@ -558,6 +571,7 @@ async def approve(
             "provider": provider.code,
             "transaction_id": str(entry.id),
             "subscription_id": str(request.subscription_id) if request.subscription_id else None,
+            "debt_collected": str(debt_collected),
             "via": "gateway" if actor is None else "staff",
             "test_money": test_money,
         },
