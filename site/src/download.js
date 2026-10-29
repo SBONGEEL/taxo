@@ -225,6 +225,19 @@ function store(site, isPlay, badges) {
     }
     const slot = $("[data-play]", card);
     const link = $("[data-play-link]", card);
+    // **`play` والحزمةُ باقية** (قرارُ ٢٠٢٦-١٠-٢٩): تطبيقٌ على المتجر يأخذ الشارةَ **أوّلاً**، وزرُّ الملفّ تحتها احتياطاً لهاتفٍ
+    // بلا Google Play — والبصمةُ والإصدارُ باقيان له. وتطبيقٌ بلا رابطِ متجرٍ (الكبتنُ في اختبارٍ مغلق) يبقى بزرِّ ملفِّه وحدَه
+    if (isPlay && url) {
+      const get = $("[data-get]", card);
+      get?.before(playBadge(url, `${NAMES[key] ?? key} على Google Play`));
+      if (get) {
+        get.classList.add("get--fallback");
+        const label = $("span", get);
+        if (label) label.textContent = "هاتفك بلا Google Play؟ حمّل الملف مباشرةً";
+      }
+      shown = logo = true;
+      continue;
+    }
     if (url && slot && link) {
       link.href = url;
       slot.hidden = false;

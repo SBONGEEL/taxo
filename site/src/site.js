@@ -110,25 +110,46 @@ function offBadge() {
   return span;
 }
 
+// **ووضعُ `play` ومعه صفحةُ الحزمة** (`apk_page_enabled`، قرارُ ٢٠٢٦-١٠-٢٩): الراكبُ على المتجر والكبتنُ في اختبارٍ مغلق — **فالقرارُ
+// لكلِّ بطاقةٍ برابطها**: بطاقةٌ لها رابطُ متجرٍ تأخذ الشارةَ مكانَ الزرّ **ورابطاً صغيراً إلى الملفّ المباشر** لهاتفٍ بلا Google Play
+// (Huawei الحديثة، وكثيرةٌ في الجزائر وليبيا)؛ **وبطاقةٌ بلا رابطٍ تُبقي زرَّ الملفّ** بدل شارةٍ معطَّلةٍ لا تُنزل شيئاً.
+function fallbackLink(key) {
+  const a = document.createElement("a");
+  a.className = "apk-fallback";
+  a.href = `/download#${key}`;
+  a.textContent = "هاتفك بلا Google Play؟ حمّل الملف مباشرةً";
+  return a;
+}
+
 function download(site) {
   const isPlay = site.distribution_mode === "play";
+  const apkPage = !isPlay || site.apk_page_enabled === true;
   const urls = { rider: site.play_url_rider, driver: site.play_url_driver };
   const labels = { rider: "تطبيق الراكب على Google Play", driver: "تطبيق الكبتن على Google Play" };
   let badges = 0;
+  let apkKept = !isPlay;
   for (const card of $$("[data-dl-card]")) {
     const key = card.dataset.dlCard; // rider | driver
     const url = isStoreUrl(urls[key]) ? urls[key] : "";
     const badge = $("[data-play-badge]", card);
     if (isPlay) {
       badge?.remove();
-      $("[data-dl-cta]", card)?.replaceWith(url ? playBadge(url, labels[key], 200) : offBadge());
+      const cta = $("[data-dl-cta]", card);
+      if (url) {
+        cta?.replaceWith(playBadge(url, labels[key], 200));
+        if (apkPage) card.append(fallbackLink(key));
+      } else if (apkPage) {
+        apkKept = true; // **الزرُّ المخبوزُ باقٍ** — يقود إلى `/download#<key>` والملفُّ هناك
+      } else {
+        cta?.replaceWith(offBadge());
+      }
     } else if (badge) {
       if (url) badge.href = url;
       else badge.remove();
     }
     if (url) badges += 1;
   }
-  if (isPlay) $$("[data-apk-only]").forEach((el) => el.remove());
+  if (!apkKept) $$("[data-apk-only]").forEach((el) => el.remove());
 
   const line = $("[data-trademark]");
   if (badges) trademark(line, true);

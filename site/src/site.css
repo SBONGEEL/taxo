@@ -2042,3 +2042,17 @@ picture {
     transform: none;
   }
 }
+
+/* **رابطُ الملفّ المباشر تحت شارة المتجر** (قرارُ ٢٠٢٦-١٠-٢٩) — لهاتفٍ بلا Google Play؛ صغيرٌ واللمسُ ٤٤ */
+.dl-card .apk-fallback {
+  display: block;
+  padding: 12px 8px;
+  text-align: center;
+  color: var(--t2-accent-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.dl-card .apk-fallback:hover {
+  text-decoration: underline;
+}

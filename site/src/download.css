@@ -640,3 +640,23 @@ h1 {
     transition: none;
   }
 }
+
+/* **زرُّ الملفّ احتياطاً تحت شارة المتجر** (قرارُ ٢٠٢٦-١٠-٢٩) — لهاتفٍ بلا Google Play: خطٌّ هادئٌ لا زرُّ الجمر، ولمسٌ ٤٤ */
+.app .play-badge {
+  align-self: center;
+  margin: 0 auto;
+  text-align: center;
+}
+.app .play-badge img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.get.get--fallback {
+  min-height: 44px;
+  background: transparent;
+  color: var(--t2-accent-text);
+  border: 1px solid var(--t2-line, currentColor);
+  font-size: 14.5px;
+  font-weight: 600;
+}
