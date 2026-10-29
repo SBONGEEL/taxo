@@ -163,10 +163,12 @@ celery_app.conf.update(
             "task": "app.tasks.payments.reconcile_gateway_payments",
             "schedule": GATEWAY_RECONCILE_SECONDS,
         },
-        # **المطابقةُ اليوميّة** (SPEC §٨٧/٣) — يومٌ بنافذة يومين، فدفعةُ الليل تُرى ولو حُسمت بعد منتصفه
+        # **المطابقةُ اليوميّة** (SPEC §٨٧/٣) — يومٌ بنافذة يومين، فدفعةُ الليل تُرى ولو حُسمت بعد منتصفه.
+        # **ساعةٌ ثابتةٌ لا فترةُ ٢٤ ساعة** (قِيس ٢٠٢٦-١٠-٢٩): الفترةُ تبدأ من إقلاع beat وكلُّ رفعٍ يعيده — فثلاثُ رفعاتٍ في يومٍ
+        # تركت الجدولَ فارغاً ولم تجرِ مطابقةٌ واحدة. 00:17 UTC = 01:17 في الجزائر، بعد منتصف ليل الأسواق الثلاثة
         "reconcile-gateways-daily": {
             "task": "app.tasks.payments.reconcile_gateways_daily",
-            "schedule": 86_400.0,
+            "schedule": crontab(hour=0, minute=17),
         },
         # **مراقبةُ SofizPay** (§٨٧/٤) — عشرون ثانيةً كـ`check_interval` في الـSDK؛ ولا نداءَ حين لا عقدَ ولا طريقةَ مفعَّلة
         "watch-sofizpay": {

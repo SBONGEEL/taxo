@@ -283,3 +283,15 @@ async def test_an_arriving_payment_wakes_the_pending_sofizpay_request(
     async with session_factory() as session:
         row = await session.get(PaymentRequest, uuid.UUID(request["id"]))
         assert row.status is PaymentRequestStatus.APPROVED
+
+
+def test_daily_reconciliation_runs_at_a_fixed_hour_not_every_24h_from_boot():
+    """**المطابقةُ اليوميّة بساعةٍ ثابتة** (قِيس ٢٠٢٦-١٠-٢٩): فترةُ ٢٤ ساعةً تبدأ من إقلاع beat، وثلاثُ رفعاتٍ في يومٍ تركت
+     فارغاً على الإنتاج — فلم تجرِ مطابقةٌ واحدةٌ منذ بُنيت."""
+    from celery.schedules import crontab
+
+    from app.tasks.celery_app import celery_app
+
+    schedule = celery_app.conf.beat_schedule["reconcile-gateways-daily"]["schedule"]
+    assert isinstance(schedule, crontab)
+    assert schedule.hour == {0} and schedule.minute == {17}
