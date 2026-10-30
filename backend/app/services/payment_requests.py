@@ -854,6 +854,7 @@ async def settle_from_gateway(
             locked.fee_amount = paid_fee
     settled = await apply_gateway_outcome(
         session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+        gateway_code=event.gateway_code, gateway_message=event.gateway_message,
         test_money=bool(getattr(gateway, "test_mode", False)),
     )
     return settled, settled.status is not PaymentRequestStatus.PENDING
@@ -909,6 +910,7 @@ async def expire_stale(session: AsyncSession, *, now: datetime | None = None) ->
         if event is not None:
             await apply_gateway_outcome(
                 session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+        gateway_code=event.gateway_code, gateway_message=event.gateway_message,
                 test_money=bool(getattr(gateway, "test_mode", False)),
             )
         else:
@@ -967,13 +969,19 @@ async def apply_gateway_outcome(
     amount: Decimal | None,
     reason: str | None,
     test_money: bool = False,
+    gateway_code: str | None = None,
+    gateway_message: str | None = None,
 ) -> PaymentRequest:
     """**ما قاله الوسيطُ يُطبَّق بالأبواب نفسِها التي يعتمد بها الموظّف** (§٧٣-هـ/١٠) — فلا مسارَ ثانياً للمال.
 
     **ومكرَّرُه لا يغيّر شيئاً**: طلبٌ حُسم يعود كما هو — الوسيطُ يعيد الإشعارَ حتى يرى ٢٠٠، والقيدُ لا يُكتب ثانية.
+    **ورمزُ البنك ورسالتُه** (§٨٥/٩) يُحفظان للّوحة على كلِّ حسمٍ غيرِ «دُفع»، والمستخدمُ يقرأ `reason` بكلماتنا وحدَها.
     """
     if request.status is not PaymentRequestStatus.PENDING:
         return request
+    if outcome is not PaymentRequestStatus.APPROVED and (gateway_code or gateway_message):
+        request.gateway_code = (gateway_code or None) and gateway_code[:32]
+        request.gateway_message = (gateway_message or None) and gateway_message[:500]
     if outcome is PaymentRequestStatus.APPROVED:
         # **دُفع ⇐ لا يُرفض أبداً** (SPEC §٨٢-أ/٢): المالُ دخل. **ومبلغٌ مختلفٌ لا يُقيَّد بتخمين** — يبقى «قيد المعالجة» بسببه،
         # ولا يُطلب من صاحبه أن يدفع ثانية، **والمالكُ يُشعَر به إن لم يُحسم** (`reconcile_gateway`)
@@ -1009,6 +1017,14 @@ async def apply_gateway_outcome(
         from app.services import payment_breaker
 
         await payment_breaker.after_failure(session, rejected, test_money=test_money)
+        # **ويُبلَغ صاحبُه بالسبب** (§٨٥/٩) — لا مالَ تحرّك، فالتزامُ الإشعار هنا يلتزم الرفضَ نفسَه لا غير
+        from app.core.redis_client import get_redis_client
+        from app.services import notifications
+
+        await notifications.notify_payment_rejected(
+            session, get_redis_client(), user_id=rejected.user_id, request_id=rejected.id,
+            reason=rejected.rejection_reason or payment_reasons.GATEWAY_FAILED,
+        )
         return rejected
     if outcome is PaymentRequestStatus.CANCELLED:
         request.status = PaymentRequestStatus.CANCELLED
@@ -1118,6 +1134,7 @@ async def _apply_event(session: AsyncSession, locked: PaymentRequest, event, gat
             locked.fee_amount = paid_fee
     await apply_gateway_outcome(
         session, request=locked, outcome=event.outcome, amount=event.amount, reason=event.reason,
+        gateway_code=event.gateway_code, gateway_message=event.gateway_message,
         test_money=bool(getattr(gateway, "test_mode", False)),
     )
 

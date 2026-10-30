@@ -87,6 +87,9 @@ class GatewayEvent:
     #: **رسومُه كما يقولها** (§٧٤-ك/١) — على الدافع وعلى التاجر؛ `None` حين لا يذكرها
     fee_on_customer: Decimal | None = None
     fee_on_merchant: Decimal | None = None
+    #: **رمزُ البنك ورسالتُه الخامّة** (§٨٥/٩) — للّوحة والسجلّ وحدَهما؛ والمستخدمُ يقرأ `reason` بكلماتنا
+    gateway_code: str | None = None
+    gateway_message: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

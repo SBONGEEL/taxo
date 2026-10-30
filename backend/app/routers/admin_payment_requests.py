@@ -273,6 +273,8 @@ async def _rows_out(session, rows: list[PaymentRequest]) -> list[AdminPaymentReq
                 cancel_reason=row.cancel_reason,
                 refund_reason=row.refund_reason,
                 outcome_note=row.outcome_note,
+                gateway_code=row.gateway_code,
+                gateway_message=row.gateway_message,
                 transaction_id=row.transaction_id,
                 subscription_id=row.subscription_id,
                 reviewed_at=row.reviewed_at,

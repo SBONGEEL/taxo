@@ -17,7 +17,7 @@ from app.core.redis_client import get_redis_client
 from app.models.user import User
 from app.models.wallet import WalletTransaction
 from app.services import payment_gateways, payment_requests
-from tests.helpers import _enable_provider, rider_session
+from tests.helpers import _enable_provider, enable_push_provider, pushes_to, register_device, rider_session
 from tests.payment_fakes import SOFIZPAY_ACCOUNT, add_gateway_method, install_transport, sofizpay_signed
 from tests.test_dz_payments_82 import _owner
 from tests.test_payment_requests import ALGERIAN_RIDER, algeria_market, balance
@@ -176,7 +176,7 @@ async def test_the_health_probe_reads_a_missing_order_as_up(monkeypatch: pytest.
         # **بأجوبة وضع التجربة حرفاً** (قِيست ٢٠٢٦-١٠-٢٩ ببطاقات الوثائق): الرفضُ · زرُّ «إلغاء» · بطاقةُ المهلة
         ({"orderStatus": 6, "respCode": "05", "respCode_desc": "Refusée"}, "rejected", "رفض الوسيطُ الدفع"),
         ({"orderStatus": 3, "respCode": "17", "respCode_desc": "Annulée par l'utilisateur"}, "cancelled", "أُلغي الدفعُ عند الوسيط"),
-        ({"orderStatus": 3, "respCode": "68", "respCode_desc": "Délai dépassé"}, "cancelled", "انتهت صلاحيةُ صفحة الدفع عند الوسيط"),
+        ({"orderStatus": 3, "respCode": "68", "respCode_desc": "Délai dépassé"}, "cancelled", "انتهت مهلة الدفع، أعد المحاولة"),
     ],
 )
 async def test_a_refusal_a_cancel_and_a_timeout_settle_with_our_words_and_credit_nothing(
@@ -274,3 +274,48 @@ async def test_the_memo_reaches_sofizpay_in_latin_letters(
     assert latin_memo("TAXO اشتراك") == "TAXO abonnement"
     assert latin_memo("شحن") == "TAXO"
     assert len(latin_memo("TAXO " + "x" * 60).encode()) <= 28
+
+
+@pytest.mark.parametrize(
+    ("answer", "reason"),
+    [
+        # **الرفضُ الحقيقيُّ الأوّل** (٢٠٢٦-١٠-٣٠، الطلب 77137267): SATIM بالعربيّة ورمزُه AB — والدافعُ كان يقرأ «رفض الوسيطُ الدفع» وحدَها
+        ({"orderStatus": 6, "respCode": "AB", "respCode_desc": "تم رفض المعاملة : رمز التحقّق (CVV) غير صحيح. يُرجى التحقّق والمحاولة مجدّدًا   Error Code:AB",
+          "actionCodeDescription": "تم رفض المعاملة : رمز التحقق (CVV) غير صحيح. Error Code:140"}, "رمز التحقّق (CVV) غير صحيح، أعد المحاولة"),
+        # sandbox ٢٠٢٦-١٠-٣٠: بطاقةُ «رصيدٌ لا يكفي»
+        ({"orderStatus": 6, "respCode": "51", "respCode_desc": "Fonds insuffisants", "actionCodeDescription": "Insufficient funds"}, "الرصيد غير كافٍ"),
+        # رمزٌ لا نعرفه ورسالةٌ فرنسيّةٌ معروفةُ الكلمات ⇐ الكلماتُ تمسكها
+        ({"orderStatus": 6, "respCode": "ZZ", "respCode_desc": "Carte expirée"}, "البطاقة منتهية الصلاحية"),
+        ({"orderStatus": 6, "respCode": "ZZ", "respCode_desc": "Limit exceeded"}, "تجاوزت الحدّ المسموح"),
+        # ولا رمزَ ولا كلمةَ نعرفها ⇐ العامُّ كما كان، **ونصُّ البنك لا يصل**
+        ({"orderStatus": 6, "respCode": "ZZ", "respCode_desc": "Something the bank said"}, "رفض الوسيطُ الدفع"),
+    ],
+)
+async def test_a_bank_refusal_reaches_the_payer_in_our_words_and_its_raw_code_reaches_the_panel_alone(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, answer: dict, reason: str
+) -> None:
+    """SPEC §٨٥/٩ — سببٌ عربيٌّ ثابتٌ على شاشة الدافع بأيِّ لغةٍ جاء البنك، ورمزُه ورسالتُه الخامّةُ في اللوحة وحدَها، وإشعارٌ لصاحبه."""
+    await algeria_market(session_factory)
+    await enable_push_provider(session_factory)
+    _, sofizpay = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await _rider_with_email(client, session_factory)
+    await register_device(client, rider["headers"], token="fcm-rejected-1")
+    opened = (await _open(client, rider["headers"], method_id)).json()
+    before = await _entries(session_factory)
+    sofizpay.check[opened["request"]["reference"]] |= answer
+    refreshed = (await client.post(f"/payment-requests/{opened['request']['id']}/refresh", headers=rider["headers"])).json()
+    assert refreshed["status"] == "rejected" and refreshed["rejection_reason"] == reason, refreshed
+    # **نصُّ البنك لا يصل المستخدمَ** — لا في السبب ولا في حقلٍ آخر من حمولته
+    assert "gateway_code" not in refreshed and answer["respCode_desc"] not in str(refreshed)
+    assert await _entries(session_factory) == before
+    # **واللوحةُ ترى الرمزَ والرسالةَ الخامّة** للدعم
+    owner = await _owner(session_factory)
+    rows = (await client.get("/admin/payment-requests", params={"country": "DZ"}, headers=owner)).json()
+    row = next(r for r in rows if r["id"] == opened["request"]["id"])
+    assert row["rejection_reason"] == reason and row["gateway_code"] == answer["respCode"]
+    assert answer["respCode_desc"] in row["gateway_message"]
+    # **وصاحبُه يُبلَغ** بكلماتنا — إشعارٌ واحدٌ بنوعه ومعرّفِ طلبه، والنصُّ الخامُّ ليس فيه
+    pushes = [p for p in await pushes_to("fcm-rejected-1") if p.get("data", {}).get("type") == "payment_request_rejected"]
+    assert len(pushes) == 1 and pushes[0]["body"] == reason and pushes[0]["data"]["request_id"] == opened["request"]["id"], pushes
+    assert answer["respCode_desc"] not in str(pushes[0])

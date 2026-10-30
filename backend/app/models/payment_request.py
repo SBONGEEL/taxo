@@ -251,6 +251,9 @@ class PaymentRequest(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True), ForeignKey("driver_subscriptions.id", ondelete="RESTRICT"), nullable=True
     )
     outcome_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    #: **رمزُ البنك ورسالتُه الخامّة** (§٨٥/٩) — للّوحة والدعم؛ لا يُنشران في باب المستخدم
+    gateway_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    gateway_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     provider: Mapped[PayMethod] = relationship(PayMethod, lazy="joined")
 

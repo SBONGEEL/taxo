@@ -890,5 +890,11 @@
  "انتهت مهلةُ إضافة الملف — سجّل الدخول مرّةً أخرى": "Le délai d’ajout du profil a expiré — reconnectez-vous",
  "هذا الرمزُ لا يخصّ هذا التطبيق": "Ce code ne concerne pas cette application",
  "لا يُضاف هذا الملفُّ إلى هذا الحساب": "Ce profil ne peut pas être ajouté à ce compte",
- "تعذّرت إضافةُ الملف — أعد الدخول": "Impossible d’ajouter le profil — reconnectez-vous"
+ "تعذّرت إضافةُ الملف — أعد الدخول": "Impossible d’ajouter le profil — reconnectez-vous",
+ "رمز التحقّق (CVV) غير صحيح، أعد المحاولة": "Code de sécurité (CVV) incorrect, réessayez",
+ "الرصيد غير كافٍ": "Solde insuffisant",
+ "البطاقة منتهية الصلاحية": "Carte expirée",
+ "بيانات البطاقة غير صحيحة": "Données de carte incorrectes",
+ "تجاوزت الحدّ المسموح": "Plafond dépassé",
+ "انتهت مهلة الدفع، أعد المحاولة": "Délai de paiement dépassé, réessayez"
 }

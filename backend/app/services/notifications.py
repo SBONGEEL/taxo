@@ -304,6 +304,18 @@ async def _safe_notify(
         logger.exception("تعذّر إرسال إشعار إلى %s", user_id)
 
 
+
+async def notify_payment_rejected(
+    session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, request_id: uuid.UUID, reason: str
+) -> None:
+    """**رفضُ البنك يبلغ صاحبَه بكلماتنا** (SPEC §٨٥/٩، أمرُ المالك ٢٠٢٦-١٠-٣٠): صندوقُ الوارد والبلاغُ داخل التطبيق ثمّ Push —
+    و`reason` من بيت الأسباب لا من البنك؛ **يُنادى بعد أن حُسم الطلبُ**، ويلتزم (commit) كما تفعل أخواتُه."""
+    await _safe_notify(
+        session, redis, user_id=user_id,
+        message=PushMessage(title="لم يكتمل الدفع", body=reason, data={"type": "payment_request_rejected", "request_id": str(request_id)}),
+    )
+
+
 # ------------------------------------------------------- أحداث الرحلة
 
 

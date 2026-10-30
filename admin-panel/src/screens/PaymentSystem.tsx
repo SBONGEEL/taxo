@@ -200,6 +200,11 @@ function RequestsTab({
                   {row.rejection_reason ?? row.refund_reason ?? row.cancel_reason ?? row.outcome_note}
                 </span>
               ) : null}
+              {row.gateway_code || row.gateway_message ? (
+                <span className="block text-10.5 font-normal text-muted" dir="ltr" title="رمزُ البنك ورسالتُه كما وصلا — للدعم">
+                  {[row.gateway_code, row.gateway_message].filter(Boolean).join(" · ")}
+                </span>
+              ) : null}
               {row.subscription_id ? <span className="block text-10.5 font-normal text-ok">فُعِّل الاشتراك</span> : null}
               {row.transaction_id ? (
                 <span dir="ltr" className="block text-10.5 font-normal text-muted" title="قيدُ الدفتر">

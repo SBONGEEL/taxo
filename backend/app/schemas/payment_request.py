@@ -217,6 +217,9 @@ class AdminPaymentRequestOut(BaseModel):
     cancel_reason: str | None
     refund_reason: str | None
     outcome_note: str | None
+    #: **رمزُ البنك ورسالتُه الخامّة** (§٨٥/٩) — للدعم في اللوحة وحدَها
+    gateway_code: str | None = None
+    gateway_message: str | None = None
     transaction_id: uuid.UUID | None
     subscription_id: uuid.UUID | None
     reviewed_at: datetime | None

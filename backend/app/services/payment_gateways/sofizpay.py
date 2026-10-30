@@ -44,6 +44,39 @@ BASE = "https://sofizpay.com"
 #: وبالفرنسيّة التي يقرؤها دافعُ CIB — ولا يُقصّ بالبايت وسطَ حرف
 MEMO_LATIN = {"اشتراك": "abonnement", "شحن رصيد": "recharge", "سداد": "paiement"}
 
+#: **رفضُ البنك بكلماتنا** (SPEC §٨٥/٩): الرمزُ أوّلاً ثمّ كلماتُ الرسالة بثلاث لغات، **وما لم يُعرف «رفض الوسيطُ الدفع»**.
+#: مقيسٌ: `AB` CVV (حيّ ٢٠٢٦-١٠-٣٠) · `05` مرفوضة · `51` رصيدٌ لا يكفي (sandbox) · `68` مهلة · `17` إلغاء. و`54`/`14`/`61`/`65` رموزُ ISO 8583
+#: القياسيّةُ عند SATIM (منتهية · رقمٌ غيرُ صحيح · تجاوزُ الحدّ) — لم تُقَس، والكلماتُ تمسكها إن جاءت برمزٍ آخر
+BANK_CODES: dict[str, str] = {
+    "AB": reasons.CARD_CVV, "51": reasons.CARD_INSUFFICIENT, "54": reasons.CARD_EXPIRED, "14": reasons.CARD_INVALID,
+    "61": reasons.CARD_LIMIT, "65": reasons.CARD_LIMIT, "68": reasons.CARD_TIMEOUT,
+}
+BANK_WORDS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("cvv", "cvc", "cryptogramme", "code de sécurité", "security code", "رمز التحق"), reasons.CARD_CVV),
+    (("insuffi", "رصيد"), reasons.CARD_INSUFFICIENT),
+    (("expired", "expirée", "expiré", "منتهية"), reasons.CARD_EXPIRED),
+    (("invalid card", "carte invalide", "numéro de carte", "card number", "رقم البطاقة", "بيانات البطاقة"), reasons.CARD_INVALID),
+    (("limit", "plafond", "الحدّ", "الحد "), reasons.CARD_LIMIT),
+    (("timeout", "time out", "délai", "مهلة"), reasons.CARD_TIMEOUT),
+)
+
+
+def bank_reason(code: str | None, *texts: str | None) -> str:
+    """سببٌ عربيٌّ ثابتٌ من رمز البنك أو من كلمات رسالته — ولا يعود نصُّ البنك نفسُه أبداً."""
+    if code is not None and str(code) in BANK_CODES:
+        return BANK_CODES[str(code)]
+    blob = " ".join(t for t in texts if t).lower()
+    for words, reason in BANK_WORDS:
+        if any(w in blob for w in words):
+            return reason
+    return reasons.GATEWAY_FAILED
+
+
+def _raw(body: dict[str, Any]) -> tuple[str | None, str | None]:
+    code = body.get("respCode")
+    message = " · ".join(str(body.get(k)) for k in ("respCode_desc", "actionCodeDescription") if body.get(k))
+    return (str(code) if code not in (None, "") else None), (message[:500] or None)
+
 
 def latin_memo(description: str) -> str:
     text = description
@@ -205,17 +238,23 @@ class SofizPayGateway:
                 amount = None
             return base.GatewayEvent(external_id, PaymentRequestStatus.APPROVED, amount=amount)
         if status == 6:
-            # **السببُ من بيت الأسباب لا من البنك** (قِيس في وضع التجربة ٢٠٢٦-١٠-٢٩): `respCode_desc` فرنسيّةُ SATIM («Refusée») — كانت
-            # تُكتب كما هي فيقرؤها الراكبُ العربيّ بلغةٍ لا يطلبها؛ ونصُّ البنك يبقى في السجلّ لا في الشاشة
-            return base.GatewayEvent(external_id, PaymentRequestStatus.REJECTED, reason=reasons.GATEWAY_FAILED)
+            # **السببُ من بيت الأسباب لا من البنك** (§٨٥/٩): رمزُ البنك ⇐ كلماتُنا؛ ونصُّه الخامُّ يُحمل للّوحة والسجلّ لا للشاشة
+            code, message = _raw(body)
+            return base.GatewayEvent(
+                external_id, PaymentRequestStatus.REJECTED,
+                reason=bank_reason(code, body.get("respCode_desc"), body.get("actionCodeDescription")),
+                gateway_code=code, gateway_message=message,
+            )
         if status == 3:
             # **`3` حالٌ نهائيّةٌ لا «قيد الفحص»** (قِيس في وضع التجربة ٢٠٢٦-١٠-٢٩، ولم تذكره الوثائق): زرُّ «إلغاء» في صفحة الدفع
             # (`respCode` ‏17) وبطاقةُ المهلة (‏68) كلاهما `orderStatus 3` — وكان يُترك معلّقاً حتى مهلتنا فيرى الدافعُ «ننتظر» لدفعةٍ ألغاها
             expired = body.get("respCode") == "68"
+            code, message = _raw(body)
             return base.GatewayEvent(
                 external_id,
                 PaymentRequestStatus.CANCELLED,
-                reason=reasons.GATEWAY_EXPIRED if expired else reasons.GATEWAY_CANCELLED,
+                reason=reasons.CARD_TIMEOUT if expired else reasons.GATEWAY_CANCELLED,
+                gateway_code=code, gateway_message=message,
             )
         return None
 

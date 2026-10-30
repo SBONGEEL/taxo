@@ -2754,6 +2754,9 @@ export interface AdminPaymentRequest {
   cancel_reason: string | null;
   refund_reason: string | null;
   outcome_note: string | null;
+  /** رمزُ البنك ورسالتُه الخامّة (§٨٥/٩) — للدعم في اللوحة وحدَها */
+  gateway_code: string | null;
+  gateway_message: string | null;
   transaction_id: string | null;
   subscription_id: string | null;
   reviewed_at: string | null;
