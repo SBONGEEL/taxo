@@ -39,6 +39,19 @@ from app.services.providers import credentials as credentials_service
 
 BASE = "https://sofizpay.com"
 
+#: **المذكّرةُ بحروفٍ لاتينيّة** (قِيس ٢٠٢٦-١٠-٣٠ على إيصال SofizPay الحقيقيّ لطلب 200 دج): خطُّ PDF عندهم بلا عربيّة، فطُبع «TAXO اشتراك»
+#: رموزاً مكسورةً في حقل «Note». الوصفُ العربيُّ يبقى للشاشة وللوسطاء الذين يرسمونه (Chargily)، **وما يصل SofizPay منه لاتينيٌّ فقط**
+#: وبالفرنسيّة التي يقرؤها دافعُ CIB — ولا يُقصّ بالبايت وسطَ حرف
+MEMO_LATIN = {"اشتراك": "abonnement", "شحن رصيد": "recharge", "سداد": "paiement"}
+
+
+def latin_memo(description: str) -> str:
+    text = description
+    for arabic, latin in MEMO_LATIN.items():
+        text = text.replace(arabic, latin)
+    text = " ".join("".join(ch for ch in text if ord(ch) < 128).split()) or "TAXO"
+    return text[:28]
+
 #: **مفتاحُ SofizPay العامُّ للتوقيع** — منسوخٌ حرفاً من الـSDK الرسميّ (`sofizpay/client.py`، الإصدار 1.0.2). **عامٌّ لا سرّ**: به يُتحقَّق
 #: من أن الإشعارَ من SofizPay، ولا يوقّع شيئاً
 SOFIZPAY_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
@@ -152,7 +165,7 @@ class SofizPayGateway:
                 "email": customer.email,
                 "return_url": return_url,
                 "webhook_url": webhook_url,
-                "memo": description.encode()[:28].decode(errors="ignore"),
+                "memo": latin_memo(description),
                 "redirect": "no",
             },
         )

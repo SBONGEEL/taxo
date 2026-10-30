@@ -255,3 +255,22 @@ async def test_no_email_asks_for_it_once_writes_nothing_and_then_pays(
         assert user.email == "rider@example.dz" and user.email_verified_at is None
     assert (await _open(client, rider["headers"], method_id)).status_code == 201
     assert len(sofizpay.created) == 1
+
+
+async def test_the_memo_reaches_sofizpay_in_latin_letters(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**إيصالُ SofizPay الحقيقيّ** (٢٠٢٦-١٠-٣٠، طلبُ اشتراكٍ 200 دج) طبع «TAXO اشتراك» رموزاً مكسورة — خطُّ PDF عندهم بلا عربيّة.
+    فالمذكّرةُ التي تصله لاتينيّةٌ بالفرنسيّة وتحت ٢٨ بايتاً، والوصفُ العربيُّ يبقى لغيره."""
+    from app.services.payment_gateways.sofizpay import latin_memo
+
+    await algeria_market(session_factory)
+    _, sofizpay = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await _rider_with_email(client, session_factory)
+    assert (await _open(client, rider["headers"], method_id)).status_code == 201
+    memo = sofizpay.created[-1]["memo"]
+    assert memo == "TAXO recharge" and memo.isascii() and len(memo.encode()) <= 28
+    assert latin_memo("TAXO اشتراك") == "TAXO abonnement"
+    assert latin_memo("شحن") == "TAXO"
+    assert len(latin_memo("TAXO " + "x" * 60).encode()) <= 28
