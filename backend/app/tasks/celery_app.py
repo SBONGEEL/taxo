@@ -59,8 +59,8 @@ ORDER_SWEEP_INTERVAL_SECONDS = 600
 
 # تقليمُ صندوق الوارد. **يوميّاً لا كلَّ دقيقة**: مدةُ الحفظ تسعون يوماً، وما
 # يتجاوزها في يومٍ يُحذف في دورةٍ واحدة. والدفعةُ مسقوفةٌ فالأولى بعد التشغيل
-# تأخذ أياماً — وذلك مقصودٌ لا عجز
-NOTIFICATION_TRIM_INTERVAL_SECONDS = 86_400
+# تأخذ أياماً — وذلك مقصودٌ لا عجز. **وبساعةٍ ثابتة** (02:05 UTC) كأخواتها أدناه
+NOTIFICATION_TRIM_SCHEDULE = crontab(hour=2, minute=5)
 
 # دورةُ الرحلات المجدولة (المرحلة 12-ط). **دقيقةٌ واحدة**: الموعدُ بالدقيقة،
 # ودورةٌ أطول تجعل «حجزَ السابعة» يعني «بين السابعة وبعدها بخمس» — ومن حجز
@@ -206,10 +206,12 @@ celery_app.conf.update(
             "task": "app.tasks.pauses.sweep_pause_limits",
             "schedule": 60.0,
         },
-        # **يوميّاً**: العتبةُ ثلاثون يوماً (2026-09-20)، ودورةٌ أسرعُ لا تجد ما تحذف
+        # **يوميّاً**: العتبةُ ثلاثون يوماً (2026-09-20)، ودورةٌ أسرعُ لا تجد ما تحذف.
+        # **والمهامُّ اليوميّةُ كلُّها بساعةٍ ثابتة** (قِيس ٢٠٢٦-١٠-٢٩): فترةُ ٨٦٤٠٠ ثانيةٍ تُعدّ من إقلاع beat، وكلُّ رفعٍ
+        # يعيده — فمن يرفع كلَّ يومٍ لا تجري مهمّتُه اليوميّةُ أبداً. ويحرسه `tests/test_beat_daily_fixed_hour.py`
         "sweep-error-reports": {
             "task": "app.tasks.error_reports.sweep_error_reports",
-            "schedule": 86_400.0,
+            "schedule": crontab(hour=1, minute=5),
         },
         "run-due-backup": {
             "task": "app.tasks.backups.run_due_backup",
@@ -224,7 +226,7 @@ celery_app.conf.update(
         },
         "trim-admin-alerts": {
             "task": "app.tasks.admin_alerts.trim_admin_alerts",
-            "schedule": 86_400.0,
+            "schedule": crontab(hour=1, minute=25),
         },
         "reevaluate-driver-levels": {
             "task": "app.tasks.levels.reevaluate_driver_levels",
@@ -276,7 +278,7 @@ celery_app.conf.update(
         # **وما جاوز ثلاثةَ عشرَ شهراً يُجمع شهرياً** — مرّةً في اليوم تكفي
         "roll-up-activity": {
             "task": "app.tasks.activity.roll_up_activity",
-            "schedule": 86400.0,
+            "schedule": crontab(hour=1, minute=45),
         },
         "sweep-intercity": {
             "task": "app.tasks.intercity.sweep_intercity",
@@ -300,7 +302,7 @@ celery_app.conf.update(
         },
         "trim-notifications": {
             "task": "app.tasks.maintenance.trim_notifications",
-            "schedule": NOTIFICATION_TRIM_INTERVAL_SECONDS,
+            "schedule": NOTIFICATION_TRIM_SCHEDULE,
         },
         # رسومُ الإلغاء (`design/CANCELLATION-FEE.md` §6-أ و§10): منعُ حاملٍ
         # انقضت مهلتُه، ومآلُ دَينٍ لم يعد صاحبُه. **وعشرُ دقائق كالسلف**:
