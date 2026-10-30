@@ -82,3 +82,23 @@
   cursor: pointer;
 }
 .t2-pr-done.neutral .t2-icon { color: var(--t2-muted); }
+
+/* ——— CVV2 لا PIN (SPEC §٨٥/٩) — التنبيهُ والرسمُ قبل صفحة البنك، وشريطُنا فوقها ——— */
+.t2-cvv { display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; padding: 14px; border-radius: 16px; background: var(--sur2, #1b1f25); border: 1px solid rgba(240, 90, 40, .45); }
+.t2-cvv-mark { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(240, 90, 40, .15); color: #f05a28; }
+.t2-cvv-body { min-width: 0; flex: 1; }
+.t2-cvv-text { margin: 0 0 10px; font-weight: 800; font-size: 15px; line-height: 1.5; color: var(--tx, #f2f0eb); }
+.t2-cvv-sub { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--mut, #9aa3ad); }
+.t2-cvv-card { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto; }
+.t2-cvv-card.compact { max-width: 220px; }
+.t2-frame { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg, #0b0d10); }
+.t2-frame-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: #0b0d10; color: #f2f0eb; border-bottom: 2px solid #f05a28; }
+.t2-frame-mark { flex: 0 0 auto; color: #f05a28; display: grid; place-items: center; }
+.t2-frame-text { margin: 0; flex: 1; font-size: 13px; font-weight: 700; line-height: 1.35; }
+.t2-frame-help { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #f05a28; background: transparent; color: #f05a28; font-weight: 900; font-size: 18px; line-height: 1; }
+.t2-frame-page { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+.t2-frame-fallback { flex: 0 0 auto; margin: 0; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)); text-align: center; font-size: 12px; background: #0b0d10; }
+.t2-frame-fallback .t2-link { background: none; border: 0; color: var(--mut, #9aa3ad); text-decoration: underline; font-size: 12px; }
+.t2-frame-sheet-back { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; z-index: 20; }
+.t2-frame-sheet { width: 100%; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--sur, #15181d); color: var(--tx, #f2f0eb); }
+.t2-frame-sheet-title { margin: 0 0 12px; font-size: 18px; font-weight: 800; }

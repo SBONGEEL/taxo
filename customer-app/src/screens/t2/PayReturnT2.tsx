@@ -17,6 +17,7 @@ import { play } from "@/lib/sound";
 import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 import { CARD_PAGE_MINUTES, settledReturn } from "@/lib/pay-return";
+import { announceFrameReturn } from "@/lib/sofizpay-cvv";
 
 import { BannerT2, BusyLabel, HeadT2 } from "./MoneyT2";
 import { SupportLine } from "./PayDz";
@@ -76,8 +77,10 @@ export function PayReturnT2Screen() {
 
   useEffect(() => {
     settledReturn();
+    // **داخل إطارنا؟** (§٨٥/٩) — يُبلَغ الأبُ فيأخذ صاحبَه إلى هنا خارجَ الإطار
+    announceFrameReturn(requestId);
     void ask();
-  }, [ask]);
+  }, [ask, requestId]);
   const cardLeft = useCardPageLeft(request?.created_at);
 
   const pending = request === null || request.status === "pending";

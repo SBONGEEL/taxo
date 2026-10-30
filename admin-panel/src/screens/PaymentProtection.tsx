@@ -462,6 +462,10 @@ function LedgerTab({ country, owner, onError }: { country: CountryCode; owner: b
           </span>
         </div>
       ) : null}
+      <p className="ad-card mb-12 p-12 text-12 text-muted">
+        مساعدة: أشهرُ رفضٍ من البنك «رمز التحقّق (CVV) غير صحيح» — الدافعُ يدخل رمزَ PIN بدل CVV2 (3 أرقام خلف البطاقة). التطبيقان ينبّهان قبل صفحة
+        البنك وفوقها، وكلُّ طلبٍ مرفوضٍ في «المعاملات» يحمل السببَ بكلماتنا ورمزَ البنك ورسالتَه للدعم.
+      </p>
       <div className="grid gap-8 sm:grid-cols-3">
         <DateInput label="من" value={since} onChange={setSince} />
         <DateInput label="إلى" value={until} onChange={setUntil} />

@@ -105,6 +105,7 @@ const PayRequestT2Screen = lazy(() =>
 );
 // **بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رمزٌ يشحن مرّةً واحدة
 // **العودةُ من صفحة الوسيط** (SPEC §٧٣-هـ المرحلة ٣)
+const CheckoutFrameScreen = lazy(() => import("@/lib/sofizpay-cvv").then((m) => ({ default: m.CheckoutFrameScreen })));
 const PayReturnT2Screen = lazy(() =>
   import("@/screens/t2/PayReturnT2").then((m) => ({
     default: m.PayReturnT2Screen,
@@ -610,6 +611,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <PayReturnT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/pay/frame"
+                        element={
+                          <Guarded>
+                            <CheckoutFrameScreen />
                           </Guarded>
                         }
                       />

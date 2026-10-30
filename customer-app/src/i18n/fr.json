@@ -1542,5 +1542,14 @@
  "اكتب بريداً صحيحاً، مثل name@example.com": "Saisissez un e-mail valide, par ex. name@example.com",
  "رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.": "Votre numéro est inscrit dans l’autre application. Ajoutez ce profil à votre même compte — un seul numéro, et un portefeuille séparé pour chaque profil.",
  "تعذّرت إضافة الملف — أعد المحاولة": "Impossible d’ajouter le profil — réessayez",
- "أضف ملفّ الراكب إلى حسابي": "Ajouter le profil passager à mon compte"
+ "أضف ملفّ الراكب إلى حسابي": "Ajouter le profil passager à mon compte",
+ "ستُطلب منك 3 أرقام من خلف بطاقتك (CVV2)، لا رمز PIN": "On vous demandera les 3 chiffres au dos de votre carte (CVV2), pas le code PIN",
+ "ظهر البطاقة: الأرقام الثلاثة الأخيرة بجانب شريط التوقيع هي CVV2": "Dos de la carte : les 3 derniers chiffres à côté de la bande de signature sont le CVV2",
+ "الذهبية / CIB": "Edahabia / CIB",
+ "قبل أن تدفع": "Avant de payer",
+ "رمز PIN تستعمله في الصرّاف فقط — ولا تكتبه في صفحة الدفع.": "Le code PIN sert uniquement au distributeur — ne le saisissez pas sur la page de paiement.",
+ "أين أجد CVV2؟": "Où trouver le CVV2 ?",
+ "صفحة الدفع": "Page de paiement",
+ "لا تظهر صفحة الدفع؟ افتحها كاملةً": "La page de paiement ne s’affiche pas ? Ouvrez-la en plein écran",
+ "3 أرقام بجانب شريط التوقيع خلف بطاقتك — ليست رمز PIN الذي تستعمله في الصرّاف.": "3 chiffres à côté de la bande de signature au dos de votre carte — pas le code PIN du distributeur."
 }

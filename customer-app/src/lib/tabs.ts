@@ -34,6 +34,8 @@ export const TABS: Tab[] = [
  * انتظارٍ لا مكانَ فيها للتنقل.
  */
 const COVERING = [
+  // **صفحةُ البنك داخل التطبيق بشريطنا** (§٨٥/٩) — شريطُ التنقّل يغطّي نموذجَ البنك وأزرارَه
+  "/wallet/pay/frame",
   "/login",
   "/register",
   "/forgot-password",

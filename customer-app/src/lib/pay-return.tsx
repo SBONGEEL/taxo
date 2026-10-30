@@ -138,6 +138,15 @@ export function PublicPayReturn({ app }: { app: AppName }) {
   // **إطارُ الإقلاع يُزال هنا** — هذه الصفحةُ لا تمرّ بالترحيب الذي يزيله (قِيس على المحاكي: النصُّ في الصفحة والشاشةُ مُعتِمة)
   useEffect(() => removeBootFrame(), []);
   const id = new URLSearchParams(window.location.search).get("r") ?? "";
+  // **داخل إطار التطبيق** (`sofizpay-cvv.tsx`): الأبُ يسمع ويذهب إلى «نتيجة الدفع» — ولا يُستورد من هناك (دورٌ في الاستيراد)
+  useEffect(() => {
+    if (!id || window.parent === window) return;
+    try {
+      window.parent.postMessage({ type: "taxo.pay.return", r: id }, window.location.origin);
+    } catch {
+      /* أصلٌ مختلف */
+    }
+  }, [id]);
   const open = `intent://pay?r=${encodeURIComponent(id)}#Intent;scheme=${SCHEME[app]};package=${PACKAGE[app]};end`;
   return (
     <div className="t2 t2-update" role="main">

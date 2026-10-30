@@ -11,7 +11,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { CARD_PAGE_MINUTES, goToCheckout } from "@/lib/pay-return";
+import { CARD_PAGE_MINUTES } from "@/lib/pay-return";
+import { CvvNotice, openCheckout } from "@/lib/sofizpay-cvv";
 
 import { ApiError } from "@/api/client";
 import {
@@ -145,7 +146,7 @@ export function PayRequestT2Screen() {
     setBusy(true);
     setError(null);
     try {
-      goToCheckout(open.id, (await resumePaymentCheckout(open.id)).checkout_url);
+      openCheckout(navigate, open.id, (await resumePaymentCheckout(open.id)).checkout_url, open.gateway_name);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
       setOpen(null);
@@ -227,7 +228,7 @@ export function PayRequestT2Screen() {
           setBusy(false);
           return;
         }
-        goToCheckout(opened.request.id, opened.checkout_url);
+        openCheckout(navigate, opened.request.id, opened.checkout_url, method?.gateway_name ?? opened.request.gateway_name);
       } catch (caught) {
         // **الوسيطُ متوقّف** (§٨٢-أ/١) — رسالتُه و«أعد المحاولة» والبديلُ، لا نصُّ خطأ
         if (gatewayIsDown(caught)) setDown(true);
@@ -584,6 +585,8 @@ export function PayRequestT2Screen() {
             <p className="t2-fld-hint">{tr("يصل {0} اسمُك ورقمُ هاتفك (وبريدُك إن كان في حسابك) فلا تكتبها في صفحته.", { 0: gatewayName })}</p>
           ) : null}
 
+          {/* **CVV2 لا PIN** (§٨٥/٩) — قبل أن يُرسَل إلى SofizPay */}
+          <CvvNotice gatewayName={method?.gateway_name} />
           {quote ? (
             <div className="t2-pr-gap-lg" role="group" aria-label={tr("رسوم الدفع")}>
               <div className="t2-wal-line">
@@ -598,7 +601,7 @@ export function PayRequestT2Screen() {
                 <span>{tr("تدفع")}</span>
                 <span dir="ltr">{formatAmount(quote.total_amount ?? quote.request.amount, currency)} {label}</span>
               </div>
-              <button type="button" className="t2-clq-cta t2-pr-gap-lg" onClick={() => goToCheckout(quote.request.id, quote.checkout_url)}>
+              <button type="button" className="t2-clq-cta t2-pr-gap-lg" onClick={() => openCheckout(navigate, quote.request.id, quote.checkout_url, method?.gateway_name ?? quote.request.gateway_name)}>
                 {tr("ادفع {0} عبر {1}", { 0: `${formatAmount(quote.total_amount ?? quote.request.amount, currency)} ${label}`, 1: gatewayName })}
               </button>
               <button
