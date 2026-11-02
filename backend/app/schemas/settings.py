@@ -19,6 +19,7 @@ from app.models.enums import (
 )
 from app.schemas.config import CountryConfigOut
 from app.schemas.category import CategoryKey
+from app.schemas.ride import FareLineOut
 
 # كل مبلغ NUMERIC(12,3) — نفس قيد القاعدة معبَّراً عنه في طبقة الإدخال
 Money = Field(ge=0, max_digits=12, decimal_places=3)
@@ -96,6 +97,49 @@ class PricingRuleOut(BaseModel):
     pause_max_minutes: int
 
     updated_at: datetime
+
+
+ExampleMinutes = Field(default=Decimal("0"), ge=0, le=240, max_digits=6, decimal_places=2)
+
+
+class PricingExampleIn(BaseModel):
+    """رحلةٌ مفترضة تُسعَّر بدوالّ الرحلة الحقيقيّة (`services/pricing_example`) — **ولا يُكتب منها شيء**."""
+
+    country_code: CountryCode
+    vehicle_category: CategoryKey
+    distance_km: Decimal = Field(gt=0, le=1000, max_digits=7, decimal_places=2)
+    duration_min: Decimal = Field(gt=0, le=1440, max_digits=7, decimal_places=2)
+    stops: int = Field(default=0, ge=0, le=5)
+    wait_minutes_per_stop: Decimal = ExampleMinutes
+    pause_minutes: Decimal = ExampleMinutes
+    arrival_wait_minutes: Decimal = ExampleMinutes
+    #: **قيمٌ لم تُحفظ بعد** — تُقرأ مكانَ المحفوظة ليرى المالكُ أثرَ ما سيكتبه. وغيابُها الصفُّ المحفوظ كما هو
+    draft: PricingRuleUpdate | None = None
+
+
+class PricingExampleOut(BaseModel):
+    currency: Currency
+    fare: Decimal
+    minimum_fare_applied: bool
+    lines: list[FareLineOut]
+    waiting_charge: Decimal
+    pause_charge: Decimal
+    arrival_charge: Decimal
+    total: Decimal
+    rounding_enabled: bool
+    payable: Decimal
+
+
+class DisplayDecimalsUpdate(BaseModel):
+    decimals: int = Field(ge=0, le=3)
+
+
+class DisplayDecimalsOut(BaseModel):
+    """خاناتُ العرض وخاناتُ المال معاً — **فاللوحةُ ترسم الفرقَ بينهما ولا تحسبه** (SPEC §٧٣-ج/٧)."""
+
+    country_code: CountryCode
+    display_decimals: int
+    currency_decimals: int
 
 
 # ------------------------------------------------------------ مفاتيح الميزات

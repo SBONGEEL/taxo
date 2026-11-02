@@ -246,6 +246,8 @@ export interface CountryConfig {
   currency_label: string;
   currency_name: string;
   currency_decimals: number;
+  /** خاناتُ العرض (SPEC §٧٣-ج/٧) — للرسم وحدَه، ولا تنزل عن `currency_decimals` */
+  display_decimals: number;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
   /** **وجوهُ ما يُطلب** بترتيبه (SPEC §٦٧) — منها تُسمّى الفئاتُ الجديدة. */

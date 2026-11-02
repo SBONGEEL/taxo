@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import service_area
-from app.core.currency import COUNTRY_NAME
+from app.core.currency import COUNTRY_NAME, STORAGE_DECIMALS, currency_for_country, decimals_of
 from app.core.exceptions import Conflict, InvalidInput, MarketClosed, MarketNotReady, NotFound, SignupClosed
 from app.models.enums import (
     AuditAction,
@@ -262,6 +262,52 @@ async def set_signup_display(
         )
     await session.flush()
     return display
+
+
+# ------------------------------------------------------------------ خاناتُ العرض (SPEC §٧٣-ج/٧)
+
+
+async def display_decimals(session: AsyncSession, country: CountryCode) -> int:
+    """**خاناتُ عرض المبالغ في الدولة** — المضبوطةُ، **وسكوتُها خاناتُ العملة نفسُها** (فلا يتغيّر شيءٌ بلا قرار)."""
+    row = await session.get(CountryMarket, country)
+    if row is not None and row.display_decimals is not None:
+        return row.display_decimals
+    return decimals_of(currency_for_country(country))
+
+
+async def set_display_decimals(
+    session: AsyncSession, *, country: CountryCode, decimals: int, actor: User
+) -> int:
+    """يضبط خاناتِ العرض — **بين خانات العملة ودقّة التخزين** (`CURRENCY_DECIMALS` … `3`).
+
+    **ولا تنزل عن خانات العملة** — والعلّةُ مالٌ لا ذوق: الأردنيُّ يُحسب بثلاث خانات، فعرضُه بخانتين يُري الراكبَ «1.24» ويُخصم
+    منه «1.235»، **وشاشةٌ تقول غيرَ ما يُخصم أسوأُ من شاشةٍ بخانةٍ زائدة**. **ولا تعلو على ثلاث**: لا مبلغَ في القاعدة يحمل رابعة.
+    """
+    floor = decimals_of(currency_for_country(country))
+    if not floor <= decimals <= STORAGE_DECIMALS:
+        raise InvalidInput(
+            f"خاناتُ العرض بين {floor} و{STORAGE_DECIMALS}: أقلُّ من {floor} يُري مبلغاً غيرَ الذي يُخصم، "
+            f"وأكثرُ من {STORAGE_DECIMALS} لا يحمله مبلغٌ في القاعدة",
+            field="decimals",
+        )
+    row = await session.get(CountryMarket, country)
+    before = await display_decimals(session, country)
+    if row is None:
+        row = CountryMarket(country_code=country, display_decimals=decimals, updated_by=actor.id)
+        session.add(row)
+    else:
+        row.display_decimals = decimals
+        row.updated_by = actor.id
+    if before != decimals:
+        await audit.record(
+            session,
+            actor=actor,
+            action=AuditAction.UPDATE,
+            entity_type="market_display_decimals",
+            details={"country_code": country.value, "changes": {"display_decimals": {"from": before, "to": decimals}}},
+        )
+    await session.flush()
+    return decimals
 
 
 # ------------------------------------------------------------------ الحدود

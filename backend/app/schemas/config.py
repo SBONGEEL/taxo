@@ -30,6 +30,9 @@ class CountryConfigOut(BaseModel):
     currency_label: str
     currency_name: str
     currency_decimals: int
+    #: **خاناتُ العرض** (SPEC §٧٣-ج/٧) — كم خانةً تُرسم بعد الفاصلة، **وليست خاناتِ المال**: الإدخالُ والسلكُ بـ،
+    #: والرسمُ بهذه. **ولا تنزل عنها** ()، وسكوتُ المالك يجعلهما سواءً
+    display_decimals: int
     features: dict[str, bool]
     #: **مفاتيحُ ما يُطلب الآن في السوق بترتيبه** (SPEC §٦٧) — المدمجتان والمشتعلةُ من الجديدة
     vehicle_categories: list[str]

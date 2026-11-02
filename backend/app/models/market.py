@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, String, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,9 +28,15 @@ from app.models.enums import CountryCode, SignupDisplay
 
 
 class CountryMarket(TimestampMixin, Base):
-    """ما يخصّ الدولةَ في صفحة «الدول» سوى حالها — **ظهورُ المغلقة في التسجيل**."""
+    """ما يخصّ الدولةَ سوى حالها — **ظهورُ المغلقة في التسجيل، وخاناتُ عرض المبالغ**."""
 
     __tablename__ = "country_markets"
+    __table_args__ = (
+        CheckConstraint(
+            "display_decimals IS NULL OR display_decimals BETWEEN 0 AND 3",
+            name="country_markets_display_decimals_range",
+        ),
+    )
 
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), primary_key=True
@@ -41,6 +47,10 @@ class CountryMarket(TimestampMixin, Base):
         default=SignupDisplay.SOON,
         server_default=SignupDisplay.SOON.value,
     )
+    #: **خاناتُ عرض المبالغ** (SPEC §٧٣-ج/٧، الترحيلة `0136`) — **للعرض والإدخال وحدَهما**: لا تمسّ مبلغاً محفوظاً ولا تقريباً.
+    #: و`NULL` = خاناتُ العملة نفسُها، **ولا تنزل عنها** (`markets.set_display_decimals`): مبلغٌ يُعرض بخاناتٍ أقلَّ ممّا يحمله
+    #: يُقرأ غيرَ ما يُخصم (1.235 يُرى 1.24)
+    display_decimals: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

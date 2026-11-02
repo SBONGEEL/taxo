@@ -138,6 +138,8 @@ import type {
   UnconfirmedActionResult,
   UnconfirmedQueueRow,
   PricingRule,
+  PricingExample,
+  DisplayDecimals,
   PromoCode,
   ProviderCatalog,
   ProviderCredential,
@@ -1050,6 +1052,25 @@ export const updatePricing = (
 
 export const deletePricing = (id: string) =>
   api.del<void>(`/admin/settings/pricing/${id}`);
+
+/** **مثالُ أجرةٍ مفصَّل** — قراءةٌ لا تكتب، و`draft` قيمٌ لم تُحفظ بعد تُقرأ مكانَ المحفوظة. */
+export const pricingExample = (payload: {
+  country_code: CountryCode;
+  vehicle_category: VehicleCategory;
+  distance_km: string;
+  duration_min: string;
+  stops?: number;
+  wait_minutes_per_stop?: string;
+  pause_minutes?: string;
+  arrival_wait_minutes?: string;
+  draft?: Record<string, string | number>;
+}) => api.post<PricingExample>("/admin/settings/pricing/example", payload);
+
+export const getDisplayDecimals = (country: CountryCode) =>
+  api.get<DisplayDecimals>(`/admin/settings/display-decimals/${country}`);
+
+export const setDisplayDecimals = (country: CountryCode, decimals: number) =>
+  api.put<DisplayDecimals>(`/admin/settings/display-decimals/${country}`, { decimals });
 
 // ------------------------------------------------------------ سجل التدقيق
 

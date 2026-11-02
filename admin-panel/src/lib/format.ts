@@ -23,6 +23,8 @@ interface CurrencyFace {
   label: string;
   name: string;
   decimals: number;
+  /** **خاناتُ العرض** (SPEC §٧٣-ج/٧) — ما يُرسم بعد الفاصلة، **ولا تنزل عن `decimals`** (الخلفيةُ تردّه) */
+  display: number;
 }
 const CURRENCY_FACES = new Map<string, CurrencyFace>();
 
@@ -32,6 +34,7 @@ export function registerCurrencies(
     currency_label: string;
     currency_name: string;
     currency_decimals: number;
+    display_decimals?: number;
   }>,
 ): void {
   for (const country of countries) {
@@ -39,6 +42,7 @@ export function registerCurrencies(
       label: country.currency_label,
       name: country.currency_name,
       decimals: country.currency_decimals,
+      display: country.display_decimals ?? country.currency_decimals,
     });
   }
 }
@@ -48,9 +52,15 @@ export function currencyDecimals(currency: string | null | undefined): number {
   return (currency ? CURRENCY_FACES.get(currency)?.decimals : undefined) ?? 3;
 }
 
+/** **خاناتُ العرض** (SPEC §٧٣-ج/٧) — يضبطها المشرفُ لكلِّ دولة، **للرسم وحدَه**: الإدخالُ والسلكُ بـ`currencyDecimals` لأن المالَ
+ *  يُحسب بها، فلا يُكتب مبلغٌ بخاناتٍ لا يحملها. **وسكوتُه خاناتُ العملة نفسُها** — فلا يتغيّر رسمٌ بلا قرار. */
+export function displayDecimals(currency: string | null | undefined): number {
+  return (currency ? CURRENCY_FACES.get(currency)?.display : undefined) ?? currencyDecimals(currency);
+}
+
 /** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
 export function zeroAmount(currency: string | null | undefined): string {
-  const places = currencyDecimals(currency);
+  const places = displayDecimals(currency);
   return places > 0 ? `0.${"0".repeat(places)}` : "0";
 }
 
@@ -82,10 +92,19 @@ export function currencyLabel(currency: Currency | string | null | undefined) {
   return currency ? (CURRENCY_FACES.get(currency)?.label ?? currency) : "";
 }
 
-/** مبلغٌ بخاناتٍ عربية-هندية ورمزِ عملته — والقيمةُ تبقى نصّاً كما وصلت. */
+/** **يُكمل الكسرَ بأصفارٍ إلى خانات العرض** (SPEC §٧٣-ج/٧) — نصّيّاً، **ولا يحذف خانةً أبداً**: ما وصل بخاناتٍ أكثرَ يُرسم كما وصل. */
+function padToDisplay(value: string, currency: Currency | string): string {
+  const places = displayDecimals(currency);
+  if (!/^-?\d+(\.\d*)?$/.test(value.trim())) return value;
+  const [whole, fraction = ""] = value.trim().split(".");
+  if (fraction.length >= places) return value;
+  return `${whole}.${fraction.padEnd(places, "0")}`;
+}
+
+/** مبلغٌ بخاناتٍ عربية-هندية ورمزِ عملته — والقيمةُ تبقى نصّاً كما وصلت، **مكمَّلةً إلى خانات العرض**. */
 export function money(value: string, currency?: Currency | string) {
   const label = currency ? ` ${currencyLabel(currency)}` : "";
-  return `${digits(value)}${label}`;
+  return `${digits(currency ? padToDisplay(value, currency) : value)}${label}`;
 }
 
 /** يومٌ وشهرٌ ووقت — ما يُقرأ في صفوف الجداول.

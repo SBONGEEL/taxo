@@ -53,6 +53,7 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         currency_label=translate(CURRENCY_LABEL[currency]),
         currency_name=translate(CURRENCY_NAME[currency]),
         currency_decimals=decimals_of(currency),
+        display_decimals=await markets.display_decimals(session, country),
         features=await settings_service.get_flags(session, country),
         vehicle_categories=keys,
         ride_categories=[categories.public_face(key, rows.get(key)) for key in keys],

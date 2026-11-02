@@ -129,6 +129,8 @@ export interface CountryConfig {
   currency_label: string;
   currency_name: string;
   currency_decimals: number;
+  /** خاناتُ العرض (SPEC §٧٣-ج/٧) — للرسم وحدَه، ولا تنزل عن `currency_decimals` */
+  display_decimals: number;
   features: Record<string, boolean>;
   vehicle_categories: string[];
   /** **وجوهُ ما يُطلب في السوق** (SPEC §٦٧) — ما يراه التطبيقان؛ واللوحةُ تقرأ الفئاتِ كاملةً من «فئات الرحلة». */
@@ -1250,6 +1252,28 @@ export interface PricingRule {
   arrival_free_minutes: number;
   pause_max_minutes: number;
   updated_at: string;
+}
+
+/** **مثالُ أجرةٍ من الخلفية** (`POST /admin/settings/pricing/example`) — بدوالّ الرحلة الحقيقيّة، **فاللوحةُ ترسم ولا تحسب** (§14). */
+export interface PricingExample {
+  currency: Currency;
+  fare: string;
+  minimum_fare_applied: boolean;
+  /** `base` · `distance` · `time` · `stops` · `minimum` — و`quantity` لتسمية السطر وحدَها */
+  lines: { kind: string; amount: string; quantity: string | null }[];
+  waiting_charge: string;
+  pause_charge: string;
+  arrival_charge: string;
+  total: string;
+  rounding_enabled: boolean;
+  payable: string;
+}
+
+/** **خاناتُ العرض وخاناتُ المال معاً** (SPEC §٧٣-ج/٧) — الأولى تُضبط، والثانيةُ حدُّها الأدنى. */
+export interface DisplayDecimals {
+  country_code: CountryCode;
+  display_decimals: number;
+  currency_decimals: number;
 }
 
 // ------------------------------------------------------------ التقارير

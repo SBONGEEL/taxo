@@ -11,7 +11,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import currency_for_country, decimals_of
 from app.core.deps import SettingsWriter, DbSession, StaffUser
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
@@ -55,6 +55,10 @@ from app.schemas.settings import (
     FeatureFlagUpsert,
     PaymentSettingOut,
     PaymentSettingUpdate,
+    DisplayDecimalsOut,
+    DisplayDecimalsUpdate,
+    PricingExampleIn,
+    PricingExampleOut,
     PricingRuleCreate,
     PricingRuleOut,
     PricingRuleUpdate,
@@ -69,7 +73,9 @@ from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
-from app.services import admin_search, audit, money_guards, otp_limits, rounding, settings_service, trip_chat
+from app.services import admin_search, audit, markets, money_guards, otp_limits, rounding, settings_service, trip_chat
+from app.services import pricing_example as pricing_example_service
+from app.schemas.ride import FareLineOut
 from app.services import broadcast as broadcast_service
 from app.schemas.broadcast import (
     BroadcastChangeOut,
@@ -227,6 +233,85 @@ async def delete_pricing_rule(
     )
     await session.delete(rule)
     await _commit(session)
+
+
+#: **أعمدةُ التسعيرة التي يقرؤها الحساب** — تُنسخ إلى صفٍّ عابرٍ لا يُضاف إلى الجلسة، فالمسوّدةُ لا تُفلَش على المحفوظ أبداً
+_RULE_FIELDS = tuple(PricingRuleUpdate.model_fields)
+
+
+@router.post("/pricing/example", response_model=PricingExampleOut)
+async def pricing_example(
+    payload: PricingExampleIn, _staff: StaffUser, session: DbSession
+) -> PricingExampleOut:
+    """**مثالُ أجرةٍ مفصَّلٌ بدوالّ الرحلة الحقيقيّة** (`services/pricing_example`) — قراءةٌ لا تكتب شيئاً، **ولو بقيمٍ لم تُحفظ**."""
+    saved = await session.scalar(
+        select(PricingRule).where(
+            PricingRule.country_code == payload.country_code,
+            PricingRule.vehicle_category == payload.vehicle_category,
+        )
+    )
+    values = {name: getattr(saved, name) for name in _RULE_FIELDS} if saved is not None else {}
+    if payload.draft is not None:
+        values.update(payload.draft.model_dump(exclude_none=True))
+    missing = [name for name in _RULE_FIELDS if values.get(name) is None]
+    if missing:
+        raise InvalidInput("لا تسعيرةَ محفوظةً لهذه الفئة — اكتب الحقولَ أوّلاً ليُحسب المثال", fields=missing)
+    rule = PricingRule(
+        country_code=payload.country_code, vehicle_category=payload.vehicle_category, **values
+    )
+    result = pricing_example_service.example(
+        rule,
+        distance_km=payload.distance_km,
+        duration_min=payload.duration_min,
+        stops=payload.stops,
+        wait_minutes_per_stop=payload.wait_minutes_per_stop,
+        pause_minutes=payload.pause_minutes,
+        arrival_wait_minutes=payload.arrival_wait_minutes,
+        policy=await rounding.policy_for(session, payload.country_code),
+    )
+    return PricingExampleOut(
+        currency=result.currency,
+        fare=result.fare,
+        minimum_fare_applied=result.minimum_fare_applied,
+        lines=[FareLineOut.model_validate(line.as_json()) for line in result.lines],
+        waiting_charge=result.waiting_charge,
+        pause_charge=result.pause_charge,
+        arrival_charge=result.arrival_charge,
+        total=result.total,
+        rounding_enabled=result.rounding_enabled,
+        payable=result.payable,
+    )
+
+
+# ------------------------------------------------------------ خاناتُ العرض (SPEC §٧٣-ج/٧)
+
+
+async def _display_decimals_out(session: AsyncSession, country: CountryCode) -> DisplayDecimalsOut:
+    return DisplayDecimalsOut(
+        country_code=country,
+        display_decimals=await markets.display_decimals(session, country),
+        currency_decimals=decimals_of(currency_for_country(country)),
+    )
+
+
+@router.get("/display-decimals/{country_code}", response_model=DisplayDecimalsOut)
+async def get_display_decimals(
+    country_code: CountryCode, _staff: StaffUser, session: DbSession
+) -> DisplayDecimalsOut:
+    return await _display_decimals_out(session, country_code)
+
+
+@router.put("/display-decimals/{country_code}", response_model=DisplayDecimalsOut)
+async def set_display_decimals(
+    country_code: CountryCode,
+    payload: DisplayDecimalsUpdate,
+    admin: SettingsWriter,
+    session: DbSession,
+) -> DisplayDecimalsOut:
+    """**للعرض والإدخال وحدَهما** — لا يمسّ مبلغاً محفوظاً ولا رصيداً ولا قيداً ولا تقريباً."""
+    await markets.set_display_decimals(session, country=country_code, decimals=payload.decimals, actor=admin)
+    await _commit(session)
+    return await _display_decimals_out(session, country_code)
 
 
 # ------------------------------------------------------------ مفاتيح الميزات
