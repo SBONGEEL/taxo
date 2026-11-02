@@ -418,6 +418,8 @@ html.dark .t2:not(.t2-day),
   cursor: pointer;
 }
 .t2-auth-forgot { display: block; width: fit-content; margin-top: 14px; }
+/* «الدخول بحساب آخر» (SPEC §60-ج) — فعلٌ ثانويٌّ تحت أزرار الدخول، في الوسط وبمساحة لمسٍ كاملة */
+.t2-auth-another { align-self: center; min-height: 44px; padding: 0 12px; }
 .t2-auth-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
 .t2-auth-actions .t2-auth-or { margin: 4px 0; }
 .t2-auth-actions .t2-button { height: 58px; font-size: 16px; }

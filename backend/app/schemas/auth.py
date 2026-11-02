@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -273,6 +273,36 @@ class UserBlockUpdate(BaseModel):
 class AuthResponse(BaseModel):
     user: UserOut
     tokens: TokenPair
+
+
+# ------------------------------------------------------------ الدخولُ بالبصمة بعد الخروج (SPEC §60-ج)
+
+DeviceId = Annotated[str, Field(min_length=8, max_length=64)]
+DeviceSecret = Annotated[str, Field(min_length=20, max_length=128)]
+DeviceApp = Literal["rider", "driver"]
+
+
+class DeviceLoginEnroll(BaseModel):
+    device_id: DeviceId
+    app: DeviceApp
+
+
+class DeviceSecretOut(BaseModel):
+    """**السرُّ مرّةً واحدة** — يسكن مخزنَ الجهاز الآمن ولا يُرى بعد هذا الجواب، وفي القاعدة بصمتُه وحدَها."""
+
+    secret: str
+
+
+class DeviceLoginRequest(BaseModel):
+    device_id: DeviceId
+    secret: DeviceSecret
+    app: DeviceApp
+
+
+class DeviceLoginOut(AuthResponse):
+    """جلسةٌ جديدة **وسرٌّ جديد** — المصروفُ لا يعود، فيُكتب هذا مكانَه."""
+
+    device_secret: str
 
 
 class TotpLoginRequest(BaseModel):

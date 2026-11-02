@@ -13,7 +13,8 @@
   والوقتُ مخزونٌ لأن الرمزَ **يُعاد سكُّه حرفاً**: من قدّم الرمزَ السابقَ في مهلة
   السماح (جوابٌ ضاع، أو تبويبان جدّدا في اللحظة نفسِها) **يُعطى الرمزَ الحاليَّ
   نفسَه** لا رمزاً ثالثاً — فلا تتفرّع السلسلةُ إلى فرعين يُقرأ أحدُهما سرقة.
-- `previous_jti` — الرمزُ الذي استُبدل للتوّ. **وبعد المهلة يُقرأ عودتُه سرقة**.
+- `previous_jti` — الرمزُ الذي استُبدل للتوّ. **وبعد المهلة يُقرأ عودتُه سرقة** — **إلا إن لم يصل الحاليُّ صاحبَه قطّ**
+  (`current_seen_at`): ذاك جوابٌ ضاع، لا لصّ.
 - `revoked_at` و`revoked_reason` — **الإبطالُ ختمٌ لا حذف**: الصفُّ يبقى شاهداً
   لمَ انتهت الجلسة.
 
@@ -48,6 +49,12 @@ class AuthSession(UUIDMixin, Base):
         DateTime(timezone=True), nullable=False
     )
     previous_jti: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # **أوصل الزوجُ الحاليُّ إلى صاحبه؟** (أمرُ المالك ٢٠٢٦-١١-٠٢: «الجلسةُ تنجو من القتل») — يُختم حين يُستعمل توكنُ وصولٍ سُكَّ
+    # مع الرمز الحاليّ (`rj`). **وما لم يُختم فالجوابُ ضاع**: تطبيقٌ قُتل وطلبُ التجديد في الطريق يعود بالرمز السابق بعد ساعات،
+    # فيُعطى الحاليَّ نفسَه لا إبطالاً (`token_service.rotate`). **وما خُتم ثمّ عاد سابقُه بعد المهلة فسرقة** كما كان
+    current_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

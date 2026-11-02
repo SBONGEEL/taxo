@@ -75,32 +75,37 @@ export class ApiError extends Error {
 
 // ------------------------------------------------------------ التخزين
 
-/** **رمزُ التجديد في الذاكرة ما دام التطبيقُ حيّاً** — ومن ورائه بيتٌ واحدٌ
- * على القرص: `localStorage` حين تكون البصمةُ مطفأة، **والمخزنُ الآمن وحدَه**
- * حين تُشعَل.
+/** **رمزُ التجديد في الذاكرة ما دام التطبيقُ حيّاً** — ومن ورائه **بيتٌ واحدٌ على القرص لا يتبع البصمة** (أمرُ المالك
+ * ٢٠٢٦-١١-٠٢، SPEC §60-ج): على الجهاز المخزنُ الآمن، وفي المتصفّح `localStorage`. انظر `lib/biometric.ts`.
  *
- * **ولمَ لا بيتان**: الرمزُ **يُستهلك مرّةً ويُدوَّر** (`token_service.rotate`)،
- * **فنسخةٌ ثانيةٌ تموت عند أوّل تجديد** ثم تردّ «جلسة منتهية» بلا سبب يظهر —
- * وهو الشكلُ الثامن. انظر `lib/biometric.ts`.
+ * **وكان البيتُ يتبع تفضيلَ البصمة** — مشتعلةٌ ⇒ المخزنُ الآمن وحدَه ولا يُقرأ إلا بالإصبع. **فكلُّ إقلاعٍ باردٍ بعد نصف ساعة**
+ * وجد الذاكرةَ فارغةً و«لا رمز» ⇒ شاشةُ الدخول — **وهو «التطبيقُ يخرجني» بعينه**.
  */
 let liveRefresh: string | null = null;
 
-/** يُملأ من `lib/biometric` — **حقنٌ لا استيراد**: `client` طبقةٌ تحته، واستيرادُ
- *  الأعلى من الأسفل يصنع حلقةً ويجعل الملحقَ يُحمَّل في المتصفّح بلا داعٍ. */
-let persistRefresh: (token: string) => void = () => {};
-
-/** **أالبصمةُ مشتعلة؟** — يُحقن من `lib/biometric` كالحاقن الذي قبله، فتبقى
- *  طبقةُ `client` جاهلةً بالملحقات. والافتراضُ `false`: **بلا حقنٍ يعمل
- *  التطبيقُ كما كان قبل الميزة**، لا كما لو كانت مشتعلة. */
-let biometricArmed: () => boolean = () => false;
-export function setBiometricArmedReader(fn: () => boolean) {
-  biometricArmed = fn;
+/** **بيتُ الجهاز** — يُحقن من `lib/biometric` (**حقنٌ لا استيراد**: `client` طبقةٌ تحت الملحقات، واستيرادُ الأعلى من الأسفل
+ *  يصنع حلقةً ويجعل الملحقَ يُحمَّل في المتصفّح بلا داعٍ). والافتراضُ «لا جهاز»: **بلا حقنٍ يعمل التطبيقُ كما في المتصفّح**. */
+interface RefreshStore {
+  native: boolean;
+  load: (fromLocalStorage: string | null) => Promise<string | null>;
+  save: (token: string) => Promise<void>;
+  clear: () => Promise<void>;
 }
+let store: RefreshStore = {
+  native: false,
+  load: async () => null,
+  save: async () => undefined,
+  clear: async () => undefined,
+};
+export function setRefreshStore(next: RefreshStore) {
+  store = next;
+}
+
 /** **جسرٌ يُحقن من طبقة الجلسة** — و`client.ts` لا يعرف Capacitor ولا يستوردها.
  *
  * **والسببُ بنيويّ**: هذا الملفُّ يعمل في المتصفّح كما يعمل في الغلاف، **واستيرادُ
  * جسرٍ أصليٍّ هنا يجعل كلَّ صفحةِ ويبٍ تحمله**. فالحقنُ من الخارج كما
- * `setRefreshPersister` و`setBiometricArmedReader` قبله — بيتٌ واحدٌ للنمط.
+ * `setRefreshStore` قبله — بيتٌ واحدٌ للنمط.
  */
 let nativeSession: (accessToken: string | null) => void = () => {};
 
@@ -110,56 +115,57 @@ export function setNativeSessionWriter(
   nativeSession = fn;
 }
 
-export function setRefreshPersister(fn: (token: string) => void) {
-  persistRefresh = fn;
+let hydrated: Promise<void> | null = null;
+
+/** **يُقرأ بيتُ الجهاز قبل أن يُحكم بخروج أحد** — يناديه الإقلاعُ (`lib/session`) مرّةً، وما بعده من الذاكرة. */
+export function hydrateTokens(): Promise<void> {
+  hydrated ??= (async () => {
+    if (!store.native) return;
+    const held = await store.load(localStorage.getItem(REFRESH_KEY));
+    // **لا نسخةَ ثانيةً في `localStorage`** — ما نُقل منه يُنزع
+    localStorage.removeItem(REFRESH_KEY);
+    liveRefresh ??= held;
+  })();
+  return hydrated;
 }
 
 export const tokens = {
   access: () => localStorage.getItem(ACCESS_KEY),
-  /** **المشتركُ أوّلاً حين يكون هو البيت** (SPEC §60): تبويبان يتقاسمان
-   *  `localStorage` ولكلٍّ ذاكرتُه، فمن دوّر الرمزَ في أحدهما ترك الآخرَ بنسخةٍ
-   *  مستهلَكة — **وإعادتُها بعد مهلة السماح تُبطل الجلسةَ كلَّها**. والذاكرةُ
-   *  حين لا بيتَ غيرُها (البصمةُ مشتعلة، أو مُحي المشتركُ). */
-  refresh: () =>
-    (biometricArmed() ? null : localStorage.getItem(REFRESH_KEY)) ?? liveRefresh,
-  /** **يُستدعى بعد كلِّ تدوير** — فيبقى المخزَّنُ هو الحيَّ لا نسخةً منه.
-   *
-   * **والبيتُ واحدٌ فعلاً لا في التوثيق وحدَه** (صُحّح 2026-08-29): كان يكتب
-   * في `localStorage` **وفي المخزن الآمن معاً**، والنزعُ يقع في موضعٍ واحدٍ —
-   * لحظةَ الإشعال. **فكلُّ دخولٍ بكلمة المرور بعده يعيد الرمزَ إلى
-   * `localStorage`**، فيجد الإقلاعُ الباردُ رمزاً فيجدّد صامتاً — **ولا شاشةَ
-   * دخولٍ ولا زرّ**. أي أن الميزةَ تعمل مرّةً بعد الإشعال ثمّ تنام أبداً.
-   *
-   * **فالوجهةُ تُقرَّر هنا**: مشتعلةٌ ⇒ المخزنُ الآمن وحدَه، ومطفأةٌ ⇒
-   * `localStorage` كما كان.
-   */
+  /** **في المتصفّح المشتركُ أوّلاً** (SPEC §60): تبويبان يتقاسمان `localStorage` ولكلٍّ ذاكرتُه، فمن دوّر الرمزَ في أحدهما ترك
+   *  الآخرَ بنسخةٍ مستهلَكة. **وعلى الجهاز الذاكرةُ** — مملوءةً من المخزن الآمن عند الإقلاع (`hydrateTokens`). */
+  refresh: () => (store.native ? null : localStorage.getItem(REFRESH_KEY)) ?? liveRefresh,
+  /** **دخولٌ جديد** — رمزُ الوصول فوراً فتمضي النداءاتُ بعده، والتجديدُ إلى بيته بلا انتظار: جلسةٌ وُلدت للتوّ لا سابقَ لها يُخشى عليه. */
   save(pair: { access_token: string; refresh_token: string }) {
-    localStorage.setItem(ACCESS_KEY, pair.access_token);
     liveRefresh = pair.refresh_token;
-    if (biometricArmed()) {
-      // **بيتٌ واحد**: لا نسخةَ ثانيةً تُغني عن البصمة وتُبطل البوّابة
+    localStorage.setItem(ACCESS_KEY, pair.access_token);
+    if (store.native) {
       localStorage.removeItem(REFRESH_KEY);
+      void store.save(pair.refresh_token);
     } else {
       localStorage.setItem(REFRESH_KEY, pair.refresh_token);
     }
-    persistRefresh(pair.refresh_token);
     // **والأسطحُ الأصليّةُ تحتاج رمزَ الوصول لتقبل بنفسها**: شاشةُ ملء
     // الشاشة تقبل والتطبيقُ مقتولٌ والقفلُ مغلق — **ورمزٌ محفوظٌ منذ ساعةٍ
     // يجعل «اقبل» يسقط بصمت**. فيُحدَّث مع كلِّ تجديد.
     nativeSession(pair.access_token);
   },
-  /** **يُنزع من `localStorage` حين تُشعَل البصمة** — بيتٌ واحدٌ لا اثنان. */
-  detachFromLocalStorage() {
-    localStorage.removeItem(REFRESH_KEY);
-  },
-  /** يُسلَّم إلى مسار الفتح: يضع الرمزَ المفتوحَ في الذاكرة قبل التجديد. */
-  adoptRefresh(token: string) {
-    liveRefresh = token;
+  /** **تدويرٌ** — التجديدُ يُكتب في بيته **قبل** رمز الوصول.
+   *
+   * **والترتيبُ هو الإصلاح** (قِيس ٢٠٢٦-١١-٠٢): تطبيقٌ قُتل بين الكتابتين وفي يده رمزُ وصولٍ جديدٌ ورمزُ تجديدٍ قديم — فيستعمل
+   * الأوّلَ ثمّ يقدّم الثاني بعد ساعات، **والخادمُ يقرأ «الحاليُّ وصل صاحبَه ثمّ عاد السابق» سرقةً** ويُبطل الجلسة. وبالترتيب
+   * المعكوس يبقى القديمُ مع رمزِ وصولٍ قديم، **فلا يُستعمل الحاليُّ قبل أن يُحفظ**. */
+  async saveRotated(pair: { access_token: string; refresh_token: string }) {
+    liveRefresh = pair.refresh_token;
+    if (store.native) await store.save(pair.refresh_token);
+    else localStorage.setItem(REFRESH_KEY, pair.refresh_token);
+    localStorage.setItem(ACCESS_KEY, pair.access_token);
+    nativeSession(pair.access_token);
   },
   clear() {
     liveRefresh = null;
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    if (store.native) void store.clear();
     // **ويُمحى ما عند الأصليّ معه** — رمزٌ باقٍ بعد الخروج بابٌ مفتوح
     nativeSession(null);
   },
@@ -175,23 +181,15 @@ export function setSessionLostHandler(handler: (serverRejected: boolean) => void
 
 let refreshing: Promise<boolean> | null = null;
 
-/** **هل رفض الخادمُ رمزاً قدّمناه فعلاً؟** — أم لم يكن لدينا ما نقدّمه؟
- *
- * **والفرقُ هو كلُّ شيء** (صُحّح 2026-08-29): «لا رمزَ ⇒ انتهت الجلسة» كان
- * **صادقاً ببيتٍ واحد** — يومَ كان الرمزُ في `localStorage` أو لا مكانَ له.
- * **فلمّا صار له بيتان** (المخزنُ الآمن حين تُشعَل البصمة) صار غيابُه عن
- * الذاكرة **لا يعني غيابَه**.
- *
- * **وأثرُه كان أن الميزةَ لا تعمل أبداً**: إقلاعٌ بارد ⇒ الذاكرةُ فارغة ⇒
- * «انتهت الجلسة» ⇒ `forgetToken()` **يمحو الرمزَ قبل أن يُستعمل مرّةً**.
+/** **هل رفض الخادمُ رمزاً قدّمناه فعلاً؟** — أم لم يكن لدينا ما نقدّمه؟ والفرقُ يقرّر ما يقوله الخروجُ، **ولا يمحو بيانَ
+ * البصمة في أيٍّ منهما**: رمزٌ رُفض لا يعني أن الجهازَ لم يعد صاحبَه (SPEC §60-ج).
  */
 let serverRejectedToken = false;
 
 async function refreshSession(): Promise<boolean> {
+  await hydrateTokens();
   const token = tokens.refresh();
   if (!token) {
-    // **لا رمزَ في الذاكرة ليس إبطالاً من الخادم** — فلا يُمحى المخزَّن،
-    // وتُعرض شاشةُ الدخول بزرِّ البصمة إن كان ثمّة رمزٌ محفوظ
     serverRejectedToken = false;
     return false;
   }
@@ -220,7 +218,7 @@ async function refreshSession(): Promise<boolean> {
     return false;
   }
   if (!response.ok) throw await toError(response);
-  tokens.save(await response.json());
+  await tokens.saveRotated(await response.json());
   return true;
 }
 

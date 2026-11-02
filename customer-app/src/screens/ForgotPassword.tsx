@@ -15,7 +15,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordReset } from "@/api/endpoints";
 import { VerifyCode } from "@/components/t2/VerifyCode";
-import { forgetToken } from "@/lib/biometric";
+import { forgetDeviceSecret, setBiometricPreferred } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError, passwordsReady } from "@/lib/password";
@@ -69,8 +69,10 @@ export function ForgotPasswordScreen() {
         verification_token: verificationToken,
         new_password: password,
       });
-      // **تبديلُ كلمة المرور يمحو المخزَّن قبل أن تقوم الجلسةُ الجديدة** — و`set_password` في الخلفية يُبطل كلَّ الجلسات
-      await forgetToken();
+      // **استعادةُ كلمة المرور تمحو بيانَ البصمة والتفضيلَ معاً** (أمرُ المالك ٢٠٢٦-١١-٠٢) — والخلفيةُ أبطلت البيانَ وكلَّ الجلسات
+      // (`set_password` ⇒ `revoke_all_for_user`)؛ ومن أرادها بعدُ أشعلها من الإعدادات بإصبعه
+      await forgetDeviceSecret();
+      setBiometricPreferred(false);
       signIn(response);
       navigate("/", { replace: true });
     } catch (caught) {

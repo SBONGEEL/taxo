@@ -18,7 +18,7 @@ import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordResetChallenge } from "@/api/endpoints";
 import type { OtpChannel } from "@/api/types";
 import { VerifyCode } from "@/components/t2/VerifyCode";
-import { forgetToken } from "@/lib/biometric";
+import { forgetDeviceSecret, setBiometricPreferred } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { confirmError, passwordConditions, passwordError } from "@/lib/password";
@@ -115,15 +115,11 @@ export function ForgotPasswordScreen() {
         verification_token: proof ?? "",
         new_password: password,
       });
-      // **الثانيةُ من الأربع** (قرارُ المالك): تبديلُ كلمة المرور يمحو
-      // المخزَّنَ **قبل** أن تقوم الجلسةُ الجديدة.
-      //
-      // **وأثرُها الحقيقيُّ على الأجهزة الأخرى**: `set_password` في الخلفية
-      // **يُبطل كلَّ جلسات صاحبها** (مقيس) — فجهازٌ آخرُ يحمل رمزاً مخزَّناً
-      // يتلقّى ردَّ «لم تعد صالحة» فيمحوه بالثالثة. **وهنا يُمحى صراحةً**
-      // ولا يُتّكل على أن الجديد سيحلّ محلَّ القديم: اتّكالٌ كهذا يترك رمزاً
-      // ميتاً لو تعثّر الحفظُ الجديد.
-      await forgetToken();
+      // **استعادةُ كلمة المرور تمحو بيانَ البصمة والتفضيلَ معاً** (أمرُ المالك ٢٠٢٦-١١-٠٢) — والخلفيةُ أبطلت البيانَ وكلَّ الجلسات
+      // (`set_password` ⇒ `revoke_all_for_user`، مقيس)؛ **ويُمحى هنا صراحةً** فلا يبقى زرٌّ يفشل، ومن أرادها بعدُ أشعلها من
+      // الإعدادات بإصبعه
+      await forgetDeviceSecret();
+      setBiometricPreferred(false);
       signIn(response);
     } catch (caught) {
       if (caught instanceof ApiError) {

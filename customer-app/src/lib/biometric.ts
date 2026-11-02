@@ -1,75 +1,58 @@
-/** دخولٌ سريعٌ بالبصمة أو الوجه — **البصمةُ تفتح رمزاً، ولا تصدّق أحداً**.
+/** الجلسةُ على الجهاز والدخولُ بالبصمة — **بيتان آمنان لسرّين مختلفين** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §60-ج).
  *
- * **والخلفيةُ لا تعرف بصمةً ألبتّة** (قرارُ المالك 2026-08-29): لا مسارَ دخولٍ
- * جديد، ولا تصديقَ عندها. الجهازُ يشهد لنفسِه، **والذي يُقدَّم للخلفية هو رمزُ
- * التجديد نفسُه كما اليوم** — فالميزةُ كلُّها في الواجهة، وسطحُ الهجوم لا
- * يتّسع بحرف.
+ * ## الأوّل — رمزُ التجديد: **يعيش في المخزن الآمن دائماً على الجهاز**
  *
- * ## ولمَ **رمزُ التجديد وحدَه** ولمَ **في مكانٍ واحد**
+ * **كان يعيش هناك حين تُشعَل البصمةُ وحدَها**، ولا يُقرأ إلا بها — **فكلُّ إقلاعٍ باردٍ بعد نصف ساعة** (عمرُ رمز الوصول) كان
+ * يجد الذاكرةَ فارغةً فيقف على شاشة الدخول (قِيس ٢٠٢٦-١١-٠٢). **وهو علّةُ «يخرجني التطبيق» عند من أشعلها بعينها.**
  *
- * **رمزُ التجديد يُستهلك مرّةً ويُدوَّر** — قِيس في `token_service.rotate`:
- * كلُّ نداءِ `/auth/refresh` **يستهلك الرمزَ ويُصدر غيرَه** (صفُّ الجلسة في القاعدة منذ
- * SPEC §60)، **وإعادةُ المستهلَك بعد مهلة السماح (ستّون ثانية) تُبطل الجلسةَ كلَّها**.
+ * فالآن **البيتُ واحدٌ ولا يتبع التفضيل**: على الجهاز `SecureStorage` (Keystore على أندرويد، Keychain على iOS) **يُقرأ عند
+ * الإقلاع بلا بصمة** قبل أن يُحكم بخروج أحد، ولا نسخةَ في `localStorage`. وفي المتصفّح `localStorage` كما كان. **والرمزُ
+ * يُدوَّر، فنسخةٌ ثانيةٌ تموت عند أوّل تجديد** — وهو الشكلُ الثامن الذي كان يمنعه هذا الملفُّ ويبقى يمنعه.
  *
- * **فنسختان من رمزٍ يُدوَّر ليستا نسختين — بل واحدةٌ حيّةٌ وأخرى ميتةٌ بعد أوّل
- * تجديد.** ولو خزّنّا نسخةً في المخزن الآمن وتركنا الأصلَ في `localStorage`
- * لَعملت الميزةُ يوماً ثمّ ردَّت «جلسة منتهية» بلا سبب يظهر — **وهو الشكلُ
- * الثامن بحرفه**: بابان ينشران الشيءَ نفسَه، وكلٌّ صادقٌ منفرداً.
+ * ## الثاني — بيانُ الجهاز: **الدخولُ بالبصمة بعد «تسجيل الخروج»**
  *
- * **فالبيتُ واحد**: حين تُشعَل الميزة، رمزُ التجديد **يعيش في المخزن الآمن
- * وحدَه** ويُنزع من `localStorage`، **ويُعاد كتابتُه هناك بعد كلِّ تدوير**.
- * ورمزُ الوصول يبقى كما هو (عمرُه ٣٠ دقيقة) — فمن فتح التطبيقَ خلالها يدخل
- * بلا بصمةٍ أصلاً، وهو المقصود لا نقص.
+ * الخروجُ **يُنهي الجلسةَ على الخادم** — فلا رمزَ تجديدٍ يبقى ليُفتح بالبصمة. **فالبصمةُ تفتح سرّاً آخرَ**: بيانُ جهازٍ يصدره
+ * الخادمُ عند الإشعال (`POST /auth/device-login/enroll`)، **ويُقرأ من المخزن بعد أن تصدق البصمةُ لا قبلها**، ويُصرف بجلسةٍ جديدة
+ * ويُدوَّر مع كلِّ دخول. **ويُبطله الخادمُ** باستعادة كلمة المرور وبإيقاف الحساب وبإنهاء كلِّ الجلسات، **ويُبطله صاحبُه**
+ * بـ«الدخول بحساب آخر» أو بإطفاء الميزة.
  *
  * ## ولا كلمةَ مرورٍ هنا بحال
  *
- * **لا مشفَّرةً ولا مُرمَّزة** (قرارُ المالك). المخزَّنُ رمزُ تجديدٍ **يُبطله
- * الخادمُ متى شاء** — وكلمةُ المرور لا تُبطَل، فتسريبُها يعيش مع صاحبه.
+ * **لا مشفَّرةً ولا مُرمَّزة** (قرارُ المالك). ما يُحفظ رمزٌ وسرٌّ **يُبطلهما الخادمُ متى شاء** — وكلمةُ المرور لا تُبطَل.
  *
- * ## وأين يسكن
+ * ## وفي المتصفّح: لا بصمةَ إطلاقاً
  *
- * `@aparajita/capacitor-secure-storage` — **Keystore على أندرويد وKeychain على
- * iOS**، لا `localStorage`. **و`localStorage` مفتاحُه الأصلُ** (origin) فتشاركه
- * كلُّ شيفرةٍ تعمل في الغلاف؛ والمخزنُ الآمن مفتاحُه **حزمةُ التطبيق**.
- *
- * **وأثرُ النكهتين مقيسٌ من هذا الباب**: النسخةُ التجريبية معرّفُها
- * `…rider.test` و`…driver.test` — **حزمةٌ أخرى بمجلَّد بياناتٍ آخرَ ومدخلِ
- * Keystore آخر**، فلا تختلط نسختان على هاتفٍ واحد. (والعزلُ حكمُ المنصّة لا
- * إعدادٌ نضبطه، **ولم يُقَس على جهاز** — يُقال ولا يُدَّعى.)
- *
- * ## وفي المتصفّح: لا زرَّ إطلاقاً
- *
- * `Capacitor.isNativePlatform()` أولاً، **قبل أيِّ نداءِ ملحق**. ومن لا بصمةَ
- * على جهازه **لا يرى الميزةَ**، ولا رقمَ سرّيَّ بديلاً — **بابٌ ثانٍ يضعف
- * الأول** (قرارُ المالك).
+ * `Capacitor.isNativePlatform()` أولاً، **قبل أيِّ نداءِ ملحق**. ومن لا بصمةَ على جهازه **لا يرى الميزةَ**، ولا رقمَ سرّيَّ
+ * بديلاً — **بابٌ ثانٍ يضعف الأول** (قرارُ المالك).
  */
 
 import { BiometricAuth, BiometryType } from "@aparajita/capacitor-biometric-auth";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import { Capacitor } from "@capacitor/core"; import { tr } from "@/lib/i18n";
 
-/** **المخزَّنُ الوحيد** — رمزُ تجديدٍ لا غير. */
-const SECURE_KEY = "taxo.biometric.refresh";
+/** **بيتُ رمز التجديد على الجهاز** — بلا بصمة، يُقرأ عند الإقلاع. */
+const SESSION_KEY = "taxo.session.refresh";
+/** بيتُه القديم حين كان خلف البصمة — **يُنقل منه مرّةً** إلى `SESSION_KEY` ثمّ يُمحى. */
+const LEGACY_KEY = "taxo.biometric.refresh";
+/** **بيانُ الجهاز** — لا يُقرأ للدخول إلا بعد البصمة. */
+const DEVICE_KEY = "taxo.device.secret";
 
-/** **التفضيلُ ليس سرّاً** فيعيش حيث تعيش التفضيلات: «أيريد المستخدمُ الميزة؟»
- *  — والجوابُ لا يفتح شيئاً بلا الرمز الذي في المخزن الآمن. */
+/** **التفضيلُ ليس سرّاً** فيعيش حيث تعيش التفضيلات — والجوابُ لا يفتح شيئاً بلا السرِّ الذي في المخزن الآمن. */
 const PREF_KEY = "taxo.biometric.enabled";
 
 export type BiometryKind = "fingerprint" | "face" | "generic";
 
 export interface BiometryStatus {
-  /** **أهو جهازٌ أصليّ؟** — يفصل «متصفّحٌ لا ميزةَ فيه أصلاً» عن «جهازٌ يملكها
-   *  ولم تُسجَّل بعد». **والفرقُ هو ما يقرّر: أيُكتب سطرُ الإرشاد أم لا شيء.** */
+  /** **أهو جهازٌ أصليّ؟** — يفصل «متصفّحٌ لا ميزةَ فيه أصلاً» عن «جهازٌ يملكها ولم تُسجَّل بعد». */
   native: boolean;
   /** **الجهازُ يملكها ومسجَّلةٌ فيه** — وإلا فلا زرَّ ولا مفتاحَ في الإعدادات. */
   available: boolean;
   kind: BiometryKind;
   /** أشعلها المستخدمُ من إعداداته. */
   enabled: boolean;
-  /** **ثمّة رمزٌ محفوظٌ فعلاً** — والزرُّ لا يُرسم بدونه ولو كان التفضيلُ مشتعلاً. */
+  /** **ثمّة بيانُ جهازٍ محفوظٌ فعلاً** — والزرُّ لا يُرسم بدونه ولو كان التفضيلُ مشتعلاً. */
   armed: boolean;
-  /** **رمزُ المنصّة حين تكون غيرَ متاحة** — يُسجَّل للتشخيص **ولا يُعرض**:
-   *  السطرُ المعروضُ يقول ما يفعله القارئ، لا ما ردَّته المنصّة. */
+  /** **رمزُ المنصّة حين تكون غيرَ متاحة** — يُسجَّل للتشخيص **ولا يُعرض**. */
   code?: string;
 }
 
@@ -109,14 +92,29 @@ function prefEnabled(): boolean {
   }
 }
 
+async function read(key: string): Promise<string | null> {
+  try {
+    return await SecureStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+async function remove(key: string): Promise<void> {
+  try {
+    await SecureStorage.removeItem(key);
+  } catch {
+    // المحوُ لا يُسقط شيئاً: غيابُ المفتاح هو المقصودُ منه أصلاً
+  }
+}
+
 /** **الحالُ تُقاس ولا تُفترض** — وفي المتصفّح تعود «غيرُ متاحة» بلا نداءِ ملحق. */
 export async function biometryStatus(): Promise<BiometryStatus> {
   if (!Capacitor.isNativePlatform()) return UNAVAILABLE;
   try {
     const check = await BiometricAuth.checkBiometry();
     if (!check.isAvailable) {
-      // **يُسجَّل السببُ ولا يُعرض**: القارئُ يحتاج ما يفعله، والمشخِّصُ يحتاج
-      // ما ردَّته المنصّة — وخلطُهما يجعل الشاشةَ تنطق برمزٍ لا يعني أحداً
+      // **يُسجَّل السببُ ولا يُعرض**: القارئُ يحتاج ما يفعله، والمشخِّصُ يحتاج ما ردَّته المنصّة
       console.warn(
         tr("الدخول السريع غيرُ متاح — {0}: {1}", { 0: check.code ?? tr("بلا رمز"), 1: check.reason ?? "" }) +
           tr(" · قويّةٌ متاحة: {0}", { 0: String(check.strongBiometryIsAvailable) }) +
@@ -126,114 +124,99 @@ export async function biometryStatus(): Promise<BiometryStatus> {
       return { ...UNAVAILABLE, native: true, code: check.code };
     }
     const enabled = prefEnabled();
-    // **«أمشتعلٌ التفضيل؟» غيرُ «أثمّة رمز؟»** — والخروجُ يمحو الثاني ويترك
-    // الأول، فمن رسم الزرَّ على التفضيل وحدَه رسم زرّاً يفشل عند الضغط
-    const armed = enabled ? (await readToken()) !== null : false;
-    return {
-      native: true,
-      available: true,
-      kind: kindOf(check.biometryType),
-      enabled,
-      armed,
-    };
+    // **«أمشتعلٌ التفضيل؟» غيرُ «أثمّة بيان؟»** — والإبطالُ يمحو الثاني ويترك الأول، فمن رسم الزرَّ على التفضيل وحدَه رسم زرّاً
+    // يفشل عند الضغط
+    const armed = enabled ? (await read(DEVICE_KEY)) !== null : false;
+    return { native: true, available: true, kind: kindOf(check.biometryType), enabled, armed };
   } catch (error) {
-    // **ملحقٌ لا يجيب يُقرأ «غيرُ متاح» لا يُسقط الشاشة**: هذه شاشةُ دخول،
-    // وسقوطُها يمنع الدخولَ بالطريق العاديِّ أيضاً.
-    //
-    // **لكنّه `native: true` لا `false`** (صُحّح 2026-08-29): كان يعود
-    // `UNAVAILABLE` كاملاً — **فيُقرأ «متصفّح» وهو جهازٌ سقط ملحقُه**،
-    // فيختفي سطرُ الإرشاد ولا يبقى للقارئ ولا للمشخِّص أثر. **وهو الغيابُ
-    // الصامتُ بعينه، في الشيفرة التي كُتبت لتمنعه.**
+    // **ملحقٌ لا يجيب يُقرأ «غيرُ متاح» لا يُسقط الشاشة** — **و`native: true`**: جهازٌ سقط ملحقُه ليس متصفّحاً (صُحّح 2026-08-29)
     console.warn("تعذّر سؤالُ الملحق عن البصمة", error);
     return { ...UNAVAILABLE, native: true, code: "plugin_error" };
   }
 }
 
-async function readToken(): Promise<string | null> {
-  try {
-    return await SecureStorage.getItem(SECURE_KEY);
-  } catch {
-    return null;
-  }
+// ------------------------------------------------------------ رمزُ التجديد
+
+/** **بيتُ رمز التجديد** كما يحتاجه `api/client` — يُحقن هناك فيبقى العميلُ جاهلاً بالملحقات. */
+export const nativeRefreshStore = {
+  native: Capacitor.isNativePlatform(),
+  /** **يُقرأ عند الإقلاع** — ومن البيت القديم (خلف البصمة) أو من `localStorage` (جهازٌ قبل هذا الإصدار) **يُنقل مرّةً**. */
+  async load(fromLocalStorage: string | null): Promise<string | null> {
+    const held = await read(SESSION_KEY);
+    if (held) return held;
+    const legacy = (await read(LEGACY_KEY)) ?? fromLocalStorage;
+    if (legacy) {
+      await this.save(legacy);
+      await remove(LEGACY_KEY);
+    }
+    return legacy;
+  },
+  async save(token: string): Promise<void> {
+    try {
+      await SecureStorage.setItem(SESSION_KEY, token);
+    } catch (error) {
+      console.warn("تعذّر حفظ رمز التجديد في المخزن الآمن", error);
+    }
+  },
+  async clear(): Promise<void> {
+    await remove(SESSION_KEY);
+    await remove(LEGACY_KEY);
+  },
+};
+
+// ------------------------------------------------------------ بيانُ الجهاز
+
+/** **قراءتُه للإبطال وحدَه** («الدخول بحساب آخر») — الإبطالُ لا يفتح شيئاً، فلا يحتاج بصمة. */
+export async function deviceSecretForRevoke(): Promise<string | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  return read(DEVICE_KEY);
 }
 
-/** يُكتب بعد **كلِّ** تدوير — وهو ما يمنع الشكلَ الثامن. */
-export async function rememberToken(refreshToken: string): Promise<void> {
-  if (!Capacitor.isNativePlatform() || !prefEnabled()) return;
-  try {
-    await SecureStorage.setItem(SECURE_KEY, refreshToken);
-  } catch (error) {
-    console.warn("تعذّر حفظ رمز التجديد في المخزن الآمن", error);
-  }
-}
-
-/** **المحوُ في أربع** (قرارُ المالك): خروج · تبديلُ كلمة المرور · ردُّ الخادم
- *  بأن الجلسةَ لم تعد صالحة · إطفاءُ الميزة.
- *
- *  **والتفضيلُ يبقى مشتعلاً في الثلاثة الأولى**: من أشعل الميزةَ لا يطفئها
- *  خروجُه — فإذا دخل بكلمته ثانيةً عاد الرمزُ إلى مكانه بلا أن يُشعلها من جديد.
- *  **وإطفاؤها هو وحدَه ما يطفئ التفضيل.** */
-export async function forgetToken(): Promise<void> {
+export async function storeDeviceSecret(secret: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    await SecureStorage.removeItem(SECURE_KEY);
-  } catch {
-    // المحوُ لا يُسقط شيئاً: غيابُ المفتاح هو المقصودُ منه أصلاً
+    await SecureStorage.setItem(DEVICE_KEY, secret);
+  } catch (error) {
+    console.warn("تعذّر حفظ بيان الجهاز في المخزن الآمن", error);
   }
 }
 
-/** **قراءةٌ متزامنةٌ للتفضيل** — يحتاجها `tokens.save` لتقرير وجهة الرمز،
- *  ولا تسأل الملحقَ ولا القرص: التفضيلُ في `localStorage` وقراءتُه فورية. */
+/** **المحوُ المحلّيّ** — استعادةُ كلمة المرور، وردُّ الخادم بأن البيانَ أُبطل، و«الدخول بحساب آخر»، وإطفاءُ الميزة. */
+export async function forgetDeviceSecret(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  await remove(DEVICE_KEY);
+  // **وما بقي من البيت القديم يُمحى معه** — رمزُ جلسةٍ خلف البصمة من إصدارٍ سابق
+  await remove(LEGACY_KEY);
+}
+
 export function isBiometricPreferred(): boolean {
   return prefEnabled();
 }
 
-export async function enableBiometric(refreshToken: string | null): Promise<void> {
-  localStorage.setItem(PREF_KEY, "1");
-  if (refreshToken) await rememberToken(refreshToken);
+export function setBiometricPreferred(on: boolean): void {
+  if (on) localStorage.setItem(PREF_KEY, "1");
+  else localStorage.removeItem(PREF_KEY);
 }
 
-export async function disableBiometric(): Promise<void> {
-  localStorage.removeItem(PREF_KEY);
-  await forgetToken();
-}
-
-/** **يُطلب الإصبعُ عند الإشعال** — إثباتاً أن الجهازَ يفتح فعلاً.
- *
- * **ولمَ لا يُؤجَّل إلى أوّل استعمال**: من أشعلها بلا إصبعٍ يظنّها تعمل، ثمّ
- * يكتشف يومَ يحتاجها أنها لا تفتح — **ومفتاحٌ يُشعَل ولا يُقاس هو «حقلٌ يُعلن
- * ولا يقيس»**.
- */
+/** **يُطلب الإصبعُ عند الإشعال** — إثباتاً أن الجهازَ يفتح فعلاً؛ ومفتاحٌ يُشعَل ولا يُقاس «حقلٌ يُعلن ولا يقيس». */
 export async function proveBiometry(reason: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
     throw new Error(tr("الدخول بالبصمة على الجهاز وحده"));
   }
-  await BiometricAuth.authenticate({
-    reason,
-    cancelTitle: tr("إلغاء"),
-    allowDeviceCredential: false,
-  });
+  await BiometricAuth.authenticate({ reason, cancelTitle: tr("إلغاء"), allowDeviceCredential: false });
 }
 
-/** **الفتحُ**: تُطلب البصمة، فإن صدقت أُعيد رمزُ التجديد المخزَّن.
+/** **الفتحُ**: تُطلب البصمة، فإن صدقت أُعيد بيانُ الجهاز.
  *
- * **ويُرمى الخطأُ ولا يُبتلع**: «بصمةٌ خاطئة» و«لا رمزَ محفوظاً» حالان
- * مختلفتان — والشاشةُ تقول أيَّهما وقع.
+ * **والترتيبُ مقصود**: البصمةُ **قبل** قراءة المخزن — فقراءةٌ تسبق التصديق تجعل السرَّ في الذاكرة ولو رُفض صاحبُ الإصبع.
+ * **ولا بديلَ بقفل الجهاز** (قرارُ المالك: لا بابَ ثانياً) — من لا بصمةَ له يدخل بكلمة المرور.
  */
-export async function unlockToken(reason: string): Promise<string> {
+export async function unlockDeviceSecret(reason: string): Promise<string> {
   if (!Capacitor.isNativePlatform()) {
     throw new Error(tr("الدخول بالبصمة على الجهاز وحده"));
   }
-  // **الترتيب مقصود**: تُطلب البصمةُ **قبل** قراءة المخزن — فقراءةٌ تسبق
-  // التصديق تجعل الرمزَ في الذاكرة ولو رُفض صاحبُ الإصبع
-  await BiometricAuth.authenticate({
-    reason,
-    cancelTitle: tr("إلغاء"),
-    // **ولا بديلَ بقفل الجهاز** (قرارُ المالك: لا بابَ ثانياً): من لا بصمةَ
-    // له يدخل بكلمة المرور — وهو البابُ الأول لا بابٌ أضعفُ منه
-    allowDeviceCredential: false,
-  });
-  const token = await readToken();
-  if (!token) throw new Error(tr("لا رمزَ محفوظاً على هذا الجهاز"));
-  return token;
+  await BiometricAuth.authenticate({ reason, cancelTitle: tr("إلغاء"), allowDeviceCredential: false });
+  const secret = await read(DEVICE_KEY);
+  if (!secret) throw new Error(tr("لا دخولَ بالبصمة محفوظاً على هذا الجهاز"));
+  return secret;
 }

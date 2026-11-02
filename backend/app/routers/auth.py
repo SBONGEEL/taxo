@@ -52,6 +52,10 @@ from app.schemas.auth import (
     HandoffToken,
     AuthMethodResponse,
     AuthResponse,
+    DeviceLoginEnroll,
+    DeviceLoginOut,
+    DeviceLoginRequest,
+    DeviceSecretOut,
     ChallengeRequest,
     EmailChallengeRequest,
     EmailRegisterRequest,
@@ -82,6 +86,7 @@ from app.services import verification_campaign
 from app.services import rider_photo
 from app.services import (
     admin_credentials,
+    device_logins,
     handoff,
     policies as policies_service,
     rides as rides_service,
@@ -765,6 +770,66 @@ async def refresh(
 async def logout(payload: RefreshRequest, session: DbSession, redis: RedisDep) -> None:
     """**ينهي الجلسةَ على الخادم** لا على الجهاز وحدَه (SPEC §60-ب/٢)."""
     await token_service.revoke_session(session, redis, payload.refresh_token)
+
+
+# ------------------------------------------------------------ الدخولُ بالبصمة بعد الخروج (SPEC §60-ج)
+
+
+@router.post("/device-login/enroll", response_model=DeviceSecretOut)
+async def enroll_device_login(
+    payload: DeviceLoginEnroll, user: CurrentUser, session: DbSession
+) -> DeviceSecretOut:
+    """**يُشعل البصمةَ على هذا الجهاز** — والسرُّ يُسلَّم مرّةً ويسكن مخزنَ الجهاز الآمن.
+
+    **وحسابٌ بعاملٍ ثانٍ لا يُعطاه** (أمرُ المالك: «قواعدُ العامل الثاني تبقى»): البصمةُ تقوم مقامَ كلمة المرور وحدَها.
+    """
+    if await totp.has_confirmed_factor(session, user.id):
+        raise InvalidInput("الدخولُ بالبصمة غيرُ متاحٍ لحسابٍ بعاملٍ ثانٍ — ادخل بكلمة المرور ورمز التحقّق")
+    app_scope.guard(user.roles, ClientApp(payload.app))
+    secret = await device_logins.enroll(session, user=user, device_id=payload.device_id, app=payload.app)
+    await session.commit()
+    return DeviceSecretOut(secret=secret)
+
+
+@router.post("/device-login", response_model=DeviceLoginOut)
+async def device_login(
+    payload: DeviceLoginRequest, session: DbSession, redis: RedisDep, ip: ClientIP
+) -> DeviceLoginOut:
+    """**الدخولُ بالبصمة بعد الخروج** — السرُّ مكانَ كلمة المرور، **وبحدودها نفسِها**: على الجهاز وعلى العنوان.
+
+    **ويُدوَّر السرُّ ويُلتزم قبل إصدار الجلسة**: سرٌّ صُرف ثمّ انقطع الطلبُ لا يعود صالحاً.
+    """
+    await _guard(
+        redis,
+        (
+            f"device-login:device:{payload.device_id}",
+            settings.login_rate_limit_attempts,
+            settings.login_rate_limit_window_seconds,
+        ),
+        (
+            f"login:ip:{ip}",
+            settings.login_rate_limit_attempts,
+            settings.login_rate_limit_window_seconds,
+        ),
+    )
+    user, fresh = await device_logins.spend(
+        session, device_id=payload.device_id, secret=payload.secret, app=payload.app
+    )
+    app_scope.guard(user.roles, ClientApp(payload.app))
+    role_enrollment.require_role_open(user, ClientApp(payload.app))
+    if await totp.has_confirmed_factor(session, user.id):
+        raise InvalidInput("الدخولُ بالبصمة غيرُ متاحٍ لحسابٍ بعاملٍ ثانٍ — ادخل بكلمة المرور ورمز التحقّق")
+    await session.commit()
+    await rate_limit.reset(redis, f"device-login:device:{payload.device_id}")
+    tokens = await _issue(session, redis, user)
+    return DeviceLoginOut(user=UserOut.model_validate(user), tokens=tokens, device_secret=fresh)
+
+
+@router.post("/device-login/forget", status_code=status.HTTP_204_NO_CONTENT)
+async def forget_device_login(payload: DeviceLoginRequest, session: DbSession) -> None:
+    """**«الدخول بحساب آخر»** — يُبطل بيانَ هذا الجهاز بسرّه، ولا يفشل: غيابُه هو المقصود."""
+    await device_logins.forget(session, device_id=payload.device_id, secret=payload.secret, app=payload.app)
+    await session.commit()
 
 
 @router.post("/sessions/revoke-all", status_code=status.HTTP_204_NO_CONTENT)

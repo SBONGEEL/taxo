@@ -219,7 +219,11 @@ async def test_refresh_rotates_and_invalidates_old_token(
     assert lost_reply.status_code == 200, lost_reply.text
     assert lost_reply.json()["refresh_token"] == new_tokens["refresh_token"]
 
-    # وبعدها: إعادةُ القديم مرفوضة **وتُسقط الجلسةَ كلَّها**
+    # وبعدها — **والحاليُّ وصل صاحبَه واستُعمل** (أمرُ المالك ٢٠٢٦-١١-٠٢: جوابٌ ضاع ولم يُستعمل لا يُخرج أحداً،
+    # `test_device_login.py`) — إعادةُ القديم مرفوضة **وتُسقط الجلسةَ كلَّها**
+    assert (
+        await client.get("/auth/me", headers={"Authorization": f"Bearer {new_tokens['access_token']}"})
+    ).status_code == 200
     async with session_factory() as session:
         for row in (await session.scalars(select(AuthSession))).all():
             row.current_issued_at -= GRACE + timedelta(seconds=1)

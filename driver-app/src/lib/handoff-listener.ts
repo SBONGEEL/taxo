@@ -63,7 +63,9 @@ async function adopt(url: string): Promise<void> {
   consumed.add(token);
   try {
     const { tokens: pair } = await exchangeHandoff(token);
-    tokens.save(pair);
+    // **يُنتظر حفظُ الجلسة قبل إعادة التحميل** (SPEC §60-ج): رمزُ التجديد في المخزن الآمن، وإعادةُ تحميلٍ تسبق الكتابةَ تُقلع
+    // بلا جلسة — فيخرج صاحبُها بعد نصف ساعة
+    await tokens.saveRotated(pair);
     // **يُعاد التحميلُ لا يُنقَل المسار**: الجلسةُ تُقرأ عند الإقلاع، وتبديلُها
     // تحت شجرةٍ مركَّبةٍ يترك شاشاتٍ رُسمت لصاحبٍ آخر
     window.location.replace("/");

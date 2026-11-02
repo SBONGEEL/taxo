@@ -14,7 +14,7 @@
  * - **زرُّ الرجوع** ليس في اللوحة: الدخولُ يعود إلى الترحيب (R02 ← R01 في الراكب) — فيقع في سطر العلامة بلغة رأس C02.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import type { CountryCode } from "@/api/types";
@@ -28,6 +28,7 @@ import { biometryLabel } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164, toNational } from "@/lib/phone";
+import { rememberedLogin } from "@/lib/remembered";
 import { useSession } from "@/lib/session";
 import {
   AuthBlock,
@@ -46,7 +47,7 @@ type Failure = { field: "phone" | "password" | null; message: string };
 
 export function LoginScreen() {
   const navigate = useNavigate();
-  const { signIn, biometry, signInWithBiometry } = useSession();
+  const { signIn, biometry, signInWithBiometry, signInAsAnother } = useSession();
   // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
   // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
   const auth = useAuthCountry("login");
@@ -75,6 +76,31 @@ export function LoginScreen() {
   const [offer, setOffer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
+
+  // **الرقمُ المتذكَّر** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §60-ج): من خرج يجد رقمَه ودولتَه — ومن جاء من «كن سائقاً» يسبقه.
+  // **ويُطبَّق مرّةً**: من غيّر الدولةَ بعده لا تُعاد عليه
+  const [remembered, setRemembered] = useState(() => (pending ? null : rememberedLogin()));
+  const rememberedApplied = useRef(false);
+  useEffect(() => {
+    if (!remembered || rememberedApplied.current) return;
+    if (country !== remembered.country) {
+      if (countries.includes(remembered.country)) setCountry(remembered.country);
+      else rememberedApplied.current = true;
+      return;
+    }
+    if (dialCode === null) return;
+    rememberedApplied.current = true;
+    setPhone((held) => held || toNational(remembered.phone, dialCode));
+  }, [remembered, country, countries, dialCode, setCountry]);
+
+  function anotherAccount() {
+    setFailure(null);
+    void signInAsAnother().then(() => {
+      setRemembered(null);
+      setPhone("");
+      setPassword("");
+    });
+  }
 
   const complete = looksComplete(phone, nationalLength);
   const short =
@@ -282,6 +308,13 @@ export function LoginScreen() {
                   <span>{bioBusy ? tr("لحظة…") : tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}</span>
                 </button>
               </>
+            ) : null}
+
+            {/* **«الدخول بحساب آخر»** (SPEC §60-ج) — يُبطل بيانَ البصمة على الخادم ويمحو الرقمَ المتذكَّر، فلا يُرسم بلا ما يمحوه */}
+            {remembered || biometry?.armed ? (
+              <button type="button" className="t2-auth-link t2-auth-another" disabled={busy || bioBusy} onClick={anotherAccount}>
+                {tr("الدخول بحساب آخر")}
+              </button>
             ) : null}
 
             <button type="button" className="cap-join" onClick={() => navigate("/register")}>

@@ -25,6 +25,7 @@ from app.models.dispatch_setting import DispatchSetting  # noqa: F401
 from app.models.storefront import PromoBanner, ServiceTile  # noqa: F401
 from app.models.audit import AdminAuditLog
 from app.models.auth_session import AuthSession
+from app.models.device_login import DeviceLogin  # noqa: F401
 from app.models.site import SiteSettings  # noqa: F401
 from app.models.cancellation import CancellationSetting, RideCancellationCharge
 from app.models.map_setting import MapSetting

@@ -27,14 +27,16 @@ import { Capacitor } from "@capacitor/core";
 import {
   API_URL,
   ApiError,
-  refreshNow,
-  setBiometricArmedReader,
+  hydrateTokens,
   setNativeSessionWriter,
-  setRefreshPersister,
+  setRefreshStore,
   setSessionLostHandler,
   tokens,
 } from "@/api/client";
 import {
+  deviceLogin,
+  enrollDeviceLogin,
+  forgetDeviceLogin,
   getMe,
   logout as logoutRequest,
   registerDevice,
@@ -44,15 +46,17 @@ import {
 import type { AuthResponse, User } from "@/api/types";
 import {
   biometryStatus,
+  deviceSecretForRevoke,
+  forgetDeviceSecret,
   isBiometricPreferred,
-  disableBiometric,
-  enableBiometric,
-  forgetToken,
+  nativeRefreshStore,
   proveBiometry,
-  rememberToken,
-  unlockToken,
+  setBiometricPreferred,
+  storeDeviceSecret,
+  unlockDeviceSecret,
   type BiometryStatus,
 } from "@/lib/biometric";
+import { forgetRememberedLogin, rememberLogin } from "@/lib/remembered";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { setNativeSession } from "@/lib/offer-alert";
 import { deviceId, platform } from "@/lib/device";
@@ -72,10 +76,19 @@ function isTransient(error: unknown): boolean {
   return error.status === 0 || error.status >= 500;
 }
 
+// **بيتُ رمز التجديد يُحقن قبل أيِّ رسم** (SPEC §60-ج): الإقلاعُ يقرؤه، فلا يجوز أن يسبقه أثرٌ لم يُركَّب بعد
+setRefreshStore(nativeRefreshStore);
+
+/** **يُشعل الدخولَ بالبصمة على هذا الجهاز** بجلسةٍ قائمة — والسرُّ إلى المخزن الآمن. */
+async function enrollHere(): Promise<void> {
+  const { secret } = await enrollDeviceLogin(deviceId());
+  await storeDeviceSecret(secret);
+}
+
 interface SessionState {
   user: User | null;
   loading: boolean;
-  signIn: (response: AuthResponse) => void;
+  signIn: (response: AuthResponse, options?: { viaDevice?: boolean }) => void;
   signOut: () => Promise<void>;
   /** إنهاءُ كلِّ جلسات الحساب على كلِّ الأجهزة — وهذه منها (SPEC §60). */
   signOutEverywhere: () => Promise<void>;
@@ -90,8 +103,10 @@ interface SessionState {
   /** يُعيد قراءةَ الحال بعد إشعالٍ أو إطفاء. */
   refreshBiometry: () => Promise<void>;
   setBiometric: (on: boolean) => Promise<void>;
-  /** **الفتحُ ثم التجديد**: البصمةُ تفتح الرمزَ، والخلفيةُ تراه رمزاً كأيِّ رمز. */
+  /** **البصمةُ ثمّ بيانُ الجهاز** — جلسةٌ جديدةٌ بعد الخروج (SPEC §60-ج). */
   signInWithBiometry: () => Promise<void>;
+  /** **«الدخول بحساب آخر»** — يُبطل بيانَ البصمة على الخادم ويمحو الرقمَ المتذكَّر والتفضيل (SPEC §60-ج). */
+  signInAsAnother: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionState>({
@@ -106,6 +121,7 @@ const SessionContext = createContext<SessionState>({
   refreshBiometry: async () => undefined,
   setBiometric: async () => undefined,
   signInWithBiometry: async () => undefined,
+  signInAsAnother: async () => undefined,
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -124,15 +140,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void refreshBiometry();
   }, [refreshBiometry]);
 
-  /** **الرمزُ المخزَّنُ يتبع التدوير** — يُكتب بعد كلِّ `tokens.save`.
-   *  ولولا هذا لَعمل الفتحُ مرّةً ثمّ ردَّ «جلسة منتهية» (الشكلُ الثامن). */
   useEffect(() => {
-    setRefreshPersister((token) => {
-      void rememberToken(token);
-    });
-    // **وجهةُ الرمز تُقرَّر بالتفضيل** — فلا نسخةَ في `localStorage` تُغني
-    // عن البصمة وتُبطل البوّابة (صُحّح 2026-08-29)
-    setBiometricArmedReader(isBiometricPreferred);
     // **ورمزُ الوصول يُنسخ إلى الأصليّ مع كلِّ تجديد** — به تقبل شاشةُ ملء
     // الشاشة والورقةُ والفقاعةُ بأنفسها، **والقبولُ يسبق فتحَ التطبيق**
     // (قرارُ المالك 2026-08-30). ويُمحى بالخروج.
@@ -142,27 +150,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»
-  //
-  // **والثالثةُ من الأربع هنا** (قرارُ المالك): ردُّ الخادم بأن الجلسة لم تعد
-  // صالحة **يمحو المخزَّن** — فرمزٌ أبطله الخادمُ لا يُفتح ببصمةٍ إلى الأبد،
-  // ولا يُترك ليُقرأ زرّاً يفشل عند الضغط.
   useEffect(() => {
-    setSessionLostHandler((serverRejected: boolean) => {
+    setSessionLostHandler(() => {
       setUser(null);
-      // **الثالثةُ من الأربع — ومشروطةٌ بأن يكون الخادمُ قد قال شيئاً**
-      // (صُحّح 2026-08-29): بلا رمزٍ في الذاكرة **لم يُرفض شيءٌ أصلاً**،
-      // وكان المحوُ يقع هنا **فيهدم الرمزَ عند أوّل إقلاعٍ بارد** — أي أن
-      // الميزةَ لا تعمل مرّةً واحدة.
-      if (serverRejected) void forgetToken().then(refreshBiometry);
-      else void refreshBiometry();
+      // **جلسةٌ رُفضت لا تمحو بيانَ البصمة** (SPEC §60-ج): الخادمُ يُبطله بنفسه حين يجب (استعادةُ الكلمة، الإيقاف، إنهاءُ كلِّ
+      // الجلسات)، **وإلا فهو باقٍ** — والدخولُ به يقول إن كان قد أُبطل
+      void refreshBiometry();
     });
   }, [refreshBiometry]);
 
   useEffect(() => {
-    if (!tokens.access()) {
-      setLoading(false);
-      return;
-    }
     // **إقلاعٌ بلا شبكة لا يُخرج** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): كان أيُّ
     // فشلٍ في `GET /auth/me` يمحو الرموز — فكبتنٌ فتح التطبيقَ في نفقٍ أو والخادمُ
     // يُعاد تشغيلُه وجد نفسَه خارجَ حسابه. **فالعابرُ يُعاد وتبقى الترحيبيةُ**
@@ -190,7 +187,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         });
     };
-    load();
+    // **بيتُ الجهاز يُقرأ قبل الحكم** (أمرُ المالك ٢٠٢٦-١١-٠٢): رمزُ الوصول ينتهي بعد نصف ساعة، **ورمزُ التجديد في المخزن
+    // الآمن هو الجلسةُ** — فلا خروجَ إلا حين لا يبقى أيٌّ منهما
+    void hydrateTokens().then(() => {
+      if (cancelled) return;
+      if (!tokens.access() && !tokens.refresh()) {
+        setLoading(false);
+        return;
+      }
+      load();
+    });
     return () => {
       cancelled = true;
     };
@@ -248,12 +254,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [user, config]);
 
   const signIn = useCallback(
-    (response: AuthResponse) => {
-      // `tokens.save` يستدعي الحاقنَ، فيصل الرمزُ إلى المخزن الآمن إن أُشعلت
-      // الميزةُ سلفاً — **فمن خرج ثمّ دخل بكلمته يعود زرُّه بلا أن يُشعلها**
+    (response: AuthResponse, options: { viaDevice?: boolean } = {}) => {
       tokens.save(response.tokens);
       setUser(response.user);
-      void refreshBiometry();
+      // **الرقمُ والدولةُ يُتذكَّران — وكلمةُ المرور لا** (SPEC §60-ج)
+      if (response.user.phone) rememberLogin({ phone: response.user.phone, country: response.user.country_code });
+      // **ومن أشعل البصمةَ يعود بيانُه بعد كلِّ دخولٍ بكلمته** — بيانٌ أُبطل يُستبدل بلا أن يُشعلها من جديد. **والدخولُ بالبصمة
+      // نفسُه حمل سرَّه المُدوَّر**، فلا إشعالَ ثانٍ
+      if (!options.viaDevice && isBiometricPreferred() && Capacitor.isNativePlatform()) {
+        void enrollHere()
+          .catch((error) => console.warn("تعذّر تجديدُ الدخول بالبصمة", error))
+          .finally(() => void refreshBiometry());
+      } else {
+        void refreshBiometry();
+      }
     },
     [refreshBiometry],
   );
@@ -264,9 +278,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await unregisterDevice(deviceId()).catch(() => undefined);
     if (refresh) await logoutRequest(refresh).catch(() => undefined);
     tokens.clear();
-    // **الأولى من الأربع**: الخروجُ يمحو المخزَّن — والتفضيلُ يبقى، فمن
-    // أشعلها لا يطفئها خروجُه
-    await forgetToken();
+    // **والخروجُ لا يمحو بيانَ البصمة ولا الرقمَ المتذكَّر** (أمرُ المالك ٢٠٢٦-١١-٠٢): الجلسةُ انتهت على الخادم، **والدخولُ التالي
+    // بالبصمة يفتح جلسةً جديدة**. ومن أراد محوَهما فـ«الدخول بحساب آخر»
     registered.current = false;
     setPushState(null);
     setUser(null);
@@ -283,7 +296,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await unregisterDevice(deviceId()).catch(() => undefined);
     await revokeAllSessions();
     tokens.clear();
-    await forgetToken();
+    // **والخادمُ أبطل بيانَ البصمة معها** (`revoke_all_for_user`) — فيُمحى هنا ولا يبقى زرٌّ يفشل
+    await forgetDeviceSecret();
     registered.current = false;
     setPushState(null);
     setUser(null);
@@ -294,42 +308,57 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(await getMe());
   }, []);
 
-  /** **الرابعةُ من الأربع** — الإطفاءُ من إعدادات المستخدم يمحو ويطفئ معاً. */
+  /** **الإشعالُ بإصبعٍ وبيانٍ من الخادم، والإطفاءُ يُبطله هناك ويمحو هنا** (SPEC §60-ج). */
   const setBiometric = useCallback(
     async (on: boolean) => {
       if (on) {
         // **البصمةُ تُطلب عند الإشعال لا عند أوّل استعمال**: من أشعلها بلا
         // إصبعٍ يظنّها تعمل، ثمّ يكتشف يومَ يحتاجها أنها لا تفتح
         await proveBiometry(tr("لتفعيل الدخول بالبصمة"));
-        await enableBiometric(tokens.refresh());
-        // **بيتٌ واحد**: يُنزع من `localStorage` بعد أن يستقرّ في المخزن الآمن
-        tokens.detachFromLocalStorage();
+        try {
+          await enrollHere();
+        } catch (caught) {
+          throw caught instanceof ApiError ? caught : new Error(tr("تعذّر تفعيل الدخول بالبصمة — أعد المحاولة"));
+        }
+        setBiometricPreferred(true);
       } else {
-        await disableBiometric();
+        const secret = await deviceSecretForRevoke();
+        if (secret) await forgetDeviceLogin(deviceId(), secret).catch(() => undefined);
+        await forgetDeviceSecret();
+        setBiometricPreferred(false);
       }
       await refreshBiometry();
     },
     [refreshBiometry],
   );
 
-  /** **الفتحُ ثم التجديد** — والخلفيةُ لا ترى إلا رمزاً كأيِّ رمز.
-   *
-   *  **ولا يُعلَن نجاحٌ قبل أن يُرى المستخدم**: `getMe` بعد التجديد هو ما
-   *  يقول إن الجلسةَ قامت — و«فُتح المخزن» ليس «دخلتَ».
-   */
+  /** **البصمةُ ثمّ بيانُ الجهاز** — جلسةٌ جديدةٌ وسرٌّ مُدوَّرٌ يُكتب مكانَ المصروف (SPEC §60-ج). */
   const signInWithBiometry = useCallback(async () => {
-    const token = await unlockToken(tr("لتسجيل الدخول إلى TAXO"));
-    tokens.adoptRefresh(token);
-    // التجديدُ يستهلك المفتوحَ ويُصدر زوجاً جديداً، و`tokens.save` داخله
-    // يعيد كتابةَ الجديد في المخزن الآمن
-    const ok = await refreshNow();
-    if (!ok) {
-      // **الرمزُ المخزَّنُ ميّت** — يُمحى ولا يُترك زرّاً يفشل كلَّ مرّة
-      await forgetToken();
-      await refreshBiometry();
-      throw new Error(tr("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور"));
+    const secret = await unlockDeviceSecret(tr("لتسجيل الدخول إلى TAXO Driver"));
+    let response: Awaited<ReturnType<typeof deviceLogin>>;
+    try {
+      response = await deviceLogin(deviceId(), secret);
+    } catch (caught) {
+      // **`401` حكمُ الخادم على البيان** — أُبطل (استعادةُ الكلمة، الإيقاف، إنهاءُ كلِّ الجلسات): يُمحى ويُقال الطريق.
+      // وما عداه (شبكة، حدّ) عابرٌ يُقال ولا يمحو
+      if (caught instanceof ApiError && caught.status === 401) {
+        await forgetDeviceSecret();
+        await refreshBiometry();
+        throw new Error(tr("انتهى الدخولُ بالبصمة على هذا الجهاز — ادخل بكلمة المرور مرّةً، ويعود بعدها."));
+      }
+      throw caught;
     }
-    setUser(await getMe());
+    await storeDeviceSecret(response.device_secret);
+    signIn({ user: response.user, tokens: response.tokens }, { viaDevice: true });
+  }, [refreshBiometry, signIn]);
+
+  /** **«الدخول بحساب آخر»** — يُبطَل البيانُ على الخادم أوّلاً ثمّ يُمحى ما على الجهاز: الرقمُ والدولةُ والسرُّ والتفضيل. */
+  const signInAsAnother = useCallback(async () => {
+    const secret = await deviceSecretForRevoke();
+    if (secret) await forgetDeviceLogin(deviceId(), secret).catch(() => undefined);
+    await forgetDeviceSecret();
+    setBiometricPreferred(false);
+    forgetRememberedLogin();
     await refreshBiometry();
   }, [refreshBiometry]);
 
@@ -346,6 +375,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       refreshBiometry,
       setBiometric,
       signInWithBiometry,
+      signInAsAnother,
     }),
     [
       user,
@@ -359,6 +389,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       refreshBiometry,
       setBiometric,
       signInWithBiometry,
+      signInAsAnother,
     ],
   );
 

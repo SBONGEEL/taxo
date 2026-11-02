@@ -187,6 +187,21 @@ export const registerAccount = (payload: {
 /** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١) — كلُّ أجهزة الحساب، وهذا منها. */
 export const revokeAllSessions = () => api.post<void>("/auth/sessions/revoke-all");
 
+/** **الدخولُ بالبصمة بعد الخروج** (SPEC §60-ج) — إشعالٌ بجلسةٍ قائمة يعيد سرَّ الجهاز مرّةً، وصرفُه يفتح جلسةً جديدة **ويُدوِّره**،
+ *  ونسيانُه («الدخول بحساب آخر») يُبطله. **والسرُّ لا يُقرأ للدخول إلا بعد البصمة** (`lib/biometric.unlockDeviceSecret`). */
+export const enrollDeviceLogin = (deviceId: string) =>
+  api.post<{ secret: string }>("/auth/device-login/enroll", { device_id: deviceId, app: "driver" });
+
+export const deviceLogin = (deviceId: string, secret: string) =>
+  api.post<AuthResponse & { device_secret: string }>(
+    "/auth/device-login",
+    { device_id: deviceId, secret, app: "driver" },
+    { anonymous: true },
+  );
+
+export const forgetDeviceLogin = (deviceId: string, secret: string) =>
+  api.post<void>("/auth/device-login/forget", { device_id: deviceId, secret, app: "driver" }, { anonymous: true });
+
 export const logout = (refresh_token: string) =>
   api.post<void>("/auth/logout", { refresh_token });
 

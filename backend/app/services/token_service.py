@@ -90,6 +90,8 @@ def _pair(user: User, auth: AuthSession) -> TokenPair:
             "role": user.role.value,
             "country": user.country_code.value,
             "sid": str(auth.id),
+            # **أيُّ رمزِ تجديدٍ سُكَّ معه** — فاستعمالُه يشهد أن الزوجَ وصل صاحبَه (`current_seen_at`)
+            "rj": auth.current_jti,
         },
     )
     refresh, _, _ = create_refresh_token(
@@ -172,8 +174,14 @@ async def rotate(
         auth.previous_jti = auth.current_jti
         auth.current_jti = uuid.uuid4().hex
         auth.current_issued_at = _second(now)
-    elif jti == auth.previous_jti and now - auth.current_issued_at <= GRACE:
-        pass  # **الحاليُّ نفسُه يُعاد سكُّه** — لا فرعَ ثالث في السلسلة
+        auth.current_seen_at = None
+    elif jti == auth.previous_jti and (
+        now - auth.current_issued_at <= GRACE or auth.current_seen_at is None
+    ):
+        # **الحاليُّ نفسُه يُعاد سكُّه** — لا فرعَ ثالث في السلسلة. **وبعد المهلة أيضاً ما لم يصل الحاليُّ صاحبَه** (أمرُ المالك
+        # ٢٠٢٦-١١-٠٢): تطبيقٌ قُتل وطلبُ التجديد في الطريق يعود بالسابق بعد ساعات، **ولم يستعمل أحدٌ الحاليَّ** — فلا لصَّ يُكشف،
+        # وإبطالُها كان يُخرج صاحبَها بلا سبب. **ومن استعمل الحاليَّ ثمّ عاد السابقُ فذاك فرعان** ⇒ الإبطالُ كما كان
+        pass
     else:
         auth.revoked_at = now
         auth.revoked_reason = REVOKE_REUSE
@@ -287,6 +295,11 @@ async def revoke_all_for_user(
         .values(revoked_at=func.now(), revoked_reason=reason)
     )
     removed = result.rowcount or 0
+    # **وبياناتُ البصمة معها** (أمرُ المالك ٢٠٢٦-١١-٠٢): تغييرُ الكلمة واستعادتُها والحظرُ والحذفُ وإنهاءُ الكلّ تُبطلها — **ولو
+    # استُثنيت جلسةُ من غيّر كلمتَه**: البصمةُ بابٌ بعد الخروج، ومن غيّر كلمتَه يُشعلها من جديدٍ بعلمه
+    from app.services import device_logins
+
+    await device_logins.revoke_all(session, user_id, reason=reason)
     async for key in redis.scan_iter(match=f"{_LEGACY_PREFIX}:{user_id}:*", count=100):
         removed += await redis.delete(key)
     return removed
@@ -356,6 +369,18 @@ async def authenticate_access(session: AsyncSession, token: str) -> tuple[User, 
         auth = await session.get(AuthSession, sid)
         if auth is None or auth.user_id != user_id or auth.revoked_at is not None:
             raise InvalidToken(_GONE)
+        # **الزوجُ الحاليُّ وصل صاحبَه** — يُختم مرّةً لكلِّ تدوير (كتابةٌ واحدةٌ لا في كلِّ طلب)، وبه يُفرَّق الجوابُ الضائعُ عن السرقة
+        if auth.current_seen_at is None and payload.get("rj") == auth.current_jti:
+            await session.execute(
+                update(AuthSession)
+                .where(
+                    AuthSession.id == sid,
+                    AuthSession.current_jti == auth.current_jti,
+                    AuthSession.current_seen_at.is_(None),
+                )
+                .values(current_seen_at=func.now())
+            )
+            await session.commit()
 
     user = await session.get(User, user_id)
     if user is None:

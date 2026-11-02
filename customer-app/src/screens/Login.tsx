@@ -7,7 +7,7 @@
  * **والسببُ تحت حقله** (§٦٢/٢٠): خطأٌ يسمّي حقلاً يُكتب تحته ويُنقل إليه التركيز، **وما لا حقلَ له** (حسابٌ موقوف، شبكة) سطرٌ
  * فوق الزرّ.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -19,6 +19,7 @@ import { biometryLabel } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toNational } from "@/lib/phone";
+import { rememberedLogin } from "@/lib/remembered";
 import { useSession } from "@/lib/session";
 import {
   AuthBlock,
@@ -34,7 +35,7 @@ import {
 type Failure = { field: "phone" | "password" | null; message: string };
 
 export function LoginScreen() {
-  const { signIn, biometry, signInWithBiometry } = useSession();
+  const { signIn, biometry, signInWithBiometry, signInAsAnother } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -71,6 +72,31 @@ export function LoginScreen() {
       setPhone((held) => held || toNational(pending.phone, dialCode));
     }
   }, [pending, country, countries, dialCode, setCountry]);
+
+  // **الرقمُ المتذكَّر** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §60-ج): من خرج يجد رقمَه ودولتَه — وما جاء مع التنقّل أو من «كن راكباً»
+  // يسبقه. **ويُطبَّق مرّةً**: من غيّر الدولةَ بعده لا تُعاد عليه
+  const [remembered, setRemembered] = useState(() => (handedPhone || pendingAddRole() ? null : rememberedLogin()));
+  const rememberedApplied = useRef(false);
+  useEffect(() => {
+    if (!remembered || rememberedApplied.current) return;
+    if (country !== remembered.country) {
+      if (countries.includes(remembered.country)) setCountry(remembered.country);
+      else rememberedApplied.current = true;
+      return;
+    }
+    if (dialCode === null) return;
+    rememberedApplied.current = true;
+    setPhone((held) => held || toNational(remembered.phone, dialCode));
+  }, [remembered, country, countries, dialCode, setCountry]);
+
+  function anotherAccount() {
+    setFailure(null);
+    void signInAsAnother().then(() => {
+      setRemembered(null);
+      setPhone("");
+      setPassword("");
+    });
+  }
 
   const complete = looksComplete(phone, nationalLength);
   const short =
@@ -239,6 +265,13 @@ export function LoginScreen() {
                 <span>{tr("الدخول بـ")}{biometryLabel(biometry.kind)}</span>
               </button>
             </>
+          ) : null}
+
+          {/* **«الدخول بحساب آخر»** (SPEC §60-ج) — يُبطل بيانَ البصمة على الخادم ويمحو الرقمَ المتذكَّر، فلا يُرسم بلا ما يمحوه */}
+          {remembered || biometry?.armed ? (
+            <button type="button" className="t2-auth-link t2-auth-another" disabled={busy || bioBusy} onClick={anotherAccount}>
+              {tr("الدخول بحساب آخر")}
+            </button>
           ) : null}
         </div>
       </form>

@@ -1562,5 +1562,10 @@
  "كوني سائقة": "Devenez conductrice",
  "لك حسابٌ بهذا الرقم في تطبيق TAXO Driver. أدخل كلمة مرورك لتضيف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte TAXO Driver avec ce numéro. Saisissez votre mot de passe pour ajouter le profil passager à ce même compte — sans code de vérification.",
  "لك حسابٌ في تطبيق TAXO Driver؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte TAXO Driver ? Connectez-vous avec son numéro et son mot de passe : le profil passager s’ajoute à ce même compte — sans code de vérification.",
- "هذا الرقمُ مسجّلٌ لديك في Taxo. أدخل كلمة مرورك — بلا رمز تحقّق.": "Ce numéro a déjà un compte Taxo. Saisissez votre mot de passe — sans code de vérification."
+ "هذا الرقمُ مسجّلٌ لديك في Taxo. أدخل كلمة مرورك — بلا رمز تحقّق.": "Ce numéro a déjà un compte Taxo. Saisissez votre mot de passe — sans code de vérification.",
+ "انتهى الدخولُ بالبصمة على هذا الجهاز — ادخل بكلمة المرور مرّةً، ويعود بعدها.": "La connexion par empreinte a expiré sur cet appareil — connectez-vous une fois avec votre mot de passe, elle reviendra ensuite.",
+ "لا دخولَ بالبصمة محفوظاً على هذا الجهاز": "Aucune connexion par empreinte enregistrée sur cet appareil",
+ "تعذّر تفعيل الدخول بالبصمة — أعد المحاولة": "Impossible d’activer la connexion par empreinte — réessayez",
+ "الدخول بحساب آخر": "Se connecter avec un autre compte",
+ "لتسجيل الدخول إلى TAXO Driver": "Pour vous connecter à TAXO Driver"
 }
