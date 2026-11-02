@@ -35,6 +35,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
+import { BecomeDriverButton } from "@/components/t2/BecomeButton";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
@@ -419,6 +420,9 @@ export function RiderHomeT2({
       </button>
 
       {cashback ? <CashbackChipT2 cashback={cashback} /> : null}
+
+      {/* **«كن سائقاً» شريطاً** (أمرُ المالك ٢٠٢٦-١١-٠٢، الثاني) — تحت الطلب والخدمات لا فوقها، والعريضُ أعلى «حسابي» */}
+      <BecomeDriverButton compact />
 
       {/* **الحسابُ المحدود يُقال في كلِّ فتحة** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — ويظهر بشرطه وحدَه */}
       <PhonePendingNotice variant="t2" />

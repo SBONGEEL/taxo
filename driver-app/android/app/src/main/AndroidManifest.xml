@@ -9,12 +9,17 @@
          لا استثناءَ ولا سطرَ سجلّ، فيُقرأ «غير مثبَّت» عن مثبَّت.
 
          والإعلانُ **بالحزمة وبالمخطط معاً**: الأولُ يكفي وهو الأضيق، والثاني
-         يبقي الفحصَ عاملاً لو تبدّل اسمُ الحزمة يوماً. -->
+         يبقي الفحصَ عاملاً لو تبدّل اسمُ الحزمة يوماً.
+
+         **والمخططُ بمضيفه** (قِيس على المحاكي ٢٠٢٦-١١-٠٢): مرشّحُ الأخ يشترط
+         `host="handoff"`، ونيّةُ سؤالٍ بلا مضيفٍ لا تطابقه — فكان الثاني ميتاً،
+         **والقناةُ التجريبيةُ (`ly.tajora.rider.test`) لا تُرى إلا به**، لأن
+         الأولَ يسمّي حزمةَ العامّ وحدَها. -->
     <queries>
         <package android:name="ly.tajora.rider" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="taxo-rider" />
+            <data android:scheme="taxo-rider" android:host="handoff" />
         </intent>
     </queries>
 

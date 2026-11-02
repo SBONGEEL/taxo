@@ -24,7 +24,8 @@
 import { App } from "@capacitor/app";
 
 import { exchangeHandoff } from "@/api/endpoints";
-import { tokens } from "@/api/client";
+import { ApiError, tokens } from "@/api/client";
+import { rememberAddRole } from "@/lib/add-role";
 
 /** يقرأ الرمزَ من عنوان المخطط الخاصّ — أو لا شيء. */
 function tokenOf(url: string): string | null {
@@ -66,8 +67,20 @@ async function adopt(url: string): Promise<void> {
     // **يُعاد التحميلُ لا يُنقَل المسار**: الجلسةُ تُقرأ عند الإقلاع، وتبديلُها
     // تحت شجرةٍ مركَّبةٍ يترك شاشاتٍ رُسمت لصاحبٍ آخر
     window.location.replace("/");
-  } catch {
-    /* رمزٌ منتهٍ أو مرفوض — يتولّى التطبيقُ نفسَه، وبصمت */
+  } catch (caught) {
+    // **حسابٌ بلا دور الكبتن جاء من «كن سائقاً»** (أمرُ المالك ٢٠٢٦-١١-٠٢): لا جلسةَ بل رقمُه — فيُفتح الدخولُ ورقمُه مكتوب،
+    // وكلمةُ المرور تضيف الملفّ (§21.6). **ولا يُمسّ تطبيقٌ فيه جلسةٌ قائمة**: إخراجُ صاحبها لأجل زرٍّ في تطبيقٍ آخر ليس لنا
+    if (
+      caught instanceof ApiError &&
+      caught.code === "handoff_add_role" &&
+      typeof caught.extra.phone === "string" &&
+      typeof caught.extra.country_code === "string" &&
+      !tokens.access()
+    ) {
+      rememberAddRole({ phone: caught.extra.phone, country: caught.extra.country_code });
+      window.location.replace("/login");
+    }
+    /* وغيرُه رمزٌ منتهٍ أو مرفوض — يتولّى التطبيقُ نفسَه، وبصمت */
   }
 }
 

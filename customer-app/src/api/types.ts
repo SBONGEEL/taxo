@@ -191,6 +191,11 @@ export interface LoginResponse {
   expires_in: number | null;
 }
 
+/** جوابُ `POST /auth/phone-check` — `new` ⇒ الرمز · `other_role` ⇒ الدخولُ يضيف الملفّ · `registered` ⇒ الدخولُ وحده. */
+export interface PhoneCheck {
+  status: "new" | "other_role" | "registered";
+}
+
 export interface ChallengeResponse {
   sent: boolean;
   expires_in: number | null;
@@ -311,6 +316,17 @@ export interface GuestModeConfig {
   driver: boolean;
 }
 
+/** **تطبيقٌ وأين يُنزَّل** — الحزمةُ ليُسأل النظامُ «أمثبَّت؟»، والرابطُ لمن ليس عنده */
+export interface AppLink {
+  package: string;
+  download_url: string;
+}
+
+export interface AppLinks {
+  rider: AppLink;
+  driver: AppLink;
+}
+
 export interface AppConfig {
   app: string;
   auth: AuthMethod;
@@ -341,6 +357,8 @@ export interface AppConfig {
   network_country: CountryCode | null;
   /** **دولةُ الشبكة خاماً** (SPEC §٧٦-ن/٦) — حرفان أيّاً كانت؛ و`null` بلا رأس. منها «خارج أسواقنا» */
   network_region: string | null;
+  /** **رابطا تنزيل التطبيقين وحزمتاهما** (زرُّ «كن سائقاً»، أمرُ المالك ٢٠٢٦-١١-٠٢) — من إعدادات «الموقع» في اللوحة لا ثابتٌ هنا */
+  app_links: AppLinks;
   guest_mode?: GuestModeConfig;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣).
    *

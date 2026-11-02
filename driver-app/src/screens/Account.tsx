@@ -23,7 +23,7 @@ import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useGarage } from "@/lib/garage";
 import { forDisplay } from "@/lib/phone";
-import { blockedReason, switchToRider } from "@/lib/switch-app";
+import { BecomeRiderButton } from "@/components/t2/BecomeButton";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, digits, ratedAverage } from "@/lib/utils";
 import { Icon } from "@/taxo2";
@@ -174,6 +174,9 @@ export function AccountScreen() {
           </span>
         ) : null}
       </div>
+
+      {/* **«كن راكباً» أعلى الصفحة تحت الاسم** (أمرُ المالك ٢٠٢٦-١١-٠٢) — حلّ محلَّ صفِّ التبديل الذي كان قبل الخروج (§23.2) */}
+      <BecomeRiderButton />
 
       {/* **بطاقةُ الحال**: حالُ الحساب ومستنداته، ثمّ الاشتراكُ بنبرته — بابُه إلى «الاشتراك» */}
       <div className="t2-list">
@@ -353,10 +356,6 @@ export function AccountScreen() {
         />
       </div>
 
-      {/* **في «حسابي» لا في شريطٍ سفليٍّ ولا على الرئيسية** (§23): تبديلٌ
-          لا يُضغط يومياً، وموضعُه بين ما يُفتح عن قصد */}
-      <SwitchRow />
-
       <button
         type="button"
         onClick={() => void signOut()}
@@ -476,42 +475,3 @@ function Row({
   );
 }
 
-
-/** صفُّ التبديل إلى تطبيق الراكب — **يقول سببَه إن مُنع**. */
-function SwitchRow() {
-  const [busy, setBusy] = useState(false);
-  const [blocked, setBlocked] = useState<string | null>(null);
-
-  async function press() {
-    setBusy(true);
-    setBlocked(null);
-    try {
-      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
-      if (!(await switchToRider())) window.location.href = "/account/switch/rider-not-installed";
-    } catch (caught) {
-      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
-      setBlocked(blockedReason(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="t2-list">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void press()}
-        className="t2-srow"
-      >
-        <Icon name="swap_horiz" className="t2-srow-icon" />
-        <span className="t2-srow-main">
-          <span className="t2-srow-title">{tr("تبديل إلى تطبيق الراكب")}</span>
-          <span className="t2-srow-hint">{tr("نفس الحساب — تنتقل جلستك بلا تسجيل دخول")}</span>
-        </span>
-        <Icon name="chevron_left" className="t2-ax-chev" />
-      </button>
-      {blocked ? <p className="t2-acc-blocked">{blocked}</p> : null}
-    </div>
-  );
-}

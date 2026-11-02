@@ -35,6 +35,7 @@ from app.core.exceptions import (
     HandoffBlockedByActiveWork,
     InvalidCredentials,
     InvalidInput,
+    HandoffAddRole,
     InvalidToken,
     NotFound,
     RateLimited,
@@ -58,6 +59,8 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     PasswordResetRequest,
+    PhoneCheckOut,
+    PhoneCheckRequest,
     ProfileUpdate,
     RefreshRequest,
     RegisterRequest,
@@ -84,6 +87,7 @@ from app.services import (
     rides as rides_service,
     notifications,
     otp,
+    phone_check,
     role_enrollment,
     security_settings,
     token_service,
@@ -206,6 +210,37 @@ async def start_challenge(
         resend_after=challenge.resend_after,
         channel=challenge.channel,
     )
+
+
+@router.post("/phone-check", response_model=PhoneCheckOut)
+async def check_phone(
+    payload: PhoneCheckRequest,
+    session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
+) -> PhoneCheckOut:
+    """«ألهذا الرقم حسابٌ؟» — **قبل الرمز** (قرارُ المالك ٢٠٢٦-١١-٠٢، SPEC §٢٣.٢-أ): رقمٌ له حسابٌ يُقاد إلى الدخول بلا رمز.
+
+    **والحدُّ قبل القاعدة** (`phone_check.guard`): أرقامٌ مختلفةٌ لكلِّ IP ولكلِّ جهاز، والرفضُ يُسجَّل إساءة. **والدولةُ
+    المغلقةُ قبلهما** كما في التسجيل: لا يُسأل عن رقمٍ في سوقٍ لا يُسجَّل فيه.
+    """
+    phone = await _resolve(payload.phone, payload.country_code)
+    await markets.require_signup_open(session, payload.country_code)
+    await phone_check.guard(redis, ip=ip, device=payload.device_id, phone=phone)
+
+    app = ClientApp(payload.app)
+    existing = await session.scalar(
+        select(User).where(User.phone == phone, User.account_kind == app_scope.account_kind_for(app))
+    )
+    if existing is None:
+        return PhoneCheckOut(status="new")
+    wanted = UserRole.DRIVER if app is ClientApp.DRIVER else UserRole.RIDER
+    other = UserRole.RIDER if wanted is UserRole.DRIVER else UserRole.DRIVER
+    # **بالشرط نفسِه الذي يرفض به التسجيلُ** (`auth/base.py`): الدورُ الآخر بلا هذا الدور ⇒ إضافة؛ وما عداه ⇒ دخول.
+    # **وحسابٌ في مهلة الحذف «مسجَّل»**: طريقُه الدخولُ أيضاً (SPEC §59-ج)
+    if existing.deletion_due_at is None and not existing.has_role(wanted) and existing.has_role(other):
+        return PhoneCheckOut(status="other_role")
+    return PhoneCheckOut(status="registered")
 
 
 # ------------------------------------------------------- التسجيل والدخول
@@ -952,13 +987,20 @@ async def start_handoff(
     session: DbSession,
     redis: RedisDep,
 ) -> HandoffToken:
-    """يفتح تسليمَ جلسةٍ إلى التطبيق الآخر — **لمن يملك دورَه وحدَه**.
+    """يفتح تسليمَ جلسةٍ إلى التطبيق الآخر — **لمن يملك دورَه، أو يحقّ له أن يضيفه**.
 
     والحارسُ هنا هو `app_scope` نفسُه لا حارسٌ ثانٍ: من لا يملك دورَ الهدف
     يُرفض بنفس الرسالة التي تقول **أين يذهب**. ولا يمنح الرمزُ دوراً — يُفحص
     قبل إصداره ويُفحص ثانيةً عند المبادلة، فسحبُ الدور بينهما يُبطله.
+
+    **ومن يحقّ له إضافةُ الدور يأخذ رمزاً أيضاً** (زرُّ «كن سائقاً»، أمرُ المالك ٢٠٢٦-١١-٠٢): مبادلتُه لا تُصدر جلسةً بل
+    `handoff_add_role` بالرقم — فيفتح التطبيقُ الآخرُ دخولَه ورقمُه مكتوب، **وكلمةُ المرور هي ما يضيف الدور** كما في §21.6.
     """
-    app_scope.guard(user.roles, payload.target)
+    try:
+        app_scope.guard(user.roles, payload.target)
+    except app_scope.WrongAppForRole:
+        if not role_enrollment.can_enroll(user, payload.target):
+            raise
 
     # **ولا تبديلَ أثناء عملٍ قائم** — والفحصُ هنا لا في الشاشة: شرطٌ في
     # الواجهة يزول بتعديل ملفٍ في المتصفح، وثمنُه راكبٌ ينتظر كبتناً بدّل تطبيقَه
@@ -986,7 +1028,14 @@ async def exchange_handoff(
     if user is None or user.is_blocked or user.deactivated_at is not None:
         raise InvalidToken("تعذّر التبديل — أعد الدخول")
 
-    app_scope.guard(user.roles, payload.app)
+    try:
+        app_scope.guard(user.roles, payload.app)
+    except app_scope.WrongAppForRole:
+        # **الحسابُ بلا دور هذا التطبيق ويحقّ له أن يضيفه** (زرُّ «كن سائقاً»، أمرُ المالك ٢٠٢٦-١١-٠٢): لا جلسةَ — بل رقمُه
+        # ودولتُه ليملأهما الدخولُ، **وكلمةُ المرور تضيف الدورَ** (§21.6). فلا يُكتب الرقمُ ثانيةً **ولا يُرسل رمزُ تحقّقٍ لا يلزم**
+        if not role_enrollment.can_enroll(user, payload.app):
+            raise
+        raise HandoffAddRole(phone=user.phone, country_code=user.country_code.value) from None
     role_enrollment.require_role_open(user, payload.app)
     tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)

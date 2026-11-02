@@ -16,7 +16,10 @@ import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { registerAccount, startSignupChallenge } from "@/api/endpoints";
+import { checkSignupPhone, registerAccount, startSignupChallenge } from "@/api/endpoints";
+import { rememberAddRole } from "@/lib/add-role";
+import { deviceId } from "@/lib/device";
+import { riderInstalled } from "@/lib/switch-app";
 import type { OtpChannel } from "@/api/types";
 import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
 import { RegisterTop } from "@/components/t2/RegisterTop";
@@ -122,12 +125,23 @@ export function RegisterScreen() {
       ? tr("الرقم ناقص — {0} أرقام بعد +{1}.", { 0: nationalLength, 1: dialCode })
       : null;
 
+  const riderLink = config?.app_links?.rider ?? null;
+  const [riderHere, setRiderHere] = useState(false);
+  useEffect(() => {
+    if (!riderLink) return;
+    let alive = true;
+    void riderInstalled(riderLink).then((value) => alive && setRiderHere(value));
+    return () => {
+      alive = false;
+    };
+  }, [riderLink]);
+
   // الخطوةُ الجديدةُ تُفتح من أعلاها لا من حيث توقّف التمرير
   useEffect(() => {
     if (page.current) page.current.scrollTop = 0;
   }, [step]);
 
-  function next(event: FormEvent) {
+  async function next(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
     if (!ready) {
@@ -135,6 +149,21 @@ export function RegisterScreen() {
       return;
     }
     setFailure(null);
+    // **«ألهذا الرقم حسابٌ؟» قبل الرمز** (قرارُ المالك ٢٠٢٦-١١-٠٢، SPEC §٢٣.٢-أ): رقمٌ له حسابٌ يذهب إلى الدخول ورقمُه مكتوب —
+    // **ولا رمزَ تحقّقٍ يُرسل له**. وسقوطُ الفحص (حدٌّ أو شبكة) يمضي إلى الرمز كما كان قبله: الحدُّ يمنع المعرفةَ لا التسجيل
+    setBusy(true);
+    try {
+      const { status } = await checkSignupPhone(e164, country, deviceId());
+      if (status !== "new") {
+        rememberAddRole({ phone: e164, country, ...(status === "registered" ? { reason: "registered" as const } : {}) });
+        navigate("/login", { replace: true });
+        return;
+      }
+    } catch {
+      /* يمضي إلى الرمز كما كان */
+    } finally {
+      setBusy(false);
+    }
     // مُحقِّقٌ مطفأ للطوارئ: الخلفية تقبل التسجيل بلا إثبات وتَسِم الحساب
     // (SPEC القسم 4)، فلا خطوةَ إثباتٍ تُعرض على أحد
     if (method === "none") {
@@ -161,6 +190,12 @@ export function RegisterScreen() {
       );
       navigate("/register/documents", { replace: true });
     } catch (caught) {
+      // **رقمٌ له حسابُ راكب** (أمرُ المالك ٢٠٢٦-١١-٠٢): لا حسابَ ثانٍ — يُقاد إلى الدخول ورقمُه مكتوب، وكلمةُ مروره تضيف ملفَّ الكبتن (§21.6)
+      if (caught instanceof ApiError && caught.code === "phone_has_other_role") {
+        rememberAddRole({ phone: e164, country });
+        navigate("/login", { replace: true });
+        return;
+      }
       if (caught instanceof ApiError) {
         const field = caught.field("field");
         const at: Field | null = field === "name" || field === "phone" || field === "password" ? field : null;
@@ -204,7 +239,19 @@ export function RegisterScreen() {
         {/* **الرجوعُ إلى الترحيب** — كالدخول: لا تاريخَ قبل التسجيل في التطبيق، فيُطلب الترحيبُ ولا يُرجَع في التاريخ */}
         <RegisterTop step={1} onBack={() => reopenWelcome()} />
 
-        <form onSubmit={next} className="t2-auth-form" noValidate>
+        <form onSubmit={(event) => void next(event)} className="t2-auth-form" noValidate>
+          {/* **تطبيقُ الراكب على هذا الهاتف** (أمرُ المالك ٢٠٢٦-١١-٠٢): صاحبُه غالباً له حسابٌ فيه — فيُدلّ على الدخول قبل أن يملأ
+              نموذجاً. **وإن ملأه** فـ«التالي» يسأل الخادمَ عن الرقم قبل الرمز (`checkSignupPhone`) بحدودٍ تمنع المسح */}
+          {riderHere ? (
+            <div className="t2-auth-banner t2-auth-banner--info" role="status">
+              <Icon name="info" />
+              <span>{tr("لك حسابٌ في تطبيق Taxo؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الكبتن إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
+              <button type="button" className="t2-tlink accent" onClick={() => navigate("/login", { replace: true })}>
+                {tr("ادخل بحسابي")}
+              </button>
+            </div>
+          ) : null}
+
           <AuthBlock label={tr("الاسم الكامل")} htmlFor="name" error={nameShort ?? errorOf("name")}>
             <AuthInput
               id="name"

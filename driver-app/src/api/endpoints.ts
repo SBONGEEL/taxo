@@ -37,6 +37,7 @@ import type {
   AuthResponse,
   CardOrder,
   ChallengeResponse,
+  PhoneCheck,
   CountryCode,
   TestMarket,
   DocumentType,
@@ -127,6 +128,14 @@ export const login = (
   );
 
 export const getMe = () => api.get<User>("/auth/me");
+
+/** **«ألهذا الرقم حسابٌ؟» قبل الرمز** (قرارُ المالك ٢٠٢٦-١١-٠٢، SPEC §٢٣.٢-أ) — رقمٌ له حسابٌ يُقاد إلى الدخول بلا رمز تحقّق. */
+export const checkSignupPhone = (phone: string, country_code: CountryCode, device_id: string) =>
+  api.post<PhoneCheck>(
+    "/auth/phone-check",
+    { phone, country_code, app: "driver", device_id },
+    { anonymous: true },
+  );
 
 /** تحدّي إثبات الرقم عند **التسجيل** — مسارٌ غير مسار الاستعادة. */
 export const startSignupChallenge = (

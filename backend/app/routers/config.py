@@ -8,9 +8,10 @@ from app.core.deps import DbSession
 from app.core.i18n import translate_tree
 from app.models.enums import CountryCode
 from app.schemas.auth import AuthMethodResponse
-from app.schemas.config import ConfigOut, DispatchOut
+from app.schemas.config import AppLinksOut, ConfigOut, DispatchOut
 from app.schemas.guest import GuestModeOut
 from app.services import country_config, geo, guest, otp, verification
+from app.services import site as site_service
 from app.services.providers import credentials as credentials_service
 from app.services.providers.registry import PROVIDERS
 
@@ -99,6 +100,8 @@ async def get_public_config(
             max_search_radius_km=geo.MAX_SEARCH_RADIUS_KM,
             gendered_max_search_radius_km=geo.GENDERED_MAX_SEARCH_RADIUS_KM,
         ),
+        # **رابطا التنزيل من إعدادات الموقع** (زرُّ «كن سائقاً»، ٢٠٢٦-١١-٠٢) — يتبدّلان من اللوحة بلا إصدار
+        app_links=AppLinksOut.model_validate(await site_service.app_links(session)),
         auth=await _auth_method(session, country_code or default),
         countries=[await country_config.build(session, c) for c in countries],
         # كلُّ عقدٍ يحمل حقلاً `expose_to_clients` يُنشر هنا بحقوله العامة

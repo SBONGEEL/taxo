@@ -12,6 +12,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { enrollRole, login } from "@/api/endpoints";
+import type { CountryCode } from "@/api/types";
+import { clearAddRole, pendingAddRole } from "@/lib/add-role";
 import { reopenWelcome } from "@/components/welcome/gate";
 import { biometryLabel } from "@/lib/biometric";
 import { useCountryPick } from "@/components/t2/CountryPick";
@@ -57,6 +59,19 @@ export function LoginScreen() {
     if (handedPhone) setPhone(handedPhone);
   }, [handedPhone]);
 
+  // **ومن جاء من «كن راكباً» في تطبيق الكبتن** (أمرُ المالك ٢٠٢٦-١١-٠٢): رقمُه ودولتُه معروفان، فيُكتبان له — وكلمةُ المرور وحدَها تبقى
+  const [pending] = useState(pendingAddRole);
+  const { setCountry, countries } = auth;
+  useEffect(() => {
+    if (!pending) return;
+    // **ودولةٌ لا تُختار هنا لا تُفرض** — وإلا دار الأثرُ على نفسه بلا نهاية
+    if (country !== pending.country && countries.includes(pending.country as CountryCode)) {
+      setCountry(pending.country as CountryCode);
+    } else if (country === pending.country && dialCode !== null) {
+      setPhone((held) => held || toNational(pending.phone, dialCode));
+    }
+  }, [pending, country, countries, dialCode, setCountry]);
+
   const complete = looksComplete(phone, nationalLength);
   const short =
     touched && phone.length > 0 && !complete && dialCode !== null
@@ -78,10 +93,16 @@ export function LoginScreen() {
         setFailure({ field: null, message: tr("هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.") });
         return;
       }
+      clearAddRole(); // **دخولٌ تمّ بلا إضافة** — حسابٌ يملك الدورَ سلفاً، فلا نيّةَ تبقى معلّقةً لجلسةٍ تالية
       signIn({ user: response.user, tokens: response.tokens });
       navigate("/", { replace: true });
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "role_can_be_added" && typeof caught.extra.enroll_token === "string") {
+        // **ومن ضغط «كن راكباً» قال نيّتَه سلفاً**: لا عرضَ ثانٍ — يُضاف الملفّ بالرمز الذي أصدرته كلمةُ المرور نفسُها
+        if (pending) {
+          await addProfile(caught.extra.enroll_token);
+          return;
+        }
         setOffer(caught.extra.enroll_token);
         return;
       }
@@ -99,12 +120,13 @@ export function LoginScreen() {
   }
 
 
-  async function addProfile() {
-    if (!offer || busy) return;
+  async function addProfile(token: string | null = offer) {
+    if (!token) return;
     setBusy(true);
     setFailure(null);
     try {
-      const added = await enrollRole(offer);
+      const added = await enrollRole(token);
+      clearAddRole();
       signIn({ user: added.user, tokens: added.tokens });
       navigate("/", { replace: true });
     } catch (caught) {
@@ -164,8 +186,15 @@ export function LoginScreen() {
           {tr("نسيت كلمة المرور؟")}
         </Link>
 
+        {pending && !offer ? (
+          <div className="t2-auth-banner t2-auth-banner--info" role="status">
+            <Icon name="info" />
+            <span>{pending.reason === "registered" ? tr("هذا الرقمُ مسجّلٌ لديك في Taxo. أدخل كلمة مرورك — بلا رمز تحقّق.") : tr("لك حسابٌ بهذا الرقم في تطبيق TAXO Driver. أدخل كلمة مرورك لتضيف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
+          </div>
+        ) : null}
+
         {offer ? (
-          <div className="t2-auth-banner" role="status">
+          <div className="t2-auth-banner t2-auth-banner--info" role="status">
             <Icon name="info" />
             <span>{tr("رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.")}</span>
             <button type="button" className="t2-tlink accent" onClick={() => void addProfile()} disabled={busy}>

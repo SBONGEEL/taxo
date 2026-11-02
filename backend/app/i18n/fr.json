@@ -891,6 +891,7 @@
  "هذا الرمزُ لا يخصّ هذا التطبيق": "Ce code ne concerne pas cette application",
  "لا يُضاف هذا الملفُّ إلى هذا الحساب": "Ce profil ne peut pas être ajouté à ce compte",
  "تعذّرت إضافةُ الملف — أعد الدخول": "Impossible d’ajouter le profil — reconnectez-vous",
+ "أدخل كلمة مرورك لتضيف هذا الملفّ إلى حسابك نفسِه": "Entrez votre mot de passe pour ajouter ce profil à votre même compte",
  "رمز التحقّق (CVV) غير صحيح، أعد المحاولة": "Code de sécurité (CVV) incorrect, réessayez",
  "الرصيد غير كافٍ": "Solde insuffisant",
  "البطاقة منتهية الصلاحية": "Carte expirée",

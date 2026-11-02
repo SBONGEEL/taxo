@@ -184,6 +184,17 @@ export interface GuestModeConfig {
   driver: boolean;
 }
 
+/** **تطبيقٌ وأين يُنزَّل** (زرُّ «كن سائقاً / كن راكباً» في التطبيقين) — والرابطان من حقلَي المتجر في «الموقع» */
+export interface AppLink {
+  package: string;
+  download_url: string;
+}
+
+export interface AppLinks {
+  rider: AppLink;
+  driver: AppLink;
+}
+
 export interface AppConfig {
   app: string;
   auth: { verification: string; otp_length: number | null };
@@ -194,6 +205,8 @@ export interface AppConfig {
   network_country: CountryCode | null;
   /** **دولةُ الشبكة خاماً** (SPEC §٧٦-ن/٦) — للتطبيقين؛ واللوحةُ تقرأ `/config` لبادئة الهاتف وحدَها */
   network_region: string | null;
+  /** **رابطا تنزيل التطبيقين** — للتطبيقين؛ ويُحرَّران من «الموقع» حقلَي المتجر */
+  app_links: AppLinks;
   /** **وضعُ الضيف لكلِّ تطبيق** (SPEC §٧٦-ن/٤) — ويُدار من بطاقة «وضع الضيف» في الإصدارات */
   guest_mode?: GuestModeConfig;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣) — لا نسخةَ منها هنا. */

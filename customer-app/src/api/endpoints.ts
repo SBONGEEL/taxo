@@ -25,6 +25,7 @@ import type {
   CallAnswer,
   CallStart,
   ChallengeResponse,
+  PhoneCheck,
   ChatMessage,
   ChatReport,
   ChatReportReason,
@@ -107,6 +108,14 @@ export const startGuest = (deviceId: string) =>
 
 export const getAuthMethod = () =>
   api.get<AuthMethod>("/auth/method", { anonymous: true });
+
+/** **«ألهذا الرقم حسابٌ؟» قبل الرمز** (قرارُ المالك ٢٠٢٦-١١-٠٢، SPEC §٢٣.٢-أ) — رقمٌ له حسابٌ يُقاد إلى الدخول بلا رمز تحقّق. */
+export const checkSignupPhone = (phone: string, country_code: CountryCode, device_id: string) =>
+  api.post<PhoneCheck>(
+    "/auth/phone-check",
+    { phone, country_code, app: "rider", device_id },
+    { anonymous: true },
+  );
 
 export const startChallenge = (
   phone: string,

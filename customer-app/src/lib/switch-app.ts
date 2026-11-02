@@ -1,80 +1,95 @@
-/** التبديلُ إلى تطبيق السائق — **القرارُ هنا، لا في الشاشة** (SPEC §23).
+/** زرُّ «كن سائقاً» — **القرارُ هنا، لا في الشاشة** (SPEC §23، وأمرُ المالك ٢٠٢٦-١١-٠٢).
  *
- * أربعُ حالاتٍ لا اثنتان، وكلٌّ لها مخرجٌ مختلف:
+ * سؤالان يقرّران ما يقع: **أتطبيقُ الكبتن مثبَّتٌ على هذا الهاتف؟** و**أيملك هذا الحسابُ دورَ الكبتن؟**
  *
  * | الحال | ما يقع |
  * |---|---|
- * | يملك دورَ الكبتن | يُفتح التطبيقُ الآخرُ بجلسته — بلا كلمةِ مرورٍ ولا رمز |
- * | لا يملكه | يُقاد إلى **مسار التسجيل ككبتن**، لا إلى التطبيق |
- * | في رحلةٍ جارية | يُقال له **لماذا** لا يعمل الآن — والنصُّ من الخلفية |
- * | التطبيقُ غير مثبَّت | صفحةٌ تشرح وتعطي مدخلَ التثبيت — لا خطأ ولا صمت |
+ * | غيرُ مثبَّت | يُفتح رابطُ تنزيله — **من `GET /config` لا من هنا** (حقلُ المتجر في «الموقع»، والفارغُ يعني الموقعَ الرسميّ) |
+ * | مثبَّت، والحسابُ بلا دور الكبتن | يُفتح بتسليمٍ يحمل **الرقمَ لا الجلسة** — فيفتح الآخرُ دخولَه ورقمُه مكتوب، وكلمةُ المرور تضيف الملفّ (§21.6) |
+ * | مثبَّت، والحسابُ يملكه | يُفتح بجلسته — بلا كلمةِ مرورٍ ولا رمز |
+ * | في رحلةٍ جارية | يُقال **لماذا** لا يعمل الآن — والنصُّ من الخلفية |
  *
- * **والفتحُ بـ`AppLauncher` لا بـ`intent://`** — وهذا قِيس لا افتُرض: عنوانُ
- * `intent://` سلوكٌ خاصٌّ بمتصفح كروم، **ولا يفعل شيئاً داخل WebView**؛ قِيس
- * على S21 فبقي تطبيقُ الراكب في المقدمة ولم يُفتح شيء.
+ * **ولا رمزَ تحقّقٍ في أيٍّ منها**: الحسابُ قائمٌ ورقمُه مُثبَتٌ منذ سجّل، فرمزٌ يُرسل هنا رسالةٌ لا يحتاجها أحد.
  *
- * و`canOpenUrl` يعطي «غير مثبَّت» جواباً **حتمياً من النظام** — أفضلَ مما كان
- * يشتريه `S.browser_fallback_url`: يُسأل **قبل** المحاولة، فلا يرمش شيءٌ على
- * الشاشة ولا يُخمَّن بعد مهلة.
+ * **والفتحُ بـ`AppLauncher` لا بـ`intent://`** — وهذا قِيس لا افتُرض: عنوانُ `intent://` سلوكٌ خاصٌّ بمتصفح كروم، **ولا يفعل شيئاً
+ * داخل WebView**؛ قِيس على S21 فبقي تطبيقُ الراكب في المقدمة ولم يُفتح شيء. و`canOpenUrl` يعطي «غير مثبَّت» جواباً **حتمياً من
+ * النظام** يُسأل **قبل** المحاولة، فلا يرمش شيءٌ على الشاشة ولا يُخمَّن بعد مهلة.
  *
- * **والرمزُ يسافر في مخططٍ خاصٍّ لا يبلغ خادماً**: لا نداءَ شبكةٍ يحمله ولا
- * سجلَّ وسيطٍ يقيّده. وعمرُه ثلاثون ثانيةً واستعمالُه واحد.
+ * **والرمزُ يسافر في مخططٍ خاصٍّ لا يبلغ خادماً**: لا نداءَ شبكةٍ يحمله ولا سجلَّ وسيطٍ يقيّده. وعمرُه قصيرٌ واستعمالُه واحد.
  */
 
+import { App } from "@capacitor/app";
 import { AppLauncher } from "@capacitor/app-launcher";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 
 import { startHandoff } from "@/api/endpoints";
 import { ApiError } from "@/api/client";
+import type { AppLink } from "@/api/types";
+import { useConfig } from "@/lib/config";
+import { useSession } from "@/lib/session";
+import { tr } from "@/lib/i18n";
 
+/** حزمةُ هذا التطبيق كما يُنشر — **ولاحقةُ القناة تُقرأ ممّا يزيد عليها** (`.test` للتجريبيّ، وما يُضاف بعده). */
+const OWN_PACKAGE = "ly.tajora.rider";
 
-/** صفحةُ «غير مثبَّت» — يفتحها النظامُ نفسُه حين لا يجد الحزمة. */
-export const NOT_INSTALLED_PATH = "/account/switch/driver-not-installed";
-
-/** **وظيفةُ الزرِّ فتحُ التطبيق الآخر، لا أكثر** (تصحيحُ المالك 2026-08-19).
+/** **حزمةُ الأخ في القناة نفسِها** — `ly.tajora.driver` للعامّ، و`ly.tajora.driver.test` بجوار `ly.tajora.rider.test`.
  *
- * وليس مساراً للتسجيل بدورٍ آخر: من لا يملك الدورَ يتولّاه التطبيقُ المفتوحُ
- * بشاشته، ومن لا يملك **التطبيق** يصله رابطُ تنزيله — والنظامُ نفسُه يفرّق
- * بين الحالتين (`S.browser_fallback_url`)، فلا نخمّن نحن أيَّهما وقعت.
+ * **والخادمُ يعطي حزمةَ المنتج لا القناة**: لا يعرف أيَّ نسخةٍ تسأله، والنسختان تتعايشان على الهاتف الواحد (`channels.json`) —
+ * فسؤالُ التجريبيِّ عن حزمة العامّ يقول «غير مثبَّت» وأخوه التجريبيُّ بجواره.
  */
-
-/**
- * يفتح تطبيقَ الكبتن بجلسةٍ منقولة.
- *
- * **ولا يُطلب الرمزُ إلا عند الضغط**: عمرُه ثلاثون ثانية، فطلبُه عند رسم الشاشة
- * يجعله ميتاً قبل أن يُضغط.
- */
-export async function switchToDriver(): Promise<boolean> {
-  // **مُشغِّلٌ لا مُسجِّل** (قرارُ المالك 2026-08-19): وظيفتُه فتحُ التطبيق
-  // الآخر، فيفتحه **دائماً**. والدورُ شرطٌ على **الجلسة** لا على الفتح.
-  //
-  // فإن تعذّر الرمزُ — لأن الحساب لا يملك دورَ الهدف مثلاً — يُفتح التطبيقُ
-  // **بلا مبادلة**، فيتولّاه بشاشته. و**بصمت**: لا رسالةَ خطأٍ على زرٍّ نجح
-  // فعلُه، ولا يُعرض نصُّ «ادخل من تطبيق كذا» — وهو عبثيٌّ لمن يقف فيه.
-  let token = "";
+async function siblingPackage(base: string): Promise<string> {
   try {
-    token = (await startHandoff()).token;
-  } catch (error) {
-    // **إلا المنعَ المعلن**: «أنهِ رحلتك أولاً» رفضٌ مقصودٌ له سببٌ يُقال
-    if (blockedReason(error)) throw error;
+    const { id } = await App.getInfo();
+    return id.startsWith(OWN_PACKAGE) ? base + id.slice(OWN_PACKAGE.length) : base;
+  } catch {
+    return base;
   }
+}
 
-  // **`canOpenUrl` على أندرويد يأخذ اسمَ الحزمة لا عنواناً** — قِيس على S21:
-  // بتمرير العنوان يسجّل المكوّنُ «Package name 'taxo-…://handoff' not found».
-  // و`openUrl` يأخذ العنوانَ نفسَه. مُعامِلان بنفس الاسم ومعنيان مختلفان.
-  //
-  // **وعلى iOS العكس**: لا أسماءَ حزمٍ هناك، و`canOpenURL` يسأل عن **مخطّط**
-  // مُصرَّحٍ به في `LSApplicationQueriesSchemes` — وبغيره يعيد false عن مثبَّت.
-  // **وأندرويد لا يتغيّر منه حرف** (٢٠٢٦-٠٩-٢٩).
-  const probe = Capacitor.getPlatform() === "ios" ? "taxo-driver://" : "ly.tajora.driver";
-  const { value } = await AppLauncher.canOpenUrl({ url: probe });
-  if (!value) return false; // غيرُ مثبَّت — والصفحةُ تتولّاه
+/** **أمثبَّتٌ تطبيقُ الكبتن؟** — والمتصفّحُ لا يملك جواباً، فيُقرأ «لا» ويُعطى رابطَ التنزيل. */
+export async function driverInstalled(link: AppLink): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  // **`canOpenUrl` على أندرويد يأخذ اسمَ الحزمة لا عنواناً** — قِيس على S21: بتمرير العنوان يسجّل المكوّنُ «Package name
+  // 'taxo-…://handoff' not found». **وعلى iOS العكس**: لا أسماءَ حزمٍ هناك، و`canOpenURL` يسأل عن **مخطّط** مُصرَّحٍ به في
+  // `LSApplicationQueriesSchemes` — وبغيره يعيد false عن مثبَّت (٢٠٢٦-٠٩-٢٩)
+  const probe = Capacitor.getPlatform() === "ios" ? "taxo-driver://" : await siblingPackage(link.package);
+  try {
+    return (await AppLauncher.canOpenUrl({ url: probe })).value;
+  } catch {
+    return false;
+  }
+}
 
-  await AppLauncher.openUrl({
-    url: `taxo-driver://handoff?t=${encodeURIComponent(token)}`,
-  });
-  return true;
+/** يفتح صفحةَ التنزيل — **تطبيقُ المتجر أوّلاً إن كان الرابطُ رابطَ Play**، والصفحةُ نفسُها إن لم يُفتح (أمرُ المالك).
+ *
+ * **و`completed` هو الجواب لا الاستثناء**: `AppLauncher.openUrl` على أندرويد يلتقط «لا تطبيقَ لهذا العنوان» ويعيد `false` —
+ * فهاتفٌ بلا متجر يصل الصفحةَ نفسَها ولا يبقى زرُّه بلا أثر.
+ */
+export async function openDownload(url: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    window.open(url, "_blank", "noopener");
+    return;
+  }
+  const id = playId(url);
+  if (id && Capacitor.getPlatform() === "android") {
+    try {
+      if ((await AppLauncher.openUrl({ url: `market://details?id=${encodeURIComponent(id)}` })).completed) return;
+    } catch {
+      /* لا متجرَ على هذا الهاتف — فالصفحة */
+    }
+  }
+  await AppLauncher.openUrl({ url }).catch(() => undefined);
+}
+
+/** معرِّفُ الحزمة من رابط Play — أو لا شيء لرابطٍ آخر (الموقعُ الرسميّ). */
+function playId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "play.google.com" ? parsed.searchParams.get("id") : null;
+  } catch {
+    return null;
+  }
 }
 
 /** رسالةُ المنع كما كتبتها الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17). */
@@ -85,30 +100,64 @@ export function blockedReason(error: unknown): string | null {
   return null;
 }
 
-/** **صفُّ التبديل في «حسابي» — ضغطُه وحالُه**، بيتٌ واحدٌ للشاشة القائمة وشاشة TAXO 2.0 (R15):
- *  يرسم كلٌّ منهما صفَّه بلغته، **والفعلُ واحد** — فلا يفترقان أوّلَ ما يُعدَّل أحدُهما. */
-export function useSwitchToDriver(): {
+/** **زرُّ «كن سائقاً» — نصُّه وظهورُه وضغطُه**، بيتٌ واحد.
+ *
+ * **والكلمةُ هنا «سائق» لا «كبتن» — بقرار المالك وحدَه** (٢٠٢٦-١١-٠٢): «كبتن» تبقى في كلِّ موضعٍ آخرَ من التطبيق كما هي،
+ * وهذا الزرُّ وحدَه يقول «سائق»، **وبصيغة المؤنّث لصاحبة الحساب** حين يُعرف جنسُها.
+ */
+export function useBecomeDriver(): {
+  /** **يُرسم في سوقٍ مفتوحٍ وحدَه** — الأردن والجزائر اليوم، **وليبيا مخفيّة** (أمرُ المالك) */
+  visible: boolean;
+  label: string;
+  sub: string;
   busy: boolean;
   blocked: string | null;
   press: () => Promise<void>;
 } {
+  const { config } = useConfig();
+  const { user } = useSession();
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
 
+  const link = config?.app_links?.driver ?? null;
+  const market = config?.countries.find((entry) => entry.country_code === user?.country_code);
+  const visible = Boolean(user && link && market?.status === "open");
+  const both = Boolean(user?.roles.includes("driver"));
+  const female = user?.gender === "female";
+
+  const label = both
+    ? female ? tr("التبديل إلى السائقة") : tr("التبديل إلى السائق")
+    : female ? tr("كوني سائقة") : tr("كن سائقاً");
+  const sub = both
+    ? tr("حسابك نفسُه في TAXO Driver — بلا تسجيل دخول")
+    : female
+      ? tr("اعملي بسيارتك مع TAXO — برقمك نفسِه، بلا حسابٍ جديد")
+      : tr("اعمل بسيارتك مع TAXO — برقمك نفسِه، بلا حسابٍ جديد");
+
   async function press() {
+    if (!link || busy) return;
     setBusy(true);
     setBlocked(null);
     try {
-      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
-      if (!(await switchToDriver())) window.location.href = NOT_INSTALLED_PATH;
+      if (!(await driverInstalled(link))) {
+        await openDownload(link.download_url);
+        return;
+      }
+      // **ولا يُطلب الرمزُ إلا عند الضغط**: عمرُه قصير، فطلبُه عند رسم الشاشة يجعله ميتاً قبل أن يُضغط
+      let token = "";
+      try {
+        token = (await startHandoff()).token;
+      } catch (error) {
+        // **إلا المنعَ المعلن**: «أنهِ رحلتك أولاً» رفضٌ مقصودٌ له سببٌ يُقال — **وغيرُه يفتح التطبيقَ بلا رمز** فيتولّاه بشاشته
+        if (blockedReason(error)) throw error;
+      }
+      await AppLauncher.openUrl({ url: `taxo-driver://handoff?t=${encodeURIComponent(token)}` });
     } catch (caught) {
-      // نصُّ المنع من الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17)
-      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
       setBlocked(blockedReason(caught));
     } finally {
       setBusy(false);
     }
   }
 
-  return { busy, blocked, press };
+  return { visible, label, sub, busy, blocked, press };
 }

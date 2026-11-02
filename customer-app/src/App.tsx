@@ -8,7 +8,7 @@ import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { navBarHidden } from "@/lib/outcome";
 import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
-import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -31,6 +31,8 @@ import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
 import { ApiError, tokens } from "@/api/client";
 import { startGuest } from "@/api/endpoints";
+import { pendingAddRole } from "@/lib/add-role";
+import { removeBootFrame } from "@/lib/splash";
 import { DemoBanner } from "@/components/DemoBanner";
 import { enterDemo } from "@/demo/mode";
 import { deviceId } from "@/lib/device";
@@ -63,9 +65,6 @@ import { LoginScreen } from "@/screens/Login";
 // شاشة الدخول وحدها تُحمَّل مباشرةً؛ وما عداها كسولٌ. والرئيسية أهمُّها:
 // تجرّ `mapbox-gl` (نحو 1.8 ميغابايت) وهو أكبر من التطبيق كله، فتحميلُها
 // مع الحزمة الأولى يعني محرّك خرائطٍ ينتظره من جاء ليسجّل دخوله فقط.
-const DriverNotInstalledScreen = lazy(() =>
-  import("@/screens/SwitchApp").then((m) => ({ default: m.DriverNotInstalledScreen })),
-);
 const ServiceRouteT2 = lazy(() =>
   import("@/screens/t2/ServiceRouteT2").then((m) => ({ default: m.ServiceRouteT2 })),
 );
@@ -403,7 +402,13 @@ function WelcomeGate() {
   // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل زرَّها — فيرى ما يراه الداخلُ ويمضي إليها
   const armed = Boolean(biometry?.available && biometry.armed);
   const signedIn = Boolean(user);
-  const [shown, setShown] = useState(true);
+  // **ومن جاء من «كن راكباً» لا يرى الترحيب** (أمرُ المالك ٢٠٢٦-١١-٠٢): رقمُه ينتظره في الدخول، والترحيبُ يغطّيه
+  const [shown, setShown] = useState(() => !pendingAddRole());
+  // **وإطارُ الإقلاع يُرفع هنا حين لا يُركَّب الترحيب** (قِيس على المحاكي ٢٠٢٦-١١-٠٢): `#boot` يرفعه الترحيبُ وحدَه، فبقي فوق
+  // شاشة الدخول والرقمُ مكتوبٌ تحته لا يراه أحد — عائلةُ `update-gate` نفسُها. **وبعد الإقلاع لا قبله**، فلا ومضةَ فارغة
+  useLayoutEffect(() => {
+    if (!shown && booted) removeBootFrame();
+  }, [shown, booted]);
   const [reopened, setReopened] = useState(false);
   useEffect(() => setWelcomeOpen(shown), [shown]);
   const requests = useSyncExternalStore(subscribeWelcome, welcomeRequests);
@@ -501,8 +506,6 @@ export default function App() {
                   <RouteTransition>
                     {(animated) => (
                     <Routes location={animated}>
-                      <Route path="/account/switch/driver-not-installed" element={<DriverNotInstalledScreen />} />
-
                       <Route
                         path="/login"
                         element={

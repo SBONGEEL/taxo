@@ -49,18 +49,59 @@ async def test_a_dual_role_account_moves_its_session_without_logging_in(
     assert body["tokens"]["access_token"]
 
 
-async def test_an_account_without_the_target_role_is_refused_at_the_door(
-    client,
+async def test_an_account_without_the_target_role_gets_its_number_not_a_session(
+    client, session_factory
 ) -> None:
-    """**الزرُّ لا يمنح دوراً**: من لا يملك دورَ الهدف يُرفض قبل أن يصدر رمز."""
+    """**الزرُّ لا يمنح دوراً** (زرُّ «كن سائقاً»، أمرُ المالك ٢٠٢٦-١١-٠٢): راكبٌ بلا دور الكبتن يأخذ رمزاً، **ومبادلتُه لا تُصدر
+    جلسةً** بل `handoff_add_role` برقمه ودولته — فيفتح تطبيقُ الكبتن دخولَه ورقمُه مكتوب، وكلمةُ المرور تضيف الدور (§21.6).
+    **ولا صفَّ دورٍ ولا صفَّ كبتنٍ يولد من المبادلة.**"""
+    from app.models.driver import Driver
     from tests.helpers import rider_session
 
     rider = await rider_session(client)
-    refused = await client.post(
+    started = await client.post(
         "/auth/handoff", json={"target": "driver"}, headers=rider["headers"]
     )
-    assert refused.status_code == 403, refused.text
-    assert refused.json()["code"] == "wrong_app_for_role"
+    assert started.status_code == 200, started.text
+
+    exchanged = await client.post(
+        "/auth/handoff/exchange", json={"token": started.json()["token"], "app": "driver"}
+    )
+    assert exchanged.status_code == 403, exchanged.text
+    body = exchanged.json()
+    assert body["code"] == "handoff_add_role"
+    assert body["phone"] == rider["user"]["phone"]
+    assert body["country_code"] == rider["user"]["country_code"]
+    assert "tokens" not in body and "access_token" not in exchanged.text
+
+    async with session_factory() as session:
+        user_id = uuid.UUID(rider["user"]["id"])
+        grants = (await session.scalars(select(UserRoleGrant.role).where(UserRoleGrant.user_id == user_id))).all()
+        assert set(grants) == {UserRole.RIDER}
+        assert await session.scalar(select(Driver).where(Driver.user_id == user_id)) is None
+
+    # **ومرّةً واحدة** كأيِّ رمز تسليم
+    again = await client.post(
+        "/auth/handoff/exchange", json={"token": started.json()["token"], "app": "driver"}
+    )
+    assert again.status_code == 401, again.text
+
+
+async def test_the_same_holds_from_the_captain_side(client, session_factory) -> None:
+    """**والاتجاهُ المعاكس بالحكم نفسِه** («كن راكباً»): كبتنٌ بلا دور الراكب يأخذ رمزاً، ومبادلتُه رقمُه لا جلسة.
+    **ومن لا يحقّ له الإضافةُ يُرفض قبل أن يصدر رمزٌ كما كان** — واختبارُه اللوحةُ أدناه (`test_the_panel_is_not_a_handoff_target`)."""
+    from tests.helpers import DRIVER, auth, register
+
+    # **كبتنٌ سجّل من تطبيقه** — لا راكبٌ سُحب منه دورُه: عمودُ `users.role` جسرٌ يُضمَّن في الأدوار (`User.roles`)
+    captain = await register(client, DRIVER)
+    assert captain["user"]["roles"] == ["driver"]
+    started = await client.post("/auth/handoff", json={"target": "rider"}, headers=auth(captain))
+    assert started.status_code == 200, started.text
+    exchanged = await client.post(
+        "/auth/handoff/exchange", json={"token": started.json()["token"], "app": "rider"}
+    )
+    assert exchanged.status_code == 403 and exchanged.json()["code"] == "handoff_add_role", exchanged.text
+    assert exchanged.json()["phone"] == captain["user"]["phone"]
 
 
 async def test_the_token_is_single_use(client, session_factory) -> None:
@@ -132,6 +173,8 @@ async def test_a_role_withdrawn_between_issue_and_exchange_kills_the_token(
         "/auth/handoff/exchange", json={"token": token, "app": "driver"}
     )
     assert refused.status_code == 403, refused.text
+    # **ولا جلسة**: ما بقي له رقمُه يُملأ في الدخول، وكلمةُ المرور تعيد الدورَ إن كان يحقّ له
+    assert "access_token" not in refused.text
 
 
 async def test_a_blocked_account_cannot_exchange(client, session_factory) -> None:

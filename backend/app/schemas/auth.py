@@ -134,6 +134,22 @@ class ChallengeRequest(BaseModel):
     app: ClientApp | None = None
 
 
+class PhoneCheckRequest(BaseModel):
+    """«ألهذا الرقم حسابٌ؟» قبل رمز التسجيل (SPEC §٢٣.٢-أ) — و`app` لازمٌ لأن الجوابَ «له الدورُ الآخر» يُقاس على دور التطبيق."""
+
+    phone: str = Field(min_length=6, max_length=20)
+    country_code: CountryCode
+    app: Literal["rider", "driver"]
+    # معرّفُ الجهاز (`lib/device.ts`) — لحدِّ الجهاز وحدَه، **وغيابُه لا يُسقط الطلب**: يبقى حدُّ الـIP
+    device_id: str | None = Field(default=None, max_length=100)
+
+
+class PhoneCheckOut(BaseModel):
+    """`new` ⇒ الرمزُ كما كان · `other_role` ⇒ الدخولُ يضيف الملفّ · `registered` ⇒ الدخولُ وحده — **ولا رمزَ في الاثنين**."""
+
+    status: Literal["new", "other_role", "registered"]
+
+
 class ChallengeResponse(BaseModel):
     """جواب «أرسل لي رمز التحقق».
 

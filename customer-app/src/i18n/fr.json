@@ -1551,5 +1551,16 @@
  "أين أجد CVV2؟": "Où trouver le CVV2 ?",
  "صفحة الدفع": "Page de paiement",
  "لا تظهر صفحة الدفع؟ افتحها كاملةً": "La page de paiement ne s’affiche pas ? Ouvrez-la en plein écran",
- "3 أرقام بجانب شريط التوقيع خلف بطاقتك — ليست رمز PIN الذي تستعمله في الصرّاف.": "3 chiffres à côté de la bande de signature au dos de votre carte — pas le code PIN du distributeur."
+ "3 أرقام بجانب شريط التوقيع خلف بطاقتك — ليست رمز PIN الذي تستعمله في الصرّاف.": "3 chiffres à côté de la bande de signature au dos de votre carte — pas le code PIN du distributeur.",
+ "ادخل بحسابي": "Me connecter",
+ "اعمل بسيارتك مع TAXO — برقمك نفسِه، بلا حسابٍ جديد": "Travaillez avec votre voiture sur TAXO — même numéro, sans nouveau compte",
+ "اعملي بسيارتك مع TAXO — برقمك نفسِه، بلا حسابٍ جديد": "Travaillez avec votre voiture sur TAXO — même numéro, sans nouveau compte",
+ "التبديل إلى السائق": "Passer en mode chauffeur",
+ "التبديل إلى السائقة": "Passer en mode conductrice",
+ "حسابك نفسُه في TAXO Driver — بلا تسجيل دخول": "Votre même compte sur TAXO Driver — sans vous reconnecter",
+ "كن سائقاً": "Devenez chauffeur",
+ "كوني سائقة": "Devenez conductrice",
+ "لك حسابٌ بهذا الرقم في تطبيق TAXO Driver. أدخل كلمة مرورك لتضيف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte TAXO Driver avec ce numéro. Saisissez votre mot de passe pour ajouter le profil passager à ce même compte — sans code de vérification.",
+ "لك حسابٌ في تطبيق TAXO Driver؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte TAXO Driver ? Connectez-vous avec son numéro et son mot de passe : le profil passager s’ajoute à ce même compte — sans code de vérification.",
+ "هذا الرقمُ مسجّلٌ لديك في Taxo. أدخل كلمة مرورك — بلا رمز تحقّق.": "Ce numéro a déjà un compte Taxo. Saisissez votre mot de passe — sans code de vérification."
 }

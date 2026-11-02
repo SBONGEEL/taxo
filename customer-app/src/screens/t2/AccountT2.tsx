@@ -2,7 +2,7 @@
  *
  * **لا طلبَ جديد**: الاسمُ والرقمُ من الجلسة، وعددُ الأماكن من `PlacesProvider` (محمَّلةٌ عند الإقلاع).
  * **والأبوابُ أبوابُ الشاشة القائمة كلُّها** (`screens/Account.tsx`) بمفاتيحها، وفعلا التبديلِ وإنهاءِ
- * الجلسات من بيتيهما (`useSwitchToDriver` · `SignOutEverywhereRow`) — فلا تفترق الشاشتان.
+ * الجلسات من بيتيهما (`BecomeDriverButton` · `SignOutEverywhereRow`) — فلا تفترق الشاشتان.
  *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`TAXO2-DESIGN-CORRECTIONS.md` §١٦):
  * - ~~الأرقامُ الثلاثة~~ **بُنيت بقرار المالك** (§٦١-ط/٢): رحلاتُه وتقييمُه من `GET /rides/me/summary`، و«معنا منذ» سنةُ الحساب.
@@ -15,7 +15,7 @@
  *
  * **وما في الشاشة القائمة ولم يُرسم يبقى** بلغة القائمة: رحلاتي المجدولة (خلف مفتاحها) · **مشوارٌ ثابت واشتراكاتي** (§٦٣-ج/٦) ·
  * **بين المدن وحجوزاتُه** (§٦٣-ج/٧) · ادعُ صديقك ·
- * الإشعارات · الإعدادات · حذفُ الحساب (آخرَ القائمة بقصد) · التبديلُ إلى تطبيق السائق · إنهاءُ كلِّ الجلسات.
+ * الإشعارات · الإعدادات · حذفُ الحساب (آخرَ القائمة بقصد) · إنهاءُ كلِّ الجلسات. **و«كن سائقاً» صار أعلى الصفحة** (٢٠٢٦-١١-٠٢).
  * **و«بياناتي» صار زرَّ القلم في الرأس** كما في اللوحة — البابُ نفسُه.
  */
 
@@ -34,7 +34,7 @@ import {
 } from "@/lib/bookings";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
-import { useSwitchToDriver } from "@/lib/switch-app";
+import { BecomeDriverButton } from "@/components/t2/BecomeButton";
 import { openAppTour } from "@/lib/app-tour";
 import { shareApp, shareNote } from "@/lib/share-app";
 import { SignOutEverywhereRow } from "@/components/account/SignOutEverywhere";
@@ -60,7 +60,6 @@ export function AccountT2Screen() {
   const hasCommutes = useHasCommutes();
   const intercity = useIntercityService();
   const hasIntercity = useHasIntercityBookings();
-  const swap = useSwitchToDriver();
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   // **الأرقامُ من الخلفية** (§٦١-ط/٢) — وحتى تصل، أو إن تعثّرت، «—» لا صفرٌ يُقرأ خبراً
   const [summary, setSummary] = useState<RiderSummary | null>(null);
@@ -129,6 +128,9 @@ export function AccountT2Screen() {
         </button>
       </div>
 
+      {/* **«كن سائقاً» أعلى الصفحة تحت الاسم** (أمرُ المالك ٢٠٢٦-١١-٠٢) — حلّ محلَّ صفِّ التبديل الذي كان قبل الخروج (§23.2) */}
+      <BecomeDriverButton />
+
       <div className="t2-stats">
         <div className="t2-stat">
           <div className="t2-stat-num" dir="ltr">{summary ? summary.completed_rides : "—"}</div>
@@ -182,19 +184,6 @@ export function AccountT2Screen() {
           <span className="t2-arow-label">{tr("جولة في التطبيق")}</span>
           <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
         </button>
-      </div>
-
-      {/* **التبديلُ آخرَ صفٍّ قبل الخروج** (§23) — أقربُ ما يكون إليه معنىً: مغادرةُ هذا التطبيق */}
-      <div className="t2-list t2-arows">
-        <button type="button" className="t2-arow tall" disabled={swap.busy} onClick={() => void swap.press()}>
-          <span className="t2-icon" aria-hidden="true">directions_car</span>
-          <span className="t2-arow-label">
-            {tr("تبديل إلى تطبيق السائق")}
-            <span className="t2-arow-sub">{tr("نفس الحساب — تنتقل جلستك بلا تسجيل دخول")}</span>
-          </span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
-        </button>
-        {swap.blocked ? <p className="t2-arow-note">{swap.blocked}</p> : null}
       </div>
 
       <button type="button" className="t2-logout" onClick={() => void signOut()}>

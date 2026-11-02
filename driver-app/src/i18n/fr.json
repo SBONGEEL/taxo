@@ -1785,5 +1785,16 @@
  "صفحة الدفع": "Page de paiement",
  "لا تظهر صفحة الدفع؟ افتحها كاملةً": "La page de paiement ne s’affiche pas ? Ouvrez-la en plein écran",
  "3 أرقام بجانب شريط التوقيع خلف بطاقتك — ليست رمز PIN الذي تستعمله في الصرّاف.": "3 chiffres à côté de la bande de signature au dos de votre carte — pas le code PIN du distributeur.",
- "فهمت": "Compris"
+ "فهمت": "Compris",
+ "ادخل بحسابي": "Me connecter",
+ "اطلب مشاويرك من Taxo — برقمك نفسِه، بلا حسابٍ جديد": "Commandez vos courses sur Taxo — même numéro, sans nouveau compte",
+ "اطلبي مشاويرك من Taxo — برقمك نفسِه، بلا حسابٍ جديد": "Commandez vos courses sur Taxo — même numéro, sans nouveau compte",
+ "التبديل إلى الراكب": "Passer en mode passager",
+ "التبديل إلى الراكبة": "Passer en mode passagère",
+ "حسابك نفسُه في تطبيق Taxo — بلا تسجيل دخول": "Votre même compte sur l’application Taxo — sans vous reconnecter",
+ "كن راكباً": "Devenez passager",
+ "كوني راكبة": "Devenez passagère",
+ "لك حسابٌ بهذا الرقم في تطبيق Taxo. أدخل كلمة مرورك لتضيف ملفّ الكبتن إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte Taxo avec ce numéro. Saisissez votre mot de passe pour ajouter le profil chauffeur à ce même compte — sans code de vérification.",
+ "لك حسابٌ في تطبيق Taxo؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الكبتن إلى حسابك نفسِه — بلا رمز تحقّق.": "Vous avez un compte Taxo ? Connectez-vous avec son numéro et son mot de passe : le profil chauffeur s’ajoute à ce même compte — sans code de vérification.",
+ "هذا الرقمُ مسجّلٌ لديك في تطبيق الكبتن. أدخل كلمة مرورك — بلا رمز تحقّق.": "Ce numéro a déjà un compte capitaine. Saisissez votre mot de passe — sans code de vérification."
 }

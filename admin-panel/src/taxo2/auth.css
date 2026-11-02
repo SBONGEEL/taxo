@@ -473,6 +473,10 @@ html.dark .t2:not(.t2-day),
   line-height: 20px;
 }
 .t2-auth-banner .t2-icon { flex: none; font-size: 18px; font-variation-settings: "FILL" 1; }
+/* **عرضٌ لا خطأ** (٢٠٢٦-١١-٠٢): «لك حسابٌ بهذا الرقم…» وعرضُ إضافة الملفّ (§٢١.٦) كانا بلون الخطأ — ومن يرى الأحمرَ يقرأ
+   «أخطأتُ» فيتراجع عن عرضٍ صُنع له. فالمعلومةُ على سطح الصفحة بلون النصّ، وأيقونتُها بلون العلامة */
+.t2-auth-banner--info { background: var(--t2-surface); color: var(--t2-text); border: 1px solid var(--t2-line); }
+.t2-auth-banner--info .t2-icon { color: var(--t2-accent); }
 
 @media (prefers-reduced-motion: no-preference) {
   .t2-auth-field,

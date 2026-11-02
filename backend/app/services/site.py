@@ -103,6 +103,26 @@ def play_url(package: str) -> str:
     return f"https://play.google.com/store/apps/details?id={package}"
 
 
+#: **الموقعُ الرسميّ** — صفحةُ التنزيل حين لا رابطَ متجرٍ لتطبيق: هي التي تقرّر بنفسها أحزمةٌ أم متجر (`distribution_mode`).
+PUBLIC_SITE_URL = "https://taxo.tajora.ly"
+
+
+async def app_links(session: AsyncSession) -> dict[str, dict[str, str]]:
+    """**أين يُنزَّل كلُّ تطبيقٍ من داخل أخيه** (زرُّ «كن سائقاً / كن راكباً»، أمرُ المالك ٢٠٢٦-١١-٠٢).
+
+    **لا مفتاحَ ثانٍ لمفهومٍ قائم**: رابطا المتجر في هذا الصفّ هما ما يرسمه الموقعُ على بطاقتَي التطبيقين — **والفارغُ يعني «لا
+    رابطَ متجرٍ بعد»** فيذهب الزرُّ إلى الموقع الرسميّ كما تذهب بطاقتُه إلى ملفّه. فيومَ يُكتب رابطُ Play للكبتن من «الموقع» في
+    اللوحة يتبدّل الموقعُ والزرّان معاً، **بلا إصدارٍ ولا نشر**. **وقراءةٌ محضة** (`read`): بابٌ عامٌّ لا يُنشئ صفّاً.
+    """
+    row = await read(session)
+    rider = (row.play_url_rider if row is not None else play_url(RIDER_PACKAGE)) or PUBLIC_SITE_URL
+    driver = (row.play_url_driver if row is not None else "") or PUBLIC_SITE_URL
+    return {
+        "rider": {"package": RIDER_PACKAGE, "download_url": rider},
+        "driver": {"package": DRIVER_PACKAGE, "download_url": driver},
+    }
+
+
 #: القيمُ الأولى — **تُكتب مرّةً عند أوّل قراءة، ولا تُعاد كتابتُها بعدها**.
 DEFAULTS: dict[str, Any] = {
     "hero_title": "TAXO — تاكسي بالتطبيق للراكب والكبتن",

@@ -16,7 +16,7 @@
 
 import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -57,6 +57,8 @@ import { tr } from "@/lib/i18n";
 import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
 import { tokens } from "@/api/client";
+import { pendingAddRole } from "@/lib/add-role";
+import { removeBootFrame } from "@/lib/splash";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNavT2 } from "@/components/BottomNavT2";
 import { RideComms } from "@/components/ride/RideComms";
@@ -76,9 +78,6 @@ import { PushNotices, presentNotice } from "@/components/PushNotices";
 import { useNavCovered } from "@/lib/navCover";
 import { LoginScreen } from "@/screens/Login";
 
-const RiderNotInstalledScreen = lazy(() =>
-  import("@/screens/SwitchApp").then((m) => ({ default: m.RiderNotInstalledScreen })),
-);
 const ForgotPasswordScreen = lazy(() =>
   import("@/screens/ForgotPassword").then((m) => ({
     default: m.ForgotPasswordScreen,
@@ -513,7 +512,13 @@ function WelcomeGate() {
   // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل زرَّها — فيرى ما يراه الداخلُ ويمضي إليها
   const armed = Boolean(biometry?.available && biometry.armed);
   const signedIn = Boolean(user);
-  const [shown, setShown] = useState(true);
+  // **ومن جاء من «كن سائقاً» لا يرى الترحيب** (أمرُ المالك ٢٠٢٦-١١-٠٢): رقمُه ينتظره في الدخول، والترحيبُ يغطّيه
+  const [shown, setShown] = useState(() => !pendingAddRole());
+  // **وإطارُ الإقلاع يُرفع هنا حين لا يُركَّب الترحيب** (قِيس على المحاكي ٢٠٢٦-١١-٠٢): `#boot` يرفعه الترحيبُ وحدَه، فبقي فوق
+  // شاشة الدخول والرقمُ مكتوبٌ تحته لا يراه أحد — عائلةُ `update-gate` نفسُها. **وبعد الإقلاع لا قبله**، فلا ومضةَ فارغة
+  useLayoutEffect(() => {
+    if (!shown && booted) removeBootFrame();
+  }, [shown, booted]);
   const [reopened, setReopened] = useState(false);
   useEffect(() => setWelcomeOpen(shown), [shown]);
   const requests = useSyncExternalStore(subscribeWelcome, welcomeRequests);
@@ -587,8 +592,6 @@ export default function App() {
                     <RouteTransition>
                       {(animated) => (
                       <Routes location={animated}>
-                        <Route path="/account/switch/rider-not-installed" element={<RiderNotInstalledScreen />} />
-
                         <Route
                           path="/login"
                           element={

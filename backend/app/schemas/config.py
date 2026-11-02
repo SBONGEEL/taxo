@@ -97,6 +97,22 @@ class DispatchOut(BaseModel):
     gendered_max_search_radius_km: float
 
 
+class AppLinkOut(BaseModel):
+    """**أين يُنزَّل تطبيقٌ من تطبيق أخيه** (زرُّ «كن سائقاً / كن راكباً»، أمرُ المالك ٢٠٢٦-١١-٠٢).
+
+    `package` به يسأل التطبيقُ النظامَ «أهو مثبَّت؟»، و`download_url` إليه يذهب إن لم يكن. **والرابطُ إعدادُ خادمٍ لا ثابتٌ
+    في التطبيق**: يُقرأ من إعدادات الموقع (`play_url_rider` · `play_url_driver`) فيتبدّل من «الموقع» في اللوحة بلا إصدار.
+    """
+
+    package: str
+    download_url: str
+
+
+class AppLinksOut(BaseModel):
+    rider: AppLinkOut
+    driver: AppLinkOut
+
+
 class ConfigOut(BaseModel):
     """إعدادات عامة للواجهات (SPEC القسم 2).
 
@@ -125,3 +141,5 @@ class ConfigOut(BaseModel):
     # برمجياً، ونصوصُها من السجل المركزي — فلا نسخةَ قواعدَ في التطبيق تفترق.
     validation: dict[str, dict[str, Any]]
     dispatch: DispatchOut
+    #: **رابطا تنزيل التطبيقين** — يقرؤهما زرُّ «كن سائقاً / كن راكباً» حين لا يكون التطبيقُ الآخرُ مثبَّتاً
+    app_links: AppLinksOut

@@ -50,6 +50,7 @@ import { useMapExpand } from "@/components/home/MapCard";
 import { BannerImage, OfferCard, PromoBanners, type PromoSkin } from "@/components/home/PromoBanners";
 import { MapView } from "@/components/map/MapView";
 import { PermissionNotice } from "@/components/PermissionNotice";
+import { BecomeRiderButton } from "@/components/t2/BecomeButton";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import {
   UNCONFIRMED_FLAG,
@@ -401,6 +402,8 @@ export function HomeT2Screen() {
 
       {mode === "home" ? (
         <div className="t2-hm-more">
+          {/* **«كن راكباً» شريطاً** (أمرُ المالك ٢٠٢٦-١١-٠٢، الثاني) — تحت زرِّ الاستقبال والخدمات لا فوقهما، والعريضُ أعلى «حسابي» */}
+          <BecomeRiderButton compact />
           <div className="t2-legacy">
             <PromoBanners banners={storefront?.banners ?? []} offer={storefront?.offer ?? null} skin={PROMO_SKIN} />
           </div>

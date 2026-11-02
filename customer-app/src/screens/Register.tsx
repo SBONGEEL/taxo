@@ -7,11 +7,14 @@
  * **وما صحّحه المالكُ في اللوحة** (§٦١-أ و§٦٢/١١) مرسومٌ بلغتها: **تأكيدُ كلمة المرور** · **اختيارُ السوق** · **الموافقةُ على
  * السياسات** · رمزٌ **بطول ما ينشره المُحقِّق** · وقاعدةُ الكلمة **كما تنشرها الخلفية** (٨–١٢٨ وقائمةُ المنع) — لا «بينها رقم».
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { register, startChallenge } from "@/api/endpoints";
+import { checkSignupPhone, register, startChallenge } from "@/api/endpoints";
+import { rememberAddRole } from "@/lib/add-role";
+import { deviceId } from "@/lib/device";
+import { driverInstalled } from "@/lib/switch-app";
 import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
 import { VerifyCode } from "@/components/t2/VerifyCode";
 import { reopenWelcome } from "@/components/welcome/gate";
@@ -73,6 +76,17 @@ export function RegisterScreen() {
   const consentOk = policyIds.length === 0 || agreed;
   const onPolicies = useCallback((ids: string[]) => setPolicyIds(ids), []);
 
+  const driverLink = config?.app_links?.driver ?? null;
+  const [driverHere, setDriverHere] = useState(false);
+  useEffect(() => {
+    if (!driverLink) return;
+    let alive = true;
+    void driverInstalled(driverLink).then((value) => alive && setDriverHere(value));
+    return () => {
+      alive = false;
+    };
+  }, [driverLink]);
+
   const complete = looksComplete(phone, nationalLength);
   const ready = useMemo(
     () => complete && name.trim().length >= 2 && passwordsReady(password, confirm) && consentOk,
@@ -102,6 +116,12 @@ export function RegisterScreen() {
       );
       navigate("/", { replace: true });
     } catch (caught) {
+      // **رقمٌ له حسابُ كبتن** (أمرُ المالك ٢٠٢٦-١١-٠٢): لا حسابَ ثانٍ — يُقاد إلى الدخول ورقمُه مكتوب، وكلمةُ مروره تضيف ملفَّ الراكب (§21.6)
+      if (caught instanceof ApiError && caught.code === "phone_has_other_role" && dialCode !== null) {
+        rememberAddRole({ phone: `+${dialCode}${phone}`, country });
+        navigate("/login", { replace: true });
+        return;
+      }
       if (caught instanceof ApiError) {
         const field = caught.field("field");
         const at = field === "name" || field === "phone" || field === "password" ? field : null;
@@ -117,11 +137,30 @@ export function RegisterScreen() {
     }
   }
 
-  function next(event: React.FormEvent) {
+  async function next(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     if (!ready) {
       setTouched(true);
       return;
+    }
+    // **«ألهذا الرقم حسابٌ؟» قبل الرمز** (قرارُ المالك ٢٠٢٦-١١-٠٢، SPEC §٢٣.٢-أ): رقمٌ له حسابٌ يذهب إلى الدخول ورقمُه مكتوب —
+    // **ولا رمزَ تحقّقٍ يُرسل له**. وسقوطُ الفحص (حدٌّ أو شبكة) يمضي إلى الرمز كما كان قبله: الحدُّ يمنع المعرفةَ لا التسجيل
+    if (dialCode !== null) {
+      setBusy(true);
+      try {
+        const e164 = `+${dialCode}${phone}`;
+        const { status } = await checkSignupPhone(e164, country, deviceId());
+        if (status !== "new") {
+          rememberAddRole({ phone: e164, country, ...(status === "registered" ? { reason: "registered" as const } : {}) });
+          navigate("/login", { replace: true });
+          return;
+        }
+      } catch {
+        /* يمضي إلى الرمز كما كان */
+      } finally {
+        setBusy(false);
+      }
     }
     // لا مُحقِّقَ مُهيّأ: الحسابُ يُنشأ غيرَ محقَّقٍ ويبقى موسوماً حتى يُثبت رقمه (SPEC القسم 4) — تقرّره الخلفيةُ لا الواجهة
     if (verification === "none") {
@@ -157,7 +196,19 @@ export function RegisterScreen() {
       <AuthTop onBack={reopenWelcome} step={total ? 1 : undefined} total={total || undefined} />
       <AuthTitle step title={tr("أنشئ حسابك")} sub={tr("رقمك هو هويتك في TAXO — نتحقق منه مرة واحدة.")} />
 
-      <form onSubmit={next} className="t2-auth-form step" noValidate>
+      <form onSubmit={(event) => void next(event)} className="t2-auth-form step" noValidate>
+        {/* **تطبيقُ الكبتن على هذا الهاتف** (أمرُ المالك ٢٠٢٦-١١-٠٢): صاحبُه غالباً له حسابٌ فيه — فيُدلّ على الدخول قبل أن يملأ
+            نموذجاً. **وإن ملأه** فـ«متابعة» تسأل الخادمَ عن الرقم قبل الرمز (`checkSignupPhone`) بحدودٍ تمنع المسح */}
+        {driverHere ? (
+          <div className="t2-auth-banner t2-auth-banner--info" role="status">
+            <Icon name="info" />
+            <span>{tr("لك حسابٌ في تطبيق TAXO Driver؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الراكب إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
+            <button type="button" className="t2-tlink accent" onClick={() => navigate("/login", { replace: true })}>
+              {tr("ادخل بحسابي")}
+            </button>
+          </div>
+        ) : null}
+
         <AuthBlock label={tr("الاسم الكامل")} htmlFor="name" error={nameShort ?? errorOf("name")}>
           <AuthInput
             id="name"
