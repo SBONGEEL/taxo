@@ -1471,7 +1471,7 @@
  "يصلك بالطريقة التي تختارها بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب.": "Vous le recevez par le moyen que vous choisissez après l’approbation de l’administration, et il est débité de votre solde au paiement, pas à la demande.",
  "يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند الطلب.": "Vous le recevez via CliQ après l’approbation de l’administration, et il est débité de votre solde au paiement, pas à la demande.",
  "يصلك كل راكبٍ يقبل تفضيلُه كبتنة.": "Vous recevez tout passager dont la préférence accepte une conductrice.",
- "يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.": "Ouvre votre session enregistrée sur cet appareil — votre mot de passe n’est jamais enregistré, et l’enregistrement est effacé à la déconnexion ou au changement de mot de passe.",
+ "يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً. ويبقى بعد تسجيل الخروج، ويُمحى بـ«الدخول بحساب آخر» أو بتبديل كلمة المرور.": "Ouvre votre session enregistrée sur cet appareil — votre mot de passe n’est jamais enregistré. Elle reste après la déconnexion, et s’efface avec « Se connecter avec un autre compte » ou au changement de mot de passe.",
  "يقرّبك من الطلبات القريبة": "Vous rapproche des demandes proches",
  "يكبر بعد كلِّ سلفةٍ تسدّدها في مهلتها. وما فوقه يحتاج موافقة الإدارة.": "Il augmente après chaque avance remboursée dans les délais. Au-delà, l’approbation de l’administration est nécessaire.",
  "يمكنك تغيير ذلك من الإعدادات": "Vous pouvez changer cela dans les paramètres",

@@ -412,7 +412,7 @@ export function SettingsT2Screen() {
             <Toggle
               icon="verified_user"
               title={tr("الدخول بـ{0}", { 0: biometryLabel(biometry.kind) })}
-              hint={tr("يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.")}
+              hint={tr("يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً. ويبقى بعد تسجيل الخروج، ويُمحى بـ«الدخول بحساب آخر» أو بتبديل كلمة المرور.")}
               on={biometry.enabled}
               onToggle={toggleBiometric}
             />
