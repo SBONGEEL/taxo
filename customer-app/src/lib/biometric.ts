@@ -28,7 +28,7 @@
 
 import { BiometricAuth, BiometryType } from "@aparajita/capacitor-biometric-auth";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
-import { Capacitor } from "@capacitor/core"; import { tr } from "@/lib/i18n";
+import { Capacitor, registerPlugin } from "@capacitor/core"; import { tr } from "@/lib/i18n";
 
 /** **بيتُ رمز التجديد على الجهاز** — بلا بصمة، يُقرأ عند الإقلاع. */
 const SESSION_KEY = "taxo.session.refresh";
@@ -108,6 +108,18 @@ async function remove(key: string): Promise<void> {
   }
 }
 
+/** **ما كُتب في المخزن الآمن على القرص قبل أن يُمضى** (`SecureFlushPlugin`، §٢٣.٢-أ): الملحقُ يحفظ بـ`apply()` فيعود قبل القرص،
+ *  وقتلُ التطبيق في تلك اللحظة بعد تدوير الرمز يُبقي القديمَ ⇐ `reuse_detected` ⇐ خروج. **وغلافٌ أقدمُ بلا الملحق** يرفض النداء
+ *  فيُبلَع: سلوكُه سلوكُ ما قبله لا أسوأ. */
+const secureFlush = registerPlugin<{ flush(): Promise<void> }>("SecureFlush");
+async function flushToDisk(): Promise<void> {
+  try {
+    await secureFlush.flush();
+  } catch {
+    // غلافٌ قبل هذا الإصدار، أو كتابةٌ تعذّرت — والقيمةُ في الذاكرة على أيّ حال، فلا يُسقط الحفظ
+  }
+}
+
 /** **الحالُ تُقاس ولا تُفترض** — وفي المتصفّح تعود «غيرُ متاحة» بلا نداءِ ملحق. */
 export async function biometryStatus(): Promise<BiometryStatus> {
   if (!Capacitor.isNativePlatform()) return UNAVAILABLE;
@@ -154,6 +166,7 @@ export const nativeRefreshStore = {
   async save(token: string): Promise<void> {
     try {
       await SecureStorage.setItem(SESSION_KEY, token);
+      await flushToDisk();
     } catch (error) {
       console.warn("تعذّر حفظ رمز التجديد في المخزن الآمن", error);
     }
@@ -161,6 +174,7 @@ export const nativeRefreshStore = {
   async clear(): Promise<void> {
     await remove(SESSION_KEY);
     await remove(LEGACY_KEY);
+    await flushToDisk();
   },
 };
 
@@ -176,6 +190,7 @@ export async function storeDeviceSecret(secret: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
     await SecureStorage.setItem(DEVICE_KEY, secret);
+    await flushToDisk();
   } catch (error) {
     console.warn("تعذّر حفظ بيان الجهاز في المخزن الآمن", error);
   }
@@ -187,6 +202,7 @@ export async function forgetDeviceSecret(): Promise<void> {
   await remove(DEVICE_KEY);
   // **وما بقي من البيت القديم يُمحى معه** — رمزُ جلسةٍ خلف البصمة من إصدارٍ سابق
   await remove(LEGACY_KEY);
+  await flushToDisk();
 }
 
 export function isBiometricPreferred(): boolean {

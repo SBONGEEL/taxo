@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);
+        // **رمزُ الجلسة على القرص قبل «حُفظ»** (§٢٣.٢-أ) — قبل `super` كما تقتضي Capacitor
+        registerPlugin(SecureFlushPlugin.class);
         super.onCreate(savedInstanceState);
         // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
         // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`.
