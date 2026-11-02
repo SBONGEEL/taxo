@@ -180,7 +180,13 @@ function scan(file) {
         (prop) => ts.isJsxAttribute(prop) && prop.name.getText(source) === "className",
       );
       const value = cls?.initializer && ts.isStringLiteral(cls.initializer) ? cls.initializer.text : "";
-      if (/\bt2-icon\b/.test(value)) for (const child of node.children) literals(child, where);
+      // **والنصُّ المكتوبُ بين الوسمين `JsxText` لا حرفيّ** (عطبٌ مقيسٌ ٢٠٢٦-١١-٠٣): كان يُمرَّر إلى `literals` فيسكت عنه،
+      // **فرسم صفُّ «شارك التطبيق» كلمةَ SHARE** على الشاشة والحارسُ أخضر
+      if (/\bt2-icon\b/.test(value))
+        for (const child of node.children) {
+          if (ts.isJsxText(child)) note(child.text.trim(), where);
+          else literals(child, where);
+        }
     }
     ts.forEachChild(node, visit);
   };
