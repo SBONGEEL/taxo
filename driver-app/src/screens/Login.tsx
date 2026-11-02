@@ -60,14 +60,20 @@ export function LoginScreen() {
   const [pending] = useState(pendingAddRole);
   const [phone, setPhone] = useState("");
   const { setCountry, countries } = auth;
+  // **ويُطبَّق مرّةً كالمتذكَّر** (عطبٌ مقيسٌ ٢٠٢٦-١١-٠٣): كان الأثرُ يعيد دولتَه كلَّما تغيّرت، **فمن ضغط «كن سائقاً» لم يعد
+  // يختار دولةً أخرى في شاشة الدخول أبداً** — المُختارُ يُفتح ويُضغط ولا يتغيّر شيء
+  const pendingApplied = useRef(false);
   useEffect(() => {
-    if (!pending) return;
-    // **ودولةٌ لا تُختار هنا لا تُفرض** — وإلا دار الأثرُ على نفسه بلا نهاية
-    if (country !== pending.country && countries.includes(pending.country as CountryCode)) {
-      setCountry(pending.country as CountryCode);
-    } else if (country === pending.country && dialCode !== null) {
-      setPhone((held) => held || toNational(pending.phone, dialCode));
+    if (!pending || pendingApplied.current) return;
+    if (country !== pending.country) {
+      // **ودولةٌ لا تُختار هنا لا تُفرض** — وإلا دار الأثرُ على نفسه بلا نهاية
+      if (countries.includes(pending.country as CountryCode)) setCountry(pending.country as CountryCode);
+      else pendingApplied.current = true;
+      return;
     }
+    if (dialCode === null) return;
+    pendingApplied.current = true;
+    setPhone((held) => held || toNational(pending.phone, dialCode));
   }, [pending, country, countries, dialCode, setCountry]);
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState(false);

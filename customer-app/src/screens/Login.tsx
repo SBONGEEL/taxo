@@ -63,14 +63,20 @@ export function LoginScreen() {
   // **ومن جاء من «كن راكباً» في تطبيق الكبتن** (أمرُ المالك ٢٠٢٦-١١-٠٢): رقمُه ودولتُه معروفان، فيُكتبان له — وكلمةُ المرور وحدَها تبقى
   const [pending] = useState(pendingAddRole);
   const { setCountry, countries } = auth;
+  // **ويُطبَّق مرّةً كالمتذكَّر** (عطبٌ مقيسٌ ٢٠٢٦-١١-٠٣): كان الأثرُ يعيد دولتَه كلَّما تغيّرت، **فمن ضغط «كن راكباً» لم يعد
+  // يختار دولةً أخرى في شاشة الدخول أبداً** — المُختارُ يُفتح ويُضغط ولا يتغيّر شيء
+  const pendingApplied = useRef(false);
   useEffect(() => {
-    if (!pending) return;
-    // **ودولةٌ لا تُختار هنا لا تُفرض** — وإلا دار الأثرُ على نفسه بلا نهاية
-    if (country !== pending.country && countries.includes(pending.country as CountryCode)) {
-      setCountry(pending.country as CountryCode);
-    } else if (country === pending.country && dialCode !== null) {
-      setPhone((held) => held || toNational(pending.phone, dialCode));
+    if (!pending || pendingApplied.current) return;
+    if (country !== pending.country) {
+      // **ودولةٌ لا تُختار هنا لا تُفرض** — وإلا دار الأثرُ على نفسه بلا نهاية
+      if (countries.includes(pending.country as CountryCode)) setCountry(pending.country as CountryCode);
+      else pendingApplied.current = true;
+      return;
     }
+    if (dialCode === null) return;
+    pendingApplied.current = true;
+    setPhone((held) => held || toNational(pending.phone, dialCode));
   }, [pending, country, countries, dialCode, setCountry]);
 
   // **الرقمُ المتذكَّر** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §60-ج): من خرج يجد رقمَه ودولتَه — وما جاء مع التنقّل أو من «كن راكباً»
