@@ -72,6 +72,7 @@ import {
   type IntercityEntry,
 } from "@/lib/guarantees";
 import { isActive } from "@/lib/ride";
+import { useTheme } from "@/lib/theme";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits, ratedAverage } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
@@ -89,6 +90,7 @@ import { countBookings, countCommutes, countRides, hoursClock } from "./count";
 import "./t2.css";
 import "./ride.css";
 import "./guarantees.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 export function HomeT2Screen() {
   const {
@@ -218,6 +220,7 @@ export function HomeT2Screen() {
   const rating = profile ? ratedAverage(profile.driver.rating_avg) : null;
   // **CW2 — الوضعُ النسائيّ** (§٦٢-ج/٢٣): كبتنةٌ اختارت «الراكبات فقط» حيث الخدمةُ مشتعلة
   const womenMode = isWomenMode(womenService, preference, user?.gender);
+  const theme = useTheme();
 
   return (
     <div
@@ -236,6 +239,16 @@ export function HomeT2Screen() {
           ) : null}
           {womenMode ? <WomenModeChipT2 onOpen={() => navigate("/account/settings/women")} /> : null}
           <span className="t2-hm-gap" />
+          {/* **النهاريُّ والليليُّ بلمسة** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-ج) — الاختيارُ نفسُه الذي في «حسابي ← الإعدادات»،
+              فيُحفظ ويُرى هناك؛ ووجهُه وجهُ الجرس بجانبه */}
+          <button
+            type="button"
+            className="t2-hm-bell t2-hm-theme"
+            onClick={theme.toggle}
+            aria-label={theme.dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
+          >
+            <Icon name={theme.dark ? "light_mode" : "dark_mode"} />
+          </button>
           <button
             type="button"
             className="t2-hm-bell"
@@ -545,6 +558,8 @@ function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coor
   const sub = [km !== null ? tr("على بعد {0} كم", { 0: digits(km.toFixed(1)) }) : null, tapped.place?.address ?? null]
     .filter(Boolean)
     .join(" · ");
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب)
+  useBackLayer(true, onClose);
   return (
     <div className="t2-hm-tapcard" role="dialog" aria-label={tr("نقطة على الخريطة")}>
       <div className="t2-hm-tapcard-text">

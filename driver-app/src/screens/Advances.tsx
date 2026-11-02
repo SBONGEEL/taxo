@@ -35,6 +35,7 @@ import { digits,
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 /** **النصُّ هنا والرمزُ من الخلفية** — كموانع إلغاء التفعيل تماماً. */
 const REQUIREMENT_TEXT: Record<string, string> = {
@@ -91,6 +92,8 @@ export function AdvancesScreen() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الطلب لا يُغلق
+  useBackLayer(confirming && !busy, () => setConfirming(false));
   // **المطلوبُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٥ و٦) — والسقفُ يصل من الخلفية أكبرَ مضاعف (`cap`) فيُختار
   // كما هو. **قبل الخروج المبكر**: خطّافٌ بعد `return` يكسر ترتيبَ الخطّافات
   const { user } = useSession();

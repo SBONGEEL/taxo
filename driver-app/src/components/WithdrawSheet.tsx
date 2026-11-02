@@ -37,6 +37,7 @@ import { Icon } from "@/taxo2";
 
 import "@/screens/t2/fields.css";
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 interface Props {
   wallet: DriverWallet;
@@ -80,6 +81,8 @@ export function WithdrawSheet({
   const [alias, setAlias] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الإرسال لا يُغلق
+  useBackLayer(!busy, onClose);
   // **المسحوبُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦، المثال ج) — و«كلُّ المتاح» يصل من الخلفية أكبرَ مضاعفٍ
   // فيُختار كما هو؛ والمكتوبُ بيده يُفحص هنا قبل أن تردّه الخلفية، **والكسرُ الباقي له في محفظته**
   const { user } = useSession();

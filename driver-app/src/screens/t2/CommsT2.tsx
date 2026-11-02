@@ -19,6 +19,7 @@ import { DISPLAY_LOCALE } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 import "@/taxo2";
 import "./comms.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 /** **الجملةُ المُقَرّة بحرفها** — قبل رنين مكالمةٍ مسجَّلة، عند المتصل وفوق «ردّ» عند المتصَل به (§٦٦-ج/١٦). */
 const RECORDING_NOTICE = tr("هذه المكالمة ستُسجَّل للسلامة والجودة، وتُحفظ مدّةً محدودةً ثمّ تُحذف.");
@@ -131,6 +132,9 @@ function ChatSheetT2({ chat }: { chat: ChatView }) {
       setDraft((current) => (current ? current : text));
     }
   }
+
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — والبلاغُ فوقها يُغلق قبلها
+  useBackLayer(true, comms.closeChat);
 
   return (
     <div className="t2 t2-cm-shade" onClick={comms.closeChat}>
@@ -309,6 +313,9 @@ function ReportSheetT2({ message, onClose }: { message: ChatMessage; onClose: ()
     if (refused) setError(refused);
     else setSent(true);
   }
+
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الإرسال لا يُغلق
+  useBackLayer(!busy, onClose);
 
   return (
     <div className="t2-cm-report-shade" onClick={onClose}>

@@ -55,6 +55,7 @@ import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
+import { useBackLayer } from "@/lib/back-layers";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
 import { clearPendingRide, readPendingRide, savePendingRide } from "@/lib/ride-topup";
@@ -826,6 +827,15 @@ export function HomeScreen() {
       setAirportPicks(undefined);
       setSearchOpen(true);
     },
+    // **«إلى أين؟» دبوسٌ على الخريطة** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ) — بتصفير ما يصفّره البحثُ نفسُه، والبحثُ رابطٌ في ورقة الدبوس
+    onPickOnMap: () => {
+      setPresetPreference(undefined);
+      setPresetSchedule(null);
+      endParcel();
+      endHourly();
+      setAirportPicks(undefined);
+      setPhase("pick-dropoff");
+    },
     // **«المطار»** (§٦٣-ج/٢) — طلبُ رحلةٍ كأيِّ رحلة، **ومطاراتُ السوق صفوفٌ أولى في البحث** (`GET /airports`)؛ والرسمُ وقصرُ العرض على من أشعل «طلبات المطار»
     // يقعان في الخلفية حين تقع الوجهةُ في مضلّع المرفق. **والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
     onAirport: () => {
@@ -990,6 +1000,18 @@ export function HomeScreen() {
 
   /** **ورقةُ التأكيد كما رسمتها «R06»** — ورقةُ الطلب نفسُها لا «إلى أين؟» بلا انطلاق. */
   const confirming = phase === "confirm" && confirmProps !== null;
+
+  // **زرُّ الرجوع يعود خطوةً في التخطيط لا يخرج منه** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-ب) — والخطوةُ ما يفعله زرُّ الشاشة
+  // نفسُه: الدبوسُ «إلغاء»، وورقةُ الطلب السهمُ (`leaveConfirm`)، و«طردٌ/أغراضي/بالساعة» بلا ورقةٍ مفتوحةٍ يُترك طورُه.
+  // **وورقةُ البحث مفتوحةً تُسحب هذه كلُّها** — لا «سُجّل بعدها فيُغلق قبلها»: البلاطةُ تفتح الورقةَ وتغيّر الطورَ في نقرةٍ
+  // واحدة، وأثرُ الابن (الورقة) يجري قبل أثر الأب، فكانت طبقةُ الطور تعلوها ويُترك الطورُ والورقةُ مفتوحة
+  const planning = !requesting && !searchOpen;
+  useBackLayer(picking && planning, () => setPhase(dropoff || (hourlyMode && pickup) ? "confirm" : "idle"));
+  useBackLayer(phase === "confirm" && planning, leaveConfirm);
+  useBackLayer(phase === "idle" && (parcelMode || hourlyMode) && planning, () => {
+    endParcel();
+    endHourly();
+  });
   /** **أطوارُ الطلب بلا شريط تبويب** كما رُسمت (R06، §٦١-د) — الدبوسُ وورقةُ التأكيد، **ولكلٍّ منهما مخرجُه إلى الرئيسية
    *  وشريطِها** (السهمُ و«إلغاء»). **و«إلى أين؟» بلا انطلاقٍ يُبقيه**: لا سهمَ فيها يعيد. **وفي المظهرين** (§٦٢/٣) — كان
    *  الليليُّ يرسم الشريطَ والورقةَ القديمين. */
@@ -1153,6 +1175,7 @@ export function HomeScreen() {
                 onConfirm={confirmPin}
                 // **والساعاتُ تعود إلى ورقتها ولو بلا وجهة** (§٦٣-ج/٥) — ما دام انطلاقُها معروفاً
                 onCancel={() => setPhase(dropoff || (hourlyMode && pickup) ? "confirm" : "idle")}
+                onSearch={phase === "pick-dropoff" ? () => setSearchOpen(true) : undefined}
               />
             ) : phase === "confirm" && confirmProps ? (
               <ConfirmRideT2 {...confirmProps} />

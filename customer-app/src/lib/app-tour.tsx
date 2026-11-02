@@ -12,6 +12,7 @@
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { useBackLayer } from "@/lib/back-layers";
 import { tr } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { Icon } from "@/taxo2";
@@ -147,12 +148,15 @@ export function AppTour({ app, held = false }: { app: App; held?: boolean }) {
     setOpen(true);
   }, [asked]);
 
-  // **وما يمنعها يُخفيها ولا يُغلقها**: عرضٌ يصل الكبتنَ وهي مفتوحةٌ يُرى فوراً، وتعود بعده من حيث كانت
-  if (!open || held) return null;
   const close = () => {
     write("done");
     setOpen(false);
   };
+  // **وزرُّ الرجوع «تخطٍّ»** (SPEC §٩٣-ب) — ومخفيّةً لا تأخذه، فيصل ما فوقها
+  useBackLayer(open && !held, close);
+
+  // **وما يمنعها يُخفيها ولا يُغلقها**: عرضٌ يصل الكبتنَ وهي مفتوحةٌ يُرى فوراً، وتعود بعده من حيث كانت
+  if (!open || held) return null;
   const last = index === cards.length - 1;
   const card = cards[index];
   return (

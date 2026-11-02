@@ -9,6 +9,7 @@ import type { InputHTMLAttributes, ReactNode } from "react";
 import { Flag } from "./Flag";
 import { Icon } from "./Icon";
 import "./auth.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 /** الصفحة — **من الحافة إلى الحافة، والمحتوى داخل المنطقة الآمنة** (§٦٢/٩). */
 export function AuthPage({ children }: { children: ReactNode }) {
@@ -175,6 +176,8 @@ export function AuthCountrySheet({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب)
+  useBackLayer(open, onClose);
   if (!open) return null;
   return (
     <div className="t2 t2-country">

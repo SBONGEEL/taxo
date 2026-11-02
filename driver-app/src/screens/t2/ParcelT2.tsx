@@ -12,6 +12,7 @@
 
 import type { Ride } from "@/api/types";
 import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 /** **المستلم** — «المستلم: الاسم» وعنوانُ التسليم تحته، وزرُّ `tel:` بالرقم كما طبّعته الخلفيةُ E.164. **ولا يُرسم بلا اسم**:
  *  الثلاثةُ تُنشر من القبول حتى الانتهاء وحدَه، وصفٌّ فارغٌ يُقرأ عطباً. */
@@ -71,6 +72,8 @@ export function RefuseParcelSheetT2({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الرفض لا يُغلق
+  useBackLayer(!busy, onClose);
   return (
     <div className="t2-rd-cx-shade">
       <div className="t2-rd-cx-sheet" role="dialog" aria-label={fetch ? tr("ارفض الغرض") : tr("ارفض الطرد")}>

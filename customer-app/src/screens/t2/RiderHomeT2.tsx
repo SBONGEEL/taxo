@@ -39,12 +39,13 @@ import { BecomeDriverButton } from "@/components/t2/BecomeButton";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
-import { cashbackDaysText, useScheduledRides, useWeeklyCashback } from "@/lib/bookings";
+import { cashbackDaysText, useIntercityService, useScheduledRides, useWeeklyCashback } from "@/lib/bookings";
 import { useFeature } from "@/lib/config";
 import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { useParcel, useParcelFetch } from "@/lib/parcel";
 import { useSession } from "@/lib/session";
+import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
 import { Wordmark } from "@/taxo2";
@@ -75,6 +76,8 @@ export interface RiderHomeProps {
   onOpenWallet: () => void;
   onOpenAccount: () => void;
   onAskDestination: () => void;
+  /** **«إلى أين؟» يفتح الخريطةَ بدبوس** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ) — والبحثُ رابطٌ في ورقة الدبوس؛ وغيابُه يُبقي البحث. */
+  onPickOnMap?: () => void;
   places: SavedPlace[];
   onPickPlace: (place: SavedPlace) => void;
   tiles: ServiceTile[];
@@ -230,6 +233,7 @@ export function RiderHomeT2({
   onOpenNotifications,
   onOpenAccount,
   onAskDestination,
+  onPickOnMap,
   banners,
   map,
   area = null,
@@ -244,6 +248,7 @@ export function RiderHomeT2({
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
+  const { dark, setChoice: setThemeChoice } = useTheme();
   // **«طرد» بمفتاح سوقه** (§٦٣-ج/٤) — مطفأً تبقى البلاطةُ «قريباً» كما رُسمت ولا يظهر شيءٌ جديد
   const parcel = useParcel();
   // **و«بالساعة» بمفتاح سوقها** (§٦٣-ج/٥) — بالحكم نفسِه
@@ -267,6 +272,10 @@ export function RiderHomeT2({
     return first ? { category: first[0] as keyof typeof VEHICLE_LABEL, minutes: first[1] as number } : null;
   })();
   const fastest = fastestMinutes(eta);
+  // **«إلى أين؟» دبوسٌ على الخريطة، و«رحلة» بين المدن** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ). **وحيث «بين المدن» مطفأةٌ يبقى «رحلة»
+  // طلبَ رحلةٍ كما كان** — بابٌ يعمل لا يُحجب بـ«قريباً» لأن خدمةً أخرى لم تُشعَل
+  const whereTo = onPickOnMap ?? onAskDestination;
+  const intercity = useIntercityService();
 
   // **رسالةُ «قريباً»** — تُقال ثمّ تختفي، ولا تفتح شيئاً
   const [notice, setNotice] = useState<string | null>(null);
@@ -301,6 +310,16 @@ export function RiderHomeT2({
           </button>
         ) : null}
         <span className="t2-home-spacer" />
+        {/* **النهاريُّ والليليُّ بلمسة** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-ج) — الاختيارُ نفسُه الذي في «حسابي ← الإعدادات»
+            (`taxo.theme`)، فيُحفظ ويُرى هناك؛ ووجهُه وجهُ الجرس بجانبه */}
+        <button
+          type="button"
+          className="t2-home-bell t2-home-theme"
+          onClick={() => setThemeChoice(dark ? "light" : "dark")}
+          aria-label={dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
+        >
+          <span className="t2-icon" aria-hidden="true">{dark ? "light_mode" : "dark_mode"}</span>
+        </button>
         <button type="button" className="t2-home-bell" onClick={onOpenNotifications} aria-label={tr("الإشعارات")}>
           <span className="t2-icon" aria-hidden="true">notifications</span>
           {unread ? <span className="t2-home-dot" /> : null}
@@ -320,7 +339,7 @@ export function RiderHomeT2({
           يُقال هنا بسببه المكتوب** (§٧: «السببُ مكتوبٌ في الرئيسية»). ولا شيءَ يُرسم بلا شيءٍ ينتظر أو والمفتاحُ مطفأ */}
       {onOpenUnconfirmed ? <UnconfirmedStripT2 data={unconfirmed} onOpen={onOpenUnconfirmed} /> : null}
 
-      <button type="button" className="t2-home-hero" onClick={onAskDestination}>
+      <button type="button" className="t2-home-hero" onClick={whereTo}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />
         <span className="t2-home-hero-text">
           <span className="t2-home-hero-title">{tr("إلى أين؟")}</span>
@@ -340,12 +359,16 @@ export function RiderHomeT2({
       </button>
 
       <div className="t2-home-grid">
-        <MapCardT2 map={map} nearby={nearby} onAskDestination={onAskDestination} />
-        <button type="button" className="t2-home-ride" onClick={onAskDestination}>
+        <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} />
+        <button
+          type="button"
+          className="t2-home-ride"
+          onClick={intercity ? () => navigate("/account/intercity") : onAskDestination}
+        >
           <span className="t2-icon" aria-hidden="true">local_taxi</span>
           <span className="t2-home-ride-label">{tr("رحلة")}</span>
-          {/* **شارةُ «3 د»** — أسرعُ ما يصل من الفئات (§٦٢-ج/١٠) */}
-          {fastest !== null ? (
+          {/* **شارةُ «3 د»** — أسرعُ ما يصل من الفئات (§٦٢-ج/١٠)؛ **ولا تُرسم والزرُّ «بين المدن»**: دقائقُ أقرب كبتنٍ لا تخصّ رحلةً بين مدينتين */}
+          {fastest !== null && !intercity ? (
             <span className="t2-home-ride-eta">
               <b dir="ltr">{fastest}</b>{" "}{tr("د")}
             </span>

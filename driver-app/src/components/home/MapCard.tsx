@@ -26,6 +26,8 @@
 import { Maximize2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react"; import { tr } from "@/lib/i18n";
 
+import { useBackLayer } from "@/lib/back-layers";
+
 interface Props {
   /** الخريطةُ نفسُها — تُمرَّر كما هي. */
   children: ReactNode;
@@ -41,6 +43,10 @@ interface Props {
 /** **توسيعُ البطاقة وزرُّ الجهاز الخلفيّ — بيتٌ واحدٌ للبطاقتين** (القائمة، وC04 في `screens/t2`). */
 export function useMapExpand() {
   const [open, setOpen] = useState(false);
+
+  // **وزرُّ أندرويد يغلقها من مكدَّس الطبقات** (SPEC §٩٣-ب): مدخلُ التاريخ أدناه بلا `idx` فكان الزرُّ يقرؤه صفراً ويخرج من
+  // التطبيق — والمدخلُ باقٍ لزرِّ المتصفّح، وإغلاقُ الطبقة يرجع عنه في التنظيف
+  useBackLayer(open, () => setOpen(false));
 
   // **زرُّ الجهاز الخلفيُّ يغلقها قبل أن يغادر الشاشة** — ومن ضغطه وهو يرى
   // خريطةً يقصد إغلاقَها لا الخروجَ من التطبيق

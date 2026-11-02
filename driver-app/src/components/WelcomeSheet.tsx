@@ -36,6 +36,7 @@ import {
 } from "@/lib/welcome";
 
 import "./welcome-sheet.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 export function WelcomeSheet() {
   const [open, setOpen] = useState(false);
@@ -86,6 +87,16 @@ export function WelcomeSheet() {
     // **الزرُّ يقود إلى الشاشة التي بلا اشتراكها لا تصل طلبات** — لا يودّع
     navigate("/subscription");
   }
+
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — **ولا يقود إلى الاشتراك**: الرجوعُ إغلاقٌ لا قبول، وتُوسَم مقروءةً كالزرّ
+  useBackLayer(open, () => {
+    setOpen(false);
+    try {
+      localStorage.setItem(WELCOME_SEEN_KEY, "1");
+    } catch {
+      /* تُعرض مرةً أخرى */
+    }
+  });
 
   if (!open) return null;
 

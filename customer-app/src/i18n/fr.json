@@ -1567,5 +1567,7 @@
  "لا دخولَ بالبصمة محفوظاً على هذا الجهاز": "Aucune connexion par empreinte enregistrée sur cet appareil",
  "تعذّر تفعيل الدخول بالبصمة — أعد المحاولة": "Impossible d’activer la connexion par empreinte — réessayez",
  "الدخول بحساب آخر": "Se connecter avec un autre compte",
- "لتسجيل الدخول إلى TAXO Driver": "Pour vous connecter à TAXO Driver"
+ "لتسجيل الدخول إلى TAXO Driver": "Pour vous connecter à TAXO Driver",
+ "اضغط مرّةً أخرى للخروج": "Appuyez à nouveau pour quitter",
+ "ابحث عن الوجهة بالاسم": "Rechercher la destination par son nom"
 }

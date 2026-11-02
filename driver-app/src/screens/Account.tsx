@@ -30,6 +30,7 @@ import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
 import "@/screens/t2/account.css"; import { language, tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 import { legalPages, openLegal } from "@/lib/legal";
 
 type Tone = "ok" | "warn" | "danger";
@@ -376,6 +377,8 @@ function SignOutEverywhereRow() {
   const { signOutEverywhere } = useSession();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الإنهاء لا يُغلق
+  useBackLayer(confirming && !busy, () => setConfirming(false));
   const [error, setError] = useState<string | null>(null);
 
   async function confirm() {

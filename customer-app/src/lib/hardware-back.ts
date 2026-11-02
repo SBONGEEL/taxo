@@ -19,6 +19,37 @@ import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
 import { AUTH_ROOTS, isWelcomeOpen, reopenWelcome } from "@/components/welcome/gate";
+import { closeTopLayer } from "@/lib/back-layers";
+import { tr } from "@/lib/i18n";
+
+/** مهلةُ الضغطة الثانية — ما يراه أندرويد نفسُه في تطبيقاته. */
+const EXIT_WINDOW_MS = 2000;
+let lastRootBack = 0;
+
+/** **«اضغط مرّةً أخرى للخروج»** — سطرٌ عائمٌ يختفي وحدَه، ولا يأخذ لمسة. عقدةٌ لا مكوّن: يُنادى من خارج شجرة React. */
+function showExitHint(): void {
+  const hint = document.createElement("div");
+  hint.className = "t2-exit-hint";
+  hint.setAttribute("role", "status");
+  hint.textContent = tr("اضغط مرّةً أخرى للخروج");
+  Object.assign(hint.style, {
+    position: "fixed",
+    insetInline: "16px",
+    bottom: "calc(92px + env(safe-area-inset-bottom))",
+    margin: "0 auto",
+    width: "fit-content",
+    zIndex: "2147483647",
+    padding: "10px 18px",
+    borderRadius: "999px",
+    background: "var(--t2-inverse, #14181d)",
+    color: "var(--t2-on-inverse, #ffffff)",
+    fontSize: "13.5px",
+    fontWeight: "600",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(hint);
+  window.setTimeout(() => hint.remove(), EXIT_WINDOW_MS);
+}
 
 /** يبدأ الاستماع، ويُعيد دالةَ إيقافٍ للتنظيف. */
 /** **شاشةٌ تأخذ زرَّ الرجوع** (SPEC §٧٦-س): بعد الدفع، الرجوعُ إلى الرئيسية بتاريخٍ نظيف لا إلى شاشة الدفع — والشاشةُ تسجّله وتنزعه */
@@ -32,6 +63,8 @@ export function bindHardwareBack(): () => void {
 
   // **والرفضُ يُمسك عند التعليق لا عند الفكّ** (الشكلُ الذي أنتج بلاغَ 496): وعدٌ يبقى بلا ماسكٍ حتى التنظيف يطفو
   const handle = App.addListener("backButton", () => {
+    // **الطبقةُ العليا قبل كلِّ شيء** (SPEC §٩٣-ب): ورقةٌ أو خريطةٌ موسَّعةٌ أو جولةٌ تُغلق، ولا يُمسّ التاريخ
+    if (closeTopLayer()) return;
     if (override) {
       override();
       return;
@@ -48,9 +81,15 @@ export function bindHardwareBack(): () => void {
       reopenWelcome();
       return;
     }
-    // **الخروجُ من جذر التطبيق وحدَه**: من كان في الشاشة الأولى ولا تاريخَ
-    // له، الرجوعُ عنده يعني «أغلق» — وهذا ما يتوقعه مستخدمُ أندرويد
-    void App.exitApp().catch(() => undefined);
+    // **الخروجُ من جذر التطبيق وحدَه، وبضغطتين** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-ب): ضغطةٌ واحدةٌ على الرئيسية كانت تُغلق التطبيقَ
+    // بلا إنذار — والأولى الآن تقول «اضغط مرّةً أخرى للخروج»، والثانيةُ في مهلتها تُغلق
+    const now = Date.now();
+    if (now - lastRootBack < EXIT_WINDOW_MS) {
+      void App.exitApp().catch(() => undefined);
+      return;
+    }
+    lastRootBack = now;
+    showExitHint();
   }).catch(() => null);
 
   return () => {

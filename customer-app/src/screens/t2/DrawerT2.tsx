@@ -9,6 +9,7 @@ import { Drawer } from "vaul";
 
 import "@/taxo2";
 import "./kit.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 export function DrawerT2({
   open,
@@ -21,6 +22,8 @@ export function DrawerT2({
   title?: string;
   children: ReactNode;
 }) {
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — `vaul` لا يسمع زرَّ أندرويد
+  useBackLayer(open, () => onOpenChange(false));
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} direction="bottom">
       <Drawer.Portal>

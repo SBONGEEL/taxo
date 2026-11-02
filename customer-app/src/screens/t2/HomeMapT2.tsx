@@ -89,18 +89,27 @@ export function PickingSheetT2({
   loading,
   onConfirm,
   onCancel,
+  onSearch,
 }: {
   targetLabel: string;
   address: string | null;
   loading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** **«إلى أين؟» يفتح الدبوسَ والبحثُ باقٍ** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ) — رابطٌ إلى البحث بالاسم؛ وغيابُه لا رابط. */
+  onSearch?: () => void;
 }) {
   return (
     <SheetT2>
       <p className="t2-picking-hint">{tr("حرّك الخريطة حتى يقف الدبوس على")}{" "}{targetLabel}</p>
       {/* **العنوانُ المعكوس** — تأكيدُ نقطةٍ بلا اسمها تأكيدٌ على العمى، كالورقة القائمة */}
       <p className="t2-picking-address">{loading ? tr("نقرأ العنوان…") : (address ?? tr("حرّك الخريطة لقراءة العنوان"))}</p>
+      {onSearch ? (
+        <button type="button" className="t2-picking-search" onClick={onSearch}>
+          <span className="t2-icon" aria-hidden="true">search</span>
+          <span>{tr("ابحث عن الوجهة بالاسم")}</span>
+        </button>
+      ) : null}
       <div className="t2-picking-actions">
         <button type="button" className="t2-button primary" onClick={onConfirm}>
           {tr("تأكيد الموقع")}

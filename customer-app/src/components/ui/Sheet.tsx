@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Drawer } from "vaul";
 import type { ReactNode } from "react";
 
+import { useBackLayer } from "@/lib/back-layers";
 import { DURATION, EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
@@ -121,6 +122,8 @@ export function DrawerSheet({
   title?: string;
   children: ReactNode;
 }) {
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — `vaul` لا يسمع زرَّ أندرويد
+  useBackLayer(open, () => onOpenChange(false));
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} direction="bottom">
       <Drawer.Portal>

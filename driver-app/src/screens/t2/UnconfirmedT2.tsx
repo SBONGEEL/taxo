@@ -42,6 +42,7 @@ import "./t2.css";
 import "./fields.css";
 import "./money.css";
 import "./unconfirmed.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 /** **نصُّ الحدّ كما كتبه التصميم** (§٦ «الحدّ») — في الرئيسية وفي رأس الصفحة. */
 const LIMIT_TEXT = tr("لا تصلك طلباتٌ جديدةٌ حتى تؤكّد ما سبق — أكّد أو اعترض، وتعود الطلباتُ فوراً");
@@ -375,6 +376,8 @@ function ReasonSheet({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — وأثناء الإرسال لا يُغلق، كاللمس خارجها
+  useBackLayer(!busy, onClose);
 
   // نصٌّ واحد: السببُ المختارُ ثمّ الملاحظةُ إن كُتبت — أو النصُّ الحرُّ وحدَه للاعتراض
   const composed = reasons ? (reason ? (text.trim() ? `${reason} — ${text.trim()}` : reason) : "") : text.trim();

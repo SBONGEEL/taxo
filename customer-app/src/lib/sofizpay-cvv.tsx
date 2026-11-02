@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 import { goToCheckout } from "@/lib/pay-return";
 import { Icon } from "@/taxo2";
 
@@ -125,6 +126,8 @@ export function CheckoutFrameScreen() {
   const requestId = params.get("r") ?? "";
   const url = params.get("u") ?? "";
   const [help, setHelp] = useState(false);
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب)
+  useBackLayer(help, () => setHelp(false));
   const ok = requestId !== "" && framable(url);
 
   useEffect(() => {

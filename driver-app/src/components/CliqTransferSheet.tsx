@@ -25,6 +25,7 @@ import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
+import { useBackLayer } from "@/lib/back-layers";
 
 export interface CliqTransfer {
   rideId: string;
@@ -61,6 +62,8 @@ export function CliqTransferSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — «لاحقاً» لا تأكيدٌ ولا اعتراض، وأثناء الإرسال لا يُغلق
+  useBackLayer(!busy, onDismiss);
 
   useEffect(() => {
     if (!transfer.expiresAt) return;
