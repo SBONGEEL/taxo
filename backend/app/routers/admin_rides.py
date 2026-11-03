@@ -57,6 +57,7 @@ def _row(ride: Ride, summary: ride_log.PaymentSummary) -> AdminRideRow:
         distance_km=ride.distance_km,
         actual_distance_km=ride.actual_distance_km,
         estimated_fare=ride.estimated_fare,
+        negotiated_fare=ride.negotiated_fare,
         final_fare=ride.final_fare,
         cancellation_fee=ride.cancellation_fee,
         payment_methods=summary.methods,

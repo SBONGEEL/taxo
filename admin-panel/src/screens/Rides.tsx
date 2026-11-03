@@ -457,9 +457,10 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
       </Section>
 
       <Section title="المال">
+        {/* **«تفاوض»** (SPEC §٩٢-ج) — ما اتّفق عليه الطرفان يحلّ محلَّ التقدير، فيُسمّى باسمه لا «المقدَّرة» */}
         <Row
-          label="المقدَّرة"
-          value={money(ride.estimated_fare, ride.currency)}
+          label={ride.negotiated_fare ? "سعر متفاوض عليه" : "المقدَّرة"}
+          value={money(ride.negotiated_fare ?? ride.estimated_fare, ride.currency)}
         />
         <Row
           label="النهائية"

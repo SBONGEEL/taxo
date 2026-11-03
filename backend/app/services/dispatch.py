@@ -28,6 +28,7 @@ import math
 import time
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 
 from redis.asyncio import Redis
 from sqlalchemy import or_, select
@@ -54,6 +55,7 @@ from app.services.dispatch_settings import DEFAULTS as _DEFAULTS
 from app.services.dispatch_settings import DispatchRules, rules_for
 from app.services import (
     categories,
+    negotiation,
     geo,
     missions,
     notifications,
@@ -84,6 +86,8 @@ _SIGNAL_ACCEPTED = "accepted"
 _SIGNAL_DECLINED = "declined"
 #: **«قِف» من عاملٍ آخر** — إلغاءٌ وصل عمليّةً لا تحمل مهمّةَ التوزيع (§٧٥-د/٢)
 _SIGNAL_STOP = "stop"
+#: **«سعرٌ آخر» من الكبتن** (§٩٢-أ/٣) — يمدّ الدورةَ بمهلة الراكب، فلا تُطوى بطاقتُه وجوابُ الراكب في الطريق
+_SIGNAL_COUNTERED = "countered"
 _SIGNAL_TTL_SECONDS = 60
 
 # حذف مشروط بالقيمة: مهمة قديمة يجب ألا تمحو عرضاً أحدث للكبتن نفسه
@@ -290,6 +294,11 @@ async def notify_declined(
     """رفض صريح — ينتقل التوزيع للتالي بلا انتظار."""
     await release_offer(redis, ride_id, driver_id)
     await _signal(redis, ride_id, f"{_SIGNAL_DECLINED}:{driver_id}")
+
+
+async def notify_countered(redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID) -> None:
+    """عرضٌ مقابلٌ عُلِّق (`negotiation.counter`) — توقظ الحلقةَ فتمدّ الدورةَ بمهلة الراكب."""
+    await _signal(redis, ride_id, f"{_SIGNAL_COUNTERED}:{driver_id}")
 
 
 async def _wait_for_signal(
@@ -862,6 +871,22 @@ async def _fold(
         )
 
 
+async def _expire_counter(redis: Redis, ride_id: uuid.UUID, pending: tuple[uuid.UUID, Decimal]) -> None:
+    """**يُطوى عرضٌ مقابلٌ انقضت مهلتُه** — ويُقال للراكب (`fare_counter_expired`) ويُسجَّل «انقضاء».
+
+    **و`pending` ما قرأه التوزيعُ لحظةَ وصول العرض لا ما بقي في Redis**: مفتاحُه يعيش مهلةَ الراكب وحدَها فينقضي قبل نهاية الجولة
+    بثانية — **وسؤالُ المفتاح عندها يجيب «لا عرض» عن عرضٍ انقضى فعلاً** (أمسكه `test_an_unanswered_counter_expires…`).
+    """
+    await negotiation.take_counter(redis, ride_id)
+    driver_id, amount = pending
+    async with SessionLocal() as session:
+        await negotiation.record(session, ride_id, "expired", amount=amount, driver_id=driver_id)
+        rider_id = await session.scalar(select(Ride.rider_id).where(Ride.id == ride_id))
+        await session.commit()
+    if rider_id is not None:
+        await events.publish_fare_counter_expired(redis, rider_user_id=rider_id, ride_id=ride_id)
+
+
 #: **ما تزيده «انتظري، نوسّع البحث» على مهلة السوق** (§٦٤-ج/٤-٣، قراري) — ثلاثُ دقائق: انتظارٌ اختارته، لا بحثٌ بلا نهاية
 WIDEN_EXTRA_SECONDS = 180
 
@@ -892,6 +917,18 @@ async def _run(ride_id: uuid.UUID) -> None:
         # بحثٍ عمرُه دقيقتان — لا بابَ في التطبيقات يكتبه — فقراءتُه في كلِّ
         # دورةٍ استعلامٌ بلا جواب جديد
         test = await rider_is_test(session, locked.rider_id)
+        # **رحلةُ «تفاوض» تسلسليّةٌ قسراً** (§٩٢-أ/٣: كبتنٌ واحدٌ في كلِّ مرّة) **بمهلة الكبتن وعدد الكباتن من إعدادها** — والبثُّ بسعرٍ
+        # يُساوَم عليه مزادٌ لم يُطلب. وتُقرأ مرّةً هنا كقواعد التوزيع
+        bargain = None
+        started_offer = locked.negotiation_offer
+        if locked.negotiation_offer is not None:
+            bargain = await negotiation.rules_for(session, locked.country_code)
+            rules = dataclasses.replace(
+                rules,
+                mode=DispatchMode.SEQUENTIAL,
+                offer_timeout_seconds=bargain.driver_timeout_seconds,
+                max_attempts=bargain.max_drivers or rules.max_attempts,
+            )
         await session.commit()
 
     # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣): دقائقُ أكثر بمحاولاتٍ أكثر — اختارت أن تنتظر
@@ -913,6 +950,10 @@ async def _run(ride_id: uuid.UUID) -> None:
                 ride = await _load_ride(session, ride_id)
                 # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن
                 if ride is None or ride.status != RideStatus.SEARCHING:
+                    return
+                # **عدّل الراكبُ سعرَه فبدأ توزيعٌ جديد** (`POST /rides/{id}/offer`) — وإشارةُ «قِف» قد تضيع بين العمّال، فهذه
+                # المهمّةُ تعرف نفسَها قديمةً بالسعر الذي بدأت به
+                if bargain is not None and ride.negotiation_offer != started_offer:
                     return
                 # شرطُ المطابقة يُقرأ في كل دورة لا مرةً عند البدء: مفتاحُ
                 # الخدمة قد يُطفأ أثناء البحث، وجنسُ الكبتن قد يُختم في هذه
@@ -1003,6 +1044,8 @@ async def _run(ride_id: uuid.UUID) -> None:
             # ويبقى الباقون — وتنتهي الدورةُ بقبولٍ أو بخلوّ الدفعة أو بالمهلة.
             round_end = time.monotonic() + rules.offer_timeout_seconds
             accepted = False
+            #: **عرضٌ مقابلٌ لم يُجَب بعد** — يُقرأ لحظةَ إشارته، ويُمحى بأيِّ جوابٍ من الراكب (القبولُ يُنهي الجولة، والرفضُ إشارةُ رفض)
+            countered: tuple[uuid.UUID, Decimal] | None = None
             while held and time.monotonic() < round_end:
                 remaining = min(round_end, deadline) - time.monotonic()
                 if remaining <= 0:
@@ -1016,7 +1059,19 @@ async def _run(ride_id: uuid.UUID) -> None:
                     return
                 if signal is None:
                     break
+                if signal.startswith(_SIGNAL_COUNTERED) and bargain is not None:
+                    # **جوابُ الراكب له مهلتُه كاملة** — والثانيةُ الزائدةُ ليسبق انقضاءُ العرض المقابل طيَّ البطاقة
+                    extended = time.monotonic() + bargain.rider_timeout_seconds + 1
+                    round_end = max(round_end, extended)
+                    deadline = max(deadline, extended)
+                    pending = await negotiation.pending_counter(redis, ride_id)
+                    countered = pending[:2] if pending is not None else None
+                    continue
                 if signal.startswith(_SIGNAL_DECLINED):
+                    if countered is not None:
+                        # **رفضُ الراكب عرضاً مقابلاً يَعِد بالتالي** (§٩٢-أ/٤) — فلا تأكل مهلةُ جوابه جولةَ من بعده
+                        deadline = max(deadline, time.monotonic() + rules.offer_timeout_seconds)
+                    countered = None
                     _, _, raw = signal.partition(":")
                     try:
                         refuser = uuid.UUID(raw)
@@ -1047,6 +1102,11 @@ async def _run(ride_id: uuid.UUID) -> None:
                 held = {}
                 return
 
+            # **عرضٌ مقابلٌ لم يُجب عنه** ينقضي هنا — رفضٌ يمضي به الطلبُ إلى التالي بسعر الراكب (§٩٢-أ/٦)
+            if countered is not None:
+                await _expire_counter(redis, ride_id, countered)
+                # **وانقضاؤه رفضٌ** بالوعد نفسِه: جولةٌ كاملةٌ للتالي ولو استنفد الانتظارُ مهلةَ البحث
+                deadline = max(deadline, time.monotonic() + rules.offer_timeout_seconds)
             # صمتوا أو رفضوا: تُطوى البطاقاتُ ويدخل أصحابُها التبريد
             await _fold(redis, ride_id, held, rules)
             held = {}

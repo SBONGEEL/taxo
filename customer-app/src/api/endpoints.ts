@@ -9,9 +9,10 @@ import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
   MyPaymentRequest,
-  PayMethods,
+  NegotiationState,
   PaymentCheckout,
   PaymentRequestPurpose,
+  PayMethods,
   TaxoCardRedeemed,
 } from "@/api/types";
 import type {
@@ -292,7 +293,21 @@ export const requestRide = (payload: {
   payment_method?: PaymentMethod;
   /** **معرّفُ السعر المثبَّت** (§٨٨/١) — مفتاحٌ لا مبلغ: يُؤخذ السعرُ المحفوظُ إن طابقت التفاصيلُ وفي مهلته */
   quote_id?: string;
+  /** **«تفاوض»** (SPEC §٩٢) — سعرُ الراكب كما كتبه؛ والخلفيةُ تردّه بنصّها تحت الحدّ أو بغير خطوة السوق. وغيابُه السعرُ العاديّ */
+  negotiation?: { offer: string };
 }) => api.post<Ride>("/rides", payload);
+
+/** **حالُ «تفاوض»** — عرضُ الراكب، وما اتُّفق عليه، والعرضُ المقابلُ المعلَّقُ بمهلته (§٩٢). */
+export const getNegotiation = (rideId: string) => api.get<NegotiationState>(`/rides/${rideId}/negotiation`);
+
+/** **قبولُ عرض الكبتن المقابل** — تُسنَد الرحلةُ إليه بسعره؛ وعرضٌ انقضى أو أُخذ ٤٠٩ برسالته. */
+export const acceptCounter = (rideId: string) => api.post<Ride>(`/rides/${rideId}/counter/accept`);
+
+/** **رفضُه** — يمضي الطلبُ إلى الكبتن التالي بسعر الراكب الأصليّ. */
+export const rejectCounter = (rideId: string) => api.post<void>(`/rides/${rideId}/counter/reject`);
+
+/** **تغييرُ السعر أثناء البحث** — يبدأ البحثُ من جديد بالسعر الجديد (§٩٢-أ/٥). */
+export const changeOffer = (rideId: string, amount: string) => api.post<Ride>(`/rides/${rideId}/offer`, { amount });
 
 /** **«ادفع الساعاتِ نقداً بدل المحفظة» وعكسُه** (§٦٣-ج/٥) — قبل البدء وحدَه؛ وبعده ٤٠٩ برسالته. **والبابُ للراكب صاحب الرحلة**
  *  (غيرُه ٤٠٤)، ويعيد الرحلةَ بقيمتها الجديدة. */

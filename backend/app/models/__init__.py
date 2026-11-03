@@ -275,3 +275,7 @@ from app.models.admin_alert import (  # noqa: F401
     AdminAlertRead,
     AdminAlertSettings,
 )
+from app.models.negotiation import (  # noqa: F401
+    NegotiationSetting,
+    RideFareOffer,
+)

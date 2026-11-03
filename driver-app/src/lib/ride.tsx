@@ -64,6 +64,8 @@ export interface Offer {
   /** لحظةُ انتهاء المهلة — منها يُحسب العدّاد، فلا ينجرف مع إعادة الرسم. */
   expiresAt: number;
   totalSeconds: number;
+  /** **سعرُك المقابل** (§٩٢-أ/٣) بعد «سعر آخر» — والبطاقةُ تبقى بمهلة جواب الراكب بانتظاره */
+  countered?: string;
 }
 
 interface RideState {
@@ -81,6 +83,8 @@ interface RideState {
   flushTrip: () => Promise<void>;
   setRide: (ride: Ride | null) => void;
   dismissOffer: () => void;
+  /** **«سعر آخر» أُرسل** — تبقى البطاقةُ بمهلة جواب الراكب، وتسكت نغمتُها */
+  holdOffer: (amount: string, seconds: number) => void;
   dismissTransfer: () => void;
   clearError: () => void;
 }
@@ -98,6 +102,7 @@ const RideContext = createContext<RideState>({
   flushTrip: () => Promise.resolve(),
   setRide: () => undefined,
   dismissOffer: () => undefined,
+  holdOffer: () => undefined,
   dismissTransfer: () => undefined,
   clearError: () => undefined,
 });
@@ -413,6 +418,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
       dismissOffer: () => {
         stopOfferLoop();
         setOffer(null);
+      },
+      holdOffer: (amount: string, seconds: number) => {
+        stopOfferLoop();
+        setOffer((current) =>
+          current ? { ...current, countered: amount, expiresAt: Date.now() + seconds * 1_000, totalSeconds: seconds } : current,
+        );
       },
       dismissTransfer: () => setTransfer(null),
       clearError: () => setError(null),

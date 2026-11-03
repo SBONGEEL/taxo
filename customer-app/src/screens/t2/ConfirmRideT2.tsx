@@ -54,6 +54,7 @@ import { useSession } from "@/lib/session";
 import { currencyLabel, formatAmount, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
+import { NegotiateBlockT2 } from "./NegotiationT2";
 import { HourlySheetT2 } from "./HourlyT2";
 import { ParcelOptionT2, ParcelSheetT2 } from "./ParcelT2";
 import { SheetT2 } from "./SheetT2";
@@ -152,6 +153,12 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     available,
   } = props;
   const c = useConfirmRide(props);
+  // **«تفاوض»** (SPEC §٩٢) — سعرُ الراكب كما يكتبه، و`null` بالسعر العاديّ. **وحيث نشر التقديرُ حدَّه وحدَه**: سوقٌ مشتعلٌ وفئةٌ
+  // داخلة، **ولا يُجمع مع طردٍ ولا ساعاتٍ ولا مشاركةٍ ولا كوبونٍ ولا حجز** — وما يُختار منها يُطفئه بعلّته لا صامتاً
+  const [bargain, setBargain] = useState<string | null>(props.initialOffer ?? null);
+  const bargainOffered =
+    Boolean(c.estimate?.negotiation_minimum) && !c.loading && !c.parcelMode && !c.hourlyMode && !c.scheduling;
+  const bargaining = bargain !== null && bargainOffered && !c.share && !c.applied;
   // **حججُ الطلب مرّةً واحدة** — يرسلها «اطلب» و«اشحن مبلغ الرحلة الآن» معاً فلا يفترقان (§٨٨/١)
   const requestArgs: Parameters<ConfirmRideProps["onRequest"]> = [
     c.category,
@@ -169,6 +176,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     // **والطريقةُ المرسومةُ على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — والرئيسيةُ تقرّر أتُرسل (المفتاح).
     // **ولا طريقةَ للساعات**: محجوزُها هو طريقتُها، والورقةُ لا ترسم منتقيَ الدفع لها
     c.hourlyMode ? undefined : c.payMethod?.method,
+    bargaining && bargain ? bargain : undefined,
   ];
   // **مفتاحُ «المطار» في سوق الراكب** (§٦٣-ج/٢) — مطفأً لا سطرَ ولو وصل رسمٌ (والخلفيةُ لا ترسله مطفأً أصلاً)
   const { user } = useSession();
@@ -246,12 +254,16 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                       : tr("اطلب توصيل الطرد")
                     : c.hourlyMode
                       ? tr("اطلب بالساعة")
+                      : bargaining
+                        ? tr("اعرض سعرك")
                       : women
                         ? tr("اطلبي كبتنة")
                         : tr("اطلب {0}", { 0: VEHICLE_LABEL[c.category] })}
             </span>
             {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
-            {c.shownFare && !c.loading && !c.parcelUnavailable && !c.hourlyBlocked ? (
+            {bargaining && bargain ? (
+              <span className="t2-cta-price">{formatMoney(bargain, currency)}</span>
+            ) : c.shownFare && !c.loading && !c.parcelUnavailable && !c.hourlyBlocked ? (
               <span className="t2-cta-price">{formatMoney(c.shownFare, currency)}</span>
             ) : null}
           </button>
@@ -382,6 +394,15 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </p>
       ) : null}
 
+      {/* **«اقترح سعرك»** (SPEC §٩٢) — حيث نشر التقديرُ حدَّه، **ومطفأٌ بعلّته مع المشاركة أو الكوبون** */}
+      {bargainOffered && c.estimate ? (
+        c.share || c.applied ? (
+          <p className="t2-sheet-fine">{tr("«اقترح سعرك» لا يُجمع مع المشاركة ولا الكوبون.")}</p>
+        ) : (
+          <NegotiateBlockT2 estimate={c.estimate} offer={bargain} onChange={setBargain} />
+        )
+      ) : null}
+
       {/* **شارةُ الطرد** — «بيانات الطرد» قبل المستلم، و«إلى: الاسم» بعده بزرِّ التعديل */}
       {c.parcelMode ? (
         <ParcelOptionT2 draft={c.parcel} fetch={c.parcelFetch} onOpen={() => setParcelOpen(true)} />
@@ -417,7 +438,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **الدفعُ والكوبونُ صفٌّ واحد** كما رُسم — وكلٌّ بشرطه: لا منتقٍ بقناةٍ وحيدة، ولا كوبونَ حيث المفتاحُ مطفأ.
           **ولا منتقيَ قناةٍ للساعات** (§٦٣-ج/٥): من أين يُدفع المحجوزُ اختيارُها في كتلتها، ومنتقٍ ثانٍ بجانبه يُقرأ خياراً ثانياً
           للشيء نفسِه — وما زاد يُدفع في النهاية من شاشة الدفع كأيِّ رحلة */}
-      {(c.payMethod && c.channels.length > 1 && !c.hourlyMode) || c.promoEnabled ? (
+      {(c.payMethod && c.channels.length > 1 && !c.hourlyMode) || (c.promoEnabled && !bargaining) ? (
         <div className="t2-payrow">
           {c.payMethod && c.channels.length > 1 && !c.hourlyMode ? (
             <button type="button" className="t2-payrow-pay" onClick={() => c.setPickingPay(true)}>
@@ -426,10 +447,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               <span className="t2-icon t2-payrow-more" aria-hidden="true">expand_more</span>
             </button>
           ) : null}
-          {c.payMethod && c.channels.length > 1 && !c.hourlyMode && c.promoEnabled ? (
+          {c.payMethod && c.channels.length > 1 && !c.hourlyMode && c.promoEnabled && !bargaining ? (
             <span className="t2-payrow-sep" />
           ) : null}
-          {c.promoEnabled ? (
+          {c.promoEnabled && !bargaining ? (
             c.applied ? (
               <button
                 type="button"
@@ -501,7 +522,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       ) : null}
 
       {/* **المشاركة** (12-ي) بموافقتيها — وتُخفى ما دام لا سعرَ لها */}
-      {c.shareOffered ? (
+      {c.shareOffered && !bargaining ? (
         <div className="t2-share">
           <label className="t2-share-row">
             <input

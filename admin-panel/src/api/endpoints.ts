@@ -184,6 +184,7 @@ import type {
   CliqClaim,
   DebtClaimRow,
   DispatchSetting,
+  NegotiationSetting,
   DriverDebtRow,
   PromoBannerRow,
   ServiceTileRow,
@@ -1638,6 +1639,15 @@ export const confirmDebtClaim = (id: string, credited: string) =>
 /** شطبُ مستحقٍّ بقرارٍ مسجَّل — والسببُ مطلوبٌ لا اختياري. */
 export const writeOffDebt = (id: string, reason: string) =>
   api.post<DriverDebtRow>(`/admin/drivers/debts/${id}/writeoff`, { reason });
+
+/** **«تفاوض» لكلِّ سوق** (SPEC §٩٢-ب) — **والغائبُ مطفأ** ولا صفَّ له. */
+export const listNegotiationSettings = () => api.get<NegotiationSetting[]>("/admin/settings/negotiation");
+
+/** **يسري على الطلب التالي** — رحلةٌ في بحثها تُكمل بما بدأت به. والفئاتُ بمفاتيحها في السوق، و`null` يُفرغ الاختياريَّ وحدَه. */
+export const updateNegotiationSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<NegotiationSetting, "country_code">>,
+) => api.patch<NegotiationSetting>(`/admin/settings/negotiation/${country}`, payload);
 
 /** قواعدُ التوزيع لكل سوق — **والغائبُ يعمل بالافتراضيّ ولا صفَّ له**. */
 export const listDispatchSettings = () =>

@@ -15,10 +15,11 @@ from sqlalchemy import select
 
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
-from app.core.exceptions import Conflict, NotFound, PermissionDenied
+from app.core.exceptions import Conflict, NotFound, PermissionDenied, RideOfferExpired
 from app.models.driver import Driver
 from app.models.user import User
-from app.models.enums import CancelReasonCode, CancellationChargeStatus, RideStatus, UserRole
+from app.models.enums import CancelReasonCode, CancellationChargeStatus, DriverStatus, RideStatus, UserRole
+from app.models.vehicle import Vehicle
 from app.models.ride import ACTIVE_DRIVER_STATUSES, TERMINAL_STATUSES, Ride
 from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
@@ -42,9 +43,13 @@ from app.schemas.ride import (
     StartRideRequest,
     TrackLinkOut,
     HourlyPrepayIn,
+    CounterSentOut,
+    FareAmountIn,
+    NegotiationCounterOut,
+    NegotiationStateOut,
 )
 from app.services import approach, avatar, cancellation, rider_photo
-from app.services import eta, markets
+from app.services import eta, markets, negotiation
 from app.services import (
     categories,
     dispatch,
@@ -232,7 +237,27 @@ async def estimate_ride(
         rugged_fee=next((line.amount for line in quote.lines if line.kind == "rugged"), None),
         parcel_terms=list(parcels.TERMS) if payload.is_parcel else None,
         **(await _hourly_terms(session, rider.country_code)),
+        **(
+            # **على التقدير المعروض نفسِه** الذي يتحقّق عليه الطلب (`ride.estimated_fare`) — فلا يُعرض حدٌّ يردّه الطلب
+            await _negotiation_terms(session, rider.country_code, payload.vehicle_category, rounding.rounded(quote.fare, policy))
+            if not payload.is_parcel and not payload.hourly_hours
+            else {}
+        ),
     )
+
+
+async def _negotiation_terms(session, country, category: str, fare) -> dict:
+    """**حدُّ «تفاوض» وخطوتُه** (§٩٢-ب) — **من الخلفية لا من الشاشة** (§١٤)، و`{}` حيث لا تفاوض."""
+    rules = await negotiation.rules_for(session, country)
+    if not rules.allows(category):
+        return {}
+    floor = await negotiation.floor_for(session, country, rules, fare)
+    return {
+        "negotiation_minimum": floor.minimum,
+        "negotiation_min_percent": rules.min_percent,
+        "negotiation_min_amount": floor.by_amount,
+        "negotiation_step": floor.step,
+    }
 
 
 async def _hourly_terms(session, country) -> dict:
@@ -261,6 +286,11 @@ async def request_ride(
     """
     # **السوقُ المغلقُ لا يُطلب فيه جديد** (SPEC §٧٤-أ/٢) — هنا لا في الخدمة: الحجزُ الذي سبق الإغلاقَ يُنشئ رحلتَه من الخدمة ويُنفَّذ
     await markets.require_open_for(session, rider, door="ride")
+    # **حدُّ الإساءة قبل أيِّ عمل** (§٩٢-د): طلباتُ التفاوض وتعديلاتُ السعر معاً
+    if payload.negotiation is not None:
+        from app.core.redis_client import get_redis_client as _redis
+
+        await negotiation.require_rider_budget(_redis(), rider.id)
     ride = await rides_service.request_ride(
         session,
         rider=rider,
@@ -276,6 +306,7 @@ async def request_ride(
         widen_search=payload.widen_search,
         payment_method=payload.payment_method,
         quote_id=payload.quote_id,
+        negotiation_offer=payload.negotiation.offer if payload.negotiation is not None else None,
         passenger=(
             ride_for_other.PassengerRequest(
                 name=payload.for_other.name,
@@ -701,8 +732,154 @@ async def decline_ride(
     انتظار بقية المهلة.
     """
     await dispatch.require_offer(redis, ride_id, driver.id)
+    # **ورفضُ عرضِ «تفاوض» يُسجَّل** (§٩٢-د) — سجلُّ اللوحة وما يُقاس عليه الإساءة
+    offer = await session.scalar(select(Ride.negotiation_offer).where(Ride.id == ride_id))
+    if offer is not None:
+        await negotiation.record(session, ride_id, "driver_decline", amount=offer, driver_id=driver.id)
+        await session.commit()
+        # **ومن سحب نفسَه بعد عرضٍ مقابلٍ يسحبه معه** — وإلا قبله الراكبُ بعد أن طُويت بطاقةُ صاحبه
+        pending = await negotiation.pending_counter(redis, ride_id)
+        if pending is not None and pending[0] == driver.id and await negotiation.take_counter(redis, ride_id):
+            rider_id = await session.scalar(select(Ride.rider_id).where(Ride.id == ride_id))
+            if rider_id is not None:
+                await events.publish_fare_counter_expired(redis, rider_user_id=rider_id, ride_id=ride_id)
     await dispatch.notify_declined(redis, ride_id, driver.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{ride_id}/counter", response_model=CounterSentOut)
+async def counter_fare(
+    ride_id: uuid.UUID, payload: FareAmountIn, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> CounterSentOut:
+    """**«سعرٌ آخر»** (§٩٢-أ/٣) — من الكبتن المعروضةِ عليه رحلةُ «تفاوض» الآن، **ويصل الراكبَ بمهلة جوابه**."""
+    if driver.status != DriverStatus.APPROVED:
+        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+    ride = await session.get(Ride, ride_id)
+    if ride is None:
+        raise NotFound("الرحلة غير موجودة")
+    rules = await negotiation.counter(session, redis, ride=ride, driver=driver, amount=payload.amount)
+    await session.commit()
+    await events.publish_fare_counter(
+        redis,
+        rider_user_id=ride.rider_id,
+        ride_id=ride.id,
+        amount=str(pricing.as_money(payload.amount)),
+        expires_in_seconds=rules.rider_timeout_seconds,
+        driver=await _counter_driver(session, driver),
+    )
+    # **مهلةُ جواب الراكب تُقال للكبتن** — بطاقتُه تبقى بها لا بمهلة العرض الأولى (حجزُه مُدَّ بها في `negotiation.counter`)
+    return CounterSentOut(amount=pricing.as_money(payload.amount), expires_in_seconds=rules.rider_timeout_seconds)
+
+
+async def _counter_driver(session, driver: Driver) -> dict:
+    """**من يعرض** — اسمٌ أوّل وتقييمٌ ومركبة، ليقرّر الراكبُ على من يقبل. **ولا رقمَ ولا صورة** قبل أن تُسند الرحلة."""
+    user = await session.get(User, driver.user_id)
+    vehicle = await session.scalar(select(Vehicle).where(Vehicle.driver_id == driver.id).limit(1))
+    return {
+        "name": (user.name or "").split(" ")[0] if user is not None else "",
+        "rating": str(driver.rating_avg) if driver.rating_avg is not None else None,
+        "vehicle": f"{vehicle.make} {vehicle.model}".strip() if vehicle is not None else None,
+        "color": vehicle.color if vehicle is not None else None,
+    }
+
+
+async def _own_negotiated(session, ride_id: uuid.UUID, rider: User) -> Ride:
+    ride = await session.get(Ride, ride_id)
+    if ride is None or ride.rider_id != rider.id or ride.negotiation_offer is None:
+        raise NotFound("الرحلة غير موجودة")
+    return ride
+
+
+@router.post("/{ride_id}/counter/accept", response_model=RideOut)
+async def accept_counter(ride_id: uuid.UUID, rider: RiderUser, session: DbSession, redis: RedisDep) -> RideOut:
+    """**الراكبُ يقبل العرضَ المقابل** (§٩٢-أ/٤) — الرحلةُ تُسند لذلك الكبتن **بسعره** تحت قفل صفّها (`rides._take`)."""
+    await _own_negotiated(session, ride_id, rider)
+    taken = await negotiation.take_counter(redis, ride_id)
+    if taken is None:
+        raise RideOfferExpired("انقضى العرضُ المقابل — البحثُ مستمرٌّ بسعرك")
+    driver_id, amount = taken
+    driver = await session.get(Driver, driver_id)
+    if driver is None:  # pragma: no cover - صفٌّ اختفى
+        raise RideOfferExpired()
+    ride = await rides_service.take_countered(session, ride_id, driver, amount)
+    await session.commit()
+    await dispatch.notify_accepted(redis, ride_id)
+    await dispatch.release_offer(redis, ride_id, driver.id)
+    await notifications.publish_ride_event(session, redis, ride, events.RideEvent.DRIVER_ASSIGNED)
+    out = _to_out(ride)
+    try:
+        await session.refresh(ride)
+        await eta.approach(session, redis, ride=ride)
+    except Exception:  # noqa: BLE001 — زينةُ خريطةٍ لا شرطُ قبول (كما في `accept_ride`)
+        logger.exception("approach failed after counter accept ride=%s", ride_id)
+    return out
+
+
+@router.post("/{ride_id}/counter/reject", status_code=status.HTTP_204_NO_CONTENT)
+async def reject_counter(ride_id: uuid.UUID, rider: RiderUser, session: DbSession, redis: RedisDep) -> Response:
+    """**الراكبُ يرفض العرضَ المقابل** (§٩٢-أ/٤) — إلى الكبتن التالي **بسعره الأصليّ**، ولا أخذَ وردَّ بعده."""
+    await _own_negotiated(session, ride_id, rider)
+    taken = await negotiation.take_counter(redis, ride_id)
+    if taken is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    driver_id, amount = taken
+    await negotiation.record(session, ride_id, "rider_reject", amount=amount, driver_id=driver_id)
+    await session.commit()
+    await dispatch.notify_declined(redis, ride_id, driver_id)
+    driver_user = await session.scalar(select(Driver.user_id).where(Driver.id == driver_id))
+    if driver_user is not None:
+        await events.publish_offer_expired(redis, driver_user_id=driver_user, ride_id=ride_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{ride_id}/offer", response_model=RideOut)
+async def change_offer(
+    ride_id: uuid.UUID, payload: FareAmountIn, rider: RiderUser, session: DbSession, redis: RedisDep
+) -> RideOut:
+    """**تعديلُ السعر أثناء البحث** (§٩٢-أ/٥) — **يبدأ البحثَ من جديد بالسعر الجديد**: تُطوى البطاقةُ القائمة ويُمسح التبريد.
+
+    وتعديلُ الوجهة أو الفئة إلغاءٌ مجّانيٌّ ثمّ طلبٌ جديد — بالبابين القائمين (`design/NEGOTIATE.md` §١).
+    """
+    await negotiation.require_rider_budget(redis, rider.id)
+    ride = await _own_negotiated(session, ride_id, rider)
+    await session.refresh(ride, with_for_update=True)
+    if ride.status not in (RideStatus.REQUESTED, RideStatus.SEARCHING):
+        raise RideOfferExpired("لم يعد البحثُ قائماً")
+    await negotiation.validate_offer(
+        session, country=ride.country_code, category=ride.vehicle_category, estimate=ride.estimated_fare,
+        amount=payload.amount,
+    )
+    ride.negotiation_offer = pricing.as_money(payload.amount)
+    await negotiation.record(session, ride.id, "rider_offer", amount=ride.negotiation_offer)
+    # **البحثُ يُعاد من أوّله**: الحالُ `requested` من جديد فيبدأ التوزيعُ كأنه طلبٌ جديد، ومن رفض السعرَ القديم يُعرض عليه الجديد
+    ride.status = RideStatus.REQUESTED
+    await session.commit()
+    await dispatch.stop(ride_id)
+    await dispatch.withdraw_offer(session, redis, ride_id)
+    await negotiation.take_counter(redis, ride_id)
+    await redis.delete(dispatch.cooldown_key(ride_id))
+    body = _to_out(await rides_service.get_ride(session, ride_id))
+    dispatch.start(ride_id)
+    return body
+
+
+@router.get("/{ride_id}/negotiation", response_model=NegotiationStateOut)
+async def negotiation_state(
+    ride_id: uuid.UUID, rider: RiderUser, session: DbSession, redis: RedisDep
+) -> NegotiationStateOut:
+    """**حالُ التفاوض بعد انقطاع** — العرضُ القائم والعرضُ المقابلُ المعلَّق بمهلته الباقية (من `TTL` لا تقدير)."""
+    ride = await _own_negotiated(session, ride_id, rider)
+    pending = await negotiation.pending_counter(redis, ride_id)
+    counter = None
+    if pending is not None:
+        driver_id, amount, remaining = pending
+        driver = await session.get(Driver, driver_id)
+        counter = NegotiationCounterOut(
+            amount=amount,
+            expires_in_seconds=remaining,
+            driver=await _counter_driver(session, driver) if driver is not None else {},
+        )
+    return NegotiationStateOut(offer=ride.negotiation_offer, negotiated_fare=ride.negotiated_fare, counter=counter)
 
 
 @router.post("/{ride_id}/arrive", response_model=RideOut)

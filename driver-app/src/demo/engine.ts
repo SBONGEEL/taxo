@@ -216,6 +216,9 @@ function makeRide(seed: number): Ride {
     pause_price_per_min: ZERO,
     pause_max_minutes: 0,
     current_fare: fare,
+    // **العرضُ لا يتفاوض** — رحلتُه بالسعر العاديّ دائماً
+    negotiation_offer: null,
+    negotiated_fare: null,
     fare_lines: [{ kind: "base", amount: fare }],
     start_code_required: false,
     for_other: false,

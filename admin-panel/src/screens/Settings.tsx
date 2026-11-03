@@ -44,6 +44,8 @@ import {
   listPaymentSettings,
   listAdvanceSettings,
   listDispatchSettings,
+  listNegotiationSettings,
+  listRideCategories,
   listCancellationSettings,
   listServiceSettings,
   updateServiceSettings,
@@ -54,6 +56,7 @@ import {
   listWalletSettings,
   updateAdvanceSettings,
   updateDispatchSettings,
+  updateNegotiationSettings,
   setFeatureFlag,
   updateCommission,
   updatePaymentSettings,
@@ -69,6 +72,8 @@ import type {
   CountryCode,
   DispatchMode,
   DispatchSetting,
+  NegotiationSetting,
+  RideCategory,
   CancellationSetting,
   ServiceSetting,
   OtpExhausted,
@@ -400,6 +405,7 @@ export function SettingsScreen() {
   const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
   const [dispatchRows, setDispatchRows] = useState<DispatchSetting[]>([]);
+  const [negotiationRows, setNegotiationRows] = useState<NegotiationSetting[]>([]);
   const [cancel, setCancel] = useState<CancellationSetting[]>([]);
   const [services, setServices] = useState<ServiceSetting[]>([]);
   const [otp, setOtp] = useState<OtpSetting[]>([]);
@@ -451,6 +457,8 @@ export function SettingsScreen() {
     setOtp(otpRows);
     setMapRows(mapRows);
     setBurned(spent);
+    // **«تفاوض»** (§٩٢-ب) — خارج الدفعة: صفحةٌ تعمل ولو تعثّر بابُه
+    setNegotiationRows(await listNegotiationSettings().catch(() => []));
   }, [country]);
 
   useEffect(() => {
@@ -466,6 +474,7 @@ export function SettingsScreen() {
   // **`null` لا `undefined` مُمرَّرةً**: النموذجُ يعرض الافتراضيَّ للغائب
   const dispatchRow =
     dispatchRows.find((row) => row.country_code === country) ?? null;
+  const negotiationRow = negotiationRows.find((row) => row.country_code === country) ?? null;
   const walletRow = wallet.find((row) => row.country_code === country);
   const paymentRow = payment.find((row) => row.country_code === country);
   const advanceRow = advance.find((row) => row.country_code === country);
@@ -739,6 +748,28 @@ export function SettingsScreen() {
             <DispatchForm
               key={country}
               row={dispatchRow}
+              country={country}
+              disabled={!isAdmin}
+              onSaved={(message) => {
+                setDone(message);
+                void load();
+              }}
+              onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+            />
+          </section>
+
+          {/* **«تفاوض»** (SPEC §٩٢-ب) — مطفأٌ حتى يُشعَل هنا لكلِّ دولة */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">«تفاوض» على السعر</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              الراكبُ يقترح سعرَه، <b className="text-ink">ويُعرض على كبتنٍ واحدٍ في كلِّ مرّة</b> — يقبله، أو يرفضه فيمضي
+              إلى التالي، أو يعرض سعراً أعلى يقبله الراكبُ أو يرفضه. <b className="text-ink">والعمولةُ على السعر المتّفق
+              عليه</b>، والانتظارُ والوقفاتُ فوقه. ولا يُجمع مع الحجز ولا الساعات ولا الطرد ولا المشاركة ولا الكوبون.
+              <b className="text-ink"> وما يُحفظ هنا يسري على الطلب التالي</b> لا على بحثٍ جارٍ.
+            </p>
+            <NegotiationForm
+              key={country + (negotiationRow ? "1" : "0")}
+              row={negotiationRow}
               country={country}
               disabled={!isAdmin}
               onSaved={(message) => {
@@ -3239,6 +3270,143 @@ function OtpForm({
             .catch((caught) =>
               onError(caught),
             )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **«تفاوض»** (SPEC §٩٢-ب) — **الغائبُ يُعرض بافتراضات الجدول مطفأً** (لا صفَّ يُخترع حتى يُحفظ). والحقولُ الاختياريّةُ فارغةً
+ *  تُرسل `null` (بلا مبلغٍ ثابت · بلا سقف · بمحاولات التوزيع)، **والفئاتُ بلا اختيارٍ = كلُّها**. */
+function NegotiationForm({
+  row,
+  country,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: NegotiationSetting | null;
+  country: CountryCode;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [enabled, setEnabled] = useState(row?.enabled ?? false);
+  const [percent, setPercent] = useState(String(row?.min_percent ?? 70));
+  const [amount, setAmount] = useState(row?.min_amount ?? "");
+  const [driverWait, setDriverWait] = useState(row?.driver_timeout_seconds ?? 20);
+  const [riderWait, setRiderWait] = useState(row?.rider_timeout_seconds ?? 20);
+  const [cap, setCap] = useState(row?.max_counter_percent === null || !row ? "" : String(row.max_counter_percent));
+  const [drivers, setDrivers] = useState(row?.max_drivers === null || !row ? "" : String(row.max_drivers));
+  const [picked, setPicked] = useState<string[]>(row?.categories ?? []);
+  const [categories, setCategories] = useState<RideCategory[]>([]);
+  const [busy, setBusy] = useState(false);
+  const digits = (value: string) => value.replace(/[^0-9]/g, "");
+
+  useEffect(() => {
+    listRideCategories(country)
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, [country]);
+
+  return (
+    <>
+      <div className="mb-10 flex items-center justify-between gap-10">
+        <span className="text-12 font-bold text-ink">{enabled ? "مشتعلٌ في هذا السوق" : "مطفأٌ في هذا السوق"}</span>
+        <Switch checked={enabled} disabled={disabled} label="«تفاوض»" onChange={() => setEnabled(!enabled)} />
+      </div>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          name="min_percent"
+          label="الحدّ الأدنى — نسبة من التقدير (%)"
+          dir="ltr"
+          inputMode="numeric"
+          value={percent}
+          disabled={disabled}
+          onChange={(event) => setPercent(digits(event.target.value))}
+        />
+        <MoneyField
+          name="min_amount"
+          label="ولا يقلّ عن مبلغ (اختياري)"
+          value={amount}
+          currency={currencyOf(country)}
+          disabled={disabled}
+          onChange={setAmount}
+        />
+        <DurationField
+          name="driver_timeout_seconds"
+          label="مهلة الكبتن على العرض"
+          value={driverWait}
+          disabled={disabled}
+          onChange={setDriverWait}
+        />
+        <DurationField
+          name="rider_timeout_seconds"
+          label="مهلة الراكب على العرض المقابل"
+          value={riderWait}
+          disabled={disabled}
+          onChange={setRiderWait}
+        />
+        <Field
+          name="max_counter_percent"
+          label="سقف العرض المقابل فوق عرض الراكب (%، اختياري)"
+          dir="ltr"
+          inputMode="numeric"
+          value={cap}
+          disabled={disabled}
+          onChange={(event) => setCap(digits(event.target.value))}
+        />
+        <Field
+          name="max_drivers"
+          label="كم كبتناً قبل «لا كبتن» (اختياري)"
+          dir="ltr"
+          inputMode="numeric"
+          value={drivers}
+          disabled={disabled}
+          onChange={(event) => setDrivers(digits(event.target.value))}
+        />
+      </div>
+      <p className="mb-6 mt-12 text-11 font-bold text-ink">الفئات — بلا اختيارٍ تعني كلَّها</p>
+      <div className="flex flex-wrap gap-10">
+        {categories.map((category) => (
+          <Checkbox
+            key={category.key}
+            checked={picked.includes(category.key)}
+            disabled={disabled}
+            onChange={(next) =>
+              setPicked((current) => (next ? [...current, category.key] : current.filter((key) => key !== category.key)))
+            }
+          >
+            {category.name}
+          </Checkbox>
+        ))}
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        الحدُّ الأدنى هو الأعلى من النسبة والمبلغ، مرفوعاً إلى وحدة تقريب السوق — ويُعرض للراكب قبل أن يكتب سعرَه. والعرضُ
+        المقابلُ لا يكون إلا أعلى من عرض الراكب.
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || percent === "" || driverWait === 0 || riderWait === 0}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateNegotiationSettings(country, {
+            enabled,
+            min_percent: Number(percent),
+            min_amount: amount === "" ? null : amount,
+            driver_timeout_seconds: driverWait,
+            rider_timeout_seconds: riderWait,
+            max_counter_percent: cap === "" ? null : Number(cap),
+            max_drivers: drivers === "" ? null : Number(drivers),
+            categories: picked,
+          })
+            .then(() => onSaved(enabled ? "حُفظ «تفاوض» مشتعلاً — يسري على الطلب التالي" : "حُفظ «تفاوض» مطفأً"))
+            .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}
       >

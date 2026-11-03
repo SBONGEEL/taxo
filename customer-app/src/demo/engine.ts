@@ -267,6 +267,9 @@ function makeRide(draft: RideDraft): Ride {
     stop_fee: ZERO,
     stops_charge: ZERO,
     rider_estimate: fare,
+    // **العرضُ لا يتفاوض** — رحلتُه بالسعر العاديّ دائماً
+    negotiation_offer: null,
+    negotiated_fare: null,
     created_at: now(),
     accepted_at: null,
     arrived_at: null,

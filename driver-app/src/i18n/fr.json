@@ -1809,5 +1809,13 @@
  "فئةُ مركبتك يحدّدها فريقُ TAXO من طرازها وسنة صنعها وصورها.": "La catégorie de votre véhicule est fixée par l'équipe TAXO d'après le modèle, l'année et les photos.",
  "فئةُ مركبتك مؤقّتة — تعمل كما هي حتى يؤكّدها فريقُ TAXO عند مراجعة مركبتك.": "Catégorie provisoire — elle reste active jusqu'à sa confirmation par l'équipe TAXO lors de la vérification de votre véhicule.",
  "رخصة التاكسي": "Licence de taxi",
- "اختياريّة — لمن يعمل بتاكسي مرخَّص": "Facultative — pour les taxis agréés"
+ "اختياريّة — لمن يعمل بتاكسي مرخَّص": "Facultative — pour les taxis agréés",
+ "سعرُك — بانتظار جواب الراكب على": "Votre prix — en attente de la réponse du passager sur",
+ "سعرُ الراكب — المقدَّر": "Prix du passager — estimé",
+ "سعرك": "Votre prix",
+ "أرسل سعري": "Envoyer mon prix",
+ "اسحب سعري": "Retirer mon prix",
+ "سعر آخر": "Autre prix",
+ "قبول بسعره": "Accepter à son prix",
+ "سعر متفاوض عليه": "Prix négocié"
 }

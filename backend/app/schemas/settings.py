@@ -427,6 +427,35 @@ class DispatchSettingOut(BaseModel):
     broadcast_batch_size: int
 
 
+class NegotiationSettingOut(BaseModel):
+    """«تفاوض» لسوق (§٩٢-ب) — **والغيابُ مطفأ** فلا يُخترع صفّ."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    country_code: CountryCode
+    enabled: bool
+    min_percent: int
+    min_amount: Decimal | None
+    driver_timeout_seconds: int
+    rider_timeout_seconds: int
+    max_counter_percent: int | None
+    max_drivers: int | None
+    categories: list[str]
+
+
+class NegotiationSettingUpdate(BaseModel):
+    """**الحدودُ صورةٌ عن قيود القاعدة** — والفارغُ في الحقول الاختياريّة يُطفئها (`null` صريحاً)."""
+
+    enabled: bool | None = None
+    min_percent: int | None = Field(default=None, ge=10, le=100)
+    min_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    driver_timeout_seconds: int | None = Field(default=None, ge=5, le=120)
+    rider_timeout_seconds: int | None = Field(default=None, ge=5, le=120)
+    max_counter_percent: int | None = Field(default=None, ge=1, le=500)
+    max_drivers: int | None = Field(default=None, ge=1, le=50)
+    categories: list[str] | None = Field(default=None, max_length=20)
+
+
 class DispatchSettingUpdate(BaseModel):
     """**والحدودُ هنا صورةٌ عن قيود القاعدة** لا حدٌّ ثانٍ يفترق عنها."""
 
