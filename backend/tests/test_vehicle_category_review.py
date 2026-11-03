@@ -150,6 +150,15 @@ async def test_nearby_categories_follow_the_takers(
     assert (await client.get("/rides/eta", params=far, headers=rider)).json()["available"] == []
 
 
+async def test_config_publishes_the_three_names(client: AsyncClient, session_factory) -> None:
+    """**الأسماءُ بثلاث لغات** (§٩١-ب/٦) — `/config` ينشر ما كتبه المشرف، **وفارغُه فارغٌ** فيقرأ التطبيقُ العربيَّ أو ترجمتَه."""
+    await _comfort_row(session_factory, name_fr="Confort", name_en="Comfort")
+    body = (await client.get("/config")).json()
+    faces = {face["key"]: face for country in body["countries"] if country["country_code"] == "JO" for face in country["ride_categories"]}
+    assert (faces["comfort"]["name_fr"], faces["comfort"]["name_en"]) == ("Confort", "Comfort")
+    assert faces["economy"]["name_fr"] is None and faces["economy"]["name"] == "اقتصادي"
+
+
 async def test_confirmation_waits_for_the_captain_row_lock(
     client: AsyncClient, session_factory, admin_headers: dict
 ) -> None:

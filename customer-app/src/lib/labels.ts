@@ -12,7 +12,7 @@ import type {
   RideStatus,
   VehicleCategory,
   WalletTransactionType,
-} from "@/api/types"; import { tr } from "@/lib/i18n";
+} from "@/api/types"; import { language, tr } from "@/lib/i18n";
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
   requested: tr("جارٍ إرسال الطلب"),
@@ -57,8 +57,13 @@ export const CATEGORY_ICON: Record<VehicleCategory, string> = { economy: "local_
  *  اليومَ حرفاً. ويُستدعى حين تصل الإعدادات (`ConfigProvider`)، فكلُّ شاشةٍ تقرأ الجدولَ نفسَه بلا بابٍ ثانٍ. */
 export function registerCategoryFaces(faces: RideCategoryFace[]): void {
   for (const face of faces) {
-    if (face.key === "economy" || face.key === "comfort") continue;
-    VEHICLE_LABEL[face.key] = face.name;
+    // **اسمُ المشرف بلغة التطبيق يعلو** (§٩١-ب/٦) — للمدمجتين أيضاً، **والعربيُّ لهما كما كان حرفاً**
+    const localName = language === "fr" ? face.name_fr : null;
+    if (face.key === "economy" || face.key === "comfort") {
+      if (localName) VEHICLE_LABEL[face.key] = localName;
+      continue;
+    }
+    VEHICLE_LABEL[face.key] = localName || face.name;
     VEHICLE_HINT[face.key] = face.description ? tr("{0} · {1} مقاعد", { 0: face.description, 1: face.seats }) : tr("{0} مقاعد", { 0: face.seats });
     CATEGORY_ICON[face.key] = face.icon;
   }

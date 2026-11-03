@@ -13,7 +13,7 @@ import type {
   VehicleCategory, RideCategoryFace } from "@/api/types";
 import { currencyLabel, currencyName, digits,
   DISPLAY_LOCALE,
-} from "@/lib/utils"; import { tr } from "@/lib/i18n";
+} from "@/lib/utils"; import { language, tr } from "@/lib/i18n";
 
 /** **يُقرأ من `currencyLabel` ولا يُكتب هنا** (2026-09-07): البيتُ نزل إلى
  *  `@/lib/utils` كي يقرأه صندوقُ اللافتات المتطابقُ بايتاً في التطبيقين،
@@ -46,8 +46,13 @@ export const CATEGORY_LABEL: Record<VehicleCategory, string> = {
  *  اليومَ حرفاً. ويُستدعى حين تصل الإعدادات (`ConfigProvider`)، فكلُّ شاشةٍ تقرأ الجدولَ نفسَه بلا بابٍ ثانٍ. */
 export function registerCategoryFaces(faces: RideCategoryFace[]): void {
   for (const face of faces) {
-    if (face.key === "economy" || face.key === "comfort") continue;
-    CATEGORY_LABEL[face.key] = face.name;
+    // **اسمُ المشرف بلغة التطبيق يعلو** (§٩١-ب/٦) — للمدمجتين أيضاً، **والعربيُّ لهما كما كان حرفاً**
+    const localName = language === "fr" ? face.name_fr : null;
+    if (face.key === "economy" || face.key === "comfort") {
+      if (localName) CATEGORY_LABEL[face.key] = localName;
+      continue;
+    }
+    CATEGORY_LABEL[face.key] = localName || face.name;
   }
 }
 

@@ -24,6 +24,9 @@ class RideCategoryPublic(BaseModel):
     icon: str
     description: str | None = None
     seats: int
+    #: **الاسمُ بالفرنسيّة والإنجليزيّة** (SPEC §٩١-ب/٦) — يقرأ التطبيقُ ما يوافق لغتَه، **وفارغٌ: الاسمُ العربيُّ أو ترجمةُ التطبيق للمدمجة**
+    name_fr: str | None = None
+    name_en: str | None = None
 
 
 class RideCategoryOut(RideCategoryPublic):
@@ -38,9 +41,7 @@ class RideCategoryOut(RideCategoryPublic):
     allowed_fuels: list[str]
     min_year: int | None
     min_seats: int | None
-    # §٩١-ب — للّوحة وحدَها اليوم (التطبيقان يقرآن الاسمَ العربيَّ كما كانا)
-    name_fr: str | None = None
-    name_en: str | None = None
+    # §٩١-ب — إرشادُ التعيين للّوحة وحدَها (والاسمان في الوجه العامّ أعلاه)
     guidance: str | None = None
     suggest_models: list[str] = []
     serves_lower: bool = False

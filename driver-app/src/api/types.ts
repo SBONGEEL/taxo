@@ -1663,6 +1663,9 @@ export interface RideCategoryFace {
   icon: string;
   description: string | null;
   seats: number;
+  /** **الاسمُ بالفرنسيّة والإنجليزيّة** (SPEC §٩١-ب/٦) — يكتبهما المشرف؛ وفارغٌ: الاسمُ العربيُّ (أو ترجمةُ التطبيق للمدمجتين). */
+  name_fr?: string | null;
+  name_en?: string | null;
 }
 
 // ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)

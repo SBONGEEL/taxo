@@ -37,7 +37,10 @@ _BUILTIN_FACES: dict[str, tuple[str, str, str]] = {
 def public_face(key: str, row: RideCategory | None) -> RideCategoryPublic:
     """**ما يراه التطبيقان لفئة** — من صفّها، **والمدمجةُ بلا صفٍّ بوجهها الافتراضيّ**."""
     if row is not None:
-        return RideCategoryPublic(key=row.key, name=row.name, icon=row.icon, description=row.description, seats=row.seats)
+        return RideCategoryPublic(
+            key=row.key, name=row.name, icon=row.icon, description=row.description, seats=row.seats,
+            name_fr=row.name_fr, name_en=row.name_en,
+        )
     name, icon, hint = _BUILTIN_FACES.get(key, (key, "local_taxi", ""))
     return RideCategoryPublic(key=key, name=name, icon=icon, description=hint or None, seats=4)
 

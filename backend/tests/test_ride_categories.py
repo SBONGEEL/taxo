@@ -99,7 +99,8 @@ async def test_an_active_category_is_shown_priced_from_its_own_row_and_cannot_dr
     body = await _jordan(client, rider)
     assert body["vehicle_categories"] == ["economy", "comfort", "family"]
     face = next(row for row in body["ride_categories"] if row["key"] == "family")
-    assert face == {"key": "family", "name": "عائلية", "icon": "airport_shuttle", "description": "سبعة مقاعد", "seats": 7}
+    assert face == {"key": "family", "name": "عائلية", "icon": "airport_shuttle", "description": "سبعة مقاعد", "seats": 7,
+                    "name_fr": None, "name_en": None}
 
     route = {"pickup": PICKUP, "dropoff": DROPOFF}
     economy = (await client.post("/rides/estimate", json=route | {"vehicle_category": "economy"}, headers=rider)).json()
