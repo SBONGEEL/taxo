@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- **«يتبع النظام» يتبعه في WebView** (٢٠٢٦-١١-٠٣، الجزء D/١٠): بهدف SDK ≥ 33 يأخذ WebView `prefers-color-scheme` من
+         `android:isLightTheme` في السمة — وقِيس على المحاكي في وضع النظام الليليّ: `false` مع `DayNight` وحدَها، فبقي التطبيقُ نهاريّاً.
+         **السمةُ نفسُها التي في `values/styles.xml` حرفاً**، ومعها السطرُ الأخير وحدَه؛ ومن API 29 لأن الخاصّيّةَ وُلدت فيه. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <item name="android:isLightTheme">false</item>
+    </style>
+</resources>
