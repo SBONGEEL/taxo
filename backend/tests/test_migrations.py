@@ -474,3 +474,39 @@ async def test_0122_sets_algeria_hold_and_round_trips() -> None:
         async with engine.begin() as conn:
             await conn.execute(text("DELETE FROM wallet_settings WHERE country_code::text IN ('DZ', 'JO')"))
         await engine.dispose()
+
+
+async def test_0140_fills_comfort_guidance_only_where_empty_and_round_trips() -> None:
+    """**`0140` يكتب إرشادَ «مريح» حيث هو فارغٌ وحدَه** (أمرُ المالك ٢٠٢٦-١١-٠٣) — صفُّ الجزائر الفارغُ يُملأ، وصفُّ الأردن الذي كتب
+    فيه مشرفٌ سنتَه يبقى حرفاً؛ **ونزولُه يفرغ ما كتبه هو وحدَه** — مقيسٌ قبلها لا مقروء."""
+    config = alembic_config()
+    insert = (
+        "INSERT INTO ride_categories (id, country_code, key, name, icon, seats, sort_order, is_active, is_builtin, min_year) "
+        "VALUES (gen_random_uuid(), 'DZ', 'comfort', 'مريح', 'directions_car', 4, 1, true, true, NULL), "
+        "(gen_random_uuid(), 'JO', 'comfort', 'مريح', 'directions_car', 4, 1, true, true, 2015), "
+        "(gen_random_uuid(), 'DZ', 'economy', 'اقتصادي', 'directions_car', 4, 0, true, true, NULL)"
+    )
+    read = "SELECT country_code::text || ':' || key, min_year, cardinality(suggest_models), guidance IS NOT NULL FROM ride_categories"
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0139")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM ride_categories"))
+            await conn.execute(text(insert))
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0140")
+        async with engine.begin() as conn:
+            rows = {row[0]: tuple(row[1:]) for row in (await conn.execute(text(read))).all()}
+        assert rows["DZ:comfort"][0] == 2018 and rows["DZ:comfort"][1] > 20 and rows["DZ:comfort"][2]
+        assert rows["JO:comfort"] == (2015, 0, False)
+        assert rows["DZ:economy"] == (None, 0, True)
+        await engine.dispose()
+        await asyncio.to_thread(command.downgrade, config, "0139")
+        async with engine.begin() as conn:
+            rows = {row[0]: tuple(row[1:]) for row in (await conn.execute(text(read))).all()}
+        assert rows == {"DZ:comfort": (None, 0, False), "JO:comfort": (2015, 0, False), "DZ:economy": (None, 0, False)}
+    finally:
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM ride_categories"))
+        await engine.dispose()
