@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, SmallInteger, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,5 +45,10 @@ class Vehicle(UUIDMixin, TimestampMixin, Base):
     body_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     fuel: Mapped[str | None] = mapped_column(String(20), nullable=True)
     seats: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # ── **الفئةُ يقرّرها المشرف** (§٩١-ب، `0138`) — فارغٌ = **مؤقّتةٌ تعمل** وتنتظر «بحاجة لمراجعة الفئة»؛ وتغييرُ الطراز أو السنة يفرغه
+    category_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    category_confirmed_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     driver: Mapped["Driver"] = relationship(back_populates="vehicles")

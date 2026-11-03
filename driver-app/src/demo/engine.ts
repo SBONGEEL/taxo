@@ -298,6 +298,8 @@ const profile = (): DriverProfile => ({
       body_type: null,
       fuel: null,
       seats: 4,
+      // **مؤكَّدةٌ في العرض** — حسابُ الضيف مركبةٌ مثالٌ لا تنتظر مراجعة (SPEC §٩١-ب)
+      category_confirmed_at: ago(60 * 24 * 30),
       created_at: ago(60 * 24 * 30),
     },
   ],

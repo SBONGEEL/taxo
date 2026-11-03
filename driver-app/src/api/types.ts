@@ -325,6 +325,8 @@ export interface Vehicle {
   body_type: string | null;
   fuel: string | null;
   seats: number | null;
+  /** **أكّد فريقُ TAXO الفئة؟** (SPEC §٩١-ب) — فارغٌ: مؤقّتةٌ تعمل حتى تُراجَع؛ وتراها قراءةً. */
+  category_confirmed_at: string | null;
   created_at: string;
 }
 

@@ -68,7 +68,6 @@ import type {
   User,
   UserNotification,
   Vehicle,
-  VehicleCategory,
   WalletTransaction,
   Withdrawal,
   WithdrawalMethod,
@@ -259,7 +258,7 @@ export const addVehicle = (payload: {
   year: number;
   color: string;
   plate_number: string;
-  category: VehicleCategory;
+  // **ولا `category`** (SPEC §٩١-ب/٥): يعيّنها فريقُ TAXO عند مراجعة المركبة
 }) => api.post<Vehicle>("/drivers/me/vehicles", payload);
 
 // ------------------------------------------------------------ الرحلة

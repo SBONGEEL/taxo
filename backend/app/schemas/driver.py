@@ -32,7 +32,8 @@ class VehicleCreate(BaseModel):
     year: int = Field(ge=1990, le=2100)
     color: str = Field(min_length=1, max_length=40)
     plate_number: str = Field(min_length=2, max_length=32)
-    category: VehicleCategory = VehicleCategory.ECONOMY
+    # **ولا `category`** (§٩١-ب/٥): الفئةُ يقرّرها المشرف — والتطبيقُ الأقدمُ الذي يرسلها تُهمل منه بلا خطأ (الحقولُ الزائدةُ تُتجاهل)،
+    # فتولد المركبةُ «اقتصادي» مؤقّتةً تنتظر تأكيدَ المشرف
 
 
 class VehicleUpdate(BaseModel):
@@ -46,7 +47,7 @@ class VehicleUpdate(BaseModel):
     year: int | None = Field(default=None, ge=1990, le=2100)
     color: str | None = Field(default=None, min_length=1, max_length=40)
     plate_number: str | None = Field(default=None, min_length=2, max_length=32)
-    category: VehicleCategory | None = None
+    # **ولا `category`** (§٩١-ب/٥) — يغيّرها المشرفُ وحدَه (`PUT /admin/drivers/{id}/vehicles/{id}/category`)
 
 
 class VehicleUpdateResultOut(BaseModel):
@@ -76,6 +77,8 @@ class VehicleOut(BaseModel):
     body_type: str | None = None
     fuel: str | None = None
     seats: int | None = None
+    #: **أكّد مشرفٌ الفئة؟** (§٩١-ب) — فارغٌ: مؤقّتةٌ تعمل وتنتظر المراجعة؛ ويراها الكبتنُ قراءةً
+    category_confirmed_at: datetime | None = None
     created_at: datetime
 
 

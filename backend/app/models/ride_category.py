@@ -49,6 +49,17 @@ class RideCategory(UUIDMixin, TimestampMixin, Base):
     allowed_fuels: Mapped[list[str]] = mapped_column(ARRAY(String(20)), nullable=False, default=list, server_default=text("'{}'"))
     min_year: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     min_seats: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # ── §٩١-ب (`0138`) — **الاسمُ بلغتين أخريين** (فارغٌ = العربيّ)، **وإرشادُ التعيين**، **و«الأعلى يأخذ الأدنى»**
+    name_fr: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    name_en: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    #: **ما يقرؤه المشرفُ قبل أن يعيّن** — سطرٌ أو سطران
+    guidance: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    #: **طُرزٌ تُقترح لها الفئة** في شاشة الاعتماد (مع `min_year`) — اقتراحٌ يؤكّده المشرف لا تعيين
+    suggest_models: Mapped[list[str]] = mapped_column(
+        ARRAY(String(60)), nullable=False, default=list, server_default=text("'{}'")
+    )
+    #: **كبتنُ هذه الفئة يأخذ طلباتِ ما دونها ترتيباً** — مطفأٌ افتراضاً: التوزيعُ كما كان (`categories.driver_clause`)
+    serves_lower: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
 
 
 class DriverCategoryAccess(UUIDMixin, TimestampMixin, Base):

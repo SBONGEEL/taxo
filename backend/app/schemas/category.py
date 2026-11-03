@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import CountryCode, VehicleBodyType, VehicleFuel
+from app.models.enums import CountryCode, DriverStatus, VehicleBodyType, VehicleCategory, VehicleFuel
 
 #: **أيقوناتُ الفئة** — **من قائمةٍ لا نصٌّ حرّ**: خطُّ الأيقونات مقتطَعٌ بأسمائه في التطبيقين (`index.html`)، واسمٌ خارجه يُرسم نصّاً
 CategoryIcon = Literal["local_taxi", "directions_car", "airport_shuttle", "electric_car", "diamond", "accessible"]
@@ -38,6 +38,12 @@ class RideCategoryOut(RideCategoryPublic):
     allowed_fuels: list[str]
     min_year: int | None
     min_seats: int | None
+    # §٩١-ب — للّوحة وحدَها اليوم (التطبيقان يقرآن الاسمَ العربيَّ كما كانا)
+    name_fr: str | None = None
+    name_en: str | None = None
+    guidance: str | None = None
+    suggest_models: list[str] = []
+    serves_lower: bool = False
 
 
 class RideCategoryCreate(BaseModel):
@@ -53,6 +59,11 @@ class RideCategoryCreate(BaseModel):
     allowed_fuels: list[VehicleFuel] = Field(default_factory=list)
     min_year: int | None = Field(default=None, ge=1990, le=2100)
     min_seats: int | None = Field(default=None, ge=1, le=20)
+    name_fr: str | None = Field(default=None, min_length=2, max_length=40)
+    name_en: str | None = Field(default=None, min_length=2, max_length=40)
+    guidance: str | None = Field(default=None, max_length=500)
+    suggest_models: list[Annotated[str, Field(min_length=2, max_length=60)]] = Field(default_factory=list, max_length=40)
+    serves_lower: bool = False
 
 
 class RideCategoryUpdate(BaseModel):
@@ -68,6 +79,11 @@ class RideCategoryUpdate(BaseModel):
     allowed_fuels: list[VehicleFuel] | None = None
     min_year: int | None = Field(default=None, ge=1990, le=2100)
     min_seats: int | None = Field(default=None, ge=1, le=20)
+    name_fr: str | None = Field(default=None, min_length=2, max_length=40)
+    name_en: str | None = Field(default=None, min_length=2, max_length=40)
+    guidance: str | None = Field(default=None, max_length=500)
+    suggest_models: list[Annotated[str, Field(min_length=2, max_length=60)]] | None = Field(default=None, max_length=40)
+    serves_lower: bool | None = None
 
 
 class CategoryAccessIn(BaseModel):
@@ -94,3 +110,34 @@ class VehicleAttributesIn(BaseModel):
     body_type: VehicleBodyType | None = None
     fuel: VehicleFuel | None = None
     seats: int | None = Field(default=None, ge=1, le=20)
+
+
+class VehicleCategoryIn(BaseModel):
+    """**المشرفُ يعيّن فئةَ المركبة ويؤكّدها** (§٩١-ب/٥) — والسببُ في التدقيق."""
+
+    category: VehicleCategory
+    reason: str | None = Field(default=None, max_length=280)
+
+
+class CategorySuggestionOut(BaseModel):
+    """**الفئةُ المقترحة** من الطراز والسنة وإرشادِ الفئتين — `null` حين لا إرشادَ مكتوب."""
+
+    suggested: VehicleCategory | None
+    reason: str
+
+
+class CategoryReviewOut(BaseModel):
+    """**صفٌّ في «بحاجة لمراجعة الفئة»** — مركبةٌ فئتُها مؤقّتةٌ تعمل، ومعها الاقتراح."""
+
+    driver_id: uuid.UUID
+    driver_name: str | None
+    driver_phone: str
+    driver_status: DriverStatus
+    vehicle_id: uuid.UUID
+    make: str
+    model: str
+    year: int
+    plate_number: str
+    category: VehicleCategory
+    suggested: VehicleCategory | None
+    reason: str

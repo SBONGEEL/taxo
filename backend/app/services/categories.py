@@ -103,8 +103,43 @@ def _vehicle_meets(category: RideCategory) -> ColumnElement[bool]:
     return and_(*terms)
 
 
+#: **ترتيبُ المدمجتين بلا صفّ** — كما تبذرهما `0110` (اقتصادي ٠ · مريح ١)
+_BUILTIN_RANK: dict[str, int] = {VehicleCategory.ECONOMY.value: 0, VehicleCategory.COMFORT.value: 1}
+
+
+async def takers(session: AsyncSession, country: CountryCode | None, key: str) -> list[str]:
+    """**فئاتُ من يأخذ طلبَ `key`** (§٩١-ب/٩): الفئةُ نفسُها، **وكلُّ فئةٍ أعلى ترتيباً أُشعل فيها «الأعلى يأخذ الأدنى»**.
+    والإعدادُ مطفأٌ في كلِّ صفٍّ افتراضاً — فالجوابُ `[key]` وحدَه، والتوزيعُ كما كان حرفاً."""
+    if country is None:
+        return [key]
+    rows = await for_country(session, country)
+    by_key = {row.key: row for row in rows}
+    own = by_key.get(key)
+    rank = own.sort_order if own is not None else _BUILTIN_RANK.get(key)
+    if rank is None:
+        return [key]
+    return [key] + [row.key for row in rows if row.key != key and row.serves_lower and row.sort_order > rank]
+
+
+async def presence_keys(session: AsyncSession, country: CountryCode | None, key: str) -> frozenset[str] | None:
+    """**فئاتُ المركبة التي تُقبل من هاش الحضور** قبل القاعدة (`dispatch`) — و`None`: لا تصفيةَ بالحضور، يحسمها `driver_clause`.
+    **والحضورُ لا يحمل إلا مدمجة**، فأيُّ آخذٍ من فئةٍ جديدةٍ يُسقط التصفيةَ كلَّها، كما تسقط لطلبٍ من فئةٍ جديدة."""
+    keys = await takers(session, country, key)
+    if not all(is_builtin(taker) for taker in keys):
+        return None
+    return frozenset(keys)
+
+
 async def driver_clause(session: AsyncSession, country: CountryCode | None, key: str) -> ColumnElement[bool]:
-    """**شرطُ «يأخذ هذه الفئة»** على صفِّ `Driver` — يُضمّ إلى شروط التوزيع في `dispatch._eligible_levels`."""
+    """**شرطُ «يأخذ هذه الفئة»** على صفِّ `Driver` — يُضمّ إلى شروط التوزيع في `dispatch._eligible_levels`.
+    **وكبتنُ فئةٍ أعلى أُشعل فيها «الأعلى يأخذ الأدنى» يأخذها أيضاً** (`takers`)."""
+    keys = await takers(session, country, key)
+    clauses = [await _own_clause(session, country, taker) for taker in keys]
+    return clauses[0] if len(clauses) == 1 else or_(*clauses)
+
+
+async def _own_clause(session: AsyncSession, country: CountryCode | None, key: str) -> ColumnElement[bool]:
+    """**من فئتُه هي `key` نفسُها** — المدمجةُ بفئة مركبته، والجديدةُ بشروطها ومنحها."""
     if is_builtin(key):
         return exists(select(Vehicle.id).where(Vehicle.driver_id == Driver.id, Vehicle.category == key))
     category = await get(session, country, key) if country is not None else None
@@ -122,6 +157,35 @@ async def driver_clause(session: AsyncSession, country: CountryCode | None, key:
         )
 
     return and_(or_(qualifies, override(True)), ~override(False))
+
+
+def _model_matches(patterns: list[str], vehicle: Vehicle) -> bool:
+    """**طرازٌ في القائمة** — بلا حالةِ أحرف، وجزءٌ من «الشركة الطراز» يكفي («Camry» يطابق «Toyota Camry»)."""
+    label = f"{vehicle.make} {vehicle.model}".casefold()
+    return any(pattern.strip().casefold() in label for pattern in patterns if pattern.strip())
+
+
+async def suggest(session: AsyncSession, country: CountryCode, vehicle: Vehicle) -> tuple[str | None, str]:
+    """**الفئةُ المقترحةُ لمركبة** في شاشة الاعتماد (§٩١-ب/٥) — **اقتراحٌ يؤكّده المشرف لا تعيين**، ومعه علّتُه في سطر.
+
+    تُفحص المدمجتان **من الأعلى ترتيباً**: أوّلُ واحدةٍ لها إرشادٌ مكتوب (`min_year` أو `suggest_models`) تستوفيه المركبةُ هي المقترحة،
+    وإلا «اقتصادي». **ولا إرشادَ مكتوباً لأيٍّ منهما ⇒ لا اقتراح** — اقتراحٌ بلا قاعدةٍ تخمينٌ يُقرأ قراراً.
+    """
+    rows = {row.key: row for row in await for_country(session, country)}
+    guided = False
+    ordered = sorted(BUILTIN_KEYS, key=lambda key: (rows[key].sort_order if key in rows else _BUILTIN_RANK[key]), reverse=True)
+    for key in ordered:
+        row = rows.get(key)
+        if row is None or (row.min_year is None and not row.suggest_models):
+            continue
+        guided = True
+        year_ok = row.min_year is None or vehicle.year >= row.min_year
+        model_ok = not row.suggest_models or _model_matches(row.suggest_models, vehicle)
+        if year_ok and model_ok:
+            return key, f"تستوفي إرشادَ «{row.name}»" + (f" — سنةُ الصنع {vehicle.year} ≥ {row.min_year}" if row.min_year else "")
+    if not guided:
+        return None, "لا إرشادَ مكتوبٌ للفئتين — اكتبه في «الفئات» (أدنى سنة · الطُّرز)"
+    return VehicleCategory.ECONOMY.value, "لا تستوفي إرشادَ فئةٍ أعلى"
 
 
 #: **الأسعارُ التي لا تُشغَّل فئةٌ بصفرٍ في أيٍّ منها** (§٦٧-ب/٣)

@@ -312,6 +312,12 @@ export function VehicleT2Screen() {
                 <span>{tr("رقم اللوحة")}</span>
                 <span dir="ltr">{s.vehicle.plate_number}</span>
               </div>
+              {/* **الفئةُ قراءةً ومعها من يقرّرها** (SPEC §٩١-ب/٥) — لا زرَّ لتغييرها لأنها ليست بيده */}
+              <p className="t2-vdocs-fine">
+                {s.vehicle.category_confirmed_at
+                  ? tr("فئةُ مركبتك يحدّدها فريقُ TAXO من طرازها وسنة صنعها وصورها.")
+                  : tr("فئةُ مركبتك مؤقّتة — تعمل كما هي حتى يؤكّدها فريقُ TAXO عند مراجعة مركبتك.")}
+              </p>
               {/* **صفاتُ المراجعة قراءةً** (SPEC §٦٧-ج/٥) — يضعها المشرف، وبها تصلك الفئاتُ الجديدة؛ ولا تُرسم ما دامت فارغة */}
               {s.vehicle.seats !== null ? (
                 <div className="t2-vdocs-pair">

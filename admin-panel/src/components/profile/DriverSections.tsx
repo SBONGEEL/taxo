@@ -9,14 +9,16 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
+  getCategorySuggestion,
   getDriverLiveRide,
   listAdvances,
   listDriverDebts,
   listDriverVehicles,
   listSubscriptions,
   setVehicleAttributes,
+  setVehicleCategory,
 } from "@/api/endpoints";
-import type { DriverLiveRide, Vehicle, VehicleBodyType, VehicleFuel } from "@/api/types";
+import type { CategorySuggestion, DriverLiveRide, Vehicle, VehicleBodyType, VehicleCategory, VehicleFuel } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -89,7 +91,9 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
                     { label: "اللون", value: vehicle.color },
                     {
                       label: "الفئة",
-                      value: CATEGORY_LABEL[vehicle.category] ?? vehicle.category,
+                      value: `${CATEGORY_LABEL[vehicle.category] ?? vehicle.category}${
+                        vehicle.category_confirmed_at ? "" : " — مؤقّتة، تنتظر تأكيدَ مشرف"
+                      }`,
                     },
                     {
                       label: "الهيكل · الوقود · المقاعد",
@@ -104,6 +108,9 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
                 />
               ))}
               {rows.map((vehicle) => (
+                <VehicleCategoryControl key={`cat-${vehicle.id}`} driverId={driverId} vehicle={vehicle} />
+              ))}
+              {rows.map((vehicle) => (
                 <VehicleAttributes key={`attrs-${vehicle.id}`} driverId={driverId} vehicle={vehicle} />
               ))}
             </div>
@@ -111,6 +118,66 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
         </>
       )}
     </ProfileSection>
+  );
+}
+
+/** **فئةُ المركبة يعيّنها المشرف** (SPEC §٩١-ب/٥) — **والاقتراحُ من الطراز والسنة وإرشادِ الفئتين، يؤكّده المشرف لا يحلّ محلَّه**.
+ *  والتأكيدُ يُكتب ولو لم تتغيّر الفئة: يُخرجها من «بحاجة لمراجعة الفئة». **ويسري على التوزيع من اتصال الكبتن التالي.** */
+function VehicleCategoryControl({ driverId, vehicle }: { driverId: string; vehicle: Vehicle }) {
+  const [choice, setChoice] = useState<VehicleCategory>(vehicle.category);
+  const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
+  const [reason, setReason] = useState("");
+  const [confirmed, setConfirmed] = useState(vehicle.category_confirmed_at !== null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getCategorySuggestion(driverId, vehicle.id)
+      .then((value) => alive && setSuggestion(value))
+      .catch(() => alive && setSuggestion(null));
+    return () => {
+      alive = false;
+    };
+  }, [driverId, vehicle.id]);
+  return (
+    <div className="rounded-13 border border-line p-12">
+      <p className="text-12 font-semibold text-ink">
+        فئةُ المركبة {confirmed ? <Badge tone="ok">مؤكَّدة</Badge> : <Badge tone="warn">مؤقّتة</Badge>}
+      </p>
+      {suggestion ? (
+        <p className="mt-4 text-11.5 text-muted">
+          {suggestion.suggested
+            ? `المقترحة: ${CATEGORY_LABEL[suggestion.suggested]} — ${suggestion.reason}`
+            : suggestion.reason}
+        </p>
+      ) : null}
+      <div className="mt-8 grid gap-10 md:grid-cols-2">
+        <Select label="الفئة" value={choice} onChange={(event) => setChoice(event.target.value as VehicleCategory)}>
+          {(Object.keys(CATEGORY_LABEL) as VehicleCategory[]).map((key) => (
+            <option key={key} value={key}>
+              {CATEGORY_LABEL[key]}
+            </option>
+          ))}
+        </Select>
+        <Field label="السبب (اختياريّ)" value={reason} onChange={(event) => setReason(event.target.value)} />
+      </div>
+      <ErrorNote message={error} />
+      <Button
+        className="mt-10"
+        size="sm"
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          setError(null);
+          setVehicleCategory(driverId, vehicle.id, { category: choice, reason: reason.trim() || null })
+            .then(() => setConfirmed(true))
+            .catch((caught: Error) => setError(caught.message))
+            .finally(() => setBusy(false));
+        }}
+      >
+        تأكيدُ الفئة
+      </Button>
+    </div>
   );
 }
 

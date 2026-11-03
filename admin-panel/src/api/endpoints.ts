@@ -172,6 +172,8 @@ import type {
   VehicleFuel,
   RideCategory,
   CategoryAccess,
+  CategoryReviewRow,
+  CategorySuggestion,
   Wallet,
   WalletSetting,
   WalletTransaction,
@@ -2121,6 +2123,11 @@ export const createRideCategory = (payload: {
   allowed_fuels: VehicleFuel[];
   min_year: number | null;
   min_seats: number | null;
+  name_fr: string | null;
+  name_en: string | null;
+  guidance: string | null;
+  suggest_models: string[];
+  serves_lower: boolean;
 }) => api.post<RideCategory>("/admin/settings/ride-categories", payload);
 
 export const updateRideCategory = (
@@ -2136,6 +2143,11 @@ export const updateRideCategory = (
     allowed_fuels: VehicleFuel[];
     min_year: number | null;
     min_seats: number | null;
+    name_fr: string | null;
+    name_en: string | null;
+    guidance: string | null;
+    suggest_models: string[];
+    serves_lower: boolean;
   }>,
 ) => api.patch<RideCategory>(`/admin/settings/ride-categories/${id}`, payload);
 
@@ -2150,6 +2162,21 @@ export const setVehicleAttributes = (
   vehicleId: string,
   payload: { body_type: VehicleBodyType | null; fuel: VehicleFuel | null; seats: number | null },
 ) => api.patch<Vehicle>(`/admin/drivers/${driverId}/vehicles/${vehicleId}/attributes`, payload);
+
+/** **الفئةُ المقترحة** من الطراز والسنة وإرشادِ الفئتين (§٩١-ب/٥) — اقتراحٌ يؤكّده المشرف. */
+export const getCategorySuggestion = (driverId: string, vehicleId: string) =>
+  api.get<CategorySuggestion>(`/admin/drivers/${driverId}/vehicles/${vehicleId}/category-suggestion`);
+
+/** **المشرفُ يعيّن فئةَ المركبة ويؤكّدها** — والكبتنُ يراها قراءةً؛ ويسري على التوزيع من اتصاله التالي. */
+export const setVehicleCategory = (
+  driverId: string,
+  vehicleId: string,
+  payload: { category: VehicleCategory; reason: string | null },
+) => api.put<Vehicle>(`/admin/drivers/${driverId}/vehicles/${vehicleId}/category`, payload);
+
+/** **«بحاجة لمراجعة الفئة»** — كلُّ مركبةٍ فئتُها مؤقّتة في السوق. */
+export const listCategoryReview = (country: CountryCode) =>
+  api.get<CategoryReviewRow[]>("/admin/vehicles/category-review", { query: { country_code: country } });
 
 // ------------------------------------------------------------ نظامُ الدفع الجديد (SPEC §٧٣-هـ المرحلة ١)
 

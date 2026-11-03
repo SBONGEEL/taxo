@@ -10,9 +10,10 @@
 
 ومن ذلك تنبع ثلاث قواعد:
 
-1. **حقولُ الهوية تُسقط الاعتماد** (`plate_number`, `make`, `model`, `year`,
-   `category`): كلُّها مكتوبةٌ في رخصة المركبة، وتغييرُها يجعل ما رآه المشرف
-   غيرَ ما يسير في الشارع. والفئةُ معها لأنها تحدّد التسعيرة.
+1. **حقولُ الهوية تُسقط الاعتماد** (`plate_number`, `make`, `model`, `year`):
+   كلُّها مكتوبةٌ في رخصة المركبة، وتغييرُها يجعل ما رآه المشرف غيرَ ما يسير
+   في الشارع. **والفئةُ خرجت من يد الكبتن** (§٩١-ب/٥): يقرّرها المشرف — **وتغييرُ
+   الطراز أو السنة يُفرغ تأكيدَها** فتعود إلى «بحاجة لمراجعة الفئة»، إذ عليهما بُنيت.
 2. **واللونُ لا يُسقطه**: لونٌ خاطئ يجعل الراكب لا يعرف السيارة — إزعاجٌ لا
    خطر، وإسقاطُ اعتمادٍ لتصحيح خطأٍ إملائي في «أبيض» يُخرج كبتناً من العمل
    يوماً لأجل لا شيء. **وهذا هو الحدُّ**: ما تشهد عليه الورقةُ هويةً يُراجَع،
@@ -43,8 +44,10 @@ from app.services import drivers as drivers_service
 
 # ما تشهد عليه رخصةُ المركبة هويةً — تغييرُه يعيد الكبتن إلى المراجعة
 IDENTITY_FIELDS: frozenset[str] = frozenset(
-    {"plate_number", "make", "model", "year", "category"}
+    {"plate_number", "make", "model", "year"}
 )
+# **ما بُنيت عليه الفئة** (§٩١-ب/٥) — تغييرُه يُفرغ تأكيدَ المشرف ولا يغيّر الفئةَ نفسَها
+CATEGORY_BASIS: frozenset[str] = frozenset({"make", "model", "year"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +107,9 @@ async def update(
 
     for field, value in changed.items():
         setattr(vehicle, field, value)
+    if CATEGORY_BASIS & changed.keys():
+        vehicle.category_confirmed_at = None
+        vehicle.category_confirmed_by = None
 
     try:
         await session.flush()

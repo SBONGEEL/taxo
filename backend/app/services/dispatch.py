@@ -534,6 +534,8 @@ async def _ranked_candidates(
         if gendered
         else geo.MAX_SEARCH_RADIUS_KM
     )
+    # **فئاتُ المركبة المقبولةُ من الحضور** (§٦٧-ج/٣ و§٩١-ب/٩): المدمجةُ ومن فوقها ممّن أُشعل فيه «الأعلى يأخذ الأدنى»؛ و`None` لا تصفية
+    accepted_keys = await categories.presence_keys(session, ride.country_code, ride.vehicle_category)
     for radius in (geo.SEARCH_RADIUS_KM, widest):
         presences = [
             presence
@@ -546,7 +548,7 @@ async def _ranked_candidates(
             )
             if presence.driver_id not in tried
             # **فئةُ المركبة في الحضور تحسم المدمجتين وحدهما** (§٦٧-ج/٣) — والجديدةُ يحسمها شرطُها في `_eligible_levels`
-            and (not categories.is_builtin(ride.vehicle_category) or presence.vehicle_category == ride.vehicle_category)
+            and (accepted_keys is None or presence.vehicle_category in accepted_keys)
         ]
         if not presences:
             continue

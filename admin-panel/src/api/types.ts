@@ -846,6 +846,34 @@ export interface RideCategory {
   allowed_fuels: VehicleFuel[];
   min_year: number | null;
   min_seats: number | null;
+  /** **§٩١-ب** — الاسمُ بالفرنسيّة والإنجليزيّة (فارغٌ = العربيّ)، وإرشادُ التعيين، و«الأعلى يأخذ الأدنى». */
+  name_fr: string | null;
+  name_en: string | null;
+  guidance: string | null;
+  suggest_models: string[];
+  serves_lower: boolean;
+}
+
+/** **الفئةُ المقترحةُ لمركبة** (`CategorySuggestionOut`، §٩١-ب/٥) — `null` حين لا إرشادَ مكتوب. */
+export interface CategorySuggestion {
+  suggested: VehicleCategory | null;
+  reason: string;
+}
+
+/** **صفٌّ في «بحاجة لمراجعة الفئة»** (`CategoryReviewOut`) — فئتُه مؤقّتةٌ تعمل حتى يؤكّدها مشرف. */
+export interface CategoryReviewRow {
+  driver_id: string;
+  driver_name: string | null;
+  driver_phone: string;
+  driver_status: DriverStatus;
+  vehicle_id: string;
+  make: string;
+  model: string;
+  year: number;
+  plate_number: string;
+  category: VehicleCategory;
+  suggested: VehicleCategory | null;
+  reason: string;
 }
 
 /** **منحُ فئةٍ لكبتنٍ أو نزعُها** (`CategoryAccessOut`). */
@@ -877,6 +905,8 @@ export interface Vehicle {
   body_type: VehicleBodyType | null;
   fuel: VehicleFuel | null;
   seats: number | null;
+  /** **أكّد مشرفٌ الفئة؟** (§٩١-ب) — فارغٌ: مؤقّتةٌ تعمل وتنتظر «بحاجة لمراجعة الفئة». */
+  category_confirmed_at: string | null;
   created_at: string;
 }
 

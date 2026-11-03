@@ -150,7 +150,7 @@ async def test_each_missing_required_vehicle_field_is_named(
 ) -> None:
     """حقلٌ ناقص — **ويُسمّى بعينه**.
 
-    و`category` وحدَها لها قيمةٌ افتراضية في المخطط، فغيابُها ليس خطأً — وذلك
+    و`category` ليست في المخطط أصلاً (§٩١-ب/٥: يعيّنها المشرف)، فغيابُها ليس خطأً — وذلك
     فرقٌ يجب أن يبقى مرئياً في الاختبار لا أن يُخفى بحذف الحالة.
     """
     driver = await register(client, DRIVER)
@@ -175,7 +175,7 @@ async def test_each_missing_required_vehicle_field_is_named(
         ("year", 5),  # يمرّ حارسَ التطبيق «غيرُ فارغ» ويُرفض هنا
         ("year", 3000),
         ("plate_number", "7"),  # يمرّ الحارسَ نفسَه
-        ("category", "suv"),
+        # **ولا `category`**: خرجت من يد الكبتن (§٩١-ب/٥) فتُهمل ولا تُرفض — والتطبيقُ الأقدمُ الذي يرسلها لا يسقط
         ("make", ""),
     ],
 )

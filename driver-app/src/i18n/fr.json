@@ -1804,5 +1804,8 @@
  "لتسجيل الدخول إلى TAXO Driver": "Pour vous connecter à TAXO Driver",
  "اضغط مرّةً أخرى للخروج": "Appuyez à nouveau pour quitter",
  "الوضع الليلي": "Mode nuit",
- "الوضع النهاري": "Mode jour"
+ "الوضع النهاري": "Mode jour",
+ "فئةُ مركبتك (اقتصادي أو مريح) يحدّدها فريقُ TAXO عند مراجعتها، من طرازها وسنة صنعها وصورها.": "La catégorie de votre véhicule (Économique ou Confort) est fixée par l'équipe TAXO lors de sa vérification, d'après le modèle, l'année et les photos.",
+ "فئةُ مركبتك يحدّدها فريقُ TAXO من طرازها وسنة صنعها وصورها.": "La catégorie de votre véhicule est fixée par l'équipe TAXO d'après le modèle, l'année et les photos.",
+ "فئةُ مركبتك مؤقّتة — تعمل كما هي حتى يؤكّدها فريقُ TAXO عند مراجعة مركبتك.": "Catégorie provisoire — elle reste active jusqu'à sa confirmation par l'équipe TAXO lors de la vérification de votre véhicule."
 }

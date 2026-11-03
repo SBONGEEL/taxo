@@ -23,19 +23,18 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { addVehicle, listDocuments, updateDriver, uploadDocument } from "@/api/endpoints";
-import type { DocumentType, VehicleCategory } from "@/api/types";
+import type { DocumentType } from "@/api/types";
 import { DocumentRow } from "@/components/t2/DocumentRow";
 import type { DocumentState } from "@/components/t2/DocumentRow";
 import { RegisterTop } from "@/components/t2/RegisterTop";
 import { useGoBack } from "@/lib/back";
 import { useConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
-import { useSession } from "@/lib/session";
 import { describeShrink, shrinkImage } from "@/lib/shrink";
 import { toLatinDigits } from "@/lib/utils";
 import { checkForm, rulesFor } from "@/lib/validation";
 import { VEHICLE_COLORS, VEHICLE_MAKES, VEHICLE_MODELS, vehicleYears } from "@/lib/vehicle-options";
-import { AuthBlock, AuthChoice, AuthError, AuthInput, AuthPage, DateField, Icon } from "@/taxo2";
+import { AuthBlock, AuthError, AuthInput, AuthPage, DateField, Icon } from "@/taxo2";
 
 import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
@@ -65,11 +64,6 @@ const DOC_HINT: Partial<Record<DocumentType, string>> = {
   vehicle_side_left: tr("الجانب الأيسر كاملاً"),
   vehicle_interior: tr("المقاعد الأمامية والخلفية"),
   vehicle_plate: tr("اللوحة وحدها، واضحةَ الأرقام"),
-};
-
-const CATEGORY_LABEL: Record<VehicleCategory, string> = {
-  economy: tr("اقتصادي"),
-  comfort: tr("مريح"),
 };
 
 /** **الوثائقُ أولاً ثم صورُ المركبة** — قسمان لا قائمةٌ من عشرة.
@@ -108,7 +102,7 @@ const ORDER: DocumentType[] = [...PAPERS, ...VEHICLE_PHOTOS];
 const EXPIRING: DocumentType[] = ["driving_license", "national_id", "vehicle_registration"];
 
 /** حقولُ المركبة كما تسمّيها الخلفية — خطأٌ يسمّي واحداً منها يُعرض تحته في «المركبة». */
-const VEHICLE_FIELDS = ["make", "model", "year", "color", "plate_number", "category"];
+const VEHICLE_FIELDS = ["make", "model", "year", "color", "plate_number"];
 
 type Stage = "vehicle" | "documents";
 
@@ -128,20 +122,15 @@ export function RegisterDocumentsScreen() {
   const navigate = useNavigate();
   const goBack = useGoBack("/");
   const { config } = useConfig();
-  const { user } = useSession();
   const { profile, refresh } = useDriver();
   const page = useRef<HTMLDivElement>(null);
   const listBase = useId();
-
-  const categories =
-    config?.countries.find((entry) => entry.country_code === user?.country_code)?.vehicle_categories ?? ["economy"];
 
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [color, setColor] = useState("");
   const [plate, setPlate] = useState("");
-  const [category, setCategory] = useState<VehicleCategory>(categories[0]);
   const [alias, setAlias] = useState("");
 
   // **أمسجَّلةٌ له مركبةٌ قبل أن يفتح الشاشة؟** — يُقرأ مرّةً حين يُعرف الملف، ولا يتبدّل بعد إنشاء المركبة هنا
@@ -278,7 +267,6 @@ export function RegisterDocumentsScreen() {
       year,
       color,
       plate_number: plate,
-      category,
     });
   }
 
@@ -320,7 +308,6 @@ export function RegisterDocumentsScreen() {
         year: Number(year),
         color: color.trim(),
         plate_number: plate.trim(),
-        category,
       });
       if (alias.trim()) await updateDriver({ cliq_alias: alias.trim() });
       await refresh();
@@ -538,14 +525,8 @@ export function RegisterDocumentsScreen() {
               />
             </AuthBlock>
 
-            <AuthBlock label={tr("الفئة")} error={errorFor("category")}>
-              <AuthChoice
-                label={tr("الفئة")}
-                value={category}
-                options={categories.map((value) => ({ value, label: CATEGORY_LABEL[value] }))}
-                onChange={setCategory}
-              />
-            </AuthBlock>
+            {/* **الفئةُ لا تُختار هنا** (SPEC §٩١-ب/٥): يعيّنها فريقُ TAXO من الطراز والسنة والصور — ويُقال ذلك قبل أن يبحث عنها */}
+            <p className="t2-auth-hint">{tr("فئةُ مركبتك (اقتصادي أو مريح) يحدّدها فريقُ TAXO عند مراجعتها، من طرازها وسنة صنعها وصورها.")}</p>
 
             <div className="t2-auth-push" />
             <div className="t2-auth-actions">

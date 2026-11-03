@@ -21,6 +21,7 @@ from sqlalchemy import select
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import DriverStatus
+from app.models.vehicle import Vehicle
 from app.services import dispatch
 from app.services.directions import Route
 
@@ -222,7 +223,6 @@ async def approved_driver(
             "year": 2021,
             "color": "أبيض",
             "plate_number": plate_number,
-            "category": category,
         },
         headers=headers,
     )
@@ -233,6 +233,10 @@ async def approved_driver(
             select(Driver).where(Driver.user_id == uuid.UUID(body["user"]["id"]))
         )
         driver.status = DriverStatus.APPROVED
+        # **الفئةُ يعيّنها المشرف** (§٩١-ب/٥) لا التطبيق — فتُكتب مباشرةً كما يُكتب الاعتماد؛ وبابُ المشرف مقيسٌ في `test_vehicle_category_review.py`
+        if category != "economy":
+            vehicle = await session.scalar(select(Vehicle).where(Vehicle.driver_id == driver.id))
+            vehicle.category = category
         await session.commit()
         driver_id = driver.id
 

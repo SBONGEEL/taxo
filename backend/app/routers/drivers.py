@@ -162,7 +162,7 @@ async def add_my_vehicle(
         year=payload.year,
         color=payload.color.strip(),
         plate_number=payload.plate_number.strip().upper(),
-        category=payload.category,
+        # **«اقتصادي» مؤقّتةً** حتى يؤكّد المشرفُ الفئة (§٩١-ب/٥)
     )
     session.add(vehicle)
     try:

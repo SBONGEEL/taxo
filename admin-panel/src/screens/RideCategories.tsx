@@ -3,6 +3,9 @@
  * **المدمجتان أوّلاً قراءةً**: «اقتصادي» و«مريح» تعملان كما اليوم حرفاً وتتبعان فئةَ المركبة، فلا تُعدَّلان من هنا. **ثمّ الجديدة**: إضافةٌ
  * وتعديلٌ وتشغيلٌ وإطفاءٌ وترتيب، وشروطُ المركبة، **ومنحُ كبتنٍ أو نزعُها منه**. **والأسعارُ في «التسعيرة»** — والخادمُ يرفض تشغيلَ فئةٍ بلا
  * أسعارٍ موجبة ويقول علّتَه، فلا تُعيد الشاشةُ القاعدة.
+ *
+ * **و§٩١-ب**: «بحاجة لمراجعة الفئة» في رأس الشاشة (مركباتٌ فئتُها مؤقّتةٌ تعمل)، **وإرشادُ التعيين و«الأعلى يأخذ الأدنى» للمدمجتين أيضاً** —
+ * هما وحدَهما ما يُكتب في صفِّ المدمجة من هنا؛ واسمُها ووصفُها كما هما.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -11,12 +14,21 @@ import { ApiError } from "@/api/client";
 import {
   createRideCategory,
   listCategoryAccess,
+  listCategoryReview,
   listDrivers,
   listRideCategories,
   setCategoryAccess,
+  setVehicleCategory,
   updateRideCategory,
 } from "@/api/endpoints";
-import type { CategoryAccess, RideCategory, VehicleBodyType, VehicleFuel } from "@/api/types";
+import type {
+  CategoryAccess,
+  CategoryReviewRow,
+  RideCategory,
+  VehicleBodyType,
+  VehicleCategory,
+  VehicleFuel,
+} from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
@@ -62,6 +74,12 @@ interface Draft {
   allowed_fuels: VehicleFuel[];
   min_year: string;
   min_seats: string;
+  name_fr: string;
+  name_en: string;
+  guidance: string;
+  /** **طُرزٌ تُقترح لها الفئة** — مفصولةً بفواصل في الحقل، وقائمةً في العقد */
+  suggest_models: string;
+  serves_lower: boolean;
 }
 
 const EMPTY: Draft = {
@@ -75,6 +93,11 @@ const EMPTY: Draft = {
   allowed_fuels: [],
   min_year: "",
   min_seats: "",
+  name_fr: "",
+  name_en: "",
+  guidance: "",
+  suggest_models: "",
+  serves_lower: false,
 };
 
 const draftOf = (row: RideCategory): Draft => ({
@@ -88,6 +111,23 @@ const draftOf = (row: RideCategory): Draft => ({
   allowed_fuels: row.allowed_fuels,
   min_year: row.min_year === null ? "" : String(row.min_year),
   min_seats: row.min_seats === null ? "" : String(row.min_seats),
+  name_fr: row.name_fr ?? "",
+  name_en: row.name_en ?? "",
+  guidance: row.guidance ?? "",
+  suggest_models: row.suggest_models.join("، "),
+  serves_lower: row.serves_lower,
+});
+
+/** **حقولُ §٩١-ب كما تُرسل** — في الإنشاء والتعديل وإرشادِ المدمجة سواء */
+const extrasOf = (draft: Draft) => ({
+  name_fr: draft.name_fr.trim() || null,
+  name_en: draft.name_en.trim() || null,
+  guidance: draft.guidance.trim() || null,
+  suggest_models: draft.suggest_models
+    .split(/[,،]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2),
+  serves_lower: draft.serves_lower,
 });
 
 const numberOrNull = (value: string) => (value.trim() === "" ? null : Number(value));
@@ -145,6 +185,7 @@ export function RideCategoriesScreen() {
                 allowed_fuels: draft.allowed_fuels,
                 min_year: numberOrNull(draft.min_year),
                 min_seats: numberOrNull(draft.min_seats),
+                ...extrasOf(draft),
               });
               setCreating(false);
               saved(`أُضيفت «${draft.name.trim()}» مطفأةً — ضع أسعارَها في «التسعيرة» ثمّ شغّلها`);
@@ -152,6 +193,8 @@ export function RideCategoriesScreen() {
             onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
           />
         ) : null}
+
+        <ReviewPanel onError={(caught) => form.capture(caught, "تعذّر قراءة «بحاجة لمراجعة الفئة»")} />
 
         {rows === null ? (
           <Spinner className="mx-auto my-38" />
@@ -217,7 +260,33 @@ function CategoryCard({
         </span>
       </div>
 
-      {row.is_builtin ? null : (
+      {row.is_builtin ? (
+        <>
+          <p className="mt-10 text-12 text-ink">
+            {[
+              row.min_year !== null ? `يُقترح لمركبة ${digits(String(row.min_year))} فما بعد` : null,
+              row.suggest_models.length ? `الطُّرز: ${row.suggest_models.join("، ")}` : null,
+              row.serves_lower ? "كباتنُها يأخذون طلباتِ ما دونها" : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "بلا إرشادِ تعيينٍ مكتوب — فلا اقتراحَ في شاشة الاعتماد."}
+          </p>
+          <Button className="mt-10" size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}>
+            {editing ? "إغلاق" : "إرشادُ التعيين و«الأعلى يأخذ الأدنى»"}
+          </Button>
+          {editing ? (
+            <GuidanceForm
+              initial={draftOf(row)}
+              onSubmit={async (draft) => {
+                await updateRideCategory(row.id, { min_year: numberOrNull(draft.min_year), ...extrasOf(draft) });
+                setEditing(false);
+                onSaved(`حُفظ إرشادُ «${row.name}»`);
+              }}
+              onError={onError}
+            />
+          ) : null}
+        </>
+      ) : (
         <>
           <h3 className="mb-6 mt-14 text-13 font-bold text-muted">شروطُ المركبة</h3>
           <p className="text-12 text-ink">
@@ -265,6 +334,7 @@ function CategoryCard({
                   allowed_fuels: draft.allowed_fuels,
                   min_year: numberOrNull(draft.min_year),
                   min_seats: numberOrNull(draft.min_seats),
+                  ...extrasOf(draft),
                 });
                 setEditing(false);
                 onSaved(`حُفظت «${draft.name.trim()}»`);
@@ -348,6 +418,27 @@ function CategoryForm({
           value={draft.min_seats}
           onChange={(event) => set({ min_seats: event.target.value })}
         />
+        <Field name="name_fr" label="الاسم بالفرنسيّة (اختياري)" dir="ltr" value={draft.name_fr} onChange={(event) => set({ name_fr: event.target.value })} />
+        <Field name="name_en" label="الاسم بالإنجليزيّة (اختياري)" dir="ltr" value={draft.name_en} onChange={(event) => set({ name_en: event.target.value })} />
+        <Field
+          name="suggest_models"
+          label="طُرزٌ تُقترح لها الفئة (مفصولةً بفواصل)"
+          dir="ltr"
+          placeholder="Camry، Sonata"
+          value={draft.suggest_models}
+          onChange={(event) => set({ suggest_models: event.target.value })}
+        />
+        <Field
+          name="guidance"
+          label="إرشادُ التعيين للمشرف"
+          value={draft.guidance}
+          onChange={(event) => set({ guidance: event.target.value })}
+        />
+      </div>
+      <div className="mt-12">
+        <Checkbox checked={draft.serves_lower} onChange={() => set({ serves_lower: !draft.serves_lower })}>
+          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكبتنُ يقبل أو يرفض كأيِّ عرض
+        </Checkbox>
       </div>
       <h4 className="mb-6 mt-12 text-12 font-bold text-muted">أنواعُ الهيكل المسموحة (لا شيء = أيّ نوع)</h4>
       <div className="flex flex-wrap gap-10">
@@ -387,6 +478,134 @@ function CategoryForm({
       >
         حفظ
       </Button>
+    </div>
+  );
+}
+
+/** **إرشادُ تعيين المدمجة** (§٩١-ب/٥–٩) — أدنى سنةٍ وطُرزٌ يُقترح لها، والاسمُ بلغتين، و«الأعلى يأخذ الأدنى». **ولا شيءَ غيرُها**: المدمجةُ
+ *  تتبع فئةَ المركبة، فأدنى السنة هنا **اقتراحٌ في شاشة الاعتماد** لا شرطٌ يُخرج كبتناً. */
+function GuidanceForm({
+  initial,
+  onSubmit,
+  onError,
+}: {
+  initial: Draft;
+  onSubmit: (draft: Draft) => Promise<void>;
+  onError: (caught: unknown) => void;
+}) {
+  const [draft, setDraft] = useState<Draft>(initial);
+  const [busy, setBusy] = useState(false);
+  const set = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
+  return (
+    <div className="mt-12 rounded-13 border border-line p-14">
+      <div className="grid gap-12 md:grid-cols-2">
+        <Field
+          name="min_year"
+          label="يُقترح لمركبةٍ من سنة (اختياري)"
+          inputMode="numeric"
+          dir="ltr"
+          value={draft.min_year}
+          onChange={(event) => set({ min_year: event.target.value })}
+        />
+        <Field name="name_fr" label="الاسم بالفرنسيّة (اختياري)" dir="ltr" value={draft.name_fr} onChange={(event) => set({ name_fr: event.target.value })} />
+        <Field name="name_en" label="الاسم بالإنجليزيّة (اختياري)" dir="ltr" value={draft.name_en} onChange={(event) => set({ name_en: event.target.value })} />
+        <Field
+          name="suggest_models"
+          label="طُرزٌ تُقترح لها الفئة (مفصولةً بفواصل)"
+          dir="ltr"
+          placeholder="Camry، Sonata"
+          value={draft.suggest_models}
+          onChange={(event) => set({ suggest_models: event.target.value })}
+        />
+        <Field
+          name="guidance"
+          label="إرشادُ التعيين للمشرف"
+          value={draft.guidance}
+          onChange={(event) => set({ guidance: event.target.value })}
+        />
+      </div>
+      <div className="mt-12">
+        <Checkbox checked={draft.serves_lower} onChange={() => set({ serves_lower: !draft.serves_lower })}>
+          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكبتنُ يقبل أو يرفض كأيِّ عرض
+        </Checkbox>
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          onSubmit(draft)
+            .catch(onError)
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </div>
+  );
+}
+
+const CATEGORY_NAME: Record<VehicleCategory, string> = { economy: "اقتصادي", comfort: "مريح" };
+
+/** **«بحاجة لمراجعة الفئة»** (§٩١-ب/٥) — مركباتٌ فئتُها مؤقّتة: القائمةُ يومَ الترحيلة، والجديدة، ومن غيّر طرازَه أو سنتَه.
+ *  **وفئتُها تعمل كما هي حتى تُؤكَّد** — فالقائمةُ عملٌ يُنجز لا إنذار. */
+function ReviewPanel({ onError }: { onError: (caught: unknown) => void }) {
+  const { country } = useCountry();
+  const [rows, setRows] = useState<CategoryReviewRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(async () => setRows(await listCategoryReview(country)), [country]);
+  useEffect(() => {
+    setRows(null);
+    load().catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load]);
+  if (rows === null) return null;
+  if (rows.length === 0) {
+    return <p className="mt-12 text-12 text-muted">«بحاجة لمراجعة الفئة»: لا مركبةَ تنتظر — كلُّ فئةٍ في هذه الدولة مؤكَّدة.</p>;
+  }
+  return (
+    <div className="mt-12 rounded-16 border border-warn bg-surface p-18">
+      <h2 className="text-16 font-bold text-ink">بحاجة لمراجعة الفئة · {digits(String(rows.length))}</h2>
+      <p className="mt-3 text-11.5 leading-note text-muted">
+        فئتُها مؤقّتةٌ وتعمل كما هي حتى تؤكّدها — والاقتراحُ من الطراز والسنة وإرشادِ الفئتين، والقرارُ لك.
+      </p>
+      <div className="mt-10 flex flex-col gap-8">
+        {rows.map((row) => (
+          <div key={row.vehicle_id} className="flex flex-wrap items-center gap-10 rounded-13 border border-line p-10">
+            <div className="min-w-0 flex-1">
+              <p className="text-12.5 font-semibold text-ink">
+                {row.driver_name ?? "—"}{" "}
+                <span className="text-11 text-muted" dir="ltr">
+                  {row.driver_phone}
+                </span>
+              </p>
+              <p className="text-11.5 text-muted">
+                {row.make} {row.model} · {digits(String(row.year))} · <span dir="ltr">{row.plate_number}</span> · الآن:{" "}
+                {CATEGORY_NAME[row.category]}
+                {row.suggested ? ` · المقترحة: ${CATEGORY_NAME[row.suggested]}` : ""} — {row.reason}
+              </p>
+            </div>
+            {(Object.keys(CATEGORY_NAME) as VehicleCategory[]).map((key) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={key === (row.suggested ?? row.category) ? "primary" : "secondary"}
+                loading={busy === `${row.vehicle_id}:${key}`}
+                onClick={() => {
+                  setBusy(`${row.vehicle_id}:${key}`);
+                  setVehicleCategory(row.driver_id, row.vehicle_id, { category: key, reason: null })
+                    .then(load)
+                    .catch(onError)
+                    .finally(() => setBusy(null));
+                }}
+              >
+                تأكيدُها {CATEGORY_NAME[key]}
+              </Button>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

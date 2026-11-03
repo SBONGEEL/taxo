@@ -1,4 +1,5 @@
-"""لوحةُ فئات الرحلة (SPEC §٦٧-ب/١–٥) — **إضافةٌ وتعديلٌ وتشغيلٌ وإطفاءٌ وترتيب، وشروطُ المركبة، ومنحُ كبتنٍ أو نزعُها منه**.
+"""لوحةُ فئات الرحلة (SPEC §٦٧-ب/١–٥) — **إضافةٌ وتعديلٌ وتشغيلٌ وإطفاءٌ وترتيب، وشروطُ المركبة، ومنحُ كبتنٍ أو نزعُها منه**،
+**وفئةُ المركبة يعيّنها المشرف** (§٩١-ب/٥): اقتراحٌ من الطراز والسنة، وتأكيد، وقائمةُ «بحاجة لمراجعة الفئة».
 
 **والأسعارُ في «التسعير» القائمة** (`/admin/settings/pricing`) بمفتاح الفئة — **ولا تُشعَل فئةٌ بلا أسعارٍ موجبة** (`categories.require_priced`).
 **وكلُّ كتابةٍ قيدُ تدقيق** بما تغيّر. **والمفتاحُ والدولةُ لا يتغيّران بعد الإنشاء**: مكتوبان على الرحلات والأسعار.
@@ -7,6 +8,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query, status
 from sqlalchemy import select
@@ -22,13 +24,17 @@ from app.models.vehicle import Vehicle
 from app.schemas.category import (
     CategoryAccessIn,
     CategoryAccessOut,
+    CategoryReviewOut,
+    CategorySuggestionOut,
     RideCategoryCreate,
     RideCategoryOut,
     RideCategoryUpdate,
     VehicleAttributesIn,
+    VehicleCategoryIn,
 )
 from app.schemas.driver import VehicleOut
 from app.services import audit, categories
+from app.services import drivers as drivers_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -173,3 +179,85 @@ async def set_vehicle_attributes(
     await session.commit()
     await session.refresh(vehicle)
     return VehicleOut.model_validate(vehicle)
+
+
+async def _driver_vehicle(session, driver_id: uuid.UUID, vehicle_id: uuid.UUID) -> tuple[Vehicle, CountryCode]:
+    row = (
+        await session.execute(
+            select(Vehicle, User.country_code)
+            .join(Driver, Driver.id == Vehicle.driver_id)
+            .join(User, User.id == Driver.user_id)
+            .where(Vehicle.id == vehicle_id, Vehicle.driver_id == driver_id)
+            .execution_options(populate_existing=True)
+        )
+    ).first()
+    if row is None:
+        raise NotFound("لا مركبةَ بهذا المعرّف لهذا الكبتن")
+    return row[0], row[1]
+
+
+@router.get("/drivers/{driver_id}/vehicles/{vehicle_id}/category-suggestion", response_model=CategorySuggestionOut)
+async def category_suggestion(
+    driver_id: uuid.UUID, vehicle_id: uuid.UUID, _staff: StaffUser, session: DbSession
+) -> CategorySuggestionOut:
+    """**الفئةُ المقترحة** (§٩١-ب/٥) — اقتراحٌ يؤكّده المشرف، ومعه علّتُه."""
+    vehicle, country = await _driver_vehicle(session, driver_id, vehicle_id)
+    suggested, reason = await categories.suggest(session, country, vehicle)
+    return CategorySuggestionOut(suggested=suggested, reason=reason)
+
+
+@router.put("/drivers/{driver_id}/vehicles/{vehicle_id}/category", response_model=VehicleOut)
+async def set_vehicle_category(
+    driver_id: uuid.UUID, vehicle_id: uuid.UUID, payload: VehicleCategoryIn, admin: SettingsWriter, session: DbSession
+) -> VehicleOut:
+    """**المشرفُ يعيّن فئةَ المركبة ويؤكّدها** (§٩١-ب/٥) — والتأكيدُ نفسُه يُكتب ولو لم تتغيّر الفئة (يُخرجها من قائمة المراجعة).
+
+    **بقفل صفِّ الكبتن قبل قراءة المركبة** (ترتيبُ الأقفال في `CLAUDE.md`): تعديلُ الكبتن طرازَه يأخذ القفلَ نفسَه ويُفرغ التأكيد —
+    فلا يُكتب تأكيدٌ على طرازٍ لم يره المشرف بعد أن أُفرغ. **ويسري على التوزيع من اتصال الكبتن التالي**: فئةُ الحضور تُقرأ مرّةً لكلِّ اتصال.
+    """
+    driver = await session.scalar(select(Driver).where(Driver.id == driver_id))
+    if driver is None:
+        raise NotFound("لا كبتنَ بهذا المعرّف")
+    await drivers_service.lock(session, driver)
+    vehicle, _country = await _driver_vehicle(session, driver_id, vehicle_id)
+    before = {"category": vehicle.category, "confirmed": vehicle.category_confirmed_at is not None}
+    vehicle.category = payload.category.value
+    vehicle.category_confirmed_at = datetime.now(UTC)
+    vehicle.category_confirmed_by = admin.id
+    await audit.record(
+        session, actor=admin, action=AuditAction.UPDATE, entity_type="vehicle_category", entity_id=vehicle.id,
+        details={"driver_id": str(driver_id), "reason": payload.reason},
+        changes={
+            "category": {"before": before["category"], "after": payload.category.value},
+            "confirmed": {"before": before["confirmed"], "after": True},
+        },
+    )
+    await session.commit()
+    await session.refresh(vehicle)
+    return VehicleOut.model_validate(vehicle)
+
+
+@router.get("/vehicles/category-review", response_model=list[CategoryReviewOut])
+async def category_review(
+    _staff: StaffUser, session: DbSession, country_code: CountryCode = Query(...)
+) -> list[CategoryReviewOut]:
+    """**«بحاجة لمراجعة الفئة»** (§٩١-ب/٥) — كلُّ مركبةٍ فئتُها مؤقّتة: القائمةُ يومَ الترحيلة، والجديدةُ، ومن غيّر طرازَه أو سنتَه.
+    **وفئتُها تعمل كما هي حتى يؤكّدها مشرف** — فلا يفقد كبتنٌ عملَه بالانتظار."""
+    rows = await session.execute(
+        select(Vehicle, Driver.status, User.name, User.phone)
+        .join(Driver, Driver.id == Vehicle.driver_id)
+        .join(User, User.id == Driver.user_id)
+        .where(User.country_code == country_code, Vehicle.category_confirmed_at.is_(None))
+        .order_by(Vehicle.created_at)
+    )
+    out: list[CategoryReviewOut] = []
+    for vehicle, driver_status, name, phone in rows.all():
+        suggested, reason = await categories.suggest(session, country_code, vehicle)
+        out.append(
+            CategoryReviewOut(
+                driver_id=vehicle.driver_id, driver_name=name, driver_phone=phone, driver_status=driver_status,
+                vehicle_id=vehicle.id, make=vehicle.make, model=vehicle.model, year=vehicle.year,
+                plate_number=vehicle.plate_number, category=vehicle.category, suggested=suggested, reason=reason,
+            )
+        )
+    return out
