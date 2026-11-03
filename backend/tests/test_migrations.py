@@ -510,3 +510,64 @@ async def test_0140_fills_comfort_guidance_only_where_empty_and_round_trips() ->
         async with engine.begin() as conn:
             await conn.execute(text("DELETE FROM ride_categories"))
         await engine.dispose()
+
+
+async def test_0141_creates_missing_builtin_rows_with_guidance_and_round_trips() -> None:
+    """**`0141` تُنشئ صفّي المدمجتين حيث لهما أسعارٌ ولا صفّ** (الجزائر يومَ قِيست) — مشتعلين بترتيب ٠/١ وبإرشادهما، **ولا تمسّ صفّاً
+    كتبه مشرف** (الأردن هنا)، ولا سوقاً بلا أسعار؛ وتضيف أسماءَ «مريح» العربيّة حيث القائمةُ قائمةُ `0140` حرفاً. **ونزولُها يعيد
+    القائمةَ ولا يحذف صفّاً** — مقيسٌ قبلها لا مقروء."""
+    config = alembic_config()
+    prices = (
+        "INSERT INTO pricing_rules (id, country_code, vehicle_category, base_fare, price_per_km, price_per_min, minimum_fare, "
+        "cancellation_fee) VALUES "
+        "(gen_random_uuid(), 'DZ', 'economy', 150, 40, 8, 230, 100), (gen_random_uuid(), 'DZ', 'comfort', 200, 52, 10, 300, 130), "
+        "(gen_random_uuid(), 'JO', 'comfort', 1, 0.4, 0.1, 1.5, 0.5)"
+    )
+    # **صفُّ الأردن كتب فيه مشرفٌ اسمَه ورتّبه** — يبقى حرفاً
+    jo_row = (
+        "INSERT INTO ride_categories (id, country_code, key, name, icon, seats, sort_order, is_active, is_builtin) "
+        "VALUES (gen_random_uuid(), 'JO', 'comfort', 'مريح جدّاً', 'directions_car', 4, 7, false, true)"
+    )
+    read = (
+        "SELECT country_code::text || ':' || key, name, sort_order, is_active, min_year, cardinality(suggest_models), "
+        "guidance IS NOT NULL, 'كامري' = ANY(suggest_models) FROM ride_categories"
+    )
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0140")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM ride_categories"))
+            await conn.execute(text("DELETE FROM pricing_rules"))
+            await conn.execute(text(prices))
+            await conn.execute(text(jo_row))
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0141")
+        async with engine.begin() as conn:
+            rows = {row[0]: tuple(row[1:]) for row in (await conn.execute(text(read))).all()}
+        assert set(rows) == {"DZ:economy", "DZ:comfort", "JO:comfort"}
+        assert rows["DZ:economy"] == ("اقتصادي", 0, True, None, 0, True, False)
+        name, order, active, min_year, models, guided, arabic = rows["DZ:comfort"]
+        assert (name, order, active, min_year, guided, arabic) == ("مريح", 1, True, 2018, True, True) and models > 60
+        assert rows["JO:comfort"] == ("مريح جدّاً", 7, False, None, 0, False, False)
+
+        # **والأسماءُ العربيّة تبلغ صفّاً كتبته `0140`** — ولا تبلغ قائمةً عدّلها مشرف
+        async with engine.begin() as conn:
+            await conn.execute(text("UPDATE ride_categories SET suggest_models = ARRAY['Camry']::varchar(60)[] WHERE country_code = 'JO'"))
+        await engine.dispose()
+        await asyncio.to_thread(command.downgrade, config, "0140")
+        async with engine.begin() as conn:
+            rows = {row[0]: tuple(row[1:]) for row in (await conn.execute(text(read))).all()}
+        # **النزولُ لا يحذف**: الصفّان باقيان بقائمة `0140`
+        assert rows["DZ:comfort"][4:] == (36, True, False) and rows["DZ:economy"][1:3] == (0, True)
+        assert rows["JO:comfort"][4] == 1
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0141")
+        async with engine.begin() as conn:
+            rows = {row[0]: tuple(row[1:]) for row in (await conn.execute(text(read))).all()}
+        assert rows["DZ:comfort"][6] is True and rows["JO:comfort"][4:] == (1, False, False)
+    finally:
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM ride_categories"))
+            await conn.execute(text("DELETE FROM pricing_rules"))
+        await engine.dispose()
