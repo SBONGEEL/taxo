@@ -25,7 +25,8 @@ import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
 import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
-import { useConfig } from "@/lib/config";
+import { useConfig, useCountryConfig } from "@/lib/config";
+import { useSession } from "@/lib/session";
 import { rulesFor } from "@/lib/validation";
 import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import {
@@ -47,6 +48,7 @@ export const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_interior: tr("من الداخل"),
   vehicle_plate: tr("لوحة المركبة"),
   profile_photo: tr("الصورة الشخصية"),
+  taxi_licence: tr("رخصة التاكسي"),
 };
 
 export const REVIEW_LABEL = {
@@ -109,9 +111,16 @@ export function useVehicleScreen() {
   }
 
   const vehicle = profile?.vehicles[0];
+  // **وثيقةٌ تشترطها فئةٌ مشتعلةٌ في سوقه** (SPEC §٩١-ب/٧: رخصةُ التاكسي لـ«تاكسي المدينة») — **بعد المطلوب لا بينه**: اختياريّةٌ لا تحبس
+  // اعتماداً، **ولا تُرسم حيث لا فئةَ تشترطها** (`/config` ينشر المشتعلةَ وحدَها) فلا يُطلب منه ما لا معنى له في سوقه
+  const { user } = useSession();
+  const faces = useCountryConfig(user?.country_code)?.ride_categories ?? [];
+  const extra = [...new Set(faces.flatMap((face) => (face.required_document ? [face.required_document] : [])))].filter(
+    (type) => !REQUIRED_DOCUMENTS.includes(type),
+  );
   // **الوثائقُ ثم صورُ المركبة الستّ** (البند ١١) — نفسُ ترتيب شاشة التسجيل،
   // فمن رفع هناك يجد الترتيبَ نفسَه هنا حين يستبدل
-  const types: DocumentType[] = REQUIRED_DOCUMENTS;
+  const types: DocumentType[] = [...REQUIRED_DOCUMENTS, ...extra];
 
   return {
     goBack,

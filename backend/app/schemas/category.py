@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import CountryCode, DriverStatus, VehicleBodyType, VehicleCategory, VehicleFuel
+from app.models.enums import CountryCode, DocumentType, DriverStatus, VehicleBodyType, VehicleCategory, VehicleFuel
 
 #: **أيقوناتُ الفئة** — **من قائمةٍ لا نصٌّ حرّ**: خطُّ الأيقونات مقتطَعٌ بأسمائه في التطبيقين (`index.html`)، واسمٌ خارجه يُرسم نصّاً
 CategoryIcon = Literal["local_taxi", "directions_car", "airport_shuttle", "electric_car", "diamond", "accessible"]
@@ -27,6 +27,8 @@ class RideCategoryPublic(BaseModel):
     #: **الاسمُ بالفرنسيّة والإنجليزيّة** (SPEC §٩١-ب/٦) — يقرأ التطبيقُ ما يوافق لغتَه، **وفارغٌ: الاسمُ العربيُّ أو ترجمةُ التطبيق للمدمجة**
     name_fr: str | None = None
     name_en: str | None = None
+    #: **وثيقةٌ تشترطها الفئة** (§٩١-ب/٧) — فيرسم تطبيقُ الكبتن صفَّ رفعها حيث الفئةُ مشتعلة؛ وفارغٌ = لا شيء
+    required_document: DocumentType | None = None
 
 
 class RideCategoryOut(RideCategoryPublic):
@@ -65,6 +67,7 @@ class RideCategoryCreate(BaseModel):
     guidance: str | None = Field(default=None, max_length=500)
     suggest_models: list[Annotated[str, Field(min_length=2, max_length=60)]] = Field(default_factory=list, max_length=40)
     serves_lower: bool = False
+    required_document: DocumentType | None = None
 
 
 class RideCategoryUpdate(BaseModel):
@@ -85,6 +88,7 @@ class RideCategoryUpdate(BaseModel):
     guidance: str | None = Field(default=None, max_length=500)
     suggest_models: list[Annotated[str, Field(min_length=2, max_length=60)]] | None = Field(default=None, max_length=40)
     serves_lower: bool | None = None
+    required_document: DocumentType | None = None
 
 
 class CategoryAccessIn(BaseModel):

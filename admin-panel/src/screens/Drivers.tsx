@@ -131,6 +131,7 @@ const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_interior: "من الداخل",
   vehicle_plate: "لوحة المركبة",
   profile_photo: "الصورة الشخصية",
+  taxi_licence: "رخصة التاكسي",
 };
 
 const GENDER_LABEL: Record<Gender, string> = {

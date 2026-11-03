@@ -173,6 +173,7 @@ import type {
   RideCategory,
   CategoryAccess,
   CategoryReviewRow,
+  DocumentType,
   CategorySuggestion,
   Wallet,
   WalletSetting,
@@ -2128,6 +2129,7 @@ export const createRideCategory = (payload: {
   guidance: string | null;
   suggest_models: string[];
   serves_lower: boolean;
+  required_document: DocumentType | null;
 }) => api.post<RideCategory>("/admin/settings/ride-categories", payload);
 
 export const updateRideCategory = (
@@ -2148,6 +2150,7 @@ export const updateRideCategory = (
     guidance: string | null;
     suggest_models: string[];
     serves_lower: boolean;
+    required_document: DocumentType | null;
   }>,
 ) => api.patch<RideCategory>(`/admin/settings/ride-categories/${id}`, payload);
 

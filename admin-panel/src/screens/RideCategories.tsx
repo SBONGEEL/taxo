@@ -80,6 +80,8 @@ interface Draft {
   /** **طُرزٌ تُقترح لها الفئة** — مفصولةً بفواصل في الحقل، وقائمةً في العقد */
   suggest_models: string;
   serves_lower: boolean;
+  /** **يُمنح بعد اعتماد رخصة التاكسي** (§٩١-ب/٧) — النوعُ الوحيدُ الذي تشترطه فئةٌ اليوم */
+  taxi_licence: boolean;
 }
 
 const EMPTY: Draft = {
@@ -98,6 +100,7 @@ const EMPTY: Draft = {
   guidance: "",
   suggest_models: "",
   serves_lower: false,
+  taxi_licence: false,
 };
 
 const draftOf = (row: RideCategory): Draft => ({
@@ -116,6 +119,7 @@ const draftOf = (row: RideCategory): Draft => ({
   guidance: row.guidance ?? "",
   suggest_models: row.suggest_models.join("، "),
   serves_lower: row.serves_lower,
+  taxi_licence: row.required_document === "taxi_licence",
 });
 
 /** **حقولُ §٩١-ب كما تُرسل** — في الإنشاء والتعديل وإرشادِ المدمجة سواء */
@@ -128,6 +132,7 @@ const extrasOf = (draft: Draft) => ({
     .map((item) => item.trim())
     .filter((item) => item.length >= 2),
   serves_lower: draft.serves_lower,
+  required_document: draft.taxi_licence ? ("taxi_licence" as const) : null,
 });
 
 const numberOrNull = (value: string) => (value.trim() === "" ? null : Number(value));
@@ -527,6 +532,11 @@ function GuidanceForm({
       <div className="mt-12">
         <Checkbox checked={draft.serves_lower} onChange={() => set({ serves_lower: !draft.serves_lower })}>
           كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكبتنُ يقبل أو يرفض كأيِّ عرض
+        </Checkbox>
+      </div>
+      <div className="mt-8">
+        <Checkbox checked={draft.taxi_licence} onChange={() => set({ taxi_licence: !draft.taxi_licence })}>
+          لا تُمنح لكبتنٍ قبل اعتماد «رخصة التاكسي» عنده — ويرى الكباتنُ صفَّ رفعها في وثائقهم ما دامت الفئةُ مشتعلة
         </Checkbox>
       </div>
       <Button

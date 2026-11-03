@@ -173,6 +173,9 @@ class DocumentType(StrEnum):
     # وشرطُها للاعتماد **يُقرأ لكل كبتنٍ على حدة** لا من جدولٍ ثابت — انظر
     # `models/driver.py::required_document_types`
     PROFILE_PHOTO = "profile_photo"
+    # **رخصةُ/تسجيلُ التاكسي** (SPEC §٩١-ب/٧، `0139`) — **اختياريّة لا تحبس اعتماداً**: شرطُ منح «تاكسي المدينة» يدوياً
+    # (`ride_categories.required_document`)، ولا يرى الكبتنُ صفَّها إلا حيث فئةٌ تشترطها مشتعلة
+    TAXI_LICENCE = "taxi_licence"
 
 
 class DeactivationStatus(StrEnum):

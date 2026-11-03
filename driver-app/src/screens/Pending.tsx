@@ -32,6 +32,7 @@ export const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_interior: tr("من الداخل"),
   vehicle_plate: tr("لوحة المركبة"),
   profile_photo: tr("الصورة الشخصية"),
+  taxi_licence: tr("رخصة التاكسي"),
 };
 
 export const STATUS = {

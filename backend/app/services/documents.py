@@ -90,6 +90,7 @@ DOCUMENT_TYPE_LABEL: dict[DocumentType, str] = {
     DocumentType.VEHICLE_INTERIOR: "المركبة من الداخل",
     DocumentType.VEHICLE_PLATE: "لوحة المركبة",
     DocumentType.PROFILE_PHOTO: "الصورة الشخصية",
+    DocumentType.TAXI_LICENCE: "رخصة التاكسي",
 }
 
 

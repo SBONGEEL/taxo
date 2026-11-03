@@ -16,8 +16,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import DbSession, SettingsWriter, StaffUser
 from app.core.exceptions import Conflict, InvalidInput, NotFound
-from app.models.driver import Driver
-from app.models.enums import AuditAction, CountryCode
+from app.models.driver import Driver, DriverDocument
+from app.models.enums import AuditAction, CountryCode, DocumentReviewStatus, DocumentType
 from app.models.ride_category import DriverCategoryAccess, RideCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -33,7 +33,7 @@ from app.schemas.category import (
     VehicleCategoryIn,
 )
 from app.schemas.driver import VehicleOut
-from app.services import audit, categories
+from app.services import audit, categories, documents
 from app.services import drivers as drivers_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -132,6 +132,19 @@ async def set_access(
     )
     if driver is None:
         raise NotFound("لا كبتنَ بهذا المعرّف")
+    # **منحُ فئةٍ تشترط وثيقةً ينتظر اعتمادَها** (§٩١-ب/٧: «تاكسي المدينة» بعد رخصة التاكسي) — والنزعُ لا يُشترط له شيء
+    if payload.granted and category.required_document:
+        approved = await session.scalar(
+            select(DriverDocument.id).where(
+                DriverDocument.driver_id == driver.id,
+                DriverDocument.doc_type == category.required_document,
+                DriverDocument.review_status == DocumentReviewStatus.APPROVED,
+            )
+        )
+        if approved is None:
+            raise InvalidInput(
+                f"لا تُمنح «{category.name}» قبل اعتماد «{documents.label_for(DocumentType(category.required_document))}» عند الكبتن"
+            )
     existing = await session.scalar(
         select(DriverCategoryAccess).where(
             DriverCategoryAccess.driver_id == driver.id, DriverCategoryAccess.category_id == category.id

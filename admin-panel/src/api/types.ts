@@ -284,7 +284,9 @@ export type DocumentType =
   /** الصورةُ الشخصية (البند ٥٢) — **مستندٌ يُراجَع وصورةٌ تُنشر معاً**.
    *  شرطُ اعتمادٍ إلا على سائقةٍ مثبَّتةِ الجنس، وحيث لا صورةَ يُرسم أوّلُ حرفٍ
    *  من الاسم — لا مربعٌ فارغ ولا أيقونةٌ عامة. */
-  | "profile_photo";
+  | "profile_photo"
+  // **رخصةُ التاكسي** (SPEC §٩١-ب/٧) — شرطُ منح فئةٍ تشترطها (`required_document`)
+  | "taxi_licence";
 
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 
@@ -852,6 +854,8 @@ export interface RideCategory {
   guidance: string | null;
   suggest_models: string[];
   serves_lower: boolean;
+  /** **وثيقةٌ يشترطها المنحُ يدوياً** (§٩١-ب/٧، `0139`) — «تاكسي المدينة» ⇐ `taxi_licence`؛ وفارغٌ = لا شرط */
+  required_document: DocumentType | null;
 }
 
 /** **الفئةُ المقترحةُ لمركبة** (`CategorySuggestionOut`، §٩١-ب/٥) — `null` حين لا إرشادَ مكتوب. */

@@ -60,6 +60,8 @@ class RideCategory(UUIDMixin, TimestampMixin, Base):
     )
     #: **كبتنُ هذه الفئة يأخذ طلباتِ ما دونها ترتيباً** — مطفأٌ افتراضاً: التوزيعُ كما كان (`categories.driver_clause`)
     serves_lower: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    #: **وثيقةٌ يشترطها منحُ الفئة يدوياً** (`0139`، «تاكسي المدينة» ⇐ `taxi_licence`) — معتمدةً عند الكبتن قبل المنح؛ وفارغٌ = لا شرط
+    required_document: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class DriverCategoryAccess(UUIDMixin, TimestampMixin, Base):

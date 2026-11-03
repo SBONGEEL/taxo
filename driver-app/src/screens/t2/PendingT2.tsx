@@ -43,6 +43,7 @@ const DOC_ICON: Record<DocumentType, string> = {
   vehicle_interior: "directions_car",
   vehicle_plate: "directions_car",
   profile_photo: "person",
+  taxi_licence: "local_taxi",
 };
 
 /** نبرةُ الحال بألوان C12: ساريةٌ خضراء، ومرفوضةٌ حمراء، وما ينتظر كهرمانيّ. */

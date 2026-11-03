@@ -18,7 +18,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select, text
 
-from app.models.enums import CountryCode
+from app.models.driver import DriverDocument
+from app.models.enums import CountryCode, DocumentReviewStatus, DocumentType
 from app.models.ride_category import RideCategory
 from app.models.vehicle import Vehicle
 from app.services import categories, dispatch
@@ -157,6 +158,47 @@ async def test_config_publishes_the_three_names(client: AsyncClient, session_fac
     faces = {face["key"]: face for country in body["countries"] if country["country_code"] == "JO" for face in country["ride_categories"]}
     assert (faces["comfort"]["name_fr"], faces["comfort"]["name_en"]) == ("Confort", "Comfort")
     assert faces["economy"]["name_fr"] is None and faces["economy"]["name"] == "اقتصادي"
+
+
+async def test_city_taxi_is_granted_only_after_its_licence_is_approved(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**«تاكسي المدينة» بالمنح بعد رخصة التاكسي** (§٩١-ب/٧) — الوثيقةُ معلَّقةً لا تكفي، ومعتمدةً تفتح المنح؛ **والنزعُ بلا شرط**."""
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    created = await client.post(
+        "/admin/settings/ride-categories",
+        json={"country_code": "JO", "key": "city_taxi", "name": "تاكسي المدينة", "required_document": "taxi_licence"},
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["required_document"] == "taxi_licence"
+    access = f"/admin/settings/ride-categories/{created.json()['id']}/access"
+    grant = {"driver_id": str(driver["driver_id"]), "granted": True, "reason": "تاكسي مرخَّص"}
+
+    refused = await client.put(access, json=grant, headers=admin_headers)
+    assert refused.status_code == 422 and "رخصة التاكسي" in refused.text, refused.text
+
+    async with session_factory() as session:
+        session.add(
+            DriverDocument(
+                driver_id=driver["driver_id"], doc_type=DocumentType.TAXI_LICENCE, file_path="x/taxi.jpg",
+                content_type="image/jpeg", size_bytes=10, review_status=DocumentReviewStatus.PENDING,
+            )
+        )
+        await session.commit()
+    assert (await client.put(access, json=grant, headers=admin_headers)).status_code == 422
+
+    async with session_factory() as session:
+        document = await session.scalar(select(DriverDocument).where(DriverDocument.doc_type == DocumentType.TAXI_LICENCE))
+        document.review_status = DocumentReviewStatus.APPROVED
+        await session.commit()
+    granted = await client.put(access, json=grant, headers=admin_headers)
+    assert granted.status_code == 200, granted.text
+    assert await _eligible(session_factory, driver["driver_id"], "city_taxi")
+
+    revoked = await client.put(access, json=grant | {"granted": False}, headers=admin_headers)
+    assert revoked.status_code == 200, revoked.text
 
 
 async def test_confirmation_waits_for_the_captain_row_lock(

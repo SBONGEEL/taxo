@@ -21,6 +21,7 @@ import { useRef } from "react";
 
 import type { DocumentType, DriverDocument } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
+import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import {
@@ -48,6 +49,7 @@ const DOC_ICON: Record<DocumentType, string> = {
   vehicle_interior: "photo_camera",
   vehicle_plate: "photo_camera",
   profile_photo: "person",
+  taxi_licence: "local_taxi",
 };
 
 /** صورُ المركبة — زرُّها «ارفع صورة» كما في الشاشة القائمة، والوثائقُ «ارفع الوثيقة» كما في اللوحة. */
@@ -111,7 +113,8 @@ function viewOf(
   if (!document) {
     return {
       tone: "off",
-      sub: tr("لم يُرفع"),
+      // **الاختياريّةُ تُقال اختياريّة** (§٩١-ب/٧) — رخصةُ التاكسي لمن يعمل بتاكسي مرخَّص، لا نقصٌ عند غيره
+      sub: REQUIRED_DOCUMENTS.includes(docType) ? tr("لم يُرفع") : tr("اختياريّة — لمن يعمل بتاكسي مرخَّص"),
       valid: false,
       end: "upload",
       alarm: false,
@@ -194,7 +197,9 @@ export function VehicleT2Screen() {
       today,
     ),
   }));
-  const valid = rows.filter((row) => row.view.valid).length;
+  // **العدّادُ والشريطُ للمطلوب وحدَه** — صفُّ رخصة التاكسي الاختياريّ (§٩١-ب/٧) لا يجعل «٩ من ١٠» لمن لا يحتاجها
+  const required = rows.filter((row) => REQUIRED_DOCUMENTS.includes(row.docType));
+  const valid = required.filter((row) => row.view.valid).length;
   // **«الاستقبال متوقف» حالُ الكبتن لا حسابُ الشاشة**: معلَّقٌ أو قيدُ المراجعة لا يصله طلب
   const stopped = s.profile !== null && s.profile.driver.status !== "approved";
 
@@ -218,14 +223,14 @@ export function VehicleT2Screen() {
         <div className="t2-vdocs-sum">
           <div className="t2-vdocs-sum-top">
             <span className="t2-vdocs-count">
-              {digits(String(valid))}{" "}{tr("من")}{" "}{digits(String(rows.length))}{" "}{tr("سارية")}
+              {digits(String(valid))}{" "}{tr("من")}{" "}{digits(String(required.length))}{" "}{tr("سارية")}
             </span>
             {stopped ? (
               <span className="t2-vdocs-stop">{tr("الاستقبال متوقف")}</span>
             ) : null}
           </div>
           <div className="t2-vdocs-bar" aria-hidden="true">
-            {rows.map((row) => (
+            {required.map((row) => (
               <span
                 key={row.docType}
                 className={`t2-vdocs-seg ${row.view.tone}`}
