@@ -158,3 +158,28 @@
 **الجاهزيّةُ للإعادة** (تُحدَّث يوميّاً): مشتركون ≥١٢ كلَّ يوم ✓ حتى الآن (**على الحدّ تماماً — لا هامش**) · ١٤ يوماً ⏳ (٥/١٤) ·
 إصدارٌ مرئيٌّ أسبوعيٌّ من ملاحظةٍ حقيقيّة ⏳ · نشاطٌ يوميّ ⚠ دون ٨ (٣ في ٢٠٢٦-١٠-٣٠ — نُبِّه المالك) · **وTesters Community تنتهي يومَها ١٦ ≈ ٢٠٢٦-١١-٠٤ قبل ١١-٠٧: إن خرج مختبِروها هبط المشتركون دون ١٢** · السياسة ✓ · أعطال ✓.
 
+### مسوّدةُ أجوبة إعادة تقديم الكبتن (٢٠٢٦-١١-٠٣) — **لا تُرسل إلا بكلمة المالك**
+
+**الأسئلةُ ١، ٢، ٥، ٦، ٧ كما أُرسلت في ٢٠٢٦-١٠-٢٢** (أعلاه) — لا شيءَ فيها تغيّر. **والخمسةُ تحت جديدة**، كلٌّ دون ٣٠٠ حرف (قيست).
+**وثلاثةُ شروطٍ تُقاس يومَ الإرسال قبل «تطبيق»، وإلا يُعدَّل النصّ**: (أ) عدّادُ Play يقول **١٤ يوماً** بـ١٢ مشتركاً؛ (ب) زرُّ الرجوع (الجزء D)
+على الإنتاج؛ (ج) الجولةُ و«شارك التطبيق» يُريان في حزمة الإنتاج — **فإن غاب أحدُها حُذف من الجواب لا من القياس**.
+**وقِيس (ج) في ٢٠٢٦-١١-٠٣ ✓**: `taxo.tour.v1` و«شارك التطبيق» في حزمتَي `driver.tajora.ly` (`index-CF8h4e3W.js`) و`app.tajora.ly` (`index-DFSbqog5.js`)؛
+**و(ب) لم يصل بعد** — `t2-exit-hint` غائبٌ عنهما، والجزءُ D لم يُرفع.
+
+**3.** (241) Testers used the closed builds on their own phones, mostly in guest mode, which opens the whole captain app without an account: home map, going online, ride offers, earnings, wallet and plans. 12 testers stayed opted in for 14 straight days.
+> استعمل المختبِرون إصداراتِ الاختبار المغلق على هواتفهم، وأكثرُهم بوضع الضيف الذي يفتح تطبيقَ الكبتن كلَّه بلا حساب: الخريطة، والاتّصال، وعروض الرحلات، والأرباح، والمحفظة، والخطط. وبقي ١٢ مختبِراً مشتركين ١٤ يوماً متّصلة.
+
+**4.** (240) Feedback came from the in-app Send feedback form, our captain WhatsApp groups and the Testers Community report. They asked for an onboarding tour, a share button and a clearer store listing; their report found no crashes or critical errors.
+> جاءت الملاحظاتُ من «أرسل ملاحظة» داخل التطبيق ومجموعات واتساب الكباتن وتقرير Testers Community: طلبوا جولةً تعريفيّة وزرَّ مشاركة ووصفَ متجرٍ أوضح، وتقريرُهم لم يجد أعطالاً ولا أخطاءً حرجة.
+
+**8.** (269) From tester feedback: a 4-card tour on first open, a Share the app button, a new store description and 7 captioned screenshots. Since the review: builds 960, 975 and 994 with a security update and edge-to-edge display, and a back button that closes one layer at a time.
+> من ملاحظات المختبِرين: جولةٌ بأربع بطاقاتٍ أوّلَ فتحة، وزرُّ «شارك التطبيق»، ووصفُ متجرٍ جديد و٧ لقطاتٍ بتعليق. ومنذ المراجعة: الإصداراتُ 960 و975 و994 بتحديثٍ أمنيٍّ والعرضِ حتى الحافّة، وزرُّ رجوعٍ يغلق طبقةً واحدةً كلَّ مرّة.
+
+**9.** (260) 12 opted-in testers for 14 days, 0 crashes and 0 ANRs in Play vitals for 28 days, no policy issues. Every release passes our full automated suite and code guards in CI, a verified backup and a money-integrity check before deploy, and live monitoring alerts us.
+> ١٢ مختبِراً مشتركاً ١٤ يوماً، وصفرُ أعطالٍ وصفرُ ANR في مؤشّرات Play ٢٨ يوماً، ولا مشاكلَ سياسة. وكلُّ إصدارٍ يمرّ بالمجموعة الآليّة كاملةً وحرّاس الشيفرة في CI، وبنسخةٍ محقَّقةٍ وفحصٍ لسلامة المال قبل الرفع، والمراقبةُ الحيّة تنبّهنا.
+
+**10.** (261) This time 12 testers stayed opted in for the full 14 days, and we shipped three closed builds after the review (960, 975, 994), each with real changes and honest notes. Testers tried every screen in guest mode, and each fix was checked on the live closed build.
+> هذه المرّةَ بقي ١٢ مختبِراً مشتركين الأيّامَ الأربعةَ عشر كاملة، وأصدرنا بعد المراجعة ثلاثةَ إصداراتٍ مغلقة (960 و975 و994) بتغييراتٍ حقيقيّةٍ وملاحظاتٍ صادقة. وجرّب المختبِرون كلَّ شاشةٍ بوضع الضيف، وكلُّ إصلاحٍ تُحقِّق منه على الإصدار المغلق الحيّ.
+
+**والسهولة (٢)**: «ليس صعبًا ولا سهلاً» كما كانت — **والعدُّ على الحدّ تماماً (١٢) يشهد أنها ليست «سهلة»**.
+
