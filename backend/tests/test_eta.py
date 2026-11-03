@@ -42,7 +42,8 @@ async def test_off_means_no_number_and_no_call(
     rider = auth(await register(client, RIDER))
 
     body = (await client.get("/rides/eta", params=PICKUP, headers=rider)).json()
-    assert body == {"enabled": False, "categories": []}
+    # **و«المتاحُ قريباً» يُنشر مطفأً** (§٩١-ب/٨) — حضورٌ وقاعدةٌ بلا نداء، فالعدّادُ صفرٌ أدناه
+    assert body == {"enabled": False, "categories": [], "available": ["economy"]}
 
     ride = await request_ride(client, rider)
     await wait_for_offer(ride["id"], driver["driver_id"])

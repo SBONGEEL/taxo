@@ -278,6 +278,33 @@ async def nearby_available(
     return available[:ceiling]
 
 
+async def nearby_categories(redis: Redis, session: AsyncSession, *, rider: User, lat: float, lng: float) -> list[str]:
+    """**فئاتُ السوق المطلوبةُ التي لها كبتنٌ متاحٌ قريب** (SPEC §٩١-ب/٨: «غير متاح قريباً») — **بلا نداء Mapbox**، فلا مفتاحَ
+    ولا كلفة: حضورُ Redis ثمّ سؤالُ «المؤهَّل» نفسِه الذي يسأله التوزيع (`dispatch.eligible_driver_ids`) **لكلِّ فئةٍ بشرطها** —
+    و`driver_clause` فيه يحمل «الأعلى يأخذ الأدنى» (`categories.takers`)، فكبتنُ «مريح» يجعل «اقتصادي» متاحاً حيث أُشعل وحدَه.
+
+    **و«قريب» نصفُ قطر الخريطة** (`map_settings`) — ما يُرسم سياراتٍ هو ما يُقال متاحاً، فلا تقول الورقةُ «غير متاح» وسيارةٌ من
+    الفئة على الخريطة تحتها. **والتفضيلُ والعالمُ كما في الخريطة** (`nearby_available`): تفضيلُ الملف، ووسمُ التجربة.
+    """
+    from app.services import categories, dispatch, map_settings
+
+    country = rider.country_code
+    limits = await map_settings.limits_for(session, country)
+    presences = await geo.nearby(redis, country_code=country, lat=lat, lng=lng, radius_km=limits.radius_km)
+    if not presences:
+        return []
+    match = await dispatch.gender_match(
+        session, country_code=country, rider_gender=rider.gender, preference=rider.ride_gender_preference
+    )
+    found: list[str] = []
+    for key in await categories.requestable_keys(session, country):
+        accepted = await categories.presence_keys(session, country, key)
+        ids = [p.driver_id for p in presences if accepted is None or p.vehicle_category in accepted]
+        if ids and await dispatch.eligible_driver_ids(session, ids, key, gender=match, test=rider.is_test, country=country):
+            found.append(key)
+    return found
+
+
 # ------------------------------------------------- خريطةُ الراكب مشتركةً بالخلايا (§٧٥-د/٢)
 
 #: **ضلعُ الخليّة** (~٢٫٢ كم) — كلُّ راكبٍ في الخليّة يقرأ حسابَها الواحد

@@ -156,6 +156,8 @@ export interface ConfirmRideProps {
   pickupLine?: string | null;
   /** **دقائقُ أقرب كبتنٍ لكلِّ فئة** (§٦٢-ج/١٠، «· يصل خلال 3 د» في R06) — و`null`/غيابُها حيث المفتاحُ مطفأ. */
   eta?: Partial<Record<VehicleCategory, number>> | null;
+  /** **فئاتٌ لها كبتنٌ متاحٌ قريب** (SPEC §٩١-ب/٨) — وما غاب منها «غير متاح قريباً» **ويبقى مطلوباً** (البحثُ يتّسع)؛ و`null`: لا يُعرف فلا يُقال شيء. */
+  available?: VehicleCategory[] | null;
   /** **طلبُ طرد** (§٦٣-ج/٤) بدأته بلاطةُ «طرد» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة لا فيها** (`Home`): إضافةُ
    *  محطةٍ تطوي الورقةَ ثمّ تعيدها، ومسوّدةٌ فيها كانت تضيع معها — فيُعاد كتابةُ المستلم وإقرارُ الشروط من أوّله. */
   parcel?: { draft: RideParcel | null; onChange: (next: RideParcel) => void; fetch?: boolean };

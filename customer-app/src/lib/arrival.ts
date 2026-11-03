@@ -13,6 +13,14 @@ import { distanceKm, type LatLng } from "@/lib/route-line";
 
 export type CategoryMinutes = Partial<Record<VehicleCategory, number>>;
 
+/** **جوابُ «قبل الطلب» كلُّه من سؤالٍ واحد**: الدقائقُ (`null` حيث المفتاحُ مطفأ) والمتاحُ قريباً (§٩١-ب/٨ — `null`: لا يُعرف). */
+export interface NearestState {
+  minutes: CategoryMinutes | null;
+  available: VehicleCategory[] | null;
+}
+
+const UNKNOWN: NearestState = { minutes: null, available: null };
+
 const EVERY_MS = 60_000;
 
 /** خليّةُ السؤال — **نصفُ منزلةٍ ثالثة** كخليّة الخادم (≈٥٥٠ م): حركةٌ داخلها لا تعيد السؤال. */
@@ -21,13 +29,13 @@ function cell(value: number): number {
 }
 
 /** دقائقُ أقرب كبتنٍ متاحٍ لكلِّ فئة — و`null` حيث المفتاحُ مطفأ أو لا جواب (فلا يُرسم شيء). */
-export function useNearestEta(point: Coordinates | null, active: boolean): CategoryMinutes | null {
-  const [minutes, setMinutes] = useState<CategoryMinutes | null>(null);
+export function useNearestEta(point: Coordinates | null, active: boolean): NearestState {
+  const [state, setState] = useState<NearestState>(UNKNOWN);
   const lat = point ? cell(point.lat) : null;
   const lng = point ? cell(point.lng) : null;
   useEffect(() => {
     if (!active || lat === null || lng === null || !point) {
-      setMinutes(null);
+      setState(UNKNOWN);
       return;
     }
     const at = { lat: point.lat, lng: point.lng };
@@ -36,13 +44,15 @@ export function useNearestEta(point: Coordinates | null, active: boolean): Categ
       getNearestEta(at)
         .then((answer) => {
           if (cancelled) return;
+          // **والمتاحُ قريباً يُقرأ ولو أُطفئت الدقائق** (§٩١-ب/٨) — لا كلفةَ مزوّدٍ فيه
+          const available = answer.available ?? null;
           if (!answer.enabled) {
-            setMinutes(null);
+            setState({ minutes: null, available });
             return;
           }
           const next: CategoryMinutes = {};
           for (const row of answer.categories) next[row.vehicle_category] = row.minutes;
-          setMinutes(next);
+          setState({ minutes: next, available });
         })
         .catch(() => undefined);
     void ask();
@@ -54,7 +64,7 @@ export function useNearestEta(point: Coordinates | null, active: boolean): Categ
     // الخليّةُ لا الإحداثيّةُ الدقيقة — وإلا أعادت كلُّ حركةٍ صغيرةٍ للدبوس السؤال
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, lat, lng]);
-  return minutes;
+  return state;
 }
 
 /** **أقلُّ الدقائق** — شارةُ «3 د» على بلاطة «رحلة» (R05)؛ و`null` إن لم يُعرف شيء. */

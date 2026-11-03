@@ -149,6 +149,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     onOpenUnconfirmed,
     countryConfig,
     eta,
+    available,
   } = props;
   const c = useConfirmRide(props);
   // **حججُ الطلب مرّةً واحدة** — يرسلها «اطلب» و«اشحن مبلغ الرحلة الآن» معاً فلا يفترقان (§٨٨/١)
@@ -332,7 +333,12 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                     <span className="t2-cat-hint">
                       {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
                       {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
-                      {eta?.[option] ? tr(" · يصل خلال {0} د", { 0: eta[option] }) : ""}
+                      {/* **و«غير متاح قريباً»** (§٩١-ب/٨) — لا كبتنَ منها قريب الآن؛ **والفئةُ تبقى مطلوبة**: البحثُ يتّسع بعد الدائرة الأولى */}
+                      {available && !available.includes(option)
+                        ? tr(" · غير متاح قريباً")
+                        : eta?.[option]
+                          ? tr(" · يصل خلال {0} د", { 0: eta[option] })
+                          : ""}
                     </span>
                   </span>
                   {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها

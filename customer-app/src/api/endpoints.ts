@@ -750,6 +750,9 @@ export const postErrorReport = (body: ErrorReportBody) =>
 export interface NearestEta {
   enabled: boolean;
   categories: { vehicle_category: VehicleCategory; minutes: number }[];
+  /** **فئاتُ السوق التي لها كبتنٌ متاحٌ قريب** (SPEC §٩١-ب/٨) — **تصل ولو أُطفئ زمنُ الوصول**؛ وما غاب منها «غير متاح قريباً».
+   *  وغيابُها كلُّه خادمٌ أقدم — فلا يُرسم شيء. */
+  available?: VehicleCategory[] | null;
 }
 
 export const getNearestEta = (point: Coordinates) =>

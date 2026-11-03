@@ -49,6 +49,7 @@ from app.services import (
     categories,
     dispatch,
     documents as documents_service,
+    drivers as drivers_service,
     notifications,
     pricing,
     promo as promo_service,
@@ -393,11 +394,14 @@ async def nearest_eta(
 
     **قبل `/{ride_id}`** في الترتيب: وإلا قُرئت «eta» معرّفَ رحلة.
     """
+    # **«غير متاح قريباً»** (SPEC §٩١-ب/٨) — قبل المفتاح: حضورٌ وقاعدةٌ بلا مزوّد، فلا يحتاج إذنَ الكلفة
+    available = await drivers_service.nearby_categories(redis, session, rider=user, lat=lat, lng=lng)
     if not await eta.enabled(session, user.country_code):
-        return EtaOut(enabled=False)
+        return EtaOut(enabled=False, available=available)
     minutes = await eta.nearest_minutes(session, redis, rider=user, lat=lat, lng=lng)
     return EtaOut(
         enabled=True,
+        available=available,
         categories=[
             EtaCategoryOut(vehicle_category=category, minutes=value)
             for category, value in sorted(minutes.items(), key=lambda item: item[0].value)

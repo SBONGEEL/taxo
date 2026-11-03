@@ -676,6 +676,9 @@ class EtaOut(BaseModel):
 
     enabled: bool
     categories: list[EtaCategoryOut] = []
+    #: **فئاتُ السوق التي لها كبتنٌ متاحٌ قريب** (SPEC §٩١-ب/٨) — **تُنشر ولو أُطفئ زمنُ الوصول**: لا نداءَ مزوّدٍ فيها.
+    #: وما غاب منها يُرسم «غير متاح قريباً». و`None` من خادمٍ أقدمَ لا يعرفها — فلا يُرسم شيء
+    available: list[CategoryKey] | None = None
 
 
 class RouteLineOut(BaseModel):

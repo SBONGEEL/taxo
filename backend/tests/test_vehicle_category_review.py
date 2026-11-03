@@ -6,6 +6,7 @@
 - **التأكيدُ** يُخرجها من القائمة، **وتغييرُ الطراز أو السنة يعيدها** إليها والفئةُ كما هي.
 - **«الأعلى يأخذ الأدنى»** مطفأٌ افتراضاً (التوزيعُ كما كان)، ومشتعلاً يوصل طلبَ «اقتصادي» لكبتن «مريح» — ولا يوصل العكس.
 - **التأكيدُ ينتظر قفلَ صفِّ الكبتن** — فلا يُكتب فوق طرازٍ تغيّر.
+- **«غير متاح قريباً»** (البند ٨): فئةٌ بلا آخذٍ متاحٍ قريبٍ غائبةٌ من `available` — **ومعها «الأعلى يأخذ الأدنى»**.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from app.models.enums import CountryCode
 from app.models.ride_category import RideCategory
 from app.models.vehicle import Vehicle
 from app.services import categories, dispatch
-from tests.helpers import DRIVER, approved_driver, auth, bring_online, register
+from tests.helpers import DRIVER, PICKUP, RIDER, approved_driver, auth, bring_online, register
 
 pytestmark = pytest.mark.usefixtures("jordan_settings")
 
@@ -124,6 +125,29 @@ async def test_higher_takes_lower_is_off_by_default_and_never_the_reverse(
         assert await categories.presence_keys(session, CountryCode.JO, "economy") == frozenset({"economy", "comfort"})
         # **ولا يأخذ الأدنى طلبَ الأعلى**
         assert await categories.takers(session, CountryCode.JO, "comfort") == ["comfort"]
+
+
+async def test_nearby_categories_follow_the_takers(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**«غير متاح قريباً»** (§٩١-ب/٨) — كبتنُ «مريح» وحدَه قريب: «اقتصادي» غيرُ متاح، **حتى يُشعل «الأعلى يأخذ الأدنى»** فيصير
+    متاحاً من الكبتن نفسِه. **وزمنُ الوصول مطفأ** — فالقائمةُ لا تنتظر مفتاحَ الكلفة."""
+    comfort = await approved_driver(client, session_factory, DRIVER, category="comfort")
+    await bring_online(client, comfort)
+    await _comfort_row(session_factory)
+    rider = auth(await register(client, RIDER))
+
+    body = (await client.get("/rides/eta", params=PICKUP, headers=rider)).json()
+    assert body["enabled"] is False and body["available"] == ["comfort"]
+
+    row_id = (await client.get("/admin/settings/ride-categories", params={"country_code": "JO"}, headers=admin_headers)).json()[0]["id"]
+    await client.patch(f"/admin/settings/ride-categories/{row_id}", json={"serves_lower": True}, headers=admin_headers)
+    body = (await client.get("/rides/eta", params=PICKUP, headers=rider)).json()
+    assert body["available"] == ["economy", "comfort"]
+
+    # **وبعيداً لا شيء** — خارج نصف قطر الخريطة
+    far = {"lat": PICKUP["lat"] + 0.5, "lng": PICKUP["lng"] + 0.5}
+    assert (await client.get("/rides/eta", params=far, headers=rider)).json()["available"] == []
 
 
 async def test_confirmation_waits_for_the_captain_row_lock(

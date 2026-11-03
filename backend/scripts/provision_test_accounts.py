@@ -139,7 +139,6 @@ _VEHICLE = VehicleCreate(
     year=2020,
     color="أبيض",
     plate_number="TST-0652",
-    category=VehicleCategory.ECONOMY,
 )
 
 #: **المرجعُ المكتوبُ على صفِّ الاشتراك** — من يقرأ التقريرَ بعد شهرٍ يعرف لماذا صفر
@@ -341,7 +340,8 @@ async def provision(
                 year=_VEHICLE.year,
                 color=_VEHICLE.color.strip(),
                 plate_number=_VEHICLE.plate_number.strip().upper(),
-                category=_VEHICLE.category,
+                # **الفئةُ ليست في `VehicleCreate`** (SPEC §٩١-ب/٥) — «اقتصادي» مؤقّتةٌ كما يكتبها بابُ التطبيق
+                category=VehicleCategory.ECONOMY,
             )
         )
 

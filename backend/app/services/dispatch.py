@@ -488,8 +488,12 @@ async def eligible_driver_ids(
     *,
     gender: GenderMatch | None = None,
     test: bool = False,
+    country: CountryCode | None = None,
 ) -> set[uuid.UUID]:
     """المؤهَّلون وحدَهم — وهو ما تقرؤه خريطةُ الراكب.
+
+    **و`country` يُدخل «الأعلى يأخذ الأدنى»** (§٩١-ب/٩، `categories.takers`) — وبلاه فئةُ المركبة وحدَها كما كانت: الخريطةُ ترسم
+    كلَّ كبتنٍ بفئته فلا تحتاجه، و«غير متاح قريباً» يسأل عن فئة الطلب فيحتاجه (`drivers.nearby_categories`).
 
     **و`_eligible_levels` تقرأ المستوى في الاستعلام نفسِه** (البند ٥٣، §٥-ج):
     `drivers.level` عمودٌ في الصفِّ الذي يُقرأ أصلاً، فلا ضمَّ جديدٌ ولا استعلامٌ
@@ -500,7 +504,7 @@ async def eligible_driver_ids(
     """
     return set(
         await _eligible_levels(
-            session, driver_ids, vehicle_category, gender=gender, test=test
+            session, driver_ids, vehicle_category, gender=gender, test=test, country=country
         )
     )
 
