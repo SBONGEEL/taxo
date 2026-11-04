@@ -113,6 +113,7 @@ celery_app = Celery(
         "app.tasks.broadcast",
         "app.tasks.capacity",
         "app.tasks.admin_alerts",
+        "app.tasks.facebook",
     ],
 )
 
@@ -316,6 +317,11 @@ celery_app.conf.update(
         # الجدد كلَّهم، ودورةٌ كلَّ خمسٍ تعني خمسَ دقائقَ من تسجيلٍ واقفٍ بلا أن
         # يعلم أحد. والدورةُ رخيصةٌ: نداءٌ واحدٌ داخل الشبكة، ولا تنبيهَ إلا
         # على **تحوّل** الحال
+        # **قناةُ فيسبوك** (SPEC §٩٤/٢): حالُ المجدول ورابطُه بعد النشر وأرقامُ تفاعله — كلَّ نصف ساعة
+        "sync-facebook": {
+            "task": "app.tasks.facebook.sync_facebook",
+            "schedule": 1800,
+        },
         "watch-whatsapp-session": {
             "task": "app.tasks.whatsapp.watch_whatsapp_session",
             "schedule": WHATSAPP_WATCH_INTERVAL_SECONDS,

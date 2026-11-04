@@ -3244,3 +3244,55 @@ export interface TransferReviewer {
   must_change_password: boolean;
   created_at: string;
 }
+
+// ------------------------------------------------- قناةُ فيسبوك (SPEC §٩٤/٢)
+
+export type FacebookPostStatus =
+  | "pending_review"
+  | "changes_requested"
+  | "approved"
+  | "scheduled"
+  | "published"
+  | "rejected"
+  | "failed";
+
+export interface FacebookPost {
+  id: string;
+  title: string;
+  caption: string;
+  lang: "ar" | "fr" | "dz" | "en";
+  kind: "photo" | "carousel" | "video";
+  status: FacebookPostStatus;
+  group_key: string | null;
+  scheduled_at: string | null;
+  media_count: number;
+  media_types: ("image" | "video")[];
+  preview_url: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  fb_post_id: string | null;
+  permalink: string | null;
+  published_at: string | null;
+  last_error: string | null;
+  stats: { reactions?: number; comments?: number; shares?: number };
+  created_at: string;
+}
+
+export interface FacebookPostRequest {
+  id: string;
+  body: string;
+  count: number | null;
+  status: "open" | "done";
+  answer: string | null;
+  created_at: string;
+}
+
+export interface FacebookReport {
+  by_status: Partial<Record<FacebookPostStatus, number>>;
+  published_this_week: number;
+  upcoming: number;
+  totals: { reactions: number; comments: number; shares: number };
+  top: { id: string; title: string; permalink: string | null; stats: FacebookPost["stats"] }[];
+  page: { name?: string; username?: string; followers_count?: number; fan_count?: number; link?: string } | null;
+  page_error: string | null;
+}

@@ -279,3 +279,5 @@ from app.models.negotiation import (  # noqa: F401
     NegotiationSetting,
     RideFareOffer,
 )
+
+from app.models.facebook import FacebookPost, FacebookPostRequest  # noqa: F401  — قناةُ فيسبوك (SPEC §٩٤)

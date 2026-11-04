@@ -90,6 +90,16 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(key="secret_token", label="التوكن السري (sk)"),
         ),
     ),
+    # **صفحةُ فيسبوك «Taxo»** (SPEC §٩٤/١) — عامٌّ بلا دولةٍ ولا مفتاحِ ميزة: العقدُ يقول «نستطيع النشر»، والمنشورُ لا يُجدوَل إلا بموافقة
+    # المالك من قسم «فيسبوك». **والرمزُ لصفحةٍ واحدة**: كلُّ نداءٍ يذهب إلى `page_id` المكتوب هنا لا غير
+    ProviderKey.FACEBOOK_PAGE: ProviderSpec(
+        key=ProviderKey.FACEBOOK_PAGE,
+        label="فيسبوك — صفحة Taxo",
+        fields=(
+            ProviderField(key="page_id", label="معرّف الصفحة", secret=False),
+            ProviderField(key="page_token", label="رمز الصفحة الطويل"),
+        ),
+    ),
     ProviderKey.TELR: ProviderSpec(
         key=ProviderKey.TELR,
         label="Telr — الدفع بالبطاقة",

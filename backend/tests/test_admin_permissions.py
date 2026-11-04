@@ -96,6 +96,8 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         "activity_alerts.receive",
         # **دفترُ وسيط الدفع** (SPEC §٨٧/٤، 2026-10-28) — ثماني عشرة، **والسادسةُ خارجَ افتراض `admin`**: «للمالك ومن يأذن له»
         "gateway_ledger.read",
+        # **قناةُ فيسبوك** (SPEC §٩٤/٢، 2026-11-04) — تسعَ عشرة، **والسابعةُ خارجَ افتراض `admin`**: النشرُ باسم الشركة ورسائلُ الصفحة
+        "facebook.manage",
     }
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == (
         permissions_service.ALL - permissions_service.SENSITIVE
@@ -107,6 +109,7 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         AdminPermission.MARKETS_MANAGE,
         AdminPermission.ACTIVITY_ALERTS_RECEIVE,
         AdminPermission.GATEWAY_LEDGER_READ,
+        AdminPermission.FACEBOOK_MANAGE,
     }
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
         AdminPermission.READ_ONLY,

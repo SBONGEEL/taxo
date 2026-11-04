@@ -7,8 +7,8 @@
 **ولا جدولَ مالٍ يُمسّ**: عمودان فارغان على الرحلة وجدولان جديدان فارغان. **والرجوعُ** يحذف الجدولين والعمودين — **ويسقط عمداً إن وُجدت
 رحلةٌ متّفقٌ على سعرها** (لا يُمحى سعرٌ دُفع عليه بتراجعٍ صامت).
 
-Revision ID: 0142
-Revises: 0141
+Revision ID: 0143
+Revises: 0142
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0142"
-down_revision = "0141"
+revision = "0143"
+down_revision = "0142"
 branch_labels = None
 depends_on = None
 
@@ -87,7 +87,7 @@ def downgrade() -> None:
     # **لا يُمحى سعرٌ متّفقٌ عليه بتراجعٍ صامت** — رحلةٌ تحمله تُسقط الرجوعَ بعلّته
     op.execute(
         "DO $$ BEGIN IF EXISTS (SELECT 1 FROM rides WHERE negotiated_fare IS NOT NULL) THEN "
-        "RAISE EXCEPTION 'rides carry negotiated_fare — downgrade of 0142 refused'; END IF; END $$"
+        "RAISE EXCEPTION 'rides carry negotiated_fare — downgrade of 0143 refused'; END IF; END $$"
     )
     op.drop_index("ix_ride_fare_offers_ride_id", table_name="ride_fare_offers")
     op.drop_table("ride_fare_offers")

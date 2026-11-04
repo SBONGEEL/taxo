@@ -127,6 +127,9 @@ const PricingZonesScreen = lazy(() =>
 const MarketsScreen = lazy(() =>
   import("@/screens/Markets").then((m) => ({ default: m.MarketsScreen })),
 );
+const FacebookScreen = lazy(() =>
+  import("@/screens/Facebook").then((m) => ({ default: m.FacebookScreen })),
+);
 const ReleasesScreen = lazy(() =>
   import("@/screens/Releases").then((m) => ({ default: m.ReleasesScreen })),
 );
@@ -573,6 +576,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <MarketsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/facebook"
+                    element={
+                      <Guarded>
+                        <FacebookScreen />
                       </Guarded>
                     }
                   />

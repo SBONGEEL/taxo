@@ -573,8 +573,8 @@ async def test_0141_creates_missing_builtin_rows_with_guidance_and_round_trips()
         await engine.dispose()
 
 
-async def test_0142_negotiation_round_trips() -> None:
-    """**`0142` («تفاوض»، §٩٢) تضيف عمودَي الرحلة وجدولَيها، ونزولُها يُسقطها كلَّها** — مقيسٌ قبلها لا مقروء. **ولا تمسّ جدولَ مال**."""
+async def test_0143_negotiation_round_trips() -> None:
+    """**`0143` («تفاوض»، §٩٢) تضيف عمودَي الرحلة وجدولَيها، ونزولُها يُسقطها كلَّها** — مقيسٌ قبلها لا مقروء. **ولا تمسّ جدولَ مال**."""
     config = alembic_config()
 
     async def shape() -> tuple[set[str], set[str]]:
@@ -584,10 +584,10 @@ async def test_0142_negotiation_round_trips() -> None:
         return columns & {"negotiation_offer", "negotiated_fare"}, tables & {"negotiation_settings", "ride_fare_offers"}
 
     try:
-        await asyncio.to_thread(command.downgrade, config, "0141")
+        await asyncio.to_thread(command.downgrade, config, "0142")
         assert await shape() == (set(), set())
         await engine.dispose()
-        await asyncio.to_thread(command.upgrade, config, "0142")
+        await asyncio.to_thread(command.upgrade, config, "0143")
         assert await shape() == ({"negotiation_offer", "negotiated_fare"}, {"negotiation_settings", "ride_fare_offers"})
         async with engine.begin() as conn:
             enabled = (await conn.execute(text(

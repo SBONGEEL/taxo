@@ -33,6 +33,8 @@ import { Icon, Wordmark } from "@/taxo2";
 /** **صلاحيةُ «الملخّصات المالية»** (SPEC §٦٥-د/٧) — **لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل**، فبندُها يُرسم لمن مُنحها بالاسم وحدَه
  *  (`useMyPermissions` — بندٌ لا يُرسم قبل الجواب ولا يظهر ثمّ يختفي). **والدورُ لا يقولها**: `adminOnly` يرسم البندَ لكلِّ `admin`، وأكثرُهم يُردّ عنها. */
 const FINANCE_SUMMARY = "finance.summary";
+/** قناةُ فيسبوك (SPEC §٩٤/٢) — صلاحيّةٌ حسّاسةٌ تُعطى بالاسم */
+const FACEBOOK_MANAGE = "facebook.manage";
 
 /** المجموعاتُ كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». **والأيقونةُ من الهوية** (Material Symbols Rounded). */
 const GROUPS: {
@@ -120,6 +122,7 @@ const GROUPS: {
     items: [
       { label: "التقارير والإحصاءات", icon: "bar_chart", to: "/reports" },
       { label: "الإشعارات الجماعية", icon: "campaign", to: "/campaigns", adminOnly: true },
+      { label: "فيسبوك", icon: "campaign", to: "/facebook", permission: FACEBOOK_MANAGE },
     ],
   },
   {

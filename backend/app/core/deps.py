@@ -275,6 +275,8 @@ MarketsManager = Annotated[User, _perm(AdminPermission.MARKETS_MANAGE)]
 # **إشعاراتُ النشاط** (SPEC §٨١) — المالكُ افتراضاً، وغيرُه بمنحٍ بالاسم
 ActivityAlertsReceiver = Annotated[User, _perm(AdminPermission.ACTIVITY_ALERTS_RECEIVE)]
 GatewayLedgerReader = Annotated[User, _perm(AdminPermission.GATEWAY_LEDGER_READ)]
+# **قناةُ صفحة فيسبوك** (SPEC §٩٤/٢) — خارجَ افتراض `admin`، تُمنح بالاسم
+FacebookManager = Annotated[User, _perm(AdminPermission.FACEBOOK_MANAGE)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #
