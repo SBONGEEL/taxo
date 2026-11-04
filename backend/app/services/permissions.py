@@ -81,6 +81,8 @@ SENSITIVE: frozenset[AdminPermission] = frozenset(
         AdminPermission.ACTIVITY_ALERTS_RECEIVE,
         # **والسادسةُ دفترُ وسيط الدفع** (SPEC §٨٧/٤) — بنصِّ المالك «للمالك ومن يأذن له»: معاملاتُ حساب التاجر كلُّها
         AdminPermission.GATEWAY_LEDGER_READ,
+        # **والسابعةُ قناةُ فيسبوك** (SPEC §٩٤/٢) — النشرُ باسم الشركة ورسائلُ الصفحة: للمالك ومن يمنحه بالاسم
+        AdminPermission.FACEBOOK_MANAGE,
     }
 )
 

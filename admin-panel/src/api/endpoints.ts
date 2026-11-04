@@ -6,6 +6,7 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
+import type { FacebookPost, FacebookPostRequest, FacebookReport } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2530,3 +2531,32 @@ export const alertSamples = () => api.get<AlertSample[]>("/admin/alerts/samples"
 /** **المعاينة** — إشعارٌ حقيقيٌّ بالنوع إلى أجهزتي وحدَها، بوسم «معاينة»، ولا يُكتب منه شيء */
 export const sendTestAlert = (payload: { kind: string; country_code?: CountryCode; count?: number }) =>
   api.post<AlertTestResult>("/admin/alerts/test", payload);
+
+// ------------------------------------------------- قناةُ فيسبوك (SPEC §٩٤/٢) — بصلاحيّة `facebook.manage`
+
+export const listFacebookPosts = () => api.get<FacebookPost[]>("/admin/facebook/posts");
+export const approveFacebookPost = (id: string) => api.post<FacebookPost>(`/admin/facebook/posts/${id}/approve`);
+export const decideFacebookPost = (id: string, decision: "changes_requested" | "rejected", note: string) =>
+  api.post<FacebookPost>(`/admin/facebook/posts/${id}/decide`, { decision, note: note || null });
+export const rescheduleFacebookPost = (id: string, scheduledAt: string) =>
+  api.post<FacebookPost>(`/admin/facebook/posts/${id}/reschedule`, { scheduled_at: scheduledAt });
+export const editFacebookPost = (id: string, body: { title?: string; caption?: string }) =>
+  api.patch<FacebookPost>(`/admin/facebook/posts/${id}`, body);
+export const approveFacebookGroup = (groupKey: string) =>
+  api.post<FacebookPost[]>(`/admin/facebook/groups/${encodeURIComponent(groupKey)}/approve`);
+export const syncFacebook = () => api.post<{ imported: number; updated: number }>("/admin/facebook/sync");
+export const facebookReport = () => api.get<FacebookReport>("/admin/facebook/report");
+export const listFacebookRequests = () => api.get<FacebookPostRequest[]>("/admin/facebook/requests");
+export const addFacebookRequest = (body: string, count: number | null) =>
+  api.post<FacebookPostRequest>("/admin/facebook/requests", { body, count });
+export const closeFacebookRequest = (id: string, answer: string) =>
+  api.post<FacebookPostRequest>(`/admin/facebook/requests/${id}/done`, { answer: answer || null });
+
+/** **صورةُ المنشور أو الفيديو من التخزين** — خلف الجلسة، فتُقرأ بترويسة الدخول وتُعرض رابطاً محلّيّاً يُغلق بعد العرض. */
+export async function facebookMediaBlob(id: string, index: number): Promise<string> {
+  const answer = await fetch(`${API_URL}/admin/facebook/posts/${id}/media/${index}`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) throw new Error("تعذّر فتح الصورة");
+  return URL.createObjectURL(await answer.blob());
+}

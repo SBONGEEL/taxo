@@ -609,6 +609,9 @@ class ProviderKey(StrEnum):
     # (`payment_providers.integration`) لا بمفتاح ميزة: العقدُ يقول «نستطيع»، والطريقةُ المفعَّلةُ تقول «نعرض»
     CHARGILY = "chargily"
     SOFIZPAY = "sofizpay"
+    # **صفحةُ فيسبوك «Taxo»** (SPEC §٩٤/١) — عقدٌ عامٌّ لا لكلِّ دولة: معرّفُ الصفحة ورمزُها الطويلُ معمّيان، **ولصفحةٍ واحدةٍ وحدَها**:
+    # الرمزُ لا يُستعمل على غير الصفحة المكتوبة في العقد
+    FACEBOOK_PAGE = "facebook_page"
 
 
 class GatewayFeeBearer(StrEnum):
@@ -1375,6 +1378,9 @@ class AdminPermission(StrEnum):
     #: **«للمالك ومن يأذن له من المشرفين»** — فلا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل (`permissions.SENSITIVE`)، وتُمنح بالاسم.
     #: **والرصيدُ للمالك وحدَه** (دورُه لا هذه الصلاحية)
     GATEWAY_LEDGER_READ = "gateway_ledger.read"
+    #: **قناةُ صفحة فيسبوك «Taxo»** (SPEC §٩٤/٢) — حسّاسة: النشرُ باسم الشركة، ورسائلُ الصفحة وتعليقاتُها بياناتٌ شخصيّة.
+    #: فلا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل (`permissions.SENSITIVE`)، والمالكُ يملكها بدوره، وغيرُه بمنحٍ بالاسم.
+    FACEBOOK_MANAGE = "facebook.manage"
 
 
 # ----------------------------------------- تقاريرُ الأعطال (2026-09-20، تقاريرُ الأعطال)
@@ -1440,3 +1446,18 @@ class ErrorSort(StrEnum):
     LAST_SEEN = "last_seen"
     FIRST_SEEN = "first_seen"
     EVENTS = "events"
+
+
+class FacebookPostStatus(StrEnum):
+    """سلّمُ حال منشورٍ في قناة فيسبوك (SPEC §٩٤/٢) — **مرآتُه في اللوحة **.
+
+    في القاعدة **نصٌّ بقيدٍ لا نوعَ تعداد** ()، والتعدادُ هنا مصدرُ القيم للقيد وللّوحة معاً.
+    """
+
+    PENDING_REVIEW = "pending_review"
+    CHANGES_REQUESTED = "changes_requested"
+    APPROVED = "approved"
+    SCHEDULED = "scheduled"
+    PUBLISHED = "published"
+    REJECTED = "rejected"
+    FAILED = "failed"

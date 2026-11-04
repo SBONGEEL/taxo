@@ -28,6 +28,7 @@ from app.routers import (
     admin_missions,
     admin_referrals,
     admin_releases,
+    admin_facebook,
     admin_sharing,
     admin_providers,
     admin_rides,
@@ -136,6 +137,7 @@ api_router.include_router(admin_policies.router)
 api_router.include_router(admin_site.router)
 api_router.include_router(admin_referrals.router)
 api_router.include_router(admin_releases.router)
+api_router.include_router(admin_facebook.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 # **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١) — طرقُ الدفع لكلِّ دولة وطابورُ الموظّف الماليّ، ووجهُه للراكب والكبتن والـwebhook

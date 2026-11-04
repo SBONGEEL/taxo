@@ -275,3 +275,5 @@ from app.models.admin_alert import (  # noqa: F401
     AdminAlertRead,
     AdminAlertSettings,
 )
+
+from app.models.facebook import FacebookPost, FacebookPostRequest  # noqa: F401  — قناةُ فيسبوك (SPEC §٩٤)
