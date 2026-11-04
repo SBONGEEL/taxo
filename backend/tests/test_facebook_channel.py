@@ -7,6 +7,8 @@ import uuid
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 
+import secrets
+
 import pytest
 from httpx import AsyncClient
 
@@ -14,7 +16,9 @@ from app.services.facebook import graph, posts as fb_posts
 from tests.conftest import _staff_headers
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
-PAGE = graph.Page(page_id="111", token="SECRET-TOKEN-VALUE")
+#: رمزٌ **مولَّدٌ لا حرفيّ** (APPROVALS-62 §١٥) — ما يُختبر أنه لا يظهر في رسالة خطأ
+FAKE_PAGE_KEY = secrets.token_urlsafe(24)
+PAGE = graph.Page(page_id="111", token=FAKE_PAGE_KEY)
 
 
 async def fb_manager(client: AsyncClient, admin_headers: dict, phone: str = "+962790000081") -> dict:
@@ -176,5 +180,5 @@ async def test_sync_imports_and_tracks_publication(client, admin_headers, monkey
 
 
 def test_token_never_leaves_in_an_error() -> None:
-    assert "SECRET-TOKEN-VALUE" not in PAGE.scrub("bad token SECRET-TOKEN-VALUE here")
+    assert FAKE_PAGE_KEY not in PAGE.scrub(f"bad {FAKE_PAGE_KEY} here")
     assert not PAGE.owns("999_1") and PAGE.owns("111_1")

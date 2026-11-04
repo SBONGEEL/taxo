@@ -369,6 +369,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - الشكلُ الثامنُ والعشرون — **عملٌ يبقى على القرص لأن ما قبل إيداعه لم ينتهِ، فيُقرأ في الجولة التالية «ليس منّي»** (قِيس ٢٠٢٦-٠٩-١٥) → `PATTERNS.md`
 - القياسُ الصادقُ لا يأذن بفعلٍ خارج نطاقه (2026-08-25) → `PATTERNS.md`
+- الحذفُ بمطابقةٍ نصّيةٍ على كودٍ متعددِ الأسطر يُتلف — والمُحلِّلُ هو الأداة (2026-08-20) → `PATTERNS.md`
 - وللعائلة وجهٌ خامس — **حاويةٌ تخدم `dist` والمصدرُ يتغيّر تحتها** (قِيس 2026-08-26) → `PATTERNS.md`
 - متغيّرٌ واحدٌ في كلِّ مرّة — لا فعلان يمسّان سطحاً واحداً في يوم (2026-08-25) → `PATTERNS.md`
 - الشكلُ السادسَ عشر — **اسمٌ يُبحث عنه نصّاً، ونداءٌ بمفتاحٍ متغيّر** (2026-08-25) → `PATTERNS.md`
@@ -587,14 +588,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > تصير طقساً يُمرّ عليه؛ **واستثناءُ ما يصيح على السليم** (`money(value)` بلا
 > عملة) — حارسٌ يصيح على سليمٍ يُطفأ، فيسقط معه ما يمسكه حقاً.
 
-**وسطرٌ من واقع 2026-08-20 يخصّ التعديلَ الآليَّ نفسَه**: **الحذفُ بمطابقةٍ
-نصّيةٍ على كودٍ متعددِ الأسطر يُتلف.** عدُّ أقواسٍ ساذجٌ لحذف دالّةٍ قطع توقيعاً
-يمتدّ على سطرين ونوعُ عودته يحمل `{`، فترك `validation.ts` نصفَ ملف.
-**والمُحلِّلُ هو الأداة** — `ts.createSourceFile` يعطي مدى العقدة بحدّه، ومعه
-تعليقُه السابق. **وgit هو ما أنقذ**: `git checkout --` أعاد الملفَّ في ثانية.
-فأيُّ كنسٍ عريضٍ لاحقاً **يبدأ من شجرةٍ نظيفةٍ مودَعة**، لا من شجرةٍ فيها عملُ
-ساعةٍ لم يُلتزَم.
-
 <!--جديد-->
 ## الوقوفُ للضرورة لا للاستئذان (قرارُ المالك 2026-08-28) — **تحكم متى تقف لا ما تدّعيه**
 
@@ -683,6 +676,9 @@ one paragraph; disabling costs the feature, and it is invisible to whoever expec
 **Never stop:**
 - to present a table — put it in the report and carry on;
 - to get permission to fix a defect you found;
+<!--جديد-->
+- for a purely technical choice — a test fix, a scanner false positive on my own code, re-running gates: decide, tell him after (owner, 2026-11-04). Ask only about money, the database, personal data, or what users see; the absolutes stand.
+<!--/جديد-->
 - to confirm a condition he already recorded;
 - to announce that you are about to begin;
 - for a question that **measurement settles**: if you measured and one reasonable answer stands, do it
