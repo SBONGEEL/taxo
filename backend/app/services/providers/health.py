@@ -96,6 +96,32 @@ async def _test_payout(values: dict[str, Any]) -> str:
     return await build_provider(values).test_connection()
 
 
+async def _test_facebook(values: dict[str, Any]) -> str:
+    """**يقرأ الصفحةَ نفسَها ويقول اسمَها** — ويرفض معرّفاً لا يطابق ما يعيده فيسبوك.
+
+    فيسبوك يقبل اسمَ المستخدم (`taxoapp`) في المسار ويعيد المعرّفَ الرقميّ؛ **والقناةُ تحتاج الرقميّ**: معرّفُ كلِّ منشورٍ
+    `{رقم الصفحة}_{رقم المنشور}`، و`Page.owns` يقارنه ببداية `page_id` — فاسمُ مستخدمٍ في العقد يجعل كلَّ منشورٍ «ليس للصفحة».
+    """
+    from app.services.facebook import graph
+
+    page_id = str(values.get("page_id") or "").strip()
+    token = str(values.get("page_token") or "").strip()
+    if not page_id or not token:
+        raise AppError("عقد فيسبوك ناقص معرّف الصفحة أو الرمز")
+    page = graph.Page(page_id=page_id, token=token)
+    try:
+        info = await graph.summary(page)
+    except graph.FacebookError as exc:
+        # **نصُّ فيسبوك منظَّفٌ من الرمز** في `_send` — فيُقرأ كما هو
+        raise AppError(f"فيسبوك رفض: {exc}") from None
+    real_id = str(info.get("id") or "")
+    if real_id != page_id:
+        raise AppError(f"المعرّفُ في العقد ليس رقمَ الصفحة — اكتب {real_id or 'المعرّفَ الرقميّ'} بدل {page_id}")
+    followers = info.get("followers_count")
+    tail = f" · {followers} متابع" if followers is not None else ""
+    return f"صفحة «{info.get('name') or page_id}» ({real_id}){tail}"
+
+
 async def _run(
     provider_key: ProviderKey, values: dict[str, Any], test_phone: str | None
 ) -> str:
@@ -118,7 +144,13 @@ async def _run(
         from app.services import payment_gateways
 
         return await payment_gateways.build(provider_key.value, values).test_connection()
-    return await _test_payout(values)
+    if provider_key is ProviderKey.FACEBOOK_PAGE:
+        return await _test_facebook(values)
+    if provider_key is ProviderKey.PAYOUT:
+        return await _test_payout(values)
+    # **لا سقوطَ إلى اختبار عقدٍ آخر** (عطبٌ مقيسٌ ٢٠٢٦-١١-٠٥): كان كلُّ مفتاحٍ بلا فرعٍ يُختبر بعقد التحويلات، فقالت بطاقةُ
+    # فيسبوك «عقد التحويلات الآلية ناقص العنوان» — جوابٌ عن عقدٍ آخر يُقرأ جواباً عن هذا
+    raise AppError("لا اختبارَ مبنيٌّ لهذا العقد بعد")
 
 
 async def test_credential(
