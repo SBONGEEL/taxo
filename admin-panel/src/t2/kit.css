@@ -583,8 +583,15 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   padding: 4px;
   border-radius: 99px;
   background: var(--t2-surface);
+  /* **يمرّر داخل وعائه ولا يدفع الصفحة** (قِيس ٢٠٢٦-١١-٠٥): ستُّ تبويباتٍ في «فيسبوك» على ٣٩٠ بكسل جعلت الصفحةَ كلَّها
+     تمرّ أفقيّاً ١٨٦ بكسل */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.ad-seg::-webkit-scrollbar { display: none; }
 .ad-seg-opt {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
