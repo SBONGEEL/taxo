@@ -40,6 +40,8 @@ COVERED_ELSEWHERE: dict[str, str] = {
     " بتعديلِ مركبة",
     "offers": "يحرسه `test_subscriptions_concurrency.py` — عرضٌ بحدِّ استعمالٍ"
     " واحدٍ لا يُمنح مرتين",
+    "posts": "منشوراتُ فيسبوك (`services/facebook/posts.py`) — يحرسه `test_facebook_channel.py`: موافقتان معاً"
+    " بتداخلٍ مقصود ودفعتان معاً لموافقةٍ واحدة، وكلاهما يسقط بحذف القفل",
     "promo": "يحرسه `test_promo_concurrency.py`",
     "rides": "يحرسه `test_multi_stop_concurrency.py` و"
     "`test_ride_sharing_join_concurrency.py`",
