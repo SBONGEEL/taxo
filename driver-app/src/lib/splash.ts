@@ -57,7 +57,7 @@ export function splashText(status: Exclude<SplashStatus, null>): string {
   return status === "offline"
     ? tr("لا يوجد اتصال بالإنترنت")
     : status === "unreachable"
-      ? tr("تعذّر الوصول إلى الخدمة")
+      ? `${tr("تعذّر الوصول إلى الخدمة")} — ${tr("تحقّق من اتصالك بالإنترنت — نعيد المحاولة تلقائيّاً")}`
       : tr("لم يصل الجواب بعد — جارٍ المحاولة");
 }
 

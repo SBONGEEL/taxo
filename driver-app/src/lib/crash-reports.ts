@@ -317,6 +317,22 @@ export async function sendUserReport(
   }
 }
 
+/** **فشلُ الوصول عند الإقلاع** (حادثةُ ٢٠٢٦-١١-٠٤) — يُعدّ في شاشة «الأعطال» مجموعةً لكلِّ رمز.
+ *
+ * **لا عنوانَ ولا رابطَ ولا هويّة**: الاسمُ ثابتٌ والرسالةُ رمزٌ فنّيٌّ من أربعة (`network_timeout`…)، فكلُّ الأجهزة
+ * التي سقطت بالرمز نفسِه **مجموعةٌ واحدةٌ تُعدّ**. ويُحفظ في الطابور حين لا يصل، ويُرسل مع أوّل اتصالٍ ينجح. */
+export function reportNetworkFailure(code: string): void {
+  const error = new Error(`boot ${code}`.slice(0, 60));
+  error.name = "NetworkError";
+  error.stack = undefined;
+  capture("error", error, null);
+}
+
+/** يُفرِغ الطابورَ من خارج الوحدة — بعد أن ينجح أوّلُ نداء. */
+export function flushCrashReports(): void {
+  void flush();
+}
+
 /** يُركَّب مرّةً عند الإقلاع — **قبل أيِّ شاشة**. */
 export function installCrashReports(app: CrashApp): void {
   if (currentApp) return;

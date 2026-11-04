@@ -227,7 +227,7 @@ export function Welcome({
     >
       <div className="rw-stage" style={{ ["--rw-scale" as string]: String(scale) }}>
         <div className="rw-cam">
-          <img src={dark ? "/welcome/amman-night.svg" : "/welcome/amman-day.svg"} alt="" />
+          <img src={dark ? "/welcome/map-night.svg" : "/welcome/map-day.svg"} alt="" />
           {LABELS.map(([text, x, y]) => (
             <span key={text} className="rw-label" style={{ left: x, top: y }}>
               {text}

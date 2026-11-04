@@ -324,7 +324,7 @@ export function Welcome({
   const onPages = phase === "pages" || (phase === "leaving" && next !== undefined);
   const [mx, my] = MAP_AT[page];
   const waiting = phase === "hold" && held && !booted && splash.status;
-  const mapSrc = dark ? "/welcome/amman-night.svg" : "/welcome/amman-day.svg";
+  const mapSrc = dark ? "/welcome/map-night.svg" : "/welcome/map-day.svg";
 
   return (
     <div
