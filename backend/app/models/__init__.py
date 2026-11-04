@@ -281,3 +281,9 @@ from app.models.negotiation import (  # noqa: F401
 )
 
 from app.models.facebook import FacebookPost, FacebookPostRequest  # noqa: F401  — قناةُ فيسبوك (SPEC §٩٤)
+from app.models.site_stats import (  # noqa: F401  — «الإحصاءات»
+    PlayStatsDaily,
+    SiteDaily,
+    SiteDownloadDaily,
+    StatsImport,
+)

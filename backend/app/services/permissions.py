@@ -83,6 +83,7 @@ SENSITIVE: frozenset[AdminPermission] = frozenset(
         AdminPermission.GATEWAY_LEDGER_READ,
         # **والسابعةُ قناةُ فيسبوك** (SPEC §٩٤/٢) — النشرُ باسم الشركة ورسائلُ الصفحة: للمالك ومن يمنحه بالاسم
         AdminPermission.FACEBOOK_MANAGE,
+        AdminPermission.STATS_VIEW,
     }
 )
 
