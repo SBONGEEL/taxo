@@ -64,3 +64,15 @@ Community انتهت (اليوم ١٦/١٦ في ٣ نوفمبر)، فكلُّ ي
 - **(ب) قِيس اليوم ✓**: `t2-exit-hint` في حزمتَي `driver.tajora.ly` (`index-DbsZPq8Z.js`) و`app.tajora.ly` (`index-WbFjuHvU.js`) — زرُّ الرجوع على الإنتاج.
 - **8.** Since the review we shipped builds 960, 975, 994 and 1025: a security update, edge-to-edge display, a back button that closes one layer at a time, and sign-in kept if the app is killed. From feedback: a 4-card tour, a Share button and a new store listing.
 - **10.** This time 12 testers stayed opted in for the full 14 days, and we shipped four closed builds after the review (960, 975, 994, 1025), each with real changes and honest notes. Testers tried every screen in guest mode, and each fix was checked on the live closed build.
+
+## ٢٠٢٦-١١-٠٥ — ردُّ Testers Community، وأمرُ المالك بالتقديم في ٨ نوفمبر
+
+- **ردُّ Testers Community** (بريدٌ إلى المالك، نقله في المحادثة ٢٠٢٦-١١-٠٥): طلبوا من مختبريهم **الاستمرارَ في الاختبار استثناءً**
+  بعد انتهاء الدورة (١٦/١٦ في ٣ نوفمبر)، **ونصحوا بطلب الوصول إلى الإنتاج في أقرب وقتٍ ممكن**.
+- **أمرُ المالك (٢٠٢٦-١١-٠٥) — يحلّ محلَّ «لا يُرسل الطلبُ إلا بكلمة المالك» لهذا الطلب وحده:**
+  1. **في ٢٠٢٦-١١-٠٨** يُقدَّم طلبُ الوصول إلى الإنتاج لـTAXO Driver **حالما تسمح به Play Console** (العدّادُ «14 يوماً» و١٢ فأكثر)،
+     **بلا انتظار المالك**، بالأجوبة المعدّة في `design/PLAY-PRODUCTION-APPLICATION.md` **محدَّثةً بأرقام يوم التقديم الحقيقيّة**.
+  2. **حتى ذلك اليوم**: قراءةُ عدد المختبرين والأعطال يوميّاً؛ **وإن نزل العددُ تحت ١٢ يُبلَّغ المالكُ فوراً**.
+  3. **بعد الإرسال**: يُبلَّغ المالكُ بوقت الإرسال (UTC) وبالحالة كما تظهر في الكونسول.
+- **وما لم يتغيّر**: لا مساسَ بمسار الإنتاج ولا إصدارَ عليه إن قُبل الطلب (يُبلَّغ المالكُ وينتظر)، ولا إيقافَ للاختبار المغلق،
+  ولا حذفَ لقائمة مختبرين؛ وإن طلب Google رمزاً أو كلمةَ مرور: وقوفٌ وسؤال.
