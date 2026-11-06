@@ -21,7 +21,7 @@ from app.services import site_stats
 from app.services.providers import credentials as provider_credentials
 
 SCOPE = "https://www.googleapis.com/auth/devstorage.read_only"
-TOKEN_URI = "https://oauth2.googleapis.com/token"
+OAUTH_ENDPOINT = "https://oauth2.googleapis.com/token"
 TIMEOUT = httpx.Timeout(30.0)
 
 
@@ -40,8 +40,8 @@ def _private_key(raw: str) -> str:
 
 async def _token(client: httpx.AsyncClient, email: str, key: str) -> str:
     now = int(time.time())
-    assertion = jwt.encode({"iss": email, "scope": SCOPE, "aud": TOKEN_URI, "iat": now, "exp": now + 600}, key, algorithm="RS256")
-    r = await client.post(TOKEN_URI, data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion": assertion})
+    assertion = jwt.encode({"iss": email, "scope": SCOPE, "aud": OAUTH_ENDPOINT, "iat": now, "exp": now + 600}, key, algorithm="RS256")
+    r = await client.post(OAUTH_ENDPOINT, data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion": assertion})
     if r.status_code != 200:
         raise PlayReportsError(f"تبادلُ الرمز رُفض ({r.status_code})")
     return r.json()["access_token"]

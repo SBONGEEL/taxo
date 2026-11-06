@@ -18,7 +18,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-SECRET = Path.home() / ".taxo-secrets" / "cloudflare-delicate-block-888e.txt"
+CREDS_FILE = Path.home() / ".taxo-secrets" / "cloudflare-delicate-block-888e.txt"
 WORKER = Path(__file__).resolve().parent.parent / "ops" / "uptime-worker" / "worker.js"
 NAME = "taxo-uptime"
 KV_TITLE = "taxo-uptime-state"
@@ -27,7 +27,7 @@ API = "https://api.cloudflare.com/client/v4"
 
 
 def creds() -> tuple[str, str]:
-    lines = [line.strip() for line in SECRET.read_text(encoding="utf-8").splitlines()]
+    lines = [line.strip() for line in CREDS_FILE.read_text(encoding="utf-8").splitlines()]
     return lines[lines.index("Account ID") + 1], lines[lines.index("Your API Token") + 1]
 
 
