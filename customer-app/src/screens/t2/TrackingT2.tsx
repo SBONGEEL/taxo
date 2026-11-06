@@ -54,6 +54,7 @@ import { currencyLabel, DISPLAY_LOCALE, formatAmount, formatDistance, ratedAvera
 import { CommsButtonsT2 } from "./CommsT2";
 import { ForOtherTrackT2 } from "./ForOtherT2";
 import { HourlyTrackT2 } from "./HourlyT2";
+import { NegotiationTrackT2 } from "./NegotiationT2";
 import { ParcelTrackT2 } from "./ParcelT2";
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
@@ -165,8 +166,14 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   /** شارتا الطلب — **وصفٌ لما طُلب** كما في الورقة القائمة: «رحلة نسائية» تطمينٌ بأن الشرطَ سارٍ، والمشاركةُ بحاليها. */
   const badges =
-    t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly || commute ? (
+    t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly || commute || ride.negotiation_offer ? (
       <div className="t2-trk-badges">
+        {/* **«تفاوض»** (§٩٢) — «سعرك» أثناء البحث، و«سعرٌ متّفقٌ عليه» بعد القبول */}
+        {ride.negotiated_fare ? (
+          <span className="t2-trk-badge">{tr("سعرٌ متّفقٌ عليه")}{" "}{formatAmount(ride.negotiated_fare, ride.currency)}</span>
+        ) : ride.negotiation_offer ? (
+          <span className="t2-trk-badge">{tr("سعرك")}</span>
+        ) : null}
         {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — رحلةٌ من اشتراكه، من الصفّ لا من المفتاح */}
         {commute ? <span className="t2-trk-badge">{tr("مشوارٌ ثابت")}</span> : null}
         {/* **«طرد»** (§٦٣-ج/٤) — وصفٌ لما طُلب كأخواتها، من الصفّ لا من المفتاح */}
@@ -263,7 +270,11 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* **«انتظري، نوسّع البحث» اختارته هي** (§٦٤-ج/٤-٣، `search_widened`) — فالسطرُ يقول ما يقع الآن **بلا عددٍ ولا نصفِ قطر**:
             عددُ الكبتنات القريبات لم يُقَل (`APPROVALS-62` §٦-٢)، **ولا يُلحق به عددُ السيارات** ولو وصل */}
         <p className="t2-trk-sub">
-          {ride.search_widened ? tr("نوسّع البحث بين الكبتنات…") : tr("نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين")}
+          {ride.search_widened
+            ? tr("نوسّع البحث بين الكبتنات…")
+            : ride.negotiation_offer
+              ? tr("نعرض سعرك على كبتنٍ واحدٍ في كلِّ مرّة")
+              : tr("نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين")}
           {/* **والعددُ لا ينفصل عن معدوده** آخرَ السطر (` `) — قِيس: «6» وحدَها آخرَ سطرٍ و«كباتن» أوّلَ تاليه */}
           {nearby && !ride.search_widened ? tr(". {0}{1} الآن.", { 0: nearby > 2 ? `${nearby} ` : "", 1: nearbyLabel(nearby) }) : ""}
         </p>
@@ -290,7 +301,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
               {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
                   ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤). والمشوارُ الثابتُ بسعره المجمَّد في الحالين */}
               <span dir="ltr" className="t2-num">
-                {formatAmount(ride.rider_estimate, ride.currency)}
+                {formatAmount(ride.negotiation_offer ?? ride.rider_estimate, ride.currency)}
               </span>{" "}
               {currencyLabel(ride.currency)}
             </div>
@@ -302,6 +313,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {parcel ? <ParcelTrackT2 ride={ride} /> : null}
         {/* **والساعات** (§٦٣-ج/٥): عددُها وكيلومتراتُها، ومن أين يُدفع محجوزُها بزرِّ تبديله — من أوّل البحث */}
         {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
+        {/* **«تفاوض»** (§٩٢): العرضُ المقابلُ بقبوله ورفضه، وتغييرُ السعر */}
+        {ride.negotiation_offer ? <NegotiationTrackT2 ride={ride} onChanged={onChanged} /> : null}
         {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
         {t.women ? (
           <p className="t2-note">

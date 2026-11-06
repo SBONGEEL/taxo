@@ -39,6 +39,7 @@ import {
   arriveAtStop,
   beginPause,
   cancelRide,
+  counterFare,
   declineRide,
   refuseParcel,
   resumeFromStop,
@@ -83,6 +84,7 @@ import { RideT2 } from "@/screens/t2/RideT2";
 import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
 import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
+import { useRide } from "@/lib/ride";
 import { Icon, Wordmark } from "@/taxo2";
 
 import { countBookings, countCommutes, countRides, hoursClock } from "./count";
@@ -93,6 +95,7 @@ import "./guarantees.css"; import { tr } from "@/lib/i18n";
 import { useBackLayer } from "@/lib/back-layers";
 
 export function HomeT2Screen() {
+  const { holdOffer } = useRide();
   const {
     navigate,
     user,
@@ -461,6 +464,14 @@ export function HomeT2Screen() {
               dismissOffer();
             })
           }
+          // **«سعر آخر»** (§٩٢-أ/٣) — يُرسل كما كُتب، والبطاقةُ تبقى بمهلة جواب الراكب؛ ورفضُه يصل بنصّ الخلفية
+          onCounter={(amount) =>
+            run(async () => {
+              const sent = await counterFare(offer.ride.id, amount);
+              holdOffer(sent.amount, sent.expires_in_seconds);
+            })
+          }
+          counterError={actionError}
         />
       ) : null}
 

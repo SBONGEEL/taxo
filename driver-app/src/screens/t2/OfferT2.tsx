@@ -39,6 +39,8 @@ import { digits } from "@/lib/utils";
 import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { hoursLabel, noDestination } from "@/screens/t2/HourlyT2";
 import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
+import { useState } from "react";
+
 import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** محيطُ الحلقة كما رُسمت: `r=25` ⇒ ٢π×٢٥ ≈ ١٥٧ (`stroke-dasharray="157"` في اللوحة). */
@@ -53,6 +55,8 @@ export function OfferT2({
   over,
   onAccept,
   onDecline,
+  onCounter,
+  counterError = null,
 }: {
   offer: Offer;
   /** **دقائقُ الطريق إلى الراكب** من مسار العرض (§٦٢-ج/١٠) — و`null` حتى تُعرف أو حيث المفتاحُ مطفأ. */
@@ -64,6 +68,10 @@ export function OfferT2({
   over: boolean;
   onAccept: () => void;
   onDecline: () => void;
+  /** **«سعر آخر»** (SPEC §٩٢-أ/٣) — لطلب «تفاوض» وحدَه؛ ويُرسل السعرُ كما كُتب */
+  onCounter?: (amount: string) => Promise<void> | void;
+  /** **رفضُ الخلفية لسعرك** بنصّها — تحت الحقل */
+  counterError?: string | null;
 }) {
   const left = useOfferCountdown(offer);
   const offset = Math.round((1 - left / offer.totalSeconds) * DASH);
@@ -74,6 +82,9 @@ export function OfferT2({
   const hours = ride.ride_type === "hourly" ? ride.hourly_hours : null;
   // **«الدفع: كاش» كما يرى الفئة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — من صفِّ الرحلة، و`null` لا يُرسم شيئاً
   const methodLabel = ride.payment_method_hint ? tr("الدفع: {0}", { 0: METHOD_LABEL[ride.payment_method_hint] }) : null;
+  // **«تفاوض»** (§٩٢) — سعرُ الراكب هو الرقمُ الكبير، **وقبولُك قبولٌ به**؛ والمقدَّرُ سطرٌ تحته ليقرّر به
+  const bargain = ride.negotiation_offer;
+  const [counter, setCounter] = useState<string | null>(null);
 
   return (
     <>
@@ -129,13 +140,24 @@ export function OfferT2({
                 {/* **ما سيقبضه مقرَّباً كما يُعرض على الراكب** (`current_fare`، SPEC §٧٠-ج/٤) — لا `estimated_fare` الدقيقة؛
                     ومطفأً هما سواء. وإشعارُ العرض في الخلفية يقول الرقمَ نفسَه */}
                 <span className="t2-of-fare-num" dir="ltr">
-                  {digits(ride.current_fare)}
+                  {digits(offer.countered ?? bargain ?? ride.current_fare)}
                 </span>
                 <span className="t2-of-fare-cur">{currencyLabel}</span>
               </div>
             </div>
           </div>
 
+          {/* **«تفاوض»** (§٩٢) — سعرُ من؟ والمقدَّرُ للمقارنة، وبعد «سعر آخر» حالُه */}
+          {bargain ? (
+            <div className="t2-of-tags">
+              <span className="t2-of-tag">
+                {offer.countered
+                  ? tr("سعرُك — بانتظار جواب الراكب على")
+                  : tr("سعرُ الراكب — المقدَّر")}{" "}
+                {digits(offer.countered ? bargain : ride.current_fare)} {currencyLabel}
+              </span>
+            </div>
+          ) : null}
           {/* **شاراتُ الطلب — بنصّها وشرطها من `OfferSheet` حرفاً**، وتُقرأ قبل القبول لا بعده */}
           <OfferTags offer={offer} currencyLabel={currencyLabel} />
           {/* **من يدفع رحلةً لشخصٍ آخر — يُقرأ قبل القبول** (§٦٣-ج/١): نقدٌ من الراكب الفعليّ، أو لا شيءَ يُقبض أصلاً.
@@ -166,14 +188,45 @@ export function OfferT2({
             </div>
           </div>
 
+          {/* **«سعر آخر»** — حقلٌ وزرّ، والسعرُ يُرسل كما كُتب (لا حسابَ هنا، §١٤) */}
+          {bargain && onCounter && !offer.countered && counter !== null ? (
+            <div className="t2-of-tags">
+              <input
+                dir="ltr"
+                inputMode="decimal"
+                autoFocus
+                aria-label={tr("سعرك")}
+                className="t2-input"
+                value={counter}
+                onChange={(event) => setCounter(event.target.value.trim())}
+              />
+              <button
+                type="button"
+                className="t2-of-accept"
+                disabled={busy || counter === ""}
+                onClick={() => void onCounter(counter)}
+              >
+                {tr("أرسل سعري")}
+              </button>
+              {counterError ? <span className="t2-of-tag warn">{counterError}</span> : null}
+            </div>
+          ) : null}
+
           <div className="t2-of-actions">
             <button type="button" className="t2-of-decline" onClick={onDecline} disabled={busy}>
-              {tr("رفض")}
+              {offer.countered ? tr("اسحب سعري") : tr("رفض")}
             </button>
-            <button type="button" className="t2-of-accept" onClick={onAccept} disabled={busy}>
-              <Icon name="check" />
-              {tr("قبول")}
-            </button>
+            {bargain && onCounter && !offer.countered && counter === null ? (
+              <button type="button" className="t2-of-decline" onClick={() => setCounter("")} disabled={busy}>
+                {tr("سعر آخر")}
+              </button>
+            ) : null}
+            {offer.countered ? null : (
+              <button type="button" className="t2-of-accept" onClick={onAccept} disabled={busy}>
+                <Icon name="check" />
+                {bargain ? tr("قبول بسعره") : tr("قبول")}
+              </button>
+            )}
           </div>
         </div>
       </div>

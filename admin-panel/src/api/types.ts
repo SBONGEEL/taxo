@@ -1046,6 +1046,8 @@ export interface AdminRideRow {
   distance_km: string;
   actual_distance_km: string | null;
   estimated_fare: string;
+  /** **«تفاوض»** (SPEC §٩٢-ج) — ما اتّفق عليه الطرفان (وهو المقدَّرةُ نفسُها بعد القبول)، و`null` بلا تفاوض */
+  negotiated_fare: string | null;
   final_fare: string | null;
   cancellation_fee: string | null;
   payment_methods: PaymentMethod[];
@@ -1961,6 +1963,24 @@ export interface DebtClaimRow {
 export type DispatchMode = "sequential" | "broadcast";
 
 /** قواعدُ التوزيع لسوق — **صارت إعداداً بعد أن كانت ثابتاً في الشيفرة**. */
+/** **«تفاوض» لسوق** (SPEC §٩٢-ب) — **والغائبُ مطفأ** ولا صفَّ له. والحدودُ صورةٌ عن قيود القاعدة. */
+export interface NegotiationSetting {
+  country_code: CountryCode;
+  enabled: boolean;
+  /** **الحدُّ الأدنى نسبةً من التقدير** (10–100) */
+  min_percent: number;
+  /** **ومبلغٌ ثابتٌ لا ينزل العرضُ تحته** — والأعلى من الاثنين يحكم؛ و`null` بلا مبلغ */
+  min_amount: string | null;
+  driver_timeout_seconds: number;
+  rider_timeout_seconds: number;
+  /** **سقفُ العرض المقابل** نسبةً فوق عرض الراكب، و`null` بلا سقف */
+  max_counter_percent: number | null;
+  /** **كم كبتناً يُعرض عليه الطلب** قبل «لا كبتن»، و`null` = محاولاتُ التوزيع */
+  max_drivers: number | null;
+  /** **الفئاتُ بمفاتيحها**، والفارغةُ = كلُّ الفئات */
+  categories: string[];
+}
+
 export interface DispatchSetting {
   country_code: CountryCode;
   mode: DispatchMode;

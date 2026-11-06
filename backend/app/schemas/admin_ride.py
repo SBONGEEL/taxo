@@ -64,6 +64,8 @@ class AdminRideRow(BaseModel):
     distance_km: Decimal
     actual_distance_km: Decimal | None
     estimated_fare: Decimal
+    #: **«تفاوض»** (SPEC §٩٢-ج) — ما اتّفق عليه الطرفان، **وهو `estimated_fare` نفسُها بعد القبول**؛ يُنشر ليُقال «سعر متفاوض عليه»
+    negotiated_fare: Decimal | None = None
     final_fare: Decimal | None
     cancellation_fee: Decimal | None
 

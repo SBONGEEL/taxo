@@ -44,6 +44,8 @@ from app.services import categories, storefront
 from app.schemas.settings import (
     DispatchSettingOut,
     DispatchSettingUpdate,
+    NegotiationSettingOut,
+    NegotiationSettingUpdate,
     CommissionSettingOut,
     OtpExhaustedOut,
     MapSettingOut,
@@ -68,6 +70,7 @@ from app.schemas.settings import (
 )
 from app.models.advance import AdvanceSetting
 from app.models.dispatch_setting import DispatchSetting
+from app.models.negotiation import NegotiationSetting
 from app.models.storefront import PromoBanner, ServiceTile
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
@@ -1100,6 +1103,54 @@ async def update_dispatch_settings(
     )
     await session.commit()
     return DispatchSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------- «تفاوض» (§٩٢-ب)
+
+
+@router.get("/negotiation", response_model=list[NegotiationSettingOut])
+async def list_negotiation_settings(_staff: StaffUser, session: DbSession) -> list[NegotiationSettingOut]:
+    """صفوفُ الأسواق المضبوطة — **والغائبُ مطفأ** ولا يُخترع له صفّ."""
+    rows = (await session.scalars(select(NegotiationSetting).order_by(NegotiationSetting.country_code))).all()
+    return [NegotiationSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/negotiation/{country_code}", response_model=NegotiationSettingOut)
+async def update_negotiation_settings(
+    country_code: CountryCode, payload: NegotiationSettingUpdate, admin: SettingsWriter, session: DbSession
+) -> NegotiationSettingOut:
+    """تشغيلُ «تفاوض» وحدُّه الأدنى ومهلُه وحدودُه (§٩٢-ب). **ويسري على الطلب التالي** — رحلةٌ في بحثها تُكمل بما بدأت به.
+
+    **والفئاتُ بمفاتيح `ride_categories` لا قائمةٌ ثانية**: مفتاحٌ لا فئةَ له في السوق يُردّ بعلّته.
+    """
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("categories"):
+        known = {row.key for row in await categories.for_country(session, country_code)} | categories.BUILTIN_KEYS
+        unknown = sorted(set(data["categories"]) - known)
+        if unknown:
+            raise InvalidInput(f"فئاتٌ لا وجودَ لها في هذا السوق: {', '.join(unknown)}", field="categories")
+    for field in ("enabled", "min_percent", "driver_timeout_seconds", "rider_timeout_seconds", "categories"):
+        if field in data and data[field] is None:
+            raise InvalidInput("هذا الحقلُ لا يُفرَّغ", field=field)
+    setting = await session.scalar(select(NegotiationSetting).where(NegotiationSetting.country_code == country_code))
+    if setting is None:
+        setting = NegotiationSetting(country_code=country_code, categories=[])
+        session.add(setting)
+        await session.flush()
+    for field, value in data.items():
+        setattr(setting, field, value)
+    await session.flush()
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="negotiation_settings",
+        entity_id=setting.id,
+        details=payload.model_dump(exclude_unset=True, mode="json"),
+    )
+    await session.commit()
+    await session.refresh(setting)
+    return NegotiationSettingOut.model_validate(setting)
 
 
 # ─────────────────── بثُّ موقع الكبتن (§٧٥-ج) ───────────────

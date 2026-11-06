@@ -51,6 +51,9 @@ class RideEvent(StrEnum):
     STOP_WAIT_EXCEEDED = "stop_wait_exceeded"
     # **«الكبتن يقترب»** (§61-ي/١١) — للراكب وحدَه، مرّةً لكلِّ رحلة، **ولا يقرؤه التوزيعُ ولا انتقالُ الحالات**
     DRIVER_APPROACHING = "driver_approaching"
+    # **«تفاوض»** (§٩٢-أ/٤) — للراكب وحدَه: عرضٌ مقابلٌ من الكبتن بمهلة جوابه، **وانقضاؤه** (الطلبُ يمضي إلى التالي بسعره الأصليّ)
+    FARE_COUNTER = "fare_counter"
+    FARE_COUNTER_EXPIRED = "fare_counter_expired"
 
 
 class PaymentEvent(StrEnum):
@@ -256,6 +259,36 @@ async def publish_offer_expired(
         redis,
         user_channel(driver_user_id),
         {"type": RideEvent.OFFER_EXPIRED.value, "ride_id": str(ride_id)},
+    )
+
+
+async def publish_fare_counter(
+    redis: Redis,
+    *,
+    rider_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    amount: str,
+    expires_in_seconds: int,
+    driver: dict,
+) -> None:
+    """**عرضٌ مقابلٌ وصل الراكب** (§٩٢-أ/٤): قبولٌ أو رفضٌ وحدَهما، ومعه الكبتنُ ومركبتُه ليقرّر على من يعرض."""
+    await publish(
+        redis,
+        user_channel(rider_user_id),
+        {
+            "type": RideEvent.FARE_COUNTER.value,
+            "ride_id": str(ride_id),
+            "amount": amount,
+            "expires_in_seconds": expires_in_seconds,
+            "driver": driver,
+        },
+    )
+
+
+async def publish_fare_counter_expired(redis: Redis, *, rider_user_id: uuid.UUID, ride_id: uuid.UUID) -> None:
+    """انقضت مهلةُ الراكب على العرض المقابل — تُطوى بطاقتُه، والبحثُ يمضي بسعره الأصليّ."""
+    await publish(
+        redis, user_channel(rider_user_id), {"type": RideEvent.FARE_COUNTER_EXPIRED.value, "ride_id": str(ride_id)}
     )
 
 

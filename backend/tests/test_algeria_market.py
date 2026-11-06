@@ -412,3 +412,19 @@ async def test_no_algerian_row_is_seeded_with_an_invented_price() -> None:
 
     assert flags[FeatureKey.COUNTRY_VISIBLE] is False
     assert [key for key, on in flags.items() if on] == [FeatureKey.OTP_VERIFICATION_ENABLED]
+
+
+def test_negotiation_amounts_are_shaped_like_every_dinar_amount() -> None:
+    """**عرضُ الراكب على بطاقة الكبتن الجزائريّ «600» لا «600.000»** (§٩٢، ٢٠٢٦-١١-٠٦) — والأردنيُّ بثلاث خاناته كما كان."""
+    for key in ("negotiation_offer", "negotiation_minimum", "negotiation_step", "negotiation_min_amount", "negotiated_fare"):
+        assert money_wire.is_money_key(key), key
+    ride = {"currency": "DZD", "negotiation_offer": "600.000", "negotiated_fare": "600.000", "estimated_fare": "640.000"}
+    quote = {"currency": "DZD", "negotiation_minimum": "450.000", "negotiation_step": "10.000", "negotiation_min_percent": 70}
+    assert money_wire.normalize({"type": "ride_offer", "ride": ride})["ride"] == {
+        "currency": "DZD", "negotiation_offer": "600", "negotiated_fare": "600", "estimated_fare": "640"
+    }
+    assert money_wire.normalize(quote) == {
+        "currency": "DZD", "negotiation_minimum": "450", "negotiation_step": "10", "negotiation_min_percent": 70
+    }
+    jordan = {"currency": "JOD", "negotiation_offer": "4.500", "negotiation_minimum": "4.500"}
+    assert money_wire.normalize(jordan) is jordan

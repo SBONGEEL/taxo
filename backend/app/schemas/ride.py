@@ -106,6 +106,46 @@ class RideEstimateOut(BaseModel):
     locked_until: datetime | None = None
     #: **ما ينقص المحفظةَ لتغطّي الأجرة** مقرَّباً بوحدة السوق — «اشحن مبلغ الرحلة الآن»؛ صفرٌ حين يكفي الرصيد
     wallet_shortfall: Decimal | None = None
+    #: **«تفاوض»** (§٩٢-ب): أقلُّ عرضٍ في هذه الرحلة، **والحدّان اللذان صنعاه معاً** ليُعرضا بوضوح (نسبةٌ من التقدير · مبلغٌ ثابت)،
+    #: وخطوةُ العرض (وحدةُ التقريب، أو `null` بلا خطوة). **`null` كلُّها = لا تفاوضَ هنا** (مطفأٌ في السوق أو الفئة، أو طلبٌ غيرُ فوريّ)
+    negotiation_minimum: Decimal | None = None
+    negotiation_min_percent: int | None = None
+    negotiation_min_amount: Decimal | None = None
+    negotiation_step: Decimal | None = None
+
+
+class NegotiationIn(BaseModel):
+    """**عرضُ الراكب** (§٩٢-أ/٢) — سعرُه هو، ويُردّ تحت الحدّ أو بكسرٍ بعلّته (`negotiation.validate_offer`)."""
+
+    offer: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+
+
+class FareAmountIn(BaseModel):
+    """**سعرٌ آخر من الكبتن، أو تعديلُ الراكب عرضَه** (§٩٢-أ/٣، /٥)."""
+
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+
+
+class NegotiationCounterOut(BaseModel):
+    amount: Decimal
+    expires_in_seconds: int
+    #: اسمٌ أوّل · تقييم · مركبة · لون — **ولا رقمَ ولا صورة** قبل الإسناد
+    driver: dict
+
+
+class CounterSentOut(BaseModel):
+    """**ما يُقال للكبتن بعد «سعر آخر»** — سعرُه كما حُفظ، ومهلةُ جواب الراكب التي تبقى بها بطاقتُه."""
+
+    amount: Decimal
+    expires_in_seconds: int
+
+
+class NegotiationStateOut(BaseModel):
+    """حالُ «تفاوض» على رحلة (§٩٢) — لاستعادة الشاشة بعد انقطاع."""
+
+    offer: Decimal | None
+    negotiated_fare: Decimal | None
+    counter: NegotiationCounterOut | None = None
 
 
 class RideForOtherIn(BaseModel):
@@ -177,6 +217,8 @@ class RideCreateRequest(RideEstimateRequest):
     payment_method: PaymentMethod | None = None
     #: **معرّفُ السعر المثبَّت** (SPEC §٨٨/١) — مفتاحٌ لا مبلغ: يُؤخذ التقديرُ المحفوظُ إن طابقت التفاصيلُ وفي مهلته، وإلا يُسعَّر من جديد
     quote_id: str | None = Field(default=None, max_length=40)
+    #: **«تفاوض»** (§٩٢) — `null` لطلبٍ عاديّ
+    negotiation: NegotiationIn | None = None
 
 
 class RideCancelRequest(BaseModel):
@@ -476,6 +518,10 @@ class RideOut(BaseModel):
     # **طريقةُ الدفع التي اختارها الراكبُ مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — «الدفع: كاش» على بطاقة العرض كما
     # يرى الكبتنُ الفئة. **و`null` حين لم تُرسل أو المفتاحُ مطفأ**، فلا يُرسم سطرٌ لطريقةٍ لا يُعرف عنها شيء
     payment_method_hint: PaymentMethod | None = None
+    #: **«تفاوض»** (§٩٢): عرضُ الراكب الآن — يراه الكبتنُ على بطاقة العرض بدل التقدير — و`null` لطلبٍ عاديّ
+    negotiation_offer: Decimal | None = None
+    #: **السعرُ المتّفق عليه** — ووجودُه وسمُ «سعر متفاوض عليه» في السجلّ والإيصال واللوحة (§٩٢-ج)
+    negotiated_fare: Decimal | None = None
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -588,6 +634,8 @@ class RideOut(BaseModel):
             commute=ride.commute_id is not None,
             search_widened=ride.search_widened,
             payment_method_hint=ride.payment_method_hint,
+            negotiation_offer=ride.negotiation_offer,
+            negotiated_fare=ride.negotiated_fare,
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,

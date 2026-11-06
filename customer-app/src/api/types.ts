@@ -426,6 +426,12 @@ export interface RideEstimate {
   hourly_rate: string | null;
   hourly_km_per_hour: number | null;
   hourly_max_hours: number | null;
+  /** **«تفاوض»** (SPEC §٩٢-ب) — **أقلُّ عرضٍ لهذه الرحلة** من الخلفية، ومعه نسبتُه والمبلغُ الثابتُ إن ضُبط وخطوةُ السوق.
+   *  **وغيابُها «لا تفاوضَ هنا»** (السوقُ مطفأٌ أو الفئةُ خارجه) — فلا تُرسم الكتلة. */
+  negotiation_minimum?: string | null;
+  negotiation_min_percent?: number | null;
+  negotiation_min_amount?: string | null;
+  negotiation_step?: string | null;
 }
 
 export interface RideVehicle {
@@ -583,6 +589,10 @@ export interface Ride {
    *  `estimated_fare` حرفاً** (ما عرضه العدّادُ قبل §٧٠، فلا تغيّرَ بلا إذن المالك)، **ومشتعلاً ما سيدفعه من التقدير**: المقدَّرةُ
    *  ناقصَ الخصم المجمَّد مقرَّبةً مرّةً — مضاعفٌ للوحدة. **يُرسم كما وصل** ولا يُحسب منه شيء (§14)؛ ولا يدخله انتظارٌ ولا وقفات. */
   rider_estimate: string;
+  /** **«تفاوض»** (SPEC §٩٢) — سعرُ الراكب المعروضُ أثناء البحث، و`null` لطلبٍ بالسعر العاديّ */
+  negotiation_offer: string | null;
+  /** **ما اتُّفق عليه** — يُكتب عند القبول ويحلّ محلَّ التقدير؛ و`null` قبله أو بلا تفاوض */
+  negotiated_fare: string | null;
 
   created_at: string;
   accepted_at: string | null;
@@ -878,7 +888,23 @@ export type FareLineKind =
   // **التقريب** (§٧٠-ج/٤): فرقُ تقريب ما على الراكب — **موجبٌ أو سالب**، فتُجمع السطورُ إلى الأجرة النهائيّة حرفاً
   | "rounding"
   // **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥): زيادةُ ولاية الانطلاق الموسومة «وعرة» — داخل الأجرة، **وقبل التقريب**
-  | "rugged";
+  | "rugged"
+  // **«سعر متفاوض عليه»** (SPEC §٩٢-ج): سطرٌ واحدٌ مكانَ أسطر الطريق — والانتظارُ والوقفاتُ فوقه
+  | "negotiated";
+
+/** **العرضُ المقابلُ من الكبتن** (§٩٢-أ/٣) — من يعرض بلا رقمٍ ولا صورة قبل الإسناد، ومهلتُه بالثواني من الخلفية. */
+export interface NegotiationCounter {
+  amount: string;
+  expires_in_seconds: number;
+  driver: { name?: string; rating?: string | null; vehicle?: string | null; color?: string | null };
+}
+
+/** **حالُ «تفاوض» على رحلة** — لاستعادة الشاشة بعد انقطاع (`GET /rides/{id}/negotiation`). */
+export interface NegotiationState {
+  offer: string | null;
+  negotiated_fare: string | null;
+  counter: NegotiationCounter | null;
+}
 
 export interface FareLine {
   kind: FareLineKind;

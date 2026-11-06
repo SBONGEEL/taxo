@@ -308,6 +308,11 @@ export const acceptRide = (rideId: string) =>
 export const declineRide = (rideId: string) =>
   api.post<void>(`/rides/${rideId}/decline`);
 
+/** **«سعر آخر»** (SPEC §٩٢-أ/٣) — على طلب «تفاوض» معروضٍ عليك الآن، **أعلى من سعر الراكب**؛ ويعود بمهلة جوابه التي تبقى بها
+ *  بطاقتُك. والخلفيةُ تردّه بنصّها (يساوي سعرَه أو أقلّ · ليس مضاعفاً للوحدة · فوق السقف · عروضٌ كثيرة). */
+export const counterFare = (rideId: string, amount: string) =>
+  api.post<{ amount: string; expires_in_seconds: number }>(`/rides/${rideId}/counter`, { amount });
+
 export const arriveRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/arrive`);
 

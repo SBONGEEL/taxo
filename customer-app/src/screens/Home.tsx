@@ -202,6 +202,8 @@ export function HomeScreen() {
   const [presetPreference, setPresetPreference] = useState<GenderPreference | undefined>();
   // **و«جدولي الرحلة لوقت لاحق» (RW3، §٦٢-ج/٢٣) تفتحها بفئة تلك الرحلة ومنتقي الموعد مفتوحاً** — `null` في كلِّ طلبٍ غيرِه
   const [presetSchedule, setPresetSchedule] = useState<VehicleCategory | null>(null);
+  // **«ارفع سعرك»** (§٩٢-أ/٧) — سعرُ الطلب السابق يُفتح به التفاوضُ في الورقة؛ ويُمحى مع كلِّ ما يُمحى معه الحجز
+  const [presetOffer, setPresetOffer] = useState<string | null>(null);
   // **وبلاطةُ «طرد» تبدأه طلبَ طرد** (§٦٣-ج/٤): الوجهةُ ثمّ ورقتُه. **ومسوّدتُه هنا لا في ورقة الطلب** — إضافةُ محطةٍ تطوي الورقةَ
   // ثمّ تعيدها، فمسوّدةٌ فيها تضيع ويُعاد إقرارُ الشروط والمستلمُ من أوّله
   const [parcelMode, setParcelMode] = useState(false);
@@ -464,6 +466,7 @@ export function HomeScreen() {
       setDropoff(null);
       setDropoffAddress(null);
       setPresetSchedule(null);
+      setPresetOffer(null);
       navigate("/account/bookings");
     } catch (caught) {
       setError(
@@ -484,6 +487,7 @@ export function HomeScreen() {
     parcel?: RideParcel,
     hourly?: RideHourly,
     paymentMethod?: PayableMethod,
+    negotiationOffer?: string,
   ) {
     // **ساعاتٌ بلا وجهةٍ تُرسل نقطةَ الانطلاق وجهةً** (§٦٣-ج/٥، عقدُ `HourlyIn`) — وكلُّ طلبٍ غيرِها بوجهته كما كان
     const target = dropoff ?? (hourly ? pickup : null);
@@ -514,6 +518,8 @@ export function HomeScreen() {
       // **طريقةُ الدفع تُرسل مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — **حيث المفتاحُ مشتعلٌ وحدَه**: مطفأً
       // حمولةُ الطلب هي هي حرفاً. ومنها يولد صفُّ الكاش وكليك عند الإنهاء ويراها الكبتنُ على بطاقة العرض
       payment_method: unconfirmedOn ? paymentMethod : undefined,
+      // **«تفاوض»** (SPEC §٩٢) — السعرُ كما كتبه، وغيابُه السعرُ العاديّ
+      negotiation: negotiationOffer ? { offer: negotiationOffer } : undefined,
       stops: stops.map((stop) => ({
         lat: stop.lat,
         lng: stop.lng,
@@ -531,8 +537,9 @@ export function HomeScreen() {
     parcel?: RideParcel,
     hourly?: RideHourly,
     paymentMethod?: PayableMethod,
+    negotiationOffer?: string,
   ) {
-    const payload = payloadFor(category, preference, promoCode, sharing, forOther, parcel, hourly, paymentMethod);
+    const payload = payloadFor(category, preference, promoCode, sharing, forOther, parcel, hourly, paymentMethod, negotiationOffer);
     if (!payload) return;
     setRequesting(true);
     setError(null);
@@ -546,6 +553,7 @@ export function HomeScreen() {
       setDropoffAddress(null);
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       endHourly();
     } catch (caught) {
@@ -652,6 +660,7 @@ export function HomeScreen() {
       setStops([]);
       setPresetPreference("any");
       setPresetSchedule(null);
+      setPresetOffer(null);
       setParcelMode(true);
       setParcelDraft(null);
       // **و«أحضر غرضي» يعود «أحضر غرضي»** بنقطتيه — مكانُ الغرض اختير
@@ -673,6 +682,7 @@ export function HomeScreen() {
       setStops([]);
       setPresetPreference("any");
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       setHourlyMode(true);
       setHourlyDraft({
@@ -740,6 +750,24 @@ export function HomeScreen() {
     setStops([]);
     setPresetPreference(previous.gender_preference);
     setPresetSchedule(previous.vehicle_category);
+    endParcel();
+    endHourly();
+    setError(null);
+    closeOutcome(previous.id);
+    setPhase("confirm");
+  }
+
+  /** **«ارفع سعرك أو اطلب بالسعر العاديّ»** (SPEC §٩٢-أ/٧) — ورقةُ الطلب نفسُها بنقطتي الرحلة وفئتها، **والتفاوضُ مشتعلٌ بالسعر
+   *  السابق** يرفعه بيده أو يطفئه؛ والسعرُ يُسأل من جديد كأيِّ طلب. ولا محطات: الطلبُ الأوّلُ يُعاد بنقطتيه كـ«جدولي». */
+  function negotiateAgain(previous: Ride) {
+    setPickup(previous.pickup);
+    setPickupAddress(previous.pickup_address);
+    setDropoff(previous.dropoff);
+    setDropoffAddress(previous.dropoff_address);
+    setStops([]);
+    setPresetPreference(previous.gender_preference);
+    setPresetSchedule(null);
+    setPresetOffer(previous.negotiation_offer);
     endParcel();
     endHourly();
     setError(null);
@@ -822,6 +850,7 @@ export function HomeScreen() {
     onAskDestination: () => {
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       endHourly();
       setAirportPicks(undefined);
@@ -831,6 +860,7 @@ export function HomeScreen() {
     onPickOnMap: () => {
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       endHourly();
       setAirportPicks(undefined);
@@ -841,6 +871,7 @@ export function HomeScreen() {
     onAirport: () => {
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       endHourly();
       setSearchOpen(true);
@@ -888,6 +919,7 @@ export function HomeScreen() {
       setPresetPreference(undefined);
       setAirportPicks(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       setParcelDraft(null);
       setParcelFetch(false);
       setFetchPlaced(false);
@@ -901,6 +933,7 @@ export function HomeScreen() {
       setPresetPreference(undefined);
       setAirportPicks(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       setParcelDraft(null);
       setParcelFetch(true);
       setFetchPlaced(false);
@@ -914,6 +947,7 @@ export function HomeScreen() {
       setPresetPreference(undefined);
       setAirportPicks(undefined);
       setPresetSchedule(null);
+      setPresetOffer(null);
       endParcel();
       setHourlyDraft(HOURLY_START);
       setHourlyMode(true);
@@ -949,6 +983,7 @@ export function HomeScreen() {
     setStops([]);
     setPresetPreference(undefined);
     setPresetSchedule(null);
+    setPresetOffer(null);
     endParcel();
     endHourly();
   };
@@ -989,6 +1024,7 @@ export function HomeScreen() {
           initialPreference: presetPreference,
           initialCategory: presetSchedule ?? undefined,
           initialScheduling: presetSchedule !== null,
+          initialOffer: presetOffer ?? undefined,
           pickupLine,
           // **طلبُ طردٍ ومسوّدتُه** (§٦٣-ج/٤) — وغيابُه رحلةٌ عاديّة
           parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft, fetch: parcelFetch } : undefined,
@@ -1166,6 +1202,7 @@ export function HomeScreen() {
                     ? () => widenSearch(outcome)
                     : undefined
                 }
+                onNegotiateAgain={outcome.negotiation_offer ? () => negotiateAgain(outcome) : undefined}
                 error={error}
               />
             ) : picking ? (

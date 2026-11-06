@@ -60,7 +60,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import categories, markets, parcels, pricing_zones, ride_for_other, test_accounts
+from app.services import categories, markets, negotiation, parcels, pricing_zones, ride_for_other, test_accounts
 from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
@@ -401,6 +401,7 @@ async def request_ride(
     widen_search: bool = False,
     payment_method: PaymentMethod | None = None,
     quote_id: str | None = None,
+    negotiation_offer: Decimal | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -419,6 +420,16 @@ async def request_ride(
     # المجدول ينشئ رحلاتِه من هذا الباب نفسِه** (12-ط)، وحارسٌ في الراوتر
     # بابٌ يُنسى في الباب الثاني.
     verification.require_usable_account(rider)
+
+    # **«تفاوض»** (§٩٢، `design/NEGOTIATE.md` §٢): رحلةٌ فوريّةٌ عاديّةٌ وحدَها — لكلٍّ من الحجز والساعة والطرد سعرٌ مجمَّدٌ بقاعدته،
+    # **والكوبونُ والمشاركةُ خصمٌ فوق سعرٍ اتّفق عليه الطرفان**. **ويُردّ أوّلاً** فلا يسبقه رفضُ ميزةٍ لا علاقةَ للراكب بها
+    if negotiation_offer is not None and (
+        scheduled_for is not None or hourly is not None or parcel is not None or share or promo_code
+    ):
+        raise InvalidInput(
+            "التفاوضُ لرحلةٍ فوريّةٍ عاديّة — بلا حجزٍ مسبقٍ ولا ساعةٍ ولا طردٍ ولا مشاركةٍ ولا كوبون",
+            field="negotiation",
+        )
 
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
@@ -664,6 +675,13 @@ async def request_ride(
         for_other=bool(ride.for_other),
         payer=RidePayer(ride.payer or RidePayer.REQUESTER.value),
     )
+    # **«تفاوض»** (§٩٢، `design/NEGOTIATE.md` §٢): رحلةٌ فوريّةٌ عاديّةٌ وحدَها — لكلٍّ من الحجز والساعة والطرد سعرٌ مجمَّدٌ بقاعدته،
+    # **والكوبونُ والمشاركةُ خصمٌ فوق سعرٍ اتّفق عليه الطرفان**. **ويُردّ قبل أن تُضاف الرحلة** فلا يبقى صفٌّ لطلبٍ مرفوض
+    if negotiation_offer is not None:
+        await negotiation.validate_offer(
+            session, country=rider.country_code, category=vehicle_category, estimate=ride.estimated_fare, amount=negotiation_offer
+        )
+        ride.negotiation_offer = pricing.as_money(negotiation_offer)
     session.add(ride)
 
     # **الكوبونُ يُجمَّد قبل الـflush** (12-ز): الرمزُ يُتحقق منه تحت قفل صفّه،
@@ -675,8 +693,8 @@ async def request_ride(
         await promo_service.apply_to_ride(
             session, ride=ride, rider=rider, code=promo_code
         )
-    else:
-        # **وكوبونُ ترحيب المُحال في `else` لا بجانبه** (تعميمُ الإحالة): من
+    elif negotiation_offer is None:
+        # **وكوبونُ ترحيب المُحال في `else` لا بجانبه** (ولا على رحلة «تفاوض»: السعرُ المتّفق عليه هو النهائيّ) (تعميمُ الإحالة): من
         # كتب رمزاً اختار عرضاً بعينه، وإحلالُ غيره محلَّه — ولو كان أكبر —
         # يجعل الشاشةَ تعرض ما لم يطلبه. **ولا يُفشل الطلبَ بحال**: الراكبُ لم
         # يسأل هذه الهدية، فردُّ خطأٍ على «اطلب رحلة» بسببها أسوأُ من غيابها
@@ -702,6 +720,8 @@ async def request_ride(
         await session.rollback()
         raise RideAlreadyActive() from exc
 
+    if ride.negotiation_offer is not None:
+        await negotiation.record(session, ride.id, "rider_offer", amount=ride.negotiation_offer)
     return ride
 
 
@@ -737,6 +757,14 @@ async def accept_ride(
     return await _take(session, ride_id, driver)
 
 
+async def take_countered(session: AsyncSession, ride_id: uuid.UUID, driver: Driver, amount: Decimal) -> Ride:
+    """**قبولُ الراكب عرضَ الكبتن المقابل** (§٩٢-أ/٤) — القبولُ نفسُه (`_take`) **بسعر الكبتن**، والعرضُ أُخذ مرّةً قبله
+    (`negotiation.take_counter`) فلا يُقبل مرّتين."""
+    if driver.status != DriverStatus.APPROVED:
+        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+    return await _take(session, ride_id, driver, agreed=amount)
+
+
 async def take_reserved(session: AsyncSession, ride_id: uuid.UUID, driver: Driver) -> Ride:
     """**الكبتنُ المحجوزُ يأخذ رحلةَ حجزه المضمون بلا عرض** (§٦٣-ج/٣) — «نعم» قبل الموعد بساعة هي قبولُه.
 
@@ -748,7 +776,12 @@ async def take_reserved(session: AsyncSession, ride_id: uuid.UUID, driver: Drive
 
 
 async def _take(
-    session: AsyncSession, ride_id: uuid.UUID, driver: Driver, *, reserved: bool = False
+    session: AsyncSession,
+    ride_id: uuid.UUID,
+    driver: Driver,
+    *,
+    reserved: bool = False,
+    agreed: Decimal | None = None,
 ) -> Ride:
     if await _driver_has_active_ride(session, driver.id):
         raise RideAlreadyActive("لديك رحلة جارية بالفعل")
@@ -784,6 +817,13 @@ async def _take(
     ride.status = RideStatus.ACCEPTED
     ride.accepted_at = _now()
     driver.current_ride_id = ride.id
+    # **«تفاوض»: السعرُ يُتّفق عليه تحت قفل الصفّ نفسِه** (§٩٢-ج) — قبولُ الكبتن بعرض الراكب كما هو الآن، أو قبولُ الراكب بعرضه المقابل
+    if ride.negotiation_offer is not None:
+        negotiation.agree(ride, agreed if agreed is not None else ride.negotiation_offer)
+        await negotiation.record(
+            session, ride.id, "rider_accept" if agreed is not None else "driver_accept", amount=ride.negotiated_fare,
+            driver_id=driver.id,
+        )
 
     # **وهنا تُحسم نسبةُ العمولة** (§25.11، قرارُ المالك 2026-08-20).
     #
@@ -1078,7 +1118,8 @@ async def _final_fare(
 
     base = ride.estimated_fare
     base_lines: list[dict[str, str]] = list(ride.fare_lines or [])
-    if actual_km is not None and route.deviates(ride.distance_km, actual_km):
+    # **والسعرُ المتّفق عليه لا يعيده انحرافُ الطريق** (§٩٢-ج): `estimated_fare` وسطرُه كُتبا عند الاتفاق (`negotiation.agree`)
+    if ride.negotiated_fare is None and actual_km is not None and route.deviates(ride.distance_km, actual_km):
         rule = await pricing.get_rule(
             session, ride.country_code, ride.vehicle_category
         )

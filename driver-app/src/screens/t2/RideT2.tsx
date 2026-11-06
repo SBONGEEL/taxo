@@ -231,6 +231,12 @@ export function RideT2({
               </div>
               <div className="t2-rd-rider-sub">{ride.pickup_address ?? tr("نقطة الانطلاق")}</div>
               {shared ? <div className="t2-rd-rider-share">{shareText}</div> : null}
+              {/* **«تفاوض»** (SPEC §٩٢-ج) — السعرُ الذي اتّفقتما عليه، والانتظارُ والوقفاتُ فوقه */}
+              {ride.negotiated_fare ? (
+                <div className="t2-rd-rider-share">
+                  {tr("سعر متفاوض عليه")}{" "}{digits(ride.negotiated_fare)} {currencyLabel}
+                </div>
+              ) : null}
             </div>
             {/* **الأجرةُ المقدَّرة** — كانت تحت اسم الراكب في الورقة القائمة، وتبقى في صفّه. **ومقرَّبةً كما تنشرها الخلفية**
                 (`current_fare`، SPEC §٧٠-ج/٤) — قبل البدء لا انتظارَ ولا وقفةَ فيها، فهي المقدَّرةُ بقاعدة السوق */}

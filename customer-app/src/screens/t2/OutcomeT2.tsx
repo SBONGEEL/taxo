@@ -42,6 +42,7 @@ export function OutcomeSheetT2({
   onAcceptAnyDriver,
   onScheduleAgain,
   onWidenSearch,
+  onNegotiateAgain,
   error,
 }: {
   ride: Ride;
@@ -51,6 +52,8 @@ export function OutcomeSheetT2({
   onScheduleAgain?: () => void;
   /** **«انتظري، نوسّع البحث»** (RW3، §٦٤-ج/٤-٣) — الرحلةُ نفسُها بـ`widen_search`، من الرئيسية */
   onWidenSearch?: () => Promise<void>;
+  /** **«ارفع سعرك»** (SPEC §٩٢-أ/٧) — لطلب «تفاوض» لم يجد كبتناً: الورقةُ بسعره السابق، ومنها يرفعه أو يطلب بالسعر العاديّ */
+  onNegotiateAgain?: () => void;
   /** **خطأُ «أقبل أي كبتن»** — من الرئيسية التي ترسل الطلب */
   error: string | null;
 }) {
@@ -110,6 +113,15 @@ export function OutcomeSheetT2({
         {tr("أقبل أي كبتن متاح")}
       </button>
       {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
+      <button type="button" className="t2-out-later" onClick={onDismiss}>
+        {tr("حسناً")}
+      </button>
+    </div>
+  ) : ride.status === "no_driver_found" && onNegotiateAgain ? (
+    <div className="t2-out-actions">
+      <button type="button" className="t2-button primary" onClick={onNegotiateAgain}>
+        {tr("ارفع سعرك أو اطلب بالسعر العاديّ")}
+      </button>
       <button type="button" className="t2-out-later" onClick={onDismiss}>
         {tr("حسناً")}
       </button>

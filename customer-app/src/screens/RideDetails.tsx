@@ -166,7 +166,9 @@ export function RideDetailsScreen() {
   const rows: { label: string; value: string }[] = lines ?? [];
   const extras: { label: string; value: string }[] = [];
   const after = lines ? extras : rows;
-  if (ride.final_fare) after.push({ label: tr("السعر المقدّر"), value: formatMoney(ride.estimated_fare, ride.currency) });
+  // **ورحلةُ «تفاوض» بلا سطرِ مقدَّر** (٢٠٢٦-١١-٠٦): الخلفيةُ تكتب السعرَ المتّفقَ عليه في `estimated_fare` (`negotiation.py`)،
+  // فسطرُ «السعر المقدّر» تحت «سعر متفاوض عليه» يكرّر الرقمَ نفسَه باسمٍ يوهم أنه تقديرُ التطبيق — قِيس على مكدّس التطوير
+  if (ride.final_fare && !ride.negotiated_fare) after.push({ label: tr("السعر المقدّر"), value: formatMoney(ride.estimated_fare, ride.currency) });
   if (!lines && Number(ride.stops_charge) > 0)
     rows.push({ label: tr("رسم المحطات ({0})", { 0: ride.stops.length }), value: formatMoney(ride.stops_charge, ride.currency) });
   if (!lines && Number(ride.waiting_charge) > 0)

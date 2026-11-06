@@ -117,7 +117,11 @@ export interface ConfirmRideProps {
     /** **طريقةُ الدفع المرسومة على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — ويقرّر صاحبُ الورقة أتُرسل (المفتاح). وغيابُها
      *  حيث لا قناةَ يختارها هو (دافعٌ غيرُه) أو الرحلةُ بالساعة (محجوزُها طريقتُها). */
     paymentMethod?: PayableMethod,
+    /** **«تفاوض»** (SPEC §٩٢) — سعرُ الراكب كما كتبه، وغيابُه السعرُ العاديّ */
+    negotiationOffer?: string,
   ) => void;
+  /** **«ارفع عرضك»** بعد بحثٍ لم يجد كبتناً (§٩٢-أ/٧) — تُفتح الورقةُ والتفاوضُ مشتعلٌ بالسعر السابق */
+  initialOffer?: string;
   requesting: boolean;
   requestError: string | null;
   /** **٤٠٢ `unconfirmed_payment_blocked`** — دفعُ رحلةٍ سابقةٍ يمنع الطلب (§٧): رسالةُ الخلفية وزرٌّ إلى «رحلةٌ لم يكتمل دفعها». */

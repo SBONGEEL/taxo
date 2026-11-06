@@ -358,3 +358,39 @@ async def test_a_pending_offer_is_redelivered_on_connect(
         < frame["expires_in_seconds"]
         <= dispatch_settings.DEFAULTS.offer_timeout_seconds
     )
+
+
+async def test_a_driver_who_also_rides_gets_offers_on_his_socket(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**حسابٌ بالدورين يفتح قناةَ الكبتن وتصله الطلبات** (٢٠٢٦-١١-٠٦).
+
+    **العلّةُ**: المقبسُ كان يسأل `active_ride_for_user` بلا جانب، فيرتدّ `AmbiguousRole` على من يحمل الدورين **قبل
+    `connected`** — فيسقط المقبسُ، ولا يُعرض على الكبتن طلبٌ أبداً، ولا سطرَ يقول لماذا غيرُ استثناءٍ في سجلّ الخادم.
+    قِيس على مكدّس التطوير في جولة «تفاوض»: كبتنُ الجزائر بالدورين لم تصله بطاقةٌ في أيِّ مسار. **والقناتان كلتاهما**:
+    قناةُ الراكب لحسابٍ بالدورين تسقط بالعلّة نفسِها.
+    """
+    import uuid as _uuid
+
+    from app.models.enums import UserRole
+    from app.models.user import UserRoleGrant
+
+    driver = await approved_driver(client, session_factory, plate_number="AMM-2R")
+    async with session_factory() as session:
+        session.add(UserRoleGrant(user_id=_uuid.UUID(driver["user_id"]), role=UserRole.RIDER))
+        await session.commit()
+    rider = await _rider_session(client)
+
+    async with ws_client() as sockets:
+        async with aconnect_ws(f"{WS_DRIVER}?token={driver['token']}", client=sockets) as driver_ws:
+            connected = await _receive(driver_ws, of_type="connected")
+            assert connected["active_ride"] is None
+            await driver_ws.send_json({"type": "location", **NEAR_PICKUP, "heading": 0})
+
+            ride = await request_ride(client, rider["headers"])
+            offer = await _receive(driver_ws, of_type="ride_offer")
+            assert offer["ride"]["id"] == ride["id"]
+
+        # **وقناةُ الراكب للحساب نفسِه** تفتح ولا تسقط
+        async with aconnect_ws(f"{WS_RIDER}?token={driver['token']}", client=sockets) as rider_ws:
+            assert (await _receive(rider_ws, of_type="connected"))["type"] == "connected"

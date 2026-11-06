@@ -31,7 +31,8 @@ import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
 import { play, type Cue } from "@/lib/sound";
-import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
+import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms";
+import { FARE_COUNTER_EVENT } from "@/screens/t2/NegotiationT2"; import { tr } from "@/lib/i18n";
 
 export interface DriverPing {
   lat: number;
@@ -249,6 +250,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
           // **محادثةُ الرحلة ومكالمتُها على المقبس نفسِه** (§٦٦) — تُمرَّر إلى طبقتها (`lib/comms.tsx`) ولا تمرّ بأحداث الرحلة
           if (isTripCommsEvent(event)) {
             dispatchTripComms(event);
+            return;
+          }
+          // **العرضُ المقابلُ وانقضاؤه** (§٩٢) — بلا رحلةٍ في الحمولة؛ يُمرَّر إلى ورقة البحث فتسأل حالَها فوراً
+          if (event.type === "fare_counter" || event.type === "fare_counter_expired") {
+            window.dispatchEvent(new CustomEvent(FARE_COUNTER_EVENT));
+            if (event.type === "fare_counter" && !heardFromSystem()) play("notify");
             return;
           }
           const withRide = event as { ride?: Ride };

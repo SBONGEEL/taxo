@@ -571,3 +571,32 @@ async def test_0141_creates_missing_builtin_rows_with_guidance_and_round_trips()
             await conn.execute(text("DELETE FROM ride_categories"))
             await conn.execute(text("DELETE FROM pricing_rules"))
         await engine.dispose()
+
+
+async def test_0143_negotiation_round_trips() -> None:
+    """**`0143` («تفاوض»، §٩٢) تضيف عمودَي الرحلة وجدولَيها، ونزولُها يُسقطها كلَّها** — مقيسٌ قبلها لا مقروء. **ولا تمسّ جدولَ مال**."""
+    config = alembic_config()
+
+    async def shape() -> tuple[set[str], set[str]]:
+        async with engine.begin() as conn:
+            columns = {c["name"] for c in await conn.run_sync(lambda sync: inspect(sync).get_columns("rides"))}
+            tables = set(await conn.run_sync(lambda sync: inspect(sync).get_table_names()))
+        return columns & {"negotiation_offer", "negotiated_fare"}, tables & {"negotiation_settings", "ride_fare_offers"}
+
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0142")
+        assert await shape() == (set(), set())
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0143")
+        assert await shape() == ({"negotiation_offer", "negotiated_fare"}, {"negotiation_settings", "ride_fare_offers"})
+        async with engine.begin() as conn:
+            enabled = (await conn.execute(text(
+                "INSERT INTO negotiation_settings (id, country_code) VALUES (gen_random_uuid(), 'JO') RETURNING enabled, min_percent"
+            ))).one()
+            await conn.execute(text("DELETE FROM negotiation_settings"))
+        # **يُشحن مطفأً** (§٩٢-ب) — والقاعدةُ نفسُها تقول ذلك لا الشيفرة وحدَها
+        assert tuple(enabled) == (False, 70)
+    finally:
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
