@@ -25,6 +25,7 @@ import type { PhotoReport } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Shell } from "@/components/Shell";
+import { MediaViewer, useMediaCache } from "@/components/ui/MediaViewer";
 import { moment } from "@/lib/format";
 import { Icon } from "@/taxo2";
 
@@ -33,6 +34,9 @@ import { Icon } from "@/taxo2";
  * بلا جلسةٍ لو نُسخ من شريط العنوان. */
 function ReportedPhoto({ reportId }: { reportId: string }) {
   const [src, setSrc] = useState<string | null>(null);
+  // **وتُفتح في العارض** (البند ٠): قرارٌ على صورةِ شخصٍ يُتّخذ عليها مكبَّرةً لا على مربّعٍ بعرض ١١٢
+  const media = useMediaCache();
+  const [viewing, setViewing] = useState(false);
   useEffect(() => {
     let url: string | null = null;
     let alive = true;
@@ -56,10 +60,21 @@ function ReportedPhoto({ reportId }: { reportId: string }) {
     <div className="ad-report-photo">
       {/* **ما لم تصل الصورةُ فمكانُها رسمُ شخص** — لا بياضٌ يُقرأ «لا صورة» */}
       {src ? (
-        <img src={src} alt="الصورةُ المبلَّغ عنها" />
+        <button type="button" className="ad-mv-plain" onClick={() => setViewing(true)} aria-label="اعرض الصورة ملءَ الشاشة">
+          <img src={src} alt="الصورةُ المبلَّغ عنها" />
+        </button>
       ) : (
         <Icon name="person" />
       )}
+      {viewing && src ? (
+        <MediaViewer
+          cache={media}
+          items={[{ key: reportId, label: "الصورةُ المبلَّغ عنها", load: () => Promise.resolve({ url: src, type: "image/jpeg" }) }]}
+          index={0}
+          onIndex={() => undefined}
+          onClose={() => setViewing(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -889,3 +889,175 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   box-shadow: var(--t2-map-me-shadow);
 }
 .ad-map-live.stale { background: var(--t2-warning); }
+
+/* ── عارضُ الوثائق والصور (البند ٠، ٢٠٢٦-١١-٠٦) — ملءَ الشاشة على داكنٍ في الثيمين ─────────── */
+.ad-mv {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 9, 12, 0.97);
+  color: #f3f1ec;
+  touch-action: none;
+}
+.ad-mv-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  background: rgba(0, 0, 0, 0.35);
+}
+.ad-mv-title { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 10px; }
+.ad-mv-name { overflow: hidden; font-size: 14.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ad-mv-count { flex: none; font-size: 12.5px; color: rgba(243, 241, 236, 0.7); }
+.ad-mv-tools { display: flex; flex: none; align-items: center; gap: 4px; }
+.ad-mv-btn,
+.ad-mv-pct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.ad-mv-pct { min-width: 54px; font-size: 12.5px; font-weight: 600; direction: ltr; }
+.ad-mv-btn:hover,
+.ad-mv-pct:hover { background: rgba(255, 255, 255, 0.1); }
+.ad-mv-btn:disabled { opacity: 0.35; cursor: default; }
+.ad-mv-btn:focus-visible,
+.ad-mv-pct:focus-visible,
+.ad-mv-nav:focus-visible { outline: 2px solid var(--t2-accent, #ff6a2c); outline-offset: 2px; }
+.ad-mv-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 8px 12px;
+}
+.ad-mv-stage.zoomed { cursor: grab; }
+.ad-mv-stage.zoomed:active { cursor: grabbing; }
+.ad-mv-img {
+  display: block;
+  object-fit: contain;
+  border-radius: 6px;
+  transform-origin: center center;
+  transition: transform 0.12s ease-out;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.ad-mv-stage.zoomed .ad-mv-img { transition: none; }
+.ad-mv-pdf { width: 100%; height: 100%; border: 0; border-radius: 8px; background: #fff; }
+.ad-mv-pdf-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.ad-mv-pdf-card .t2-icon { font-size: 40px; }
+.ad-mv-pdf-card p { margin: 0; }
+.ad-mv-open {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--t2-accent, #ff6a2c);
+  color: #1a0f08;
+  font-weight: 700;
+  text-decoration: none;
+}
+.ad-mv-open.ghost { border: 1px solid rgba(255, 255, 255, 0.3); background: transparent; color: inherit; }
+.ad-mv-note { font-size: 13.5px; color: rgba(243, 241, 236, 0.75); }
+.ad-mv-note.danger { color: #ff8a80; }
+.ad-mv-nav {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+}
+.ad-mv-nav:hover { background: rgba(0, 0, 0, 0.75); }
+.ad-mv-nav.prev { inset-inline-start: 4px; }
+.ad-mv-nav.next { inset-inline-end: 4px; }
+.ad-mv-extra {
+  display: flex;
+  justify-content: center;
+  padding: 10px 14px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, 0.35);
+}
+.ad-mv-extra .fld { color-scheme: dark; }
+@media (max-width: 639px) {
+  .ad-mv-bar { flex-wrap: wrap; gap: 4px 8px; padding-inline: 8px; }
+  .ad-mv-title { order: 1; flex-basis: calc(100% - 52px); }
+  .ad-mv-tools { order: 2; flex-basis: 100%; justify-content: space-between; }
+  .ad-mv-btn, .ad-mv-pct { min-width: 44px; height: 44px; }
+  .ad-mv-stage { margin: 4px; }
+  .ad-mv-nav { width: 40px; height: 40px; margin-top: -20px; }
+}
+
+/* المصغَّرة: تُفتح بنقرة، وعدسةٌ في زاويتها تقول ذلك */
+.ad-mv-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 132px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-surface-2, rgba(0, 0, 0, 0.04));
+  color: var(--t2-muted);
+  cursor: zoom-in;
+}
+.ad-mv-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.ad-mv-thumb-pdf { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.ad-mv-thumb-pdf .t2-icon { font-size: 30px; }
+.ad-mv-thumb-zoom {
+  position: absolute;
+  inset-block-end: 6px;
+  inset-inline-end: 6px;
+  display: flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+.ad-mv-thumb-zoom .t2-icon { font-size: 18px; }
+.ad-mv-thumb:focus-visible { outline: 2px solid var(--t2-accent, #ff6a2c); outline-offset: 2px; }
+.ad-mv-thumb.tall { height: 260px; }
+.ad-mv-thumb.tall img { object-fit: contain; }
+/* صورةٌ قائمةٌ تصير زرّاً يفتح العارض — بلا شكلِ زرّ */
+.ad-mv-plain { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.ad-mv-plain img { width: 100%; height: 100%; object-fit: cover; }
+/* حقلُ التاريخ في أسفل العارض: في مجراه لا عائماً — العائمُ يصعد إلى أعلى الشاشة فيغطّي شريطَ الأدوات */
+.ad-mv-extra .ad-doc-expiry { position: static; inset: auto; width: min(520px, 100%); }
+/* المصغَّرةُ في درج الكبتن بمقاس الوثيقة القديم: تُقرأ كاملةً لا مقصوصة، والتاريخُ عائمٌ على حافّتها */
+.ad-doc-preview .ad-mv-thumb { height: 220px; background: var(--t2-bg); }
+.ad-doc-preview .ad-mv-thumb img { object-fit: contain; }

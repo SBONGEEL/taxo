@@ -1347,13 +1347,15 @@ export const createStaffTopup = (
 export async function driverDocumentBlob(
   driverId: string,
   documentId: string,
-): Promise<string> {
+): Promise<{ url: string; type: string }> {
+  // **ومعها نوعُها** (البند ٠): العارضُ يرسم الصورةَ صورةً والـPDF ملفّاً — والرابطُ وحدَه لا يقول أيّهما
   const answer = await fetch(
     `${API_URL}/admin/drivers/${driverId}/documents/${documentId}/file`,
     { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } },
   );
   if (!answer.ok) throw new Error("تعذّر فتح الوثيقة");
-  return URL.createObjectURL(await answer.blob());
+  const blob = await answer.blob();
+  return { url: URL.createObjectURL(blob), type: blob.type };
 }
 
 // ------------------------------------------- حسابُ المشرف نفسِه (SPEC §25.9)
