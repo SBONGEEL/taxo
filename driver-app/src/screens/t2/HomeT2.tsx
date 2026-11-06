@@ -75,7 +75,7 @@ import {
 import { isActive } from "@/lib/ride";
 import { useTheme } from "@/lib/theme";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
-import { digits, formatAmount, ratedAverage } from "@/lib/utils";
+import { digits, formatAmount, isZeroAmount, ratedAverage } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
 import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
@@ -282,6 +282,14 @@ export function HomeT2Screen() {
             {earnings ? <span className="t2-hm-earn-cur">{CURRENCY_LABEL[earnings.currency]}</span> : null}
           </div>
           <div className="t2-hm-earn-hint">{tr("المحصَّل − العمولة")}</div>
+          {/* **حركةُ المحفظة سطراً صغيراً لا رقماً كبيراً** (أمرُ المالك ٢٠٢٦-١١-٠٦): −٠٫٠٩٠ رقماً كبيراً قرأه الكبتنُ خسارةً — وهو
+              عمولةٌ خرجت من رصيده. **ويُرسم حين تحرّكت وحدَه**، بخانات الدولة */}
+          {earnings && !isZeroAmount(earnings.net) ? (
+            <div className="t2-hm-earn-hint">
+              {tr("حركة المحفظة:")}{" "}
+              <span dir="ltr">{formatAmount(earnings.net, earnings.currency)}</span>
+            </div>
+          ) : null}
           <div className="t2-hm-chips">
             {earnings ? (
               <span className="t2-hm-chip">
