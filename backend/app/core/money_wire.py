@@ -92,7 +92,8 @@ MONEY_NAMES = frozenset(
 #: فاسمٌ زائدٌ هنا لا يُفسد رقماً؛ **وحارسُ الاختبار (`tests/money_format.py`) يقرؤها** عبر `is_money_key` فيُفحص نصُّها في كلِّ جواب.
 #: **وعادت `balance_after` و`ceiling` و`_debt` و`_compensation` إلى المفردات** (§٧٦-ع/٥، ٢٠٢٦-١٠-١٨) بعد أن عُرض السقفُ في شاشة
 #: المستحقّات والرصيدُ بعدها في دفتر اللوحة، وكُتبت علّةُ الصفرَين بالبناء في `DELIBERATE`
-WIRE_ONLY_NAMES = frozenset({"price_to_pay", "net", "tips", "cap", "total", "total_rewarded"})
+#: **و`earned`** («صافي اليوم» = المحصَّلُ ناقصاً العمولة، §٩٦، ٢٠٢٦-١١-٠٦) — أمسكه مسحُ الجزائر «0.000» في CI 42252187606
+WIRE_ONLY_NAMES = frozenset({"price_to_pay", "net", "tips", "cap", "total", "total_rewarded", "earned"})
 WIRE_ONLY_SUFFIXES = ("_earnings", "_repaid", "_collected")
 
 # **استثناءاتٌ مسمّاةٌ بسببها** — لا كنسٌ صامت:
