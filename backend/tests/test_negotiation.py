@@ -113,11 +113,37 @@ async def test_an_offer_under_the_floor_is_refused_with_its_minimum(
     assert Decimal(response.json()["minimum"]) == minimum
 
 
+async def test_the_floor_is_the_same_from_the_rounded_or_the_raw_estimate(
+    session_factory, jordan_settings: None
+) -> None:
+    """**الحدُّ واحدٌ في كلِّ باب** (٢٠٢٦-١١-٠٦) — التقديرُ يمرّر المقرَّب، والطلبُ وتعديلُ السعر يمرّران `estimated_fare` الخام.
+
+    قِيس على مكدّس التطوير في الجزائر: تقديرٌ ٣٤٤ خاماً يُعرض ٣٤٠، **والحدُّ المعروضُ ٢٤٠ والطلبُ يردّه طالباً ٢٥٠**. فالراكبُ يكتب
+    ما قيل له إنه الأدنى فيُرفض. **وبعد الإصلاح**: الخامُ والمقرَّبُ يعطيان الحدَّ نفسَه.
+    """
+    from app.models.payment_setting import PaymentSetting
+
+    async with session_factory() as session:
+        row = await session.scalar(select(PaymentSetting).where(PaymentSetting.country_code == CountryCode.JO))
+        if row is None:
+            row = PaymentSetting(country_code=CountryCode.JO)
+            session.add(row)
+        row.rounding_enabled, row.rounding_unit, row.rounding_mode = True, Decimal("10"), "nearest"
+        await session.commit()
+        rules = negotiation.NegotiationRules(
+            enabled=True, min_percent=70, min_amount=None, driver_timeout_seconds=20, rider_timeout_seconds=20,
+            max_counter_percent=None, max_drivers=None, categories=(),
+        )
+        from_raw = await negotiation.floor_for(session, CountryCode.JO, rules, Decimal("344"))
+        from_rounded = await negotiation.floor_for(session, CountryCode.JO, rules, Decimal("340"))
+    assert from_raw.minimum == from_rounded.minimum == Decimal("240")
+
+
 # ------------------------------------------------------------------ المسارات
 
 
 async def test_driver_accepts_the_riders_price(
-    client: AsyncClient, negotiation_on: None, session_factory
+    client: AsyncClient, negotiation_on: None, session_factory, admin_headers: dict[str, str]
 ) -> None:
     """**قبولٌ ⇒ مؤكَّدةٌ بسعر الراكب** (§٩٢-أ/٣) — ويحلّ محلَّ التقدير بسطرٍ واحد."""
     driver = await _driver(client, session_factory, plate="AMM-1")
@@ -133,6 +159,12 @@ async def test_driver_accepts_the_riders_price(
     assert Decimal(body["negotiated_fare"]) == offer and Decimal(body["estimated_fare"]) == offer
     assert [line["kind"] for line in body["fare_lines"]] == ["negotiated"]
     assert await _kinds(session_factory, ride["id"]) == ["rider_offer", "driver_accept"]
+    # **واللوحةُ تقرأ الوسمَ نفسَه** (§٩٢-ج): `negotiated_fare` في التفصيل والقائمة هو ما يرسم «سعر متفاوض عليه» في `Rides.tsx`
+    detail = await client.get(f"/admin/rides/{ride['id']}", headers=admin_headers)
+    assert detail.status_code == 200, detail.text
+    assert Decimal(detail.json()["negotiated_fare"]) == offer
+    rows = (await client.get("/admin/rides", headers=admin_headers)).json()
+    assert any(row["id"] == ride["id"] and Decimal(row["negotiated_fare"]) == offer for row in rows)
 
 
 async def test_counter_then_rider_accepts_at_the_drivers_price(

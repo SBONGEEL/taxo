@@ -103,6 +103,10 @@ async def floor_for(session: AsyncSession, country: CountryCode, rules: Negotiat
     """
     policy = await rounding.policy_for(session, country)
     step = policy.unit if policy.enabled else None
+    # **النسبةُ من التقدير المقرَّب في كلِّ باب** (٢٠٢٦-١١-٠٦): التقديرُ يمرّر المقرَّبَ والطلبُ وتعديلُ السعر يمرّران
+    # `ride.estimated_fare` الخامَ — **فقِيس على مكدّس التطوير** حدٌّ يُعرض ٢٤٠ دج ويردّه الطلبُ مطالباً بـ٢٥٠ (٣٤٤ خاماً، ٣٤٠
+    # مقرَّباً). والتقريبُ هنا متساوي القوى، فالمقرَّبُ الآتي من التقدير لا يتغيّر
+    estimate = rounding.rounded(estimate, policy)
     by_percent = _ceil_to(estimate * Decimal(rules.min_percent) / Decimal(100), step)
     by_amount = _ceil_to(rules.min_amount, step) if rules.min_amount is not None else None
     return Floor(minimum=max(by_percent, by_amount or Decimal(0)), by_percent=by_percent, by_amount=by_amount, step=step)
@@ -166,11 +170,11 @@ async def counter(
         raise NotFound("لا عرضَ قائمٌ على هذه الرحلة")
     await dispatch.require_offer(redis, ride.id, driver.id)
     if await redis.exists(counter_key(ride.id)):
-        raise InvalidInput("أرسلتَ سعرك — ينتظر جوابَ الراكب", field="amount")
+        raise InvalidInput("أرسلتَ عرضك — ينتظر جوابَ الراكب", field="amount")
     rules = await rules_for(session, ride.country_code)
     await rounding.require_multiple_in(session, ride.country_code, amount, field="amount")
     if amount <= ride.negotiation_offer:
-        raise InvalidInput("سعرُك يساوي عرضَ الراكب أو أقلّ — اضغط «قبول»", field="amount")
+        raise InvalidInput("عرضُك يساوي عرضَ الراكب أو أقلّ — اضغط «قبول بسعره»", field="amount")
     if rules.max_counter_percent is not None:
         cap = as_money(ride.negotiation_offer * (Decimal(100) + Decimal(rules.max_counter_percent)) / Decimal(100))
         if amount > cap:

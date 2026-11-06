@@ -138,12 +138,17 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("complaint", "support", "problem", "شكوى", "شكاوى"),
     AlertKind("low_rating", "support", "problem", "تقييمٌ منخفض", "تقييمات منخفضة"),
     AlertKind("feedback", "support", "feedback", "ملاحظةٌ جديدة", "ملاحظات جديدة"),
+    # **مراقبةُ الوصول من الخارج** (`services/uptime.py`، أمرُ المالك ٢٠٢٦-١١-٠٥) — رابطٌ عامٌّ ساقطٌ دقيقتين، ثمّ عودتُه
+    AlertKind("service_down", "support", "problem", "التطبيقُ لا يُبلَغ من الإنترنت", "انقطاعاتُ الوصول", window=0),
+    AlertKind("service_up", "support", "account", "التطبيقُ عاد يُبلَغ", "عوداتُ الوصول", window=0),
 )
 CATALOG: dict[str, AlertKind] = {item.kind: item for item in _KINDS}
 
 METHOD_LABEL = {"cash": "نقداً", "cliq": "كليك", "card": "بطاقة", "wallet": "المحفظة"}
 CANCELLED_BY_LABEL = {"rider": "ألغاها الراكب", "driver": "ألغاها الكبتن", "no_driver": "لم يُعثر على كبتن"}
 COMPLAINT_SOURCE_LABEL = {"dispute": "نزاعٌ على دفعة", "chat": "بلاغٌ على رسالة", "photo": "بلاغٌ على صورة"}
+#: الرابطان اللذان يراقبهما `services/uptime.py` — **بما يقرؤه المالك** لا باسم المفتاح
+UPTIME_TARGET_LABEL = {"api": "الخادم (api.tajora.ly)", "app": "تطبيقُ الراكب (app.tajora.ly)"}
 REVIEWED_BY_LABEL = {"reviewer": "بيد المراجع", "owner": "بيد المالك", "staff": "بيد الماليّة"}
 _EXPIRED = re.compile(r"expire|انته|مهلة|timeout", re.IGNORECASE)
 
@@ -298,7 +303,7 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
         return Draft(
             kind,
             CountryCode(country_value) if country_value else None,
-            data={key: extra[key] for key in ("gateway", "provider") if extra.get(key)},
+            data={key: extra[key] for key in ("gateway", "provider", "target", "minutes") if extra.get(key)},
         )
 
     if model == "payment_request":
@@ -581,6 +586,10 @@ def tray_text(alert: AdminAlert) -> tuple[str, str]:
         parts.append("من ضيف" if data.get("guest") else ("من كبتن" if data.get("app") == "driver" else "من راكب"))
     if data.get("gateway"):
         parts.append(str(data["gateway"]).capitalize())
+    if data.get("target") in UPTIME_TARGET_LABEL:
+        parts.append(UPTIME_TARGET_LABEL[data["target"]])
+        if data.get("minutes"):
+            parts.append(f"{data['minutes']} دقيقة")
     if data.get("by") in REVIEWED_BY_LABEL:
         parts.append(REVIEWED_BY_LABEL[data["by"]])
     if data.get("who") == "rider":

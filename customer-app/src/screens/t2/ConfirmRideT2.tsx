@@ -255,7 +255,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                     : c.hourlyMode
                       ? tr("اطلب بالساعة")
                       : bargaining
-                        ? tr("اعرض سعرك")
+                        ? tr("تفاوض")
                       : women
                         ? tr("اطلبي كبتنة")
                         : tr("اطلب {0}", { 0: VEHICLE_LABEL[c.category] })}
@@ -397,7 +397,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **«اقترح سعرك»** (SPEC §٩٢) — حيث نشر التقديرُ حدَّه، **ومطفأٌ بعلّته مع المشاركة أو الكوبون** */}
       {bargainOffered && c.estimate ? (
         c.share || c.applied ? (
-          <p className="t2-sheet-fine">{tr("«اقترح سعرك» لا يُجمع مع المشاركة ولا الكوبون.")}</p>
+          <p className="t2-sheet-fine">{tr("«تفاوض» لا يُجمع مع المشاركة ولا الكوبون.")}</p>
         ) : (
           <NegotiateBlockT2 estimate={c.estimate} offer={bargain} onChange={setBargain} />
         )

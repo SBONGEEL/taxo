@@ -116,7 +116,8 @@ async def test_old_days_roll_up_into_months_and_the_staff_sees_them(
         await session.commit()
     assert removed == 2
     async with session_factory() as session:
-        months = list(await session.scalars(select(DriverActivityMonth)))
+        # **مرتَّبةً بالشهر**: يومان قديمان قد يقعان في شهرين (أمسكه CI ٢٠٢٦-١١-٠٤) — وبلا ترتيبٍ تعود الصفوفُ بأيِّ ترتيب
+            months = list(await session.scalars(select(DriverActivityMonth).order_by(DriverActivityMonth.month)))
     assert [(row.month.day, row.online_minutes) for row in months] in ([(1, 120)], [(1, 100), (1, 20)])
     assert sum(row.online_minutes for row in months) == 120
     assert [row.day for row in await _rows(session_factory)] == [today]

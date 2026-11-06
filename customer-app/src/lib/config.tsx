@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -24,6 +25,7 @@ import { registerCurrencies } from "@/lib/utils";
 import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
+import { flushCrashReports, reportNetworkFailure } from "@/lib/crash-reports";
 import type { FirebaseWebConfig } from "@/lib/firebase"; import { tr } from "@/lib/i18n";
 
 interface ConfigState {
@@ -40,6 +42,11 @@ const ConfigContext = createContext<ConfigState>({
 
 /** بعدها يُقرأ الصمتُ بطءاً لا سكوناً — أطولُ من نداءٍ سويٍّ وأقصرُ من صبرِ أحد. */
 const SLOW_AFTER_MS = 4_000;
+
+/** **كم فشلاً متتالياً قبل أن يُقال «تعذّر الوصول»** (حادثةُ ٢٠٢٦-١١-٠٤): شبكةُ هاتفٍ تتعثّر ثوانيَ
+ *  — أو رفعٌ يعيد الخلفيّةَ في ستِّ ثوانٍ — لا تستحقّ شاشةَ خطأ. قبلها «لم يصل الجواب بعد — جارٍ المحاولة»،
+ *  والمحاولةُ تتكرّر بالتباعد نفسِه في الحالين. والانقطاعُ الذي يعرفه المتصفّح (`offline`) يُقال فوراً لأنه حقيقة. */
+const FAILURES_BEFORE_ERROR = 3;
 
 /** **رمزٌ فنّيٌّ قصيرٌ ممّا يُعرف يقيناً — لا تشخيصٌ ولا تخمين.**
  *
@@ -61,6 +68,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
   const [attempt, setAttempt] = useState(0);
+  const failures = useRef(0);
 
   /** **الانقطاعُ والبطءُ حالان لا حال** (`DESIGN.md` §7.8):
    *
@@ -102,13 +110,24 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         setError(null);
         setSplashStatus(null);
         setAttempt(0);
+        failures.current = 0;
+        // ما انتظر الوصولَ في الطابور يُرسل الآن
+        flushCrashReports();
       })
       .catch((err: Error) => {
         if (cancelled) return;
         setError(err.message);
+        failures.current += 1;
+        const code = reachCode(err);
+        // **يُعدّ في «الأعطال» بلا بياناتٍ شخصيّة** — رمزٌ فنّيٌّ وحده، ويُرسل حين يعود الوصول
+        if (navigator.onLine) reportNetworkFailure(code);
         setSplashStatus(
-          navigator.onLine ? "unreachable" : "offline",
-          reachCode(err),
+          !navigator.onLine
+            ? "offline"
+            : failures.current >= FAILURES_BEFORE_ERROR
+              ? "unreachable"
+              : "slow",
+          code,
         );
         setAttempt((n) => n + 1);
       })

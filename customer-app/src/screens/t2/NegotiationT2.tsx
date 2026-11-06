@@ -43,10 +43,10 @@ export function NegotiateBlockT2({
         <span className="t2-share-main">
           <span className="t2-share-title">
             <Icon name="sell" />
-            {tr("اقترح سعرك")}
+            {tr("تفاوض على السعر")}
           </span>
           <span className="t2-share-body">
-            {tr("يُعرض سعرُك على كبتنٍ واحدٍ في كلِّ مرّة — يقبله، أو يعرض سعراً آخر تقبله أو ترفضه.")}
+            {tr("يُعرض عرضُك على كبتنٍ واحدٍ في كلِّ مرّة — يقبله، أو يعرض سعراً آخر تقبله أو ترفضه.")}
           </span>
         </span>
         <Switch on={on} />
@@ -54,7 +54,7 @@ export function NegotiateBlockT2({
       {on ? (
         <>
           <label className="t2-coupon-label" htmlFor="bargain">
-            {tr("سعرك")}
+            {tr("عرضك في التفاوض")}
           </label>
           <div className="t2-coupon-row">
             <input
@@ -169,7 +169,7 @@ export function NegotiationTrackT2({ ride, onChanged }: { ride: Ride; onChanged:
                 disabled={busy}
                 onClick={() => void run(() => rejectCounter(ride.id))}
               >
-                {tr("ارفض — كبتنٌ آخر بسعري")}
+                {tr("ارفض — كبتنٌ آخر بعرضي")}
               </button>
             </div>
           </div>
@@ -178,12 +178,12 @@ export function NegotiationTrackT2({ ride, onChanged }: { ride: Ride; onChanged:
 
       {editing === null ? (
         <button type="button" className="t2-button secondary" disabled={busy} onClick={() => setEditing(ride.negotiation_offer ?? "")}>
-          {tr("غيّر سعرك")}
+          {tr("غيّر عرضك")}
         </button>
       ) : (
         <>
           <label className="t2-coupon-label" htmlFor="bargain-change">
-            {tr("سعرك الجديد — يبدأ البحثُ من جديد")}
+            {tr("عرضك الجديد — يبدأ البحثُ من جديد")}
           </label>
           <div className="t2-coupon-row">
             <input

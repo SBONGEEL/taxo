@@ -170,9 +170,9 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
       <div className="t2-trk-badges">
         {/* **«تفاوض»** (§٩٢) — «سعرك» أثناء البحث، و«سعرٌ متّفقٌ عليه» بعد القبول */}
         {ride.negotiated_fare ? (
-          <span className="t2-trk-badge">{tr("سعرٌ متّفقٌ عليه")}{" "}{formatAmount(ride.negotiated_fare, ride.currency)}</span>
+          <span className="t2-trk-badge">{tr("سعر متفاوض عليه")}{" "}{formatAmount(ride.negotiated_fare, ride.currency)}</span>
         ) : ride.negotiation_offer ? (
-          <span className="t2-trk-badge">{tr("سعرك")}</span>
+          <span className="t2-trk-badge">{tr("تفاوض")}</span>
         ) : null}
         {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — رحلةٌ من اشتراكه، من الصفّ لا من المفتاح */}
         {commute ? <span className="t2-trk-badge">{tr("مشوارٌ ثابت")}</span> : null}
@@ -273,7 +273,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           {ride.search_widened
             ? tr("نوسّع البحث بين الكبتنات…")
             : ride.negotiation_offer
-              ? tr("نعرض سعرك على كبتنٍ واحدٍ في كلِّ مرّة")
+              ? tr("نعرض عرضك على كبتنٍ واحدٍ في كلِّ مرّة")
               : tr("نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين")}
           {/* **والعددُ لا ينفصل عن معدوده** آخرَ السطر (` `) — قِيس: «6» وحدَها آخرَ سطرٍ و«كباتن» أوّلَ تاليه */}
           {nearby && !ride.search_widened ? tr(". {0}{1} الآن.", { 0: nearby > 2 ? `${nearby} ` : "", 1: nearbyLabel(nearby) }) : ""}

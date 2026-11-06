@@ -89,6 +89,7 @@ celery_app = Celery(
         "app.tasks.bookings",
         "app.tasks.maintenance",
         "app.tasks.payments",
+        "app.tasks.uptime",
         "app.tasks.advances",
         "app.tasks.backups",
         "app.tasks.pauses",
@@ -126,6 +127,11 @@ celery_app.conf.update(
     task_time_limit=300,
     task_soft_time_limit=240,
     beat_schedule={
+        # **الوصولُ من الخارج كلَّ دقيقة** (`services/uptime.py`) — والإشعارُ بعد دقيقتين من السقوط
+        "uptime-probe": {
+            "task": "app.tasks.uptime.probe_public_urls",
+            "schedule": 60.0,
+        },
         "sweep-subscriptions": {
             "task": "app.tasks.subscriptions.sweep_subscriptions",
             "schedule": SWEEP_INTERVAL_SECONDS,

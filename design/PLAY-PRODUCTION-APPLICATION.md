@@ -183,3 +183,24 @@
 
 **والسهولة (٢)**: «ليس صعبًا ولا سهلاً» كما كانت — **والعدُّ على الحدّ تماماً (١٢) يشهد أنها ليست «سهلة»**.
 
+
+### نصُّ الإرسال لإعادة تقديم الكبتن (٢٠٢٦-١١-٠٥) — **يُرسل في ٧ أو ٨ نوفمبر بأمر المالك، بعد قياس أرقامه يومَها**
+
+**هذا هو النصُّ الذي يُلصق في النموذج سؤالاً سؤالاً**، مجموعاً من مسوّدة ١١-٠٣ ونهائيّات ١١-٠٤. **و٥ بلا ذكرٍ لسوقٍ غير الأردن والجزائر**
+(قاعدةٌ دائمة). **وما يُقاس يومَ الإرسال قبل «تطبيق»**: عدّادُ Play (الأيّامُ والمشتركون) وأعطالُ ٢٨ يوماً وآخرُ إصدارٍ مغلق — **فإن خالف رقمٌ النصَّ
+عُدّل الرقمُ لا القياس**، وبقي كلُّ جوابٍ دون ٣٠٠ حرف.
+
+1. Unpaid testers from our own network (friends, family and captains from our driver WhatsApp groups), from 11 Sep 2026 by email list and then our Google Group, plus Testers Community, a paid testing service, which added 15 testers per app on their own phones in other countries from 18 Oct.
+2. ليس صعبًا ولا سهلاً
+3. Testers used the closed builds on their own phones, mostly in guest mode, which opens the whole captain app without an account: home map, going online, ride offers, earnings, wallet and plans. 12 testers stayed opted in for 14 straight days.
+4. Feedback came from the in-app Send feedback form, our captain WhatsApp groups and the Testers Community report. They asked for an onboarding tour, a share button and a clearer store listing; their report found no crashes or critical errors.
+5. Licensed drivers (captains) in Jordan and Algeria who want to earn by accepting nearby ride requests, with the fare shown before accepting, clear earnings, a wallet with withdrawals and simple subscription plans.
+6. Captains see the fare before accepting, get turn-by-turn guidance, chat and call riders without sharing numbers, track earnings, withdraw from the wallet and choose daily, weekly or monthly plans, in Arabic and French, with local payment options in each market.
+7. ‫10 آلاف - 100 ألف
+8. Since the review we shipped builds 960, 975, 994 and 1025: a security update, edge-to-edge display, a one-layer back button, sign-in kept if the app is killed, and a server fix so captains who also ride get ride offers. From feedback: a 4-card tour, a Share button and a new store listing.
+9. 12 opted-in testers for 14 days, 0 crashes and 0 ANRs in Play vitals for 28 days, no policy issues. Every release passes our full automated suite and code guards in CI, a verified backup and a money-integrity check before deploy, and live monitoring alerts us.
+10. This time 12 testers stayed opted in for the full 14 days, and we shipped four closed builds after the review (960, 975, 994, 1025), each with real changes and honest notes. Testers tried every screen in guest mode, and each fix was checked on the live closed build.
+
+> **وسطرُ «كبتنٌ هو راكبٌ أيضاً» في ٨ (أمرُ المالك ٢٠٢٦-١١-٠٦)**: مقبسُ الكبتن كان يسقط لمن يحمل الدورين فلا يصله طلب — قائمٌ على الإنتاج منذ ٢٠٢٦-٠٨-١٩،
+> وأُصلح في 41c96e0f ورُفع في 6ab90e1e (٢٠٢٦-١١-٠٦). وهو إصلاحُ خادمٍ يبلغ كلَّ الإصداراتِ بلا حزمةٍ جديدة؛ **ويُذكر في ملاحظات أوّلِ إصدارٍ مغلقٍ قادمٍ للكبتن**:
+> «إصلاح: الكبتن الذي يستعمل التطبيقَ راكباً أيضاً تصله طلباتُ الرحلات الآن» / "Fix: captains who also ride with Taxo now receive ride offers."

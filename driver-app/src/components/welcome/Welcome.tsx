@@ -52,11 +52,7 @@ const cam = (x: number, y: number, s: number) =>
   `translate(${(FX - s * x).toFixed(2)}px,${(360 - s * y).toFixed(2)}px) scale(${s})`;
 const EZ = { o: "cubic-bezier(.2,.8,.2,1)", io: "cubic-bezier(.65,0,.35,1)" } as const;
 type Pt = [number, string | number, (keyof typeof EZ)?];
-const LB: Array<[string, number, number]> = [
-  [i18nTr("جبل عمّان"), 159.5, 449.9],
-  [i18nTr("اللويبدة"), 222.9, 402.4],
-  [i18nTr("العبدلي"), 141, 353],
-];
+// **لا أسماءَ أحياءٍ فوق الخريطة** — الخريطةُ محايدةٌ لا مدينةَ فيها (حادثُ ٢٠٢٦-١١-٠٤، SPEC §٩٥)
 
 /** المقدّمةُ حتى إطارها الأخير — والـX وحدَه «من المرة الثانية». */
 const INTRO_S = 4.4;
@@ -324,7 +320,7 @@ export function Welcome({
   const onPages = phase === "pages" || (phase === "leaving" && next !== undefined);
   const [mx, my] = MAP_AT[page];
   const waiting = phase === "hold" && held && !booted && splash.status;
-  const mapSrc = dark ? "/welcome/amman-night.svg" : "/welcome/amman-day.svg";
+  const mapSrc = dark ? "/welcome/map-night.svg" : "/welcome/map-day.svg";
 
   return (
     <div
@@ -348,11 +344,6 @@ export function Welcome({
         {phase === "intro" ? (
           <div className="cw-cam" style={{ animation: intro.anim.cam }}>
             <img src={mapSrc} alt="" />
-            {LB.map(([text, x, y]) => (
-              <span key={text} className="cw-maplabel" style={{ left: x, top: y }}>
-                {text}
-              </span>
-            ))}
             <svg width="390" height="844" viewBox="0 0 390 844" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", animation: intro.anim.trailOp }} aria-hidden="true">
               <path d={HD} fill="none" stroke="var(--t2-accent)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1} style={{ animation: intro.anim.trailDash }} />
             </svg>
@@ -369,15 +360,13 @@ export function Welcome({
         ) : (
           <>
             <img className="cw-map" src={mapSrc} alt="" style={{ left: mx, top: my }} />
-            <span className="cw-label" style={{ left: 95.7, top: 296 }}>{i18nTr("جبل عمّان")}</span>
-            <span className="cw-label" style={{ left: 285.9, top: 154 }}>{i18nTr("اللويبدة")}</span>
           </>
         )}
 
         <div className="cw-veil-solid" style={phase === "intro" ? { animation: intro.anim.veil } : undefined} />
         <div className="cw-veil-grad" />
-        <span className="cw-pin p1">{i18nTr("اللويبدة")}</span>
-        <span className="cw-pin p2">{i18nTr("البلد")}</span>
+        <span className="cw-pin p1">{i18nTr("نقطة الالتقاء")}</span>
+        <span className="cw-pin p2">{i18nTr("الوجهة")}</span>
 
         {phase === "intro" ? (
           <>
