@@ -101,7 +101,9 @@ async def test_a_late_and_repeated_confirmation_credits_exactly_once(
     first = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     again = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     refreshed = await client.post(f"/payment-requests/{opened['request']['id']}/refresh", headers=rider["headers"])
-    assert first.json()["applied"] == 1 and again.json()["applied"] == 0
+    # **يُجاب فوراً ويُحسم بعد الجواب** (أمرُ المالك ٢٠٢٦-١١-٠٦) — فالجوابُ لا يحمل «حُسم»، والقيدُ الواحدُ هو ما يُقاس
+    assert first.status_code == again.status_code == 200
+    assert first.json() == {"ok": True, "queued": 1} == again.json()
     assert refreshed.json()["status"] == "approved"
     assert await _entries(session_factory) == before + 1 and await balance(client, rider["headers"]) == "1500"
 
@@ -319,3 +321,30 @@ async def test_a_bank_refusal_reaches_the_payer_in_our_words_and_its_raw_code_re
     pushes = [p for p in await pushes_to("fcm-rejected-1") if p.get("data", {}).get("type") == "payment_request_rejected"]
     assert len(pushes) == 1 and pushes[0]["body"] == reason and pushes[0]["data"]["request_id"] == opened["request"]["id"], pushes
     assert answer["respCode_desc"] not in str(pushes[0])
+
+
+async def test_the_webhook_answers_before_the_gateway_is_asked(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**الجوابُ لا ينتظر سؤالَ الوسيط** — قِيس أن SofizPay قطع الاتصالَ قبل جوابنا (٢٠٢٦-١٠-٣٠)؛ فالحسمُ بعد الجواب، **فمسارُ الجواب
+    نفسُه لا يقيِّد شيئاً**: ما لم تحسمه المهمّةُ يبقى معلَّقاً للمراقبة."""
+    from app.routers import payment_requests as router_module
+
+    await algeria_market(session_factory)
+    _, sofizpay = install_transport(monkeypatch)
+    method_id = await add_gateway_method(session_factory, "sofizpay")
+    rider = await _rider_with_email(client, session_factory)
+    opened = (await _open(client, rider["headers"], method_id)).json()
+    cib_id = opened["request"]["reference"]
+    before = await _entries(session_factory)
+    order: list[str] = []
+
+    async def settle_later(integration: str, ids: list[str]) -> None:
+        order.append(f"{integration}:{ids}")  # **لا يحسم** — فما يُقيَّد بعدها قُيِّد في مسار الجواب نفسِه
+
+    monkeypatch.setattr(router_module, "_settle_webhook_in_background", settle_later)
+    notice = sofizpay_signed({"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000})
+    answer = await client.post("/payment-requests/webhook/sofizpay", json=notice)
+    assert answer.status_code == 200 and answer.json() == {"ok": True, "queued": 1}
+    assert order == [f"sofizpay:{[cib_id]}"]
+    assert await _entries(session_factory) == before

@@ -16,7 +16,7 @@ from typing import Annotated
 import html
 
 import anyio
-from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app.core import storage
@@ -357,12 +357,17 @@ async def refresh_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSess
 
 @router.post("/webhook/{integration}")
 async def gateway_webhook(
-    integration: str, request: Request, session: DbSession, redis: RedisDep
+    integration: str, request: Request, session: DbSession, redis: RedisDep, background: BackgroundTasks
 ) -> dict[str, object]:
     """**الـwebhook الموحّد للوسطاء الآليّين** (§٧٣-هـ/١٠) — **الحمولةُ إشارةُ استيقاظٍ لا مصدرُ حقيقة** (قاعدةُ `card_gateway`).
 
     التوقيعُ يُتحقَّق حيث يوثّقه الوسيط، **على كلِّ عقدٍ مفعَّلٍ له** (الإشعارُ لا يقول سوقَه)؛ ثمّ **يُسأل الوسيطُ مباشرةً** عن كلِّ معرّف
     (`refresh`) — قبل القفل — ويُطبَّق جوابُه. **ومعرّفٌ لا طلبَ له يُسجَّل ولا يُرفض بغير ٢٠٠**: الوسيطُ يعيد ما لم يرَ له ٢٠٠.
+
+    **وإشعارُ الاستيقاظ (SofizPay) يُجاب بـ٢٠٠ فوراً ويُحسم بعد الجواب** (أمرُ المالك ٢٠٢٦-١١-٠٦): سؤالُ الوسيط نداءُ شبكةٍ قد يطول،
+    **وقِيس أن SofizPay قطع الاتصالَ قبل جوابنا** (سجلُّ النفق ٢٠٢٦-١٠-٣٠: «context canceled» مرّتين) — فالتوقيعُ يُتحقَّق قبل الجواب
+    (إشعارٌ مزوَّرٌ يُرفض بـ٤٠١ كما كان)، والحسمُ في مهمّةٍ خلفيّةٍ بجلستها. **ومراقبةُ الـ٢٠ ثانية (`watch_sofizpay`) باقيةٌ احتياطاً**
+    تحسم ما فات المهمّةَ لأيِّ سبب. **وإشعارٌ يشهد (Chargily) يبقى متزامناً**: جوابُه يحمل `applied` وهو ما يقيِّد «دُفع».
     """
     gateways = await payment_gateways.webhook_gateways(session, integration)
     if not gateways:
@@ -381,7 +386,26 @@ async def gateway_webhook(
             continue
     if ids is None:
         raise payment_gateways.WebhookSignatureInvalid()
+    if not signed:
+        background.add_task(_settle_webhook_in_background, integration, list(ids))
+        return {"ok": True, "queued": len(ids)}
+    applied = await _settle_webhook_ids(session, redis, integration, ids, signed=signed)
+    return {"ok": True, "applied": applied}
 
+
+async def _settle_webhook_in_background(integration: str, ids: list[str]) -> None:
+    """**الحسمُ بعد الجواب** — بجلسةٍ خاصّة، **وفشلُه يُسجَّل ولا يُفقد شيئاً**: المراقبةُ والتسويةُ الدوريّةُ تحسمان ما بقي معلَّقاً."""
+    from app.core.db import SessionLocal
+    from app.core.redis_client import get_redis_client
+
+    try:
+        async with SessionLocal() as session:
+            await _settle_webhook_ids(session, get_redis_client(), integration, ids, signed=False)
+    except Exception:  # noqa: BLE001 — احتياطُ الـ٢٠ ثانية يحسم
+        logger.exception("تعذّر حسمُ إشعار %s بعد الجواب — تحسمه المراقبة", integration)
+
+
+async def _settle_webhook_ids(session, redis, integration: str, ids: list[str], *, signed: bool) -> int:
     applied = 0
     owners = []
     for external_id in ids:
@@ -401,7 +425,7 @@ async def gateway_webhook(
         owner = await session.get(User, owner_id)
         if owner is not None:
             await cancellation.announce_settled_for_debtor(session, redis, user=owner)
-    return {"ok": True, "applied": applied}
+    return applied
 
 
 # ------------------------------------------------------------------ صفحةُ الوسيط الوهميّ (التطوير والاختبار وحدَهما)

@@ -174,10 +174,12 @@ async def test_sofizpay_is_decided_by_its_check_not_its_notice(
 
     # **إشعارٌ موقَّعٌ بطريقة الـSDK** (§٨٧/٥) — يُقرأ معرّفُه وحدَه، والفحصُ يقول «معلّق» ⇐ لا شيء
     notice = sofizpay_signed({"event": "cib.payment.updated", "payment_status": "success", "cib_transaction_id": cib_id, "amount": 150000})
-    assert (await client.post("/payment-requests/webhook/sofizpay", json=notice)).json()["applied"] == 0
+    # **يُجاب فوراً ويُحسم بعد الجواب** — فالقياسُ الرصيدُ لا حقلُ الجواب
+    assert (await client.post("/payment-requests/webhook/sofizpay", json=notice)).json() == {"ok": True, "queued": 1}
+    assert await balance(client, rider["headers"]) == "0"
 
     sofizpay.check[cib_id] |= {"orderStatus": 2, "respCode": "00"}
-    assert (await client.post("/payment-requests/webhook/sofizpay", json=notice)).json()["applied"] == 1
+    assert (await client.post("/payment-requests/webhook/sofizpay", json=notice)).json() == {"ok": True, "queued": 1}
     assert await balance(client, rider["headers"]) == "1500"
 
 
