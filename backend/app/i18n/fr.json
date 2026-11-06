@@ -893,9 +893,10 @@
  "تعذّرت إضافةُ الملف — أعد الدخول": "Impossible d’ajouter le profil — reconnectez-vous",
  "أدخل كلمة مرورك لتضيف هذا الملفّ إلى حسابك نفسِه": "Entrez votre mot de passe pour ajouter ce profil à votre même compte",
  "رمز التحقّق (CVV) غير صحيح، أعد المحاولة": "Code de sécurité (CVV) incorrect, réessayez",
- "الرصيد غير كافٍ": "Solde insuffisant",
  "البطاقة منتهية الصلاحية": "Carte expirée",
  "بيانات البطاقة غير صحيحة": "Données de carte incorrectes",
  "تجاوزت الحدّ المسموح": "Plafond dépassé",
- "انتهت مهلة الدفع، أعد المحاولة": "Délai de paiement dépassé, réessayez"
+ "انتهت مهلة الدفع، أعد المحاولة": "Délai de paiement dépassé, réessayez",
+ "اعتُمد حسابك": "Votre compte a été approuvé",
+ "أصبحتَ كبتناً في تاكسو — اشترك لتبدأ استقبال الطلبات.": "Vous êtes désormais capitaine TAXO — abonnez-vous pour commencer à recevoir des courses."
 }

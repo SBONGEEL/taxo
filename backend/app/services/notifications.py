@@ -1053,6 +1053,27 @@ async def publish_driver_approaching(session: AsyncSession, redis: Redis, ride: 
     )
 
 
+async def publish_driver_approved(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+) -> None:
+    """**اعتُمد حسابُ الكبتن** (أمرُ المالك ٢٠٢٦-١١-٠٦) — شاشةُ الانتظار تَعِد بهذا الإشعار حرفاً («سيصلك إشعار عند اعتماد
+    الحساب») **ولم يكن يُرسل**: من أغلق التطبيقَ ينتظر ما لا يأتي. **والخطوةُ التالية في النصّ** — الاعتمادُ وحدَه لا يُدخل
+    التوزيع، والاشتراكُ شرطُه الثاني."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="اعتُمد حسابك",
+            body="أصبحتَ كبتناً في تاكسو — اشترك لتبدأ استقبال الطلبات.",
+            data={"type": "driver_approved"},
+        ),
+    )
+
+
 async def publish_inspection_scheduled(
     session: AsyncSession,
     redis: Redis,

@@ -1603,5 +1603,7 @@
  "ارفض — كبتنٌ آخر بعرضي": "Refuser — un autre capitaine à mon offre",
  "اتصالك بالإنترنت ضعيف أو غير مستقر — نعيد المحاولة تلقائياً": "Votre connexion Internet est faible ou instable — nouvelle tentative automatique",
  "جرّب التبديل بين Wi-Fi وبيانات الهاتف": "Essayez de passer du Wi-Fi aux données mobiles, ou l’inverse",
- "الخدمة متوقفة مؤقتاً، نعمل على إصلاحها": "Le service est temporairement indisponible, nous y travaillons"
+ "الخدمة متوقفة مؤقتاً، نعمل على إصلاحها": "Le service est temporairement indisponible, nous y travaillons",
+ "التبديل إلى الكبتن": "Passer à l’application capitaine",
+ "التبديل إلى الكبتنة": "Passer à l’application capitaine"
 }

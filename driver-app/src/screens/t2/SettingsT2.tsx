@@ -21,6 +21,7 @@
  * وتقاريرُ الأعطال، وإشعاراتُ العروض، والسِمةُ الوردية.
  */
 
+import { hasCliqPayout } from "@/lib/payout";
 import { useState, type ReactNode } from "react";
 
 import { TestMarketSection } from "@/components/t2/TestMarket";
@@ -419,6 +420,7 @@ export function SettingsT2Screen() {
             {bioError ? <p className="t2-srow-error">{bioError}</p> : null}
           </>
         ) : null}
+        {hasCliqPayout(profile?.user.country_code) ? (
         <div className="t2-srow tall">
           <span className="t2-icon t2-srow-icon" aria-hidden="true">account_balance</span>
           <span className="t2-srow-main">
@@ -444,6 +446,7 @@ export function SettingsT2Screen() {
             </span>
           </span>
         </div>
+        ) : null}
       </Group>
 
       <div className="t2-settings-notes">

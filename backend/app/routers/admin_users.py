@@ -724,7 +724,7 @@ async def review_driver_document(
 
 @router.post("/drivers/{driver_id}/approve", response_model=DriverOut)
 async def approve_driver(
-    driver_id: uuid.UUID, admin: UsersManager, session: DbSession
+    driver_id: uuid.UUID, admin: UsersManager, session: DbSession, redis: RedisDep
 ) -> DriverOut:
     """اعتماد الكبتن — بحارسَي `services/drivers.approve`.
 
@@ -732,9 +732,13 @@ async def approve_driver(
     يعمل والمستنداتُ فارغة، وهو ما كان يقع قبل هذه المرحلة.
     """
     driver = await _driver(session, driver_id)
+    was_approved = driver.status is DriverStatus.APPROVED
     driver = await drivers_service.approve(session, driver=driver, actor=admin)
     await session.commit()
     await session.refresh(driver)
+    # **الوعدُ في شاشة الانتظار يُوفى** (٢٠٢٦-١١-٠٦) — بعد الـcommit كبقية البثّ، **ومرّةً واحدة**: ضغطةٌ ثانيةٌ على معتمَدٍ لا تُعيده
+    if not was_approved:
+        await notifications.publish_driver_approved(session, redis, user_id=driver.user_id)
     return DriverOut.model_validate(driver)
 
 

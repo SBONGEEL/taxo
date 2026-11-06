@@ -102,3 +102,6 @@
 .t2-frame-sheet-back { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; z-index: 20; }
 .t2-frame-sheet { width: 100%; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--sur, #15181d); color: var(--tx, #f2f0eb); }
 .t2-frame-sheet-title { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+
+/* **«فهمت» بعرض الورقة وبعيداً عن السطر فوقه** (٢٠٢٦-١١-٠٦) — كان بعرض نصّه في العربيّة ويكاد يلمس الشرح */
+.t2-frame-sheet .t2-m-cta { display: flex; width: 100%; margin-top: 18px; }

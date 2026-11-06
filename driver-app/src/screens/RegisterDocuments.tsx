@@ -30,6 +30,7 @@ import { RegisterTop } from "@/components/t2/RegisterTop";
 import { useGoBack } from "@/lib/back";
 import { useConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { hasCliqPayout } from "@/lib/payout";
 import { describeShrink, shrinkImage } from "@/lib/shrink";
 import { toLatinDigits } from "@/lib/utils";
 import { checkForm, rulesFor } from "@/lib/validation";
@@ -124,6 +125,7 @@ export function RegisterDocumentsScreen() {
   const goBack = useGoBack("/");
   const { config } = useConfig();
   const { profile, refresh } = useDriver();
+  const cliqPayout = hasCliqPayout(profile?.user.country_code);
   const page = useRef<HTMLDivElement>(null);
   const listBase = useId();
 
@@ -310,7 +312,7 @@ export function RegisterDocumentsScreen() {
         color: color.trim(),
         plate_number: plate.trim(),
       });
-      if (alias.trim()) await updateDriver({ cliq_alias: alias.trim() });
+      if (cliqPayout && alias.trim()) await updateDriver({ cliq_alias: alias.trim() });
       await refresh();
       navigate("/", { replace: true });
     } catch (caught) {
@@ -584,7 +586,7 @@ export function RegisterDocumentsScreen() {
           {section(tr("الوثائق المطلوبة"), PAPERS)}
           {section(tr("صور المركبة"), VEHICLE_PHOTOS)}
 
-          {returning ? null : (
+          {returning || !cliqPayout ? null : (
             <div className="cap-alias">
               <AuthBlock
                 label={tr("حساب CliQ للسحب")}
