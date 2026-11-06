@@ -102,7 +102,7 @@ async def test_a_full_payment_clears_the_debt_at_once_and_lifts_the_block_at_the
     request, cib_id = await _pay(client, captain, method_id, "700", sofizpay)
     sofizpay.check[cib_id] |= {"orderStatus": 2, "respCode": "00"}
     applied = await client.post("/payment-requests/webhook/sofizpay", json=_notice(cib_id, "700"))
-    assert applied.json()["applied"] == 1, applied.text
+    assert applied.json() == {"ok": True, "queued": 1}, applied.text
 
     left, blocked, statuses = await _state(session_factory, captain)
     assert left == 0 and blocked is False and statuses == ["settled", "settled"]
@@ -162,7 +162,7 @@ async def test_a_repeated_signed_webhook_collects_the_debt_exactly_once(
     first = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     again = await client.post("/payment-requests/webhook/sofizpay", json=notice)
     refreshed = await client.post(f"/payment-requests/{request['id']}/refresh", headers=captain["headers"])
-    assert first.json()["applied"] == 1 and again.json()["applied"] == 0
+    assert first.json() == again.json() == {"ok": True, "queued": 1}
     assert refreshed.json()["status"] == "approved"
     # **قيدان لا أربعة**: الصفُّ الكاملُ وجزءُ الثاني
     assert await _collections(session_factory) == before + 2
