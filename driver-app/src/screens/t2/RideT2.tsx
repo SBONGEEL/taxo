@@ -497,8 +497,14 @@ function TripHead({
           </span>
           <span className="t2-rd-fare-cur">{currencyLabel}</span>
         </div>
+        {/* **ورحلةُ «تفاوض» لا تُكتب «تقديرياً»** (أمرُ المالك ٢٠٢٦-١١-٠٦): سعرُها متّفقٌ عليه نهائيّ، و«تقديرياً» توهم أنه سيتغيّر —
+            قِيس على الإنتاج. والانتظارُ والوقفاتُ فوقه تبقى «حتى الآن» كما في كلِّ رحلة */}
         <div className="t2-rd-fare-note">
-          {Number(ride.waiting_charge) > 0 || Number(ride.pause_charge) > 0 ? tr("حتى الآن") : tr("تقديرياً")}
+          {Number(ride.waiting_charge) > 0 || Number(ride.pause_charge) > 0
+            ? tr("حتى الآن")
+            : ride.negotiated_fare
+              ? tr("سعر متفاوض عليه")
+              : tr("تقديرياً")}
         </div>
       </div>
     </div>

@@ -796,7 +796,7 @@ async def accept_counter(ride_id: uuid.UUID, rider: RiderUser, session: DbSessio
     await _own_negotiated(session, ride_id, rider)
     taken = await negotiation.take_counter(redis, ride_id)
     if taken is None:
-        raise RideOfferExpired("انقضى العرضُ المقابل — البحثُ مستمرٌّ بسعرك")
+        raise RideOfferExpired("انقضى العرضُ المقابل — البحثُ مستمرٌّ بعرضك")
     driver_id, amount = taken
     driver = await session.get(Driver, driver_id)
     if driver is None:  # pragma: no cover - صفٌّ اختفى

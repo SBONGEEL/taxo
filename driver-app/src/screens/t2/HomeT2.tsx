@@ -270,7 +270,9 @@ export function HomeT2Screen() {
       {mode === "home" ? (
         <div className="t2-hm-earn">
           {/* **«صافي اليوم» لا «أرباح اليوم»** — الرقمُ صافي ما دخل المحفظة، **ولا يُرسم صفرٌ مكانَ «لم يُعرف بعد»** */}
-          <div className="t2-hm-earn-label">{tr("صافي اليوم")}</div>
+          {/* **«صافي المحفظة اليوم»** (أمرُ المالك ٢٠٢٦-١١-٠٦): الرقمُ ما دخل المحفظةَ وما خرج منها — **والكاشُ في جيبه خارجه** — فرحلةُ كاشٍ
+              تُريه سالباً (عمولتُها) و«صافي اليوم» وحدَه يُقرأ دخلاً ضاع. الاسمُ يقول أين الرقم، والكاشُ المقبوضُ شارةٌ بجانبه */}
+          <div className="t2-hm-earn-label">{tr("صافي المحفظة اليوم")}</div>
           <div className="t2-hm-earn-row">
             <span className="t2-hm-earn-num" dir="ltr">
               {earnings ? digits(earnings.net) : "—"}
@@ -282,6 +284,15 @@ export function HomeT2Screen() {
               <span className="t2-hm-chip">
                 <Icon name="local_taxi" />
                 <RideCount n={earnings.completed_rides} />
+              </span>
+            ) : null}
+            {earnings && Number(earnings.directly_collected) > 0 ? (
+              <span className="t2-hm-chip">
+                <Icon name="payments" />
+                {tr("مُحصَّل مباشرة")}{" "}
+                <span className="t2-hm-chip-num" dir="ltr">
+                  {digits(earnings.directly_collected)}
+                </span>
               </span>
             ) : null}
             {earnings?.online_minutes != null ? (

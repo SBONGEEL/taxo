@@ -170,11 +170,11 @@ async def counter(
         raise NotFound("لا عرضَ قائمٌ على هذه الرحلة")
     await dispatch.require_offer(redis, ride.id, driver.id)
     if await redis.exists(counter_key(ride.id)):
-        raise InvalidInput("أرسلتَ سعرك — ينتظر جوابَ الراكب", field="amount")
+        raise InvalidInput("أرسلتَ عرضك — ينتظر جوابَ الراكب", field="amount")
     rules = await rules_for(session, ride.country_code)
     await rounding.require_multiple_in(session, ride.country_code, amount, field="amount")
     if amount <= ride.negotiation_offer:
-        raise InvalidInput("سعرُك يساوي عرضَ الراكب أو أقلّ — اضغط «قبول»", field="amount")
+        raise InvalidInput("عرضُك يساوي عرضَ الراكب أو أقلّ — اضغط «قبول بسعره»", field="amount")
     if rules.max_counter_percent is not None:
         cap = as_money(ride.negotiation_offer * (Decimal(100) + Decimal(rules.max_counter_percent)) / Decimal(100))
         if amount > cap:

@@ -152,8 +152,8 @@ export function OfferT2({
             <div className="t2-of-tags">
               <span className="t2-of-tag">
                 {offer.countered
-                  ? tr("سعرُك — بانتظار جواب الراكب على")
-                  : tr("سعرُ الراكب — المقدَّر")}{" "}
+                  ? tr("عرضك في التفاوض — بانتظار جواب الراكب على")
+                  : tr("عرض الراكب في التفاوض — المقدَّر")}{" "}
                 {digits(offer.countered ? bargain : ride.current_fare)} {currencyLabel}
               </span>
             </div>
@@ -195,7 +195,7 @@ export function OfferT2({
                 dir="ltr"
                 inputMode="decimal"
                 autoFocus
-                aria-label={tr("سعرك")}
+                aria-label={tr("عرضك في التفاوض")}
                 className="t2-input"
                 value={counter}
                 onChange={(event) => setCounter(event.target.value.trim())}
@@ -206,7 +206,7 @@ export function OfferT2({
                 disabled={busy || counter === ""}
                 onClick={() => void onCounter(counter)}
               >
-                {tr("أرسل سعري")}
+                {tr("أرسل عرضي")}
               </button>
               {counterError ? <span className="t2-of-tag warn">{counterError}</span> : null}
             </div>
@@ -214,11 +214,11 @@ export function OfferT2({
 
           <div className="t2-of-actions">
             <button type="button" className="t2-of-decline" onClick={onDecline} disabled={busy}>
-              {offer.countered ? tr("اسحب سعري") : tr("رفض")}
+              {offer.countered ? tr("اسحب عرضي") : tr("رفض")}
             </button>
             {bargain && onCounter && !offer.countered && counter === null ? (
               <button type="button" className="t2-of-decline" onClick={() => setCounter("")} disabled={busy}>
-                {tr("سعر آخر")}
+                {tr("عرض آخر")}
               </button>
             ) : null}
             {offer.countered ? null : (

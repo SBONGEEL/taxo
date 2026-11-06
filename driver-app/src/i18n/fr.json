@@ -1818,5 +1818,12 @@
  "سعر آخر": "Autre prix",
  "قبول بسعره": "Accepter à son prix",
  "سعر متفاوض عليه": "Prix négocié",
- "تحقّق من اتصالك بالإنترنت — نعيد المحاولة تلقائيّاً": "Vérifiez votre connexion Internet — nouvelle tentative automatique"
+ "تحقّق من اتصالك بالإنترنت — نعيد المحاولة تلقائيّاً": "Vérifiez votre connexion Internet — nouvelle tentative automatique",
+ "عرضك في التفاوض — بانتظار جواب الراكب على": "Votre offre de négociation — en attente de la réponse du passager sur",
+ "عرض الراكب في التفاوض — المقدَّر": "Offre du passager (négociation) — estimé",
+ "عرضك في التفاوض": "Votre offre de négociation",
+ "أرسل عرضي": "Envoyer mon offre",
+ "اسحب عرضي": "Retirer mon offre",
+ "عرض آخر": "Autre offre",
+ "صافي المحفظة اليوم": "Net du portefeuille aujourd’hui"
 }

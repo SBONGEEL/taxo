@@ -120,7 +120,7 @@ export function OutcomeSheetT2({
   ) : ride.status === "no_driver_found" && onNegotiateAgain ? (
     <div className="t2-out-actions">
       <button type="button" className="t2-button primary" onClick={onNegotiateAgain}>
-        {tr("ارفع سعرك أو اطلب بالسعر العاديّ")}
+        {tr("ارفع عرضك أو اطلب بالسعر العاديّ")}
       </button>
       <button type="button" className="t2-out-later" onClick={onDismiss}>
         {tr("حسناً")}
