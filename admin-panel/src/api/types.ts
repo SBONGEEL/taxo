@@ -3296,3 +3296,26 @@ export interface FacebookReport {
   page: { name?: string; username?: string; followers_count?: number; fan_count?: number; link?: string } | null;
   page_error: string | null;
 }
+
+// ------------------------------------------------- «الإحصاءات» (`design/SITE-STATS.md`) — مجاميعُ يوميّة بلا IP ولا كوكي
+
+export type StatsApp = "rider" | "driver";
+export type StatsWindow = "today" | "week" | "month" | "all";
+
+export interface SiteStatsReport {
+  today: string;
+  summary: Record<StatsApp, Record<StatsWindow, { site: number; play: number; total: number }>>;
+  /** «all» بلا فريدين: الفريدُ يُعدّ في يومٍ وأسبوعٍ وشهرٍ وحدَها */
+  visits: Record<StatsWindow, { views: number; uniques: number | null }>;
+  site_daily: { day: string; views: number; uniques: number }[];
+  top_pages: { key: string; count: number }[];
+  top_sources: { key: string; count: number }[];
+  site_countries: { key: string; count: number }[];
+  downloads_daily: { day: string; app: StatsApp; downloads: number; clicks: number }[];
+  download_countries: { key: string; count: number }[];
+  play_daily: { day: string; app: StatsApp; installs: number; uninstalls: number; active_devices: number }[];
+  play_countries: { key: string; count: number }[];
+  play_last_import: { ran_at: string; status: string; rows: number; error: string | null } | null;
+  play_last_day: string | null;
+  since: { site: string | null; downloads: string | null; play: string | null };
+}

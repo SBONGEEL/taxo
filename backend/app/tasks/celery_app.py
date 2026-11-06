@@ -115,6 +115,7 @@ celery_app = Celery(
         "app.tasks.capacity",
         "app.tasks.admin_alerts",
         "app.tasks.facebook",
+        "app.tasks.site_stats",
     ],
 )
 
@@ -327,6 +328,11 @@ celery_app.conf.update(
         "sync-facebook": {
             "task": "app.tasks.facebook.sync_facebook",
             "schedule": 1800,
+        },
+        # **«الإحصاءات»**: تقاريرُ Play تتحدّث يوميّاً بتأخّر أيّام — فاستيرادٌ كلَّ ستِّ ساعاتٍ يكفي ويلحق أوّلَ نسخة
+        "import-play-stats": {
+            "task": "app.tasks.site_stats.import_play",
+            "schedule": 6 * 3600,
         },
         "watch-whatsapp-session": {
             "task": "app.tasks.whatsapp.watch_whatsapp_session",

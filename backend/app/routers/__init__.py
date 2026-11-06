@@ -78,6 +78,7 @@ from app.routers import (
     guest,
     wallet,
     public_site,
+    site_stats,
     storefront,
     trip_chat,
     ride_calls,
@@ -187,6 +188,9 @@ api_router.include_router(vehicle_skins.router)
 api_router.include_router(admin_vehicle_skins.router)
 # **الصفحةُ التعريفيةُ العامة** — قراءةٌ محضةٌ بلا جلسة (2026-08-21)
 api_router.include_router(public_site.router)
+# **«الإحصاءات»** — عدٌّ عامٌّ بلا IP وتقريرٌ بصلاحيّة `stats.view` (أمرُ المالك ٢٠٢٦-١١-٠٤)
+api_router.include_router(site_stats.public)
+api_router.include_router(site_stats.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...
 api_router.include_router(ws_router)
 

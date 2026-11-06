@@ -35,6 +35,8 @@ import { Icon, Wordmark } from "@/taxo2";
 const FINANCE_SUMMARY = "finance.summary";
 /** قناةُ فيسبوك (SPEC §٩٤/٢) — صلاحيّةٌ حسّاسةٌ تُعطى بالاسم */
 const FACEBOOK_MANAGE = "facebook.manage";
+/** «الإحصاءات» — زياراتُ الموقع وتحميلاتُه وPlay، صلاحيّةٌ حسّاسةٌ تُعطى بالاسم */
+const STATS_VIEW = "stats.view";
 
 /** المجموعاتُ كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». **والأيقونةُ من الهوية** (Material Symbols Rounded). */
 const GROUPS: {
@@ -123,6 +125,7 @@ const GROUPS: {
       { label: "التقارير والإحصاءات", icon: "bar_chart", to: "/reports" },
       { label: "الإشعارات الجماعية", icon: "campaign", to: "/campaigns", adminOnly: true },
       { label: "فيسبوك", icon: "campaign", to: "/facebook", permission: FACEBOOK_MANAGE },
+      { label: "الإحصاءات", icon: "insights", to: "/stats", permission: STATS_VIEW },
     ],
   },
   {

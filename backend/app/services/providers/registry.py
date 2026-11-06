@@ -100,6 +100,17 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(key="page_token", label="رمز الصفحة الطويل"),
         ),
     ),
+    # **تقاريرُ Google Play** («الإحصاءات»، أمرُ المالك ٢٠٢٦-١١-٠٤) — عامٌّ بلا دولة: التثبيتُ والإلغاءُ والأجهزةُ النشطة بالبلد، يوميّاً.
+    # **حسابُ خدمةٍ يقرأ التخزينَ وحدَه**، والمجلّدُ `pubsite_prod_…` من «تنزيل التقارير» في Play Console
+    ProviderKey.GOOGLE_PLAY_REPORTS: ProviderSpec(
+        key=ProviderKey.GOOGLE_PLAY_REPORTS,
+        label="Google Play — تقاريرُ التثبيت",
+        fields=(
+            ProviderField(key="client_email", label="بريد حساب الخدمة", secret=False),
+            ProviderField(key="private_key", label="المفتاح الخاص (private_key)"),
+            ProviderField(key="bucket", label="مجلّد التقارير (pubsite_prod_…)", secret=False),
+        ),
+    ),
     ProviderKey.TELR: ProviderSpec(
         key=ProviderKey.TELR,
         label="Telr — الدفع بالبطاقة",

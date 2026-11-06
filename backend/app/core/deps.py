@@ -277,6 +277,7 @@ ActivityAlertsReceiver = Annotated[User, _perm(AdminPermission.ACTIVITY_ALERTS_R
 GatewayLedgerReader = Annotated[User, _perm(AdminPermission.GATEWAY_LEDGER_READ)]
 # **قناةُ صفحة فيسبوك** (SPEC §٩٤/٢) — خارجَ افتراض `admin`، تُمنح بالاسم
 FacebookManager = Annotated[User, _perm(AdminPermission.FACEBOOK_MANAGE)]
+StatsViewer = Annotated[User, _perm(AdminPermission.STATS_VIEW)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

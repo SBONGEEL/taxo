@@ -31,6 +31,10 @@
  */
 
 import { playBadge, readDoor, trademark } from "./door.js";
+import { track } from "./stats.js";
+
+// **«الإحصاءات»** — زيارةٌ وضغطُ تحميلٍ بلا كوكي ولا معرّف (`stats.js`)
+track();
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
