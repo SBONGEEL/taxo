@@ -30,7 +30,7 @@
  *   `users`، فلا يحمله الردُّ ولا تخمّنه الشاشة.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -91,6 +91,8 @@ import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { Checkbox, DateInput, Field, FieldError, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
+import { MediaThumb, MediaViewer, useMediaCache } from "@/components/ui/MediaViewer";
+import type { MediaCache, MediaItem } from "@/components/ui/MediaViewer";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { NO_RESULTS, useSearch } from "@/lib/search";
@@ -148,101 +150,48 @@ const PREFERENCE_LABEL: Record<GenderPreference, string> = {
 
 const COLUMNS = "1.6fr 1.1fr 0.9fr 1fr 0.8fr 0.6fr 1.2fr";
 
-/** معاينةُ وثيقةٍ داخل الدرج — **تُجلب بالمفتاح ثم تُعرض من `blob:`**.
+/** **مصغَّرةُ الوثيقة تُفتح في العارض** (البند ٠، ٢٠٢٦-١١-٠٦) — كانت زرّاً «اعرض الوثيقة» يرسم صورةً بارتفاع ١٧٠ داخل الدرج.
  *
- * و`<img src>` لا يحمل ترويسةَ `Authorization`، والمسارُ يتحقق من الدور —
- * فالجلبُ يدويٌّ لا لأن الصورةَ خاصة فحسب، بل لأن البابَ لا يفتح بغير مفتاح.
+ * **والمصغَّراتُ تُجلب حين يُفتح الدرج** — كان المبدأُ «لا تُفتح إلا بطلب» كي لا تُحمَّل تسعُ صورٍ لا يُنظر إلى أكثرها،
+ * **وأمرُ المالك أن تُرى الوثيقةُ بنقرةٍ واحدة** فصار الطلبُ هو فتحَ الدرج نفسِه. والجلبُ بالمفتاح إلى `blob:`
+ * (`<img src>` لا يحمل ترويسة التفويض)، **ومن فتح يُحرِّر**: خبيئةُ الدرج تُلغيها كلَّها حين يُغلق.
  *
- * **ولا تُفتح إلا بطلب**: درجٌ فيه تسعُ وثائقَ يجلبها كلَّها عند الفتح يحمّل
- * تسعَ صورٍ لا ينظر المشرفُ إلى أكثرها. **ومن فتح يغلق** — `revokeObjectURL`
- * عند الإغلاق، وإلا بقيت الوثائقُ في ذاكرة التبويب حتى يُغلق.
- */
-/** معاينةُ الوثيقة، **ومعها حقلُ التاريخ عائماً فوقها** (البند ب).
+ * **و«رآها» يقع في العارض لا في المصغَّرة**: الاعتمادُ الجماعيُّ يقبل ما رآه المشرفُ وحدَه، ومصغَّرةٌ بعرض الدرج
+ * ليست قراءةً لرقمٍ على رخصة — فـ`onSeen` يقع حين تصل الورقةُ مفتوحةً في العارض، لا حين تُرسم صغيرة.
  *
- * **وموضعُه فوق الصورة لا تحتها**: المشرفُ يقارن رقماً مكتوباً على الورقة برقمٍ
- * في خانة، **وعينُه تنتقل بينهما**. وخانةٌ تحت صورةٍ بارتفاع ١٧٠ تعني أن أحدَهما
- * خارج مجال النظر حين يُقرأ الآخر — فيُحفظ الرقمُ في الذاكرة ويُكتب، وهو بعينه
- * ما يُخطئ فيه الإنسان.
+ * **وحقلُ التاريخ تحت المصغَّرة وفي أسفل العارض معاً**: المشرفُ يقارن رقماً على الورقة برقمٍ في خانة،
+ * وفي العارض يقرأ الورقةَ مكبَّرةً والخانةُ تحتها في نظرةٍ واحدة.
  */
 function DocumentPreview({
-  driverId,
-  documentId,
+  cache,
+  item,
   expiry,
   onExpiryChange,
-  onSeen,
+  onOpen,
 }: {
-  driverId: string;
-  documentId: string;
+  cache: MediaCache;
+  item: MediaItem;
   expiry: string;
   onExpiryChange: (value: string) => void;
-  /** **يقع حين تصل الورقةُ فعلاً لا حين يُضغط الزرّ** — والفرقُ هو المعنى:
-   *  نداءٌ فشل ليس معاينة. */
-  onSeen: () => void;
+  onOpen: () => void;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [url]);
-
-  if (url) {
-    return (
-      <div className="ad-doc-preview">
-        <img src={url} alt="الوثيقة" className="ad-doc-img" />
-        {/* عائمٌ على الحافة العليا — يُقرأ مع الورقة في نظرةٍ واحدة */}
-        <div className="ad-doc-expiry">
-          <span className="ad-doc-expiry-label" aria-hidden="true">
-            تنتهي في
-          </span>
-          {/* **حقلُ التاريخ من نظام التصميم لا الأصليُّ عارياً** (§٦٢-ب/١٥): الأصليُّ في صفحةٍ عربيّةٍ يرسم «يوم/شهر/سنة»
-              بحروفٍ معكوسة — **وقِيس هنا كذلك ولو بـ`dir="ltr"`** («ةنس/رهش/موي» في لقطة الدرج). **والقيمةُ والحدثُ كما
-              كانا**: نصُّ `YYYY-MM-DD` يُرسل مع البتّة، ومنتقي النظام نفسُه يُفتح */}
-          <DateField
-            value={expiry}
-            onChange={onExpiryChange}
-            label="تنتهي في"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            URL.revokeObjectURL(url);
-            setUrl(null);
-          }}
-          className="ad-doc-hide"
-        >
-          إخفاء
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true);
-          setFailed(null);
-          driverDocumentBlob(driverId, documentId)
-            .then((blob) => {
-              setUrl(blob);
-              onSeen();
-            })
-            .catch((caught: Error) => setFailed(caught.message))
-            .finally(() => setBusy(false));
-        }}
-        className="ad-doc-view"
-      >
-        <Icon name="visibility" />
-        {busy ? "جارٍ الفتح…" : "اعرض الوثيقة"}
-      </button>
-      {failed ? <p className="ad-doc-fail">{failed}</p> : null}
+    <div className="ad-doc-preview">
+      <MediaThumb cache={cache} item={item} onOpen={onOpen} />
+      <ExpiryField value={expiry} onChange={onExpiryChange} />
+    </div>
+  );
+}
+
+function ExpiryField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="ad-doc-expiry">
+      <span className="ad-doc-expiry-label" aria-hidden="true">
+        تنتهي في
+      </span>
+      {/* **حقلُ التاريخ من نظام التصميم لا الأصليُّ عارياً** (§٦٢-ب/١٥): الأصليُّ في صفحةٍ عربيّةٍ يرسم «يوم/شهر/سنة»
+          بحروفٍ معكوسة. **والقيمةُ والحدثُ كما كانا**: نصُّ `YYYY-MM-DD` يُرسل مع البتّة */}
+      <DateField value={value} onChange={onChange} label="تنتهي في" />
     </div>
   );
 }
@@ -648,6 +597,28 @@ function DriverDrawer({
    * آمنة**» — والأمانُ هنا أن يكون القرارُ على ورقةٍ رُئيت.
    */
   const [seen, setSeen] = useState<Set<string>>(new Set());
+  // **العارض** (البند ٠): وثائقُ هذا الكبتن كلُّها مجموعةٌ واحدة — التالي والسابق بينها
+  const media = useMediaCache();
+  const [viewing, setViewing] = useState<number | null>(null);
+  const setDocExpiry = useCallback(
+    (id: string, value: string) => setExpiry((current) => ({ ...current, [id]: value })),
+    [],
+  );
+  const mediaItems = useMemo<MediaItem[]>(
+    () =>
+      (docs?.documents ?? []).map((document) => ({
+        key: document.id,
+        label: DOC_LABEL[document.doc_type],
+        load: () => driverDocumentBlob(row.driver_id, document.id),
+        extra: (
+          <ExpiryField
+            value={expiry[document.id] ?? document.expires_on ?? ""}
+            onChange={(value) => setDocExpiry(document.id, value)}
+          />
+        ),
+      })),
+    [docs, expiry, row.driver_id, setDocExpiry],
+  );
 
   /** كـ`run` **ولا يُغلق الدرج** — لبتّةِ مستندٍ من عدّة مستندات. */
   async function runStay(action: () => Promise<unknown>, message: string) {
@@ -751,7 +722,7 @@ function DriverDrawer({
           <p className="ad-mini-empty">لم يرفع أيّ مستند بعد.</p>
         ) : (
           <ul className="ad-mini-reset">
-            {docs.documents.map((document) => (
+            {docs.documents.map((document, index) => (
               <li key={document.id} className="ad-doc">
                 <div className="ad-doc-top">
                   <span className="ad-tile">
@@ -784,15 +755,11 @@ function DriverDrawer({
                     الوثيقة وحالها — رخصةٌ تُقبل ولا يراها أحد. والمسارُ مبنيٌّ
                     منذ 9-ب ولم يصل إليه زرٌّ قط. */}
                 <DocumentPreview
-                  driverId={row.driver_id}
-                  documentId={document.id}
+                  cache={media}
+                  item={mediaItems[index]}
                   expiry={expiry[document.id] ?? document.expires_on ?? ""}
-                  onExpiryChange={(value) =>
-                    setExpiry((current) => ({ ...current, [document.id]: value }))
-                  }
-                  onSeen={() =>
-                    setSeen((current) => new Set(current).add(document.id))
-                  }
+                  onExpiryChange={(value) => setDocExpiry(document.id, value)}
+                  onOpen={() => setViewing(index)}
                 />
 
                 {/* **الأزرارُ للمنتظِر وحدَه**: `documents.review` يرفض ما بُتّ
@@ -994,6 +961,16 @@ function DriverDrawer({
             دعمٍ فني (القسم 13/8).
           </p>
         )}
+      {viewing !== null && mediaItems[viewing] ? (
+        <MediaViewer
+          cache={media}
+          items={mediaItems}
+          index={viewing}
+          onIndex={setViewing}
+          onClose={() => setViewing(null)}
+          onShown={(key) => setSeen((current) => (current.has(key) ? current : new Set(current).add(key)))}
+        />
+      ) : null}
     </Drawer>
     </FormErrors>
   );

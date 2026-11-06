@@ -22,6 +22,7 @@ import {
 } from "@/api/endpoints";
 import type { AdminTransfer, PaymentRequestStatus, TransferSettings } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { MediaThumb, MediaViewer, useMediaCache } from "@/components/ui/MediaViewer";
 import { Pills, Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -152,27 +153,15 @@ export function TransfersScreen() {
 }
 
 function ReviewModal({ row, onClose, onDone }: { row: AdminTransfer; onClose: () => void; onDone: (message: string) => void }) {
-  const [file, setFile] = useState<{ url: string; type: string } | null>(null);
+  // **الإيصالُ في العارض** (البند ٠): مصغَّرةٌ تُفتح ملءَ الشاشة بتكبيرٍ وتدوير — رقمُ التحويل يُقرأ لا يُخمَّن
+  const media = useMediaCache();
+  const [viewing, setViewing] = useState(false);
+  const receipt = { key: row.id, label: `إيصال ${row.public_ref}`, load: () => transferReceiptBlob(row.id) };
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let opened: string | null = null;
-    if (row.has_receipt) {
-      transferReceiptBlob(row.id)
-        .then((answer) => {
-          opened = answer.url;
-          setFile(answer);
-        })
-        .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "تعذّر فتح الإيصال"));
-    }
-    // **من يفتح الإيصالَ يحرّره** — وإلا بقي في ذاكرة التبويب
-    return () => {
-      if (opened) URL.revokeObjectURL(opened);
-    };
-  }, [row.id, row.has_receipt]);
 
   async function decide(approve: boolean) {
     setBusy(true);
@@ -212,17 +201,15 @@ function ReviewModal({ row, onClose, onDone }: { row: AdminTransfer; onClose: ()
         ))}
       </div>
       <div className="mt-14">
-        {file ? (
-          file.type === "application/pdf" ? (
-            <a href={file.url} target="_blank" rel="noreferrer" className="text-12 font-semibold text-ink underline">
-              افتح ملفَّ الإيصال (PDF)
-            </a>
-          ) : (
-            <img src={file.url} alt="صورة الإيصال" className="mx-auto block max-h-[60vh] max-w-full rounded-14" />
-          )
-        ) : row.has_receipt ? null : (
+        {/* **من يفتح الإيصالَ يحرّره**: خبيئةُ الحوار تُلغي الـ`blob:` حين يُغلق */}
+        {row.has_receipt ? (
+          <MediaThumb cache={media} item={receipt} onOpen={() => setViewing(true)} className="tall" />
+        ) : (
           <p className="text-12 text-muted">لا إيصالَ مرفق.</p>
         )}
+        {viewing ? (
+          <MediaViewer cache={media} items={[receipt]} index={0} onIndex={() => undefined} onClose={() => setViewing(false)} />
+        ) : null}
       </div>
       {row.status === "pending" ? (
         <>

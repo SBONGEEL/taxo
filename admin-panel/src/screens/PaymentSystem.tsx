@@ -44,6 +44,7 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Checkbox, Field, Select, Switch } from "@/components/ui/Field";
 import { MoneyField } from "@/components/ui/Inputs";
 import { Modal } from "@/components/ui/Modal";
+import { MediaThumb, MediaViewer, useMediaCache } from "@/components/ui/MediaViewer";
 import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import {
@@ -258,33 +259,17 @@ function RequestsTab({
   );
 }
 
+/** **الإيصالُ يُفتح في العارض** (البند ٠، ٢٠٢٦-١١-٠٦): مصغَّرةٌ في الحوار تُفتح ملءَ الشاشة بتكبيرٍ وتدوير،
+ *  والـPDF داخله. **ومن يفتح الإيصالَ يحرّره** — خبيئةُ الحوار تُلغي الـ`blob:` حين يُغلق. */
 function ReceiptModal({ row, onClose }: { row: AdminPaymentRequest; onClose: () => void }) {
-  const [file, setFile] = useState<{ url: string; type: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    let opened: string | null = null;
-    paymentReceiptBlob(row.id)
-      .then((answer) => {
-        opened = answer.url;
-        setFile(answer);
-      })
-      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "تعذّر فتح الإيصال"));
-    // **من يفتح الإيصالَ يحرّره** — وإلا بقي في ذاكرة التبويب
-    return () => {
-      if (opened) URL.revokeObjectURL(opened);
-    };
-  }, [row.id]);
+  const media = useMediaCache();
+  const [viewing, setViewing] = useState(true);
+  const receipt = { key: row.id, label: `إيصال ${row.user_name ?? ""}`.trim(), load: () => paymentReceiptBlob(row.id) };
   return (
     <Modal title={`إيصال ${row.user_name ?? ""}`} onClose={onClose} wide>
-      <ErrorNote message={error} />
-      {file ? (
-        file.type === "application/pdf" ? (
-          <a href={file.url} target="_blank" rel="noreferrer" className="text-12 font-semibold text-ink underline">
-            افتح ملفَّ الإيصال (PDF)
-          </a>
-        ) : (
-          <img src={file.url} alt="صورة الإيصال" className="mx-auto block max-h-[70vh] max-w-full rounded-14" />
-        )
+      <MediaThumb cache={media} item={receipt} onOpen={() => setViewing(true)} className="tall" />
+      {viewing ? (
+        <MediaViewer cache={media} items={[receipt]} index={0} onIndex={() => undefined} onClose={onClose} />
       ) : null}
       <div className="mt-18 flex">
         <Button className="flex-1" size="md" variant="secondary" onClick={onClose}>

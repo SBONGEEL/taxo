@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { feedbackScreenshotBlob, listFeedback, markFeedback } from "@/api/endpoints";
 import type { AdminFeedback } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { MediaViewer, useMediaCache } from "@/components/ui/MediaViewer";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Segmented } from "@/components/ui/Segmented";
@@ -30,6 +31,9 @@ const APP_LABEL: Record<string, string> = {
 
 function Screenshot({ feedbackId }: { feedbackId: string }) {
   const [src, setSrc] = useState<string | null>(null);
+  // **تُفتح في العارض** (البند ٠) لا في تبويبٍ يحمل رابطَ `blob:` يموت حين تُغلق الصفحة
+  const media = useMediaCache();
+  const [viewing, setViewing] = useState(false);
   useEffect(() => {
     let url: string | null = null;
     let alive = true;
@@ -53,12 +57,21 @@ function Screenshot({ feedbackId }: { feedbackId: string }) {
   return (
     <div className="ad-report-photo">
       {src ? (
-        <a href={src} target="_blank" rel="noreferrer" aria-label="افتح صورة الشاشة كاملة">
+        <button type="button" className="ad-mv-plain" onClick={() => setViewing(true)} aria-label="افتح صورة الشاشة كاملة">
           <img src={src} alt="صورةُ الشاشة المرفقة" />
-        </a>
+        </button>
       ) : (
         <Icon name="image" />
       )}
+      {viewing && src ? (
+        <MediaViewer
+          cache={media}
+          items={[{ key: feedbackId, label: "صورةُ الشاشة المرفقة", load: () => Promise.resolve({ url: src, type: "image/png" }) }]}
+          index={0}
+          onIndex={() => undefined}
+          onClose={() => setViewing(false)}
+        />
+      ) : null}
     </div>
   );
 }
