@@ -29,6 +29,7 @@ from app.routers import (
     admin_referrals,
     admin_releases,
     admin_facebook,
+    agent_facebook,
     admin_sharing,
     admin_providers,
     admin_rides,
@@ -139,6 +140,8 @@ api_router.include_router(admin_site.router)
 api_router.include_router(admin_referrals.router)
 api_router.include_router(admin_releases.router)
 api_router.include_router(admin_facebook.router)
+# **بابُ وكيل فيسبوك بمفتاح خدمة** (§٩٤/٧) — قناةُ فيسبوك وحدَها
+api_router.include_router(agent_facebook.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 # **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١) — طرقُ الدفع لكلِّ دولة وطابورُ الموظّف الماليّ، ووجهُه للراكب والكبتن والـwebhook
