@@ -37,6 +37,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { enterDemo } from "@/demo/mode";
 import { deviceId } from "@/lib/device";
 import { StaleShellNotice } from "@/components/StaleShellNotice";
+import { ConnectionBanner } from "@/components/ConnectionBanner";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -352,6 +353,7 @@ function NavBar() {
       <WomenModeNotice />
       {/* **والنسخةُ المحفوظةُ تُقال** حين عرضها العاملُ بعد مهلته (§٦٢-د/٦) */}
       <StaleShellNotice />
+      <ConnectionBanner />
       {/* **وشريطُ TaxoTabs في المظهرين** — كان القائمُ يُرسم في الليليّ (`ByTheme`)، والوجهاتُ هي هي (`lib/tabs.ts`) */}
       {showsNav(pathname) && !coveredByT2 ? <BottomNavT2 /> : null}
     </>

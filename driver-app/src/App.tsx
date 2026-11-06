@@ -37,6 +37,7 @@ import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
 import { StaleShellNotice } from "@/components/StaleShellNotice";
+import { ConnectionBanner } from "@/components/ConnectionBanner";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig, useFeature } from "@/lib/config";
@@ -456,6 +457,7 @@ function NavBar() {
       <WomenModeNotice />
       {/* **والنسخةُ المحفوظةُ تُقال** حين عرضها العاملُ بعد مهلته (§٦٢-د/٦) */}
       <StaleShellNotice />
+      <ConnectionBanner />
       {/* **TaxoTabs في المظهرين** (§٦٢/٣) — كان الشريطُ القديمُ يُرسم حتى في الداكن */}
       {showsNav(pathname) && !T2_COVERING.includes(pathname) ? <BottomNavT2 /> : null}
     </>

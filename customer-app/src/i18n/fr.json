@@ -1600,5 +1600,8 @@
  "«تفاوض» لا يُجمع مع المشاركة ولا الكوبون.": "« Négocier » ne se combine ni avec le partage ni avec un code promo.",
  "نعرض عرضك على كبتنٍ واحدٍ في كلِّ مرّة": "Nous présentons votre offre à un capitaine à la fois",
  "ارفع عرضك أو اطلب بالسعر العاديّ": "Augmentez votre offre ou commandez au prix normal",
- "ارفض — كبتنٌ آخر بعرضي": "Refuser — un autre capitaine à mon offre"
+ "ارفض — كبتنٌ آخر بعرضي": "Refuser — un autre capitaine à mon offre",
+ "اتصالك بالإنترنت ضعيف أو غير مستقر — نعيد المحاولة تلقائياً": "Votre connexion Internet est faible ou instable — nouvelle tentative automatique",
+ "جرّب التبديل بين Wi-Fi وبيانات الهاتف": "Essayez de passer du Wi-Fi aux données mobiles, ou l’inverse",
+ "الخدمة متوقفة مؤقتاً، نعمل على إصلاحها": "Le service est temporairement indisponible, nous y travaillons"
 }
