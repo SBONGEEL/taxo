@@ -126,7 +126,8 @@ export function useBecomeDriver(): {
   const female = user?.gender === "female";
 
   const label = both
-    ? female ? tr("التبديل إلى السائقة") : tr("التبديل إلى السائق")
+    // «الكبتن» لا «السائق» (٢٠٢٦-١١-٠٦): التطبيقُ الذي يُبدَّل إليه يسمّي صاحبَه كبتناً في كلِّ شاشة
+    ? female ? tr("التبديل إلى الكبتنة") : tr("التبديل إلى الكبتن")
     : female ? tr("كوني سائقة") : tr("كن سائقاً");
   const sub = both
     ? tr("حسابك نفسُه في TAXO Driver — بلا تسجيل دخول")
