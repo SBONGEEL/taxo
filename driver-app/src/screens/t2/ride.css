@@ -107,6 +107,8 @@
 /* ── C04 · صافي اليوم وشاراتُه ── */
 .t2-hm-earn { margin: 20px 20px 0; }
 .t2-hm-earn-label { font-size: 13px; color: var(--t2-muted); }
+/* «المحصَّل − العمولة» تحت «صافي اليوم» — سطرٌ يقول كيف حُسب الرقم (أمرُ المالك ٢٠٢٦-١١-٠٦) */
+.t2-hm-earn-hint { font-size: 11px; color: var(--t2-muted); margin-top: 2px; }
 .t2-hm-earn-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
 .t2-hm-earn-num {
   font-family: var(--t2-font-num);

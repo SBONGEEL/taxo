@@ -1828,5 +1828,7 @@
  "صافي المحفظة اليوم": "Net du portefeuille aujourd’hui",
  "اتصالك بالإنترنت ضعيف أو غير مستقر — نعيد المحاولة تلقائياً": "Votre connexion Internet est faible ou instable — nouvelle tentative automatique",
  "جرّب التبديل بين Wi-Fi وبيانات الهاتف": "Essayez de passer du Wi-Fi aux données mobiles, ou l’inverse",
- "الخدمة متوقفة مؤقتاً، نعمل على إصلاحها": "Le service est temporairement indisponible, nous y travaillons"
+ "الخدمة متوقفة مؤقتاً، نعمل على إصلاحها": "Le service est temporairement indisponible, nous y travaillons",
+ "المحصَّل − العمولة": "Encaissé − commission",
+ "حركة المحفظة:": "Mouvement du portefeuille :"
 }
