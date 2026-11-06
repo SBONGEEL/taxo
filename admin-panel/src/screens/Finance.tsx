@@ -18,6 +18,7 @@
 
 import { GuardBanner } from "@/components/GuardBanner";
 import { useCountry } from "@/lib/country";
+import { currencyOf, money } from "@/lib/format";
 import { useCountryConfig } from "@/lib/config";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -208,7 +209,7 @@ export function FinanceScreen() {
             render={(row) => (
               <>
                 <span className="font-semibold text-ink">
-                  {digits(row.amount)}
+                  {money(row.amount, currencyOf(country))}
                 </span>
                 <span dir="ltr" className="text-start text-muted">
                   {row.cart_id}
@@ -272,7 +273,7 @@ export function FinanceScreen() {
                   />
                 </span>
                 <span className="font-semibold text-ink">
-                  {digits(row.amount)}
+                  {money(row.amount, currencyOf(country))}
                 </span>
                 <span className="min-w-0 text-muted">
                   {WITHDRAWAL_METHOD_LABEL[row.method]}
@@ -383,7 +384,7 @@ export function FinanceScreen() {
             render={(row) => (
               <>
                 <span className="font-semibold text-ink">
-                  {digits(row.amount)}
+                  {money(row.amount, currencyOf(country))}
                 </span>
                 <span className="text-muted">
                   {row.method === "cliq" ? "كليك" : "كاش"}
@@ -519,6 +520,7 @@ function ConfirmClaimModal({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const { country } = useCountry();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const short = amount.trim() !== "" && Number(amount) < Number(claim.amount);
@@ -540,7 +542,7 @@ function ConfirmClaimModal({
         <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
           <span className="text-12.5 text-muted">المطلوب</span>
           <span className="text-17 font-bold text-ink">
-            {digits(claim.amount)}
+            {money(claim.amount, currencyOf(country))}
           </span>
         </div>
 
@@ -629,6 +631,7 @@ function ConfirmTopupModal({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const { country } = useCountry();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const differs = amount.trim() !== "" && amount.trim() !== request.amount;
@@ -653,7 +656,7 @@ function ConfirmTopupModal({
         <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
           <span className="text-12.5 text-muted">ما كتبه صاحبُ الطلب</span>
           <span className="text-15 font-bold text-ink">
-            {digits(request.amount)}
+            {money(request.amount, currencyOf(country))}
           </span>
         </div>
 
@@ -721,6 +724,7 @@ function PayoutModal({
   onClose: () => void;
   onPaid: (message: string) => void;
 }) {
+  const { country } = useCountry();
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -743,7 +747,7 @@ function PayoutModal({
         <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
           <span className="text-12.5 text-muted">المبلغ</span>
           <span className="text-17 font-bold text-ink">
-            {digits(request.amount)}
+            {money(request.amount, currencyOf(country))}
           </span>
         </div>
 

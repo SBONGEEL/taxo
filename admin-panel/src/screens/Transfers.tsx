@@ -30,6 +30,7 @@ import { Field, Switch } from "@/components/ui/Field";
 import { MoneyField } from "@/components/ui/Inputs";
 import { Modal } from "@/components/ui/Modal";
 import { PAYMENT_REQUEST_PURPOSE_LABEL, PAYMENT_REQUEST_STATUS_LABEL, PAYMENT_REQUEST_STATUS_TONE } from "@/lib/labels";
+import { currencyOf, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, cn, digits } from "@/lib/utils";
 
@@ -103,7 +104,7 @@ export function TransfersScreen() {
                 </span>
               </span>
               <span>
-                <span className="block font-semibold text-ink">{digits(row.amount)}</span>
+                <span className="block font-semibold text-ink">{money(row.amount, currencyOf(row.country_code))}</span>
                 <span className="block text-10.5 text-muted">{PAYMENT_REQUEST_PURPOSE_LABEL[row.purpose]}</span>
               </span>
               <span dir="ltr" className="text-muted">
@@ -178,7 +179,7 @@ function ReviewModal({ row, onClose, onDone }: { row: AdminTransfer; onClose: ()
   }
 
   const facts: [string, string, boolean][] = [
-    ["المبلغ", digits(row.amount), false],
+    ["المبلغ", money(row.amount, currencyOf(row.country_code)), false],
     ["رقم التحويل", row.reference ?? "—", true],
     ["مرجع TAXO", row.public_ref, true],
     ["تاريخ التحويل", day(row.transfer_date), false],

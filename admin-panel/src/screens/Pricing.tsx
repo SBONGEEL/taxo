@@ -43,7 +43,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { currencyLabel, currencyOf, isZeroAmount, money } from "@/lib/format";
+import { currencyLabel, currencyOf, isZeroAmount, money, trimForCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
 /** **المدمجتان دائماً** — وما أضافه المشرفُ في «فئات الرحلة» بعدهما (SPEC §٦٧): لكلِّ فئةٍ صفُّ أسعارها هنا. */
@@ -471,22 +471,23 @@ function CategoryCard({
     setValues(
       rule
         ? {
-            base_fare: rule.base_fare,
-            price_per_km: rule.price_per_km,
-            price_per_min: rule.price_per_min,
-            minimum_fare: rule.minimum_fare,
-            cancellation_fee: rule.cancellation_fee,
-            stop_fee: rule.stop_fee,
+            // **الأسعارُ بخانات العملة** (البند ٨): «35.000» تُرسم «35» للجزائريّ — انظر `trimForCurrency`
+            base_fare: trimForCurrency(rule.base_fare, currencyOf(country)),
+            price_per_km: trimForCurrency(rule.price_per_km, currencyOf(country)),
+            price_per_min: trimForCurrency(rule.price_per_min, currencyOf(country)),
+            minimum_fare: trimForCurrency(rule.minimum_fare, currencyOf(country)),
+            cancellation_fee: trimForCurrency(rule.cancellation_fee, currencyOf(country)),
+            stop_fee: trimForCurrency(rule.stop_fee, currencyOf(country)),
             stop_free_minutes: String(rule.stop_free_minutes),
-            stop_price_per_min: rule.stop_price_per_min,
+            stop_price_per_min: trimForCurrency(rule.stop_price_per_min, currencyOf(country)),
             stop_max_wait_minutes: String(rule.stop_max_wait_minutes),
-            pause_price_per_min: rule.pause_price_per_min,
+            pause_price_per_min: trimForCurrency(rule.pause_price_per_min, currencyOf(country)),
             arrival_free_minutes: String(rule.arrival_free_minutes),
             pause_max_minutes: String(rule.pause_max_minutes),
           }
         : EMPTY,
     );
-  }, [rule]);
+  }, [rule, country]);
 
   const currency = currencyOf(country);
   const unit = currencyLabel(currency);

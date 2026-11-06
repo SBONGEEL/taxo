@@ -58,6 +58,16 @@ export function displayDecimals(currency: string | null | undefined): number {
   return (currency ? CURRENCY_FACES.get(currency)?.display : undefined) ?? currencyDecimals(currency);
 }
 
+/** **أصفارُ التخزين لا تُرسم لعملةٍ بلا كسور** (البند ٨، قِيس ٢٠٢٦-١١-٠٦): سعرُ الكيلومتر والدقيقة ليسا في مفردات المال على السلك
+ *  (`money_wire.py` يطابق `_price` نهايةً، و`price_per_km` لا ينتهي بها) — فيصلان من `NUMERIC(12,3)` كما هما: «35.000» في جدول أسعار
+ *  الجزائر. **فتُحذف الأصفارُ الزائدةُ وحدَها** («35.000» ← «35»، و«35.500» ← «35.5») ولا تُقرَّب خانةٌ ذاتُ قيمة، **والأردنيُّ كما هو**. */
+export function trimForCurrency(value: string, currency: string | null | undefined): string {
+  if (!currency || currencyDecimals(currency) > 0) return value;
+  const text = value.trim();
+  if (!/^-?\d+\.\d*$/.test(text)) return value;
+  return text.replace(/\.?0+$/, "") || "0";
+}
+
 /** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
 export function zeroAmount(currency: string | null | undefined): string {
   const places = displayDecimals(currency);
@@ -104,7 +114,8 @@ function padToDisplay(value: string, currency: Currency | string): string {
 /** مبلغٌ بخاناتٍ عربية-هندية ورمزِ عملته — والقيمةُ تبقى نصّاً كما وصلت، **مكمَّلةً إلى خانات العرض**. */
 export function money(value: string, currency?: Currency | string) {
   const label = currency ? ` ${currencyLabel(currency)}` : "";
-  return `${digits(currency ? padToDisplay(value, currency) : value)}${label}`;
+  // **وأصفارُ التخزين تُحذف أوّلاً لعملةٍ بلا كسور** (البند ٨): «470.000» كانت تُرسم كما وصلت لأن الإكمالَ لا يحذف
+  return `${digits(currency ? padToDisplay(trimForCurrency(value, currency), currency) : value)}${label}`;
 }
 
 /** يومٌ وشهرٌ ووقت — ما يُقرأ في صفوف الجداول.

@@ -9,7 +9,7 @@ import { useId, useState } from "react";
 
 import { FieldError } from "@/components/ui/Field";
 import { useFieldError } from "@/lib/form-errors";
-import { currencyDecimals, currencyLabel } from "@/lib/format";
+import { currencyDecimals, currencyLabel, trimForCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/api/types";
 
@@ -67,7 +67,7 @@ export function MoneyField({
           inputMode="decimal"
           dir="ltr"
           disabled={disabled}
-          value={value}
+          value={trimForCurrency(value, currency)}
           onChange={(event) => onChange(event.target.value)}
           onBlur={() => {
             const text = value.trim();
