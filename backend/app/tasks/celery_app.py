@@ -332,7 +332,8 @@ celery_app.conf.update(
         # **«الإحصاءات»**: تقاريرُ Play تتحدّث يوميّاً بتأخّر أيّام — فاستيرادٌ كلَّ ستِّ ساعاتٍ يكفي ويلحق أوّلَ نسخة
         "import-play-stats": {
             "task": "app.tasks.site_stats.import_play",
-            "schedule": 6 * 3600,
+            # **ساعاتٌ ثابتة لا فترةٌ من الإقلاع** (`test_beat_daily_fixed_hour`): كلُّ رفعٍ يعيد العدّ فيضيع الاستيرادُ
+            "schedule": crontab(minute=41, hour="*/6"),
         },
         "watch-whatsapp-session": {
             "task": "app.tasks.whatsapp.watch_whatsapp_session",
