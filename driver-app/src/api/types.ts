@@ -603,6 +603,8 @@ export interface Earnings {
   advance_repaid: string;
   net: string;
   directly_collected: string;
+  /** **«صافي اليوم» = ما كسبه فعلاً** (أمرُ المالك ٢٠٢٦-١١-٠٦): المحصَّلُ كلُّه (كاشٌ وبطاقةٌ ومحفظة) ناقصاً العمولةَ وكلَّ اقتطاع — من الخلفية. */
+  earned: string;
   completed_rides: number;
   /** صافي كلِّ يومٍ في النافذة (§٦٢-ج/٣٨) — يومٌ بلا قيدٍ صفٌّ بصفر. */
   days: EarningsDay[];

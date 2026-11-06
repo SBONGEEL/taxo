@@ -341,6 +341,8 @@ const earnings = (period: Earnings["period"]): Earnings => ({
   advance_repaid: ZERO,
   net: period === "today" ? "12.750" : period === "week" ? "84.250" : "312.500",
   directly_collected: "6.250",
+  // **«صافي اليوم» = المحصَّلُ ناقصاً العمولة** — حرفيٌّ للعرض كبقيّة الرقم (لا حسابَ مالٍ في الواجهة)
+  earned: period === "today" ? "19.000" : period === "week" ? "90.500" : "318.750",
   completed_rides: period === "today" ? 6 : period === "week" ? 41 : 152,
   days: [0, 1, 2, 3, 4, 5, 6].map((k) => ({
     day: new Date(Date.now() - (6 - k) * 86_400_000).toISOString().slice(0, 10),

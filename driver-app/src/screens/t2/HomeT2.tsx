@@ -75,7 +75,7 @@ import {
 import { isActive } from "@/lib/ride";
 import { useTheme } from "@/lib/theme";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
-import { digits, ratedAverage } from "@/lib/utils";
+import { digits, formatAmount, ratedAverage } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
 import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
@@ -272,13 +272,16 @@ export function HomeT2Screen() {
           {/* **«صافي اليوم» لا «أرباح اليوم»** — الرقمُ صافي ما دخل المحفظة، **ولا يُرسم صفرٌ مكانَ «لم يُعرف بعد»** */}
           {/* **«صافي المحفظة اليوم»** (أمرُ المالك ٢٠٢٦-١١-٠٦): الرقمُ ما دخل المحفظةَ وما خرج منها — **والكاشُ في جيبه خارجه** — فرحلةُ كاشٍ
               تُريه سالباً (عمولتُها) و«صافي اليوم» وحدَه يُقرأ دخلاً ضاع. الاسمُ يقول أين الرقم، والكاشُ المقبوضُ شارةٌ بجانبه */}
-          <div className="t2-hm-earn-label">{tr("صافي المحفظة اليوم")}</div>
+          {/* **ثمّ «صافي اليوم» = ما كسبه فعلاً** (أمرُ المالك ٢٠٢٦-١١-٠٦، الثاني): المحصَّلُ كلُّه ناقصاً العمولةَ — `earned` من الخلفية،
+              **بخانات الدولة** (`formatAmount`: الجزائرُ بلا كسور والأردنُّ ثلاث). وشارةُ «مُحصَّل مباشرة» باقيةٌ كما هي، والرصيدُ في المحفظة */}
+          <div className="t2-hm-earn-label">{tr("صافي اليوم")}</div>
           <div className="t2-hm-earn-row">
             <span className="t2-hm-earn-num" dir="ltr">
-              {earnings ? digits(earnings.net) : "—"}
+              {earnings ? formatAmount(earnings.earned, earnings.currency) : "—"}
             </span>
             {earnings ? <span className="t2-hm-earn-cur">{CURRENCY_LABEL[earnings.currency]}</span> : null}
           </div>
+          <div className="t2-hm-earn-hint">{tr("المحصَّل − العمولة")}</div>
           <div className="t2-hm-chips">
             {earnings ? (
               <span className="t2-hm-chip">

@@ -94,6 +94,10 @@ class Earnings:
     advance_repaid: Decimal
     net: Decimal
     directly_collected: Decimal
+    # **«صافي اليوم» = ما كسبه فعلاً** (أمرُ المالك ٢٠٢٦-١١-٠٦): كلُّ ما حصّله — كاشاً وكليكاً بيده، وبطاقةً ومحفظةً في محفظته،
+    # والبقشيش — **ناقصاً العمولةَ التي نشأت في النافذة وكلَّ اقتطاع**. رحلةُ كاشٍ بـ٢٫٠٠٠ وعمولتُها ٠٫٠٩٠ ⇐ **١٫٩١٠** لا −٠٫٠٩٠.
+    # **و`net` باقٍ كما هو** (صافي المحفظة، وأيّامُ النافذة تُجمع إليه) — فرقمان لسؤالين لا رقمٌ يُعاد تعريفه. انظر `_commission_incurred`
+    earned: Decimal
     completed_rides: int
     # **صافي كلِّ يومٍ في النافذة** (§٦٢-ج/٣٨) — يومٌ بلا قيدٍ صفٌّ بصفر،
     # ومجموعُها `net` بعينه
@@ -195,6 +199,39 @@ async def _advance_rounding_returned(
         )
     )
     return Decimal(total or 0)
+
+
+async def _commission_incurred(
+    session: AsyncSession, user_id: uuid.UUID, driver_id: uuid.UUID, from_at: datetime, to_at: datetime
+) -> Decimal:
+    """**العمولةُ التي نشأت في النافذة** — لا التي خرجت من المحفظة فيها (أمرُ المالك ٢٠٢٦-١١-٠٦، «صافي اليوم»).
+
+    **عمولةُ الكاش دَينٌ لا قيد** (`debts.record_from_ride`): الأجرةُ كلُّها في جيبه ومنها عمولتُنا، فيُكتب صفٌّ في `driver_debts`
+    لحظةَ الرحلة **ويُحصَّل من رصيده لاحقاً** قيدَ `commission` بمفتاح `debt_collect:`/`debt_part:` — **وقد يقع في يومٍ آخر**.
+    فالعمولةُ على رحلات اليوم = قيودُ العمولة المباشرة (بلا قيود التحصيل) + الديونُ التي نشأت اليوم. **ولو قُرئ الدفترُ وحدَه**:
+    يومُ الكاش يُرى بلا عمولة، ويومُ التحصيل يُطرح منه ما ليس من رحلاته.
+    """
+    from app.models.debt import DriverDebt
+
+    direct = await session.scalar(
+        select(func.coalesce(func.sum(func.abs(WalletTransaction.amount)), 0)).where(
+            WalletTransaction.owner_id == user_id,
+            WalletTransaction.owner_type == WalletOwnerType.DRIVER,
+            WalletTransaction.type == WalletTransactionType.COMMISSION,
+            WalletTransaction.created_at >= from_at,
+            WalletTransaction.created_at <= to_at,
+            ~WalletTransaction.idempotency_key.like("debt\\_collect:%", escape="\\"),
+            ~WalletTransaction.idempotency_key.like("debt\\_part:%", escape="\\"),
+        )
+    )
+    owed = await session.scalar(
+        select(func.coalesce(func.sum(DriverDebt.amount), 0)).where(
+            DriverDebt.driver_id == driver_id,
+            DriverDebt.created_at >= from_at,
+            DriverDebt.created_at <= to_at,
+        )
+    )
+    return pricing.as_money(Decimal(direct or 0) + Decimal(owed or 0))
 
 
 def _change_percent(current: Decimal, previous: Decimal) -> int | None:
@@ -330,6 +367,13 @@ async def summary(
         # يطرحه لا يطابق ما يراه صاحبُه في رصيده — نفسُ حجّة إدخال البقشيش
         net=current_net,
         directly_collected=pricing.as_money(Decimal(directly_collected or 0)),
+        earned=pricing.as_money(
+            wallet_earnings
+            + tips
+            + Decimal(directly_collected or 0)
+            - await _commission_incurred(session, user_id, driver.id, from_at, to_at)
+            - advance_repaid
+        ),
         completed_rides=int(completed or 0),
         days=days,
         change_percent=_change_percent(
