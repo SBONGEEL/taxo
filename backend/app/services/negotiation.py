@@ -103,6 +103,10 @@ async def floor_for(session: AsyncSession, country: CountryCode, rules: Negotiat
     """
     policy = await rounding.policy_for(session, country)
     step = policy.unit if policy.enabled else None
+    # **النسبةُ من التقدير المقرَّب في كلِّ باب** (٢٠٢٦-١١-٠٦): التقديرُ يمرّر المقرَّبَ والطلبُ وتعديلُ السعر يمرّران
+    # `ride.estimated_fare` الخامَ — **فقِيس على مكدّس التطوير** حدٌّ يُعرض ٢٤٠ دج ويردّه الطلبُ مطالباً بـ٢٥٠ (٣٤٤ خاماً، ٣٤٠
+    # مقرَّباً). والتقريبُ هنا متساوي القوى، فالمقرَّبُ الآتي من التقدير لا يتغيّر
+    estimate = rounding.rounded(estimate, policy)
     by_percent = _ceil_to(estimate * Decimal(rules.min_percent) / Decimal(100), step)
     by_amount = _ceil_to(rules.min_amount, step) if rules.min_amount is not None else None
     return Floor(minimum=max(by_percent, by_amount or Decimal(0)), by_percent=by_percent, by_amount=by_amount, step=step)

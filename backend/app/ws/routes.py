@@ -288,7 +288,9 @@ async def driver_socket(
             return
         await session.commit()
 
-        active = await rides_service.active_ride_for_user(session, user)
+        # **الجانبُ معلَنٌ بالقناة نفسِها** (٢٠٢٦-١١-٠٦): حسابٌ بالدورين كان يُسقط المقبسَ هنا بـ`AmbiguousRole` قبل `connected`،
+        # **فلا يُعرض عليه طلبٌ أبداً** ولا يرى شيئاً — والقناةُ قناةُ كبتنٍ فلا سؤالَ عن جانبها
+        active = await rides_service.active_ride_for_user(session, user, declared=UserRole.DRIVER)
         snapshot = RideOut.from_ride(active).model_dump(mode="json") if active else None
         # **والعرضُ المعلَّق يُستعاد كما تُستعاد الرحلة** (2026-08-21):
         # `dispatch:driver_offer:{id}` قائمٌ في Redis بمهلته، **وكان المقبسُ
@@ -470,7 +472,8 @@ async def rider_socket(
         if user is None:
             return
 
-        active = await rides_service.active_ride_for_user(session, user)
+        # **وقناةُ الراكب جانبُها الراكب** — العلّةُ نفسُها في قناة الكبتن أعلاه
+        active = await rides_service.active_ride_for_user(session, user, declared=UserRole.RIDER)
         snapshot = RideOut.from_ride(active).model_dump(mode="json") if active else None
         if active is not None and active.driver_id is not None:
             state.driver_id = active.driver_id
