@@ -322,7 +322,10 @@ export async function sendUserReport(
  * **لا عنوانَ ولا رابطَ ولا هويّة**: الاسمُ ثابتٌ والرسالةُ رمزٌ فنّيٌّ من أربعة (`network_timeout`…)، فكلُّ الأجهزة
  * التي سقطت بالرمز نفسِه **مجموعةٌ واحدةٌ تُعدّ**. ويُحفظ في الطابور حين لا يصل، ويُرسل مع أوّل اتصالٍ ينجح. */
 export function reportNetworkFailure(code: string): void {
-  const error = new Error(`boot ${code}`.slice(0, 60));
+  // **ثلاثةُ أصنافٍ في «الأعطال» لا أربعةُ رموز** (البند ٥، ٢٠٢٦-١١-٠٦): لا اتصال · اتصالٌ ضعيف · الخادمُ متوقّف —
+  // التجميعُ بنصِّ الرسالة، فرمزان لمعنىً واحدٍ («انتهت المهلة» و«سقط في الطريق») كانا صفّين لشيءٍ واحد
+  const kind = code === "network_offline" ? "network_offline" : code === "server_down" ? "server_down" : "network_weak";
+  const error = new Error(`boot ${kind}`.slice(0, 60));
   error.name = "NetworkError";
   error.stack = undefined;
   capture("error", error, null);

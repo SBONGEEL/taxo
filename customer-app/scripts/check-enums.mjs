@@ -23,6 +23,8 @@ const SRC = join(process.cwd(), "src");
 /** اتحاداتُ واجهةٍ خالصة تشترك في أسماءٍ مع تعدادات الخلفية بالمصادفة.
  *  كلُّ إعفاءٍ هنا يذكر لماذا هو اتحادُ عرضٍ لا مرآةُ عقد. */
 const UI_UNIONS = new Set([
+  // حالُ الاتصال كما يعيشها المستخدم (`lib/connection.ts`) — تُشتق من المتصفّح وردِّ الحافّة، لا عمودَ لها
+  "ConnectionState",
   // حالُ الاشتراك الأربع تُشتق في `Subscription.tsx::stateOf` من
   // `is_active` و`days_remaining` و`coverage_until` — لا عمودَ لها
   "State",

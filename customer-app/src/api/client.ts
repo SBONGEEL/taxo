@@ -16,6 +16,7 @@ import { demoPatchConfig, demoRequest } from "@/demo/engine";
 import { demoActive, guestToken } from "@/demo/mode";
 import { noteApi } from "@/lib/breadcrumbs";
 import { captureRequestId } from "@/lib/request-id"; import { language, tr } from "@/lib/i18n";
+import { isEdgeDown, setConnection } from "@/lib/connection";
 
 // **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ، 2026-08-26): كان هنا
 // `?? "http://127.0.0.1:8001"` — **فبناءٌ نُسي فيه المتغيّرُ ينجح ويُشحن**،
@@ -253,23 +254,23 @@ function timeoutFor(path: string): number {
  */
 function networkError(error: unknown): ApiError {
   if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") {
+    // **مهلةٌ انتهت والشبكةُ قائمة = اتصالٌ ضعيف** (البند ٥، ٢٠٢٦-١١-٠٦) — لا «الخادم لا يستجيب»: الخادمُ الساقطُ تقوله الحافّةُ بردّها
+    setConnection(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "weak");
     return new ApiError(
       0,
       "network_timeout",
-      tr("الخادم لا يستجيب — انتهت المهلة. أعد المحاولة"),
+      tr("اتصالك بالإنترنت ضعيف أو غير مستقر — نعيد المحاولة تلقائياً"),
     );
   }
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    return new ApiError(
-      0,
-      "network_offline",
-      tr("لا اتصال بالإنترنت — تحقّق من شبكتك ثم أعد المحاولة"),
-    );
+    setConnection("offline");
+    return new ApiError(0, "network_offline", tr("لا يوجد اتصال بالإنترنت"));
   }
+  setConnection("weak");
   return new ApiError(
     0,
     "network_unreachable",
-    tr("تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل"),
+    tr("اتصالك بالإنترنت ضعيف أو غير مستقر — نعيد المحاولة تلقائياً"),
   );
 }
 
@@ -379,6 +380,12 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
     onSessionLost(serverRejectedToken);
   }
 
+  // **الحافّةُ تقول إن الخادمَ خلفها لا يجيب** (البند ٥): «الخدمة متوقفة مؤقتاً» لا خطأٌ مجهول — وأيُّ جوابٍ غيرُه يعيد الحالَ سليماً
+  if (isEdgeDown(response)) {
+    setConnection("down");
+    throw new ApiError(response.status, "server_down", tr("الخدمة متوقفة مؤقتاً، نعمل على إصلاحها"));
+  }
+  setConnection("ok");
   if (!response.ok) throw await toError(response);
   if (response.status === 204) return undefined as T;
   // **بايتاتٌ لا JSON حين تُطلب** (البند ٥٢): صورةُ الكبتن تمرّ بنفس المسار —
