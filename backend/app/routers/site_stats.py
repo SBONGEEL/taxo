@@ -19,8 +19,9 @@ from app.core.deps import DbSession, RedisDep, StatsViewer
 from app.core.exceptions import AppError
 from app.services import play_reports, site_stats
 
+# **`router` أوّلاً**: `check:contract` يقرأ أوّلَ بادئةٍ في الملفّ لأبواب `@router` — والعامُّ لا تناديه اللوحة
+router = APIRouter(prefix="/admin/stats", tags=["admin"])
 public = APIRouter(prefix="/public/site", tags=["public"])
-admin = APIRouter(prefix="/admin/stats", tags=["admin"])
 
 #: حدُّ العدِّ لكلِّ بلدٍ في الدقيقة — فوقه يُرمى
 PER_MINUTE = 600
@@ -74,12 +75,12 @@ async def download(app: Literal["rider", "driver"], session: DbSession, redis: R
     return Response(status_code=204)
 
 
-@admin.get("/report")
+@router.get("/report")
 async def report(session: DbSession, viewer: StatsViewer, days: int = 30) -> dict:
     return await site_stats.report(session, days=max(7, min(days, 120)))
 
 
-@admin.post("/import-play")
+@router.post("/import-play")
 async def import_play(session: DbSession, viewer: StatsViewer) -> dict:
     """استيرادٌ الآن بدل انتظار المهمّة اليوميّة — **ويُسجَّل كما تُسجَّل هي**."""
     try:

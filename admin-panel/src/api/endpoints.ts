@@ -6,7 +6,7 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { FacebookPost, FacebookPostRequest, FacebookReport } from "@/api/types";
+import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2570,3 +2570,8 @@ export async function facebookMediaBlob(id: string, index: number): Promise<stri
   if (!answer.ok) throw new Error("تعذّر فتح الصورة");
   return URL.createObjectURL(await answer.blob());
 }
+
+// ------------------------------------------------- «الإحصاءات» — بصلاحيّة `stats.view`
+
+export const siteStatsReport = (days: number) => api.get<SiteStatsReport>(`/admin/stats/report?days=${days}`);
+export const importPlayStats = () => api.post<{ rows: number }>("/admin/stats/import-play");
