@@ -13,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { checkSignupPhone, register, startChallenge } from "@/api/endpoints";
 import { rememberAddRole } from "@/lib/add-role";
+import { forgetInvite, INVITE_EVENT, pendingInvite } from "@/lib/invite";
 import { deviceId } from "@/lib/device";
 import { driverInstalled } from "@/lib/switch-app";
 import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
@@ -37,11 +38,11 @@ import {
   Icon,
 } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
-type Field = "name" | "phone" | "password";
+type Field = "name" | "phone" | "password" | "referral_code";
 type Failure = { field: Field | null; message: string };
 
 /** حقلُ الشاشة الذي يحمل اسمَ حقل الخلفية (SPEC ١٧.٧). */
-const INPUT_ID: Record<Field, string> = { name: "name", phone: "phone", password: "new-password" };
+const INPUT_ID: Record<Field, string> = { name: "name", phone: "phone", password: "new-password", referral_code: "referral-code" };
 
 export function RegisterScreen() {
   const { config } = useConfig();
@@ -64,6 +65,17 @@ export function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [gender, setGender] = useState<"male" | "female" | null>(null);
+  // **رمزُ الدعوة يُملأ ممّا جاء به** (رابطُ الدعوة أو مُحيلُ التثبيت، `lib/invite.ts`) — ويبقى حقلاً يُمحى ويُغيَّر باليد
+  const [invite, setInvite] = useState(() => pendingInvite() ?? "");
+  useEffect(() => {
+    // مُحيلُ التثبيت غيرُ متزامن — قد يصل والشاشةُ مرسومة، **ولا يكتب فوق ما كتبه صاحبُ الحقل**
+    const onInvite = (event: Event) => {
+      const code = (event as CustomEvent<string>).detail;
+      setInvite((current) => (current === "" ? code : current));
+    };
+    window.addEventListener(INVITE_EVENT, onInvite);
+    return () => window.removeEventListener(INVITE_EVENT, onInvite);
+  }, []);
   // **مُختارُ الدولة** (SPEC §٧٤-أ/٤) — المفتوحةُ تُختار، والمغلقةُ «قريباً» أو لا تُرسم؛ **والدولةُ تحدّد سوقَ الحساب مرّةً واحدة**
   const pick = useCountryPick(auth, "signup", { feminine: gender === "female" });
   const [touched, setTouched] = useState(false);
@@ -112,8 +124,10 @@ export function RegisterScreen() {
           gender: gender ?? undefined,
           // **ما وافق عليه بعينه** — لا `true` تستنتج منها الخلفيةُ شيئاً
           accepted_policy_ids: agreed ? policyIds : [],
+          referral_code: invite.trim() ? invite.trim() : undefined,
         }),
       );
+      forgetInvite();
       navigate("/", { replace: true });
     } catch (caught) {
       // **رقمٌ له حسابُ كبتن** (أمرُ المالك ٢٠٢٦-١١-٠٢): لا حسابَ ثانٍ — يُقاد إلى الدخول ورقمُه مكتوب، وكلمةُ مروره تضيف ملفَّ الراكب (§21.6)
@@ -124,7 +138,8 @@ export function RegisterScreen() {
       }
       if (caught instanceof ApiError) {
         const field = caught.field("field");
-        const at = field === "name" || field === "phone" || field === "password" ? field : null;
+        const at =
+          field === "name" || field === "phone" || field === "password" || field === "referral_code" ? field : null;
         setFailure({ field: at, message: caught.message });
         setStep("details");
         if (at) window.setTimeout(() => document.getElementById(INPUT_ID[at])?.focus(), 0);
@@ -267,6 +282,22 @@ export function RegisterScreen() {
             value={confirm}
             invalid={Boolean(confirmError(password, confirm))}
             onChange={(event) => setConfirm(event.target.value)}
+          />
+        </AuthBlock>
+
+        {/* **رمزُ الدعوة — اختياريّ** (أمرُ المالك ٢٠٢٦-١١-٠٨): مملوءٌ إن جاء من رابط صديق، ويُكتب باليد إن قيل في مكالمة */}
+        <AuthBlock label={tr("رمز الدعوة (اختياري)")} htmlFor="referral-code" error={errorOf("referral_code")}>
+          <AuthInput
+            id="referral-code"
+            name="referral-code"
+            dir="ltr"
+            autoComplete="off"
+            autoCapitalize="characters"
+            maxLength={16}
+            value={invite}
+            placeholder={tr("إن دعاك صديق")}
+            invalid={Boolean(errorOf("referral_code"))}
+            onChange={(event) => setInvite(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
           />
         </AuthBlock>
 

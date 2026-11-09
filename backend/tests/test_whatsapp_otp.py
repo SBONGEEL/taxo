@@ -393,3 +393,33 @@ async def test_an_unanswered_number_during_send_says_the_same_thing(
     )
     assert failed.status_code == 502, failed.text
     assert failed.json()["reason"] == "number_unanswered", failed.text
+
+
+async def test_a_wrong_invite_code_is_refused_before_the_code_is_burnt(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**رمزُ دعوةٍ خاطئ لا يُحرق رمزَ واتساب** (أمرُ المالك ٢٠٢٦-١١-٠٨).
+
+    كان الإسنادُ بعد `otp.verify`، فخطأٌ في رمز الدعوة يُسقط التسجيلَ **بعد** أن احترق رمزُ التحقّق،
+    فيطلب الصديقُ رمزاً ثانياً. **وبحذف `_known_referral` من الباب يسقط هذا الاختبار**: التسجيلُ الثاني
+    بالرمز نفسِه يرتدّ «رمز غير صحيح» لأن الأوّلَ أحرقه.
+    """
+    await enable_whatsapp_provider(session_factory)
+    await _flip_whatsapp(client, admin_headers, True)
+    sent = await client.post("/auth/challenge", json={"phone": PHONE, "country_code": "JO"})
+    assert sent.status_code == 200, sent.text
+    code = await read_whatsapp_otp(E164)
+
+    refused = await client.post(
+        "/auth/register",
+        json=SIGNUP | {"verification_token": code, "referral_code": "ZZZZZZZZ"},
+    )
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "referral_code_unknown"
+    # **والخانةُ مسمّاة** — فتضع الواجهةُ الرسالةَ تحت «رمز الدعوة» لا في شريطٍ عامّ
+    assert refused.json()["field"] == "referral_code"
+
+    created = await client.post(
+        "/auth/register", json=SIGNUP | {"verification_token": code}
+    )
+    assert created.status_code == 201, created.text

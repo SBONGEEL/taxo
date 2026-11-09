@@ -180,6 +180,7 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                     <td className="p-8">
                       <Badge tone={row.is_active ? "ok" : "muted"}>
                         {row.is_active ? "مفعّل" : "مطفأ"}
+                        {row.is_public ? "" : " · خاصّ"}
                       </Badge>
                     </td>
                     <td className="p-8">
@@ -258,6 +259,7 @@ function NewPromoModal({
   const [until, setUntil] = useState("");
   const [from, setFrom] = useState("");
   const [uses, setUses] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -274,6 +276,20 @@ function NewPromoModal({
         // يُطبَّع في الخلفية أيضاً — وهذا كي يرى المشرف ما سيُخزَّن
         onChange={(event) => setCode(event.target.value.toUpperCase())}
       />
+
+      {/* **خاصٌّ لكوبون ترحيب الإحالة**: رمزٌ عامٌّ يكتبه كلُّ من رأى المنشور
+          فتنفد الميزانيةُ على غير المدعوّين — والخلفيةُ ترفض ربطَ العامِّ */}
+      <div className="mt-12">
+        <Select
+          label="الظهور"
+          id="promo-visibility"
+          value={visibility}
+          onChange={(event) => setVisibility(event.target.value as "public" | "private")}
+        >
+          <option value="public">عامّ — يكتبه الراكب في حقل رمز الخصم</option>
+          <option value="private">خاصّ — كوبون ترحيبٍ للمدعوّين يُطبَّق آليّاً</option>
+        </Select>
+      </div>
 
       <div className="mt-12 grid grid-cols-2 gap-10">
         <Select
@@ -383,6 +399,7 @@ function NewPromoModal({
             total_usage_limit: uses ? Number(uses) : null,
             // ومنتصفُ الليل بتوقيت الجهاز يكفي هنا كما في «ينتهي»
             valid_from: from ? `${from}T00:00:00` : null,
+            is_public: visibility === "public",
           })
             .then(onCreated)
             .catch((caught) => {

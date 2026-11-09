@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ly.tajora.rider",
+      "sha256_cert_fingerprints": [
+        "9E:E8:58:36:23:75:93:E7:DC:8B:EA:69:EB:C5:13:B9:94:4E:3F:E6:E0:DE:CD:C9:38:17:3D:F2:C8:29:88:01"
+      ]
+    }
+  }
+]

@@ -600,6 +600,9 @@ export interface ReferralSetting {
   female_bonus_amount: string;
   /** `null` = بلا سقف. والصفرُ في هذا المشروع «لم يُحدَّد»، فلا يُستعمل هنا. */
   monthly_cap: number | null;
+  /** كوبونُ ترحيب المُحال — **خاصٌّ لا يُكتب باليد**، يُطبَّق آليّاً على أولى
+   *  رحلاته. `null` = لا هديةَ للمدعوّ، فلا يُوعَد بها في أيِّ منشور. */
+  referred_promo_code_id: string | null;
 }
 
 /** إعداداتُ مشاركة الرحلة (12-ي) — النسبةُ مالٌ والثلاثةُ الباقيةُ معايرةٌ.
@@ -737,6 +740,9 @@ export interface PromoCode {
   valid_from: string | null;
   valid_until: string | null;
   is_active: boolean;
+  /** `false` = خاصّ: لا يقبله حقلُ «رمز الخصم»، ويُطبَّق آليّاً حيث رُبط
+   *  (كوبونُ ترحيب الإحالة). */
+  is_public: boolean;
   /** ما دُفع فعلاً (دفعات `promo` المؤكَّدة). */
   spent: string;
   /** ما دُفع **ومعه ما وُعد به في رحلاتٍ جارية** — وهو ما يُقاس به السقف،

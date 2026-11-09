@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
         TaxoChannels.ensure(this);
         // **رمزُ الجلسة على القرص قبل «حُفظ»** (§٢٣.٢-أ) — قبل `super` كما تقتضي Capacitor
         registerPlugin(SecureFlushPlugin.class);
+        // **مُحيلُ التثبيت** — رمزُ الدعوة لمن ثبّت من رابط صديق (`lib/invite.ts`)
+        registerPlugin(InstallReferrerPlugin.class);
         super.onCreate(savedInstanceState);
         // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
         // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`.

@@ -46,6 +46,10 @@ class PromoCodeCreate(BaseModel):
     valid_from: datetime | None = None
     valid_until: datetime | None = None
     is_active: bool = True
+    # **رمزٌ خاصّ لا يُكتب بيد أحد** — كوبونُ ترحيب المُحال يُطبَّق آليّاً على
+    # رحلته (`referrals.apply_welcome_promo`)، ورمزٌ عامٌّ بنفسه يجعل الهديةَ
+    # تُكتب من أيِّ راكبٍ رأى المنشور فتنفد الميزانيةُ على غير المدعوّين
+    is_public: bool = True
 
     @model_validator(mode="after")
     def _percent_needs_sense(self) -> PromoCodeCreate:
@@ -99,6 +103,7 @@ class PromoCodeOut(BaseModel):
     valid_from: datetime | None
     valid_until: datetime | None
     is_active: bool
+    is_public: bool = True
     spent: Decimal
     committed: Decimal
     used_count: int

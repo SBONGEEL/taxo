@@ -39,6 +39,7 @@ import { BroadcastSettings } from "@/components/BroadcastSettings";
 import {
   listCommission,
   listFeatureFlags,
+  listPromoCodes,
   getReferralSettings,
   getSharingSettings,
   listPaymentSettings,
@@ -84,6 +85,7 @@ import type {
   CountryFeatureFlags,
   FeatureKey,
   PaymentSetting,
+  PromoCode,
   ReferralSetting,
   RideSharingSetting,
   WalletSetting,
@@ -665,7 +667,7 @@ export function SettingsScreen() {
               (`referral_settings`)، ونفسُ سببِ استقلال «سياسات الدفع» عن
               «حدود المحفظة»: حقلٌ يسكن شاشةً غير جدوله يصير البحثُ عنه تخميناً */}
           <section className="rounded-16 border border-line bg-surface p-18">
-            <h2 className="mb-4 text-14 font-bold text-ink">حافز إحالة السائقات</h2>
+            <h2 className="mb-4 text-14 font-bold text-ink">حافز الإحالة</h2>
             <p className="mb-12 text-11 leading-snug text-muted">
               مكافأةٌ تُدفع في محفظة من أحال، بعد أن يُعتمد حسابُ المُحالة{" "}
               <b className="text-ink">ويُثبَّت جنسُها</b> وتُكمل عددَ الرحلات
@@ -1407,6 +1409,22 @@ function ReferralForm({
   const [busy, setBusy] = useState(false);
 
   const isDriver = row.referral_type === "driver";
+  // كوبونُ ترحيب المدعوّ — **برنامجُ الراكب وحدَه**: الرحلةُ الأولى رحلةُ راكب
+  const [promo, setPromo] = useState(row.referred_promo_code_id ?? "");
+  const [coupons, setCoupons] = useState<PromoCode[]>([]);
+  useEffect(() => {
+    if (isDriver) return;
+    listPromoCodes(row.country_code)
+      .then((rows) =>
+        // الخاصُّ المفعَّلُ وحدَه يقبله الربط — وما هو مربوطٌ يبقى ظاهراً ولو أُطفئ
+        setCoupons(
+          rows.filter(
+            (c) => (!c.is_public && c.is_active) || c.id === row.referred_promo_code_id,
+          ),
+        ),
+      )
+      .catch(() => setCoupons([]));
+  }, [isDriver, row.country_code, row.referred_promo_code_id]);
   const currency = currencyOf(row.country_code);
   const total = (Number(amount) || 0) + (Number(bonus) || 0);
 
@@ -1461,6 +1479,33 @@ function ReferralForm({
         />
       </div>
 
+      {!isDriver ? (
+        <div className="mt-10">
+          <Select
+            name="referred_promo_code_id"
+            label="كوبون ترحيب المدعوّ (على أولى رحلاته)"
+            value={promo}
+            disabled={disabled}
+            onChange={(event) => setPromo(event.target.value)}
+          >
+            <option value="">بلا كوبون — لا هديةَ للمدعوّ</option>
+            {coupons.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code} —{" "}
+                {c.discount_type === "percent"
+                  ? `${digits(c.discount_value)}٪${c.max_discount ? ` حتى ${money(c.max_discount, currency)}` : ""}`
+                  : money(c.discount_value, currency)}
+                {c.is_active ? "" : " (مطفأ)"}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-6 text-11 leading-snug text-muted">
+            القائمةُ فيها الكوبوناتُ <b className="text-ink">الخاصّة المفعّلة</b> لهذه
+            الدولة. أنشئ واحداً من «العروض والحملات» واختر «خاصّ».
+          </p>
+        </div>
+      ) : null}
+
       {/* **الجملةُ تقول المُحصَّل لا العلاوة** — شرطُ المالك بحرفه */}
       {isDriver && Number(bonus) > 0 ? (
         <p className="mt-8 text-11 text-ok">
@@ -1495,6 +1540,11 @@ function ReferralForm({
             ...(cap === ""
               ? { clear_monthly_cap: true }
               : { monthly_cap: Number(cap) }),
+            ...(isDriver
+              ? {}
+              : promo === ""
+                ? { clear_referred_promo: true }
+                : { referred_promo_code_id: promo }),
           })
             .then(() =>
               onSaved("حُفظ الحافز — يُقيَّم ما لم يُدفع بالحدّ الجديد"),

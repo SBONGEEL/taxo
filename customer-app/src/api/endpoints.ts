@@ -158,6 +158,8 @@ export const register = (payload: {
   gender?: "male" | "female";
   /** **ما وافق عليه بعينه** — والخلفيةُ ترفض التسجيل إن نقص منها واحدة. */
   accepted_policy_ids?: string[];
+  /** رمزُ من دعاه — **اختياريّ**، والخلفيةُ ترفض المجهولَ بحقله قبل أن يُحرق رمزُ التحقّق. */
+  referral_code?: string;
 }) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider", app: CLIENT_APP }, { anonymous: true });
 
 /** **التطبيقُ يُعلن نفسَه في كل بابٍ يُصدر جلسة** (`core/app_scope.py`).

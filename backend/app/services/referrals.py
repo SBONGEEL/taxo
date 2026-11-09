@@ -251,7 +251,7 @@ async def attach(
     """
     referrer = await by_code(session, code)
     if referrer is None:
-        raise ReferralCodeUnknown()
+        raise ReferralCodeUnknown(field="referral_code")
     if referrer.id == referred.id:
         raise ReferralNotAllowed("لا يمكن إحالة نفسك")
 
@@ -796,6 +796,7 @@ async def update_settings(
     monthly_cap: int | None = None,
     clear_monthly_cap: bool = False,
     referred_promo_code_id: uuid.UUID | None = None,
+    clear_referred_promo: bool = False,
 ) -> ReferralSetting:
     row = await ensure_settings(session, country, referral_type)
     if reward_amount is not None:
@@ -820,8 +821,26 @@ async def update_settings(
         if monthly_cap <= 0:
             raise InvalidInput("السقف الشهري يكون أكبر من صفر، أو بلا سقف")
         row.monthly_cap = monthly_cap
-    if referred_promo_code_id is not None:
-        row.referred_promo_code_id = referred_promo_code_id
+    if clear_referred_promo:
+        row.referred_promo_code_id = None
+    elif referred_promo_code_id is not None:
+        # **يُفحص قبل الربط لا عند الرحلة** (أمرُ المالك ٢٠٢٦-١١-٠٨): كوبونٌ من سوقٍ
+        # آخر أو عامٌّ أو مطفأٌ يُقبل اليومَ ثم يُبتلع رفضُه بصمتٍ في `apply_welcome_promo`،
+        # فيُعلَن للمدعوّ هديةٌ لا تصل — وهو بعينه ما أوقف منشورَ «ادعُ صديقك»
+        from app.models.promo import PromoCode
+
+        promo = await session.get(PromoCode, referred_promo_code_id)
+        if promo is None:
+            raise InvalidInput("الكوبون غير موجود", field="referred_promo_code_id")
+        if promo.country_code != country:
+            raise InvalidInput("الكوبون من دولةٍ أخرى", field="referred_promo_code_id")
+        if not promo.is_active:
+            raise InvalidInput("الكوبون موقوف", field="referred_promo_code_id")
+        if promo.is_public:
+            raise InvalidInput(
+                "كوبون الترحيب يكون خاصّاً لا يُكتب باليد", field="referred_promo_code_id"
+            )
+        row.referred_promo_code_id = promo.id
     await session.flush()
     return row
 

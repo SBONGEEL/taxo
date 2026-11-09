@@ -896,3 +896,68 @@ async def test_an_exhausted_welcome_coupon_never_fails_the_ride(
     async with session_factory() as session:
         ride = await session.get(Ride, uuid.UUID(created.json()["id"]))
         assert ride.promo_code_id is None
+
+
+# ------------------------------------- كوبونُ الترحيب من اللوحة (أمرُ المالك ٢٠٢٦-١١-٠٨)
+
+
+async def _panel_coupon(client: AsyncClient, admin_headers: dict, *, code: str,
+                        country: str = "JO", is_public: bool = False) -> dict:
+    response = await client.post(
+        "/admin/promo-codes",
+        json={
+            "code": code,
+            "country_code": country,
+            "discount_type": "percent",
+            "discount_value": "50",
+            "max_discount": "10.000",
+            "budget_total": "100.000",
+            "per_user_limit": 1,
+            "is_public": is_public,
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["is_public"] is is_public
+    return response.json()
+
+
+async def test_the_panel_links_a_private_welcome_coupon_and_unlinks_it(
+    client: AsyncClient, admin_headers: dict
+):
+    """**الحلقةُ كلُّها من اللوحة**: ينشئ المشرفُ كوبوناً خاصّاً ويربطه ويقرؤه ثم يفكّه —
+    وكان المفتاحُ مشعلاً والربطُ لا بابَ له، فهديةٌ تُعلن ولا تصل."""
+    coupon = await _panel_coupon(client, admin_headers, code="HELLO50")
+    url = "/admin/referrals/settings?country_code=JO&referral_type=rider"
+
+    linked = await client.put(url, json={"referred_promo_code_id": coupon["id"]}, headers=admin_headers)
+    assert linked.status_code == 200, linked.text
+    assert linked.json()["referred_promo_code_id"] == coupon["id"]
+    assert (await client.get(url, headers=admin_headers)).json()["referred_promo_code_id"] == coupon["id"]
+
+    # تعديلُ حقلٍ آخر لا يفكّ الكوبون
+    other = await client.put(url, json={"required_rides": 1}, headers=admin_headers)
+    assert other.json()["referred_promo_code_id"] == coupon["id"]
+
+    cleared = await client.put(url, json={"clear_referred_promo": True}, headers=admin_headers)
+    assert cleared.json()["referred_promo_code_id"] is None
+
+
+async def test_a_public_or_foreign_coupon_is_refused_as_the_welcome_gift(
+    client: AsyncClient, admin_headers: dict
+):
+    """عامٌّ يكتبه كلُّ من رأى المنشور، ومن سوقٍ آخر لا يُطبَّق أبداً — **يُرفضان عند الربط**
+    لا يُبتلع رفضُهما بصمتٍ عند الرحلة."""
+    url = "/admin/referrals/settings?country_code=JO&referral_type=rider"
+    public = await _panel_coupon(client, admin_headers, code="EVERYONE", is_public=True)
+    refused = await client.put(url, json={"referred_promo_code_id": public["id"]}, headers=admin_headers)
+    assert refused.status_code == 422
+    assert refused.json()["field"] == "referred_promo_code_id"
+
+    foreign = await _panel_coupon(client, admin_headers, code="ELSEWHERE", country="DZ")
+    refused = await client.put(url, json={"referred_promo_code_id": foreign["id"]}, headers=admin_headers)
+    assert refused.status_code == 422
+
+    unknown = await client.put(url, json={"referred_promo_code_id": str(uuid.uuid4())}, headers=admin_headers)
+    assert unknown.status_code == 422
+

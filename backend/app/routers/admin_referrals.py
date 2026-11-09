@@ -50,6 +50,7 @@ def _settings_out(
         required_rides=row.required_rides,
         female_bonus_amount=row.female_bonus_amount,
         monthly_cap=row.monthly_cap,
+        referred_promo_code_id=row.referred_promo_code_id,
     )
 
 
@@ -248,6 +249,8 @@ async def update_settings(
         female_bonus_amount=payload.female_bonus_amount,
         monthly_cap=payload.monthly_cap,
         clear_monthly_cap=payload.clear_monthly_cap,
+        referred_promo_code_id=payload.referred_promo_code_id,
+        clear_referred_promo=payload.clear_referred_promo,
     )
     await audit.record(
         session,
@@ -268,6 +271,12 @@ async def update_settings(
                         "monthly_cap",
                         payload.monthly_cap
                         if not payload.clear_monthly_cap
+                        else True,
+                    ),
+                    (
+                        "referred_promo_code_id",
+                        payload.referred_promo_code_id
+                        if not payload.clear_referred_promo
                         else True,
                     ),
                 )

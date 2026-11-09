@@ -87,6 +87,9 @@ class ReferralSettingsIn(BaseModel):
     # **بابٌ صريحٌ للعدم**: غيابُ `monthly_cap` من الطلب يعني «لا تلمسه»،
     # و«بلا سقف» حالةٌ أخرى — وحقلٌ واحدٌ لا يحمل المعنيين
     clear_monthly_cap: bool = False
+    # كوبونُ ترحيب المُحال — **وفكُّه بابٌ صريح** كالسقف: غيابُ الحقل «لا تلمسه»
+    referred_promo_code_id: uuid.UUID | None = None
+    clear_referred_promo: bool = False
 
 
 class ReferralSettingsOut(BaseModel):
@@ -96,6 +99,7 @@ class ReferralSettingsOut(BaseModel):
     required_rides: int
     female_bonus_amount: Decimal
     monthly_cap: int | None = None
+    referred_promo_code_id: uuid.UUID | None = None
 
 
 class AdminReferralRow(BaseModel):

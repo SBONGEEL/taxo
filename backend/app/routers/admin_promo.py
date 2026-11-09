@@ -49,6 +49,7 @@ async def _out(session, row: PromoCode) -> PromoCodeOut:
                 "valid_from",
                 "valid_until",
                 "is_active",
+                "is_public",
             )
         },
         spent=await promo_service.spent(session, row.id),

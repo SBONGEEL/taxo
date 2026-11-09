@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "@/App";
 import "@/index.css";
 import { listenForHandoff } from "@/lib/handoff-listener";
+import { listenForInvite } from "@/lib/invite";
 import { trackVisualViewport } from "@/lib/viewport";
 import { installCrashReports } from "@/lib/crash-reports";
 
@@ -36,6 +37,8 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 
 // **يُسجَّل مرةً عند الإقلاع** — قبل أي شاشة، فالنيّةُ قد تسبق الرسم
 listenForHandoff();
+// **ورمزُ الدعوة كذلك** — رابطُ التطبيق ومُحيلُ التثبيت يسبقان «أنشئ حسابك»
+listenForInvite();
 
 // **قبل أيِّ شاشة**: عطبٌ في الإقلاع نفسِه يقع قبل أن تُرسم أولُ ورقة،
 // وتركيبٌ داخل مكوّنٍ يفوته ما سقط قبله.

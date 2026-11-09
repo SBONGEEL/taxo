@@ -289,6 +289,7 @@ export const createPromoCode = (payload: {
   total_usage_limit?: number | null;
   valid_from?: string | null;
   valid_until?: string | null;
+  is_public?: boolean;
 }) => api.post<PromoCode>("/admin/promo-codes", payload);
 
 /** **ولا `code` فيه**: رحلاتٌ تشير إليه بمعرّفه، وتغييرُ نصِّه يجعل ملصقاً في
@@ -724,6 +725,8 @@ export const updateReferralSettings = (
     female_bonus_amount?: string;
     monthly_cap?: number;
     clear_monthly_cap?: boolean;
+    referred_promo_code_id?: string;
+    clear_referred_promo?: boolean;
   },
 ) =>
   api.put<ReferralSetting>(

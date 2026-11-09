@@ -158,6 +158,8 @@ dependencies {
     // **لخدمة رنين المكالمة** (`CallMessagingService`، §٦٦-ج/١٧): ترث خدمةَ ملحق الإشعارات وتقرأ `RemoteMessage`،
     // **والملحقُ يجلب المكتبةَ بـ`implementation`** فلا تبلغ ترجمةَ التطبيق. **بنسخة الملحق نفسِها** (`variables.gradle`)
     implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
+    // **مُحيلُ التثبيت من Google Play** (`InstallReferrerPlugin`) — رمزُ الدعوة لمن ثبّت من رابط صديق
+    implementation "com.android.installreferrer:installreferrer:2.2"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

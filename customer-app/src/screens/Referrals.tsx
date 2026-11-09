@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { getMyReferrals } from "@/api/endpoints";
+import { shareInvite } from "@/lib/invite";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
@@ -117,16 +118,12 @@ export function ReferralsScreen() {
 
   async function share() {
     if (!data) return;
-    const text = tr("سجّل في تاكسو برمزي {0}", { 0: data.code });
-    if (navigator.share) {
-      try {
-        await navigator.share({ text });
-        return;
-      } catch {
-        // أُلغيت المشاركة — لا شيء يُقال
-      }
+    // **الرسالةُ تحمل رابطَ الدعوة** (أمرُ المالك ٢٠٢٦-١١-٠٨) — يفتح التطبيقَ ورمزُه مكتوب، أو المتجرَ ورمزُه معه
+    const outcome = await shareInvite(data.code);
+    if (outcome === "copied") {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
     }
-    void copy();
   }
 
   function amountOf(program: ReferralProgram) {

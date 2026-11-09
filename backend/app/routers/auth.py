@@ -93,6 +93,7 @@ from app.services import (
     notifications,
     otp,
     phone_check,
+    referrals,
     role_enrollment,
     security_settings,
     token_service,
@@ -262,6 +263,18 @@ async def check_phone(
 # **وقائمةٌ فارغةٌ تمرّ بحقّ**: سوقٌ لم تُنشر فيه وثيقةٌ **لا يُسأل مستخدموه
 # عن شيء** — وهي الحالُ التي كانت قائمةً حتى يوم النشر. **والبوّابةُ تُشتقّ
 # من المنشور لا من ثابتٍ مكتوب**، فيومَ يُنشر نصٌّ في سوقٍ جديدٍ تعمل وحدَها.
+async def _known_referral(session, code: str | None) -> None:
+    """**رمزُ الدعوة يُفحص قبل رمز التحقّق لا بعده** (أمرُ المالك ٢٠٢٦-١١-٠٨، إحالةُ الجزائر).
+
+    الإسنادُ نفسُه في `referrals.attach` بعد إنشاء الصفّ — **ورمزُ التحقّق يُحرق قبله** (`otp.verify`)،
+    فرمزُ دعوةٍ خاطئٌ كان يُسقط التسجيلَ **بعد** أن استُهلك رمزُ واتساب، فيعود الصديقُ ليطلب رمزاً ثانياً
+    ويُحسب عليه في حدود الرسائل. **ولا يُسنَد هنا شيء**: هذا سؤالُ «أله صاحب؟» وحده، والإسنادُ والفريدُ
+    في مكانهما. والرفضُ يحمل `field` لتضع الواجهةُ الرسالةَ تحت الخانة لا في شريطٍ عامّ.
+    """
+    if code and await referrals.by_code(session, code) is None:
+        raise referrals.ReferralCodeUnknown(field="referral_code")
+
+
 async def _consented(session, payload, *, role: UserRole) -> list:
     """يعيد الوثائقَ الواجبةَ بعد التحقّق — **أو يرفض التسجيل بنصٍّ يسمّي الناقص**."""
     policy_app = PolicyApp.DRIVER if role == UserRole.DRIVER else PolicyApp.RIDER
@@ -319,6 +332,7 @@ async def register(
 
     # **قبل الرمز وقبل الصفّ** — كما الرقمُ تماماً
     accepted = await _consented(session, payload, role=payload.role)
+    await _known_referral(session, payload.referral_code)
 
     verified_at = None
     if await verification.required_for_signup(session, payload.country_code):
@@ -426,6 +440,7 @@ async def register_with_email(
 
     if not await verification.email_signup_available(session, payload.country_code):
         raise InvalidInput("التسجيل بالبريد غير مفعَّل في هذا السوق")
+    await _known_referral(session, payload.referral_code)
 
     await verification.verify_email(
         redis,

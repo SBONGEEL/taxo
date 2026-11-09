@@ -80,6 +80,16 @@
                 <data android:scheme="taxo-rider" android:host="pay" />
             </intent-filter>
 
+            <!-- **رابطُ الدعوة** (أمرُ المالك ٢٠٢٦-١١-٠٨): `https://taxo.tajora.ly/i/<الرمز>` يفتح التطبيقَ ورمزُه مكتوب.
+                 **رابطُ تطبيقٍ موثَّق** (`autoVerify`) بملفِّ `landing/.well-known/assetlinks.json` وبصمةِ توقيع Google Play —
+                 **و`/i/` وحدَه**: بقيّةُ الموقع تبقى للمتصفّح. ومن لا يملك التطبيقَ يحوّله الموقعُ إلى المتجر. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="taxo.tajora.ly" android:pathPrefix="/i/" />
+            </intent-filter>
+
         </activity>
 
         <provider
