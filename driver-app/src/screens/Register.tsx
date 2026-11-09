@@ -42,7 +42,7 @@ import {
 
 import "@/components/t2/captain-auth.css"; import { tr } from "@/lib/i18n";
 
-type Field = "name" | "phone" | "password";
+type Field = "name" | "phone" | "password" | "referral_code";
 type Failure = { field: Field | null; message: string };
 
 /** يوجّه خطأَ حقلٍ من الخلفية إلى حقله في الشاشة (SPEC ١٧.٧).
@@ -54,6 +54,7 @@ const INPUT_ID: Record<Field, string> = {
   name: "name",
   phone: "phone",
   password: "new-password",
+  referral_code: "referral-code",
 };
 
 export function RegisterScreen() {
@@ -81,6 +82,8 @@ export function RegisterScreen() {
   });
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  // **رمزُ الدعوة — اختياريّ** (أمرُ المالك ٢٠٢٦-١١-٠٨): يُكتب باليد؛ والملءُ الآليُّ من رابطٍ يأتي مع نشر التطبيق على Play
+  const [invite, setInvite] = useState("");
   const [touched, setTouched] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
@@ -186,6 +189,7 @@ export function RegisterScreen() {
           verification_token: verificationToken,
           // **ما وافق عليه بعينه** — لا `true` تستنتج منها الخلفيةُ شيئاً
           accepted_policy_ids: agreed ? policyIds : [],
+          referral_code: invite.trim() ? invite.trim() : undefined,
         }),
       );
       navigate("/register/documents", { replace: true });
@@ -198,7 +202,8 @@ export function RegisterScreen() {
       }
       if (caught instanceof ApiError) {
         const field = caught.field("field");
-        const at: Field | null = field === "name" || field === "phone" || field === "password" ? field : null;
+        const at: Field | null =
+          field === "name" || field === "phone" || field === "password" || field === "referral_code" ? field : null;
         setFailure({ field: at, message: caught.message });
         // **الحقلُ المرفوض يُعلَّم ويُنتقل إليه** — وهو في نموذج «الحساب»، فيُعاد إليه.
         // **وإثباتٌ استُهلك لا يُعاد استعماله** (401): بدايةٌ نظيفةٌ من النموذج كما كان
@@ -324,6 +329,21 @@ export function RegisterScreen() {
               value={confirmation}
               invalid={Boolean(confirmError(password, confirmation))}
               onChange={(event) => setConfirmation(event.target.value)}
+            />
+          </AuthBlock>
+
+          <AuthBlock label={tr("رمز الدعوة (اختياري)")} htmlFor="referral-code" error={errorOf("referral_code")}>
+            <AuthInput
+              id="referral-code"
+              name="referral-code"
+              dir="ltr"
+              autoComplete="off"
+              autoCapitalize="characters"
+              maxLength={16}
+              value={invite}
+              placeholder={tr("إن دعاك صديق")}
+              invalid={Boolean(errorOf("referral_code"))}
+              onChange={(event) => setInvite(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
             />
           </AuthBlock>
 

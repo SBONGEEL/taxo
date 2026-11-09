@@ -176,6 +176,8 @@ export const registerAccount = (payload: {
   verification_token?: string;
   /** **ما وافق عليه بعينه** — والخلفيةُ ترفض التسجيل إن نقص منها واحدة. */
   accepted_policy_ids?: string[];
+  /** رمزُ من دعاه — **اختياريّ**، والخلفيةُ ترفض المجهولَ بحقله قبل أن يُحرق رمزُ التحقّق. */
+  referral_code?: string;
 }) =>
   api.post<AuthResponse>(
     "/auth/register",
