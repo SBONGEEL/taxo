@@ -36,6 +36,7 @@ import { DurationField, MoneyField } from "@/components/ui/Inputs";
 import { Storefront } from "@/components/Storefront";
 import { VerificationCampaign } from "@/components/VerificationCampaign";
 import { BroadcastSettings } from "@/components/BroadcastSettings";
+import { QualitySettings } from "@/components/QualitySettings";
 import {
   listCommission,
   listFeatureFlags,
@@ -759,6 +760,9 @@ export function SettingsScreen() {
               onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
             />
           </section>
+
+          {/* **درجةُ جودة الكبتن** (البند ٣) — مطفأةٌ حتى تُشعَل هنا لكلِّ دولة */}
+          <QualitySettings key={"quality-" + country} country={country} disabled={!isAdmin} onError={setError} onSaved={setDone} />
 
           {/* **«تفاوض»** (SPEC §٩٢-ب) — مطفأٌ حتى يُشعَل هنا لكلِّ دولة */}
           <section className="rounded-16 border border-line bg-surface p-18">

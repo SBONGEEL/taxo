@@ -41,6 +41,8 @@ export function destinationFor(
   if (kind.startsWith("subscription_")) return "/subscription";
   // **ملخّصُ الأسبوع** (البند ١٧، ٢٠٢٦-١١-١٠) — «أرباحي» ومنها الملخّصُ تحتها
   if (kind === "weekly_digest") return "/wallet/earnings";
+  // **«درجتك تحتاج انتباهاً»** (البند ٣) — «درجتي» تحت «أرباحي»
+  if (kind === "quality_warning") return "/wallet/earnings";
   if (kind.startsWith("document_")) return "/account/vehicle";
   return null;
 }

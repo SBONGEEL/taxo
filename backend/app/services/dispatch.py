@@ -55,6 +55,7 @@ from app.services.dispatch_settings import DEFAULTS as _DEFAULTS
 from app.services.dispatch_settings import DispatchRules, rules_for
 from app.services import (
     destination,
+    quality,
     categories,
     negotiation,
     geo,
@@ -605,11 +606,17 @@ async def _ranked_candidates(
             if len(ranked) > 1
             else {}
         )
-        if discounts:
+        # **ودرجةُ الجودة بالأمتار نفسِها** (البند ٣) — فارغةٌ حيث مفتاحُها مطفأ، فلا يتغيّر الترتيبُ حرفاً
+        boosts = (
+            await quality.bonuses(session, ride.country_code, [p.driver_id for p in ranked])
+            if len(ranked) > 1
+            else {}
+        )
+        if discounts or boosts:
             ranked.sort(
                 key=lambda p: (
                     p.driver_id in silent,
-                    p.distance_km * 1000 - discounts.get(levels[p.driver_id], 0),
+                    p.distance_km * 1000 - discounts.get(levels[p.driver_id], 0) - boosts.get(p.driver_id, 0),
                     # **والمسافةُ الحقيقيةُ فاصلٌ ثانٍ**: متساويان في المؤثِّرة
                     # يُرتَّبان بالأقرب فعلاً، فلا يقرّر ترتيبُ ريدِس بينهما
                     p.distance_km,
@@ -845,6 +852,8 @@ async def _offer_to(
     **وجلسةٌ قصيرةٌ للإشعار وحدَه**: البثُّ لا يحتاجها، لكن Push يقرأ أجهزةَ
     الكبتن من القاعدة — ولا تُحجز جلسةٌ طوال انتظار المهلة من أجل ذلك.
     """
+    # **عرضٌ يُحصى** (البند ٣) — مقامُ نسبة القبول
+    await quality.record(redis, "offered", candidate.driver_id)
     async with SessionLocal() as session:
         await notifications.publish_ride_offer(
             session,

@@ -1856,5 +1856,17 @@
  "وجهتي: {0}": "Ma destination : {0}",
  "تصلك الطلبات في اتّجاهها وحدها حتى {0}": "Vous ne recevez que les courses dans sa direction jusqu'à {0}",
  "تصلك الطلبات في اتّجاهها وحدها": "Vous ne recevez que les courses dans sa direction",
- "إلغاء وجهتي": "Annuler ma destination"
+ "إلغاء وجهتي": "Annuler ma destination",
+ "درجتي": "Mon score",
+ "قبول الطلبات": "Acceptation des courses",
+ "الالتزام بعد القبول": "Engagement après acceptation",
+ "تقييم الركّاب": "Notes des passagers",
+ "خلوّ من اعتراضات الدفع": "Absence de litiges de paiement",
+ "الرحلات المكتملة": "Courses terminées",
+ "اقبل ما يصلك من طلباتٍ أكثر — كلُّ عرضٍ يمرّ بلا ردٍّ يُحسب.": "Acceptez davantage de demandes — chaque offre laissée sans réponse est comptée.",
+ "لا تلغِ بعد القبول إلا لضرورة — الإلغاءُ يؤخّر الراكبَ ويُحسب عليك.": "N'annulez après acceptation qu'en cas de nécessité — l'annulation retarde le passager et compte contre vous.",
+ "اعتنِ بنظافة السيارة والتحيّة والقيادة الهادئة — التقييمُ يأتي منها.": "Soignez la propreté du véhicule, l'accueil et une conduite calme — c'est de là que viennent les notes.",
+ "اتّفق مع الراكب على الدفع بوضوحٍ قبل نهاية الرحلة — الاعتراضاتُ تُحسب عليك.": "Mettez-vous clairement d'accord sur le paiement avant la fin de la course — les litiges comptent contre vous.",
+ "رحلاتٌ مكتملةٌ أكثر ترفع درجتك — اتّصل في ساعات الذروة.": "Plus de courses terminées augmentent votre score — connectez-vous aux heures de pointe.",
+ "آخر 30 يوماً. الدرجةُ الأعلى تقدّمك قليلاً في ترتيب الطلبات بين القريبين، والأقربُ يبقى الأوّل.": "30 derniers jours. Un meilleur score vous avance un peu parmi les chauffeurs proches ; le plus proche reste le premier."
 }

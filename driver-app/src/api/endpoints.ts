@@ -313,6 +313,16 @@ export const clearDestination = () => api.del<void>("/drivers/me/destination");
 /** **خريطةُ الطلب** (البند ١٨) — خلايا بنحو كيلومترٍ آخرَ نصف ساعة، **بمستوىً ١…٣ لا عدد**. */
 export const getHeatmap = () => api.get<{ lat: number; lng: number; level: number }[]>("/drivers/me/heatmap");
 
+/** **«درجتي»** (البند ٣) — ٠–١٠٠ آخرَ ٣٠ يوماً ومكوّناتُها ٠…١، وأضعفُها بمفتاحه. **تُعرض حيث `enabled` وحدَه.** */
+export interface MyQuality {
+  enabled: boolean;
+  score: number;
+  parts: Record<string, number>;
+  tips: { component: string; text: string }[];
+  history: { day: string; score: number }[];
+}
+export const getMyQuality = () => api.get<MyQuality>("/drivers/me/quality");
+
 /** **ملخّصُ الأسبوع الماضي** (البند ١٧) — سبعةُ أيامٍ كاملةٍ تنتهي بأمس، ومقارنتُها بالسبعة قبلها. */
 export const getWeeklyDigest = () => api.get<WeeklyDigest>("/drivers/me/earnings/weekly");
 

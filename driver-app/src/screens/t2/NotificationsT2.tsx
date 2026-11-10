@@ -53,6 +53,8 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   campaign: { icon: "campaign", tone: "plain" },
   // **ملخّصُ الأسبوع** (البند ١٧)
   weekly_digest: { icon: "payments", tone: "ok" },
+  // **إنذارُ درجة الجودة** (البند ٣)
+  quality_warning: { icon: "star", tone: "warn" },
 };
 const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };
 

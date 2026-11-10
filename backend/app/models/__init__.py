@@ -285,6 +285,7 @@ from app.models.signup_country import SignupAttemptDaily, SignupCountry  # noqa:
 from app.models.document_setting import DocumentSetting  # noqa: F401  — متابعةُ الوثائق لكلِّ دولة (البندان ١ و٢)
 from app.models.support import EmergencyAlert, SupportSetting  # noqa: F401  — الطوارئُ وأرقامُ التواصل (البندان ٧ و٨)
 from app.models.eta_sample import EtaSample
+from app.models.quality import DriverQualityScore, QualitySetting  # noqa: F401  — درجةُ الجودة (البند ٣)
 from app.models.site_stats import (  # noqa: F401  — «الإحصاءات»
     PlayStatsDaily,
     SiteDaily,

@@ -682,6 +682,9 @@ async def accept_ride(
     await session.commit()
 
     # إيقاظ مهمة التوزيع لتتوقف، ثم إعلام الطرفين — كلاهما بعد الـ commit
+    from app.services import quality
+
+    await quality.record(redis, "accepted", driver.id)
     await dispatch.notify_accepted(redis, ride_id)
     await dispatch.release_offer(redis, ride_id, driver.id)
     await notifications.publish_ride_event(
@@ -743,6 +746,9 @@ async def decline_ride(
             rider_id = await session.scalar(select(Ride.rider_id).where(Ride.id == ride_id))
             if rider_id is not None:
                 await events.publish_fare_counter_expired(redis, rider_user_id=rider_id, ride_id=ride_id)
+    from app.services import quality
+
+    await quality.record(redis, "declined", driver.id)
     await dispatch.notify_declined(redis, ride_id, driver.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -803,6 +809,9 @@ async def accept_counter(ride_id: uuid.UUID, rider: RiderUser, session: DbSessio
         raise RideOfferExpired()
     ride = await rides_service.take_countered(session, ride_id, driver, amount)
     await session.commit()
+    from app.services import quality
+
+    await quality.record(redis, "accepted", driver.id)
     await dispatch.notify_accepted(redis, ride_id)
     await dispatch.release_offer(redis, ride_id, driver.id)
     await notifications.publish_ride_event(session, redis, ride, events.RideEvent.DRIVER_ASSIGNED)

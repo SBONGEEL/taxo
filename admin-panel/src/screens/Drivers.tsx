@@ -40,6 +40,7 @@ import {
   clearDriverInspection,
   driverDocumentBlob,
   getDriverActivity,
+  getDriverQuality,
   getDriverDocuments,
   grantIntercityPermit,
   listDriverVehicles,
@@ -57,6 +58,7 @@ import {
 import type {
   AdminDriverRow,
   DriverActivity,
+  DriverQuality,
   DocumentType,
   DriverDocuments,
   DriverStatus,
@@ -860,6 +862,9 @@ function DriverDrawer({
         {/* **ساعاتُ العمل** (§٦٢-ج/٣٧، «يراها الكبتنُ والإدارة») — قراءةٌ وحدَها: لا فعلَ فيها */}
         <WorkHoursCard driverId={row.driver_id} />
 
+        {/* **درجةُ الجودة** (البند ٣) — قراءةٌ وحدَها: الأوزانُ في «الإعدادات» */}
+        <QualityCard driverId={row.driver_id} />
+
         <h3 className="ad-dh">توثيق الجنس</h3>
         <div className="ad-box">
           <div className="ad-box-row">
@@ -1250,6 +1255,90 @@ function WorkHoursCard({ driverId }: { driverId: string }) {
               {data.months.map((month) => (
                 <WorkRow key={month.month} label={digits(month.month.slice(0, 7))} minutes={month.minutes} />
               ))}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+const QUALITY_PARTS: { key: string; label: string }[] = [
+  { key: "acceptance", label: "قبول العروض" },
+  { key: "cancellation", label: "الالتزام بعد القبول" },
+  { key: "rating", label: "تقييم الركّاب" },
+  { key: "complaints", label: "خلوّ من اعتراضات الدفع" },
+  { key: "completed", label: "الرحلات المكتملة" },
+];
+
+function QualityCard({ driverId }: { driverId: string }) {
+  const [data, setData] = useState<DriverQuality | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDriverQuality(driverId)
+      .then((value) => {
+        if (!cancelled) setData(value);
+      })
+      .catch((caught) => setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة درجة الجودة"));
+    return () => {
+      cancelled = true;
+    };
+  }, [driverId]);
+
+  const counts = data?.counts ?? {};
+  return (
+    <>
+      <h3 className="ad-dh">درجة الجودة</h3>
+      <div className="ad-box">
+        <ErrorNote message={error} />
+        {data === null ? (
+          error ? null : (
+            <div className="ad-sec-loading">
+              <Spinner />
+            </div>
+          )
+        ) : (
+          <>
+            <p className="ad-box-hint">
+              آخرَ 30 يوماً، محسوبةً الآن.{" "}
+              {data.enabled ? "ومفتاحُها مشتعلٌ في سوقه: تؤثّر في ترتيب التوزيع." : "ومفتاحُها مطفأٌ في سوقه: تُحسب ولا تؤثّر."}
+            </p>
+            <div className="ad-kv">
+              <div className="ad-kv-row">
+                <span className="ad-kv-label">الدرجة</span>
+                <span className="ad-kv-value" dir="ltr">
+                  {digits(String(data.score))} / 100
+                </span>
+              </div>
+              {QUALITY_PARTS.map((part) => (
+                <div key={part.key} className="ad-kv-row">
+                  <span className="ad-kv-label">{part.label}</span>
+                  <span className="ad-kv-value" dir="ltr">
+                    {digits(String(Math.round((data.parts[part.key] ?? 0) * 100)))}%
+                  </span>
+                </div>
+              ))}
+              <div className="ad-kv-row">
+                <span className="ad-kv-label">عروض · قبول · رحلات · ملغاة</span>
+                <span className="ad-kv-value" dir="ltr">
+                  {[counts.offered, counts.accepted, counts.assigned, counts.cancelled]
+                    .map((value) => digits(String(value ?? 0)))
+                    .join(" · ")}
+                </span>
+              </div>
+              {data.history.length ? (
+                <div className="ad-kv-row">
+                  <span className="ad-kv-label">آخر الأيام</span>
+                  <span className="ad-kv-value" dir="ltr">
+                    {data.history
+                      .slice(-7)
+                      .map((day) => digits(String(day.score)))
+                      .join(" · ")}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </>
         )}
