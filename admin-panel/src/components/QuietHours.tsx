@@ -41,6 +41,7 @@ export function QuietHours({
   const [zone, setZone] = useState("");
   // **مسافةُ «الكبتن يقترب»** (§61-ي/١١) — في الصفِّ نفسِه وبالبابِ نفسِه
   const [approach, setApproach] = useState("");
+  const [weeklyCap, setWeeklyCap] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -50,6 +51,7 @@ export function QuietHours({
     setEnd(row.quiet_hours_end);
     setZone(row.timezone);
     setApproach(String(row.approach_notice_meters));
+    setWeeklyCap(String(row.weekly_marketing_cap));
   }, [country]);
 
   useEffect(() => {
@@ -110,7 +112,19 @@ export function QuietHours({
               disabled={!isAdmin}
               onChange={(event) => setApproach(event.target.value.replace(/[^0-9]/g, ""))}
             />
+            <Field
+              label="الحدّ الأسبوعيّ للحملات لكلِّ مستخدم"
+              name="weekly_marketing_cap"
+              dir="ltr"
+              inputMode="numeric"
+              value={weeklyCap}
+              disabled={!isAdmin}
+              onChange={(event) => setWeeklyCap(event.target.value.replace(/[^0-9]/g, ""))}
+            />
           </div>
+          <p className="mt-6 text-11 leading-note text-muted">
+            الحدُّ الأسبوعيّ: أقصى ما يصل المستخدمَ من حملاتٍ في سبعة أيام (1–14). من بلغه تُتخطّاه الحملةُ التالية ويُعدّ في إحصائها.
+          </p>
           <p className="mt-6 text-11 leading-note text-muted">
             يصل الراكبَ مرّةً حين يقترب كبتنُه من نقطة الانطلاق بهذه المسافة (200–3000). و800 م نحو دقيقتين في المدينة — مسافةٌ لا
             زمن، فلا زمنَ قيادةٍ يُحسب في النظام. ويسري على ما يُقبل من الرحلات بعد الحفظ.
@@ -134,6 +148,7 @@ export function QuietHours({
                   quiet_hours_end: end,
                   timezone: zone.trim(),
                   approach_notice_meters: approach ? Number(approach) : undefined,
+                  weekly_marketing_cap: weeklyCap ? Number(weeklyCap) : undefined,
                 })
                   .then(() =>
                     onSaved(

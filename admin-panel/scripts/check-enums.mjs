@@ -39,6 +39,8 @@ const UI_UNIONS = new Set([
   "EmergencyFilter",
   // **مدى «دقّة وقت الوصول»** (`screens/EtaAccuracy.tsx`، البند ١٢): ٧/٢٨/٩٠ يوماً — معاملُ استعلامٍ لا قيمةَ عمود
   "EtaWindow",
+  // **حالُ جمهور الحملة** (البند ١٩): `Literal` في `schemas/notification.py` لا تعدادٌ في القاعدة
+  "CampaignActivity",
   // حالُ الاشتراك الأربع تُشتق في `Subscription.tsx::stateOf` من
   // `is_active` و`days_remaining` و`coverage_until` — لا عمودَ لها
   "State",

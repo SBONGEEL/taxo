@@ -23,6 +23,7 @@ import uuid
 from datetime import datetime, time
 
 from sqlalchemy import (
+    SmallInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -66,6 +67,10 @@ class NotificationCampaign(UUIDMixin, TimestampMixin, Base):
             name="campaign_scheduled_requires_time",
         ),
         CheckConstraint("sent_count >= 0", name="campaign_sent_count_non_negative"),
+        CheckConstraint(
+            "activity IS NULL OR activity IN ('active', 'dormant', 'never')",
+            name="campaign_activity_values",
+        ),
         Index("ix_notification_campaigns_status_scheduled", "status", "scheduled_at"),
     )
 
@@ -94,6 +99,14 @@ class NotificationCampaign(UUIDMixin, TimestampMixin, Base):
     )
     # عددُ من وصلهم فعلاً — يُقرأ في اللوحة، وتفصيلُه في `deliveries`
     sent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    #: **المدينة/الولاية** (البند ١٩) — منطقةُ تسعير: من كانت آخرُ رحلاته فيها. و`None` الدولةُ كلُّها
+    zone_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("pricing_zones.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    #: **الحال** (البند ١٩): `active` رحلةٌ في ٣٠ يوماً · `dormant` رحلاتٌ أقدمُ وحدها · `never` لا رحلة؛ و`None` الكلّ
+    activity: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # يبقى بعد حذف الحساب كما في `admin_audit_logs` — من أرسل حملةً سؤالٌ
     # يُسأل بعد رحيله
@@ -140,6 +153,8 @@ class NotificationDelivery(UUIDMixin, TimestampMixin, Base):
     sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    #: **لمَ لم يُرسل** (البند ١٩): `opted_out` · `no_device` · `weekly_cap` — ومع `skipped` وحدها
+    skip_reason: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<NotificationDelivery {self.campaign_id} {self.status}>"
@@ -158,6 +173,7 @@ class NotificationSetting(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "notification_settings"
     __table_args__ = (
+        CheckConstraint("weekly_marketing_cap BETWEEN 1 AND 14", name="notification_weekly_cap_range"),
         UniqueConstraint("country_code", name="uq_notification_settings_country_code"),
         CheckConstraint(
             "approach_notice_meters BETWEEN 200 AND 3000",
@@ -174,6 +190,10 @@ class NotificationSetting(UUIDMixin, TimestampMixin, Base):
     # **مسافةُ إشعار «الكبتن يقترب»** (§61-ي/١١) — مسافةٌ لا زمن: لا زمنَ قيادةٍ يُحسب في النظام. ٨٠٠ م نحو دقيقتين في المدينة
     approach_notice_meters: Mapped[int] = mapped_column(
         Integer, nullable=False, default=800, server_default="800"
+    )
+    #: **الحدُّ الأسبوعيّ** (البند ١٩) — أقصى ما يصل المستخدمَ من حملاتٍ في سبعة أيام (١–١٤)
+    weekly_marketing_cap: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=3, server_default="3"
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي

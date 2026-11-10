@@ -29,6 +29,8 @@ import { ApiError } from "@/api/client";
 import {
   cancelCampaign,
   createCampaign,
+  getCampaignStats,
+  listPricingZones,
   updateCampaign,
   listCampaigns,
   listDeliveries,
@@ -37,7 +39,10 @@ import type {
   Campaign,
   CampaignAudience,
   CampaignStatus,
+  CampaignActivity,
+  CampaignStats,
   Delivery,
+  PricingZone,
 } from "@/api/types";
 import { PromoCodes } from "@/components/PromoCodes";
 import { MissionsLevels } from "@/components/MissionsLevels";
@@ -327,6 +332,15 @@ function Composer({
   const [scheduledAt, setScheduledAt] = useState(
     editing?.scheduled_at ? editing.scheduled_at.slice(0, 16) : "",
   );
+  // **المدينة/الولاية والحال** (البند ١٩) — مُضيِّقان اختياريّان؛ والمدنُ مناطقُ التسعير في دولة اللوحة
+  const [zoneId, setZoneId] = useState<string>(editing?.zone_id ?? "");
+  const [activity, setActivity] = useState<CampaignActivity | "">(editing?.activity ?? "");
+  const [zones, setZones] = useState<PricingZone[]>([]);
+  useEffect(() => {
+    listPricingZones(country)
+      .then((found) => setZones(found.zones))
+      .catch(() => setZones([]));
+  }, [country]);
   const [busy, setBusy] = useState(false);
   const form = useFormError();
   const error = form.message;
@@ -342,6 +356,8 @@ function Composer({
       country_code: audience === "by_country" ? country : null,
       // بلا موعدٍ تبقى مسودّة، وبموعدٍ تصير مجدولة (الخلفية تقرر)
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      zone_id: audience === "by_country" && zoneId ? zoneId : null,
+      activity: activity === "" ? null : activity,
     };
     try {
       if (editing) await updateCampaign(editing.id, payload);
@@ -407,6 +423,42 @@ function Composer({
         </div>
       </div>
 
+      {audience === "by_country" && zones.length > 0 ? (
+        <div className="mt-14">
+          <label className="label" htmlFor="zone">
+            المدينة / الولاية
+          </label>
+          <select id="zone" name="zone_id" className="fld" value={zoneId} onChange={(event) => setZoneId(event.target.value)}>
+            <option value="">كلُّ الدولة</option>
+            {zones.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.name_ar}
+              </option>
+            ))}
+          </select>
+          <p className="mt-6 text-11 leading-note text-muted">من كانت آخرُ رحلاته (راكباً أو كبتناً) فيها.</p>
+        </div>
+      ) : null}
+
+      <div className="mt-14">
+        <span className="label">الحال</span>
+        <div className="flex flex-wrap gap-8">
+          {ACTIVITY_CHOICES.map(([key, label]) => (
+            <button
+              key={key || "all"}
+              type="button"
+              onClick={() => setActivity(key)}
+              className={cn(
+                "rounded-12 border px-14 py-10 text-12.5",
+                activity === key ? "border-ink font-semibold text-ink" : "border-line text-muted",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-14">
         <DateInput
           id="scheduled"
@@ -447,6 +499,13 @@ function Composer({
   );
 }
 
+const ACTIVITY_CHOICES: [CampaignActivity | "", string][] = [
+  ["", "الكلّ"],
+  ["active", "نشط — رحلةٌ في 30 يوماً"],
+  ["dormant", "خامل — رحلاتٌ أقدم"],
+  ["never", "لم يركب بعد"],
+];
+
 function DeliveriesModal({
   campaign,
   deliveries,
@@ -458,6 +517,7 @@ function DeliveriesModal({
 }) {
   return (
     <Modal onClose={onClose} title={`سجل الإرسال — ${campaign.title}`}>
+      <CampaignStatsLine campaignId={campaign.id} />
       {deliveries === null ? (
         <Spinner className="mx-auto" />
       ) : deliveries.length === 0 ? (
@@ -500,3 +560,27 @@ function DeliveriesModal({
 }
 
 /** نافذةٌ بنمط `DESIGN.md` §3.5 — تعتيمٌ وسطُ الشاشة ولوحٌ بنصف قطر 20. */
+
+/** **إحصاءُ الحملة** (البند ١٩) — وصل · فُتح · فشل · تُخطّي بسببه؛ كلُّ رقمٍ من الخلفية. */
+function CampaignStatsLine({ campaignId }: { campaignId: string }) {
+  const [stats, setStats] = useState<CampaignStats | null>(null);
+  useEffect(() => {
+    getCampaignStats(campaignId)
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, [campaignId]);
+  if (stats === null) return null;
+  const parts: [string, number][] = [
+    ["وصل", stats.sent],
+    ["فُتح", stats.opened],
+    ["فشل", stats.failed],
+    ["أطفأ العروض", stats.skipped_opted_out],
+    ["بلا جهاز", stats.skipped_no_device],
+    ["بلغ الحدّ الأسبوعيّ", stats.skipped_weekly_cap],
+  ];
+  return (
+    <p className="mb-10 text-12.5 text-muted">
+      {parts.map(([label, value]) => `${label} ${digits(String(value))}`).join(" · ")}
+    </p>
+  );
+}

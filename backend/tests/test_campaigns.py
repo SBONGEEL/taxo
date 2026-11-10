@@ -470,3 +470,51 @@ async def test_a_scheduled_campaign_can_be_edited_and_a_sent_one_cannot(
         headers=admin_headers,
     )
     assert refused.status_code == 409, refused.text
+
+
+# ------------------------------------------------- البند ١٩: الحدُّ الأسبوعيّ والحالُ والإحصاء
+
+
+async def test_the_weekly_cap_skips_and_says_why(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**الحدُّ من اللوحة** — حملتان والحدُّ واحد: الثانيةُ تُتخطّى بسببها، والإحصاءُ يقول ذلك."""
+    await enable_push_provider(session_factory)
+    await _quiet_hours(session_factory, "JO", "00:00", "00:00")
+    saved = await client.put(
+        "/admin/campaigns/settings/JO",
+        json={"quiet_hours_start": "00:00", "quiet_hours_end": "00:00", "timezone": "Asia/Amman", "weekly_marketing_cap": 1},
+        headers=admin_headers,
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["weekly_marketing_cap"] == 1
+
+    rider = auth(await register(client, RIDER))
+    await register_device(client, rider, token="fcm-rider-token")
+    due = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
+    first = await _create(client, admin_headers, scheduled_at=due)
+    assert (await _dispatch(session_factory, first["id"])).sent == 1
+    second = await _create(client, admin_headers, scheduled_at=due)
+    result = await _dispatch(session_factory, second["id"])
+    assert result.sent == 0 and result.skipped == 1
+
+    stats = (await client.get(f"/admin/campaigns/{second['id']}/stats", headers=admin_headers)).json()
+    assert stats["skipped_weekly_cap"] == 1 and stats["sent"] == 0
+    assert (await client.get(f"/admin/campaigns/{first['id']}/stats", headers=admin_headers)).json()["sent"] == 1
+
+
+async def test_activity_narrows_to_who_never_rode(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**«لم يركب بعد»** يصل من لا رحلةَ له — و«نشط» لا يصله أحدٌ هنا."""
+    await enable_push_provider(session_factory)
+    await _quiet_hours(session_factory, "JO", "00:00", "00:00")
+    rider = auth(await register(client, RIDER))
+    await register_device(client, rider, token="fcm-rider-token")
+    due = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
+
+    active = await _create(client, admin_headers, scheduled_at=due, activity="active")
+    assert active["activity"] == "active"
+    assert (await _dispatch(session_factory, active["id"])).sent == 0
+    never = await _create(client, admin_headers, scheduled_at=due, activity="never")
+    assert (await _dispatch(session_factory, never["id"])).sent == 1

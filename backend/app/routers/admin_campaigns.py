@@ -17,6 +17,7 @@ from app.core.deps import GrowthManager, DbSession
 from app.core.exceptions import InvalidInput
 from app.models.enums import AuditAction, CampaignStatus, CountryCode
 from app.schemas.notification import (
+    CampaignStatsOut,
     CampaignCreate,
     CampaignOut,
     CampaignUpdate,
@@ -59,6 +60,8 @@ async def create_campaign(
         audience=payload.audience,
         country_code=payload.country_code,
         scheduled_at=payload.scheduled_at,
+        zone_id=payload.zone_id,
+        activity=payload.activity,
     )
     await session.commit()
     await session.refresh(campaign)
@@ -85,6 +88,8 @@ async def update_campaign(
         audience=payload.audience,
         country_code=payload.country_code,
         scheduled_at=payload.scheduled_at,
+        zone_id=payload.zone_id,
+        activity=payload.activity,
     )
     await session.commit()
     await session.refresh(campaign)
@@ -123,6 +128,13 @@ async def list_deliveries(
 
 
 # ------------------------------------------------------- إشعار تجريبي
+
+
+@router.get("/{campaign_id}/stats", response_model=CampaignStatsOut)
+async def campaign_stats(campaign_id: uuid.UUID, _staff: GrowthManager, session: DbSession) -> CampaignStatsOut:
+    """**إحصاءُ الحملة** (البند ١٩): وصل · فشل · تُخطّي بسببه · فُتح."""
+    campaign = await campaigns_service.get_campaign(session, campaign_id)
+    return CampaignStatsOut(**await campaigns_service.stats(session, campaign))
 
 
 @router.post("/test-push", response_model=TestPushResult)
@@ -202,6 +214,8 @@ async def update_settings(
     setting.timezone = _valid_timezone(payload.timezone)
     if payload.approach_notice_meters is not None:
         setting.approach_notice_meters = payload.approach_notice_meters
+    if payload.weekly_marketing_cap is not None:
+        setting.weekly_marketing_cap = payload.weekly_marketing_cap
     await session.commit()
     await session.refresh(setting)
     return NotificationSettingOut.model_validate(setting)

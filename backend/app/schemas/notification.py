@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, time
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,6 +21,9 @@ class CampaignCreate(BaseModel):
     country_code: CountryCode | None = None
     # بلا موعد تبقى مسودّة؛ بموعدٍ تصير مجدولة
     scheduled_at: datetime | None = None
+    #: **المدينة/الولاية والحال** (البند ١٩) — مُضيِّقان اختياريّان
+    zone_id: uuid.UUID | None = None
+    activity: Literal["active", "dormant", "never"] | None = None
 
 
 class CampaignUpdate(BaseModel):
@@ -29,6 +32,8 @@ class CampaignUpdate(BaseModel):
     audience: CampaignAudience | None = None
     country_code: CountryCode | None = None
     scheduled_at: datetime | None = None
+    zone_id: uuid.UUID | None = None
+    activity: Literal["active", "dormant", "never"] | None = None
 
 
 class CampaignOut(BaseModel):
@@ -44,6 +49,8 @@ class CampaignOut(BaseModel):
     sent_at: datetime | None
     sent_count: int
     created_at: datetime
+    zone_id: uuid.UUID | None = None
+    activity: str | None = None
 
 
 class DeliveryOut(BaseModel):
@@ -90,6 +97,8 @@ class NotificationSettingOut(BaseModel):
     timezone: str
     # **مسافةُ إشعار «الكبتن يقترب»** بالأمتار (§61-ي/١١)
     approach_notice_meters: int
+    #: **الحدُّ الأسبوعيّ للحملات** (البند ١٩)
+    weekly_marketing_cap: int
 
 
 class NotificationSettingUpdate(BaseModel):
@@ -99,6 +108,7 @@ class NotificationSettingUpdate(BaseModel):
     timezone: str = Field(min_length=3, max_length=64)
     # **اختياريٌّ** فلا يتغيّر عقدُ من لا يرسله (§61-ي/١١) — ٢٠٠–٣٠٠٠ متر
     approach_notice_meters: int | None = Field(default=None, ge=200, le=3000)
+    weekly_marketing_cap: int | None = Field(default=None, ge=1, le=14)
 
 
 # ------------------------------------------- صندوق وارد المستخدم (9-ب)
@@ -137,3 +147,15 @@ class MarkReadIn(BaseModel):
     """
 
     ids: list[uuid.UUID] | None = Field(default=None, max_length=200)
+
+
+class CampaignStatsOut(BaseModel):
+    """**إحصاءُ حملة** (البند ١٩) — من سطور التسليم لا من عدّادٍ يُكتب بيد."""
+
+    sent: int
+    failed: int
+    skipped_opted_out: int
+    skipped_no_device: int
+    skipped_weekly_cap: int
+    #: من فتح الإشعارَ من صندوق الوارد (`user_notifications.read_at`)
+    opened: int

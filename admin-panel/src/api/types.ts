@@ -250,6 +250,22 @@ export interface Campaign {
   sent_at: string | null;
   sent_count: number;
   created_at: string;
+  /** **المدينة/الولاية** (البند ١٩) — منطقةُ تسعير، و`null` الدولةُ كلُّها */
+  zone_id: string | null;
+  activity: CampaignActivity | null;
+}
+
+/** **الحال** (البند ١٩): رحلةٌ في ٣٠ يوماً · رحلاتٌ أقدمُ وحدها · لا رحلة — `Literal` في الخلفية لا تعداد. */
+export type CampaignActivity = "active" | "dormant" | "never";
+
+/** **إحصاءُ حملة** (البند ١٩) — من سطور التسليم وصندوق الوارد. */
+export interface CampaignStats {
+  sent: number;
+  failed: number;
+  skipped_opted_out: number;
+  skipped_no_device: number;
+  skipped_weekly_cap: number;
+  opened: number;
 }
 
 export interface Delivery {
@@ -266,6 +282,8 @@ export interface NotificationSetting {
   timezone: string;
   /** مسافةُ إشعار «الكبتن يقترب» بالأمتار (§61-ي/١١) — ٢٠٠–٣٠٠٠. */
   approach_notice_meters: number;
+  /** **الحدُّ الأسبوعيّ للحملات** (البند ١٩) — ١–١٤ لكلِّ مستخدم في سبعة أيام. */
+  weekly_marketing_cap: number;
 }
 
 // ------------------------------------------------------------ الكباتن

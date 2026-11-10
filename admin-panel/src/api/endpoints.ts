@@ -103,6 +103,8 @@ import type {
   Badge,
   CancellationPlan,
   Campaign,
+  CampaignActivity,
+  CampaignStats,
   CampaignAudience,
   CancellationChargeRow,
   CancellationChargeStatus,
@@ -419,6 +421,8 @@ export const createCampaign = (payload: {
   audience: CampaignAudience;
   country_code?: CountryCode | null;
   scheduled_at?: string | null;
+  zone_id?: string | null;
+  activity?: CampaignActivity | null;
 }) => api.post<Campaign>("/admin/campaigns", payload);
 
 export const updateCampaign = (
@@ -429,8 +433,13 @@ export const updateCampaign = (
     audience: CampaignAudience;
     country_code: CountryCode | null;
     scheduled_at: string | null;
+    zone_id: string | null;
+    activity: CampaignActivity | null;
   }>,
 ) => api.patch<Campaign>(`/admin/campaigns/${id}`, payload);
+
+/** **إحصاءُ الحملة** (البند ١٩). */
+export const getCampaignStats = (id: string) => api.get<CampaignStats>(`/admin/campaigns/${id}/stats`);
 
 export const cancelCampaign = (id: string) =>
   api.post<Campaign>(`/admin/campaigns/${id}/cancel`);
@@ -453,6 +462,7 @@ export const setQuietHours = (
     quiet_hours_end: string;
     timezone: string;
     approach_notice_meters?: number;
+    weekly_marketing_cap?: number;
   },
 ) =>
   api.put<NotificationSetting>(`/admin/campaigns/settings/${country}`, payload);

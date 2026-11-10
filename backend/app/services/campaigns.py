@@ -258,6 +258,8 @@ async def create(
     audience: CampaignAudience,
     country_code: CountryCode | None,
     scheduled_at: datetime | None,
+    zone_id: uuid.UUID | None = None,
+    activity: str | None = None,
 ) -> NotificationCampaign:
     """حملة جديدة — مسودّةٌ أو مجدولة. الـ commit مسؤولية الراوتر."""
     status = (
@@ -278,6 +280,8 @@ async def create(
         status=status,
         scheduled_at=scheduled_at,
         created_by=actor.id,
+        zone_id=zone_id,
+        activity=activity,
     )
     session.add(campaign)
     await session.flush()
@@ -303,6 +307,8 @@ async def update(
     audience: CampaignAudience | None = None,
     country_code: CountryCode | None = None,
     scheduled_at: datetime | None = None,
+    zone_id: uuid.UUID | None = None,
+    activity: str | None = None,
 ) -> NotificationCampaign:
     """تعديلٌ قبل الإرسال وحده — ما أُرسل لا يُعدَّل نصُّه بعد وصوله."""
     if campaign.status not in OPEN_CAMPAIGN_STATUSES:
@@ -319,6 +325,10 @@ async def update(
     if scheduled_at is not None:
         campaign.scheduled_at = scheduled_at
         campaign.status = CampaignStatus.SCHEDULED
+    if zone_id is not None:
+        campaign.zone_id = zone_id
+    if activity is not None:
+        campaign.activity = activity
 
     _validate(
         audience=campaign.audience,
@@ -396,7 +406,56 @@ def _audience_filters(campaign: NotificationCampaign) -> list:
 
     if campaign.country_code is not None:
         filters.append(User.country_code == campaign.country_code)
+    # **المدينة/الولاية والحال** (البند ١٩) — من رحلاته راكباً أو كبتناً
+    if campaign.zone_id is not None:
+        filters.append(_last_ride_in_zone(campaign.zone_id))
+    if campaign.activity is not None:
+        filters.append(_activity_clause(campaign.activity))
     return filters
+
+
+#: «نشط» = رحلةٌ (راكباً أو كبتناً) في هذه الأيام
+ACTIVE_DAYS = 30
+
+
+def _rides_of_user():
+    """رحلاتُ المستخدم راكباً أو كبتناً — شرطٌ مترابطٌ على `User.id`."""
+    from sqlalchemy import or_
+
+    from app.models.driver import Driver
+    from app.models.ride import Ride
+
+    mine_as_driver = select(Driver.id).where(Driver.user_id == User.id).scalar_subquery()
+    return Ride, or_(Ride.rider_id == User.id, Ride.driver_id == mine_as_driver)
+
+
+def _last_ride_in_zone(zone_id: uuid.UUID):
+    """**آخرُ رحلاته انطلقت في المنطقة** — المدينةُ تُستدلّ من الرحلات لا من حقلٍ يكتبه أحد."""
+    from sqlalchemy import func
+
+    from app.models.pricing_zone import PricingZone
+
+    Ride, mine = _rides_of_user()
+    last_pickup = (
+        select(Ride.pickup_point).where(mine).order_by(Ride.created_at.desc()).limit(1).scalar_subquery()
+    )
+    return select(PricingZone.id).where(PricingZone.id == zone_id, func.ST_Covers(PricingZone.area, last_pickup)).exists()
+
+
+def _activity_clause(activity: str):
+    from datetime import timedelta
+
+    from app.models.enums import RideStatus
+
+    Ride, mine = _rides_of_user()
+    since = _now() - timedelta(days=ACTIVE_DAYS)
+    any_ride = select(Ride.id).where(mine, Ride.status == RideStatus.COMPLETED).exists()
+    recent = select(Ride.id).where(mine, Ride.status == RideStatus.COMPLETED, Ride.created_at >= since).exists()
+    if activity == "active":
+        return recent
+    if activity == "dormant":
+        return any_ride & ~recent
+    return ~any_ride
 
 
 async def target_countries(
@@ -462,6 +521,7 @@ async def _send_batch(
     campaign: NotificationCampaign,
     user_ids: list[uuid.UUID],
     result: DispatchResult,
+    cap: int = 3,
 ) -> None:
     """يرسل لدفعةٍ ويكتب سطر تسليمٍ لكل مستخدم فيها.
 
@@ -476,8 +536,10 @@ async def _send_batch(
             )
         )
     )
+    # **الحدُّ الأسبوعيّ** (البند ١٩) — من وصلته حملاتٌ بعدد الحدِّ في سبعة أيام لا تصله أخرى؛ والحدُّ لدولة الحملة الجارية
+    capped = await _weekly_capped(session, user_ids, cap)
     tokens = await _tokens_by_user(
-        session, [user_id for user_id in user_ids if user_id not in opted_out]
+        session, [user_id for user_id in user_ids if user_id not in opted_out and user_id not in capped]
     )
     message = PushMessage(
         title=campaign.title,
@@ -488,9 +550,11 @@ async def _send_batch(
 
     for user_id in user_ids:
         user_tokens = tokens.get(user_id) or []
-        if user_id in opted_out or not user_tokens:
+        reason: str | None = None
+        if user_id in opted_out or user_id in capped or not user_tokens:
             status = DeliveryStatus.SKIPPED
             sent_at = None
+            reason = "opted_out" if user_id in opted_out else "weekly_cap" if user_id in capped else "no_device"
         else:
             outcome = await provider.send(user_tokens, message)
             if outcome.invalid_tokens:
@@ -505,6 +569,7 @@ async def _send_batch(
                 user_id=user_id,
                 status=status,
                 sent_at=sent_at,
+                skip_reason=reason,
             )
         )
         if status is DeliveryStatus.SENT:
@@ -525,6 +590,62 @@ async def _send_batch(
             result.skipped += 1
         else:
             result.failed += 1
+
+
+async def _weekly_capped(session: AsyncSession, user_ids: list[uuid.UUID], cap: int) -> set[uuid.UUID]:
+    from datetime import timedelta
+
+    from sqlalchemy import func
+
+    since = _now() - timedelta(days=7)
+    rows = await session.execute(
+        select(NotificationDelivery.user_id)
+        .where(
+            NotificationDelivery.user_id.in_(user_ids),
+            NotificationDelivery.status == DeliveryStatus.SENT,
+            NotificationDelivery.sent_at >= since,
+        )
+        .group_by(NotificationDelivery.user_id)
+        .having(func.count() >= cap)
+    )
+    return set(rows.scalars())
+
+
+async def stats(session: AsyncSession, campaign: NotificationCampaign) -> dict[str, int]:
+    """**إحصاءُ الحملة** (البند ١٩) — من سطور التسليم ومن صندوق الوارد (ما قُرئ)، لا من عدّاد."""
+    from sqlalchemy import func
+
+    from app.models.notification import UserNotification
+
+    rows = (
+        await session.execute(
+            select(NotificationDelivery.status, NotificationDelivery.skip_reason, func.count())
+            .where(NotificationDelivery.campaign_id == campaign.id)
+            .group_by(NotificationDelivery.status, NotificationDelivery.skip_reason)
+        )
+    ).all()
+    out = {"sent": 0, "failed": 0, "skipped_opted_out": 0, "skipped_no_device": 0, "skipped_weekly_cap": 0}
+    for status, reason, count in rows:
+        if status is DeliveryStatus.SENT:
+            out["sent"] += count
+        elif status is DeliveryStatus.FAILED:
+            out["failed"] += count
+        else:
+            # سطورٌ قبل البند ١٩ بلا سبب: لا جهازَ أو أطفأ — تُعدّ «لا جهاز» ولا يُخترع لها سبب
+            out["skipped_opted_out" if reason == "opted_out" else "skipped_weekly_cap" if reason == "weekly_cap" else "skipped_no_device"] += count
+    out["opened"] = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(UserNotification)
+            .where(
+                UserNotification.kind == CAMPAIGN_KIND,
+                UserNotification.data["campaign_id"].astext == str(campaign.id),
+                UserNotification.read_at.is_not(None),
+            )
+        )
+        or 0
+    )
+    return out
 
 
 async def dispatch(
@@ -564,7 +685,7 @@ async def dispatch(
             )
             if not batch:
                 break
-            await _send_batch(session, provider, campaign, batch, result)
+            await _send_batch(session, provider, campaign, batch, result, cap=setting.weekly_marketing_cap)
             await session.flush()
 
     campaign.sent_count += result.sent
