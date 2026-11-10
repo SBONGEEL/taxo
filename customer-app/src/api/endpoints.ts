@@ -1049,3 +1049,23 @@ export interface MyPlans {
 }
 export const getMyPlans = () => api.get<MyPlans>("/rider-plans");
 export const subscribePlan = (planId: string) => api.post<MyPlans>(`/rider-plans/${planId}/subscribe`, {});
+
+/** **«نقاطي»** (البند ١٤، §٩٧/١٤) — الرصيدُ والمستوى والانتهاء وقيمةُ الاستبدال، كلُّها من الخلفية. */
+export interface MyLoyalty {
+  enabled: boolean;
+  currency: string;
+  points: number;
+  tier: "bronze" | "silver" | "gold";
+  year_points: number;
+  next_tier: "silver" | "gold" | null;
+  to_next: number | null;
+  bonus_percent: number;
+  redeem_points: number | null;
+  redeem_value: string | null;
+  redeemable_value: string;
+  expiry_days: number | null;
+  expiring_points: number;
+  expiring_at: string | null;
+}
+export const getMyLoyalty = () => api.get<MyLoyalty>("/loyalty/me");
+export const redeemLoyalty = (blocks: number) => api.post<MyLoyalty>("/loyalty/me/redeem", { blocks });

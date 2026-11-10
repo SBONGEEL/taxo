@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  LoyaltyRule,
   RiderPlan,
   PriceExperiment,
   DriverGoal, FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
@@ -2746,3 +2747,10 @@ export const createRiderPlan = (
 ) => api.post<RiderPlan>(`/admin/rider-plans?country_code=${country}`, payload);
 export const setRiderPlanActive = (id: string, isActive: boolean) =>
   api.patch<RiderPlan>(`/admin/rider-plans/${id}`, { is_active: isActive });
+
+/** **قاعدةُ الولاء** (البند ١٤) — `null` قبل أن تُوضع */
+export const getLoyaltyRule = (country: CountryCode) => api.get<LoyaltyRule | null>(`/admin/loyalty?country_code=${country}`);
+export const saveLoyaltyRule = (
+  country: CountryCode,
+  payload: Omit<LoyaltyRule, "country_code" | "holders" | "open_points" | "redeemed_value">,
+) => api.put<LoyaltyRule>(`/admin/loyalty?country_code=${country}`, payload);

@@ -73,6 +73,8 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.TAXO_CARD,
     # **مكافأةُ هدف الكبتن** (§٩٧/١٦) — من TAXO دائنٌ وحدَه، وسقفُه ميزانيّةُ الهدف (`driver_goals.budget_cap`)
     WalletTransactionType.GOAL_REWARD,
+    # **استبدالُ نقاط الولاء** (§٩٧/١٤) — رصيدٌ من TAXO
+    WalletTransactionType.LOYALTY_REWARD,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (

@@ -81,6 +81,7 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — نارُ سلسلته في الرئيسية نفسُها
   cashback: "local_fire_department",
   goal_reward: "trophy",
+  loyalty_reward: "diamond",
   rider_plan_payment: "card_membership",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
   taxo_card: "confirmation_number",
@@ -133,6 +134,8 @@ export function WalletT2Screen() {
   const payRequests = country?.features.payment_requests_enabled === true;
   // **«اشتراكي»** (البند ١٣) — حيث مفتاحُه مشتعل
   const plansEnabled = country?.features.rider_plans_enabled === true;
+  // **«نقاطي»** (البند ١٤)
+  const loyaltyEnabled = country?.features.loyalty_enabled === true;
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
@@ -207,6 +210,12 @@ export function WalletT2Screen() {
               <span className="t2-icon" aria-hidden="true">add</span>
               {tr("شحن الرصيد")}
             </button>
+            {loyaltyEnabled ? (
+              <button type="button" className="t2-btn ghost" onClick={() => navigate("/loyalty")}>
+                <span className="t2-icon" aria-hidden="true">diamond</span>
+                {tr("نقاطي")}
+              </button>
+            ) : null}
             {plansEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/plans")}>
                 <span className="t2-icon" aria-hidden="true">card_membership</span>

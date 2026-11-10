@@ -94,6 +94,7 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب وحدَه، وأيقونةُ المكافأة كالإحالة إن رُسم يوماً
   cashback: "redeem",
   goal_reward: "trophy",
+  loyalty_reward: "workspace_premium",
   rider_plan_payment: "card_membership",
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إليه، أيقونةُ الردّ كالاسترجاع
   rounding: "undo",

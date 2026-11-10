@@ -1670,5 +1670,19 @@
  "يُدفع من محفظتك، والخصمُ آليٌّ عند نهاية كلِّ رحلة، ولا يجتمع مع كوبون.": "Payé depuis votre portefeuille ; la remise s'applique automatiquement à la fin de chaque course et ne se cumule pas avec un code promo.",
  "جدّد من محفظتي": "Renouveler depuis mon portefeuille",
  "اشترك من محفظتي": "S'abonner depuis mon portefeuille",
- "الاشتراكات غير متاحة في بلدك حالياً.": "Les abonnements ne sont pas disponibles dans votre pays pour le moment."
+ "الاشتراكات غير متاحة في بلدك حالياً.": "Les abonnements ne sont pas disponibles dans votre pays pour le moment.",
+ "رصيد من نقاطك": "Crédit de vos points",
+ "نقاطي": "Mes points",
+ "المستوى": "Niveau",
+ "برونزيّ": "Bronze",
+ "فضّيّ": "Argent",
+ "ذهبيّ": "Or",
+ "{0} نقطة أخرى هذه السنة وتصير {1}": "Encore {0} points cette année pour passer {1}",
+ "أعلى مستوى": "Niveau le plus élevé",
+ "تكسب {0}٪ زيادة": "Vous gagnez {0} % de plus",
+ "{0} نقطة تنتهي في {1}": "{0} points expirent le {1}",
+ "كلُّ {0} نقطة = ": "Chaque {0} points = ",
+ "في محفظتك، تدفع به رحلاتك": "dans votre portefeuille, pour payer vos courses",
+ "استبدل": "Échanger",
+ "نقاط الولاء غير متاحة في بلدك حالياً.": "Les points de fidélité ne sont pas disponibles dans votre pays pour le moment."
 }
