@@ -21,6 +21,7 @@ from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.payment_setting import PaymentSetting
 from app.models.ride_call import RideCall
 from app.models.storefront import PromoBanner
+from app.models.support_ticket import SupportTicket
 from app.models.user import User
 from app.models.vehicle_skin import VehicleSkin
 
@@ -36,6 +37,8 @@ STORED_FILE_COLUMNS: tuple[InstrumentedAttribute, ...] = (
     PaymentRequest.receipt_path,
     PaymentSetting.cliq_qr_path,
     AppFeedback.screenshot_path,
+    # **صورةُ الشكوى** (البند ٩، ٢٠٢٦-١١-١٠) — بلا تسجيلها هنا يقرؤها الكنسُ الأسبوعيُّ يتيمةً فيمحوها
+    SupportTicket.photo_path,
 )
 
 
