@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  PriceExperiment,
   DriverGoal, FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type { EmergencyRow, SupportContacts } from "@/api/types";
@@ -2708,3 +2709,21 @@ export const createDriverGoal = (
 ) => api.post<DriverGoal>(`/admin/driver-goals?country_code=${country}`, payload);
 export const updateDriverGoal = (id: string, payload: { is_active?: boolean; title?: string }) =>
   api.patch<DriverGoal>(`/admin/driver-goals/${id}`, payload);
+
+/** **تجاربُ الأسعار** (البند ٤) */
+export const listPriceExperiments = (country: CountryCode) =>
+  api.get<PriceExperiment[]>(`/admin/price-experiments?country_code=${country}`);
+export const createPriceExperiment = (
+  country: CountryCode,
+  payload: {
+    name: string;
+    adjust_percent: string;
+    share_percent: number;
+    days: number;
+    center_lat?: number;
+    center_lng?: number;
+    radius_km?: string;
+  },
+) => api.post<PriceExperiment>(`/admin/price-experiments?country_code=${country}`, payload);
+export const movePriceExperiment = (id: string, action: "start" | "stop" | "apply" | "cancel") =>
+  api.post<PriceExperiment>(`/admin/price-experiments/${id}/${action}`, {});

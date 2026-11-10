@@ -47,6 +47,7 @@ from app.routers import (
     admin_settings,
     admin_facilities,
     admin_driver_goals,
+    admin_price_experiments,
     admin_map_places,
     airports,
     guarantees,
@@ -132,6 +133,7 @@ api_router.include_router(admin_categories.router)
 api_router.include_router(admin_facilities.router)
 api_router.include_router(admin_map_places.router)
 api_router.include_router(admin_driver_goals.router)
+api_router.include_router(admin_price_experiments.router)
 api_router.include_router(guarantees.router)
 api_router.include_router(commute.router)
 api_router.include_router(commute_driver.router)

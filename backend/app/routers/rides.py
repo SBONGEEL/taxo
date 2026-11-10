@@ -165,6 +165,8 @@ async def estimate_ride(
         stops=[_coords(stop) for stop in payload.stops],
         parcel=payload.is_parcel,
         parcel_fetch=payload.is_parcel and payload.parcel_fetch,
+        # **ذراعُ تجربة الأسعار بمعرّف الراكب** (§٩٧/٤) — فالتقديرُ يطابق الطلب
+        rider_id=rider.id,
         hourly=(
             await hourly_service.prepare(
                 session,

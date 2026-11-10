@@ -64,6 +64,9 @@ class FareEstimate:
     facility_id: "uuid.UUID | None" = None
     # **منطقةُ الانطلاق الوعرة** (SPEC §٧٤-أ/٥) — تُجمَّد على الرحلة، و`None` = سعرٌ موحَّد
     pricing_zone_id: "uuid.UUID | None" = None
+    # **تجربةُ الأسعار وذراعُ الراكب** (SPEC §٩٧/٤) — تُجمَّدان على الرحلة، و`None` خارج كلِّ تجربة
+    price_experiment_id: "uuid.UUID | None" = None
+    price_experiment_arm: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +192,7 @@ async def estimate(
     parcel: bool = False,
     parcel_fetch: bool = False,
     hourly: "HourlyTerms | None" = None,
+    rider_id: "uuid.UUID | None" = None,
 ) -> FareEstimate:
     """تسعيرة الدولة + مسار Mapbox → سعر مقدّر.
 
@@ -228,6 +232,21 @@ async def estimate(
     if effect is not None:
         fare = effect.fare
         lines = [*lines, FareLine("rugged", effect.amount)]
+
+    # **تجربةُ الأسعار** (SPEC §٩٧/٤): **بعد المنطقة الوعرة وقبل رسوم الكبتن** — نسبةٌ على أجرة الطريق لراكبٍ في ذراع «التجربة»، سطراً
+    # بذاته. **والطلبُ الفوريُّ وحدَه** (بالساعة سعرُه ساعاتُه)، **وبمعرّف الراكب** فالذراعُ ثابتةٌ بين التقدير والطلب
+    experiment = None
+    if rider_id is not None and hourly is None:
+        from app.services import price_experiments
+
+        experiment = await price_experiments.assign(
+            session, country=CountryCode(country_code), rider_id=rider_id, lat=pickup.lat, lng=pickup.lng
+        )
+        if experiment is not None:
+            extra = price_experiments.adjustment(fare, experiment.percent, CountryCode(country_code))
+            if extra:
+                fare = round_money(fare + extra, currency)
+                lines = [*lines, FareLine("experiment", extra)]
 
     # **رسمُ المطار يُحسب هنا وحدَه** (§٦٣-ج/٢) — بابُ التقدير هو بابُ الطلب، فما يُعرض هو ما يُطلب. **وبعد الحدّ الأدنى**:
     # الحدُّ حدُّ أجرة طريق، ورسمٌ يُبتلع فيه رسمٌ لا يصل صاحبَه
@@ -274,6 +293,8 @@ async def estimate(
         captain_fees=captain_fees,
         facility_id=facility.id if facility is not None and captain_fees > 0 else None,
         pricing_zone_id=effect.zone_id if effect is not None else None,
+        price_experiment_id=experiment.experiment_id if experiment is not None else None,
+        price_experiment_arm=experiment.arm if experiment is not None else None,
     )
 
 
