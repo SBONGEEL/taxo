@@ -278,6 +278,8 @@ GatewayLedgerReader = Annotated[User, _perm(AdminPermission.GATEWAY_LEDGER_READ)
 # **قناةُ صفحة فيسبوك** (SPEC §٩٤/٢) — خارجَ افتراض `admin`، تُمنح بالاسم
 FacebookManager = Annotated[User, _perm(AdminPermission.FACEBOOK_MANAGE)]
 StatsViewer = Annotated[User, _perm(AdminPermission.STATS_VIEW)]
+# **الاعتمادُ الاستثنائيُّ والتجميد** (أمرُ المالك ٢٠٢٦-١١-١٠) — خارجَ افتراض `admin`، تُمنح بالاسم
+ExceptionalManager = Annotated[User, _perm(AdminPermission.DRIVERS_EXCEPTIONAL)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

@@ -416,6 +416,7 @@ async def list_drivers(
         description="فرزُ من يعمل بلا جنسٍ مثبت — متراكمُ ما قبل الخدمة النسائية",
     ),
     q: str | None = Query(default=None, max_length=120, description="اسمٌ أو رقم"),
+    exceptional: bool | None = Query(default=None, description="«معتمد دون وثائق» وحدَهم (البند ١)"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDriverRow]:
@@ -445,6 +446,10 @@ async def list_drivers(
         stmt = stmt.where(Driver.status == status)
     if country_code is not None:
         stmt = stmt.where(User.country_code == country_code)
+    if exceptional is True:
+        stmt = stmt.where(Driver.exceptional_approved_at.is_not(None))
+    elif exceptional is False:
+        stmt = stmt.where(Driver.exceptional_approved_at.is_(None))
     if gender_verified is True:
         stmt = stmt.where(User.gender_verified_at.is_not(None))
     elif gender_verified is False:
@@ -476,6 +481,8 @@ async def list_drivers(
             inspection_at=driver.inspection_at,
             inspection_place=driver.inspection_place,
             inspection_passed_at=driver.inspection_passed_at,
+            exceptional=driver.exceptional_approved_at is not None,
+            documents_deadline_at=driver.documents_deadline_at,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
             # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد.

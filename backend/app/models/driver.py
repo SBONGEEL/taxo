@@ -174,8 +174,27 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     debt_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — يراه المشرفون وحدَهم (`AdminDriverRow`، لا `DriverOut`).
+    # يُكتب في `services/exceptional_approval.approve`، ويُمحى عند الاعتماد العاديّ (`drivers.approve` ⇐ `clear`).
+    exceptional_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    exceptional_approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    exceptional_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: **مهلةُ رفع الوثائق** — بعدها تجميدٌ آليّ ما دام شيءٌ ناقصاً
+    documents_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: **التذكيرُ يُطفأ لكلِّ شخص** من اللوحة
+    document_reminders_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    document_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: **أيُّ تذكيرٍ قبل المهلة أُرسل** (٠ لا شيء · ١ قبل ثلاثة أيام · ٢ قبل يوم) — فلا يتكرّر تذكيرُ اليوم نفسِه
+    deadline_warning_stage: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
 
-    user: Mapped["User"] = relationship(back_populates="driver")
+    # ** صريحٌ** —  طريقٌ ثانٍ إلى loly3 root (البند ١)، فبلا تسميةٍ يلتبس الضمّ
+    user: Mapped["User"] = relationship(back_populates="driver", foreign_keys="Driver.user_id")
     vehicles: Mapped[list["Vehicle"]] = relationship(
         back_populates="driver", cascade="all, delete-orphan"
     )

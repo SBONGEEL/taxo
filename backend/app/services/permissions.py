@@ -84,6 +84,8 @@ SENSITIVE: frozenset[AdminPermission] = frozenset(
         # **والسابعةُ قناةُ فيسبوك** (SPEC §٩٤/٢) — النشرُ باسم الشركة ورسائلُ الصفحة: للمالك ومن يمنحه بالاسم
         AdminPermission.FACEBOOK_MANAGE,
         AdminPermission.STATS_VIEW,
+        # **والاعتمادُ الاستثنائيُّ والتجميد** (أمرُ المالك ٢٠٢٦-١١-١٠) — «للمالك ومن يمنحه، مطفأةٌ افتراضاً لغيره»
+        AdminPermission.DRIVERS_EXCEPTIONAL,
     }
 )
 

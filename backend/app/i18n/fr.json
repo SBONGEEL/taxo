@@ -935,5 +935,15 @@
  "مالطا": "Malte",
  "قبرص": "Chypre",
  "كندا": "Canada",
- "الولايات المتحدة": "États-Unis"
+ "الولايات المتحدة": "États-Unis",
+ "ارفع وثائقك": "Envoyez vos documents",
+ "المهلة تقترب — ارفع وثائقك": "Le délai approche — envoyez vos documents",
+ "ارفع الوثائق الناقصة من «حسابي ← المركبة والوثائق» قبل انتهاء المهلة، وإلا جُمِّد حسابك حتى ترفعها.": "Envoyez les documents manquants depuis « Mon compte → Véhicule et documents » avant la fin du délai, sinon votre compte sera suspendu jusqu'à leur envoi.",
+ "ارفع الوثائق الناقصة من «حسابي ← المركبة والوثائق» لتكتمل مراجعة حسابك.": "Envoyez les documents manquants depuis « Mon compte → Véhicule et documents » pour finaliser la vérification de votre compte.",
+ "جُمِّد حسابك": "Votre compte est suspendu",
+ "{0} — ارفع الوثائق الناقصة ليعود حسابك للعمل.": "{0} — envoyez les documents manquants pour réactiver votre compte.",
+ "السبب: {0} — تواصل مع الدعم لأيِّ استفسار.": "Motif : {0} — contactez le support pour toute question.",
+ "أُعيد تفعيل حسابك": "Votre compte est réactivé",
+ "يمكنك العمل واستقبال الطلبات من جديد.": "Vous pouvez de nouveau travailler et recevoir des courses.",
+ "انتهت مهلةُ رفع الوثائق": "Le délai d'envoi des documents a expiré"
 }

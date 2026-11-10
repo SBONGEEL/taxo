@@ -1074,6 +1074,84 @@ async def publish_driver_approved(
     )
 
 
+#: **سببُ التجميد الآليّ** — هنا لا في الخدمة لأنه يُرسم في الإشعار، فيُستخرج ويُترجم معه
+DEADLINE_FROZEN_REASON = "انتهت مهلةُ رفع الوثائق"
+
+
+async def publish_documents_requested(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+    deadline: datetime | None,
+    urgent: bool = False,
+) -> None:
+    """**«ارفع وثائقك»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — لمن اعتُمد دون وثائق: طلبٌ من المشرف، أو تذكيرٌ دوريّ، أو تذكيرٌ
+    قبل انقضاء المهلة (`urgent`). **والجملةُ تقول الأثر**: بعد المهلة يُجمَّد الحساب حتى تُرفع. والزرُّ يفتح شاشةَ الرفع."""
+    data = {"type": DocumentEvent.DOCUMENTS_REQUESTED.value}
+    if deadline is not None:
+        data["deadline"] = deadline.isoformat()
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="المهلة تقترب — ارفع وثائقك" if urgent else "ارفع وثائقك",
+            body=(
+                "ارفع الوثائق الناقصة من «حسابي ← المركبة والوثائق» قبل انتهاء المهلة، وإلا جُمِّد حسابك حتى ترفعها."
+                if deadline is not None
+                else "ارفع الوثائق الناقصة من «حسابي ← المركبة والوثائق» لتكتمل مراجعة حسابك."
+            ),
+            data=data,
+        ),
+    )
+
+
+async def publish_account_frozen(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+    reason: str,
+    documents: bool = False,
+) -> None:
+    """**جُمِّد حسابُك** (أمرُ المالك ٢٠٢٦-١١-١٠) — **والسببُ في الرسالة** كما كتبه المشرف، ومعه طريقُ الخروج: الوثائقُ إن كانت
+    هي السبب، وإلا التواصلُ مع الدعم. «رفضٌ بلا مخرجٍ ليس رفضاً»."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="جُمِّد حسابك",
+            body=(
+                f"{reason} — ارفع الوثائق الناقصة ليعود حسابك للعمل."
+                if documents
+                else f"السبب: {reason} — تواصل مع الدعم لأيِّ استفسار."
+            ),
+            data={"type": DocumentEvent.DOCUMENTS_DEADLINE_FROZEN.value if documents else "account_frozen"},
+        ),
+    )
+
+
+async def publish_account_unfrozen(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+) -> None:
+    """**أُعيد تفعيلُ حسابك** — الخبرُ الذي ينتظره من جُمِّد."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="أُعيد تفعيل حسابك",
+            body="يمكنك العمل واستقبال الطلبات من جديد.",
+            data={"type": "account_unfrozen"},
+        ),
+    )
+
+
 async def publish_inspection_scheduled(
     session: AsyncSession,
     redis: Redis,

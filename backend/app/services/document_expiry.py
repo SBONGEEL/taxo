@@ -51,6 +51,9 @@ from app.services import drivers as drivers_service
 # **العتباتُ بأيّامها** — والترتيبُ من الأبعد إلى الأقرب، فيُختار أقربُ عتبةٍ
 # بلغها المستندُ اليومَ ولا تُرسل ثلاثةُ إشعاراتٍ دفعةً واحدةً لمن رفع وثيقةً
 # تنتهي بعد يوم.
+#
+# **وصارت من اللوحة لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٢: «قابلةٌ للضبط»)
+# — `document_settings.expiry_notice_days`؛ وهذه افتراضُ دولةٍ بلا صفّ.
 NOTICE_DAYS: tuple[int, ...] = (30, 7, 1)
 
 
@@ -95,7 +98,10 @@ async def expiring_on(
     **بالضبط لا «أقلّ من»**: «أقلُّ من ثلاثين» يشمل السابع والأول، فيُرسل
     تنبيهُ الثلاثين كلَّ يومٍ لثلاثين يوماً. والعتبةُ لحظةٌ تُعبر مرّةً.
     """
-    targets = {today + timedelta(days=d): d for d in NOTICE_DAYS}
+    from app.services import exceptional_approval
+
+    notice = (await exceptional_approval.settings_for(session, country)).expiry_notice_days or NOTICE_DAYS
+    targets = {today + timedelta(days=d): d for d in notice}
     rows = (
         await session.execute(
             _base_query()
@@ -188,3 +194,23 @@ async def suspend_for_expiry(
         reason=f"انتهت صلاحية {label} في {item.expires_on.isoformat()}",
     )
     return driver
+
+
+async def expiring_within(
+    session: AsyncSession, *, today: date, country: CountryCode, days: int
+) -> list[tuple[DriverDocument, Driver, User]]:
+    """**قائمةُ اللوحة** (البند ٢): وثائقُ الكباتن **المطلوبةُ** التي تنتهي خلال `days` يوماً أو انتهت ولم تُستبدل — الأقربُ أوّلاً."""
+    rows = (
+        await session.execute(
+            _base_query()
+            .where(User.country_code == country)
+            .where(DriverDocument.expires_on <= today + timedelta(days=days))
+            .order_by(DriverDocument.expires_on)
+            .limit(300)
+        )
+    ).all()
+    kept = []
+    for document, driver, user in rows:
+        if document.doc_type in await documents_service.required_for(session, driver.id):
+            kept.append((document, driver, user))
+    return kept

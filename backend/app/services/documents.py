@@ -308,6 +308,9 @@ async def upload(
         doc_type in required_now
         and already_uploaded is not None
         and driver.status is DriverStatus.APPROVED
+        # **«معتمد دون وثائق» يبقى يعمل وهو يرفع** (أمرُ المالك ٢٠٢٦-١١-١٠): وثائقُه تدخل المراجعةَ العاديّة، والاعتمادُ
+        # العاديُّ يزيل الوسم — **ولو أسقط الرفعُ اعتمادَه لصار طلبُ الوثائق عقوبةً على من يلبّيه**
+        and driver.exceptional_approved_at is None
     )
     # الفحص **قبل** كتابة الملف: رفضٌ بعد الحفظ يترك ملفاً نحذفه فوراً
     if reverts_approval and await _has_active_ride(session, driver.id):
@@ -372,7 +375,9 @@ async def upload(
         # وبغير هذا يُلغي استبدالُ مستندٍ إيقافاً إدارياً وقع أثناء الرفع
         if reverts_approval:
             await drivers_service.lock(session, driver)
-            reverts_approval = driver.status is DriverStatus.APPROVED
+            reverts_approval = (
+                driver.status is DriverStatus.APPROVED and driver.exceptional_approved_at is None
+            )
 
         if reverts_approval:
             await drivers_service.set_status(

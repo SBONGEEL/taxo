@@ -80,6 +80,13 @@ import {
   VehiclesSection,
 } from "@/components/profile/DriverSections";
 import { DriverDebts } from "@/components/DriverDebts";
+import {
+  DocumentSettingsCard,
+  ExceptionalBadge,
+  ExceptionalCard,
+  ExpiringDocumentsCard,
+  RequestAllButton,
+} from "@/components/ExceptionalApproval";
 import { Deactivations } from "@/components/Deactivations";
 import { PendingDeletions } from "@/components/PendingDeletions";
 import { Shell } from "@/components/Shell";
@@ -307,6 +314,8 @@ export function DriversScreen() {
   // محورٌ ثانٍ مستقل عن الحالة — لا حبّةٌ سادسة بينها: «معتمدون» و«بلا جنسٍ
   // مثبت» سؤالان يُسألان معاً، وحبّةٌ واحدة تجعلهما بديلين
   const [unverifiedGender, setUnverifiedGender] = useState(false);
+  // **«معتمد دون وثائق» وحدَهم** (البند ١) — محورٌ ثالثٌ مستقلٌّ كأخيه
+  const [exceptionalOnly, setExceptionalOnly] = useState(false);
   const [rows, setRows] = useState<AdminDriverRow[] | null>(null);
   const search = useSearch();
   const [open, setOpen] = useState<AdminDriverRow | null>(null);
@@ -351,12 +360,13 @@ export function DriversScreen() {
         country_code: country,
         status: filter === "all" ? undefined : filter,
         gender_verified: unverifiedGender ? false : undefined,
+        exceptional: exceptionalOnly ? true : undefined,
         // **من الخادم لا في المتصفح**: القائمةُ مرقَّمةٌ بخمسين، وبحثٌ محلّيٌّ
         // يقرأ الصفحةَ المعروضةَ وحدَها فيبدو معطوباً لمن يعرف أن الصفَّ موجود
         q: search.term,
       }),
     );
-  }, [country, filter, unverifiedGender, search.term]);
+  }, [country, filter, unverifiedGender, exceptionalOnly, search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -392,6 +402,16 @@ export function DriversScreen() {
               قبله يعني خدمةً بلا سائقاتٍ يمكن ترشيحُهنّ.
             </span>
           </Checkbox>
+        </div>
+
+        <div className="ad-toggle-card">
+          <Checkbox checked={exceptionalOnly} onChange={setExceptionalOnly}>
+            <span className="ad-toggle-title">معتمد دون وثائق</span>
+            <span className="ad-toggle-hint">
+              من اعتُمد استثنائياً وما زالت وثائقه ناقصة — بمهلته، ويُجمَّد آلياً بعدها.
+            </span>
+          </Checkbox>
+          {exceptionalOnly ? <RequestAllButton country={country} onDone={setDone} /> : null}
         </div>
       </div>
 
@@ -451,6 +471,7 @@ export function DriversScreen() {
                 </Badge>
                 {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — بجانب حاله لا بدلاً منها */}
                 <TestAccountBadge isTest={row.is_test} />
+                <ExceptionalBadge exceptional={row.exceptional} deadline={row.documents_deadline_at} />
               </span>
 
               <span>
@@ -506,6 +527,18 @@ export function DriversScreen() {
       {/* **طلباتُ إلغاء التفعيل تحت قائمة الكباتن** (البند ١٣): هنا يُقرأ حالُ
           الكبتن أصلاً، وقرارٌ يُخرجه من التوزيع يسكن حيث تُقرأ حالتُه — لا في
           «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
+      {country ? (
+        <ExpiringDocumentsCard
+          country={country}
+          onOpen={(driverId, name) => {
+            params.set("q", name);
+            params.set("open", driverId);
+            setFilter("all");
+            setParams(params, { replace: true });
+          }}
+        />
+      ) : null}
+      {country ? <DocumentSettingsCard country={country} /> : null}
       <div className="ad-section-gap" />
       <PendingDeletions onError={setError} />
       <Deactivations onError={setError} />
@@ -882,6 +915,8 @@ function DriverDrawer({
             </p>
           )}
         </div>
+
+        <ExceptionalCard driverId={row.driver_id} onChanged={onDone} />
 
         {canDecide ? (
           <div className="ad-drawer-reason">

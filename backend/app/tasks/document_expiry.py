@@ -79,11 +79,22 @@ async def _sweep() -> tuple[int, int]:
     return notified, suspended
 
 
+async def _sweep_exceptional() -> dict[str, int]:
+    """**متابعةُ «معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — التذكيرُ والمهلةُ والتجميدُ الآليّ، في الدورة اليوميّة نفسِها."""
+    from app.services import exceptional_approval
+
+    async with SessionLocal() as session:
+        return await exceptional_approval.sweep(session, get_redis_client())
+
+
 @celery_app.task(name="app.tasks.document_expiry.sweep_document_expiry")
 def sweep_document_expiry() -> dict[str, int]:
     notified, suspended = run_async(_sweep())
+    followup = run_async(_sweep_exceptional())
+    if any(followup.values()):
+        logger.info("متابعةُ الوثائق: %s", followup)
     if notified or suspended:
         logger.info(
             "صلاحيةُ المستندات: %s تنبيهاً و%s تعليقاً", notified, suspended
         )
-    return {"notified": notified, "suspended": suspended}
+    return {"notified": notified, "suspended": suspended, **followup}

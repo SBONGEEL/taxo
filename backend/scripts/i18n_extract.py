@@ -31,6 +31,8 @@ WHOLE_FILES = (
     "services/otp_templates.py",
     # **أسماءُ الدول** (SPEC §٧٤-أ/٤) — تُنشر في `/config` بلغة الطلب فيسمّي بها مُختارُ الدولة كلَّ سوق
     "core/currency.py",
+    # **ودولُ مُنتقي الهاتف غيرُ الأسواق** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — بأسمائها في `/config` بلغة الطلب
+    "core/countries.py",
     # **أسماءُ طرق الدفع والخطط وأسبابُ حسم الدفعة** (SPEC §٧٦-ع/٢) — تُرسم بلغة الطلب
     "core/data_names.py",
     "services/payment_reasons.py",

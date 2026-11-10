@@ -430,6 +430,9 @@ class AdminDriverRow(BaseModel):
     inspection_at: datetime | None
     inspection_place: str | None
     inspection_passed_at: datetime | None
+    # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — للمشرفين وحدَهم، ولذلك هنا لا في `DriverOut` الذي يقرؤه الكبتن
+    exceptional: bool = False
+    documents_deadline_at: datetime | None = None
     created_at: datetime
 
 

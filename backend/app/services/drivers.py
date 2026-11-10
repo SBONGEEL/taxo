@@ -503,6 +503,10 @@ async def approve(session: AsyncSession, *, driver: Driver, actor: User) -> Driv
         names = "، ".join(documents.label_for(item) for item in missing)
         raise DocumentsIncomplete(f"مستندات لم تُعتمد بعد: {names}")
 
+    # **الاعتمادُ العاديُّ يزيل وسمَ «معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — اكتملت الوثائقُ فلا مهلةَ ولا تذكير
+    from app.services import exceptional_approval
+
+    exceptional_approval.clear(driver)
     return await set_status(
         session, driver=driver, status=DriverStatus.APPROVED, actor=actor
     )

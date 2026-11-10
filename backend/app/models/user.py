@@ -356,7 +356,7 @@ class User(UUIDMixin, TimestampMixin, Base):
         return bool(self.roles & frozenset(roles))
 
     driver: Mapped["Driver | None"] = relationship(
-        back_populates="user", uselist=False, cascade="all, delete-orphan"
+        back_populates="user", uselist=False, cascade="all, delete-orphan", foreign_keys="Driver.user_id"
     )
 
     # اعتمادُ دخولِ المشرف — `None` لكلِّ راكبٍ وكبتن (`models/admin_credential.py`)

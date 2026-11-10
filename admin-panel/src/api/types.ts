@@ -331,7 +331,50 @@ export interface AdminDriverRow {
   inspection_at: string | null;
   inspection_place: string | null;
   inspection_passed_at: string | null;
+  /** **«معتمد دون وثائق»** (البند ١) — للمشرفين وحدَهم، ومعه مهلةُ الرفع. */
+  exceptional: boolean;
+  documents_deadline_at: string | null;
   created_at: string;
+}
+
+/** **الاعتمادُ الاستثنائيُّ ومتابعةُ الوثائق** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — `GET /admin/drivers/{id}/exceptional`. */
+export interface DriverExceptional {
+  driver_id: string;
+  status: DriverStatus;
+  exceptional: boolean;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  reason: string | null;
+  deadline_at: string | null;
+  reminders_enabled: boolean;
+  reminded_at: string | null;
+  missing_documents: string[];
+}
+
+/** إعداداتُ متابعة الوثائق لكلِّ دولة (البندان ١ و٢). */
+export interface DocumentSettings {
+  country_code: CountryCode;
+  exceptional_deadline_days: number;
+  exceptional_reminder_days: number;
+  expiry_notice_days: number[];
+}
+
+/** **«وثائق تنتهي قريباً»** (البند ٢) — `GET /admin/documents/expiring`. */
+export interface ExpiringDocumentRow {
+  document_id: string;
+  driver_id: string;
+  driver_name: string;
+  doc_type: DocumentType;
+  doc_label: string;
+  expires_on: string;
+  days_left: number;
+  driver_status: DriverStatus;
+}
+
+export interface DocumentSettingsInput {
+  exceptional_deadline_days: number;
+  exceptional_reminder_days: number;
+  expiry_notice_days: number[];
 }
 
 export interface DriverDocument {

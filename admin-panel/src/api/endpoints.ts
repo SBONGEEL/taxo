@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
+import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -471,6 +472,8 @@ export const listDrivers = (
     country_code?: CountryCode;
     /** `false` هو **قائمةُ عملٍ** لا فلترةَ عرض: من يعمل بلا جنسٍ مثبت. */
     gender_verified?: boolean;
+    /** **«معتمد دون وثائق» وحدَهم** (البند ١) */
+    exceptional?: boolean;
     q?: string;
     limit?: number;
     offset?: number;
@@ -522,6 +525,34 @@ export const suspendDriver = (driverId: string, reason: string) =>
     `/admin/drivers/${driverId}/suspend`,
     { reason },
   );
+
+// ------------------------------------------------- الاعتمادُ الاستثنائيّ (البند ١) — بصلاحيّة `drivers.exceptional`
+export const getDriverExceptional = (driverId: string) =>
+  api.get<DriverExceptional>(`/admin/drivers/${driverId}/exceptional`);
+
+export const approveDriverExceptional = (driverId: string, reason: string) =>
+  api.post<DriverExceptional>(`/admin/drivers/${driverId}/approve-exceptional`, { reason });
+
+export const freezeDriver = (driverId: string, reason: string) =>
+  api.post<DriverExceptional>(`/admin/drivers/${driverId}/freeze`, { reason });
+
+export const unfreezeDriver = (driverId: string, reason: string) =>
+  api.post<DriverExceptional>(`/admin/drivers/${driverId}/unfreeze`, { reason });
+
+export const setDocumentFollowup = (driverId: string, body: { reminders?: boolean; extend_days?: number }) =>
+  api.put<DriverExceptional>(`/admin/drivers/${driverId}/document-followup`, body);
+
+export const requestDriverDocuments = (body: { driver_ids?: string[]; all_flagged?: boolean; country_code?: CountryCode }) =>
+  api.post<{ sent: number }>("/admin/drivers/request-documents", body);
+
+export const listExpiringDocuments = (country: CountryCode, days = 30) =>
+  api.get<ExpiringDocumentRow[]>("/admin/documents/expiring", { query: { country_code: country, days } });
+
+export const getDocumentSettings = (country: CountryCode) =>
+  api.get<DocumentSettings>(`/admin/document-settings/${country}`);
+
+export const saveDocumentSettings = (country: CountryCode, body: DocumentSettingsInput) =>
+  api.put<DocumentSettings>(`/admin/document-settings/${country}`, body);
 
 export const activateDriver = (driverId: string) =>
   api.post<{ id: string; status: DriverStatus }>(

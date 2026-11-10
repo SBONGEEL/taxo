@@ -87,6 +87,11 @@ class DocumentEvent(StrEnum):
     # يعرف أنه توقّف. **وجملةٌ واحدةٌ لهما تجعل الأولَ يُقرأ إيقافاً.**
     DOCUMENT_EXPIRING = "document_expiring"
     DOCUMENT_EXPIRED = "document_expired"
+    # **«ارفع وثائقك»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — طلبٌ من المشرف أو تذكيرٌ دوريّ لمن اعتُمد دونها؛ والبادئةُ
+    # `document_` تفتح شاشةَ الرفع في التطبيق (`notification-route.ts`)
+    DOCUMENTS_REQUESTED = "document_upload_requested"
+    #: **جُمِّد لانقضاء المهلة** — ومعه طريقُ الخروج: ارفعها
+    DOCUMENTS_DEADLINE_FROZEN = "document_deadline_frozen"
 
 
 class SubscriptionEvent(StrEnum):

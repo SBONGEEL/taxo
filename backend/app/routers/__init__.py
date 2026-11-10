@@ -4,6 +4,7 @@ from app.routers import (
     admin_account,
     admin_campaigns,
     admin_countries,
+    admin_exceptional,
     admin_markets,
     admin_pricing_zones,
     admin_finance_overview,
@@ -169,6 +170,7 @@ api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_countries.router)
 # **«الدول» ومفتاحُ الحدود** (SPEC §٧٤-أ/٢–٣) — بابُ حال السوق الوحيد، والكتابةُ `markets.manage`
 api_router.include_router(admin_markets.router)
+api_router.include_router(admin_exceptional.router)
 # **«مناطق التسعير»** (SPEC §٧٤-أ/٥) — الحدودُ ووسمُ «وعرة» ونسبتُها أو جدولُها؛ والكتابةُ كالتسعيرة
 api_router.include_router(admin_pricing_zones.router)
 # **حساباتُ التجربة** (SPEC §٧٤-أ/١٠) — قائمتُها وإعادةُ ملء رصيدها للمالك
