@@ -1020,3 +1020,32 @@ export interface PickupSuggestion {
 }
 export const pickupSuggestion = (lat: number, lng: number, signal?: AbortSignal) =>
   api.get<PickupSuggestion | null>("/pickup/suggestion", { query: { lat, lng }, signal });
+
+/** **اشتراكُ الراكب** (البند ١٣، §٩٧/١٣) — الخطط والاشتراكُ الحاليّ، والأرقامُ كلُّها من الخلفية. */
+export interface MyPlans {
+  enabled: boolean;
+  currency: string;
+  plans: {
+    id: string;
+    name: string;
+    days: number;
+    price: string;
+    discount_percent: string;
+    per_ride_cap: string;
+    monthly_cap: string;
+    terms: string | null;
+  }[];
+  current: {
+    plan_name: string;
+    starts_at: string;
+    ends_at: string;
+    discount_percent: string;
+    per_ride_cap: string;
+    monthly_cap: string;
+    saved: string;
+    month_left: string;
+    can_renew: boolean;
+  } | null;
+}
+export const getMyPlans = () => api.get<MyPlans>("/rider-plans");
+export const subscribePlan = (planId: string) => api.post<MyPlans>(`/rider-plans/${planId}/subscribe`, {});

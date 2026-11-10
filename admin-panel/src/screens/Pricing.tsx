@@ -39,6 +39,7 @@ import {
 import type { CountryCode, DisplayDecimals, PricingExample, PricingRule, VehicleCategory } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { PriceExperiments } from "@/components/PriceExperiments";
+import { RiderPlans } from "@/components/RiderPlans";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
@@ -354,6 +355,8 @@ export function PricingScreen() {
 
       {/* **تجاربُ الأسعار** (البند ٤) — تحت التسعيرة التي تجرّب عليها */}
       <PriceExperiments onError={(message) => setError(message)} isAdmin={isAdmin} />
+      {/* **اشتراكاتُ الركّاب** (البند ١٣) */}
+      <RiderPlans onError={(message) => setError(message)} isAdmin={isAdmin} />
     </Shell>
     </FormErrors>
   );

@@ -1655,5 +1655,20 @@
  "قل وجهتك بصوتك": "Dites votre destination",
  "سمعنا «{0}» — اختر وجهتك من النتائج": "Nous avons entendu « {0} » — choisissez votre destination dans les résultats",
  "مكافأة هدف": "Prime d'objectif",
- "تسعيرة تجريبية": "Tarif expérimental"
+ "تسعيرة تجريبية": "Tarif expérimental",
+ "ثمن الاشتراك": "Prix de l'abonnement",
+ "خصم الاشتراك": "Remise d'abonnement",
+ "اشتراكي": "Mon abonnement",
+ "وفّرت حتى الآن": "Économisé jusqu'ici",
+ "ينتهي في {0}": "Se termine le {0}",
+ "بقي من خصم هذا الشهر": "Reste de remise ce mois",
+ "{0} يوماً": "{0} jours",
+ "خصم {0}٪ على كلِّ رحلة": "{0} % de remise sur chaque course",
+ "للرحلة": "par course",
+ "و": "et",
+ "لكلِّ 30 يوماً": "par 30 jours",
+ "يُدفع من محفظتك، والخصمُ آليٌّ عند نهاية كلِّ رحلة، ولا يجتمع مع كوبون.": "Payé depuis votre portefeuille ; la remise s'applique automatiquement à la fin de chaque course et ne se cumule pas avec un code promo.",
+ "جدّد من محفظتي": "Renouveler depuis mon portefeuille",
+ "اشترك من محفظتي": "S'abonner depuis mon portefeuille",
+ "الاشتراكات غير متاحة في بلدك حالياً.": "Les abonnements ne sont pas disponibles dans votre pays pour le moment."
 }
