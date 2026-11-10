@@ -154,6 +154,9 @@ const NotificationsT2Screen = lazy(() =>
     default: m.NotificationsT2Screen,
   })),
 );
+const SupportListT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ default: m.SupportListT2 })));
+const SupportThreadT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ default: m.SupportThreadT2 })));
+const ReportRideT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ default: m.ReportRideT2 })));
 const ReferralsScreen = lazy(() =>
   import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
 );
@@ -672,6 +675,32 @@ export default function App() {
                         element={
                           <Guarded>
                             <ReferralsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/support"
+                        element={
+                          <Guarded>
+                            <SupportListT2 />
+                          </Guarded>
+                        }
+                      />
+
+                      <Route
+                        path="/support/:ticketId"
+                        element={
+                          <Guarded>
+                            <SupportThreadT2 />
+                          </Guarded>
+                        }
+                      />
+
+                      <Route
+                        path="/rides/:rideId/report"
+                        element={
+                          <Guarded>
+                            <ReportRideT2 />
                           </Guarded>
                         }
                       />

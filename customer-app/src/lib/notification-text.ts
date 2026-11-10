@@ -42,6 +42,8 @@ const UNCONFIRMED_KINDS: readonly string[] = ["payment_reminder", "payment_dispu
 /** أين يذهب الصفُّ حين يُنقر — **من `data` لا من نصّ العنوان**. */
 export function destinationOf(entry: UserNotification): string | null {
   if (UNCONFIRMED_KINDS.includes(entry.kind)) return "/payments/unconfirmed";
+  // **طلباتي** (البندان ٨ و٩) — كلُّ ردٍّ أو قرارٍ يفتح خيطَه
+  if (entry.kind === "support_update" && entry.data?.ticket_id) return `/support/${entry.data.ticket_id}`;
   const rideId = entry.data?.ride_id;
   const bookingId = entry.data?.booking_id;
   // **حجزٌ بلا رحلة** — لم يُنفَّذ أو فات أو **ينتظر اختيارَها** (`booking_women_paused`، §٦٤-ج/٤-١): بطاقتُه في «رحلاتي المجدولة»

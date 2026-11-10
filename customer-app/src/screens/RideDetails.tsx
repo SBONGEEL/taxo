@@ -35,7 +35,8 @@ import {
 } from "@/lib/utils";
 import { fareLineRows } from "@/lib/fareLines";
 import { Icon } from "@/taxo2";
-import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
+import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2";
+import "@/screens/t2/support.css"; import { tr } from "@/lib/i18n";
 
 /** **ما يغطّي الشريطَ من حوافّه** — الرجوعُ وشريطُ الحالة فوق، والورقةُ تعلو قاعَه بثلاثين: فيُضبط الإطارُ على ما يُرى منه. */
 const STRIP_PADDING = { top: 76, bottom: 54, left: 48, right: 48 };
@@ -353,6 +354,18 @@ export function RideDetailsScreen() {
               }
             >
               {tr("أعد الطلب")}
+            </button>
+          ) : null}
+
+          {/* **«نسيت شيئاً» و«شكوى»** (البند ٩) — على رحلةٍ انتهت؛ والمفقوداتُ لرحلةٍ لها كبتن */}
+          {ride.status === "completed" && ride.driver ? (
+            <button type="button" className="sp-link" onClick={() => navigate(`/rides/${ride.id}/report?kind=lost_item`)}>
+              {tr("نسيت شيئاً في السيارة")}
+            </button>
+          ) : null}
+          {ride.status === "completed" || ride.status === "cancelled_by_rider" || ride.status === "cancelled_by_driver" ? (
+            <button type="button" className="sp-link" onClick={() => navigate(`/rides/${ride.id}/report?kind=complaint`)}>
+              {tr("شكوى على هذه الرحلة")}
             </button>
           ) : null}
         </div>

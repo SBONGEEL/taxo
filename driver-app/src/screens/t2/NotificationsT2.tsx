@@ -51,6 +51,8 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   payment_disputed: { icon: "error", tone: "danger" },
   payment_auto_confirmed: { icon: "receipt_long", tone: "warn" },
   campaign: { icon: "campaign", tone: "plain" },
+  // **طلباتي** (البندان ٨ و٩)
+  support_update: { icon: "chat", tone: "plain" },
   // **ملخّصُ الأسبوع** (البند ١٧)
   weekly_digest: { icon: "payments", tone: "ok" },
   // **إنذارُ درجة الجودة** (البند ٣)

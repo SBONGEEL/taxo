@@ -286,6 +286,7 @@ from app.models.document_setting import DocumentSetting  # noqa: F401  — مت�
 from app.models.support import EmergencyAlert, SupportSetting  # noqa: F401  — الطوارئُ وأرقامُ التواصل (البندان ٧ و٨)
 from app.models.eta_sample import EtaSample
 from app.models.quality import DriverQualityScore, QualitySetting  # noqa: F401  — درجةُ الجودة (البند ٣)
+from app.models.support_ticket import SupportMessage, SupportTicket  # noqa: F401  — التذاكر (البندان ٨ و٩)
 from app.models.site_stats import (  # noqa: F401  — «الإحصاءات»
     PlayStatsDaily,
     SiteDaily,

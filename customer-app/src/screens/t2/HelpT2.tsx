@@ -11,6 +11,7 @@
 
 import { AppLauncher } from "@capacitor/app-launcher";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getSiteHelp } from "@/api/endpoints";
@@ -63,6 +64,7 @@ export function HelpT2Screen() {
 
   const mail = help?.email ? `mailto:${help.email}` : null;
   const { user } = useSession();
+  const navigate = useNavigate();
   // **«تواصل معنا» على واتساب** (البند ٨) — رقمُ دولتك من اللوحة، وبلا رقمٍ لا زرّ
   const whatsapp = useSupportWhatsapp(user?.country_code);
 
@@ -95,6 +97,25 @@ export function HelpT2Screen() {
           </button>
         </>
       ) : null}
+
+      {/* **طلباتي** (البندان ٨ و٩) — محادثةٌ مع فريق الدعم داخل التطبيق، ومعها المفقوداتُ والشكاوى */}
+      <a
+        className="t2-help-mail"
+        href="/support"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate("/support");
+        }}
+      >
+        <span className="t2-help-mail-icon" aria-hidden="true">
+          <span className="t2-icon fill">chat</span>
+        </span>
+        <span className="t2-help-mail-main">
+          <span className="t2-help-mail-title">{tr("طلباتي")}</span>
+          <span className="t2-help-mail-address">{tr("محادثاتك مع الدعم والمفقودات والشكاوى")}</span>
+        </span>
+        <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+      </a>
 
       {whatsapp ? (
         <a

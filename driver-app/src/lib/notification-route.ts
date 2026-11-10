@@ -36,6 +36,8 @@ export function destinationFor(
   if (kind === "payment_reminder" || kind === "payment_disputed" || kind === "payment_auto_confirmed") {
     return "/payments/unconfirmed";
   }
+  // **طلباتي** (البندان ٨ و٩) — ردُّ الفريق أو قرارُه، أو راكبٌ يبحث عن غرضٍ في رحلتي
+  if (kind === "support_update" && data?.ticket_id) return `/support/${data.ticket_id}`;
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
   if (kind.startsWith("subscription_")) return "/subscription";

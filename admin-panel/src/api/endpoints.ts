@@ -10,6 +10,7 @@ import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
+import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2665,3 +2666,34 @@ export const updateQualitySettings = (country: CountryCode, payload: Partial<Omi
 
 /** الدرجةُ الآن ومكوّناتُها وتاريخُ آخر ٣٠ يوماً. */
 export const getDriverQuality = (driverId: string) => api.get<DriverQuality>(`/admin/quality/drivers/${driverId}`);
+
+/** **طابورُ الطلبات** (البندان ٨ و٩) — `active` = مفتوحٌ أو قيد المراجعة، و`waiting` ما ينتظر ردَّ مشرف. */
+export const listTickets = (query: {
+  status?: string;
+  kind?: string;
+  country_code?: CountryCode;
+  waiting?: boolean;
+  limit?: number;
+  offset?: number;
+}) => api.get<AdminTicketPage>("/admin/support/tickets", { query });
+
+export const getTicket = (ticketId: string) => api.get<AdminTicketDetail>(`/admin/support/tickets/${ticketId}`);
+
+export const replyTicket = (ticketId: string, body: string) =>
+  api.post<AdminTicketDetail>(`/admin/support/tickets/${ticketId}/messages`, { body });
+
+/** **الحسمُ بسببٍ إلزاميّ** — ويصل صاحبَ الطلب إشعاراً. */
+export const decideTicket = (ticketId: string, status: "in_review" | "resolved" | "rejected", reason?: string) =>
+  api.patch<AdminTicketDetail>(`/admin/support/tickets/${ticketId}`, { status, reason });
+
+export const getTicketStats = (country?: CountryCode, days = 90) =>
+  api.get<TicketStats>("/admin/support/tickets/stats", { query: { country_code: country, days } });
+
+/** **الصورةُ تُجلب بالجلسة** — لا عنوانَ لصورة شكوى أحدٍ يعمل بلا جلسة. */
+export async function ticketPhotoBlob(ticketId: string): Promise<string> {
+  const answer = await fetch(`${API_URL}/admin/support/tickets/${ticketId}/photo`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) throw new Error("تعذّر فتح الصورة");
+  return URL.createObjectURL(await answer.blob());
+}

@@ -421,3 +421,9 @@ async def publish_driver_location(
     if path:
         payload["path"] = [[p_lat, p_lng, p_heading, ago] for p_lat, p_lng, p_heading, ago in path]
     await publish(redis, driver_location_channel(driver_id), payload)
+
+
+class SupportEvent(StrEnum):
+    """**طلباتُ الدعم والمفقودات والشكاوى** (البندان ٨ و٩) — إشعارٌ واحدٌ يفتح خيطَ الطلب بمفتاح `ticket_id`."""
+
+    UPDATE = "support_update"

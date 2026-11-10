@@ -3490,3 +3490,59 @@ export interface DriverQuality {
   counts: Record<string, number | null>;
   history: { day: string; score: number }[];
 }
+
+/** **التذاكر** (البندان ٨ و٩) — محادثةُ الدعم و«نسيت شيئاً» والشكوى بجدولٍ واحد. */
+export type TicketKind = "support" | "lost_item" | "complaint";
+export type TicketStatus = "open" | "in_review" | "resolved" | "rejected";
+export type ComplaintCategory = "behavior" | "vehicle" | "route" | "fare" | "safety" | "other";
+
+export interface TicketMessage {
+  id: string;
+  author_role: "user" | "party" | "staff";
+  body: string;
+  created_at: string;
+}
+
+export interface AdminTicket {
+  id: string;
+  kind: TicketKind;
+  status: TicketStatus;
+  category: ComplaintCategory | null;
+  app: "rider" | "driver";
+  country_code: string;
+  ride_id: string | null;
+  user_id: string;
+  user_name: string | null;
+  against_user_id: string | null;
+  against_name: string | null;
+  needs_staff: boolean;
+  decision_reason: string | null;
+  handled_at: string | null;
+  has_photo: boolean;
+  created_at: string;
+  last_message_at: string;
+}
+
+export interface AdminTicketDetail extends AdminTicket {
+  messages: TicketMessage[];
+  account: {
+    name: string;
+    phone: string | null;
+    roles: string[];
+    created_at: string;
+    rides: { id: string; status: string; created_at: string }[];
+  };
+}
+
+export interface AdminTicketPage {
+  items: AdminTicket[];
+  total: number;
+  waiting: number;
+}
+
+export interface TicketStats {
+  days: number;
+  by_kind: { kind: TicketKind; status: TicketStatus; count: number }[];
+  by_category: { category: ComplaintCategory; count: number }[];
+  drivers: { user_id: string; name: string; complaints: number }[];
+}

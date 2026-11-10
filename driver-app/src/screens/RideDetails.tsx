@@ -55,7 +55,8 @@ import { Icon } from "@/taxo2";
 import { startOfToday, whenParts } from "./t2/when";
 
 import "./t2/ride.css";
-import "./t2/rides.css"; import { tr } from "@/lib/i18n";
+import "./t2/rides.css";
+import "./t2/support.css"; import { tr } from "@/lib/i18n";
 
 /** **حشوُ إطار الشريط** (`.t2-rdt-map`: ١٥٠ وحافّةُ الشاشة العليا) — فوقُه شريطُ الحالة، وجانباه زرّا الرجوع والموقع، وقاعُه شعارُ
  *  Mapbox ونسبتُه (شرطُ الرخصة). **وكان ٨٠ من كلِّ جهة** — حشوُ خريطةٍ تملأ الشاشة — فيبقى للخطّ ٤٠ بكسلاً ويُرسم نقطةً (قِيس). */
@@ -351,6 +352,13 @@ export function RideDetailsScreen() {
               <Icon name="balance" />
               <span>{tr("نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.")}</span>
             </p>
+          ) : null}
+
+          {/* **«شكوى على هذه الرحلة»** (البند ٩) — على رحلةٍ انتهت */}
+          {ride.status === "completed" || ride.status === "cancelled_by_rider" || ride.status === "cancelled_by_driver" ? (
+            <button type="button" className="sp-link" onClick={() => navigate(`/rides/${ride.id}/report?kind=complaint`)}>
+              {tr("شكوى على هذه الرحلة")}
+            </button>
           ) : null}
 
           {/* خطأٌ بلا قرارٍ في القاع (قراءةٌ لاحقة) يُقال هنا */}

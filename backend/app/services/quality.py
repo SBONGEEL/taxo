@@ -6,7 +6,7 @@
   ويُقبل ويُرفض؛ ٤٠ يوماً ثمّ تنقضي.
 * **الإلغاء** — ١ − ما ألغاه بعد القبول ÷ ما أُسند إليه.
 * **التقييم** — (متوسّطُ نجوم الركّاب − ١) ÷ ٤.
-* **الشكاوى** — ١ − اعتراضاتُ الدفع على رحلاته ÷ ٣ (بحدّ الصفر). **ويُضاف إليها بلاغاتُ البند ٩ حين تُبنى.**
+* **الشكاوى** — ١ − (اعتراضاتُ الدفع على رحلاته + شكاوى الركّاب غيرُ المرفوضة، البند ٩) ÷ ٣ (بحدّ الصفر).
 * **الرحلاتُ المكتملة** — ما أكمله ÷ ٤٠ (بحدّ الواحد).
 
 **وقليلُ البيانات لا يُعاقَب**: مكوّنٌ بعيّنةٍ دون حدِّها (`MIN_SAMPLE`) يأخذ ٠٫٨ — كبتنٌ جديدٌ لا يُدفن تحت قديمٍ بتقييمٍ حقيقيّ،
@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import CountryCode, RatingRaterType, RideStatus
 from app.models.quality import DriverQualityScore, QualitySetting
+from app.services import notifications
 
 WINDOW_DAYS = 30
 COUNTER_TTL_S = 40 * 86400
@@ -125,6 +126,13 @@ async def measure(session: AsyncSession, redis: Redis, *, driver_id: uuid.UUID, 
             Ride.driver_id == driver_id, Payment.disputed_at.is_not(None), Payment.disputed_at >= since
         )
     ) or 0)
+    # **وشكاوى الركّاب على رحلاته** (البند ٩) ما لم تُرفض — مع اعتراضات الدفع في المكوّن نفسِه
+    from app.models.driver import Driver
+    from app.services import support_tickets
+
+    driver_user = await session.scalar(select(Driver.user_id).where(Driver.id == driver_id))
+    complaints = await support_tickets.complaints_against(session, driver_user, since) if driver_user else 0
+    disputes += complaints
     parts = {
         "acceptance": min(1.0, accepted / offered) if offered >= MIN_SAMPLE["acceptance"] else NEUTRAL,
         "cancellation": max(0.0, 1 - cancelled / assigned) if assigned >= MIN_SAMPLE["cancellation"] else NEUTRAL,
@@ -140,13 +148,8 @@ async def measure(session: AsyncSession, redis: Redis, *, driver_id: uuid.UUID, 
     return {name: round(value, 3) for name, value in parts.items()}, counts
 
 
-TIPS = {
-    "acceptance": "اقبل ما يصلك من طلباتٍ أكثر — كلُّ عرضٍ يمرّ بلا ردٍّ يُحسب.",
-    "cancellation": "لا تلغِ بعد القبول إلا لضرورة — الإلغاءُ يؤخّر الراكبَ ويُحسب عليك.",
-    "rating": "اعتنِ بنظافة السيارة والتحيّة والقيادة الهادئة — التقييمُ يأتي منها.",
-    "complaints": "اتّفق مع الراكب على الدفع بوضوحٍ قبل نهاية الرحلة — الاعتراضاتُ تُحسب عليك.",
-    "completed": "رحلاتٌ مكتملةٌ أكثر ترفع درجتك — اتّصل في ساعات الذروة.",
-}
+#: **النصائحُ نصوصُ إشعار** — بيتُها `notifications.QUALITY_TIPS` حيث يقرؤها مستخرجُ الترجمة (`scripts/i18n_extract.py`)
+TIPS = notifications.QUALITY_TIPS
 
 
 def weakest(parts: dict[str, float], limit: int = 2) -> list[str]:

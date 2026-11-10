@@ -2109,8 +2109,21 @@ async def publish_weekly_digest(session: AsyncSession, redis: Redis, *, user_id:
     )
 
 
+#: **نصائحُ درجة الجودة** (البند ٣) — لكلِّ مكوّنٍ جملةٌ ثابتةٌ لها مفتاحٌ في `fr.json`؛ والإنذارُ يحمل نصيحةَ أضعفها
+QUALITY_TIPS = {
+    "acceptance": "اقبل ما يصلك من طلباتٍ أكثر — كلُّ عرضٍ يمرّ بلا ردٍّ يُحسب.",
+    "cancellation": "لا تلغِ بعد القبول إلا لضرورة — الإلغاءُ يؤخّر الراكبَ ويُحسب عليك.",
+    "rating": "اعتنِ بنظافة السيارة والتحيّة والقيادة الهادئة — التقييمُ يأتي منها.",
+    "complaints": "اتّفق مع الراكب على الدفع بوضوحٍ قبل نهاية الرحلة — الاعتراضاتُ تُحسب عليك.",
+    "completed": "رحلاتٌ مكتملةٌ أكثر ترفع درجتك — اتّصل في ساعات الذروة.",
+}
+
+
 async def publish_quality_warning(session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, tips: list[str]) -> None:
-    """**«درجتك تحتاج انتباهاً»** (البند ٣) — بنصيحةٍ أو اثنتين ممّا أضعفها، **بلا رقمٍ في النصّ**: الدرجةُ في الشاشة."""
+    """**«درجتك تحتاج انتباهاً»** (البند ٣) — **بنصيحة أضعف مكوّنٍ وحدَها**، بلا رقمٍ في النصّ: الدرجةُ وبقيّةُ النصائح في الشاشة.
+
+    **نصيحةٌ واحدةٌ لا جملةٌ مركّبة**: الإشعارُ يُترجَم بنصّه كاملاً (`in_language_of`)، ونصّان مضمومان لا مفتاحَ لهما في `fr.json`.
+    """
     from app.ws.events import DigestEvent
 
     await _safe_notify(
@@ -2119,7 +2132,36 @@ async def publish_quality_warning(session: AsyncSession, redis: Redis, *, user_i
         user_id=user_id,
         message=PushMessage(
             title="درجتك تحتاج انتباهاً",
-            body=" ".join(tips) if tips else "افتح «درجتي» لترى ما يرفعها.",
+            body=tips[0] if tips else "افتح «درجتي» لترى ما يرفعها.",
             data={"type": DigestEvent.QUALITY.value},
+        ),
+    )
+
+
+_SUPPORT_TEXT = {
+    # (الحدث، النوع) ⇐ (العنوان، النصّ) — **جملٌ ثابتةٌ لها مفاتيحُ في `fr.json`** لا مؤلَّفةٌ من أجزاء
+    "staff_reply": ("ردٌّ من فريق الدعم", "افتح الطلب لتقرأ الردّ."),
+    "party_reply": ("ردٌّ من الكبتن على غرضك المفقود", "افتح الطلب لتقرأ الردّ."),
+    "lost_item": ("راكبٌ يبحث عن غرضٍ نسيه في رحلتك", "افتح الطلب وأخبره إن وجدته — التواصلُ عبر التطبيق."),
+    "resolved": ("حُسم طلبك", "افتح الطلب لترى القرار وسببه."),
+    "rejected": ("أُغلق طلبك", "افتح الطلب لترى السبب."),
+    "in_review": ("طلبك قيد المراجعة", "يراجعه فريقُ الدعم الآن."),
+}
+
+
+async def publish_support_event(session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, ticket, event: str) -> None:
+    """**كلُّ تغييرٍ على طلبٍ يصل صاحبَه** (البند ٩) — والمفتاحُ `ticket_id` يفتح خيطَه في التطبيق."""
+    from app.ws.events import SupportEvent
+
+    key = ticket.status if event == "status" else event
+    title, body = _SUPPORT_TEXT.get(key, _SUPPORT_TEXT["staff_reply"])
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title=title,
+            body=body,
+            data={"type": SupportEvent.UPDATE.value, "ticket_id": str(ticket.id)},
         ),
     )

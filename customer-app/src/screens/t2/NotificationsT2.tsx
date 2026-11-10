@@ -55,6 +55,8 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   payment_disputed: { icon: "gavel", tone: "danger" },
   women_mode_revoked: { icon: "woman", tone: "women" },
   campaign: { icon: "campaign", tone: "plain" },
+  // **طلباتي** (البندان ٨ و٩)
+  support_update: { icon: "chat", tone: "plain" },
   promo: { icon: "sell", tone: "offer" },
 };
 const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };

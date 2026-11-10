@@ -1059,3 +1059,37 @@ export const pressEmergency = (body: { app: "rider" | "driver"; ride_id?: string
 /** **رقمُ طوارئ الدولة وواتسابُ الدعم** — بلا دخول: «تواصل معنا» يظهر قبل الحساب أيضاً. */
 export const supportContacts = (country: CountryCode) =>
   api.get<SupportContacts>("/support/contacts", { query: { country_code: country }, anonymous: true });
+
+/** **طلباتي** (البندان ٨ و٩) — «محادثة مع الدعم» و«نسيت شيئاً» و«شكوى على الرحلة». */
+export type TicketKind = "support" | "lost_item" | "complaint";
+export interface MyTicket {
+  id: string;
+  kind: TicketKind;
+  status: "open" | "in_review" | "resolved" | "rejected";
+  category: string | null;
+  ride_id: string | null;
+  my_role: "user" | "party";
+  decision_reason: string | null;
+  has_photo: boolean;
+  created_at: string;
+  last_message_at: string;
+}
+export interface MyTicketDetail extends MyTicket {
+  messages: { id: string; author_role: "user" | "party" | "staff"; body: string; created_at: string }[];
+}
+export const listMyTickets = () => api.get<MyTicket[]>("/support/tickets");
+export const getMyTicket = (ticketId: string) => api.get<MyTicketDetail>(`/support/tickets/${ticketId}`);
+export const postTicketMessage = (ticketId: string, body: string) =>
+  api.post<MyTicketDetail>(`/support/tickets/${ticketId}/messages`, { body });
+/** نموذجٌ بأجزاءٍ متعدّدة — الصورةُ اختياريّةٌ للشكوى وحدَها. */
+export function openTicket(
+  fields: { app: "rider" | "driver"; kind: TicketKind; body: string; ride_id?: string; category?: string },
+  photo: File | null,
+): Promise<MyTicketDetail> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined && value !== "") form.append(key, value);
+  }
+  if (photo) form.append("photo", photo);
+  return sendForm<MyTicketDetail>("POST", "/support/tickets", form);
+}

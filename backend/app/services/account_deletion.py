@@ -436,6 +436,11 @@ async def _anonymize(
 
     files.extend(await feedback.rows_of_user(session, uid))
 
+    # ── طلباتُه للدعم والمفقودات والشكاوى (البندان ٨ و٩): **تُمحى بصورها، ورسائلُه في خيوط غيره كذلك**
+    from app.services import support_tickets
+
+    files.extend(await support_tickets.erase_for_account(session, uid))
+
     # ── نصٌّ حرٌّ كتبه: يُمحى، **والدرجةُ تبقى** — منها متوسّطُ كبتنٍ آخر
     await session.execute(
         update(Rating).where(Rating.rater_id == uid).values(comment=None)

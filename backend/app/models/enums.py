@@ -1475,3 +1475,31 @@ class FacebookPostStatus(StrEnum):
     PUBLISHED = "published"
     REJECTED = "rejected"
     FAILED = "failed"
+
+
+class SupportTicketKind(StrEnum):
+    """نوعُ الطلب (SPEC §٩٧/٨–٩) — **مرآتُه في التطبيقين واللوحة**. في القاعدة نصٌّ بقيد (`0152`)، والتعدادُ مصدرُ القيم."""
+
+    SUPPORT = "support"
+    LOST_ITEM = "lost_item"
+    COMPLAINT = "complaint"
+
+
+class SupportTicketStatus(StrEnum):
+    """حالُ الطلب (SPEC §٩٧/٩): `open` ⇐ `in_review` ⇐ `resolved` · `rejected` بسببٍ إلزاميّ."""
+
+    OPEN = "open"
+    IN_REVIEW = "in_review"
+    RESOLVED = "resolved"
+    REJECTED = "rejected"
+
+
+class ComplaintCategory(StrEnum):
+    """فئةُ الشكوى على رحلة (SPEC §٩٧/٩)."""
+
+    BEHAVIOR = "behavior"
+    VEHICLE = "vehicle"
+    ROUTE = "route"
+    FARE = "fare"
+    SAFETY = "safety"
+    OTHER = "other"
