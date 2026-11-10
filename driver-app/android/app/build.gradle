@@ -158,6 +158,8 @@ dependencies {
     // **لخدمة رنين المكالمة** (`CallMessagingService`، §٦٦-ج/١٧): ترث خدمةَ ملحق الإشعارات وتقرأ `RemoteMessage`،
     // **والملحقُ يجلب المكتبةَ بـ`implementation`** فلا تبلغ ترجمةَ التطبيق. **بنسخة الملحق نفسِها** (`variables.gradle`)
     implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
+    // **تقييمُ المتجر داخل التطبيق** (`InAppReviewPlugin`، البند ٦)
+    implementation "com.google.android.play:review:2.0.2"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

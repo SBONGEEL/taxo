@@ -19,6 +19,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OfferAlertPlugin.class);
         // **رمزُ الجلسة على القرص قبل «حُفظ»** (§٢٣.٢-أ)
         registerPlugin(SecureFlushPlugin.class);
+        // **تقييمُ المتجر داخل التطبيق** (البند ٦) — النافذةُ الأصليّة من Google Play
+        registerPlugin(InAppReviewPlugin.class);
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);

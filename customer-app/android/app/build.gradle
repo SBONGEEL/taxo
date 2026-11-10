@@ -160,6 +160,8 @@ dependencies {
     implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
     // **مُحيلُ التثبيت من Google Play** (`InstallReferrerPlugin`) — رمزُ الدعوة لمن ثبّت من رابط صديق
     implementation "com.android.installreferrer:installreferrer:2.2"
+    // **تقييمُ المتجر داخل التطبيق** (`InAppReviewPlugin`، البند ٦)
+    implementation "com.google.android.play:review:2.0.2"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

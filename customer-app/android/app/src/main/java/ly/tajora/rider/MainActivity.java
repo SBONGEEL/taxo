@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
         TaxoChannels.ensure(this);
         // **رمزُ الجلسة على القرص قبل «حُفظ»** (§٢٣.٢-أ) — قبل `super` كما تقتضي Capacitor
         registerPlugin(SecureFlushPlugin.class);
+        // **تقييمُ المتجر داخل التطبيق** (البند ٦) — النافذةُ الأصليّة من Google Play
+        registerPlugin(InAppReviewPlugin.class);
         // **مُحيلُ التثبيت** — رمزُ الدعوة لمن ثبّت من رابط صديق (`lib/invite.ts`)
         registerPlugin(InstallReferrerPlugin.class);
         super.onCreate(savedInstanceState);

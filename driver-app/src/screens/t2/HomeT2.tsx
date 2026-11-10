@@ -95,6 +95,7 @@ import "./t2.css";
 import "./ride.css";
 import "./guarantees.css"; import { tr } from "@/lib/i18n";
 import { useBackLayer } from "@/lib/back-layers";
+import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 
 export function HomeT2Screen() {
   const { holdOffer } = useRide();
@@ -254,7 +255,11 @@ export function HomeT2Screen() {
       <CollectT2Screen
         ride={settling}
         currencyLabel={currency}
-        onDone={() => setSettling(null)}
+        onDone={() => {
+          // **تقييمُ المتجر** (البند ٦) — تُعدّ الرحلةُ هنا، ويُسأل حين يتوقّف عن الاستقبال لا فوق عرضٍ قادم
+          if (settling.status === "completed") noteCompletedRide(settling.id);
+          setSettling(null);
+        }}
       />
     );
   }
@@ -264,8 +269,10 @@ export function HomeT2Screen() {
   const toggleOnline = () => {
     clearError();
     if (!covered) navigate("/subscription");
-    else if (online) goOffline();
-    else goOnline();
+    else if (online) {
+      goOffline();
+      maybeAskForReview();
+    } else goOnline();
   };
   // **التقييمُ كما يصل** (`rating_avg` بمنزلتين — «4.92» كما رُسم)؛ والشاشةُ القائمةُ تقرّبه إلى منزلة
   // **ولا شارةَ «★ 0.00» لمن لم يُقيَّم بعد** (§٦٢-ب/٤٩) — كما لا تُرسم «0 رحلة» رقماً

@@ -56,6 +56,7 @@ import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
+import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 import { useBackLayer } from "@/lib/back-layers";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
@@ -1202,7 +1203,14 @@ export function HomeScreen() {
             ) : outcome ? (
               <OutcomeSheetT2
                 ride={outcome}
-                onDismiss={() => closeOutcome(outcome.id)}
+                onDismiss={() => {
+                  closeOutcome(outcome.id);
+                  // **تقييمُ المتجر** (البند ٦) — بعد الثانية المكتملة، والورقةُ أُغلقت بعد التقييم
+                  if (outcome.status === "completed") {
+                    noteCompletedRide(outcome.id);
+                    maybeAskForReview();
+                  }
+                }}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
                 // **ولا «جدولي» لطرد** (§٦٣-ج/٤) **ولا لساعات** (§٦٣-ج/٥) — الحجزُ لا يحملهما، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
                 onScheduleAgain={outcome.ride_type === "standard" ? () => scheduleAgain(outcome) : undefined}
