@@ -436,6 +436,12 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     pricing_zone_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("pricing_zones.id"), nullable=True
     )
+    #: **تجربةُ الأسعار التي وقعت فيها الرحلة** (SPEC §٩٧/٤) وذراعُها (`test` · `control`) — تُجمَّد لحظةَ الطلب كالمنطقة،
+    #: **فالإنهاءُ يعيد نسبةَ التجربة نفسِها** والمقارنةُ تعدّ الذراعين. و`None` = خارج كلِّ تجربة
+    price_experiment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("price_experiments.id"), nullable=True, index=True
+    )
+    price_experiment_arm: Mapped[str | None] = mapped_column(String(8), nullable=True)
     # ---------------------------------------------- الطرد (§٦٣-ج/٤)
     #: **نوعُ الرحلة** — `standard` لكلِّ ما سبق، و`parcel` للطرد. نصٌّ بقيدٍ لا `ENUM`: «بالساعة» يضيف قيمةً بتعديل القيد
     ride_type: Mapped[str] = mapped_column(

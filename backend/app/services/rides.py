@@ -581,6 +581,7 @@ async def request_ride(
             parcel=prepared_parcel is not None,
             parcel_fetch=prepared_parcel is not None and prepared_parcel.fetch,
             hourly=hourly_terms,
+            rider_id=rider.id,
         )
     # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
     rule = await pricing.get_rule(session, rider.country_code, vehicle_category)
@@ -637,6 +638,9 @@ async def request_ride(
         captain_fees_at_ride=quote.captain_fees,
         facility_id=quote.facility_id,
         pricing_zone_id=quote.pricing_zone_id,
+        # **تجربةُ الأسعار وذراعُها** (§٩٧/٤) — `getattr` لتقديرٍ محفوظٍ قبل الرفع (قفلُ السعر عشرُ دقائق) لا يحمل الحقلين
+        price_experiment_id=getattr(quote, "price_experiment_id", None),
+        price_experiment_arm=getattr(quote, "price_experiment_arm", None),
     )
     # **سياسةُ التقريب للعرض مجمَّدةً** (SPEC §٧٠-ج/٤): العدّادُ الحيُّ يُبنى أيضاً في بثٍّ بلا جلسة فيقرؤها من الرحلة.
     # **والتقريبُ المحفوظُ لا يقرؤها**: يُحسب بإعداد لحظة الإنهاء (`rounding.apply_to_ride`). ومطفأً `NULL` — الرحلةُ كما كانت
@@ -1139,6 +1143,14 @@ async def _final_fare(
             if effect is not None:
                 base = effect.fare
                 base_lines += [pricing.FareLine("rugged", effect.amount).as_json()]
+        # **وتجربةُ الأسعار بنسبتها المجمَّدة** (§٩٧/٤) — بعد المنطقة وقبل رسوم الكبتن كما في التقدير
+        from app.services import price_experiments
+
+        percent = await price_experiments.frozen_percent(session, ride)
+        extra = price_experiments.adjustment(base, percent, ride.country_code)
+        if extra:
+            base = pricing.round_money(base + extra, ride.currency)
+            base_lines += [pricing.FareLine("experiment", extra).as_json()]
         # **ورسومُ الكبتن لا يمسّها انحرافُ الطريق** (§٦٣-ج/٢): مجمَّدةٌ لحظةَ الطلب، فتُضاف إلى أجرة الطريق المعادة بسطرها
         if ride.captain_fees_at_ride > 0:
             base = pricing.round_money(base + ride.captain_fees_at_ride, ride.currency)

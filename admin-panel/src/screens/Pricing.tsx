@@ -38,6 +38,7 @@ import {
 } from "@/api/endpoints";
 import type { CountryCode, DisplayDecimals, PricingExample, PricingRule, VehicleCategory } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { PriceExperiments } from "@/components/PriceExperiments";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
@@ -350,6 +351,9 @@ export function PricingScreen() {
         إعدادات العمولة، حيث يسكن التفعيل والنسبة والنطاق في صفٍّ واحد — فلا
         تنشأ حالتان ماليّتان قابلتان للاختلاف.
       </p>
+
+      {/* **تجاربُ الأسعار** (البند ٤) — تحت التسعيرة التي تجرّب عليها */}
+      <PriceExperiments onError={(message) => setError(message)} isAdmin={isAdmin} />
     </Shell>
     </FormErrors>
   );

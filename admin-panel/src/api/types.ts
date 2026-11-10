@@ -602,6 +602,7 @@ export type FeatureKey =
   | "driver_map_nearby_enabled"
   | "voice_order_enabled"
   | "driver_goals_enabled"
+  | "price_experiments_enabled"
   // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
   | "unconfirmed_payments_enabled"
   | "cash_auto_confirm_enabled"
@@ -3567,4 +3568,41 @@ export interface DriverGoal {
   is_active: boolean;
   spent: string;
   awards: number;
+}
+
+/** **حالُ تجربة الأسعار** (البند ٤، §٩٧/٤) — مرآةُ `PriceExperimentStatus` */
+export type PriceExperimentStatus = "draft" | "running" | "stopped" | "applied" | "cancelled";
+/** **ذراعُ الراكب** — مرآةُ `PriceExperimentArm` */
+export type PriceExperimentArm = "test" | "control";
+
+/** **تجربةُ أسعار** — الأرقامُ والنسبُ كلُّها من الخلفية، **ولا حسابَ هنا**. */
+export interface PriceExperiment {
+  id: string;
+  country_code: CountryCode;
+  name: string;
+  adjust_percent: string;
+  share_percent: number;
+  days: number;
+  center_lat: number | null;
+  center_lng: number | null;
+  radius_km: string | null;
+  status: PriceExperimentStatus;
+  started_at: string | null;
+  ends_at: string | null;
+  stopped_at: string | null;
+  decided_at: string | null;
+  expired: boolean;
+  can_apply: boolean;
+  arms: {
+    arm: PriceExperimentArm;
+    requests: number;
+    completed: number;
+    cancelled: number;
+    fares: string;
+    commission: string;
+    captains: string;
+    completion_percent: number | null;
+    cancel_percent: number | null;
+    average_fare: string | null;
+  }[];
 }
