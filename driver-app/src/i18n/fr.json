@@ -1896,5 +1896,9 @@
  "ماذا حدث؟": "Que s'est-il passé ?",
  "أرفق صورة (اختياري)": "Joindre une photo (facultatif)",
  "طلباتي": "Mes demandes",
- "محادثاتك مع الدعم والمفقودات والشكاوى": "Vos discussions avec l'assistance, objets perdus et réclamations"
+ "محادثاتك مع الدعم والمفقودات والشكاوى": "Vos discussions avec l'assistance, objets perdus et réclamations",
+ "أهدافي": "Mes objectifs",
+ "وصلت المكافأة {0} إلى محفظتك": "La prime {0} est arrivée dans votre portefeuille",
+ "المكافأة {0} — تُضاف إلى محفظتك حين تبلغ الهدف": "Prime {0} — ajoutée à votre portefeuille quand vous atteignez l'objectif",
+ "مكافأة هدف": "Prime d'objectif"
 }

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.schemas.driver_goal import MyGoalOut, MyGoalsOut
 from app.core import rate_limit, storage
 from app.core.config import settings
 from app.core.deps import (
@@ -260,6 +261,21 @@ class MyQualityOut(BaseModel):
     parts: dict[str, float]
     tips: list[QualityTipOut]
     history: list[dict]
+
+
+@router.get("/me/goals", response_model=MyGoalsOut)
+async def my_goals(driver: CurrentDriver, user: CurrentUser, session: DbSession) -> MyGoalsOut:
+    """**«أهدافي»** (البند ١٦) — التقدّمُ حيٌّ والمبلغُ كما وضعه المالك؛ ومطفأً `enabled=false` وقائمةٌ فارغة."""
+    from app.services import driver_goals
+
+    from app.core.currency import currency_for_country
+
+    on, goals = await driver_goals.mine(session, driver, user.country_code)
+    return MyGoalsOut(
+        enabled=on,
+        currency=str(currency_for_country(user.country_code)),
+        goals=[MyGoalOut(**goal.__dict__) for goal in goals],
+    )
 
 
 @router.get("/me/quality", response_model=MyQualityOut)

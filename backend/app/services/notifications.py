@@ -2138,6 +2138,26 @@ async def publish_quality_warning(session: AsyncSession, redis: Redis, *, user_i
     )
 
 
+_GOAL_TEXT = {
+    # **أهدافُ الكبتن** (البند ١٦) — جملٌ ثابتةٌ لها مفاتيحُ في `fr.json`، **بلا مبلغٍ في النصّ**: المبلغُ في الشاشة بعملتها
+    "near": ("اقتربت من هدفك", "بقيت رحلاتٌ قليلة — افتح «أهدافي» لترى ما بقي."),
+    "reward": ("وصلت مكافأةُ هدفك", "أُضيفت المكافأةُ إلى محفظتك."),
+}
+
+
+async def publish_goal_event(session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, event: str) -> None:
+    """**«اقتربت من هدفك» و«وصلت مكافأتُك»** (البند ١٦) — يفتحان «أرباحي» على «أهدافي»."""
+    from app.ws.events import DigestEvent
+
+    title, body = _GOAL_TEXT[event]
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(title=title, body=body, data={"type": DigestEvent.GOAL.value}),
+    )
+
+
 _SUPPORT_TEXT = {
     # (الحدث، النوع) ⇐ (العنوان، النصّ) — **جملٌ ثابتةٌ لها مفاتيحُ في `fr.json`** لا مؤلَّفةٌ من أجزاء
     "staff_reply": ("ردٌّ من فريق الدعم", "افتح الطلب لتقرأ الردّ."),

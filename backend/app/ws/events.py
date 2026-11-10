@@ -78,6 +78,8 @@ class DigestEvent(StrEnum):
     WEEKLY = "weekly_digest"
     #: **إنذارُ درجة الجودة** (البند ٣) — يفتح «درجتي»
     QUALITY = "quality_warning"
+    #: **أهدافُ الكبتن** (البند ١٦) — «اقتربت» و«وصلت المكافأة»، يفتح «أهدافي»
+    GOAL = "goal_update"
 
 
 class DocumentEvent(StrEnum):

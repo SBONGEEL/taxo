@@ -287,6 +287,7 @@ from app.models.support import EmergencyAlert, SupportSetting  # noqa: F401  —
 from app.models.eta_sample import EtaSample
 from app.models.quality import DriverQualityScore, QualitySetting  # noqa: F401  — درجةُ الجودة (البند ٣)
 from app.models.support_ticket import SupportMessage, SupportTicket  # noqa: F401  — التذاكر (البندان ٨ و٩)
+from app.models.driver_goal import DriverGoal, DriverGoalAward  # noqa: F401  — أهدافُ الكبتن (البند ١٦)
 from app.models.site_stats import (  # noqa: F401  — «الإحصاءات»
     PlayStatsDaily,
     SiteDaily,

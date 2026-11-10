@@ -25,6 +25,7 @@ import { Icon } from "@/taxo2";
 
 import { countRides } from "./t2/count";
 import { QualityT2 } from "./t2/QualityT2";
+import { GoalsT2 } from "./t2/GoalsT2";
 import { WeeklyDigestT2 } from "./t2/WeeklyDigestT2";
 
 import "./t2/t2.css";
@@ -176,6 +177,8 @@ export function EarningsScreen() {
           <WeeklyDigestT2 />
           {/* **«درجتي»** (البند ٣) — حيث مفتاحُها مشتعلٌ وحدَه */}
           <QualityT2 />
+          {/* **«أهدافي»** (البند ١٦) — حيث مفتاحُها مشتعلٌ وهدفٌ قائم */}
+          <GoalsT2 />
         </>
       )}
     </div>

@@ -968,5 +968,13 @@
  "افتح الطلب لترى السبب.": "Ouvrez la demande pour voir le motif.",
  "طلبك قيد المراجعة": "Votre demande est en cours d'examen",
  "يراجعه فريقُ الدعم الآن.": "L'équipe d'assistance l'examine maintenant.",
- "ردٌّ من الكبتن على غرضك المفقود": "Le chauffeur a répondu au sujet de votre objet perdu"
+ "ردٌّ من الكبتن على غرضك المفقود": "Le chauffeur a répondu au sujet de votre objet perdu",
+ "اقتربت من هدفك": "Vous approchez de votre objectif",
+ "بقيت رحلاتٌ قليلة — افتح «أهدافي» لترى ما بقي.": "Il reste quelques courses — ouvrez « Mes objectifs » pour voir ce qu'il reste.",
+ "وصلت مكافأةُ هدفك": "Votre prime d'objectif est arrivée",
+ "أُضيفت المكافأةُ إلى محفظتك.": "La prime a été ajoutée à votre portefeuille.",
+ "الهدفُ غيرُ موجود": "Objectif introuvable",
+ "المبلغُ بخانات عملة الدولة": "Le montant doit respecter les décimales de la devise du pays",
+ "سقفُ الميزانيّة لا يقلّ عن مكافأةٍ واحدة": "Le plafond du budget ne peut pas être inférieur à une prime",
+ "النهايةُ بعد البداية": "La fin doit être après le début"
 }
