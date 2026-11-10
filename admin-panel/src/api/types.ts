@@ -604,6 +604,7 @@ export type FeatureKey =
   | "driver_goals_enabled"
   | "price_experiments_enabled"
   | "rider_plans_enabled"
+  | "loyalty_enabled"
   // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
   | "unconfirmed_payments_enabled"
   | "cash_auto_confirm_enabled"
@@ -1284,6 +1285,7 @@ export type WalletTransactionType =
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
   | "cashback"
   | "goal_reward"
+  | "loyalty_reward"
   | "rider_plan_payment"
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّينُ بكليك أو السلفة) يعود إلى محفظة الكبتن قيداً صريحاً، **ومعه صفٌّ في سجلّ
   // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
@@ -3628,4 +3630,20 @@ export interface RiderPlan {
   active_subscribers: number;
   revenue: string;
   discounts: string;
+}
+
+/** **قاعدةُ الولاء** (البند ١٤، §٩٧/١٤) — والأرقامُ الثلاثةُ الأخيرةُ من الخلفية. */
+export interface LoyaltyRule {
+  country_code: CountryCode;
+  points_per_ride: number;
+  expiry_days: number;
+  silver_threshold: number;
+  gold_threshold: number;
+  silver_bonus_percent: number;
+  gold_bonus_percent: number;
+  redeem_points: number;
+  redeem_value: string;
+  holders: number;
+  open_points: number;
+  redeemed_value: string;
 }

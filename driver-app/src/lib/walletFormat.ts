@@ -64,6 +64,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب وحدَه من TAXO، ويُسمّى للعلّة أعلاه
   cashback: tr("الاسترداد الأسبوعي"),
   goal_reward: tr("مكافأة هدف"),
+  loyalty_reward: tr("رصيد من نقاطك"),
   rider_plan_payment: tr("ثمن الاشتراك"),
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّين بكليك أو السلفة) يعود إلى محفظته: دفع المبلغَ مقرَّباً للأعلى، والفرقُ له.
   // **واسمُه اسمُ الخلفية** (`finance_summary`: «تقريب») — والإشارةُ على المبلغ تقول اتجاهَه
@@ -114,6 +115,7 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   // **والاسترداد الأسبوعيُّ حافزٌ من TAXO** — أيقونةُ المكافأة كالإحالة
   cashback: Gift,
   goal_reward: Gift,
+  loyalty_reward: Gift,
   rider_plan_payment: Gift,
   // **والتقريبُ زائدُ سدادٍ يعود** — أيقونةُ الردّ كالاسترجاع
   rounding: Undo2,

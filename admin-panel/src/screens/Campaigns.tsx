@@ -47,6 +47,7 @@ import type {
 import { PromoCodes } from "@/components/PromoCodes";
 import { MissionsLevels } from "@/components/MissionsLevels";
 import { DriverGoals } from "@/components/DriverGoals";
+import { LoyaltyRules } from "@/components/LoyaltyRules";
 import { useSession } from "@/lib/session";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { Referrals } from "@/components/Referrals";
@@ -300,6 +301,8 @@ export function CampaignsScreen() {
       <MissionsLevels onError={setError} isAdmin={isAdmin} />
       {/* **أهدافُ الكبتن بمكافأة** (البند ١٦) — مالٌ من TAXO بسقف، بجانب أدوات التحفيز الأخرى */}
       <DriverGoals onError={setError} isAdmin={isAdmin} />
+      {/* **نقاطُ الولاء** (البند ١٤) */}
+      <LoyaltyRules onError={setError} isAdmin={isAdmin} />
     </Shell>
   );
 }

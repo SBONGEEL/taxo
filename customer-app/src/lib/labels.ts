@@ -134,6 +134,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — من TAXO له في اليوم الأخير من أسبوعه
   cashback: tr("الاسترداد الأسبوعي"),
   goal_reward: tr("مكافأة هدف"),
+  loyalty_reward: tr("رصيد من نقاطك"),
   rider_plan_payment: tr("ثمن الاشتراك"),
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إلى المحفظة؛ يقع للكبتن ويُسمّى للعلّة أعلاه
   rounding: tr("تقريب"),
