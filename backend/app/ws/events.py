@@ -72,6 +72,12 @@ class PaymentEvent(StrEnum):
     CLIQ_CONFIRMATION_EXPIRED = "cliq_confirmation_expired"
 
 
+class DigestEvent(StrEnum):
+    """**ملخّصُ أسبوع الكبتن** (البند ١٧، ٢٠٢٦-١١-١٠) — إشعارٌ يفتح شاشةَ الأرباح على الملخّص."""
+
+    WEEKLY = "weekly_digest"
+
+
 class DocumentEvent(StrEnum):
     """نتيجة مراجعة مستند كبتن (SPEC القسم 12/1 و13/2 — المرحلة 9-ب).
 

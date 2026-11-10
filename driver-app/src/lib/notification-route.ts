@@ -39,6 +39,8 @@ export function destinationFor(
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
   if (kind.startsWith("subscription_")) return "/subscription";
+  // **ملخّصُ الأسبوع** (البند ١٧، ٢٠٢٦-١١-١٠) — «أرباحي» ومنها الملخّصُ تحتها
+  if (kind === "weekly_digest") return "/wallet/earnings";
   if (kind.startsWith("document_")) return "/account/vehicle";
   return null;
 }

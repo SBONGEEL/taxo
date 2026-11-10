@@ -24,6 +24,7 @@ import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
 import { countRides } from "./t2/count";
+import { WeeklyDigestT2 } from "./t2/WeeklyDigestT2";
 
 import "./t2/t2.css";
 import "./t2/money.css"; import { tr } from "@/lib/i18n";
@@ -170,6 +171,8 @@ export function EarningsScreen() {
               </p>
             ) : null}
           </div>
+          {/* **ملخّصُ الأسبوع الماضي** (البند ١٧) — مستقلٌّ عن الفترة أعلاه، وإليه يفتح إشعارُ السبت */}
+          <WeeklyDigestT2 />
         </>
       )}
     </div>

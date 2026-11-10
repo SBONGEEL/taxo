@@ -5,6 +5,7 @@
  */
 
 import type { RouteStep } from "@/lib/next-instruction";
+import type { WeeklyDigest } from "@/api/types";
 import type { UploadOptions } from "@/api/client";
 import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
 import type {
@@ -294,6 +295,9 @@ export const getDemand = () => api.get<{ high: boolean }>("/drivers/me/demand");
 
 export const getEarnings = (period: "today" | "week" | "month") =>
   api.get<Earnings>("/drivers/me/earnings", { query: { period } });
+
+/** **ملخّصُ الأسبوع الماضي** (البند ١٧) — سبعةُ أيامٍ كاملةٍ تنتهي بأمس، ومقارنتُها بالسبعة قبلها. */
+export const getWeeklyDigest = () => api.get<WeeklyDigest>("/drivers/me/earnings/weekly");
 
 /** سجل الرحلات — «للكبتن ما أُسند إليه»، ومعه ملخّصُ دفع كل صف (البند 19). */
 export const listMyRides = (limit = 20, offset = 0) =>

@@ -34,7 +34,7 @@ async def _sweep() -> tuple[int, int]:
     notified = 0
     suspended = 0
     async with SessionLocal() as session:
-      # **دورةٌ لكلِّ سوقٍ بيومِه** — لا يومٌ واحدٌ لل    # **دورةٌ لكلِّ سوقٍ بيومِه** — لا يومٌ واحدٌ للاثنين
+        # **دورةٌ لكلِّ سوقٍ بيومِه** — لا يومٌ واحدٌ للاثنين
         for country in CountryCode:
             today = await country_today(session, country)
 

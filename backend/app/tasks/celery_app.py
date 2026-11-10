@@ -86,6 +86,7 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=[
         "app.tasks.notifications",
+        "app.tasks.weekly_digest",
         "app.tasks.bookings",
         "app.tasks.maintenance",
         "app.tasks.payments",
@@ -174,6 +175,11 @@ celery_app.conf.update(
         # **المطابقةُ اليوميّة** (SPEC §٨٧/٣) — يومٌ بنافذة يومين، فدفعةُ الليل تُرى ولو حُسمت بعد منتصفه.
         # **ساعةٌ ثابتةٌ لا فترةُ ٢٤ ساعة** (قِيس ٢٠٢٦-١٠-٢٩): الفترةُ تبدأ من إقلاع beat وكلُّ رفعٍ يعيده — فثلاثُ رفعاتٍ في يومٍ
         # تركت الجدولَ فارغاً ولم تجرِ مطابقةٌ واحدة. 00:17 UTC = 01:17 في الجزائر، بعد منتصف ليل الأسواق الثلاثة
+        # **ملخّصُ أسبوع الكبتن** (البند ١٧، ٢٠٢٦-١١-١٠) — السبت 06:00 UTC = 09:00 عمّان · 07:00 الجزائر، بعد أسبوعٍ ينتهي بالجمعة
+        "send-weekly-digest": {
+            "task": "app.tasks.weekly_digest.send_weekly_digest",
+            "schedule": crontab(day_of_week="sat", hour=6, minute=0),
+        },
         "reconcile-gateways-daily": {
             "task": "app.tasks.payments.reconcile_gateways_daily",
             "schedule": crontab(hour=0, minute=17),

@@ -2091,3 +2091,20 @@ async def publish_missed_call(
             },
         ),
     )
+
+
+async def publish_weekly_digest(session: AsyncSession, redis: Redis, *, user_id: uuid.UUID) -> None:
+    """**«ملخّص أسبوعك جاهز»** (البند ١٧) — بلا رقمٍ في النصّ: الأرقامُ في الشاشة بيوم الدولة وعملتها، والإشعارُ يدعو إليها."""
+    from app.ws.events import DigestEvent
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="ملخّص أسبوعك جاهز",
+            body="رحلاتك وأرباحك وأفضل أيامك وساعاتك في الأسبوع الماضي — افتح «الأرباح».",
+            data={"type": DigestEvent.WEEKLY.value},
+        ),
+    )
+

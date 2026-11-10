@@ -4,10 +4,12 @@ import secrets
 import uuid
 from dataclasses import asdict
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Form, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -250,6 +252,44 @@ async def my_earnings(
         now=datetime.now(UTC),
     )
     return EarningsOut(**asdict(result))
+
+
+class HourCountOut(BaseModel):
+    hour: int
+    rides: int
+
+
+class WeeklyDigestOut(BaseModel):
+    from_at: datetime
+    to_at: datetime
+    currency: str
+    earned: Decimal
+    previous_earned: Decimal
+    earned_change_percent: int | None
+    completed_rides: int
+    previous_rides: int
+    online_minutes: int | None
+    commission: Decimal
+    directly_collected: Decimal
+    best_day: date | None
+    best_day_net: Decimal | None
+    best_hours: list[HourCountOut]
+    rating_average: float | None
+    rating_count: int
+
+
+@router.get("/me/earnings/weekly", response_model=WeeklyDigestOut)
+async def my_weekly_digest(driver: CurrentDriver, user: CurrentUser, session: DbSession) -> WeeklyDigestOut:
+    """**ملخّصُ الأسبوع الماضي** (البند ١٧، ٢٠٢٦-١١-١٠) — سبعةُ أيامٍ كاملةٍ بيوم الدولة تنتهي بأمس، ومقارنتُها بالسبعة قبلها."""
+    from app.services import weekly_digest
+
+    result = await weekly_digest.weekly(
+        session, driver=driver, user_id=user.id, country=user.country_code, now=datetime.now(UTC)
+    )
+    return WeeklyDigestOut(
+        **{key: value for key, value in asdict(result).items() if key != "best_hours"},
+        best_hours=[HourCountOut(hour=item.hour, rides=item.rides) for item in result.best_hours],
+    )
 
 
 @router.get("/me/documents", response_model=DriverDocumentsOut)

@@ -1787,3 +1787,23 @@ export interface PaymentCheckout {
   fee_amount?: string | null;
   total_amount?: string | null;
 }
+
+/** **ملخّصُ الأسبوع الماضي** (البند ١٧، ٢٠٢٦-١١-١٠) — `GET /drivers/me/earnings/weekly`. */
+export interface WeeklyDigest {
+  from_at: string;
+  to_at: string;
+  currency: Currency;
+  earned: string;
+  previous_earned: string;
+  earned_change_percent: number | null;
+  completed_rides: number;
+  previous_rides: number;
+  online_minutes: number | null;
+  commission: string;
+  directly_collected: string;
+  best_day: string | null;
+  best_day_net: string | null;
+  best_hours: { hour: number; rides: number }[];
+  rating_average: number | null;
+  rating_count: number;
+}
