@@ -154,6 +154,9 @@ const PhotoReportsScreen = lazy(() =>
 const EmergenciesScreen = lazy(() =>
   import("@/screens/Emergencies").then((m) => ({ default: m.EmergenciesScreen })),
 );
+const NewFeaturesScreen = lazy(() =>
+  import("@/screens/NewFeatures").then((m) => ({ default: m.NewFeaturesScreen })),
+);
 const EtaAccuracyScreen = lazy(() =>
   import("@/screens/EtaAccuracy").then((m) => ({ default: m.EtaAccuracyScreen })),
 );
@@ -700,6 +703,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PhotoReportsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/new-features"
+                    element={
+                      <Guarded>
+                        <NewFeaturesScreen />
                       </Guarded>
                     }
                   />
