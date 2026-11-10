@@ -225,6 +225,8 @@ async def report(session: AsyncSession, days: int = 30) -> dict:
         "play_daily": [{"day": d.isoformat(), "app": PACKAGES.get(p, p), "installs": int(i or 0), "uninstalls": int(u or 0),
                         "active_devices": int(a or 0)} for d, p, i, u, a in daily_play],
         "play_countries": await grouped(PlayStatsDaily, PlayStatsDaily.country, PlayStatsDaily.installs),
+        # **محاولاتُ التسجيل في الدول غيرِ النشطة** (البند ٥) — عددٌ لكلِّ دولة، بلا رقم
+        "signup_attempts": [{"key": k, "count": n} for k, n in await _signup_attempts(session, days)],
         "play_last_import": None if last is None else {
             "ran_at": last.ran_at.isoformat(), "status": last.status, "rows": last.rows, "error": last.error,
         },
@@ -233,3 +235,9 @@ async def report(session: AsyncSession, days: int = 30) -> dict:
                   "downloads": first_dl.isoformat() if first_dl else None,
                   "play": first_play.isoformat() if first_play else None},
     }
+
+
+async def _signup_attempts(session: AsyncSession, days: int) -> list[tuple[str, int]]:
+    from app.services import signup_countries  # متأخّراً: `signup_countries` يستورد `markets`
+
+    return await signup_countries.attempts(session, days=days)

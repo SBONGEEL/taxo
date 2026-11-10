@@ -295,8 +295,8 @@ export function useAuthCountry(mode: AuthMode = "login"): {
   country: CountryCode;
   /** **ما يُختار** — في الدخول كلُّ دولة، وفي التسجيل المفتوحةُ وحدَها */
   countries: CountryCode[];
-  /** **ما ترسمه ورقةُ الدول** — ومعه المغلقةُ «قريباً» في التسجيل */
-  options: Array<{ code: CountryCode; name: string; dial: string; soon: boolean }>;
+  /** **ما ترسمه ورقةُ الدول** — النشطةُ أوّلاً، ثمّ «قريباً» ثمّ «متوقفة» (والأسواقُ المغلقةُ بحالها في التسجيل، وغيرُ الأسواق في الشاشتين) */
+  options: Array<{ code: string; name: string; dial: string; state?: "soon" | "stopped" }>;
   /** اسمُ الدولة المختارة بلغة الطلب — من `/config` */
   name: string;
   setCountry: (value: CountryCode) => void;
@@ -348,12 +348,24 @@ export function useAuthCountry(mode: AuthMode = "login"): {
     setChosen(value);
   }, []);
 
-  const options = shown.map((entry) => ({
-    code: entry.country_code,
-    name: entry.name,
-    dial: entry.dial_code,
-    soon: mode === "signup" && entry.signup !== "open",
-  }));
+  const blocked = (signup: string): "soon" | "stopped" | undefined =>
+    signup === "open" ? undefined : signup === "stopped" ? "stopped" : "soon";
+  const rank = (state?: "soon" | "stopped") => (state === undefined ? 0 : state === "soon" ? 1 : 2);
+  const options = [
+    ...shown.map((entry) => ({
+      code: entry.country_code as string,
+      name: entry.name,
+      dial: entry.dial_code,
+      state: mode === "signup" ? blocked(entry.signup) : undefined,
+    })),
+    // **غيرُ الأسواق** (البند ٥) — بحالها في الدخول والتسجيل؛ ولا حسابَ فيها يُدخَل إليه
+    ...(config?.signup_countries ?? []).map((entry) => ({
+      code: entry.code,
+      name: entry.name,
+      dial: entry.dial_code,
+      state: blocked(entry.state),
+    })),
+  ].sort((a, b) => rank(a.state) - rank(b.state));
   const name = all.find((entry) => entry.country_code === country)?.name ?? country;
   return { country, countries, options, name, setCountry };
 }

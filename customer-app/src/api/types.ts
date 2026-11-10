@@ -22,8 +22,8 @@ export interface TestMarket {
   status: MarketStatus;
   current: boolean;
 }
-/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
-export type SignupState = "open" | "soon" | "hidden";
+/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
+export type SignupState = "open" | "soon" | "hidden" | "stopped";
 export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;
@@ -329,10 +329,20 @@ export interface AppLinks {
   driver: AppLink;
 }
 
+/** **دولةٌ غيرُ سوقٍ في مُنتقي الهاتف** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — مرآةُ `SignupCountryOut`. والعلمُ يُرسم من `code`. */
+export interface SignupCountry {
+  code: string;
+  name: string;
+  dial_code: string;
+  state: SignupState;
+}
+
 export interface AppConfig {
   app: string;
   auth: AuthMethod;
   countries: CountryConfig[];
+  /** **غيرُ الأسواق بحالها** — «قريباً» ثمّ «متوقفة»، والمخفيّةُ لا تُنشر */
+  signup_countries: SignupCountry[];
   /** **مرآةٌ لما يُنشر لا لكلِّ عقد** — `check:config` يقابلها بحقول
    *  `expose_to_clients` في `registry.py` في الاتجاهين (٢٠٢٦-٠٩-٢٩). وكانت
    *  تحمل أربعةَ مزوّدين لا يُنشر منهم حقلٌ ولا يقرؤهم أحد، فأُزيلوا. */

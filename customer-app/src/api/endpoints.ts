@@ -954,3 +954,7 @@ export const updateMyEmail = (email: string) => api.patch<User>("/auth/me", { em
 /** **رابطُ إيصال PDF** (SPEC §٨٨/٢) — خمسُ دقائقَ ومرّةً واحدة؛ ولدفعةٍ معتمدةٍ وحدَها (وغيرُها ٤٢٢ برسالته). */
 export const receiptLink = (requestId: string) =>
   api.post<{ url: string; expires_in: number }>(`/payment-requests/${requestId}/receipt-link`, {});
+
+/** **متابعةٌ في دولةٍ غيرِ نشطة** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — تُعدّ ويُجاب نصُّ حالها. **الدولةُ وحدَها، لا رقم.** */
+export const signupAttempt = (country: string) =>
+  api.post<{ state: string; message: string | null }>("/auth/signup-attempts", { country }, { anonymous: true });

@@ -1186,3 +1186,39 @@ async def switch_test_market(
     await session.refresh(target)
     return AuthResponse(user=UserOut.model_validate(target), tokens=tokens)
 
+
+
+class SignupAttemptIn(BaseModel):
+    """**دولةٌ وحدَها — لا رقم** (أمرُ المالك: «tries only, no phone numbers stored»)."""
+
+    country: str
+
+
+class SignupAttemptOut(BaseModel):
+    state: str
+    message: str | None = None
+
+
+@router.post("/signup-attempts", response_model=SignupAttemptOut)
+async def signup_attempt(payload: SignupAttemptIn, session: DbSession, redis: RedisDep, ip: ClientIP) -> SignupAttemptOut:
+    """**متابعةٌ في دولةٍ غيرِ نشطة** (البند ٥) — تُعدّ، ويُجاب بنصّ حالها **بلا رمزٍ يُرسل**. والنشطةُ يُجاب `open` بلا عدّ.
+
+    **ويُحدّ لكلِّ عنوانٍ في الساعة** — والعنوانُ لا يُخزَّن إلا في مفتاحِ حدٍّ ينتهي بساعته.
+    """
+    from app.core.countries import BY_CODE
+    from app.core.i18n import current_language, translate
+    from app.services import signup_countries
+
+    code = (payload.country or "").strip().upper()[:2]
+    limit = await rate_limit.hit(redis, f"signup-attempt:{ip}", limit=30, window_seconds=3600)
+    if not limit.allowed:
+        state = await signup_countries.state_of(session, code) if code in BY_CODE else None
+    else:
+        state = await signup_countries.record_attempt(session, code=code)
+        await session.commit()
+    if state is None:
+        raise NotFound("الدولةُ ليست في القائمة")
+    if state.value == "open":
+        return SignupAttemptOut(state="open")
+    name = BY_CODE[code].name("ar")
+    return SignupAttemptOut(state=state.value, message=translate(signup_countries.message_for(state, name), current_language()))

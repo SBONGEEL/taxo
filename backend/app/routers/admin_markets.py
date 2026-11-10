@@ -13,13 +13,14 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.core.currency import COUNTRY_NAME, CURRENCY_LABEL, currency_for_country
 from app.core.deps import DbSession, MarketsManager, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
 from app.core.phone import InvalidPhoneNumber, resolve_phone
-from app.models.enums import AccountKind, CountryCode, RideStatus
+from app.models.enums import AccountKind, CountryCode, RideStatus, SignupDisplay
 from app.models.market import BorderAllowance
 from app.models.ride import Ride
 from app.models.user import User
@@ -150,3 +151,46 @@ async def revoke_allowance(allowance_id: uuid.UUID, session: DbSession, admin: M
     await markets.revoke(session, allowance_id=allowance_id, actor=admin)
     await session.commit()
     return await _out(session)
+
+
+class SignupCountryRow(BaseModel):
+    code: str
+    name: str
+    dial_code: str
+    state: str
+    market: bool
+    attempts_30d: int
+
+
+class SignupCountryDisplayIn(BaseModel):
+    display: SignupDisplay
+
+
+@router.get("/signup-countries", response_model=list[SignupCountryRow])
+async def list_signup_countries(session: DbSession, _: StaffUser) -> list[SignupCountryRow]:
+    """**كلُّ دول مُنتقي الهاتف بحالها ومحاولاتِ ٣٠ يوماً** (البند ٥) — الأسواقُ للقراءة هنا (بابُها أعلاه)."""
+    from app.services import signup_countries
+
+    tried = dict(await signup_countries.attempts(session, days=30))
+    return [
+        SignupCountryRow(
+            code=e.country.code,
+            name=e.country.ar,
+            dial_code=e.country.dial,
+            state=e.state.value,
+            market=e.market,
+            attempts_30d=tried.get(e.country.code, 0),
+        )
+        for e in await signup_countries.catalogue(session)
+    ]
+
+
+@router.put("/signup-countries/{code}", response_model=list[SignupCountryRow])
+async def set_signup_country(
+    code: str, payload: SignupCountryDisplayIn, session: DbSession, admin: MarketsManager
+) -> list[SignupCountryRow]:
+    from app.services import signup_countries
+
+    await signup_countries.set_display(session, code=code.upper(), display=payload.display, actor=admin)
+    await session.commit()
+    return await list_signup_countries(session, admin)

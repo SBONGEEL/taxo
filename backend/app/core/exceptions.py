@@ -367,7 +367,19 @@ class SignupClosed(AppError):
 
     def __init__(self, country_code: object | None = None) -> None:
         name = _country_name(country_code)
-        super().__init__(f"التسجيلُ في {name} غيرُ متاحٍ بعد — قريباً." if name else self.message)
+        # **«قريباً في [الدولة]» بلفظ المالك** (٢٠٢٦-١١-١٠)
+        super().__init__(f"قريباً في {name}" if name else self.message)
+
+
+class CountryStopped(AppError):
+    """**دولةٌ «متوقفة»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — يُردّ قبل الرمز كـ«قريباً»، **ونصُّه نصُّ المالك**."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "country_stopped"
+    message = "خادم الدولة متوقف حالياً"
+
+    def __init__(self, country_code: object | None = None) -> None:
+        super().__init__(self.message)
 
 
 class MarketNotReady(AppError):

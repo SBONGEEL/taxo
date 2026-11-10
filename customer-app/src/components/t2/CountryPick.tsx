@@ -7,6 +7,7 @@
 import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
+import { signupAttempt } from "@/api/endpoints";
 import type { CountryCode } from "@/api/types";
 import type { AuthMode } from "@/lib/config";
 import { tr } from "@/lib/i18n";
@@ -15,7 +16,7 @@ import { AuthCountrySheet } from "@/taxo2";
 type Auth = {
   country: CountryCode;
   name: string;
-  options: Array<{ code: CountryCode; name: string; dial: string; soon: boolean }>;
+  options: Array<{ code: string; name: string; dial: string; state?: "soon" | "stopped" }>;
   setCountry: (value: CountryCode) => void;
 };
 
@@ -25,7 +26,11 @@ export function useCountryPick(
   options: { feminine?: boolean; disabled?: boolean } = {},
 ): { trigger: { code: string; name: string; onOpen: () => void; disabled?: boolean }; sheet: ReactNode } {
   const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const [notice, setNotice] = useState<string | null>(null);
+  const close = useCallback(() => {
+    setOpen(false);
+    setNotice(null);
+  }, []);
   const signup = mode === "signup";
   const sheet = (
     <AuthCountrySheet
@@ -39,7 +44,20 @@ export function useCountryPick(
       }
       options={auth.options}
       value={auth.country}
+      notice={notice}
       onPick={(code) => {
+        const option = auth.options.find((item) => item.code === code);
+        if (option?.state) {
+          // **غيرُ النشطة: محاولةٌ تُعدّ ونصُّها يُقال — لا رمزَ ولا رقم** (أمرُ المالك ٢٠٢٦-١١-١٠)
+          const fallback =
+            option.state === "stopped" ? tr("خادم الدولة متوقف حالياً") : tr("قريباً في {0}", { 0: option.name });
+          setNotice(fallback);
+          void signupAttempt(code)
+            .then((answer) => setNotice(answer.message ?? fallback))
+            .catch(() => undefined);
+          return;
+        }
+        setNotice(null);
         auth.setCountry(code as CountryCode);
         setOpen(false);
       }}

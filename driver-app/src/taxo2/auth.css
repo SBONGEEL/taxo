@@ -546,6 +546,29 @@ html.dark .t2:not(.t2-day),
 .t2-country-title { margin: 0; font-size: 20px; font-weight: 700; }
 .t2-country-sub { margin: -10px 0 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
 .t2-country-list { display: flex; flex-direction: column; gap: 8px; }
+/* **البحثُ والإشعار** (البند ٥) — الورقةُ تطول بأربعين دولة، فالقائمةُ تُمرَّر والبحثُ فوقها */
+.t2-country-list { overflow-y: auto; min-height: 0; }
+.t2-country-search {
+  min-height: 48px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 14px;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 15px;
+}
+.t2-country-notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t2-well);
+  color: var(--t2-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
 .t2-country-list button {
   display: flex;
   align-items: center;
@@ -562,7 +585,7 @@ html.dark .t2:not(.t2-day),
   cursor: pointer;
 }
 .t2-country-list button[aria-pressed="true"] { border: 2px solid var(--t2-text); background: var(--t2-sunken); }
-.t2-country-list button.soon { border-style: dashed; border-color: var(--t2-dash); color: var(--t2-faint); cursor: default; }
+.t2-country-list button.soon { border-style: dashed; border-color: var(--t2-dash); color: var(--t2-faint); }
 .t2-country-name { flex: 1; font-size: 16px; font-weight: 500; }
 .t2-country-list button[aria-pressed="true"] .t2-country-name { font-weight: 600; }
 .t2-country-dial { font-size: 14px; color: var(--t2-muted); }

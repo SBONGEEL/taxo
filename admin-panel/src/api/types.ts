@@ -14,8 +14,8 @@ import type { Crumb } from "@/lib/breadcrumbs";
 export type CountryCode = "JO" | "LY" | "DZ";
 /** **حالُ السوق** (SPEC §٧٤-أ/٢) — مرآةُ `MarketStatus` في الخلفية (`check:enums`). */
 export type MarketStatus = "open" | "closed";
-/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
-export type SignupState = "open" | "soon" | "hidden";
+/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
+export type SignupState = "open" | "soon" | "hidden" | "stopped";
 export type Currency = "JOD" | "LYD" | "DZD";
 export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer";
 
@@ -197,10 +197,21 @@ export interface AppLinks {
   driver: AppLink;
 }
 
+/** **دولةٌ غيرُ سوقٍ في مُنتقي الهاتف** (البند ٥) — مرآةُ `SignupCountryOut`. **واللوحةُ لا ترسمها من هنا**: تقرأ «دولَ المُنتقي»
+ *  من بابها (`listSignupCountries`) بمحاولاتها، والمرآةُ هنا لأن `/config` واحدٌ للثلاثة (`check:config`). */
+export interface SignupCountry {
+  code: string;
+  name: string;
+  dial_code: string;
+  state: SignupState;
+}
+
 export interface AppConfig {
   app: string;
   auth: { verification: string; otp_length: number | null };
   countries: CountryConfig[];
+  /** غيرُ الأسواق بحالها (البند ٥) — يرسمها التطبيقان؛ واللوحةُ تقرأ بابَها */
+  signup_countries: SignupCountry[];
   providers: Record<string, Record<string, string | undefined>>;
   default_country_code: CountryCode;
   /** **دولةُ الشبكة** (رأسُ Cloudflare) — أوّلُ تخمينٍ لمُختار الدولة؛ و`null` حين لا رأسَ أو لا سوقَ بها (§٧٤-أ/٤). */
@@ -2971,8 +2982,18 @@ export interface TaxoCardLimits {
 
 // ════════════════════════════════════════ «الدول» والحدود (SPEC §٧٤-أ/٢–٣)
 
-/** **ظهورُ المغلقة في التسجيل** — مرآةُ `SignupDisplay` (`check:enums`): «قريباً» رماديّةٌ لا تُختار، و«مخفية» لا تُعرض. */
-export type SignupDisplay = "soon" | "hidden";
+/** **ظهورُ المغلقة في التسجيل** — مرآةُ `SignupDisplay` (`check:enums`): «قريباً» · «متوقفة» (البند ٥) · «مخفية» لا تُعرض. */
+export type SignupDisplay = "soon" | "hidden" | "stopped";
+
+/** **صفُّ مُنتقي الدول في اللوحة** (البند ٥) — مرآةُ `SignupCountryRow`: كلُّ دولةٍ بحالها ومحاولاتِ ٣٠ يوماً. */
+export interface SignupCountryRow {
+  code: string;
+  name: string;
+  dial_code: string;
+  state: SignupState;
+  market: boolean;
+  attempts_30d: number;
+}
 
 export interface MarketRow {
   country_code: CountryCode;
@@ -3321,6 +3342,8 @@ export interface SiteStatsReport {
   download_countries: { key: string; count: number }[];
   play_daily: { day: string; app: StatsApp; installs: number; uninstalls: number; active_devices: number }[];
   play_countries: { key: string; count: number }[];
+  /** **محاولاتُ التسجيل في الدول غيرِ النشطة** (البند ٥) — عددٌ لكلِّ دولة، بلا رقم */
+  signup_attempts: { key: string; count: number }[];
   play_last_import: { ran_at: string; status: string; rows: number; error: string | null } | null;
   play_last_day: string | null;
   since: { site: string | null; downloads: string | null; play: string | null };

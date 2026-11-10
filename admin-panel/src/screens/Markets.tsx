@@ -20,9 +20,11 @@ import {
   revokeBorderAllowance,
   setBorders,
   setMarketStatus,
+  listSignupCountries,
+  setSignupCountry,
   setSignupDisplay,
 } from "@/api/endpoints";
-import type { CountryCode, MarketRow, Markets, SignupDisplay, TestAccounts } from "@/api/types";
+import type { CountryCode, MarketRow, Markets, SignupCountryRow, SignupDisplay, SignupState, TestAccounts } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -58,6 +60,10 @@ type Pending =
 function messageOf(caught: unknown, fallback: string): string {
   return caught instanceof Error && caught.message ? caught.message : fallback;
 }
+
+/** **أسماءُ الحالات بلفظ المالك** (البند ٥) — مفتاحٌ لكلِّ عضوٍ في `SignupDisplay`، فعضوٌ جديدٌ لا يُرسم إنجليزيّاً */
+const DISPLAY_LABEL: Record<SignupDisplay, string> = { soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
+const STATE_LABEL: Record<SignupState, string> = { open: "نشطة", soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
 
 export function MarketsScreen() {
   const held = useMyPermissions();
@@ -198,11 +204,12 @@ export function MarketsScreen() {
                       value={row.signup_display}
                       options={[
                         { key: "soon", label: "قريباً" },
+                        { key: "stopped", label: "متوقفة" },
                         { key: "hidden", label: "مخفية" },
                       ]}
                       onPick={(display) =>
                         canManage && !busy && display !== row.signup_display
-                          ? void run(() => setSignupDisplay(row.country_code, display), `ظهورُ ${row.name} في التسجيل: ${display === "soon" ? "قريباً" : "مخفية"}`)
+                          ? void run(() => setSignupDisplay(row.country_code, display), `ظهورُ ${row.name} في التسجيل: ${DISPLAY_LABEL[display]}`)
                           : undefined
                       }
                     />
@@ -330,6 +337,7 @@ export function MarketsScreen() {
               ) : null}
             </div>
           </section>
+          <SignupCountriesSection canManage={canManage} />
           <TestAccountsSection canManage={canManage} countries={data.countries} />
           <p className="text-11.5 text-muted">كلُّ فتحٍ وإغلاقٍ ورفعٍ للحدود وسماحٍ ونزعٍ وإعادةِ ملءٍ يُكتب في سجلّ التدقيق باسمك.</p>
         </div>
@@ -375,7 +383,7 @@ export function MarketsScreen() {
         <Modal title={`إغلاقُ ${pending.row.name}`} onClose={() => setPending(null)}>
           <p className="text-13 leading-relaxed text-ink">
             الرحلاتُ الجارية ({pending.row.active_rides}) تكتمل، ولا يطلب أحدٌ جديداً، والمحافظُ والبياناتُ كما هي — والدخولُ قائمٌ لكلِّ
-            حساب. والتسجيلُ فيها يصير «{pending.row.signup_display === "soon" ? "قريباً" : "مخفية"}».
+            حساب. والتسجيلُ فيها يصير «{DISPLAY_LABEL[pending.row.signup_display]}».
           </p>
           <div className="mt-12 flex gap-8">
             <Button
@@ -513,6 +521,88 @@ function TestAccountsSection({ canManage, countries }: { canManage: boolean; cou
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+/** **دولُ مُنتقي الهاتف** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — العلمُ والاسمُ والرمزُ في تطبيقَي الدخول والتسجيل، **وحالُ كلِّ دولةٍ من هنا
+ *  بلا تحديثِ تطبيق**. **الأسواقُ** (الأردن · الجزائر · ليبيا) حالُها من بطاقتها أعلاه؛ **وغيرُها**: «قريباً» أو «متوقفة» أو «مخفية» —
+ *  **ولا تكون «نشطة»**: لا قواعدَ أرقامٍ لها، فلا رمزَ يُرسل إلى رقمها. **والمحاولاتُ عددٌ لكلِّ دولة — لا رقمَ هاتفٍ يُحفظ.** */
+function SignupCountriesSection({ canManage }: { canManage: boolean }) {
+  const [rows, setRows] = useState<SignupCountryRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    listSignupCountries()
+      .then(setRows)
+      .catch((caught) => setError(messageOf(caught, "تعذّر قراءة دول المُنتقي")));
+  }, []);
+
+  async function pick(code: string, display: SignupDisplay) {
+    setBusy(code);
+    setError(null);
+    try {
+      setRows(await setSignupCountry(code, display));
+    } catch (caught) {
+      setError(messageOf(caught, "تعذّر الحفظ"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const needle = query.trim();
+  const shown = (rows ?? []).filter((row) => !needle || row.name.includes(needle) || row.dial_code.includes(needle.replace(/^\+/, "")));
+  return (
+    <section className="card flex flex-col gap-12 p-16" aria-labelledby="signup-countries-title">
+      <h2 id="signup-countries-title" className="text-15 font-bold text-ink">
+        دولُ مُنتقي الهاتف
+      </h2>
+      <p className="text-12.5 leading-relaxed text-muted">
+        يرى المستخدمُ في الدخول والتسجيل علمَ كلِّ دولةٍ واسمَها ورمزَها. <b>نشطة</b>: تعمل كالمعتاد (تُفتح من بطاقة السوق أعلاه).{" "}
+        <b>قريباً</b>: شارةٌ، وعند المتابعة «قريباً في [الدولة]» بلا رمز تحقّق. <b>متوقفة</b>: عند المتابعة «خادم الدولة متوقف حالياً» بلا
+        رمز — وهي افتراضُ كلِّ دولةٍ جديدة. <b>مخفية</b>: لا تظهر. التغييرُ يصل التطبيقين فوراً بلا تحديث، والمحاولاتُ عددٌ لكلِّ دولةٍ في
+        آخر 30 يوماً — لا يُحفظ أيُّ رقم هاتف.
+      </p>
+      <input
+        className="fld"
+        aria-label="ابحث عن دولة"
+        placeholder="ابحث بالاسم أو الرمز"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      {error ? <p className="text-12.5 text-danger">{error}</p> : null}
+      {rows === null ? <p className="text-12.5 text-muted">…</p> : null}
+      <ul className="flex flex-col divide-y divide-line">
+        {shown.map((row) => (
+          <li key={row.code} className="flex flex-wrap items-center gap-12 py-8">
+            <span className="min-w-[10rem] text-13 font-semibold text-ink">{row.name}</span>
+            <span className="num text-12 text-muted" dir="ltr">
+              +{row.dial_code}
+            </span>
+            <span className="text-12 text-muted">
+              محاولات: <span className="num font-semibold text-ink">{row.attempts_30d}</span>
+            </span>
+            {row.market ? (
+              <span className="text-12 text-muted">سوق — {STATE_LABEL[row.state]} (من بطاقته أعلاه)</span>
+            ) : (
+              <Segmented<SignupDisplay>
+                label={`حالُ ${row.name}`}
+                value={row.state === "open" ? "soon" : (row.state as SignupDisplay)}
+                options={[
+                  { key: "soon", label: "قريباً" },
+                  { key: "stopped", label: "متوقفة" },
+                  { key: "hidden", label: "مخفية" },
+                ]}
+                onPick={(display) =>
+                  canManage && busy === null && display !== row.state ? void pick(row.code, display) : undefined
+                }
+              />
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

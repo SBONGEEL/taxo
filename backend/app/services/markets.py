@@ -35,7 +35,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import service_area
 from app.core.currency import COUNTRY_NAME, STORAGE_DECIMALS, currency_for_country, decimals_of
-from app.core.exceptions import Conflict, InvalidInput, MarketClosed, MarketNotReady, NotFound, SignupClosed
+from app.core.exceptions import (
+    Conflict,
+    CountryStopped,
+    InvalidInput,
+    MarketClosed,
+    MarketNotReady,
+    NotFound,
+    SignupClosed,
+)
 from app.models.enums import (
     AuditAction,
     CountryCode,
@@ -105,12 +113,15 @@ async def signup_state(session: AsyncSession, country: CountryCode) -> SignupSta
     if await is_open(session, country):
         return SignupState.OPEN
     display = await signup_display(session, country)
-    return SignupState.HIDDEN if display is SignupDisplay.HIDDEN else SignupState.SOON
+    return {SignupDisplay.HIDDEN: SignupState.HIDDEN, SignupDisplay.STOPPED: SignupState.STOPPED}.get(display, SignupState.SOON)
 
 
 async def require_signup_open(session: AsyncSession, country: CountryCode) -> None:
     """**التسجيلُ في المغلقة يُردّ** — قبل الرمز وقبل الصفّ، كحارس الرقم. والدخولُ لا يمرّ من هنا أبداً."""
     if not await is_open(session, country):
+        # **«متوقفة» غيرُ «قريباً»** (أمرُ المالك ٢٠٢٦-١١-١٠): نصّان لحالين، وكلاهما قبل الرمز
+        if await signup_display(session, country) is SignupDisplay.STOPPED:
+            raise CountryStopped(country)
         raise SignupClosed(country)
 
 

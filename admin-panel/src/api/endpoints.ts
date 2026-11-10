@@ -23,6 +23,7 @@ import type {
   FinanceOverviewQuery,
   Markets,
   PricingZones,
+  SignupCountryRow,
   SignupDisplay,
   TestAccounts,
   BroadcastSettings,
@@ -2427,6 +2428,12 @@ export const setMarketStatus = (country: CountryCode, body: { open: boolean; for
 
 export const setSignupDisplay = (country: CountryCode, display: SignupDisplay) =>
   api.put<Markets>(`/admin/markets/${country}/signup-display`, { display });
+
+/** **دولُ مُنتقي الهاتف** (البند ٥) — كلُّها بحالها ومحاولاتها؛ **وغيرُ السوق وحدَه يُضبط من هنا** (السوقُ من بطاقته أعلاه). */
+export const listSignupCountries = () => api.get<SignupCountryRow[]>("/admin/markets/signup-countries");
+
+export const setSignupCountry = (code: string, display: SignupDisplay) =>
+  api.put<SignupCountryRow[]>(`/admin/markets/signup-countries/${code}`, { display });
 
 /** **رفعُ الحدود يشترط سبباً مكتوباً** (٨ أحرف) — والإعادةُ بلا شرط. */
 export const setBorders = (body: { enforced: boolean; reason?: string }) => api.put<Markets>("/admin/markets/borders", body);

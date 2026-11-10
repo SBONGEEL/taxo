@@ -5,6 +5,45 @@
  * محايدٌ برمزه — لا علمٌ مخترع، ولا فراغ.
  */
 import type { ReactNode } from "react";
+import {
+  AE,
+  AT,
+  BE,
+  BH,
+  CA,
+  CH,
+  CY,
+  DE,
+  DJ,
+  DK,
+  EG,
+  ES,
+  FR,
+  GB,
+  IQ,
+  IT,
+  KM,
+  KW,
+  LB,
+  MA,
+  MR,
+  MT,
+  NL,
+  NO,
+  OM,
+  PS,
+  QA,
+  SA,
+  SD,
+  SE,
+  SO,
+  SY,
+  TN,
+  TR,
+  US,
+  YE,
+} from "country-flag-icons/react/3x2";
+import type { FlagComponent } from "country-flag-icons/react/3x2";
 
 /** **الرسومُ جدولٌ بالرمز لا شرطٌ عليه** — والمقاسُ نسبةُ كلِّ علمٍ الرسميّة (الأردن وليبيا ١:٢، والجزائر ٢:٣). */
 const DRAWN: Record<string, { box: string; body: ReactNode }> = {
@@ -47,10 +86,24 @@ const DRAWN: Record<string, { box: string; body: ReactNode }> = {
   },
 };
 
+/** **وغيرُ الأسواق من `country-flag-icons`** (MIT، أعلامٌ رسميّةٌ بنسبة ٣:٢) — أمرُ المالك ٢٠٢٦-١١-١٠ (البند ٥): «flag + name + dialling code».
+ *  **والأسواقُ الثلاثةُ تبقى مرسومةً أعلاه** بنسبها الرسميّة كما في لوحة Claude Design. والاستيرادُ بالاسم فلا يدخل الحزمةَ إلا ما هنا. */
+const PACKAGED: Record<string, FlagComponent> = {
+  AE, AT, BE, BH, CA, CH, CY, DE, DJ, DK, EG, ES, FR, GB, IQ, IT, KM, KW, LB, MA, MR, MT, NL, NO, OM, PS, QA, SA, SD, SE, SO, SY, TN, TR, US, YE,
+};
+
 export function Flag({ code, label, size = 26, muted = false }: { code: string; label: string; size?: number; muted?: boolean }) {
   const height = Math.round((size * 2) / 3);
   const className = muted ? "t2-flag muted" : "t2-flag";
   const drawn = DRAWN[code];
+  const Packaged = drawn ? undefined : PACKAGED[code];
+  if (Packaged) {
+    return (
+      <span className={className} role="img" aria-label={label} style={{ width: size, height, display: "inline-flex" }}>
+        <Packaged title={label} style={{ width: "100%", height: "100%" }} />
+      </span>
+    );
+  }
   if (!drawn) {
     return (
       <span className={`${className} blank`} role="img" aria-label={label} style={{ width: size, height }}>

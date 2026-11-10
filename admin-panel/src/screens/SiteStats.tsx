@@ -31,7 +31,7 @@ const SOURCES: Record<string, string> = { facebook: "فيسبوك", google: "Goo
 
 /** أسماءُ البلدان بالعربيّة لما يغلب على الزوّار — وغيرُها برمزه كما هو. */
 const COUNTRIES: Record<string, string> = {
-  JO: "الأردن", DZ: "الجزائر", SA: "السعودية", AE: "الإمارات", EG: "مصر", MA: "المغرب", TN: "تونس", FR: "فرنسا", US: "أمريكا", "??": "غير معروف",
+  JO: "الأردن", DZ: "الجزائر", LY: "ليبيا", SA: "السعودية", AE: "الإمارات", EG: "مصر", MA: "المغرب", TN: "تونس", FR: "فرنسا", US: "أمريكا", "??": "غير معروف",
 };
 
 type Range = 30 | 90;
@@ -252,6 +252,11 @@ export function SiteStatsScreen() {
               <Ranked title="البلدان" rows={data.play_countries} name={country} />
             </div>
             <p className="st-since">Play ينشر تقاريرَه متأخّرةً يوماً أو يومين — فاليومُ والأمسُ قد يبقيان صفراً حتى الاستيراد التالي.</p>
+          </section>
+          <section className="ad-card st-panel">
+            <strong>محاولاتُ التسجيل في دولٍ غيرِ نشطة</strong>
+            <p className="st-since">من ضغط «متابعة» في دولةٍ «قريباً» أو «متوقفة» في مُنتقي الهاتف — عددٌ لكلِّ دولةٍ في المدّة المختارة، بلا أيِّ رقم هاتف. حالُ كلِّ دولةٍ من «الدول والحدود».</p>
+            <Ranked title="الدول" rows={data.signup_attempts} name={country} />
           </section>
         </div>
       )}

@@ -20,8 +20,8 @@ export interface TestMarket {
   status: MarketStatus;
   current: boolean;
 }
-/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` رماديّة · `hidden` لا تُرسم. */
-export type SignupState = "open" | "soon" | "hidden";
+/** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
+export type SignupState = "open" | "soon" | "hidden" | "stopped";
 export type Currency = "JOD" | "LYD" | "DZD";
 export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
@@ -284,10 +284,20 @@ export interface AppLinks {
   driver: AppLink;
 }
 
+/** **دولةٌ غيرُ سوقٍ في مُنتقي الهاتف** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — مرآةُ `SignupCountryOut`. والعلمُ يُرسم من `code`. */
+export interface SignupCountry {
+  code: string;
+  name: string;
+  dial_code: string;
+  state: SignupState;
+}
+
 export interface AppConfig {
   app: string;
   auth: AuthMethod;
   countries: CountryConfig[];
+  /** **غيرُ الأسواق بحالها** — «قريباً» ثمّ «متوقفة»، والمخفيّةُ لا تُنشر */
+  signup_countries: SignupCountry[];
   /** **الخرائطُ مكتوبةُ النوع وحدَها** (٢٠٢٦-٠٩-٢٩): `ios_public_token` يُقرأ على
    *  iOS بلا رجوع، فخطأُ اسمه خريطةٌ غائبةٌ على كلِّ iPhone — و`check:config`
    *  يقابل هذه الكتلةَ بما يُنشر. والباقي قاموسٌ مفتوحٌ كما كان. */

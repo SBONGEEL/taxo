@@ -143,8 +143,9 @@ export function AuthPhone({
   );
 }
 
-/** دولةٌ في ورقة المُختار — **`soon` رماديّةٌ لا تُختار** («قريباً»)، والمخفيّةُ لا تصل هنا أصلاً (يصفّيها المُنادي). */
-export type AuthCountryOption = { code: string; name: string; dial: string; soon?: boolean };
+/** دولةٌ في ورقة المُختار — **`state` «قريباً» أو «متوقفة»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥): تُرى بشارتها، **والضغطُ عليها لا يختارها**
+ *  بل يقول نصَّها (`notice`) بلا رمز تحقّق. والمخفيّةُ لا تصل هنا أصلاً (يصفّيها المُنادي). */
+export type AuthCountryOption = { code: string; name: string; dial: string; state?: "soon" | "stopped" };
 
 /** **ورقةُ الدول** (لوحاتُ «تسجيل — ورقة الدول» · «دخول — كلُّ دولة» · «وضعُ النساء» · الفرنسيّة): العلمُ والاسمُ والمفتاح، والمختارةُ
  * بحافّةٍ مزدوجةٍ وعلامة، والمغلقةُ في التسجيل «قريباً» بحافّةٍ متقطّعة. **تُغلق بالظلّ وبـEscape، واختيارٌ يغلقها.**
@@ -158,11 +159,14 @@ export function AuthCountrySheet({
   value,
   onPick,
   onClose,
+  notice,
 }: {
   open: boolean;
   title: string;
   sub?: string;
   note?: ReactNode;
+  /** **نصُّ حالِ دولةٍ ضُغطت وهي غيرُ نشطة** — «قريباً في …» أو «خادم الدولة متوقف حالياً» */
+  notice?: string | null;
   options: AuthCountryOption[];
   value: string;
   onPick: (code: string) => void;
@@ -178,7 +182,13 @@ export function AuthCountrySheet({
   }, [open, onClose]);
   // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب)
   useBackLayer(open, onClose);
+  const [query, setQuery] = useState("");
   if (!open) return null;
+  // **البحثُ بالاسم أو بالرمز** — والأرقامُ العربيّةُ تُقرأ لاتينيّة
+  const needle = query.trim().replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660)).replace(/^\+/, "").toLowerCase();
+  const shown = needle
+    ? options.filter((option) => option.name.toLowerCase().includes(needle) || option.dial.startsWith(needle) || option.code.toLowerCase() === needle)
+    : options;
   return (
     <div className="t2 t2-country">
       <button type="button" className="t2-country-scrim" aria-label={tr("إغلاق")} onClick={onClose} />
@@ -186,25 +196,42 @@ export function AuthCountrySheet({
         <span className="t2-country-handle" aria-hidden="true" />
         <h2 className="t2-country-title">{title}</h2>
         {sub ? <p className="t2-country-sub">{sub}</p> : null}
+        {options.length > 6 ? (
+          <input
+            className="t2-country-search"
+            type="search"
+            value={query}
+            placeholder={tr("ابحث عن دولتك")}
+            aria-label={tr("ابحث عن دولتك")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        ) : null}
+        {notice ? (
+          <p className="t2-country-notice" role="status">
+            {notice}
+          </p>
+        ) : null}
         <div className="t2-country-list">
-          {options.map((option) => {
+          {shown.map((option) => {
             const on = option.code === value;
+            const soon = Boolean(option.state);
             return (
               <button
                 key={option.code}
                 type="button"
-                className={option.soon ? "soon" : undefined}
-                aria-pressed={on}
-                disabled={option.soon}
+                className={soon ? "soon" : undefined}
+                aria-pressed={on && !soon}
                 onClick={() => onPick(option.code)}
               >
-                <Flag code={option.code} label={option.name} size={30} muted={option.soon} />
+                <Flag code={option.code} label={option.name} size={30} muted={soon} />
                 <span className="t2-country-name">{option.name}</span>
                 <span className="t2-country-dial" dir="ltr">
                   +{option.dial}
                 </span>
-                {option.soon ? <span className="t2-country-soon">{tr("قريباً")}</span> : null}
-                {on && !option.soon ? <Icon name="check_circle" fill className="t2-country-on" /> : null}
+                {option.state ? (
+                  <span className="t2-country-soon">{option.state === "stopped" ? tr("متوقفة") : tr("قريباً")}</span>
+                ) : null}
+                {on && !soon ? <Icon name="check_circle" fill className="t2-country-on" /> : null}
               </button>
             );
           })}

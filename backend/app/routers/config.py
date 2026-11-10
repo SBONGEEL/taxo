@@ -8,7 +8,10 @@ from app.core.deps import DbSession
 from app.core.i18n import translate_tree
 from app.models.enums import CountryCode
 from app.schemas.auth import AuthMethodResponse
-from app.schemas.config import AppLinksOut, ConfigOut, DispatchOut
+from app.core.i18n import current_language
+from app.models.enums import SignupState
+from app.schemas.config import AppLinksOut, ConfigOut, DispatchOut, SignupCountryOut
+from app.services import signup_countries
 from app.schemas.guest import GuestModeOut
 from app.services import country_config, geo, guest, otp, verification
 from app.services import site as site_service
@@ -104,6 +107,20 @@ async def get_public_config(
         app_links=AppLinksOut.model_validate(await site_service.app_links(session)),
         auth=await _auth_method(session, country_code or default),
         countries=[await country_config.build(session, c) for c in countries],
+        # **غيرُ الأسواق بحالها** (البند ٥) — «قريباً» قبل «متوقفة»، والمخفيّةُ لا تُنشر؛ وتغييرُها من اللوحة يسري هنا فوراً
+        signup_countries=[
+            SignupCountryOut(
+                code=entry.country.code,
+                name=entry.country.name(current_language()),
+                dial_code=entry.country.dial,
+                state=entry.state,
+            )
+            for entry in sorted(
+                await signup_countries.catalogue(session),
+                key=lambda e: 0 if e.state is SignupState.SOON else 1,
+            )
+            if not entry.market and entry.state is not SignupState.HIDDEN
+        ],
         # كلُّ عقدٍ يحمل حقلاً `expose_to_clients` يُنشر هنا بحقوله العامة
         # وحدها — لا قائمةً يدوية تُنسى عند إضافة مزود (المرحلة 8-ب أضافت
         # `firebase_auth`، وواجهةُ الدخول لا تعمل بغير معرّف مشروعه)

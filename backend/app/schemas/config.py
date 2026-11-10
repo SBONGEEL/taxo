@@ -116,6 +116,18 @@ class AppLinksOut(BaseModel):
     driver: AppLinkOut
 
 
+class SignupCountryOut(BaseModel):
+    """**دولةٌ غيرُ سوقٍ في مُنتقي الهاتف** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — `soon` «قريباً» · `stopped` «متوقفة».
+
+    **والمخفيّةُ لا تُنشر**، **ولا تكون «نشطة»**: لا قواعدَ أرقامٍ لها فلا رمزَ يُرسل. والعلمُ يُرسم في التطبيق من `code`.
+    """
+
+    code: str
+    name: str
+    dial_code: str
+    state: SignupState
+
+
 class ConfigOut(BaseModel):
     """إعدادات عامة للواجهات (SPEC القسم 2).
 
@@ -126,6 +138,8 @@ class ConfigOut(BaseModel):
     app: str
     auth: AuthMethodResponse
     countries: list[CountryConfigOut]
+    #: **الدولُ غيرُ الأسواق في مُنتقي الهاتف** (البند ٥) — «قريباً» ثمّ «متوقفة»، بلغة الطلب
+    signup_countries: list[SignupCountryOut] = []
     providers: dict[str, dict[str, Any]]
     # الدولة التي تفترضها شاشاتُ ما قبل الدخول: لا حسابَ بعد فلا دولةَ
     # معروفة، والتصميم بلا منتقي دول. إعدادُ نشرٍ لا سرّ — مكانه `settings`
