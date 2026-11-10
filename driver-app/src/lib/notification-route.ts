@@ -45,6 +45,8 @@ export function destinationFor(
   if (kind === "weekly_digest") return "/wallet/earnings";
   // **«درجتك تحتاج انتباهاً»** (البند ٣) — «درجتي» تحت «أرباحي»
   if (kind === "quality_warning") return "/wallet/earnings";
+  // **أهدافُ الكبتن** (البند ١٦) — «اقتربت» و«وصلت المكافأة»
+  if (kind === "goal_update") return "/wallet/earnings";
   if (kind.startsWith("document_")) return "/account/vehicle";
   return null;
 }

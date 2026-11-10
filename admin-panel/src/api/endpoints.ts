@@ -6,7 +6,8 @@
 
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
-import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
+import type {
+  DriverGoal, FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
@@ -2697,3 +2698,13 @@ export async function ticketPhotoBlob(ticketId: string): Promise<string> {
   if (!answer.ok) throw new Error("تعذّر فتح الصورة");
   return URL.createObjectURL(await answer.blob());
 }
+
+/** **أهدافُ الكبتن بمكافأة** (البند ١٦) */
+export const listDriverGoals = (country: CountryCode) =>
+  api.get<DriverGoal[]>(`/admin/driver-goals?country_code=${country}`);
+export const createDriverGoal = (
+  country: CountryCode,
+  payload: { title: string; target: number; starts_at: string; ends_at: string; reward_amount: string; budget_cap: string },
+) => api.post<DriverGoal>(`/admin/driver-goals?country_code=${country}`, payload);
+export const updateDriverGoal = (id: string, payload: { is_active?: boolean; title?: string }) =>
+  api.patch<DriverGoal>(`/admin/driver-goals/${id}`, payload);

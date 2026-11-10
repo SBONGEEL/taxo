@@ -57,6 +57,8 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   weekly_digest: { icon: "payments", tone: "ok" },
   // **إنذارُ درجة الجودة** (البند ٣)
   quality_warning: { icon: "star", tone: "warn" },
+  // **أهدافُ الكبتن** (البند ١٦)
+  goal_update: { icon: "trophy", tone: "plain" },
 };
 const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };
 

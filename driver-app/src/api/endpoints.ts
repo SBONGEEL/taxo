@@ -1093,3 +1093,21 @@ export function openTicket(
   if (photo) form.append("photo", photo);
   return sendForm<MyTicketDetail>("POST", "/support/tickets", form);
 }
+
+/** **«أهدافي»** (البند ١٦) — التقدّمُ حيٌّ من الخلفية والمكافأةُ بعملة الدولة؛ ومطفأً `enabled=false`. */
+export interface MyGoals {
+  enabled: boolean;
+  currency: string;
+  goals: {
+    id: string;
+    title: string;
+    description: string | null;
+    target: number;
+    done: number;
+    reward_amount: string;
+    starts_at: string;
+    ends_at: string;
+    rewarded: boolean;
+  }[];
+}
+export const getMyGoals = () => api.get<MyGoals>("/drivers/me/goals");

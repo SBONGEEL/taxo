@@ -80,6 +80,7 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   intercity_refund: "route",
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — نارُ سلسلته في الرئيسية نفسُها
   cashback: "local_fire_department",
+  goal_reward: "trophy",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
   taxo_card: "confirmation_number",
 };

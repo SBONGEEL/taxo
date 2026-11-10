@@ -601,6 +601,7 @@ export type FeatureKey =
   | "work_hours_enabled"
   | "driver_map_nearby_enabled"
   | "voice_order_enabled"
+  | "driver_goals_enabled"
   // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
   | "unconfirmed_payments_enabled"
   | "cash_auto_confirm_enabled"
@@ -1280,6 +1281,7 @@ export type WalletTransactionType =
   | "intercity_earning"
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
   | "cashback"
+  | "goal_reward"
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّينُ بكليك أو السلفة) يعود إلى محفظة الكبتن قيداً صريحاً، **ومعه صفٌّ في سجلّ
   // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
   | "rounding"
@@ -3549,4 +3551,20 @@ export interface TicketStats {
   by_kind: { kind: TicketKind; status: TicketStatus; count: number }[];
   by_category: { category: ComplaintCategory; count: number }[];
   drivers: { user_id: string; name: string; complaints: number }[];
+}
+
+/** **هدفُ كبتنٍ بمكافأة** (البند ١٦، §٩٧/١٦) — المصروفُ وعددُ المكافآت من الخلفية، **ولا حسابَ مالٍ هنا**. */
+export interface DriverGoal {
+  id: string;
+  country_code: CountryCode;
+  title: string;
+  description: string | null;
+  target: number;
+  starts_at: string;
+  ends_at: string;
+  reward_amount: string;
+  budget_cap: string;
+  is_active: boolean;
+  spent: string;
+  awards: number;
 }
