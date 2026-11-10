@@ -59,6 +59,8 @@ const GROUPS: {
       { label: "نظرة عامة", icon: "space_dashboard", to: "/overview" },
       { label: "الخريطة الحيّة", icon: "map", to: "/live-map", adminOnly: true },
       { label: "سجل الرحلات", icon: "route", to: "/rides" },
+      // **دقّةُ وقت الوصول** (البند ١٢، ٢٠٢٦-١١-١٠) — المتوقَّعُ مقابل الفعليّ، بلا بياناتٍ شخصيّة
+      { label: "دقّة وقت الوصول", icon: "insights", to: "/eta-accuracy" },
       // **إشعاراتُ النشاط** (SPEC §٨١) — للمالك ومن مُنحها بالاسم
       { label: "الإشعارات", icon: "notifications", to: "/alerts", permission: ACTIVITY_ALERTS },
       { label: "إعداد الإشعارات", icon: "tune", to: "/alerts/settings", permission: ACTIVITY_ALERTS },

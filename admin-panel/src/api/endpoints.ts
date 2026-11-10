@@ -127,6 +127,7 @@ import type {
   LevelSetting,
   LiveMap,
   AdminHeatCell,
+  EtaAccuracy,
   LoginResponse,
   Mission,
   NotificationSetting,
@@ -838,6 +839,10 @@ export const getOverview = (country: CountryCode, period: StatsPeriod) =>
 // ------------------------------------------------------------ الخريطة الحيّة
 
 /** لـ`admin` وحده، ويُسجَّل من فتحها (القسم 13/1) — والخلفية هي من يفرض ذلك. */
+/** **دقّةُ وقت الوصول** (البند ١٢). */
+export const getEtaAccuracy = (country: CountryCode, days: number) =>
+  api.get<EtaAccuracy>("/admin/eta/accuracy", { query: { country_code: country, days } });
+
 /** **خريطةُ الطلب** (البند ١٨) — العددُ و«غيرُ المخدوم» لكلِّ خلية. */
 export const getAdminHeatmap = (country: CountryCode) =>
   api.get<AdminHeatCell[]>("/admin/heatmap", { query: { country_code: country } });

@@ -172,6 +172,13 @@ async def approach(session: AsyncSession, redis: Redis, *, ride: Ride) -> dict[s
         if route is None or not route.geometry:
             return None
         packed = _pack(route)
+    # **مصحَّحاً بالساعة واليوم** (البند ١٢، `eta_accuracy`) — وما قاله المزوّدُ يُحفظ معه ليُقاس عند الوصول
+    from app.services import eta_accuracy
+
+    now = datetime.now(UTC)
+    raw = float(packed["duration_min"])
+    packed["duration_min"] = round(raw * await eta_accuracy.factor(session, redis, ride.country_code, now), 2)
+    await eta_accuracy.remember_prediction(redis, ride.id, raw_min=raw, shown_min=packed["duration_min"], now=now)
     await redis.set(_approach_key(ride.id), json.dumps(packed), ex=APPROACH_TTL_S)
     return packed
 
@@ -225,7 +232,10 @@ async def nearest_minutes(
         if route is None:
             continue
         # **دقيقةٌ واحدةٌ حدٌّ أدنى** — «تصل خلال 0 د» تُقرأ عطباً لا وصولاً (قاعدةُ `lib/eta` في التطبيق)
-        value = max(1, math.ceil(float(route.duration_min)))
+        # **والتصحيحُ نفسُه** (البند ١٢) قبل الطلب كما بعده — رقمان يفترقان للاقتراب نفسِه يُقرأ أحدُهما كذباً
+        from app.services import eta_accuracy
+
+        value = max(1, math.ceil(float(route.duration_min) * await eta_accuracy.factor(session, redis, rider.country_code)))
         await redis.set(key, str(value), ex=NEAREST_TTL_S)
         minutes[category] = value
     return minutes

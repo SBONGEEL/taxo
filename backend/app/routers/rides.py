@@ -889,6 +889,10 @@ async def mark_arrived(
     ride = await rides_service.mark_arrived(
         session, await _assigned_ride(session, ride_id, driver)
     )
+    # **عيّنةُ دقّة وقت الوصول** (البند ١٢) — في المعاملة نفسِها، وفشلُها لا يُفشل الوصول
+    from app.services import eta_accuracy
+
+    await eta_accuracy.record_arrival(session, redis, ride)
     await session.commit()
     await notifications.publish_ride_event(
         session, redis, ride, events.RideEvent.DRIVER_ARRIVED

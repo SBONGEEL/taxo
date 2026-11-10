@@ -1024,6 +1024,17 @@ export interface LivePendingRide {
   is_test: boolean;
 }
 
+/** **دقّةُ وقت الوصول** (البند ١٢) — المتوقَّعُ مقابل الفعليّ؛ كلُّ رقمٍ من الخلفية. */
+export interface EtaAccuracy {
+  samples: number;
+  mean_abs_error_min: number | null;
+  within_two_min_percent: number | null;
+  /** موجبٌ = يصل الكبتنُ متأخّراً عمّا قيل */
+  bias_min: number | null;
+  raw_mean_abs_error_min: number | null;
+  by_hour: { hour: number; samples: number; mean_abs_error_min: number }[];
+}
+
 /** **خليةُ خريطة الطلب** (البند ١٨) — نحو كيلومتر، آخرَ نصف ساعة؛ ومركزُ الخلية لا موضعُ راكب. */
 export interface AdminHeatCell {
   lat: number;

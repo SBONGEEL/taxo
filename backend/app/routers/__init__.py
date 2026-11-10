@@ -6,6 +6,7 @@ from app.routers import (
     admin_countries,
     admin_exceptional,
     admin_heatmap,
+    admin_eta,
     emergency,
     admin_markets,
     admin_pricing_zones,
@@ -174,6 +175,7 @@ api_router.include_router(admin_countries.router)
 api_router.include_router(admin_markets.router)
 api_router.include_router(admin_exceptional.router)
 api_router.include_router(admin_heatmap.router)
+api_router.include_router(admin_eta.router)
 api_router.include_router(emergency.router)
 # **«مناطق التسعير»** (SPEC §٧٤-أ/٥) — الحدودُ ووسمُ «وعرة» ونسبتُها أو جدولُها؛ والكتابةُ كالتسعيرة
 api_router.include_router(admin_pricing_zones.router)

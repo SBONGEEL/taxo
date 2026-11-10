@@ -37,6 +37,8 @@ const UI_UNIONS = new Set([
   "FeedbackStatus",
   // **مرشِّحُ صفحة الطوارئ** (`screens/Emergencies.tsx`، البند ٧): «مفتوحة/عولجت/الكلّ» — و`all` معاملُ استعلامٍ (`Literal`) لا قيمةَ عمود
   "EmergencyFilter",
+  // **مدى «دقّة وقت الوصول»** (`screens/EtaAccuracy.tsx`، البند ١٢): ٧/٢٨/٩٠ يوماً — معاملُ استعلامٍ لا قيمةَ عمود
+  "EtaWindow",
   // حالُ الاشتراك الأربع تُشتق في `Subscription.tsx::stateOf` من
   // `is_active` و`days_remaining` و`coverage_until` — لا عمودَ لها
   "State",
