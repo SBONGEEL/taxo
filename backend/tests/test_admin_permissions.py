@@ -99,6 +99,8 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         # **قناةُ فيسبوك** (SPEC §٩٤/٢، 2026-11-04) — تسعَ عشرة، **والسابعةُ خارجَ افتراض `admin`**: النشرُ باسم الشركة ورسائلُ الصفحة
         "facebook.manage",
         "stats.view",
+        # **الاعتمادُ الاستثنائيّ** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — خارجَ افتراض `admin`: «صلاحيةٌ منفصلة، مطفأةٌ افتراضاً لغيره»
+        "drivers.exceptional",
     }
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == (
         permissions_service.ALL - permissions_service.SENSITIVE
@@ -112,6 +114,7 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         AdminPermission.GATEWAY_LEDGER_READ,
         AdminPermission.FACEBOOK_MANAGE,
         AdminPermission.STATS_VIEW,
+        AdminPermission.DRIVERS_EXCEPTIONAL,
     }
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
         AdminPermission.READ_ONLY,
