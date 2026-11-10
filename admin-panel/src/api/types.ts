@@ -1024,6 +1024,15 @@ export interface LivePendingRide {
   is_test: boolean;
 }
 
+/** **خليةُ خريطة الطلب** (البند ١٨) — نحو كيلومتر، آخرَ نصف ساعة؛ ومركزُ الخلية لا موضعُ راكب. */
+export interface AdminHeatCell {
+  lat: number;
+  lng: number;
+  requests: number;
+  /** ما انتهى «لم يُعثر على سائق» أو يبحث منذ أكثر من ثلاث دقائق — **المناطقُ غيرُ المغطّاة** */
+  unserved: number;
+}
+
 export interface LiveMap {
   drivers: LiveDriver[];
   pending_rides: LivePendingRide[];

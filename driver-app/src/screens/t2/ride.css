@@ -265,6 +265,21 @@
 }
 .t2-hm-traffic .t2-icon { font-size: 22px; }
 .t2-hm-traffic.on { border-color: transparent; background: var(--t2-accent); color: var(--t2-on-accent); }
+/* **خريطةُ الطلب** (البند ١٨) — تحت زرِّ الزحام بخطوة */
+.t2-hm-traffic.t2-hm-heat { top: calc(118px + env(safe-area-inset-top, 0px)); }
+.t2-hm-heat-note {
+  position: absolute;
+  top: calc(170px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  left: 16px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--t2-surface);
+  color: var(--t2-muted);
+  font-size: 13px;
+  text-align: center;
+}
 .t2-hm-tapcard {
   position: absolute;
   left: 16px;

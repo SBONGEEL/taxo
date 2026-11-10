@@ -61,6 +61,8 @@ import {
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
+import type { HeatPoint } from "@/lib/heat-layer";
+import { getHeatmap } from "@/api/endpoints";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
@@ -157,6 +159,29 @@ export function HomeT2Screen() {
     setTrafficLayer(next);
     setTraffic(next);
   };
+  // **خريطةُ الطلب** (البند ١٨، ٢٠٢٦-١١-١٠) — زرٌّ في الخريطة الموسَّعة؛ مشتعلاً تُجلب كلَّ دقيقة، ومطفأً لا نداء
+  const [heatOn, setHeatOn] = useState(false);
+  const [heat, setHeat] = useState<HeatPoint[] | null>(null);
+  const toggleHeat = () => setHeatOn(!heatOn);
+  useEffect(() => {
+    if (!heatOn) {
+      setHeat(null);
+      return;
+    }
+    let alive = true;
+    const load = () =>
+      getHeatmap()
+        .then((cells) => {
+          if (alive) setHeat(cells.map((cell) => ({ lat: cell.lat, lng: cell.lng, weight: cell.level / 3 })));
+        })
+        .catch(() => undefined);
+    void load();
+    const timer = window.setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [heatOn]);
   const [tapped, setTapped] = useState<Tapped | null>(null);
   const reading = useRef<AbortController | null>(null);
   const tapAt = useCallback(
@@ -368,6 +393,7 @@ export function HomeT2Screen() {
           t2
           routeTraveled={riding}
           traffic={traffic}
+          heat={mode === "home" && open ? heat : null}
           onTap={mode === "home" && open ? tapAt : null}
           tapPin={mode === "home" && open ? (tapped?.at ?? null) : null}
         />
@@ -394,6 +420,21 @@ export function HomeT2Screen() {
               >
                 <Icon name="traffic" />
               </button>
+            ) : null}
+            {open ? (
+              <button
+                type="button"
+                className={heatOn ? "t2-hm-traffic t2-hm-heat on" : "t2-hm-traffic t2-hm-heat"}
+                onClick={toggleHeat}
+                aria-pressed={heatOn}
+                aria-label={tr("خريطة الطلب")}
+                title={tr("خريطة الطلب")}
+              >
+                <Icon name="local_fire_department" />
+              </button>
+            ) : null}
+            {open && heatOn && heat !== null && heat.length === 0 ? (
+              <p className="t2-hm-heat-note">{tr("لا طلبَ مرتفعاً في مدينتك الآن")}</p>
             ) : null}
             {open && tapped ? <TapCard tapped={tapped} position={position} onClose={() => setTapped(null)} /> : null}
             <GoPill

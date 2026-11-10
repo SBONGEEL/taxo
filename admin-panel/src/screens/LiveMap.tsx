@@ -24,10 +24,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { getLiveMap } from "@/api/endpoints";
-import type { LiveDriver, LiveMap, LivePendingRide } from "@/api/types";
+import { getAdminHeatmap, getLiveMap } from "@/api/endpoints";
+import type { AdminHeatCell, LiveDriver, LiveMap, LivePendingRide } from "@/api/types";
 import { LiveCanvas } from "@/components/LiveCanvas";
 import { Shell } from "@/components/Shell";
+import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -68,6 +69,28 @@ export function LiveMapScreen() {
   const [freshAt, setFreshAt] = useState<Date | null>(null);
   const timer = useRef<number | null>(null);
 
+  // **خريطةُ الطلب** (البند ١٨، ٢٠٢٦-١١-١٠) — مطفأةٌ افتراضاً؛ مشتعلةً تُجلب كلَّ دقيقة. **والعددُ هنا لا المستوى**: اللوحةُ ترى
+  // ما يُخفى عن السائق، ومعه «غيرُ المخدوم» — أين طلب الناسُ ولم يجدوا أحداً
+  const [heatOn, setHeatOn] = useState(false);
+  const [heat, setHeat] = useState<AdminHeatCell[] | null>(null);
+  useEffect(() => {
+    setHeat(null);
+    if (!heatOn) return;
+    let alive = true;
+    const pull = () =>
+      getAdminHeatmap(country)
+        .then((cells) => {
+          if (alive) setHeat(cells);
+        })
+        .catch(() => undefined);
+    void pull();
+    const every = window.setInterval(() => void pull(), 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(every);
+    };
+  }, [heatOn, country]);
+
   const load = useCallback(async () => {
     try {
       setData(await getLiveMap(country));
@@ -105,6 +128,9 @@ export function LiveMapScreen() {
   const free = street.filter((row) => !row.on_ride).length;
   const waiting = pending.filter((ride) => !ride.is_test).length;
   const testing = drivers.length - street.length;
+  const peak = heat && heat.length > 0 ? Math.max(...heat.map((cell) => cell.requests)) : 1;
+  const heatPoints = heat ? heat.map((cell) => ({ lat: cell.lat, lng: cell.lng, weight: cell.requests / peak })) : null;
+  const uncovered = (heat ?? []).filter((cell) => cell.unserved > 0).sort((a, b) => b.unserved - a.unserved).slice(0, 8);
 
   return (
     <Shell
@@ -149,6 +175,7 @@ export function LiveMapScreen() {
               pendingRides={pending}
               selected={selected}
               onSelect={(id) => setSelected(id === selected ? null : id)}
+              heat={heatOn ? heatPoints : null}
             />
           </div>
 
@@ -159,6 +186,43 @@ export function LiveMapScreen() {
               <Tally label="بانتظار سائق" value={waiting} warn={waiting > 0} />
               {testing > 0 ? <Tally label="تجربة" value={testing} /> : null}
             </div>
+
+            <Button
+              size="sm"
+              variant={heatOn ? "primary" : "secondary"}
+              aria-pressed={heatOn}
+              onClick={() => setHeatOn(!heatOn)}
+            >
+              <Icon name="local_fire_department" />
+              {heatOn ? "إخفاء خريطة الطلب" : "خريطة الطلب — آخر 30 دقيقة"}
+            </Button>
+
+            {heatOn && heat !== null ? (
+              <Section title="مناطق طلبٌ فيها بلا سائق">
+                {uncovered.length === 0 ? (
+                  <Empty text="كلُّ طلبٍ في آخر 30 دقيقة وجد سائقاً." />
+                ) : (
+                  uncovered.map((cell) => (
+                    <a
+                      key={`${cell.lat},${cell.lng}`}
+                      className="ad-live-row wait"
+                      href={`https://www.google.com/maps?q=${cell.lat},${cell.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="ad-live-row-top">
+                        <span className="ad-live-row-name">
+                          {digits(String(cell.unserved))} بلا سائق من {digits(String(cell.requests))} طلب
+                        </span>
+                      </span>
+                      <span className="ad-live-row-line ad-ltr" dir="ltr">
+                        {digits(`${cell.lat.toFixed(2)}, ${cell.lng.toFixed(2)}`)}
+                      </span>
+                    </a>
+                  ))
+                )}
+              </Section>
+            ) : null}
 
             <Section title="طلبات بانتظار سائق">
               {pending.length === 0 ? (

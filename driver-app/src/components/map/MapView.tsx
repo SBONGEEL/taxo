@@ -47,6 +47,7 @@ import {
   selfMarkerElement,
 } from "@/lib/skin-marker";
 import { trimRoute } from "@/lib/route-line";
+import { drawHeat, type HeatPoint } from "@/lib/heat-layer";
 import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
 import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
@@ -99,6 +100,8 @@ interface Props {
   routeTraveled?: boolean;
   /** **طبقةُ الزحام** (§٦٢-ج/٤٨) — تفضيلُ الجهاز (`driving-prefs`)؛ مع `t2` وحدَه. */
   traffic?: boolean;
+  /** **خريطةُ الطلب** (البند ١٨) — نقاطٌ موزونةٌ من `/drivers/me/heatmap`، و`null` لا طبقة. مع `t2` وحدَه. */
+  heat?: HeatPoint[] | null;
   /** **النقرُ على الخريطة** (بطاقةُ النقر، §٦٢-ج/٤٨) — يُمرَّر حيث يُقصد وحدَه (الخريطةُ الموسَّعة)؛ مع `t2` وحدَه. */
   onTap?: ((at: Coordinates) => void) | null;
   /** دبوسُ النقطة المنقورة — حتى تُغلق بطاقتُها. */
@@ -282,6 +285,7 @@ export function MapView({
   t2 = false,
   routeTraveled = false,
   traffic = false,
+  heat = null,
   onTap = null,
   tapPin = null,
 }: Props) {
@@ -298,6 +302,8 @@ export function MapView({
   // **التفضيلُ والنقرُ بمرجعين** — يقرؤهما مُعالِجا الخريطة المسجَّلان مرّةً عند البناء، فلا تُجمَّد أوّلُ قيمة
   const trafficRef = useRef(traffic);
   trafficRef.current = traffic;
+  const heatRef = useRef(heat);
+  heatRef.current = heat;
   const onTapRef = useRef(onTap);
   onTapRef.current = onTap;
   const tapMarker = useRef<mapboxgl.Marker | null>(null);
@@ -364,6 +370,7 @@ export function MapView({
         }
         // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ
         if (host.current && trafficRef.current) addTraffic(instance, host.current);
+        if (heatRef.current) drawHeat(instance, heatRef.current);
       });
       // **النقرُ يُسأل عنه المرجعُ ساعتَه**: من لم يمرّر `onTap` (الخريطةُ الصغيرة والرحلة) لا تقع نقرتُه على شيء
       instance.on("click", (event) => {
@@ -407,6 +414,15 @@ export function MapView({
     if (instance.isStyleLoaded()) apply();
     else instance.once("idle", apply);
   }, [traffic, t2]);
+
+  // **خريطةُ الطلب تتبع ما يصل** (البند ١٨) — وبالتأجيل نفسِه إلى أوّل سكونٍ إن لم يكتمل الستايل
+  useEffect(() => {
+    const instance = map.current;
+    if (!t2 || !instance) return;
+    const apply = () => drawHeat(instance, heat);
+    if (instance.isStyleLoaded()) apply();
+    else instance.once("idle", apply);
+  }, [heat, t2]);
 
   // **دبوسُ النقطة المنقورة** — دائرةٌ بالجمر بحافّة الدبوسين، ويُرفع بإغلاق بطاقتها
   useEffect(() => {

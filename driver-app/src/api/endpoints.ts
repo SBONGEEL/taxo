@@ -296,6 +296,9 @@ export const getDemand = () => api.get<{ high: boolean }>("/drivers/me/demand");
 export const getEarnings = (period: "today" | "week" | "month") =>
   api.get<Earnings>("/drivers/me/earnings", { query: { period } });
 
+/** **خريطةُ الطلب** (البند ١٨) — خلايا بنحو كيلومترٍ آخرَ نصف ساعة، **بمستوىً ١…٣ لا عدد**. */
+export const getHeatmap = () => api.get<{ lat: number; lng: number; level: number }[]>("/drivers/me/heatmap");
+
 /** **ملخّصُ الأسبوع الماضي** (البند ١٧) — سبعةُ أيامٍ كاملةٍ تنتهي بأمس، ومقارنتُها بالسبعة قبلها. */
 export const getWeeklyDigest = () => api.get<WeeklyDigest>("/drivers/me/earnings/weekly");
 

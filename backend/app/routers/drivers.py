@@ -231,6 +231,22 @@ async def my_demand(
     )
 
 
+class HeatCellOut(BaseModel):
+    lat: float
+    lng: float
+    #: ١ خفيف · ٢ متوسّط · ٣ مرتفع — **مستوىً لا عدد**
+    level: int
+
+
+@router.get("/me/heatmap", response_model=list[HeatCellOut])
+async def my_heatmap(driver: CurrentDriver, user: CurrentUser, session: DbSession) -> list[HeatCellOut]:
+    """**خريطةُ الطلب** (البند ١٨، ٢٠٢٦-١١-١٠) — خلايا بنحو كيلومترٍ في سوقه وعالمِه، آخرَ نصف ساعة، **بمستوىً لا عدد**."""
+    from app.services import heatmap
+
+    found = await heatmap.cells(session, country=user.country_code, now=datetime.now(UTC), test=user.is_test)
+    return [HeatCellOut(lat=lat, lng=lng, level=level) for lat, lng, level in heatmap.levels_for_driver(found)]
+
+
 @router.get("/me/earnings", response_model=EarningsOut)
 async def my_earnings(
     driver: CurrentDriver,

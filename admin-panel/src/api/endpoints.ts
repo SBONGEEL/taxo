@@ -126,6 +126,7 @@ import type {
   LevelOverview,
   LevelSetting,
   LiveMap,
+  AdminHeatCell,
   LoginResponse,
   Mission,
   NotificationSetting,
@@ -837,6 +838,10 @@ export const getOverview = (country: CountryCode, period: StatsPeriod) =>
 // ------------------------------------------------------------ الخريطة الحيّة
 
 /** لـ`admin` وحده، ويُسجَّل من فتحها (القسم 13/1) — والخلفية هي من يفرض ذلك. */
+/** **خريطةُ الطلب** (البند ١٨) — العددُ و«غيرُ المخدوم» لكلِّ خلية. */
+export const getAdminHeatmap = (country: CountryCode) =>
+  api.get<AdminHeatCell[]>("/admin/heatmap", { query: { country_code: country } });
+
 export const getLiveMap = (country: CountryCode) =>
   api.get<LiveMap>("/admin/live/map", { query: { country_code: country } });
 

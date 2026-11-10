@@ -39,6 +39,7 @@ import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import type { LiveDriver, LivePendingRide } from "@/api/types";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, taxoLook } from "@/lib/taxo-map";
 import { useTheme } from "@/lib/theme";
+import { drawHeat, type HeatPoint } from "@/lib/heat-layer";
 
 interface Props {
   token: string | null;
@@ -47,6 +48,8 @@ interface Props {
   pendingRides: LivePendingRide[];
   selected: string | null;
   onSelect: (driverId: string | null) => void;
+  /** **خريطةُ الطلب** (البند ١٨) — نقاطٌ موزونة، و`null` لا طبقة. */
+  heat?: HeatPoint[] | null;
 }
 
 /** غلافُ العلامة **يملكه mapbox**، والشكلُ في ابنٍ داخله.
@@ -101,6 +104,7 @@ export function LiveCanvas({
   pendingRides,
   selected,
   onSelect,
+  heat = null,
 }: Props) {
   const holder = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -109,6 +113,8 @@ export function LiveCanvas({
   const { dark } = useTheme();
   // **الستايلُ المعروضُ الآن** — يُقارَن به قبل التبديل (تحت)
   const shown = useRef<string | null>(null);
+  const heatRef = useRef(heat);
+  heatRef.current = heat;
 
   useEffect(() => {
     if (!token || !holder.current || map.current) return;
@@ -126,7 +132,11 @@ export function LiveCanvas({
     });
     map.current = instance;
     // **صبغُ «TaxoMap» مع كلِّ ستايلٍ يُحمَّل** — تبديلُ المظهر يمسح الصبغَ كما يمسح الطبقات
-    instance.on("style.load", () => taxoLook(instance, host));
+    instance.on("style.load", () => {
+      taxoLook(instance, host);
+      // **وخريطةُ الطلب تعود مع كلِّ ستايل** — تبديلُ السمة يمسحها كما يمسح الصبغ
+      if (heatRef.current) drawHeat(instance, heatRef.current);
+    });
     return () => {
       map.current?.remove();
       map.current = null;
@@ -150,6 +160,14 @@ export function LiveCanvas({
     // الافتراضيّ، **فالتحويلُ هنا لا قيمةٌ مخترعة**
     instance.setStyle(style, { diff: false } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    const apply = () => drawHeat(instance, heat);
+    if (instance.isStyleLoaded()) apply();
+    else instance.once("idle", apply);
+  }, [heat]);
 
   useEffect(() => {
     const instance = map.current;
