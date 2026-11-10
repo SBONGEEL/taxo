@@ -600,6 +600,7 @@ export type FeatureKey =
   | "weekly_cashback_enabled"
   | "work_hours_enabled"
   | "driver_map_nearby_enabled"
+  | "voice_order_enabled"
   // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
   | "unconfirmed_payments_enabled"
   | "cash_auto_confirm_enabled"

@@ -18,6 +18,8 @@ import type { CountryCode, Coordinates } from "@/api/types";
 import { searchMapPlaces } from "@/api/endpoints";
 import { mergeSearch, searchPlaces, type Place } from "@/lib/geocode";
 import { useMapPlaces } from "@/lib/map-labels";
+import { useFeature } from "@/lib/config";
+import { listen, VOICE_FLAG, voiceAvailable } from "@/lib/voice-input";
 import { usePlaces } from "@/lib/places";
 import { DrawerT2 } from "@/screens/t2/DrawerT2";
 import { BlankT2, LoaderT2 } from "@/screens/t2/KitT2";
@@ -67,11 +69,30 @@ export function DestinationSearch({
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
   const typing = query.trim().length >= 2;
+  // **الطلبُ بالصوت** (البند ١٠) — مفتاحُ السوق وغلافٌ يحمل الملحق
+  const voiceOn = useFeature(country, VOICE_FLAG) && voiceAvailable();
+  const [listening, setListening] = useState(false);
+  const [heard, setHeard] = useState<string | null>(null);
+  const speak = async () => {
+    setListening(true);
+    try {
+      const text = await listen(country, tr("إلى أين؟"));
+      if (text) {
+        setQuery(text);
+        setHeard(text);
+      }
+    } catch {
+      // لا خدمةَ تعرّفٍ في الهاتف — الكتابةُ باقية
+    } finally {
+      setListening(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setResults([]);
+      setHeard(null);
       return;
     }
   }, [open]);
@@ -117,6 +138,17 @@ export function DestinationSearch({
         />
         {searching ? <LoaderT2 small /> : null}
       </label>
+
+      {/* **زرُّ الميكروفون الكبير** (البند ١٠) — ما يُقال يُكتب في البحث، والوجهةُ تُختار من النتائج وتُؤكَّد في الورقة */}
+      {voiceOn ? (
+        <button type="button" className="t2-dest-voice" onClick={() => void speak()} disabled={listening}>
+          <Icon name="mic" fill />
+          <span>{listening ? tr("يستمع…") : tr("قل وجهتك بصوتك")}</span>
+        </button>
+      ) : null}
+      {heard && heard === query ? (
+        <p className="t2-dest-heard">{tr("سمعنا «{0}» — اختر وجهتك من النتائج", { 0: heard })}</p>
+      ) : null}
 
       {onPickOnMap ? (
         <button

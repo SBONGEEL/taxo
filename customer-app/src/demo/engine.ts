@@ -78,6 +78,7 @@ const DEMO_FEATURES: Record<string, boolean> = {
   payment_requests_enabled: true,
   promo_codes_enabled: false,
   ride_code_enabled: false,
+  voice_order_enabled: false,
   ride_calls_enabled: false,
   delivery_enabled: false,
   unconfirmed_payments_enabled: false,

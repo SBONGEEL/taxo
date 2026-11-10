@@ -1650,5 +1650,8 @@
  "نقطة التقاط أسهل: «{name}» على بُعد {m} م": "Point de prise en charge plus simple : « {name} » à {m} m",
  "يلتقي الركّابُ عادةً على بُعد {m} م من دبّوسك": "Les passagers sont généralement pris en charge à {m} m de votre repère",
  "استعملها": "L'utiliser",
- "أبقِ دبّوسي": "Garder mon repère"
+ "أبقِ دبّوسي": "Garder mon repère",
+ "يستمع…": "À l'écoute…",
+ "قل وجهتك بصوتك": "Dites votre destination",
+ "سمعنا «{0}» — اختر وجهتك من النتائج": "Nous avons entendu « {0} » — choisissez votre destination dans les résultats"
 }
