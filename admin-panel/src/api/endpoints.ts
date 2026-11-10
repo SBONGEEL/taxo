@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  RiderPlan,
   PriceExperiment,
   DriverGoal, FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
@@ -2727,3 +2728,21 @@ export const createPriceExperiment = (
 ) => api.post<PriceExperiment>(`/admin/price-experiments?country_code=${country}`, payload);
 export const movePriceExperiment = (id: string, action: "start" | "stop" | "apply" | "cancel") =>
   api.post<PriceExperiment>(`/admin/price-experiments/${id}/${action}`, {});
+
+/** **خططُ اشتراك الركّاب** (البند ١٣) */
+export const listRiderPlans = (country: CountryCode) => api.get<RiderPlan[]>(`/admin/rider-plans?country_code=${country}`);
+export const createRiderPlan = (
+  country: CountryCode,
+  payload: {
+    name: string;
+    days: number;
+    price: string;
+    discount_percent: string;
+    per_ride_cap: string;
+    monthly_cap: string;
+    terms: string | null;
+    bearer: "taxo" | "captain";
+  },
+) => api.post<RiderPlan>(`/admin/rider-plans?country_code=${country}`, payload);
+export const setRiderPlanActive = (id: string, isActive: boolean) =>
+  api.patch<RiderPlan>(`/admin/rider-plans/${id}`, { is_active: isActive });

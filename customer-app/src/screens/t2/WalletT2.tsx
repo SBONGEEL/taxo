@@ -81,6 +81,7 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — نارُ سلسلته في الرئيسية نفسُها
   cashback: "local_fire_department",
   goal_reward: "trophy",
+  rider_plan_payment: "card_membership",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
   taxo_card: "confirmation_number",
 };
@@ -130,6 +131,8 @@ export function WalletT2Screen() {
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
   const payRequests = country?.features.payment_requests_enabled === true;
+  // **«اشتراكي»** (البند ١٣) — حيث مفتاحُه مشتعل
+  const plansEnabled = country?.features.rider_plans_enabled === true;
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
@@ -204,6 +207,12 @@ export function WalletT2Screen() {
               <span className="t2-icon" aria-hidden="true">add</span>
               {tr("شحن الرصيد")}
             </button>
+            {plansEnabled ? (
+              <button type="button" className="t2-btn ghost" onClick={() => navigate("/plans")}>
+                <span className="t2-icon" aria-hidden="true">card_membership</span>
+                {tr("اشتراكي")}
+              </button>
+            ) : null}
             {transferEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/wallet/transfer")}>
                 <span className="t2-icon" aria-hidden="true">sync_alt</span>

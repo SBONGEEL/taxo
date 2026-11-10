@@ -603,6 +603,7 @@ export type FeatureKey =
   | "voice_order_enabled"
   | "driver_goals_enabled"
   | "price_experiments_enabled"
+  | "rider_plans_enabled"
   // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
   | "unconfirmed_payments_enabled"
   | "cash_auto_confirm_enabled"
@@ -1283,6 +1284,7 @@ export type WalletTransactionType =
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
   | "cashback"
   | "goal_reward"
+  | "rider_plan_payment"
   // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّينُ بكليك أو السلفة) يعود إلى محفظة الكبتن قيداً صريحاً، **ومعه صفٌّ في سجلّ
   // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
   | "rounding"
@@ -3605,4 +3607,25 @@ export interface PriceExperiment {
     cancel_percent: number | null;
     average_fare: string | null;
   }[];
+}
+
+/** **من يتحمّل خصمَ اشتراك الراكب** — مرآةُ `RiderPlanBearer` */
+export type RiderPlanBearer = "taxo" | "captain";
+
+/** **خطّةُ اشتراك الراكب** (البند ١٣، §٩٧/١٣) — والمشتركون والإيرادُ والخصمُ من الخلفية. */
+export interface RiderPlan {
+  id: string;
+  country_code: CountryCode;
+  name: string;
+  days: number;
+  price: string;
+  discount_percent: string;
+  per_ride_cap: string;
+  monthly_cap: string;
+  terms: string | null;
+  bearer: RiderPlanBearer;
+  is_active: boolean;
+  active_subscribers: number;
+  revenue: string;
+  discounts: string;
 }

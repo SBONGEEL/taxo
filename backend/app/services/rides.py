@@ -1017,6 +1017,15 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
     from app.services import sharing as sharing_service
 
     discounts: list[Payment] = []
+    # **خصمُ اشتراك الراكب** (§٩٧/١٣) — تحت قفل صفِّ الاشتراك بعد صفِّ الرحلة وقبل الدفعة، **ولا يجتمع مع كوبونٍ ولا مشاركة**.
+    # TAXO تتحمّله ⇐ صفُّ `promo` يُسوّى مع الصفّين أدناه؛ الكبتنُ ⇐ الأجرةُ نقصت بسطرها ولا صفّ
+    from app.services import rider_plans
+
+    plan_discount = await rider_plans.apply_on_completion(session, ride)
+    rider = None
+    if plan_discount is not None:
+        rider = await session.get(User, ride.rider_id)
+        discounts.append(plan_discount)
     if ride.promo_code_id is not None or ride.share_discount_percent_at_ride > 0:
         rider = await session.get(User, ride.rider_id)
         if rider is not None:

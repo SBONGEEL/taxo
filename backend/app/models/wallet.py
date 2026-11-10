@@ -98,6 +98,8 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.COMMUTE_PREPAY,
     # **المقعدُ مدينٌ بلا دائن** — يحفظه TAXO حتى الإنهاء أو الردّ
     WalletTransactionType.INTERCITY_HOLD,
+    # **ثمنُ اشتراك الراكب** (§٩٧/١٣) — مدينٌ بلا دائن، والمالُ إلى TAXO
+    WalletTransactionType.RIDER_PLAN_PAYMENT,
 )
 
 # `adjustment` يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص. **و`rounding` معه** (SPEC §٧٠-ج/٦، الترحيلة `0104`):
