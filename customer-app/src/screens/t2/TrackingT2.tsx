@@ -42,6 +42,9 @@ import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { PauseNotice } from "@/components/ride/PauseNotice";
 import { StopProgress } from "@/components/ride/StopProgress";
 import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
+import { EmergencyRowT2 } from "@/components/ride/EmergencyT2";
+import { createTrackLink } from "@/api/endpoints";
+import { trackUrl } from "@/lib/for-other";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
@@ -157,7 +160,15 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   const [pickingPay, setPickingPay] = useState(false);
 
   const share = async () => {
-    const shared = await shareRide(ride);
+    // **رابطٌ حيٌّ لا نصٌّ ساكن** (البند ٧، ٢٠٢٦-١١-١٠) — من يفتحه يرى السيارةَ تتحرّك واسمَ الكبتن الأوّلَ ولوحتَه، ويتوقّف بانتهاء
+    // الرحلة. **وتعذُّرُه لا يُسقط المشاركة**: النصُّ القديمُ (الكبتن واللوحة والوجهة) يُرسل وحدَه
+    let live: string | null = null;
+    try {
+      live = trackUrl((await createTrackLink(ride.id)).token);
+    } catch {
+      live = null;
+    }
+    const shared = await shareRide(ride, live);
     if (!shared) {
       t.setCopied(true);
       window.setTimeout(() => t.setCopied(false), 2_500);
@@ -442,6 +453,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
         {skinRow}
         {shareRow}
+        <EmergencyRowT2 rideId={ride.id} country={ride.country_code} />
         {/* **«مدفوعة من اشتراكك» مكانَ صفِّ الدفع** (§٦٣-ج/٦) — صفٌّ يُقرأ ولا يُضغط: لا قناةَ تُبدَّل */}
         {commute ? (
           <div className="t2-trk-rowbtn" role="note">
@@ -549,6 +561,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
       <PauseNotice ride={ride} />
       <div className="t2-trk-gap" />
       {shareRow}
+      {driver ? <EmergencyRowT2 rideId={ride.id} country={ride.country_code} /> : null}
       <ErrorNote message={t.error} className="t2-error" />
     </SheetT2>
   );

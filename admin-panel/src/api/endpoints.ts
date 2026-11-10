@@ -8,6 +8,7 @@ import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
+import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2618,3 +2619,19 @@ export async function facebookMediaBlob(id: string, index: number): Promise<stri
 
 export const siteStatsReport = (days: number) => api.get<SiteStatsReport>(`/admin/stats/report?days=${days}`);
 export const importPlayStats = () => api.post<{ rows: number }>("/admin/stats/import-play");
+
+// ═════════════════════════ الطوارئُ وأرقامُ التواصل (البندان ٧ و٨، ٢٠٢٦-١١-١٠)
+
+export const listEmergencies = (status: "open" | "handled" | "all" = "open") =>
+  api.get<EmergencyRow[]>("/admin/emergencies", { query: { status } });
+
+export const handleEmergency = (id: string, note: string) =>
+  api.post<void>(`/admin/emergencies/${id}/handle`, { note });
+
+export const getSupportSettings = (country: CountryCode) =>
+  api.get<SupportContacts>(`/admin/support-settings/${country}`);
+
+export const saveSupportSettings = (
+  country: CountryCode,
+  body: { emergency_number: string | null; whatsapp_number: string | null },
+) => api.put<SupportContacts>(`/admin/support-settings/${country}`, body);

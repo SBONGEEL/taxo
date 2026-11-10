@@ -25,6 +25,8 @@ import { useGarage } from "@/lib/garage";
 import { forDisplay } from "@/lib/phone";
 import { BecomeRiderButton } from "@/components/t2/BecomeButton";
 import { useSession } from "@/lib/session";
+import { useSupportWhatsapp } from "@/lib/support";
+import { AppLauncher } from "@capacitor/app-launcher";
 import { DISPLAY_LOCALE, digits, ratedAverage } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -51,6 +53,7 @@ export function AccountScreen() {
   const { profile } = useDriver();
   const { signOut } = useSession();
   const country = useCountryConfig(profile?.user.country_code);
+  const whatsapp = useSupportWhatsapp(profile?.user.country_code);
   const womenService = useFeature(
     profile?.user.country_code,
     "women_service_enabled",
@@ -323,6 +326,15 @@ export function AccountScreen() {
           sub={tr("رمزك ومن سجّل به")}
           onClick={() => navigate("/account/referrals")}
         />
+        {/* **«تواصل معنا» على واتساب** (البند ٨، ٢٠٢٦-١١-١٠) — رقمُ دولتك من اللوحة، وبلا رقمٍ لا صفّ */}
+        {whatsapp ? (
+          <Row
+            icon="chat"
+            label={tr("تواصل معنا على واتساب")}
+            sub={tr("فريقُ الدعم يردّ عليك هناك")}
+            onClick={() => void AppLauncher.openUrl({ url: whatsapp }).catch(() => undefined)}
+          />
+        ) : null}
         {/* **«أرسل ملاحظة»** (SPEC §٧٦/٤) — رأيٌ أو خللٌ يصل الفريقَ مباشرةً، ومعه إصدارُ التطبيق */}
         <Row
           icon="rate_review"

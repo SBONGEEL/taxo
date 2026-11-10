@@ -17,6 +17,8 @@ import { getSiteHelp } from "@/api/endpoints";
 import type { FaqItem } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { openAppTour } from "@/lib/app-tour";
+import { useSession } from "@/lib/session";
+import { useSupportWhatsapp } from "@/lib/support";
 
 import "@/taxo2";
 import "./t2.css";
@@ -60,6 +62,9 @@ export function HelpT2Screen() {
   useEffect(load, [load]);
 
   const mail = help?.email ? `mailto:${help.email}` : null;
+  const { user } = useSession();
+  // **«تواصل معنا» على واتساب** (البند ٨) — رقمُ دولتك من اللوحة، وبلا رقمٍ لا زرّ
+  const whatsapp = useSupportWhatsapp(user?.country_code);
 
   return (
     <div className="t2 t2-page t2-account t2-help pb-nav" aria-busy={loading}>
@@ -89,6 +94,26 @@ export function HelpT2Screen() {
             {tr("أعد المحاولة")}
           </button>
         </>
+      ) : null}
+
+      {whatsapp ? (
+        <a
+          className="t2-help-mail"
+          href={whatsapp}
+          onClick={(event) => {
+            event.preventDefault();
+            void AppLauncher.openUrl({ url: whatsapp }).catch(() => undefined);
+          }}
+        >
+          <span className="t2-help-mail-icon" aria-hidden="true">
+            <span className="t2-icon fill">chat</span>
+          </span>
+          <span className="t2-help-mail-main">
+            <span className="t2-help-mail-title">{tr("تواصل معنا على واتساب")}</span>
+            <span className="t2-help-mail-address">{tr("فريقُ الدعم يردّ عليك هناك")}</span>
+          </span>
+          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+        </a>
       ) : null}
 
       {mail ? (

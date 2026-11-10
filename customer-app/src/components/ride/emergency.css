@@ -1,0 +1,33 @@
+/* زرُّ الطوارئ (البند ٧، ٢٠٢٦-١١-١٠) — صفٌّ أحمرُ يفتح لوحةً بأمرين */
+.t2-sos { margin-bottom: 8px; }
+.t2-sos .t2-sos-row { margin-bottom: 0; color: #c62828; }
+.t2-sos .t2-sos-row > .t2-icon { color: #c62828; }
+.t2-sos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(198, 40, 40, 0.08);
+}
+.t2-sos-alert,
+.t2-sos-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.t2-sos-alert { background: #c62828; color: #fff; }
+.t2-sos-alert:disabled { opacity: 0.7; cursor: default; }
+.t2-sos-call { background: var(--t2-surface); color: #c62828; }
+.t2-sos-sent { margin: 0; font-size: 14px; font-weight: 700; color: #1b5e20; text-align: center; }
+.t2-sos-error { margin: 0; font-size: 13px; color: #c62828; }

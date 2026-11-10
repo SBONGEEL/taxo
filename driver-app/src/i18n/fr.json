@@ -1832,5 +1832,13 @@
  "المحصَّل − العمولة": "Encaissé − commission",
  "حركة المحفظة:": "Mouvement du portefeuille :",
  "رمز الدعوة (اختياري)": "Code de parrainage (facultatif)",
- "إن دعاك صديق": "Si un ami vous a invité"
+ "إن دعاك صديق": "Si un ami vous a invité",
+ "طوارئ": "Urgence",
+ "نبّه فريق TAXO الآن": "Alerter l’équipe TAXO maintenant",
+ "وصل التنبيه — فريق TAXO يتابع رحلتك الآن.": "Alerte reçue — l’équipe TAXO suit votre course.",
+ "اتّصل بالطوارئ": "Appeler les urgences",
+ "تعذّر إرسال التنبيه — اتّصل بالطوارئ مباشرة": "Impossible d’envoyer l’alerte — appelez directement les urgences",
+ "تابع رحلتي مباشرةً: {0}": "Suivez ma course en direct : {0}",
+ "تواصل معنا على واتساب": "Contactez-nous sur WhatsApp",
+ "فريقُ الدعم يردّ عليك هناك": "L’équipe d’assistance vous répond là-bas"
 }

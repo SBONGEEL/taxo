@@ -151,6 +151,9 @@ const RidersScreen = lazy(() =>
 const PhotoReportsScreen = lazy(() =>
   import("@/screens/PhotoReports").then((m) => ({ default: m.PhotoReports })),
 );
+const EmergenciesScreen = lazy(() =>
+  import("@/screens/Emergencies").then((m) => ({ default: m.EmergenciesScreen })),
+);
 const FeedbackScreen = lazy(() =>
   import("@/screens/Feedback").then((m) => ({ default: m.FeedbackScreen })),
 );
@@ -691,6 +694,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PhotoReportsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/emergencies"
+                    element={
+                      <Guarded>
+                        <EmergenciesScreen />
                       </Guarded>
                     }
                   />

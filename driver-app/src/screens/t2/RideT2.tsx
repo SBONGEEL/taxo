@@ -45,6 +45,7 @@ import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { HourlyCashCardT2, HourlyMeterT2, HourlyPlanT2, noDestination } from "@/screens/t2/HourlyT2";
 import { RecipientRowT2, RefuseParcelButtonT2, RefuseParcelSheetT2 } from "@/screens/t2/ParcelT2";
 import { CommsButtonsT2 } from "@/screens/t2/CommsT2";
+import { EmergencyRowT2 } from "@/components/ride/EmergencyT2";
 import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 interface Props {
@@ -251,6 +252,8 @@ export function RideT2({
 
         {/* **«رسالة» و«اتصال»** (§٦٦) — مع الراكب ما دامت الرحلةُ جارية، ويغيبان بانتهائها. **ولا رقمَ يُرى** في أيِّهما */}
         <CommsButtonsT2 />
+        {/* **طوارئ** (البند ٧، ٢٠٢٦-١١-١٠) — تنبيهُ فريق TAXO واتّصالٌ برقم طوارئ الدولة */}
+        <EmergencyRowT2 rideId={ride.id} country={ride.country_code} />
 
         {/* **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ بزرِّ الاتصال، وسطرُ الدافع — **و«لا تستلم شيئاً» مُبرَزة** */}
         {ride.for_other ? (

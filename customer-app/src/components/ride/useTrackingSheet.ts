@@ -42,11 +42,13 @@ const MALE_MISMATCH_LABEL = tr("الكبتن ليس ذكراً — عدم تطا
  * يتحقق من ملكيتها (القسم 14). فالمشاركة تحمل ما يطمئن المنتظِر فعلاً: اسم
  * الكبتن ولوحته والوجهة على الخريطة.
  */
-export async function shareRide(ride: Ride) {
+export async function shareRide(ride: Ride, live: string | null = null) {
   const destination = `https://maps.google.com/?q=${ride.dropoff.lat},${ride.dropoff.lng}`;
   const vehicle = ride.driver?.vehicle;
   const lines = [
     tr("أنا الآن في رحلة TAXO."),
+    // **الرابطُ الحيّ أوّلاً** (البند ٧) — يتابع منه من ينتظرك السيارةَ على الخريطة حتى تصل
+    live ? tr("تابع رحلتي مباشرةً: {0}", { 0: live }) : null,
     ride.driver ? tr("الكبتن: {0}", { 0: ride.driver.name }) : null,
     vehicle ? tr("المركبة: {0} {1} — لوحة {2}", { 0: vehicle.make, 1: vehicle.model, 2: vehicle.plate_number }) : null,
     tr("الوجهة: {0}", { 0: ride.dropoff_address ?? destination }),
@@ -54,7 +56,7 @@ export async function shareRide(ride: Ride) {
 
   const text = lines.join("\n");
   if (navigator.share) {
-    await navigator.share({ title: tr("رحلتي على TAXO"), text, url: destination }).catch(
+    await navigator.share({ title: tr("رحلتي على TAXO"), text, url: live ?? destination }).catch(
       () => undefined,
     );
     return true;

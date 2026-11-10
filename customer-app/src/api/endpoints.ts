@@ -958,3 +958,19 @@ export const receiptLink = (requestId: string) =>
 /** **متابعةٌ في دولةٍ غيرِ نشطة** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — تُعدّ ويُجاب نصُّ حالها. **الدولةُ وحدَها، لا رقم.** */
 export const signupAttempt = (country: string) =>
   api.post<{ state: string; message: string | null }>("/auth/signup-attempts", { country }, { anonymous: true });
+
+// ------------------------------------------------------- الطوارئُ وأرقامُ التواصل (البندان ٧ و٨، ٢٠٢٦-١١-١٠)
+
+export interface SupportContacts {
+  country_code: CountryCode;
+  emergency_number: string | null;
+  whatsapp_number: string | null;
+}
+
+/** **ضغطةُ «نبّه فريق TAXO»** — تنبيهٌ عاجلٌ في اللوحة بالموقع والطرفين. **وضغطتان في عشر دقائقَ حالةٌ واحدة** في الخلفية. */
+export const pressEmergency = (body: { app: "rider" | "driver"; ride_id?: string; lat?: number; lng?: number }) =>
+  api.post<{ id: string; emergency_number: string | null; created_at: string }>("/emergency", body);
+
+/** **رقمُ طوارئ الدولة وواتسابُ الدعم** — بلا دخول: «تواصل معنا» يظهر قبل الحساب أيضاً. */
+export const supportContacts = (country: CountryCode) =>
+  api.get<SupportContacts>("/support/contacts", { query: { country_code: country }, anonymous: true });

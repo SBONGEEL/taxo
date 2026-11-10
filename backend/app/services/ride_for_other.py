@@ -104,6 +104,13 @@ async def prepare(
 # ------------------------------------------------------------------ رابطُ التتبّع
 
 
+def first_name(name: str | None) -> str | None:
+    """أوّلُ كلمةٍ من الاسم — «محمد أحمد الخطيب» ⇐ «محمد»."""
+    if not name:
+        return None
+    return name.strip().split()[0] if name.strip() else None
+
+
 async def track_link(session: AsyncSession, *, ride_id: uuid.UUID, rider: User) -> str:
     """رمزُ رابط التتبّع لرحلةٍ يطلبها الطالبُ لغيره — **الرمزُ نفسُه في كلِّ ضغطة**.
 
@@ -115,9 +122,11 @@ async def track_link(session: AsyncSession, *, ride_id: uuid.UUID, rider: User) 
     # 404 لا 403: وجودُ الرحلة ليس معلومةً يستحقها غيرُ أطرافها
     if ride is None or ride.rider_id != rider.id:
         raise NotFound("الرحلة غير موجودة")
-    if not ride.for_other or ride.status not in TRACKABLE:
+    if ride.status not in TRACKABLE:
         raise TrackLinkUnavailable()
-    if not await settings_service.is_feature_enabled(
+    # **«شارك رحلتك» لكلِّ راكبٍ في رحلته** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٧) — كان الرابطُ لرحلةٍ لغيره وحدَها. **ومفتاحُ
+    # «لغيرك» يحكم رحلةَ غيره وحدَها**: إطفاؤه قرارٌ عن خدمة الطلب لغيرك، لا عن أمان الراكب نفسِه
+    if ride.for_other and not await settings_service.is_feature_enabled(
         session, ride.country_code, FeatureKey.RIDE_FOR_OTHER_ENABLED
     ):
         raise RideForOtherUnavailable()
@@ -181,8 +190,9 @@ async def public_view(session: AsyncSession, redis: Redis, *, token: str) -> Pub
     if ride is None:
         raise NotFound("الرابط غير موجود")
     state = _STATE.get(ride.status)
-    if state is None or not await settings_service.is_feature_enabled(
-        session, ride.country_code, FeatureKey.RIDE_FOR_OTHER_ENABLED
+    if state is None or (
+        ride.for_other
+        and not await settings_service.is_feature_enabled(session, ride.country_code, FeatureKey.RIDE_FOR_OTHER_ENABLED)
     ):
         return PublicTrack(state="ended", captain_name=None, vehicle=None, position=None)
     if ride.driver is None:
@@ -202,8 +212,8 @@ async def public_view(session: AsyncSession, redis: Redis, *, token: str) -> Pub
     spot = await geo.last_position(redis, driver_id=ride.driver.id, country_code=ride.country_code)
     return PublicTrack(
         state=state,
-        # **الاسمُ كما يراه الراكبُ في بطاقة الكبتن** (`RideDriverOut.name`) — لا أكثر
-        captain_name=ride.driver.user.name,
+        # **الاسمُ الأوّلُ وحدَه** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٧) — الرابطُ يُرسل لأهلٍ ويُعاد إرسالُه، والاسمُ الكاملُ ليس ما يلزمهم
+        captain_name=first_name(ride.driver.user.name),
         vehicle=vehicle,
         position={"lat": spot.lat, "lng": spot.lng} if spot is not None else None,
     )

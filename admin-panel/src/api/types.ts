@@ -3391,3 +3391,39 @@ export interface SiteStatsReport {
   play_last_day: string | null;
   since: { site: string | null; downloads: string | null; play: string | null };
 }
+
+/** **الطوارئ** (البند ٧، ٢٠٢٦-١١-١٠) — `GET /admin/emergencies`. */
+export interface EmergencyParty {
+  name: string;
+  phone: string | null;
+}
+
+export interface EmergencyRow {
+  id: string;
+  status: "open" | "handled";
+  role: "rider" | "driver";
+  country_code: CountryCode;
+  created_at: string;
+  reporter: EmergencyParty;
+  ride_id: string | null;
+  ride_status: RideStatus | null;
+  rider: EmergencyParty | null;
+  driver: EmergencyParty | null;
+  plate_number: string | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  lat: number | null;
+  lng: number | null;
+  live_lat: number | null;
+  live_lng: number | null;
+  handled_at: string | null;
+  handled_by_name: string | null;
+  note: string | null;
+}
+
+/** **أرقامُ التواصل لكلِّ دولة** (البندان ٧ و٨) — `GET/PUT /admin/support-settings/{country}`. */
+export interface SupportContacts {
+  country_code: CountryCode;
+  emergency_number: string | null;
+  whatsapp_number: string | null;
+}

@@ -38,6 +38,8 @@ function recordPath(data) {
       return "/transfers";
     case "feedback":
       return "/feedback";
+    case "emergency":
+      return "/emergencies";
     case "chat_report":
       return "/chat-reports";
     case "photo_report":

@@ -245,7 +245,7 @@ async def test_the_track_link_is_the_requesters_shows_the_captain_and_stops_at_t
     assert seen.status_code == 200, seen.text
     view = seen.json()
     assert view["state"] == "coming"
-    assert view["captain_name"] == DRIVER["name"]
+    assert view["captain_name"] == DRIVER["name"].split()[0], "الاسمُ الأوّلُ وحدَه (البند ٧)"
     assert view["vehicle"]["plate_number"]
     # **Redis GEO يخزّن بدقّةِ ~٠٫٦ م** فيعود الموقعُ مقرَّباً — يُقارن بما دون المتر لا حرفاً
     assert abs(view["position"]["lat"] - 31.96) < 1e-5 and abs(view["position"]["lng"] - 35.9106) < 1e-5

@@ -411,7 +411,7 @@
  "دخلتَ اللوحة برمز استرداد. بقي {0} من رموزك.": "Vous vous êtes connecté au tableau de bord avec un code de récupération. Il vous reste {0} codes.",
  "دفعة هذا الطلب غير موجودة": "Paiement de cette demande introuvable",
  "رابطٌ صريح": "Lien direct",
- "رابطُ التتبّع لرحلةٍ جاريةٍ تطلبها لغيرك": "Le lien de suivi concerne une course en cours que vous commandez pour autrui",
+ "رابطُ التتبّع لرحلةٍ جارية": "Le lien de suivi concerne une course en cours",
  "رابطُ التحميل ردَّ {0} — ولا يُحفظ إصدارٌ برابطٍ لا يُفتح.": "Le lien de téléchargement a répondu {0} — une version avec un lien qui ne s’ouvre pas n’est pas enregistrée.",
  "رحلة موفقة": "Bonne route",
  "رحلةٌ اليومَ تُبقي سلسلتك حيّة — بقي لك {0} أيام.": "Une course aujourd’hui garde votre série en vie — il vous reste {0} jours.",

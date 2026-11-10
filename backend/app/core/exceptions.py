@@ -548,10 +548,10 @@ class PayerMethodMismatch(Conflict):
 
 
 class TrackLinkUnavailable(Conflict):
-    """رابطُ تتبّعٍ لرحلةٍ ليست لغير صاحبها، أو انتهت (§٦٣-ج/١)."""
+    """رابطُ تتبّعٍ لرحلةٍ انتهت أو لم تبدأ (§٦٣-ج/١، والبند ٧ ٢٠٢٦-١١-١٠: لكلِّ رحلةٍ جارية)."""
 
     code = "track_link_unavailable"
-    message = "رابطُ التتبّع لرحلةٍ جاريةٍ تطلبها لغيرك"
+    message = "رابطُ التتبّع لرحلةٍ جارية"
 
 
 class WalletFrozen(AppError):

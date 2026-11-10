@@ -138,6 +138,8 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("complaint", "support", "problem", "شكوى", "شكاوى"),
     AlertKind("low_rating", "support", "problem", "تقييمٌ منخفض", "تقييمات منخفضة"),
     AlertKind("feedback", "support", "feedback", "ملاحظةٌ جديدة", "ملاحظات جديدة"),
+    # **زرُّ الطوارئ** (البند ٧، ٢٠٢٦-١١-١٠) — **بلا نافذة جمع**: كلُّ ضغطةٍ إشعارٌ وحدَها، فلا تُبتلع حالةٌ في عدّاد
+    AlertKind("emergency", "support", "problem", "طوارئ — افتح اللوحة الآن", "حالات طوارئ", window=0),
     # **مراقبةُ الوصول من الخارج** (`services/uptime.py`، أمرُ المالك ٢٠٢٦-١١-٠٥) — رابطٌ عامٌّ ساقطٌ دقيقتين، ثمّ عودتُه
     AlertKind("service_down", "support", "problem", "التطبيقُ لا يُبلَغ من الإنترنت", "انقطاعاتُ الوصول", window=0),
     AlertKind("service_up", "support", "account", "التطبيقُ عاد يُبلَغ", "عوداتُ الوصول", window=0),
@@ -198,6 +200,7 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
     from app.models.ride import Ride
     from app.models.rider_subscription import RiderSubscription
     from app.models.subscription import DriverSubscription
+    from app.models.support import EmergencyAlert
     from app.models.trip_chat import RideMessage, RideMessageReport
     from app.models.wallet import WalletTopupRequest, WalletTransaction, WithdrawalRequest
     from app.services import debts
@@ -426,6 +429,16 @@ async def _resolve(session: AsyncSession, item: dict[str, Any]) -> Draft | None:
         return Draft(
             kind, country, record_type="feedback", record_id=str(row.id),
             data={"app": row.app, "guest": row.guest_session_id is not None, "test": test},
+        )
+
+    if model == "emergency":
+        row = await session.get(EmergencyAlert, pk)
+        if row is None:
+            return None
+        user = await session.get(User, row.user_id)
+        return Draft(
+            kind, row.country_code, record_type="emergency", record_id=str(row.id),
+            data={"who": "captain" if row.role == "driver" else "rider", "test": bool(user and user.is_test)},
         )
 
     if model == "message_report":
@@ -918,6 +931,7 @@ SAMPLE_DATA: dict[str, dict[str, Any]] = {
     "documents_approved": {"doc_type": "national_id"},
     "documents_rejected": {"doc_type": "vehicle_registration"},
     "subscription_purchased": {"who": "captain", "method": "wallet"},
+    "emergency": {"who": "rider"},
 }
 _SAMPLE_WITH_AMOUNT = {spec.kind for spec in _KINDS if spec.category == "money" or spec.kind == "ride_completed"}
 
