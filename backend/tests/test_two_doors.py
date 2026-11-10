@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ مصدرٌ واحد — الحملات (البند ١٩، ٢٠٢٦-١١-١٠)
+    "CampaignOut": (
+        "مصدرٌ واحد: `CampaignOut.model_validate(row)` من صفِّ `notification_campaigns` كلِّه في الأبواب الأربعة (القائمةُ والإنشاءُ "
+        "والتعديلُ والإلغاء). **و`zone_id` و`activity` فارغان حال**: حملةٌ بلا مرشِّح مدينةٍ أو حال — لا بانيَ يملؤهما فينساه آخر"
+    ),
     # ✅ بانٍ واحد — طرقُ الدفع وطابورُ الماليّة بحقول دفع الجزائر (SPEC §٨٢، 2026-10-22)
     "AdminPaymentMethodOut": (
         "بانٍ واحد: `admin_payment_requests.method_admin_out` في الأبواب الأربعة (القائمةُ والإنشاءُ والتعديلُ ورمزُ QR) — من صفِّ "
