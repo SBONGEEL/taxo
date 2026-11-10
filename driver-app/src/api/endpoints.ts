@@ -296,6 +296,20 @@ export const getDemand = () => api.get<{ high: boolean }>("/drivers/me/demand");
 export const getEarnings = (period: "today" | "week" | "month") =>
   api.get<Earnings>("/drivers/me/earnings", { query: { period } });
 
+/** **«وجهتي»** (البند ١٥) — الوجهةُ الجارية وما بقي من مرّات اليوم. */
+export interface DriverDestination {
+  lat: number | null;
+  lng: number | null;
+  label: string | null;
+  expires_at: string | null;
+  daily_uses: number;
+  uses_left: number;
+}
+export const getDestination = () => api.get<DriverDestination>("/drivers/me/destination");
+export const setDestination = (payload: { lat: number; lng: number; label: string }) =>
+  api.put<DriverDestination>("/drivers/me/destination", payload);
+export const clearDestination = () => api.del<void>("/drivers/me/destination");
+
 /** **خريطةُ الطلب** (البند ١٨) — خلايا بنحو كيلومترٍ آخرَ نصف ساعة، **بمستوىً ١…٣ لا عدد**. */
 export const getHeatmap = () => api.get<{ lat: number; lng: number; level: number }[]>("/drivers/me/heatmap");
 

@@ -62,7 +62,7 @@ import {
 import { useFeature } from "@/lib/config";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
-import { getHeatmap } from "@/api/endpoints";
+import { clearDestination, getDestination, getHeatmap, setDestination, type DriverDestination } from "@/api/endpoints";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
@@ -77,7 +77,7 @@ import {
 import { isActive } from "@/lib/ride";
 import { useTheme } from "@/lib/theme";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
-import { digits, formatAmount, isZeroAmount, ratedAverage } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, formatAmount, isZeroAmount, ratedAverage } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
 import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
@@ -204,6 +204,30 @@ export function HomeT2Screen() {
   }, [open]);
   const [sheetRef, sheetHeight] = useMeasuredHeight();
   const mode = tracking ? "ride" : offer ? "offer" : "home";
+  // **«وجهتي»** (البند ١٥، ٢٠٢٦-١١-١٠) — تُقرأ في الرئيسة، وتُوضع من بطاقة النقر في الخريطة الموسَّعة
+  const [dest, setDest] = useState<DriverDestination | null>(null);
+  const [destError, setDestError] = useState<string | null>(null);
+  useEffect(() => {
+    if (mode !== "home") return;
+    getDestination()
+      .then(setDest)
+      .catch(() => undefined);
+  }, [mode]);
+  const chooseDestination = (at: Coordinates, label: string) => {
+    setDestError(null);
+    setDestination({ lat: at.lat, lng: at.lng, label })
+      .then((next) => {
+        setDest(next);
+        setTapped(null);
+        setOpen(false);
+      })
+      .catch((caught: unknown) => setDestError(caught instanceof Error ? caught.message : tr("تعذّر الحفظ")));
+  };
+  const dropDestination = () => {
+    clearDestination()
+      .then(() => getDestination().then(setDest))
+      .catch(() => undefined);
+  };
   // **ما يحتاج انتباهَه** (§٦٢-ج/٤٣): نقطةُ «الوثائق»، و«الطلب مرتفع» ما دام متصلاً في الرئيسية وحدَها
   const documentsAttention = useDocumentsAttention();
   const demandHigh = useDemandHigh(online && mode === "home");
@@ -436,7 +460,15 @@ export function HomeT2Screen() {
             {open && heatOn && heat !== null && heat.length === 0 ? (
               <p className="t2-hm-heat-note">{tr("لا طلبَ مرتفعاً في مدينتك الآن")}</p>
             ) : null}
-            {open && tapped ? <TapCard tapped={tapped} position={position} onClose={() => setTapped(null)} /> : null}
+            {open && tapped ? (
+              <TapCard
+                tapped={tapped}
+                position={position}
+                onClose={() => setTapped(null)}
+                onDestination={dest && dest.daily_uses > 0 && dest.uses_left > 0 ? chooseDestination : null}
+                error={destError}
+              />
+            ) : null}
             <GoPill
               online={online}
               connecting={connecting}
@@ -460,6 +492,7 @@ export function HomeT2Screen() {
 
       {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — فوق الخدمات حين يكون فيها شيءٌ وحدَه: عرضٌ ينتظر، أو حجزٌ قبله، **أو سؤالُ «هل أنت
           في الطريق؟»** وهو أوّلُها لأن الحجزَ يُسحب بعده بلا ردّ. ومطفأً أو فارغاً لا صفّ */}
+      {mode === "home" && dest && dest.lat !== null ? <DestinationRow dest={dest} onClear={dropDestination} /> : null}
       {mode === "home" && guarantee ? <GuaranteeEntryRow entry={guarantee} onOpen={() => navigate("/guarantees")} /> : null}
 
       {/* **المشاويرُ الثابتة** (§٦٣-ج/٦) — تحت أختها وبصفّها: عرضٌ ينتظر كبتناً، أو مشوارٌ اعتمده. وفارغاً لا صفّ */}
@@ -626,7 +659,20 @@ interface Tapped {
 
 /** **بطاقةُ النقر** (§٦٢-ج/٤٨، `FUTURE-FEATURES` الخرائط #٣): اسمُ النقطة وعنوانُها وبُعدُها، **و«افتح في الملاحة»** إلى تطبيق خرائطه
  *  المختار (`openIn` — بابُ «فتح في الملاحة» نفسُه). **ولا عنوانَ يُخترع**: ما لم يُقرأ يُقال «نقطة على الخريطة». */
-function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coordinates | null; onClose: () => void }) {
+function TapCard({
+  tapped,
+  position,
+  onClose,
+  onDestination,
+  error,
+}: {
+  tapped: Tapped;
+  position: Coordinates | null;
+  onClose: () => void;
+  /** **«اجعلها وجهتي»** (البند ١٥) — و`null` حيث الميزةُ مطفأةٌ أو نفدت مرّاتُ اليوم */
+  onDestination: ((at: Coordinates, label: string) => void) | null;
+  error: string | null;
+}) {
   const title = tapped.place?.name ?? (tapped.reading ? tr("جارٍ قراءة العنوان…") : tr("نقطة على الخريطة"));
   const km = position ? metersBetween(position, tapped.at) / 1000 : null;
   const sub = [km !== null ? tr("على بعد {0} كم", { 0: digits(km.toFixed(1)) }) : null, tapped.place?.address ?? null]
@@ -655,6 +701,17 @@ function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coor
         <Icon name="navigation" />
         {tr("افتح في الملاحة")}
       </button>
+      {onDestination ? (
+        <button
+          type="button"
+          className="t2-button t2-hm-tapcard-go"
+          onClick={() => onDestination(tapped.at, tapped.place?.name ?? tr("نقطة على الخريطة"))}
+        >
+          <Icon name="flag" />
+          {tr("اجعلها وجهتي")}
+        </button>
+      ) : null}
+      {error ? <span className="t2-hm-tapcard-sub" role="alert">{error}</span> : null}
       <button type="button" className="t2-hm-tapcard-close" aria-label={tr("إغلاق")} onClick={onClose}>
         <Icon name="close" />
       </button>
@@ -769,6 +826,31 @@ function IntercityEntryRow({ entry, onOpen }: { entry: IntercityEntry; onOpen: (
 
 /** **مدخلُ الحجوز المضمونة** (§٦٣-ج/٣) — صفُّ «جدّد» نفسُه بالجمر. **والسؤالُ يسبق العرض**: حجزٌ يُسأل عنه الآن يُسحب بلا ردّ،
  *  والعروضُ تنتظر. **والعددُ بالعربية** (`countBookings`) لا «2 حجز». */
+/** **«وجهتي» جارية** (البند ١٥) — صفٌّ في الرئيسة يقول إلى أين ومتى تنتهي، وزرُّ إلغاءٍ يعيده إلى كلِّ الطلبات. */
+function DestinationRow({ dest, onClear }: { dest: DriverDestination; onClear: () => void }) {
+  const until = dest.expires_at
+    ? digits(new Date(dest.expires_at).toLocaleTimeString(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit" }))
+    : null;
+  return (
+    <div className="t2-gu-home">
+      <div className="t2-hm-row t2-gu-entry">
+        <Icon name="flag" fill />
+        <span className="t2-hm-row-main">
+          <span className="t2-hm-row-title">{tr("وجهتي: {0}", { 0: dest.label ?? "" })}</span>
+          <div className="t2-hm-row-sub">
+            {until
+              ? tr("تصلك الطلبات في اتّجاهها وحدها حتى {0}", { 0: until })
+              : tr("تصلك الطلبات في اتّجاهها وحدها")}
+          </div>
+        </span>
+        <button type="button" className="t2-hm-tapcard-close" aria-label={tr("إلغاء وجهتي")} onClick={onClear}>
+          <Icon name="close" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GuaranteeEntryRow({ entry, onOpen }: { entry: GuaranteeEntry; onOpen: () => void }) {
   const title = entry.asking ? tr("هل أنت في الطريق؟") : entry.offers > 0 ? tr("عروضٌ تنتظرك") : tr("حجوزُك المضمونة القادمة");
   const sub = entry.asking

@@ -40,6 +40,9 @@ class DispatchRules:
     total_timeout_seconds: int
     cooldown_seconds: int
     broadcast_batch_size: int
+    #: **«وجهتي»** (البند ١٥) — مرّاتُ اليوم (`0` مطفأة) والانحرافُ المقبولُ بالمئة
+    destination_daily_uses: int = 2
+    destination_detour_percent: int = 30
 
 
 #: **الافتراضيُّ يُقرأ من هنا لا من القاعدة**: سوقٌ بلا صفٍّ يوزّع كسوقٍ بصفّ.
@@ -67,4 +70,6 @@ async def rules_for(session: AsyncSession, country: CountryCode) -> DispatchRule
         total_timeout_seconds=row.total_timeout_seconds,
         cooldown_seconds=row.cooldown_seconds,
         broadcast_batch_size=row.broadcast_batch_size,
+        destination_daily_uses=row.destination_daily_uses,
+        destination_detour_percent=row.destination_detour_percent,
     )

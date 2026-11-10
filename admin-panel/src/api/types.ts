@@ -2059,6 +2059,10 @@ export interface DispatchSetting {
   /** **تبريدٌ لا استبعادٌ دائم** — والصفرُ ممنوعٌ في القاعدة. */
   cooldown_seconds: number;
   broadcast_batch_size: number;
+  /** **«وجهتي»** (البند ١٥) — مرّاتُ اليوم، و`0` يطفئها في السوق. */
+  destination_daily_uses: number;
+  /** والانحرافُ المقبولُ عن الطريق المباشر إلى الوجهة، بالمئة. */
+  destination_detour_percent: number;
 }
 
 /** **درجةٌ في جدول الطور الآليّ** (§٧٥-ج) — «حتى هذا العدد ⇒ هذا الفاصل»، والأخيرةُ بلا حدّ. */

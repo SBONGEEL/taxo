@@ -54,6 +54,7 @@ from app.models.vehicle import Vehicle
 from app.services.dispatch_settings import DEFAULTS as _DEFAULTS
 from app.services.dispatch_settings import DispatchRules, rules_for
 from app.services import (
+    destination,
     categories,
     negotiation,
     geo,
@@ -579,6 +580,8 @@ async def _ranked_candidates(
             rider_user_id=ride.rider_id,
         )
         ranked = [p for p in presences if p.driver_id in levels]
+        # **«وجهتي»** (البند ١٥): من وضع وجهةً لا يُعرض عليه إلا طلبٌ في اتّجاهها — ومن لا وجهةَ له لا يتغيّر عليه شيء
+        ranked = await destination.keep_heading(session, redis, ride=ride, ranked=ranked)
         if not ranked:
             continue
         # **والمواقعُ القديمةُ تُستحدث قبل الترتيب الأخير** (§٧٥-ج) — ومن لم يُجب يتأخّر

@@ -247,6 +247,68 @@ async def my_heatmap(driver: CurrentDriver, user: CurrentUser, session: DbSessio
     return [HeatCellOut(lat=lat, lng=lng, level=level) for lat, lng, level in heatmap.levels_for_driver(found)]
 
 
+class DestinationIn(BaseModel):
+    lat: float
+    lng: float
+    label: str = ""
+
+
+class DestinationOut(BaseModel):
+    """**«وجهتي»** (البند ١٥) — الوجهةُ الجارية إن وُجدت، وما بقي من مرّات اليوم."""
+
+    lat: float | None
+    lng: float | None
+    label: str | None
+    expires_at: datetime | None
+    daily_uses: int
+    uses_left: int
+
+
+async def _destination_out(session, redis, driver_id, country) -> DestinationOut:
+    from app.services import destination, dispatch_settings
+
+    now = datetime.now(UTC)
+    rules = await dispatch_settings.rules_for(session, country)
+    dest = await destination.current(redis, driver_id)
+    used = await destination.uses_today(session, redis, driver_id, country, now)
+    return DestinationOut(
+        lat=dest.lat if dest else None,
+        lng=dest.lng if dest else None,
+        label=dest.label if dest else None,
+        expires_at=(dest.set_at + destination.DEST_TTL) if dest else None,
+        daily_uses=rules.destination_daily_uses,
+        uses_left=max(0, rules.destination_daily_uses - used),
+    )
+
+
+@router.get("/me/destination", response_model=DestinationOut)
+async def my_destination(driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep) -> DestinationOut:
+    return await _destination_out(session, redis, driver.id, user.country_code)
+
+
+@router.put("/me/destination", response_model=DestinationOut)
+async def set_my_destination(
+    payload: DestinationIn, driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> DestinationOut:
+    """**«وجهتي»** (البند ١٥) — لا تصله إلا الطلباتُ في اتّجاهها حتى يلغيها أو تنقضي مهلتُها. **ومرّاتُ اليوم من اللوحة.**"""
+    from app.services import destination
+
+    if not (-90 <= payload.lat <= 90 and -180 <= payload.lng <= 180):
+        raise InvalidInput("موضعٌ غيرُ صالح", field="lat")
+    await destination.set_destination(
+        session, redis, driver_id=driver.id, country=user.country_code, lat=payload.lat, lng=payload.lng, label=payload.label
+    )
+    return await _destination_out(session, redis, driver.id, user.country_code)
+
+
+@router.delete("/me/destination", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_my_destination(driver: CurrentDriver, redis: RedisDep) -> Response:
+    from app.services import destination
+
+    await destination.clear(redis, driver.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/me/earnings", response_model=EarningsOut)
 async def my_earnings(
     driver: CurrentDriver,

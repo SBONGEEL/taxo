@@ -42,6 +42,14 @@ class DispatchSetting(UUIDMixin, TimestampMixin, Base):
     broadcast_batch_size: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("4")
     )
+    #: **«وجهتي»** (البند ١٥، الترحيلة `0148`) — كم مرّةً في اليوم يضع الكبتنُ وجهة، **و`0` يطفئها في السوق**
+    destination_daily_uses: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("2")
+    )
+    #: والانحرافُ المقبولُ عن طريقه المباشر إليها، بالمئة من طوله
+    destination_detour_percent: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("30")
+    )
 
     __table_args__ = (
         UniqueConstraint("country_code", name="dispatch_settings_country"),
@@ -62,5 +70,13 @@ class DispatchSetting(UUIDMixin, TimestampMixin, Base):
         CheckConstraint(
             "broadcast_batch_size BETWEEN 1 AND 20",
             name="dispatch_batch_size_range",
+        ),
+        CheckConstraint(
+            "destination_daily_uses BETWEEN 0 AND 10",
+            name="dispatch_destination_uses_range",
+        ),
+        CheckConstraint(
+            "destination_detour_percent BETWEEN 5 AND 100",
+            name="dispatch_destination_detour_range",
         ),
     )

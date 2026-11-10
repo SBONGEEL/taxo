@@ -425,6 +425,8 @@ class DispatchSettingOut(BaseModel):
     total_timeout_seconds: int
     cooldown_seconds: int
     broadcast_batch_size: int
+    destination_daily_uses: int
+    destination_detour_percent: int
 
 
 class NegotiationSettingOut(BaseModel):
@@ -466,3 +468,6 @@ class DispatchSettingUpdate(BaseModel):
     #: **والصفرُ ممنوع**: تبريدُ صفرٍ يعرض على الرافض نفسِه فوراً
     cooldown_seconds: int | None = Field(default=None, ge=1, le=600)
     broadcast_batch_size: int | None = Field(default=None, ge=1, le=20)
+    #: **«وجهتي»** (البند ١٥) — `0` يطفئها في السوق
+    destination_daily_uses: int | None = Field(default=None, ge=0, le=10)
+    destination_detour_percent: int | None = Field(default=None, ge=5, le=100)

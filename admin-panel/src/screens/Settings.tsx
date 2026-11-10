@@ -3487,6 +3487,8 @@ function DispatchForm({
   const [total, setTotal] = useState(row?.total_timeout_seconds ?? 120);
   const [cooldown, setCooldown] = useState(row?.cooldown_seconds ?? 30);
   const [batch, setBatch] = useState(String(row?.broadcast_batch_size ?? 4));
+  const [destUses, setDestUses] = useState(String(row?.destination_daily_uses ?? 2));
+  const [detour, setDetour] = useState(String(row?.destination_detour_percent ?? 30));
   const [busy, setBusy] = useState(false);
 
   const digits = (value: string) => value.replace(/[^0-9]/g, "");
@@ -3544,6 +3546,31 @@ function DispatchForm({
           onChange={setTotal}
         />
       </div>
+      <div className="mt-10 grid grid-cols-2 gap-10">
+        <Field
+          name="destination_daily_uses"
+          label="«وجهتي» — مرّات في اليوم"
+          dir="ltr"
+          inputMode="numeric"
+          value={destUses}
+          disabled={disabled}
+          onChange={(event) => setDestUses(digits(event.target.value))}
+        />
+        <Field
+          name="destination_detour_percent"
+          label="«وجهتي» — الانحراف المسموح %"
+          dir="ltr"
+          inputMode="numeric"
+          value={detour}
+          disabled={disabled}
+          onChange={(event) => setDetour(digits(event.target.value))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        «وجهتي»: يضع الكبتنُ وجهةً (لأربع ساعات) فلا تصله إلا طلباتٌ تقرّبه منها، ولا يزيد طريقُه إليها عبر الراكب على الطريق المباشر
+        بأكثر من هذه النسبة (وكيلومترٌ واحدٌ حدّاً أدنى). صفرُ مرّاتٍ يطفئها في هذه الدولة، والإلغاءُ لا يردّ مرّة. من 0 إلى 10، والانحرافُ
+        من 5 إلى 100.
+      </p>
       <p className="mt-6 text-11 leading-note text-muted">
         التبريدُ ليس استبعاداً: من صمت أو رفض يعود مرشَّحاً في الطلب نفسه بعد
         انقضائه. واجعله أقصرَ من مهلة البحث كلّها بوضوح — تبريدٌ يساويها يعني
@@ -3565,6 +3592,8 @@ function DispatchForm({
             total_timeout_seconds: total,
             cooldown_seconds: cooldown,
             broadcast_batch_size: Number(batch),
+            destination_daily_uses: Number(destUses),
+            destination_detour_percent: Number(detour),
           })
             .then(() =>
               onSaved(
