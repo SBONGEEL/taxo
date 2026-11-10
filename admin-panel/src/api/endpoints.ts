@@ -9,6 +9,7 @@ import type { UploadOptions } from "@/api/client";
 import type { FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
 import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type { EmergencyRow, SupportContacts } from "@/api/types";
+import type { DriverQuality, QualitySetting } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2655,3 +2656,12 @@ export const saveSupportSettings = (
   country: CountryCode,
   body: { emergency_number: string | null; whatsapp_number: string | null },
 ) => api.put<SupportContacts>(`/admin/support-settings/${country}`, body);
+
+/** **درجةُ جودة الكبتن** (البند ٣) — كلُّ دولة، والغائبةُ بالافتراضيّ المطفأ. */
+export const listQualitySettings = () => api.get<QualitySetting[]>("/admin/quality/settings");
+
+export const updateQualitySettings = (country: CountryCode, payload: Partial<Omit<QualitySetting, "country_code">>) =>
+  api.patch<QualitySetting>(`/admin/quality/settings/${country}`, payload);
+
+/** الدرجةُ الآن ومكوّناتُها وتاريخُ آخر ٣٠ يوماً. */
+export const getDriverQuality = (driverId: string) => api.get<DriverQuality>(`/admin/quality/drivers/${driverId}`);

@@ -3469,3 +3469,24 @@ export interface SupportContacts {
   emergency_number: string | null;
   whatsapp_number: string | null;
 }
+
+/** **درجةُ جودة الكبتن** (البند ٣) — الأوزانُ والمفتاحُ لكلِّ دولة؛ والمطفأُ يُحسب ولا يؤثّر. */
+export interface QualitySetting {
+  country_code: CountryCode;
+  enabled: boolean;
+  w_acceptance: number;
+  w_cancellation: number;
+  w_rating: number;
+  w_complaints: number;
+  w_completed: number;
+  dispatch_bonus_m: number;
+  warn_below: number;
+}
+
+export interface DriverQuality {
+  score: number;
+  enabled: boolean;
+  parts: Record<string, number>;
+  counts: Record<string, number | null>;
+  history: { day: string; score: number }[];
+}

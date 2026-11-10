@@ -76,6 +76,8 @@ class DigestEvent(StrEnum):
     """**ملخّصُ أسبوع الكبتن** (البند ١٧، ٢٠٢٦-١١-١٠) — إشعارٌ يفتح شاشةَ الأرباح على الملخّص."""
 
     WEEKLY = "weekly_digest"
+    #: **إنذارُ درجة الجودة** (البند ٣) — يفتح «درجتي»
+    QUALITY = "quality_warning"
 
 
 class DocumentEvent(StrEnum):

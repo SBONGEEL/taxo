@@ -2108,3 +2108,18 @@ async def publish_weekly_digest(session: AsyncSession, redis: Redis, *, user_id:
         ),
     )
 
+
+async def publish_quality_warning(session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, tips: list[str]) -> None:
+    """**«درجتك تحتاج انتباهاً»** (البند ٣) — بنصيحةٍ أو اثنتين ممّا أضعفها، **بلا رقمٍ في النصّ**: الدرجةُ في الشاشة."""
+    from app.ws.events import DigestEvent
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="درجتك تحتاج انتباهاً",
+            body=" ".join(tips) if tips else "افتح «درجتي» لترى ما يرفعها.",
+            data={"type": DigestEvent.QUALITY.value},
+        ),
+    )

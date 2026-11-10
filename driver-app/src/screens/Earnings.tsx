@@ -24,6 +24,7 @@ import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
 import { countRides } from "./t2/count";
+import { QualityT2 } from "./t2/QualityT2";
 import { WeeklyDigestT2 } from "./t2/WeeklyDigestT2";
 
 import "./t2/t2.css";
@@ -173,6 +174,8 @@ export function EarningsScreen() {
           </div>
           {/* **ملخّصُ الأسبوع الماضي** (البند ١٧) — مستقلٌّ عن الفترة أعلاه، وإليه يفتح إشعارُ السبت */}
           <WeeklyDigestT2 />
+          {/* **«درجتي»** (البند ٣) — حيث مفتاحُها مشتعلٌ وحدَه */}
+          <QualityT2 />
         </>
       )}
     </div>

@@ -247,6 +247,36 @@ async def my_heatmap(driver: CurrentDriver, user: CurrentUser, session: DbSessio
     return [HeatCellOut(lat=lat, lng=lng, level=level) for lat, lng, level in heatmap.levels_for_driver(found)]
 
 
+class QualityTipOut(BaseModel):
+    component: str
+    text: str
+
+
+class MyQualityOut(BaseModel):
+    """**«درجتي»** (البند ٣) — الدرجةُ ومكوّناتُها ونصيحةٌ لأضعفها. **وتُعرض حيث المفتاحُ مشتعلٌ وحدَه** (`enabled`)."""
+
+    enabled: bool
+    score: int
+    parts: dict[str, float]
+    tips: list[QualityTipOut]
+    history: list[dict]
+
+
+@router.get("/me/quality", response_model=MyQualityOut)
+async def my_quality(driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep) -> MyQualityOut:
+    from app.routers.admin_quality import driver_quality
+    from app.services import quality
+
+    found = await driver_quality(session, redis, driver_id=driver.id, country=user.country_code)
+    return MyQualityOut(
+        enabled=found.enabled,
+        score=found.score,
+        parts=found.parts,
+        tips=[QualityTipOut(component=name, text=quality.TIPS[name]) for name in quality.weakest(found.parts)],
+        history=[{"day": item.day.isoformat(), "score": item.score} for item in found.history[-8:]],
+    )
+
+
 class DestinationIn(BaseModel):
     lat: float
     lng: float
