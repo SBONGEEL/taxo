@@ -7,13 +7,24 @@
  * **والأربعُ الماليّةُ (٤ و١٣ و١٤ و١٦) تُشحن مطفأةً وتنتظر مبالغَ المالك**: لا قيمةَ مالٍ تُضبط من هنا ولا من الوكيل — تُقترح وتُعرض.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { listFeatureFlags } from "@/api/endpoints";
+import {
+  listDispatchSettings,
+  listFeatureFlags,
+  listMapSettings,
+  listQualitySettings,
+  setFeatureFlag,
+  updateMapSettings,
+  updateQualitySettings,
+} from "@/api/endpoints";
+import type { CountryCode } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Switch } from "@/components/ui/Field";
 import { useCountry } from "@/lib/country";
 
 interface Feature {
@@ -241,6 +252,8 @@ export function NewFeaturesScreen() {
         </ul>
       </section>
 
+      <CountrySwitches />
+
       {flags === null && !error ? <Spinner /> : null}
 
       <section className="ad-card overflow-x-auto">
@@ -290,5 +303,198 @@ function FeatureState({ feature, flags }: { feature: Feature; flags: Record<stri
       <Badge tone={on ? "ok" : feature.awaits ? "warn" : "muted"}>{on ? "مفعّل" : "مطفأ"}</Badge>
       {!on && feature.awaits ? <span className="text-12 text-muted">ينتظر مبالغك</span> : null}
     </span>
+  );
+}
+
+/** **مفاتيحُ الميزات غيرِ الماليّة بالدولة — دقيقةٌ واحدة** (أمرُ المالك ٢٠٢٦-١١-١٠ ليلاً، البند ٣).
+ *
+ * كلُّ مفتاحٍ يُكتب **ببابه القائم نفسِه** (مفاتيحُ الميزات · خريطةُ الراكب · درجةُ الجودة) — لا بابَ جديدَ في الخلفية،
+ * والصلاحيّاتُ والسجلُّ كما هي هناك. **والحالُ يُقرأ من الخادم بعد كلِّ كتابة** لا يُفترض من النقر.
+ *
+ * **ليبيا ليست هنا**: «قريباً» حتى يقول المالك، فلا يُشعل لها شيءٌ من هذه الصفحة.
+ * **والأربعُ الماليّةُ ليست هنا**: مفاتيحُها في «مفاتيح الميزات» بعد أن تُوضع مبالغُها في صفحاتها.
+ * و«وجهتي» **عددٌ لا مفتاح** (`0` يطفئها)، فتُعرض حالاً ورابطاً إلى «قواعد التوزيع» ولا تُكتب من هنا. */
+const SWITCH_COUNTRIES: { code: CountryCode; name: string }[] = [
+  { code: "JO", name: "الأردن" },
+  { code: "DZ", name: "الجزائر" },
+];
+
+interface CountryState {
+  voice: boolean;
+  pickup: boolean;
+  quality: boolean;
+  destination: number;
+}
+
+/** المقترَحُ للدولتين — والعلّةُ مكتوبةٌ بجانب كلٍّ في الجدول. */
+const RECOMMENDED = { voice: true, pickup: true, quality: false } as const;
+
+function CountrySwitches() {
+  const [state, setState] = useState<Record<string, CountryState> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const [flags, maps, quality, dispatch] = await Promise.all([
+      listFeatureFlags(),
+      listMapSettings(),
+      listQualitySettings(),
+      listDispatchSettings(),
+    ]);
+    const next: Record<string, CountryState> = {};
+    for (const { code } of SWITCH_COUNTRIES) {
+      next[code] = {
+        voice: flags.find((row) => row.country_code === code)?.flags.voice_order_enabled === true,
+        pickup: maps.find((row) => row.country_code === code)?.pickup_suggest_enabled === true,
+        quality: quality.find((row) => row.country_code === code)?.enabled === true,
+        destination: dispatch.find((row) => row.country_code === code)?.destination_daily_uses ?? 0,
+      };
+    }
+    setState(next);
+  }, []);
+
+  useEffect(() => {
+    load().catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "تعذّر التحميل"));
+  }, [load]);
+
+  const run = async (writes: (() => Promise<unknown>)[]) => {
+    setBusy(true);
+    setError(null);
+    try {
+      for (const write of writes) await write();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "تعذّر الحفظ");
+    } finally {
+      await load().catch(() => undefined);
+      setBusy(false);
+    }
+  };
+
+  const writeVoice = (code: CountryCode, enabled: boolean) => () =>
+    setFeatureFlag({ country_code: code, feature_key: "voice_order_enabled", enabled });
+  const writePickup = (code: CountryCode, enabled: boolean) => () =>
+    updateMapSettings(code, { pickup_suggest_enabled: enabled });
+  const writeQuality = (code: CountryCode, enabled: boolean) => () => updateQualitySettings(code, { enabled });
+
+  const applyRecommended = () => {
+    if (!state) return;
+    const writes: (() => Promise<unknown>)[] = [];
+    for (const { code } of SWITCH_COUNTRIES) {
+      const now = state[code];
+      if (now.voice !== RECOMMENDED.voice) writes.push(writeVoice(code, RECOMMENDED.voice));
+      if (now.pickup !== RECOMMENDED.pickup) writes.push(writePickup(code, RECOMMENDED.pickup));
+      if (now.quality !== RECOMMENDED.quality) writes.push(writeQuality(code, RECOMMENDED.quality));
+    }
+    void run(writes);
+  };
+
+  const rows: {
+    n: number;
+    title: string;
+    why: string;
+    recommended: boolean;
+    get: (s: CountryState) => boolean;
+    write: (code: CountryCode, enabled: boolean) => () => Promise<unknown>;
+  }[] = [
+    {
+      n: 10,
+      title: "الطلبُ بالصوت",
+      why: "بلا كلفة: التعرّفُ في هاتف الراكب ولا صوتَ يصلنا.",
+      recommended: RECOMMENDED.voice,
+      get: (s) => s.voice,
+      write: writeVoice,
+    },
+    {
+      n: 11,
+      title: "نقاطُ الالتقاط المقترحة",
+      why: "تقلّل اتّصالاتِ «أين أنت؟»، والمجمَّعُ لا يُظهر إلا ما التقط عنده 3 ركّابٍ فأكثر.",
+      recommended: RECOMMENDED.pickup,
+      get: (s) => s.pickup,
+      write: writePickup,
+    },
+    {
+      n: 3,
+      title: "أثرُ درجة الجودة في التوزيع",
+      why: "الدرجةُ تُحسب وتُرى دائماً؛ هذا المفتاحُ يجعلها تقدّم كبتناً على آخر. المقترَح: بعد أسبوعين من البيانات، كي لا يتأخّر الكبتنُ الجديد بلا ذنب.",
+      recommended: RECOMMENDED.quality,
+      get: (s) => s.quality,
+      write: writeQuality,
+    },
+  ];
+
+  return (
+    <section className="ad-card mb-16 p-16">
+      <div className="mb-12 flex flex-wrap items-center justify-between gap-8">
+        <div>
+          <h2 className="text-14 font-bold text-ink">المفاتيحُ بالدولة — غيرُ الماليّة</h2>
+          <p className="text-13 text-muted">كلُّ مفتاحٍ يُحفظ فوراً. وليبيا «قريباً» فلا تظهر هنا.</p>
+        </div>
+        <Button size="sm" loading={busy} disabled={!state || busy} onClick={applyRecommended}>
+          طبّق المقترَح في الدولتين
+        </Button>
+      </div>
+      <ErrorNote message={error} />
+      {!state && !error ? <Spinner /> : null}
+      {state ? (
+        <div className="overflow-x-auto">
+          <table className="ad-table w-full text-13">
+            <thead>
+              <tr>
+                <th className="p-8 text-start">الميزة</th>
+                {SWITCH_COUNTRIES.map((country) => (
+                  <th key={country.code} className="p-8 text-start">
+                    {country.name}
+                  </th>
+                ))}
+                <th className="p-8 text-start">المقترَح ولماذا</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.n} className="align-top">
+                  <td className="p-8 font-semibold text-ink">
+                    {row.n} · {row.title}
+                  </td>
+                  {SWITCH_COUNTRIES.map((country) => (
+                    <td key={country.code} className="p-8">
+                      <Switch
+                        checked={row.get(state[country.code])}
+                        disabled={busy}
+                        label={`${row.title} — ${country.name}`}
+                        onChange={(next) => void run([row.write(country.code, next)])}
+                      />
+                    </td>
+                  ))}
+                  <td className="p-8">
+                    <Badge tone={row.recommended ? "ok" : "muted"}>{row.recommended ? "شغّله" : "أبقِه مطفأً الآن"}</Badge>
+                    <span className="mt-4 block text-12 text-muted">{row.why}</span>
+                  </td>
+                </tr>
+              ))}
+              <tr className="align-top">
+                <td className="p-8 font-semibold text-ink">15 · «وجهتي» للكبتن</td>
+                {SWITCH_COUNTRIES.map((country) => {
+                  const uses = state[country.code].destination;
+                  return (
+                    <td key={country.code} className="p-8">
+                      <Badge tone={uses > 0 ? "ok" : "muted"}>{uses > 0 ? `مفعّلة — ${uses} في اليوم` : "مطفأة"}</Badge>
+                    </td>
+                  );
+                })}
+                <td className="p-8">
+                  <Badge tone="ok">شغّله</Badge>
+                  <span className="mt-4 block text-12 text-muted">
+                    عددٌ لا مفتاح (0 يطفئها) —{" "}
+                    <Link className="text-accent underline" to="/settings">
+                      الإعدادات ← قواعد التوزيع
+                    </Link>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
   );
 }
