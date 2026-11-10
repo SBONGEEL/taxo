@@ -36,3 +36,9 @@ async def limits_for(session: AsyncSession, country_code: CountryCode) -> MapLim
     return MapLimits(
         radius_km=float(row.nearby_radius_km), max_count=int(row.nearby_max_count)
     )
+
+
+async def pickup_suggest_enabled(session: AsyncSession, country_code: CountryCode) -> bool:
+    """**اقتراحُ نقطة الالتقاط** (§٩٧/١١) — وغيابُ الصفِّ مشتعلٌ كافتراض العمود."""
+    row = await session.get(MapSetting, CountryCode(country_code))
+    return True if row is None else bool(row.pickup_suggest_enabled)

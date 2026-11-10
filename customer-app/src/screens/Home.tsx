@@ -55,6 +55,7 @@ import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
+import { usePickupSuggestion } from "@/lib/pickup-suggestion";
 import { useBackLayer } from "@/lib/back-layers";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
@@ -74,7 +75,7 @@ import {
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
 import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
-import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2"; import { tr } from "@/lib/i18n";
+import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2"; import { language, tr } from "@/lib/i18n";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -996,6 +997,8 @@ export function HomeScreen() {
   /** **ورقةُ التأكيد — خصائصُ واحدةٌ للوجهين** (القائمُ في الليليّ، و«R06» في النهاريّ المرسوم). **ووجهةُ الساعات اختياريّة**
    *  (§٦٣-ج/٥): بلاها تُسعَّر الورقةُ وتُطلب بنقطة الانطلاق وجهةً — بعقد الخلفية — **ولا يُرسم لها دبوس**. */
   const target = dropoff ?? (hourlyMode ? pickup : null);
+  // **نقطةُ التقاطٍ مقترحة** (البند ١١) — في ورقة التأكيد وحدَها
+  const pickupHint = usePickupSuggestion(pickup, phase === "confirm");
   const confirmProps: ConfirmRideProps | null =
     pickup && target
       ? {
@@ -1026,6 +1029,20 @@ export function HomeScreen() {
           initialScheduling: presetSchedule !== null,
           initialOffer: presetOffer ?? undefined,
           pickupLine,
+          pickupSuggestion: pickupHint.suggestion
+            ? {
+                name: (language === "fr" ? pickupHint.suggestion.name_en : null) ?? pickupHint.suggestion.name_ar,
+                distance_m: pickupHint.suggestion.distance_m,
+                onUse: () => {
+                  const chosen = pickupHint.suggestion!;
+                  setPickup({ lat: chosen.lat, lng: chosen.lng });
+                  setPickupAddress(
+                    (language === "fr" ? chosen.name_en : null) ?? chosen.name_ar ?? tr("نقطة الالتقاط المقترحة"),
+                  );
+                },
+                onKeep: pickupHint.keep,
+              }
+            : null,
           // **طلبُ طردٍ ومسوّدتُه** (§٦٣-ج/٤) — وغيابُه رحلةٌ عاديّة
           parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft, fetch: parcelFetch } : undefined,
           // **طلبُ ساعاتٍ ومسوّدتُه** (§٦٣-ج/٥) — و`destination` أاختيرت وجهة؛ وغيابُه رحلةٌ عاديّة

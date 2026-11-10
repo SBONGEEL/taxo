@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Integer, Numeric, text
+from sqlalchemy import Boolean, CheckConstraint, Integer, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, pg_enum
@@ -53,3 +53,5 @@ class MapSetting(TimestampMixin, Base):
     nearby_max_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text(str(DEFAULT_NEARBY_MAX_COUNT))
     )
+    #: **اقتراحُ نقطة الالتقاط** (البند ١١، §٩٧/١١) — مشتعلٌ افتراضاً: لا مالَ فيه ولا كلفةَ مزوّد، والراكبُ يقبل أو يُبقي دبّوسه
+    pickup_suggest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))

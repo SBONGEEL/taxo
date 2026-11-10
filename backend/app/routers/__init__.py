@@ -76,6 +76,7 @@ from app.routers import (
     notifications,
     payments,
     map_places,
+    pickup_spots,
     places,
     missions,
     referrals,
@@ -107,6 +108,7 @@ api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)
 api_router.include_router(map_places.router)
+api_router.include_router(pickup_spots.router)
 api_router.include_router(airports.router)
 api_router.include_router(missions.router)
 api_router.include_router(referrals.router)

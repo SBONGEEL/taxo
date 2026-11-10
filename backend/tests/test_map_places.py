@@ -29,8 +29,9 @@ def test_the_migration_constraint_lists_every_category() -> None:
     import importlib.util
     import pathlib
 
-    path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0108_map_places_osm.py"
-    spec = importlib.util.spec_from_file_location("m0108", path)
+    # **آخرُ ترحيلةٍ تبني القيد** — `0153` (فئةُ «نقطة التقاط»، البند ١١) بعد `0108`
+    path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0153_pickup_spots.py"
+    spec = importlib.util.spec_from_file_location("m0153", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore[union-attr]
     assert set(module._CATEGORIES) == set(MAP_PLACE_CATEGORIES)

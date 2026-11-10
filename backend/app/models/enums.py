@@ -922,6 +922,8 @@ class MapPlaceCategory(StrEnum):
     OTHER = "other"
     #: **المطار** (§٧١-ح/٤) — من المستورد؛ والمطاراتُ برسومها بيتُها `facilities` كما هي
     AIRPORT = "airport"
+    #: **نقطةُ التقاط** (البند ١١، §٩٧/١١) — بوّابةٌ أو زاويةٌ أو جانبُ شارعٍ رئيسيّ يضعها المالك؛ تُقترح على الراكب قبل الطلب
+    PICKUP = "pickup"
 
 
 class BookingStatus(StrEnum):

@@ -1484,7 +1484,7 @@ export const listMapSettings = () =>
 
 export const updateMapSettings = (
   country: CountryCode,
-  payload: { nearby_radius_km?: number; nearby_max_count?: number },
+  payload: { nearby_radius_km?: number; nearby_max_count?: number; pickup_suggest_enabled?: boolean },
 ) => api.patch<MapSetting>(`/admin/settings/map/${country}`, payload);
 
 

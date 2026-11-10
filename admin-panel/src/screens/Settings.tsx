@@ -3164,6 +3164,7 @@ function MapForm({
 }) {
   const [radius, setRadius] = useState(String(Number(row.nearby_radius_km)));
   const [count, setCount] = useState(String(row.nearby_max_count));
+  const [suggest, setSuggest] = useState(row.pickup_suggest_enabled);
   const [busy, setBusy] = useState(false);
   const numeric = (value: string) => value.replace(/[^0-9.]/g, "");
 
@@ -3189,6 +3190,18 @@ function MapForm({
           onChange={(event) => setCount(numeric(event.target.value))}
         />
       </div>
+      {/* **اقتراحُ نقطة الالتقاط** (البند ١١، §٩٧/١١) */}
+      <div className="mt-14 flex items-start justify-between gap-12">
+        <span className="min-w-0">
+          <span className="block text-13 font-semibold text-ink">اقتراح نقطة الالتقاط</span>
+          <span className="block text-11 leading-snug text-muted">
+            قبل الطلب يُقترح على الراكب أقربُ نقطةٍ سهلةٍ إلى دبّوسه (على 150 م): نقاطُك في «الأماكن» بفئة «نقطة التقاط» أوّلاً باسمها، ثمّ
+            حيث بدأت الرحلاتُ المكتملةُ فعلاً آخرَ 90 يوماً — مجمَّعةً ولا تُقترح خليةٌ دون ثلاثة ركّابٍ مختلفين. والراكبُ يقبلها أو يُبقي
+            دبّوسه. لا مالَ فيه ولا كلفةَ مزوّد.
+          </span>
+        </span>
+        <Switch checked={suggest} disabled={disabled} label="اقتراح نقطة الالتقاط" onChange={(next) => setSuggest(next)} />
+      </div>
       <Button
         className="mt-14"
         size="sm"
@@ -3199,6 +3212,7 @@ function MapForm({
           updateMapSettings(row.country_code, {
             nearby_radius_km: Number(radius),
             nearby_max_count: Number(count),
+            pickup_suggest_enabled: suggest,
           })
             .then(() => onSaved("حُفظت حدودُ الخريطة — تظهر في أول تحديث"))
             .catch((caught) => onError(caught))

@@ -88,6 +88,7 @@ celery_app = Celery(
         "app.tasks.notifications",
         "app.tasks.weekly_digest",
         "app.tasks.quality",
+        "app.tasks.pickup_spots",
         "app.tasks.bookings",
         "app.tasks.maintenance",
         "app.tasks.payments",
@@ -180,6 +181,11 @@ celery_app.conf.update(
         "score-drivers-daily": {
             "task": "app.tasks.quality.score_drivers",
             "schedule": crontab(hour=1, minute=30),
+        },
+        # **خلايا الالتقاط** (البند ١١) — كلَّ ليلةٍ من الرحلات المكتملة آخرَ ٩٠ يوماً
+        "pickup-spots-nightly": {
+            "task": "app.tasks.pickup_spots.rebuild",
+            "schedule": crontab(hour=2, minute=10),
         },
         # **ملخّصُ أسبوع الكبتن** (البند ١٧، ٢٠٢٦-١١-١٠) — السبت 06:00 UTC = 09:00 عمّان · 07:00 الجزائر، بعد أسبوعٍ ينتهي بالجمعة
         "send-weekly-digest": {

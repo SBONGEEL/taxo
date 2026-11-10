@@ -1537,3 +1537,8 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 }
 /* **«إدارة» فوق بلاطتي الدفع بـ٩٫٥** — طبقتُها تُرفع ٢ فلا تبلغ البلاطة (قِيس: كانت تتداخل بسطر) */
 .t2-paytiles-manage::after { top: calc(50% - 2px); }
+
+/* **نقطةُ التقاطٍ أسهل** (البند ١١) — تحت «من» في ورقة التأكيد */
+.t2-pickup-hint { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 8px 10px; border-radius: 12px; background: var(--t2-ember-soft, rgba(255, 106, 0, 0.1)); }
+.t2-pickup-hint-text { font-size: 12.5px; line-height: 1.5; white-space: normal; }
+.t2-pickup-hint-actions { display: flex; gap: 8px; flex-wrap: wrap; }

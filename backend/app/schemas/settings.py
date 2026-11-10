@@ -399,6 +399,7 @@ class MapSettingOut(BaseModel):
     country_code: CountryCode
     nearby_radius_km: Decimal
     nearby_max_count: int
+    pickup_suggest_enabled: bool
     updated_at: datetime
 
 
@@ -411,6 +412,8 @@ class MapSettingUpdate(BaseModel):
 
     nearby_radius_km: Annotated[Decimal, Field(gt=0, le=50)] | None = None
     nearby_max_count: Annotated[int, Field(gt=0, le=200)] | None = None
+    #: **اقتراحُ نقطة الالتقاط** (§٩٧/١١)
+    pickup_suggest_enabled: bool | None = None
 
 
 class DispatchSettingOut(BaseModel):

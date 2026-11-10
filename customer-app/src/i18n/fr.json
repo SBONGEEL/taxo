@@ -1644,5 +1644,11 @@
  "ماذا حدث؟": "Que s'est-il passé ?",
  "أرفق صورة (اختياري)": "Joindre une photo (facultatif)",
  "طلباتي": "Mes demandes",
- "محادثاتك مع الدعم والمفقودات والشكاوى": "Vos discussions avec l'assistance, objets perdus et réclamations"
+ "محادثاتك مع الدعم والمفقودات والشكاوى": "Vos discussions avec l'assistance, objets perdus et réclamations",
+ "نقطة الالتقاط المقترحة": "Point de prise en charge suggéré",
+ "نقطة التقاط أسهل": "Point de prise en charge plus simple",
+ "نقطة التقاط أسهل: «{name}» على بُعد {m} م": "Point de prise en charge plus simple : « {name} » à {m} m",
+ "يلتقي الركّابُ عادةً على بُعد {m} م من دبّوسك": "Les passagers sont généralement pris en charge à {m} m de votre repère",
+ "استعملها": "L'utiliser",
+ "أبقِ دبّوسي": "Garder mon repère"
 }

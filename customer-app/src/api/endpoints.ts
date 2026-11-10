@@ -1008,3 +1008,15 @@ export function openTicket(
   if (photo) form.append("photo", photo);
   return sendForm<MyTicketDetail>("POST", "/support/tickets", form);
 }
+
+/** **نقطةُ التقاطٍ مقترحة** (البند ١١، §٩٧/١١) — `place` نقطةُ المالك باسمها، و`history` حيث بدأت رحلاتٌ سابقة (مجمَّعة)؛ و`null` لا أفضل. */
+export interface PickupSuggestion {
+  lat: number;
+  lng: number;
+  name_ar: string | null;
+  name_en: string | null;
+  source: "place" | "history";
+  distance_m: number;
+}
+export const pickupSuggestion = (lat: number, lng: number, signal?: AbortSignal) =>
+  api.get<PickupSuggestion | null>("/pickup/suggestion", { query: { lat, lng }, signal });

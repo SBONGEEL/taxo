@@ -87,6 +87,17 @@ class MapPlaceAdminOut(BaseModel):
     updated_at: datetime
 
 
+class PickupSuggestionOut(BaseModel):
+    """**نقطةُ التقاطٍ مقترحة** (§٩٧/١١) — `place` من نقاط المالك باسمها، و`history` من الالتقاطات السابقة المجمَّعة بلا اسم."""
+
+    lat: float
+    lng: float
+    name_ar: str | None
+    name_en: str | None
+    source: Literal["place", "history"]
+    distance_m: int
+
+
 class MapPlaceOut(BaseModel):
     """**ما يرسمه التطبيقان ويبحثان فيه** — والمطارُ منه بفئة `airport` يُقرأ من بيته (`facilities`). **ولا إخفاءَ في الحمولة**:
     المخفيُّ لا يخرج أصلاً. و`source` يفرّق «من المالك» عن «مرفقٌ برسم» للعرض وحدَه."""

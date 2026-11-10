@@ -1894,6 +1894,8 @@ export type MapSetting = {
   country_code: CountryCode;
   nearby_radius_km: string;
   nearby_max_count: number;
+  /** **اقتراحُ نقطة الالتقاط** (§٩٧/١١) */
+  pickup_suggest_enabled: boolean;
   updated_at: string;
 };
 
@@ -2506,7 +2508,8 @@ export type MapPlaceCategory =
   | "neighborhood"
   | "street"
   | "other"
-  | "airport";
+  | "airport"
+  | "pickup";
 
 export interface MapPlace {
   id: string;

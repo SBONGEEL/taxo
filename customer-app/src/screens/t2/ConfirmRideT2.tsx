@@ -51,7 +51,7 @@ import { useFeature } from "@/lib/config";
 import { CATEGORY_ICON, PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { MAX_STOPS } from "@/lib/multistop";
 import { useSession } from "@/lib/session";
-import { currencyLabel, formatAmount, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
+import { currencyLabel, digits, formatAmount, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
 import { NegotiateBlockT2 } from "./NegotiationT2";
@@ -280,6 +280,27 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           <div className="t2-route-label">{tr("من")}</div>
           {/* **وموقعُ الجهاز بعنوانه من Mapbox** كما رُسم («شارع الرينبو، جبل عمّان») — للعرض وحدَه */}
           <div className="t2-route-value">{pickupAddress ?? props.pickupLine ?? tr("نقطة الانطلاق المحددة")}</div>
+          {/* **نقطةُ التقاطٍ أسهل** (البند ١١) — الراكبُ يقبل أو يُبقي دبّوسه */}
+          {props.pickupSuggestion ? (
+            <div className="t2-pickup-hint" role="group" aria-label={tr("نقطة التقاط أسهل")}>
+              <span className="t2-pickup-hint-text">
+                {props.pickupSuggestion.name
+                  ? tr("نقطة التقاط أسهل: «{name}» على بُعد {m} م", {
+                      name: props.pickupSuggestion.name,
+                      m: digits(props.pickupSuggestion.distance_m),
+                    })
+                  : tr("يلتقي الركّابُ عادةً على بُعد {m} م من دبّوسك", { m: digits(props.pickupSuggestion.distance_m) })}
+              </span>
+              <span className="t2-pickup-hint-actions">
+                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onUse}>
+                  {tr("استعملها")}
+                </button>
+                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onKeep}>
+                  {tr("أبقِ دبّوسي")}
+                </button>
+              </span>
+            </div>
+          ) : null}
         </div>
         <span />
         <span className="t2-route-join" aria-hidden="true" />

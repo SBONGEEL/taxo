@@ -122,6 +122,8 @@ export interface ConfirmRideProps {
   ) => void;
   /** **«ارفع عرضك»** بعد بحثٍ لم يجد كبتناً (§٩٢-أ/٧) — تُفتح الورقةُ والتفاوضُ مشتعلٌ بالسعر السابق */
   initialOffer?: string;
+  /** **نقطةُ التقاطٍ مقترحة** (البند ١١) — بطاقةٌ تحت «من» بزرّين: «استعملها» تنقل الانطلاقَ إليها، و«أبقِ دبّوسي» تُسكتها. */
+  pickupSuggestion?: { name: string | null; distance_m: number; onUse: () => void; onKeep: () => void } | null;
   requesting: boolean;
   requestError: string | null;
   /** **٤٠٢ `unconfirmed_payment_blocked`** — دفعُ رحلةٍ سابقةٍ يمنع الطلب (§٧): رسالةُ الخلفية وزرٌّ إلى «رحلةٌ لم يكتمل دفعها». */
