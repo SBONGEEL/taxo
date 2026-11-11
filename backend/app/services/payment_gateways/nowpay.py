@@ -16,7 +16,12 @@
 - `GET /status` بلا مفتاح (الصحّة)، و`GET /merchant/coins` بالمفتاح (العملاتُ المفعّلة — منه يُعرف أنّ دفعَ البطاقة مفعَّل).
 
 **والمبلغ**: الطلبُ بالدينار، والشريكُ يخصم بالدولار — **فالسعرُ يُحوَّل بربط الدينار الرسميّ** (1 JOD = 1.4104 USD، والقيمةُ في العقد
-تُضبط من صفحة العقود) **ويُقرَّب للأعلى** إلى السنت، فلا يصل TAXO أقلُّ ممّا طُلب.
+تُضبط من صفحة العقود) **ويُقرَّب للأعلى** إلى السنت.
+
+**ورسمُ الشريك تتحمّله TAXO** (قرارُ المالك ٢٠٢٦-١١-١١، حين `fee_bearer = taxo` على صفّ الطريقة): الشريكُ يضيف رسمَه فوق سعر
+الفاتورة، **فتُخفَّض الفاتورةُ حتى تُخصم البطاقةُ المستحقَّ بالدولار وحدَه**، ويُقيَّد للكبتن المستحقُّ كاملاً، ويصل TAXO أقلّ —
+والفرقُ يُكتب رسماً على TAXO في `fee_amount` بالدينار (المسارُ القائمُ لكلِّ وسيط). **وأنّ الرسمَ يُضاف فوق الفاتورة منقولٌ عن
+NOWPayments لا مقيس** — أوّلُ تجربةٍ للمالك تقيسه (`breakdown`).
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ import hashlib
 import hmac
 import json
 from collections.abc import Mapping
-from decimal import ROUND_UP, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_UP, Decimal, InvalidOperation
 from typing import Any
 
 import httpx
@@ -49,6 +54,27 @@ _PROCESSING = frozenset({"confirming", "confirmed", "sending"})
 #: **رسومُ الشريك على الدافع كما نشرتها NOWPayments** (مدوّنتها: «1.5% + 2 USD») — تُعرض للكبتن قبل الدفع، ولا تُحسب هنا
 PARTNER_FEE_TEXT = "1.5% + 2 USD"
 PARTNER_NAME = "Guardarian"
+#: **رسمُ الشريك رقماً** — المنشورُ نفسُه «1.5% + 2 USD»؛ به تُحسب الفاتورةُ حين تتحمّله TAXO
+PARTNER_FEE_RATE = Decimal("0.015")
+PARTNER_FEE_FIXED_USD = Decimal("2.00")
+_CENT = Decimal("0.01")
+_MILS = Decimal("0.001")
+
+
+def breakdown(amount: Decimal, fee_bearer: str | None, usd_per_jod: Decimal) -> tuple[Decimal, Decimal, Decimal]:
+    """**(خصمُ البطاقة، سعرُ الفاتورة، رسمُ الشريك) بالدولار لمبلغٍ بالدينار** — الحسابُ الواحدُ للفتح وللوحة.
+
+    **«taxo»**: خصمُ البطاقة = المستحقُّ بالدولار، والفاتورةُ = (الخصم − ٢) ÷ ١٫٠١٥ **مقرَّبةً للأسفل** فلا تُخصم البطاقةُ فوق المستحقّ،
+    والرسمُ = الفرق. **وغيرُها**: الفاتورةُ = المستحقّ، والرسمُ فوقها على الدافع — كما بُني أوّلاً.
+    """
+    due = (amount * usd_per_jod).quantize(_CENT, rounding=ROUND_UP)
+    if fee_bearer == "taxo":
+        invoice = ((due - PARTNER_FEE_FIXED_USD) / (1 + PARTNER_FEE_RATE)).quantize(_CENT, rounding=ROUND_DOWN)
+        if invoice <= 0:
+            raise base.GatewayError("المبلغُ أصغرُ من رسم شريك البطاقة — ادفع بكليك")
+        return due, invoice, due - invoice
+    fee = (due * PARTNER_FEE_RATE + PARTNER_FEE_FIXED_USD).quantize(_CENT, rounding=ROUND_UP)
+    return due + fee, due, fee
 
 
 class NowpayGateway:
@@ -139,9 +165,11 @@ class NowpayGateway:
         customer: base.CheckoutCustomer,
         locale: str = "ar",
     ) -> base.Checkout:
-        usd = self.charge_amount(amount)
+        _card, invoice, fee = breakdown(amount, fee_bearer, self.usd_per_jod)
+        # **الرسمُ بالدينار** يُكتب على الطلب بمساره القائم (`fee_payer`/`fee_amount`) — على TAXO أو على الدافع بحسب الطريقة
+        fee_jod = (fee / self.usd_per_jod).quantize(_MILS, rounding=ROUND_UP)
         payload: dict[str, Any] = {
-            "price_amount": float(usd),
+            "price_amount": float(invoice),
             "price_currency": CHARGE_CURRENCY,
             "pay_currency": CHARGE_CURRENCY,
             "ipn_callback_url": webhook_url,
@@ -164,7 +192,13 @@ class NowpayGateway:
             raise base.GatewayError(
                 "لم يُرجع NOWPayments رابطَ صفحة البطاقة — فعّل الدفعَ بالعملة الورقيّة (USD) في حساب NOWPayments"
             )
-        return base.Checkout(external_id=str(payment_id), checkout_url=url)
+        on_taxo = fee_bearer == "taxo"
+        return base.Checkout(
+            external_id=str(payment_id),
+            checkout_url=url,
+            fee_on_customer=None if on_taxo else fee_jod,
+            fee_on_merchant=fee_jod if on_taxo else None,
+        )
 
     async def check(self, external_id: str) -> base.GatewayEvent | None:
         body = await self._request("GET", f"/payment/{external_id}")

@@ -32,6 +32,11 @@ import { Icon } from "@/taxo2";
 import "./t2/fields.css";
 import "./t2/money.css"; import { tr } from "@/lib/i18n";
 
+/** **مبلغٌ مكتوبٌ تحت حدِّ البطاقة الأدنى** — مقارنةٌ لا حساب (§14)؛ والفارغُ ليس تحته */
+function belowCardFloor(amount: string, method: PayMethod): boolean {
+  return method.min_amount != null && amount.trim() !== "" && Number(amount) < Number(method.min_amount);
+}
+
 // **خريطةٌ بنوعها لا `as const`** — فمصدرٌ يُضاف في الخلفية ولا اسمَ له هنا يُسقط `check:enum-coverage` بدل أن يُرسم مفتاحُه
 const SOURCE_TEXT: Record<DriverDebtSource, string> = {
   ride_commission: tr("عمولة رحلة قبضتَ أجرتها نقداً"),
@@ -261,7 +266,10 @@ export function DebtScreen() {
               >
                 {busy ? tr("جارٍ…") : state.pay_via === "topup" ? tr("سدّد الآن") : tr("سدّد بكليك")}
               </button>
-              {state.pay_via !== "topup" && bankCard ? (
+              {state.pay_via !== "topup" && bankCard && belowCardFloor(amount, bankCard) ? (
+                // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا زرَّ بطاقة، ويُقال لماذا
+                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount ?? ""), 1: currency })}</p>
+              ) : state.pay_via !== "topup" && bankCard ? (
                 <>
                   <button
                     type="button"

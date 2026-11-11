@@ -2860,7 +2860,14 @@ export interface CardPayOverview {
   partner: string | null;
   partner_fee: string | null;
   method: AdminPayMethod | null;
-  requests: AdminPaymentRequest[];
+  requests: CardPayRequest[];
+}
+
+/** **دفعةُ بطاقةٍ في قائمة المالك** — المستحقُّ · خصمُ البطاقة · ما وصل · الرسمُ الذي تحمّلته TAXO (كلُّها من الخلفية) */
+export interface CardPayRequest extends AdminPaymentRequest {
+  card_charge_usd: string | null;
+  taxo_fee_usd: string | null;
+  taxo_fee: string | null;
 }
 
 export interface CardPayLimits {

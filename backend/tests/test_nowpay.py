@@ -182,9 +182,13 @@ async def test_finished_activates_the_subscription_once_and_a_duplicate_webhook_
     assert opened.status_code == 201, opened.text
     request_id = opened.json()["request"]["id"]
     assert opened.json()["checkout_url"] == "https://partner.example/checkout/5001"
-    # **ثمنُ الخطة من الخادم لا من التطبيق**، والبطاقةُ بالدولار مقرَّباً للأعلى إلى السنت (١٠ × ١٫٤١٠٤ = ١٤٫١٠٤ ⇐ ١٤٫١١)
+    # **ثمنُ الخطة من الخادم لا من التطبيق**، والمستحقُّ بالدولار مقرَّباً للأعلى إلى السنت (١٠ × ١٫٤١٠٤ = ١٤٫١٠٤ ⇐ ١٤٫١١).
+    # **ورسمُ الشريك على TAXO** (قرارُ المالك ٢٠٢٦-١١-١١): الفاتورةُ (١٤٫١١ − ٢) ÷ ١٫٠١٥ = ١١٫٩٣١ ⇐ ١١٫٩٣ فتُخصم البطاقةُ ١٤٫١١ وحدَها،
+    # والفرقُ ٢٫١٨ دولار = ١٫٥٤٦ دينار رسمٌ على TAXO في المسار القائم
     assert opened.json()["request"]["amount"] == "10.000"
-    assert fake.created[0]["price_amount"] == 14.11 and fake.created[0]["pay_currency"] == "usd"
+    assert fake.created[0]["price_amount"] == 11.93 and fake.created[0]["pay_currency"] == "usd"
+    opened_row = await _row(session_factory, request_id)
+    assert opened_row.fee_payer == "taxo" and opened_row.fee_amount == Decimal("1.546")
     assert fake.created[0]["order_id"] and "ipn_callback_url" in fake.created[0]
     assert fake.headers[0].get("origin-ip")
 
@@ -443,6 +447,10 @@ async def test_the_panel_overview_lists_payments_and_saves_limits(
     assert body["ready"] is True and body["keys_entered"] is True
     assert {(c["country_code"], c["locked"]) for c in body["countries"]} == {("JO", False), ("DZ", True), ("LY", True)}
     assert body["requests"][0]["external_id"] == "5001" and body["requests"][0]["gateway_message"] == "13.9 USDTTRC20"
+    # **الأعمدةُ الأربع** (قرارُ المالك ٢٠٢٦-١١-١١): المستحقّ · خصمُ البطاقة · ما وصل (أعلاه) · الرسمُ الذي تحمّلته TAXO
+    first = body["requests"][0]
+    assert first["amount"] == "10.000" and Decimal(first["card_charge_usd"]) == Decimal("14.11")
+    assert Decimal(first["taxo_fee_usd"]) == Decimal("2.18") and first["taxo_fee"] == "1.546"
     assert Decimal(body["today_total"]) == Decimal("10")
     # **ولا قيمةَ سرٍّ في الجواب**
     assert API_VALUE not in overview.text and IPN_VALUE not in overview.text
@@ -491,3 +499,45 @@ async def test_settings_service_refuses_the_flag_outside_jordan(session_factory)
     async with session_factory() as session:
         with pytest.raises(InvalidInput):
             await settings_service.set_flag(session, country_code=CountryCode.DZ, feature_key="nowpay_card_enabled", enabled=True)
+
+
+# ------------------------------------------------------------------ رسمُ الشريك على TAXO، والحدُّ الأدنى (قرارُ المالك ٢٠٢٦-١١-١١)
+
+
+def test_breakdown_charges_the_card_exactly_the_dues_when_taxo_bears_the_fee() -> None:
+    """**تُخصم البطاقةُ المستحقَّ وحدَه** والرسمُ يُطرح من الفاتورة — وحين يحمله الدافعُ يبقى فوقها كما بُني أوّلاً."""
+    from app.services.payment_gateways import nowpay
+
+    rate = Decimal("1.4104")
+    for amount, invoice, fee in (("10", "11.93", "2.18"), ("20", "25.82", "2.39"), ("50", "67.50", "3.02")):
+        card, inv, cost = nowpay.breakdown(Decimal(amount), "taxo", rate)
+        assert card == (Decimal(amount) * rate).quantize(Decimal("0.01"), rounding="ROUND_UP")
+        assert (inv, cost) == (Decimal(invoice), Decimal(fee)) and inv + cost == card
+        # **ولا تُخصم البطاقةُ فوق المستحقّ**: الفاتورةُ ورسمُ الشريك عليها لا يتجاوزان الخصم
+        assert (inv * (1 + nowpay.PARTNER_FEE_RATE) + nowpay.PARTNER_FEE_FIXED_USD).quantize(Decimal("0.01")) <= card
+    card, inv, cost = nowpay.breakdown(Decimal("10"), "user", rate)
+    assert (inv, cost, card) == (Decimal("14.11"), Decimal("2.22"), Decimal("16.33"))
+    with pytest.raises(nowpay.base.GatewayError):
+        nowpay.breakdown(Decimal("1"), "taxo", rate)
+
+
+async def test_a_payment_below_the_panel_floor_is_refused(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, admin_headers: dict
+) -> None:
+    """**الحدُّ من اللوحة لا من الشيفرة** — يُضبط ١٠ فتُرفض ٥ ويُقبل ١٠، ويصل الحدُّ إلى التطبيق ليُخفي الزرَّ ويقول لماذا."""
+    fake = _install(monkeypatch)
+    method_id = await _jordan_card(session_factory)
+    saved = await client.put(
+        "/admin/card-pay/limits",
+        json={"min_amount": "10", "max_amount": "100", "daily_cap": None, "usd_per_jod": None},
+        headers=admin_headers,
+    )
+    assert saved.status_code == 200, saved.text
+    captain = await approved_driver(client, session_factory)
+    listed = (await client.get("/payment-requests/methods", params={"purpose": "wallet_topup"}, headers=captain["headers"])).json()
+    card = next(row for row in listed["methods"] if row["code"] == "nowpay_card")
+    assert card["min_amount"] == "10.000" and card["fee_payer"] == "taxo"
+    small = await _open(client, captain["headers"], method_id, amount="5")
+    assert small.status_code == 422 and small.json()["field"] == "amount"
+    assert fake.created == []
+    assert (await _open(client, captain["headers"], method_id, amount="10")).status_code == 201

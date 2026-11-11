@@ -417,6 +417,13 @@ export function SubscriptionT2Screen() {
             onWallet={s.payFromWallet}
             onCard={s.payByCard}
             onCliq={s.payByCliq}
+            bankCardFloor={
+              // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١) — خطّةٌ ثمنُها تحته لا زرَّ بطاقةٍ لها، ويُقال لماذا
+              bankCard?.min_amount != null &&
+              Number(s.confirming.price_to_pay ?? s.confirming.price) < Number(bankCard.min_amount)
+                ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
+                : null
+            }
             onBankCard={
               bankCard
                 ? (chosen) =>

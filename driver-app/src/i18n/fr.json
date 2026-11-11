@@ -1904,5 +1904,8 @@
  "ثمن الاشتراك": "Prix de l'abonnement",
  "رصيد من نقاطك": "Crédit de vos points",
  "رقم الحساب المصرفيّ أو IBAN": "Numéro de compte bancaire ou IBAN",
- "كما في كشف حسابك البنكيّ، بالأرقام والحروف اللاتينيّة.": "Tel qu'il figure sur votre relevé bancaire, en chiffres et lettres latines."
+ "كما في كشف حسابك البنكيّ، بالأرقام والحروف اللاتينيّة.": "Tel qu'il figure sur votre relevé bancaire, en chiffres et lettres latines.",
+ "تُعالج البطاقةَ شركةُ {0}، ورسمُها تتحمّله TAXO: تُخصم بطاقتك مستحقَّك وحدَه. واسمُها ما يظهر في كشف حسابك.": "La carte est traitée par {0}, et ses frais sont pris en charge par TAXO : votre carte est débitée de votre montant dû uniquement. C'est son nom qui apparaît sur votre relevé.",
+ "وقد يضيف بنكُك رسمَ تحويل العملة، فيختلف ما في كشف حسابك قليلاً.": "Votre banque peut ajouter des frais de change, le montant sur votre relevé peut donc différer légèrement.",
+ "أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.": "Paiement minimum par carte : {0} {1} — pour les montants inférieurs, payez par CliQ."
 }

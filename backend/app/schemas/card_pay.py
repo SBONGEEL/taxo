@@ -17,6 +17,17 @@ class CardPayCountryOut(BaseModel):
     enabled: bool
 
 
+class CardPayRequestOut(AdminPaymentRequestOut):
+    """**دفعةُ بطاقةٍ في قائمة المالك** (قرارُه ٢٠٢٦-١١-١١): المستحقُّ (`amount`) · خصمُ البطاقة · ما وصل (`gateway_message`) · الرسمُ
+    الذي تحمّلته TAXO. **والدولارُ محسوبٌ بسعر العقد الآن** — والرسمُ بالدينار هو المكتوبُ على الطلب عند فتحه."""
+
+    #: **خصمُ البطاقة بالدولار** — المستحقُّ حين تتحمّل TAXO الرسم، والمستحقُّ ورسمُه حين يتحمّله الدافع
+    card_charge_usd: Decimal | None = None
+    #: **رسمُ الشريك الذي تحمّلته TAXO** — بالدولار (محسوب) وبالدينار (المكتوبُ على الطلب)؛ `null` حين حمله الدافع
+    taxo_fee_usd: Decimal | None = None
+    taxo_fee: Decimal | None = None
+
+
 class CardPayOverviewOut(BaseModel):
     countries: list[CardPayCountryOut]
     #: **أُدخل المفتاحان** (مفتاحُ API وسرُّ الإشعارات) — بلا قيمهما
@@ -32,7 +43,7 @@ class CardPayOverviewOut(BaseModel):
     partner: str | None
     partner_fee: str | None
     method: AdminPaymentMethodOut | None
-    requests: list[AdminPaymentRequestOut]
+    requests: list[CardPayRequestOut]
 
 
 class CardPayLimitsIn(BaseModel):

@@ -20,9 +20,15 @@ from app.core.exceptions import InvalidInput, NotFound
 from app.models.enums import AuditAction, CountryCode, FeatureKey
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.routers.admin_payment_requests import _rows_out, method_admin_out
-from app.schemas.card_pay import CardPayCountryOut, CardPayLimitsIn, CardPayLiveOut, CardPayOverviewOut
+from app.schemas.card_pay import (
+    CardPayCountryOut,
+    CardPayLimitsIn,
+    CardPayLiveOut,
+    CardPayOverviewOut,
+    CardPayRequestOut,
+)
 from app.services import audit, payment_gateways, payment_requests, settings_service
-from app.services.payment_gateways import GatewayError, GatewayUnavailable
+from app.services.payment_gateways import GatewayError, GatewayUnavailable, nowpay
 from app.services.pricing import as_money
 from app.services.providers import credentials as credentials_service
 
@@ -44,6 +50,27 @@ async def _gateway(session):
         return await payment_gateways.gateway_for(session, INTEGRATION, MARKET)
     except GatewayUnavailable:
         return None
+
+
+async def _card_rows(session, rows: list[PaymentRequest], gateway) -> list[CardPayRequestOut]:
+    """**الأعمدةُ الأربع** (قرارُ المالك ٢٠٢٦-١١-١١) — الحسابُ هنا لا في اللوحة (§14): `nowpay.breakdown` نفسُه الذي فتح الدفعة."""
+    rate = getattr(gateway, "usd_per_jod", None) or nowpay.DEFAULT_USD_PER_JOD
+    out: list[CardPayRequestOut] = []
+    for row, item in zip(rows, await _rows_out(session, rows), strict=True):
+        try:
+            card, _invoice, fee = nowpay.breakdown(row.amount, row.fee_payer, rate)
+        except GatewayError:
+            card = fee = None
+        on_taxo = row.fee_payer == "taxo"
+        out.append(
+            CardPayRequestOut(
+                **item.model_dump(),
+                card_charge_usd=card,
+                taxo_fee_usd=fee if on_taxo else None,
+                taxo_fee=row.fee_amount if on_taxo else None,
+            )
+        )
+    return out
 
 
 @router.get("", response_model=CardPayOverviewOut)
@@ -98,7 +125,7 @@ async def overview(
         partner=getattr(gateway, "partner_name", None),
         partner_fee=getattr(gateway, "partner_fee", None),
         method=method_admin_out(method) if method is not None else None,
-        requests=await _rows_out(session, rows),
+        requests=await _card_rows(session, rows, gateway),
     )
 
 

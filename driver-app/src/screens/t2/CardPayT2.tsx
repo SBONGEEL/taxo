@@ -89,6 +89,9 @@ export function CardPayT2Screen() {
   }
 
   const label = currency ? CURRENCY_LABEL[currency] : "";
+  // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا يُفتح الدفع ويُقال لماذا
+  const floor = method?.min_amount ?? null;
+  const belowFloor = handoff !== null && floor !== null && Number(handoff.amount) < Number(floor);
 
   return (
     <div className="t2 t2-cardpay scr">
@@ -150,11 +153,21 @@ export function CardPayT2Screen() {
               <li>
                 <Icon name="receipt_long" />
                 <span>
-                  {tr("تُعالج البطاقةَ شركةُ {0}، ورسمُها على الدافع: {1}. واسمُها ما يظهر في كشف حسابك.", {
-                    0: method.partner,
-                    1: method.partner_fee ?? "",
-                  })}
+                  {method.fee_payer === "taxo"
+                    ? tr("تُعالج البطاقةَ شركةُ {0}، ورسمُها تتحمّله TAXO: تُخصم بطاقتك مستحقَّك وحدَه. واسمُها ما يظهر في كشف حسابك.", {
+                        0: method.partner,
+                      })
+                    : tr("تُعالج البطاقةَ شركةُ {0}، ورسمُها على الدافع: {1}. واسمُها ما يظهر في كشف حسابك.", {
+                        0: method.partner,
+                        1: method.partner_fee ?? "",
+                      })}
                 </span>
+              </li>
+            ) : null}
+            {method.charge_rate ? (
+              <li>
+                <Icon name="account_balance" />
+                <span>{tr("وقد يضيف بنكُك رسمَ تحويل العملة، فيختلف ما في كشف حسابك قليلاً.")}</span>
               </li>
             ) : null}
             <li>
@@ -175,9 +188,13 @@ export function CardPayT2Screen() {
             </li>
           </ul>
 
-          <button type="button" className="t2-debt-cta" disabled={busy || method.down === true} onClick={() => void pay()}>
-            {busy ? tr("جارٍ…") : tr("تابع إلى صفحة البطاقة")}
-          </button>
+          {belowFloor && floor !== null ? (
+            <p className="t2-note">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(floor), 1: label })}</p>
+          ) : (
+            <button type="button" className="t2-debt-cta" disabled={busy || method.down === true} onClick={() => void pay()}>
+              {busy ? tr("جارٍ…") : tr("تابع إلى صفحة البطاقة")}
+            </button>
+          )}
           {method.down ? (
             <p className="t2-note">{tr("صفحة البطاقة متوقّفة الآن — حاول بعد قليل أو ادفع بكليك.")}</p>
           ) : null}

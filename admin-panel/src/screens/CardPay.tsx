@@ -184,7 +184,11 @@ export function CardPayScreen() {
               <div className="mt-8 grid gap-12 md:grid-cols-2">
                 <div>
                   <MoneyField label="أقلُّ مبلغٍ للدفعة الواحدة" value={minAmount} onChange={setMinAmount} currency="JOD" />
-                  <Explain>أقلُّ ما يُقبل في دفعةٍ واحدة. فارغٌ = بلا حدٍّ أدنى.</Explain>
+                  <Explain>
+                    أقلُّ ما يُقبل في دفعةٍ واحدة (يبدأ 10 دنانير). تحتَه لا يرى الكبتنُ زرَّ البطاقة، ويرى سطراً: «أقلُّ دفعٍ بالبطاقة … —
+                    للمبالغ الأصغر ادفع بكليك». ولمَ حدٌّ أدنى: رسمُ الشريك الثابت (2 دولار) تتحمّله TAXO، فالدفعةُ الصغيرةُ تكلّف أكثرَ
+                    ممّا تجلب. فارغٌ = بلا حدٍّ أدنى.
+                  </Explain>
                 </div>
                 <div>
                   <MoneyField label="أكثرُ مبلغٍ للدفعة الواحدة" value={maxAmount} onChange={setMaxAmount} currency="JOD" />
@@ -216,22 +220,26 @@ export function CardPayScreen() {
               </p>
               {data.partner ? (
                 <Explain>
-                  شريكُ البطاقة: {data.partner} — ورسمُه على الكبتن الدافع: <span dir="ltr">{data.partner_fee}</span>، ويقال له قبل أن
-                  يدفع. ورسمُ NOWPayments على حسابك يُخصم مما يصلك.
+                  شريكُ البطاقة: {data.partner} — ورسمُه (<span dir="ltr">{data.partner_fee}</span>){" "}
+                  {data.method?.fee_bearer === "taxo"
+                    ? "تتحمّله TAXO: تُخفَّض الفاتورةُ حتى تُخصم بطاقةُ الكبتن مستحقَّه وحدَه، ويُقيَّد له كاملاً، ويصلك أقلّ."
+                    : "على الكبتن الدافع، ويقال له قبل أن يدفع."}{" "}
+                  ورسمُ NOWPayments على حسابك (0.5%) يُخصم مما يصلك. وأنّ رسمَ الشريك يُضاف فوق الفاتورة منقولٌ عن NOWPayments —
+                  تؤكّده تجربتُك الأولى: إن خُصمت بطاقتُك أقلَّ من المستحقّ بالدولار فالرسمُ يُحسب بطريقةٍ أخرى.
                 </Explain>
               ) : null}
             </div>
           </section>
 
           <Table
-            columns="1.3fr 0.9fr 0.9fr 1.3fr 1.2fr 1.4fr"
-            headers={["الكبتن", "المبلغ", "الغرض", "مرجع NOWPayments", "الحال", "ما وصل"]}
+            columns="1.3fr 0.9fr 0.9fr 0.9fr 1.2fr 1.1fr 1.4fr 1fr"
+            headers={["الكبتن", "المستحقّ", "خصمُ البطاقة", "الغرض", "مرجع NOWPayments", "الحال", "ما وصل حسابَك", "رسمٌ تحمّلته TAXO"]}
             rows={data.requests}
             keyOf={(row) => row.id}
             height="compact"
             empty={{
               title: "لا دفعات بالبطاقة بعد",
-              hint: "يظهر هنا كلُّ دفعٍ بالبطاقة من كبتن: مبلغُه بالدينار، ومرجعُه عند NOWPayments، وحالُه، وما وصل حسابَك.",
+              hint: "يظهر هنا كلُّ دفعٍ بالبطاقة من كبتن: مستحقُّه بالدينار، وخصمُ بطاقته بالدولار، ومرجعُه عند NOWPayments، وحالُه، وما وصل حسابَك، والرسمُ الذي تحمّلته TAXO.",
             }}
             render={(row) => {
               const answer = live[row.id];
@@ -245,6 +253,9 @@ export function CardPayScreen() {
                     <span className="block text-10.5 text-muted">{when(row.created_at)}</span>
                   </span>
                   <span className="font-semibold text-ink">{digits(row.amount)} دينار</span>
+                  <span dir="ltr" className="text-ink">
+                    {row.card_charge_usd ? `${digits(row.card_charge_usd)} USD` : "—"}
+                  </span>
                   <span className="text-muted">{PAYMENT_REQUEST_PURPOSE_LABEL[row.purpose]}</span>
                   <span dir="ltr" className="text-10.5 text-muted">
                     {row.external_id ?? "—"}
@@ -276,12 +287,21 @@ export function CardPayScreen() {
                       </button>
                     ) : null}
                   </span>
+                  <span className="text-10.5 text-ink">
+                    {row.taxo_fee ? <span className="block">{digits(row.taxo_fee)} دينار</span> : "—"}
+                    {row.taxo_fee_usd ? (
+                      <span dir="ltr" className="block text-muted">
+                        {digits(row.taxo_fee_usd)} USD
+                      </span>
+                    ) : null}
+                  </span>
                 </>
               );
             }}
           />
           <Explain>
-            «ما وصل» هو ما قاله NOWPayments عمّا أُضيف إلى حسابك بالأصل الرقميّ. لا يتغيّر اشتراكٌ ولا مستحقٌّ إلا حين يقول NOWPayments
+            «خصمُ البطاقة» محسوبٌ بسعر الصرف المحفوظ في العقد، و«رسمٌ تحمّلته TAXO» رسمُ الشريك الذي خُفّضت به الفاتورة (بالدينار كما
+            كُتب عند فتح الدفعة). «ما وصل حسابَك» هو ما قاله NOWPayments عمّا أُضيف إلى حسابك بالأصل الرقميّ. لا يتغيّر اشتراكٌ ولا مستحقٌّ إلا حين يقول NOWPayments
             «اكتمل» (finished)؛ والجزئيُّ يُرفض بسببه ويُكتب ما وصل منه، والمنتهي والفاشل يُغلقان بلا أثر. وإن فات إشعارٌ سُئل NOWPayments
             كلَّ دقيقتين.
           </Explain>

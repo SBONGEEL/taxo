@@ -561,6 +561,7 @@ export function ConfirmSubscriptionSheet({
   gateway = null,
   manual = true,
   onBankCard,
+  bankCardFloor = null,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -579,6 +580,8 @@ export function ConfirmSubscriptionSheet({
   manual?: boolean;
   /** **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — يُمرَّر حيث طريقتُها معروضةٌ في سوقه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
   onBankCard?: (plan: SubscriptionPlan) => void;
+  /** **سطرُ الحدّ الأدنى** — حين ثمنُ الخطة تحت أقلِّ دفعٍ بالبطاقة: يُعرض مكانَ زرّها (قرارُ المالك ٢٠٢٦-١١-١١) */
+  bankCardFloor?: string | null;
 }) {
   const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
   const bankCard = !cardEnabled && !cardViaGateway && onBankCard !== undefined;
@@ -635,7 +638,9 @@ export function ConfirmSubscriptionSheet({
               **غيرَ مدعومةٍ في التطبيق** فيسأل الدعمَ عن ميزةٍ يراها في
               غيره؛ **والمعطَّلُ بعلّته يقول «قادمة» لا «غيرُ موجودة»**.
               وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
-          {bankCard ? (
+          {bankCard && bankCardFloor ? (
+            <p className="text-11 leading-note text-muted">{bankCardFloor}</p>
+          ) : bankCard ? (
             <>
               <Button size="md" variant="secondary" disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
                 {tr("الدفع بالبطاقة المصرفية")}
