@@ -1733,6 +1733,12 @@ export interface PayMethod {
   max_amount?: string | null;
   /** **الوسيطُ متوقّفٌ الآن** (§٨٢-أ/١) — يُقال قبل الضغط */
   down?: boolean;
+  /** **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١): البطاقةُ تُخصم بعملةٍ أخرى — عملتُها وكم منها لكلِّ وحدة، واسمُ شريك
+   *  البطاقة ورسمُه على الدافع. **تُقال قبل الدفع كما تصل**، و`null` لكلِّ طريقةٍ أخرى */
+  charge_currency?: string | null;
+  charge_rate?: string | null;
+  partner?: string | null;
+  partner_fee?: string | null;
 }
 
 export interface PayMethods {

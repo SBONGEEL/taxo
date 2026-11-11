@@ -58,6 +58,12 @@ class PaymentMethodOut(BaseModel):
     max_amount: Decimal | None = None
     #: **الوسيطُ متوقّفٌ الآن** (§٨٢-أ/١) — كما رآه آخرُ فحص؛ فيُقال قبل الضغط لا بعده
     down: bool = False
+    #: **الدفعُ بالبطاقة المصرفية** (NOWPayments، أمرُ المالك ٢٠٢٦-١١-١١): **البطاقةُ تُخصم بغير عملة الطلب** — عملتُها، وكم منها لكلِّ
+    #: وحدةٍ من عملة الطلب، واسمُ شريك البطاقة ورسمُه على الدافع — **فيُقال للكبتن قبل أن يدفع**؛ و`null` لكلِّ طريقةٍ أخرى
+    charge_currency: str | None = None
+    charge_rate: Decimal | None = None
+    partner: str | None = None
+    partner_fee: str | None = None
 
 
 class PaymentMethodsOut(BaseModel):

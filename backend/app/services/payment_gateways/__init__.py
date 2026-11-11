@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.crypto import get_cipher
 from app.core.exceptions import AppError
-from app.models.enums import CountryCode, PaymentRequestStatus, ProviderKey
+from app.models.enums import CountryCode, FeatureKey, PaymentRequestStatus, ProviderKey
 from app.models.provider_credential import ProviderCredential
 from app.services.providers import credentials as credentials_service
 
@@ -110,6 +110,10 @@ class CheckoutCustomer:
     email: str | None
     #: **معرّفُه عميلاً عند الوسيط** (Chargily، §٧٦-ع/٢) — فلا تسأله الصفحةُ بياناتِه؛ و`None` حين لا عميل
     gateway_id: str | None = None
+    #: **عنوانُ IP للدافع** — NOWPayments يشترطه لدفع البطاقة (ترويسة `origin-ip`)؛ ولا يُرسله غيرُه
+    ip: str | None = None
+    #: **مرجعُ الطلب عندنا** (`order_id` عند NOWPayments) — يُقرأ في لوحته فيُطابَق بطلبنا
+    order_ref: str | None = None
 
 
 class Gateway(Protocol):
@@ -144,23 +148,46 @@ class Gateway(Protocol):
 
 def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
+    from app.services.payment_gateways.nowpay import build_nowpay
     from app.services.payment_gateways.sofizpay import build_sofizpay
 
-    return {"chargily": build_chargily, "sofizpay": build_sofizpay}
+    return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
-DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay"}
+DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
-PROVIDER_KEYS: dict[str, ProviderKey] = {"chargily": ProviderKey.CHARGILY, "sofizpay": ProviderKey.SOFIZPAY}
+PROVIDER_KEYS: dict[str, ProviderKey] = {
+    "chargily": ProviderKey.CHARGILY,
+    "sofizpay": ProviderKey.SOFIZPAY,
+    "nowpay": ProviderKey.NOWPAY,
+}
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
 FEE_BEARERS: dict[str, frozenset[str]] = {
     # **خياران بأمر المالك** (§٧٤-ك/١): «TAXO» أو «الدافع» — والمناصفةُ لا تُعرض
     "chargily": frozenset({"taxo", "user"}),
     "sofizpay": frozenset({"taxo"}),
+    # **NOWPayments**: رسمُه (0.5%) على TAXO من المال الواصل، **ورسمُ شريك البطاقة على الدافع بشروط الشريك** — يُعرض له قبل الدفع
+    "nowpay": frozenset({"taxo"}),
 }
+
+#: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
+#: على الأردن شيءٌ غيرُه**: كليك والطرقُ القائمةُ كما هي. **والدولُ المسموحةُ مكتوبةٌ هنا لا في اللوحة**: الجزائرُ تمنع الأصولَ الافتراضيّة
+#: بقانون (المادّة ١١٧ من قانون المالية ٢٠١٨)، وليبيا مقفلةٌ حتى يقول المالك — فلا يُشعَل فيهما المفتاحُ ولو ضُغط
+OWN_SWITCH: dict[str, FeatureKey] = {"nowpay": FeatureKey.NOWPAY_CARD_ENABLED}
+SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {"nowpay": frozenset({CountryCode.JO})}
+#: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
+DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay"})
+#: **مفتاحٌ ⇐ وسيطُه** — فيُعرف من المفتاح أيُّ الدول مقفلة
+SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in OWN_SWITCH.items()}
+
+
+def switch_allowed(feature_key: str, country: CountryCode) -> bool:
+    """**أيُشعَل مفتاحُ هذا الوسيط في هذه الدولة؟** — `True` لكلِّ مفتاحٍ ليس لوسيط."""
+    integration = SWITCH_OWNER.get(feature_key)
+    return integration is None or CountryCode(country) in SWITCH_COUNTRIES.get(integration, frozenset())
 
 
 def allowed_for(gateway: object, phone: str | None) -> bool:

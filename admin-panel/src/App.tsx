@@ -154,6 +154,9 @@ const PhotoReportsScreen = lazy(() =>
 const EmergenciesScreen = lazy(() =>
   import("@/screens/Emergencies").then((m) => ({ default: m.EmergenciesScreen })),
 );
+const CardPayScreen = lazy(() =>
+  import("@/screens/CardPay").then((m) => ({ default: m.CardPayScreen })),
+);
 const NewFeaturesScreen = lazy(() =>
   import("@/screens/NewFeatures").then((m) => ({ default: m.NewFeaturesScreen })),
 );
@@ -526,6 +529,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <TaxoCardsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/card-pay"
+                    element={
+                      <Guarded>
+                        <CardPayScreen />
                       </Guarded>
                     }
                   />

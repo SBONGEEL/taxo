@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { bankCardMethod } from "@/screens/t2/CardPayT2";
 
 import { listPaymentMethods } from "@/api/endpoints";
 import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
@@ -126,7 +127,21 @@ export function SubscriptionT2Screen() {
       alive = false;
     };
   }, [payRequests]);
-  const gatewayMethod = methods?.find((row) => row.gateway) ?? null;
+  // **وطريقةُ البطاقة المصرفية ليست «وسيطَ السوق»** — لها زرُّها في الورقة؛ فلا تُقرأ هنا بديلاً عن Chargily
+  const gatewayMethod = methods?.find((row) => row.gateway && !row.charge_currency) ?? null;
+  // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — بمفتاحه الخاصّ في سوقه، **ونظامُ الدفع العامُّ مطفأٌ فيه** (الأردن)
+  const bankCardOn = useCountryConfig(profile?.user?.country_code)?.features.nowpay_card_enabled === true;
+  const [bankCard, setBankCard] = useState<PayMethod | null>(null);
+  useEffect(() => {
+    if (!bankCardOn) return;
+    let alive = true;
+    listPaymentMethods("subscription")
+      .then((body) => alive && setBankCard(bankCardMethod(body.methods)))
+      .catch(() => alive && setBankCard(null));
+    return () => {
+      alive = false;
+    };
+  }, [bankCardOn]);
   const gatewayName = gatewayMethod?.gateway_name ?? "Chargily";
   const hasManual = methods === null || methods.some((row) => !row.gateway && row.kind !== "purchase_code");
   const plans = s.subscription?.plans ?? [];
@@ -402,6 +417,19 @@ export function SubscriptionT2Screen() {
             onWallet={s.payFromWallet}
             onCard={s.payByCard}
             onCliq={s.payByCliq}
+            onBankCard={
+              bankCard
+                ? (chosen) =>
+                    navigate("/wallet/card-pay", {
+                      state: {
+                        purpose: "subscription",
+                        planId: chosen.id,
+                        planName: chosen.name,
+                        amount: chosen.price_to_pay ?? chosen.price,
+                      },
+                    })
+                : undefined
+            }
             onPayRequest={
               payRequests
                 ? (chosen, methodId) =>

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -163,6 +163,13 @@ async def country_today(session: AsyncSession, country: CountryCode) -> date:
     تُعاد كتابتُها في كلِّ من يحتاج يوماً.
     """
     return datetime.now(await _zone(session, country)).date()
+
+
+async def country_day_start(session: AsyncSession, country: CountryCode) -> datetime:
+    """**منتصفُ ليل البلد اليومَ بـUTC** — بدايةُ «اليوم» لكلِّ عدٍّ يوميّ (سقفُ الدفع بالبطاقة، أمرُ المالك ٢٠٢٦-١١-١١)."""
+    zone = await _zone(session, country)
+    local = datetime.now(zone)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
 
 
 def _window(zone: ZoneInfo, period: str, now: datetime) -> tuple[datetime, datetime]:

@@ -1,0 +1,70 @@
+/* **الدفعُ بالبطاقة المصرفية** — بقطع شاشات مال الكبتن (رأسُ C10، وبطاقةُ المجموع من C21) */
+.t2-cardpay {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px 32px;
+}
+.t2-cardpay-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--t2-card);
+  border: 1px solid var(--t2-line);
+  color: var(--t2-ink);
+}
+.t2-cardpay-bar-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--t2-muted);
+}
+.t2-cardpay-total {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--t2-card);
+  border: 1px solid var(--t2-line);
+}
+.t2-cardpay-k {
+  font-size: 12px;
+  color: var(--t2-muted);
+}
+.t2-cardpay-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.t2-cardpay-num {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--t2-ink);
+}
+.t2-cardpay-cur {
+  font-size: 13px;
+  color: var(--t2-muted);
+}
+.t2-cardpay-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.t2-cardpay-facts li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-ink);
+}
+.t2-cardpay-facts li > :first-child {
+  color: var(--t2-accent);
+  font-size: 18px;
+  flex: none;
+}

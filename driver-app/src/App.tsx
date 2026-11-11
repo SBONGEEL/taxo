@@ -173,6 +173,12 @@ const CardRedeemT2Screen = lazy(() =>
     default: m.CardRedeemT2Screen,
   })),
 );
+// **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — الاشتراكُ والمستحقّاتُ ببطاقة الكبتن البنكيّة، حيث `nowpay_card_enabled` مشتعل
+const CardPayT2Screen = lazy(() =>
+  import("@/screens/t2/CardPayT2").then((m) => ({
+    default: m.CardPayT2Screen,
+  })),
+);
 const PayRequestT2Screen = lazy(() =>
   import("@/screens/t2/PayRequestT2").then((m) => ({
     default: m.PayRequestT2Screen,
@@ -775,6 +781,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <PayRequestT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/wallet/card-pay"
+                          element={
+                            <Guarded>
+                              <CardPayT2Screen />
                             </Guarded>
                           }
                         />

@@ -626,6 +626,9 @@ class ProviderKey(StrEnum):
     FACEBOOK_PAGE = "facebook_page"
     #: **تقاريرُ Play** («الإحصاءات») — حسابُ خدمةٍ يقرأ مجلّدَ التقارير وحدَه
     GOOGLE_PLAY_REPORTS = "google_play_reports"
+    #: **الدفعُ بالبطاقة المصرفية للكبتن في الأردن** (أمرُ المالك ٢٠٢٦-١١-١١) — مفتاحُ API وسرُّ الإشعارات **يُدخلهما المالكُ بنفسه**؛
+    #: لكلِّ دولة، **ويُعرض بمفتاحه `nowpay_card_enabled` لا بنظام الدفع الجديد**
+    NOWPAY = "nowpay"
 
 
 class GatewayFeeBearer(StrEnum):
@@ -918,6 +921,9 @@ class FeatureKey(StrEnum):
     # **نظامُ الدفع الجديد** (SPEC §٧٣-أ/٥، §٧٣-هـ/٩) — طرقُ الدفع صفوفاً لكلِّ دولة والدفعاتُ بحالاتها الخمس. **مطفأٌ لكلِّ سوق**:
     # مطفأً لا يُفتح طلبٌ ولا تُعرض طريقة، **وواجهتا الأردن وليبيا لا تقرآن منه شيئاً** — ويُشعله المالكُ للجزائر يومَ الإطلاق
     PAYMENT_REQUESTS_ENABLED = "payment_requests_enabled"
+    #: **«الدفع بالبطاقة المصرفية» للكبتن** (أمرُ المالك ٢٠٢٦-١١-١١) — مفتاحُه الرئيسيّ لكلِّ دولة؛ **مشتعلٌ للأردن ابتداءً** ومقفلٌ في
+    #: الجزائر وليبيا بالشيفرة (`payment_gateways.SWITCH_COUNTRIES`)، **ولا يُعرض حتى يُدخل المالكُ مفتاحَيه**
+    NOWPAY_CARD_ENABLED = "nowpay_card_enabled"
 
 
 class MapPlaceCategory(StrEnum):

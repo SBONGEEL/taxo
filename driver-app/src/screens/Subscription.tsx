@@ -560,6 +560,7 @@ export function ConfirmSubscriptionSheet({
   onPayRequest,
   gateway = null,
   manual = true,
+  onBankCard,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -576,8 +577,11 @@ export function ConfirmSubscriptionSheet({
   gateway?: { id: string; name: string } | null;
   /** **طريقةٌ يدويّةٌ قائمة** — وإلا لا يُعرض «بتحويلٍ أو نقداً» */
   manual?: boolean;
+  /** **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — يُمرَّر حيث طريقتُها معروضةٌ في سوقه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
+  onBankCard?: (plan: SubscriptionPlan) => void;
 }) {
   const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
+  const bankCard = !cardEnabled && !cardViaGateway && onBankCard !== undefined;
   return (
     <div
       className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
@@ -631,6 +635,16 @@ export function ConfirmSubscriptionSheet({
               **غيرَ مدعومةٍ في التطبيق** فيسأل الدعمَ عن ميزةٍ يراها في
               غيره؛ **والمعطَّلُ بعلّته يقول «قادمة» لا «غيرُ موجودة»**.
               وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
+          {bankCard ? (
+            <>
+              <Button size="md" variant="secondary" disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
+                {tr("الدفع بالبطاقة المصرفية")}
+              </Button>
+              <p className="-mt-4 text-11 leading-note text-muted">
+                {tr("ببطاقتك البنكيّة — يُفعَّل اشتراكُك فورَ اكتمال الدفع.")}
+              </p>
+            </>
+          ) : (
           <Button
             size="md"
             variant="secondary"
@@ -639,7 +653,8 @@ export function ConfirmSubscriptionSheet({
           >
             {tr("الدفع ببطاقة")}
           </Button>
-          {cardViaGateway && gateway ? (
+          )}
+          {bankCard ? null : cardViaGateway && gateway ? (
             <p className="-mt-4 text-11 leading-note text-muted">
               {tr("الذهبية أو CIB عبر {0} — يُفعَّل اشتراكُك فورَ تأكيده.", { 0: gateway.name })}
             </p>

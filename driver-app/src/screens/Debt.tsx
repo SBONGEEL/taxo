@@ -17,8 +17,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getDebtState, listMyDebtClaims, payDebtWithCliq } from "@/api/endpoints";
-import type { DebtClaim, DriverDebtSource, DriverDebtState } from "@/api/types";
+import { getDebtState, listMyDebtClaims, listPaymentMethods, payDebtWithCliq } from "@/api/endpoints";
+import type { DebtClaim, DriverDebtSource, DriverDebtState, PayMethod } from "@/api/types";
+import { bankCardMethod } from "@/screens/t2/CardPayT2";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
@@ -89,6 +90,19 @@ export function DebtScreen() {
   const { user } = useSession();
   const unit = roundingUnit(useCountryConfig(user?.country_code));
   const unitError = notMultipleMessage(amount, unit, currency);
+  // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — جوارَ كليك حيث مفتاحُه مشتعلٌ وطريقتُه معروضة؛ **وكليكُ كما هو**
+  const bankCardOn = useCountryConfig(user?.country_code)?.features.nowpay_card_enabled === true;
+  const [bankCard, setBankCard] = useState<PayMethod | null>(null);
+  useEffect(() => {
+    if (!bankCardOn) return;
+    let alive = true;
+    listPaymentMethods("wallet_topup")
+      .then((body) => alive && setBankCard(bankCardMethod(body.methods)))
+      .catch(() => alive && setBankCard(null));
+    return () => {
+      alive = false;
+    };
+  }, [bankCardOn]);
 
   return (
     <div className="t2 t2-debt scr">
@@ -247,6 +261,23 @@ export function DebtScreen() {
               >
                 {busy ? tr("جارٍ…") : state.pay_via === "topup" ? tr("سدّد الآن") : tr("سدّد بكليك")}
               </button>
+              {state.pay_via !== "topup" && bankCard ? (
+                <>
+                  <button
+                    type="button"
+                    className="t2-debt-cta"
+                    disabled={unitError !== null || amount.trim() === ""}
+                    onClick={() =>
+                      navigate("/wallet/card-pay", { state: { purpose: "wallet_topup", amount: amount.trim() } })
+                    }
+                  >
+                    {tr("الدفع بالبطاقة المصرفية")}
+                  </button>
+                  <p className="t2-fld-hint">
+                    {tr("ببطاقتك البنكيّة — تُخصم مستحقّاتُك فورَ اكتمال الدفع، بلا مراجعة.")}
+                  </p>
+                </>
+              ) : null}
               {state.pay_via !== "topup" && !state.cliq_alias ? (
                 <p className="t2-debt-warn">
                   {tr("لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.")}

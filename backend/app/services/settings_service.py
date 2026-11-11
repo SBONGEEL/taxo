@@ -98,6 +98,13 @@ async def set_flag(
 ) -> FeatureFlag:
     """ينشئ المفتاح أو يحدّثه. الـ commit مسؤولية المستدعي."""
     key = feature_key.value if isinstance(feature_key, FeatureKey) else feature_key
+    from app.core.exceptions import InvalidInput
+    from app.services import payment_gateways
+
+    if enabled and not payment_gateways.switch_allowed(key, CountryCode(country_code)):
+        # **مفتاحُ وسيطٍ مقفلٌ في هذه الدولة بالشيفرة** (الدفعُ بالبطاقة: الأردنُ وحدَه — الجزائرُ تمنع الأصولَ الافتراضيّة بقانون،
+        # وليبيا حتى يقول المالك) — **لا يُشعَل ولو ضُغط**، ويُطفأ متى شاء
+        raise InvalidInput("هذا المفتاحُ مقفلٌ في هذه الدولة", field="enabled")
     flag = await session.scalar(
         select(FeatureFlag).where(
             FeatureFlag.country_code == country_code, FeatureFlag.feature_key == key

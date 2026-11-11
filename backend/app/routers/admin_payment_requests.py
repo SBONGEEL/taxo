@@ -90,6 +90,10 @@ async def _require_gateway_ready(session, provider: PayMethod) -> None:
         return
     if provider.fee_bearer not in payment_gateways.FEE_BEARERS.get(provider.integration, frozenset()):
         raise InvalidInput("هذا الوسيطُ لا يوثّق تحميلَ رسومه بهذا الشكل — اتركها على TAXO", field="fee_bearer")
+    # **ووسيطٌ بمفتاحه الخاصّ يُخفى وحدَه بلا عقد** (NOWPayments، أمرُ المالك: «حتى يُدخلا تبقى الطريقةُ مخفيّةً تلقائيّاً») — فلا يُشترط
+    # عقدُه لتعديل حدّيه قبل أن يُدخل المالكُ مفتاحَيه
+    if provider.integration in payment_gateways.OWN_SWITCH:
+        return
     if provider.enabled and not await credentials_service.provider_is_active(
         session, payment_gateways.PROVIDER_KEYS[provider.integration], provider.country_code
     ):

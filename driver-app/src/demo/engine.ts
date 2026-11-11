@@ -62,6 +62,7 @@ const DEMO_FEATURES: Record<string, boolean> = {
   cliq_enabled: false,
   card_enabled: false,
   payment_requests_enabled: true,
+  nowpay_card_enabled: false,
 };
 
 /** **أجرُ العرض — نصوصٌ ثابتةٌ لا حساب** */

@@ -68,6 +68,7 @@ from app.routers import (
     admin_verification_campaigns,
     admin_wallets,
     admin_payment_protection,
+    admin_card_pay,
     admin_payment_requests,
     admin_transfers,
     payment_requests,
@@ -167,6 +168,7 @@ api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 # **نظامُ الدفع الجديد** (SPEC §٧٣-هـ المرحلة ١) — طرقُ الدفع لكلِّ دولة وطابورُ الموظّف الماليّ، ووجهُه للراكب والكبتن والـwebhook
 api_router.include_router(admin_payment_requests.router)
+api_router.include_router(admin_card_pay.router)
 api_router.include_router(admin_payment_protection.router)
 # **مراجعةُ تحويلات BaridiMob** (SPEC §٨٢-ب)
 api_router.include_router(admin_transfers.router)

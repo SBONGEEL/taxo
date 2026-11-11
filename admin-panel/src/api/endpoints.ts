@@ -15,6 +15,7 @@ import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, Expiri
 import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
 import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
+import type { CardPayLimits, CardPayLive, CardPayOverview } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2271,6 +2272,16 @@ export const createPayMethod = (
     integration: "chargily" | "sofizpay" | null;
   },
 ) => api.post<AdminPayMethod>("/admin/payment-methods", body);
+
+/** **الدفعُ بالبطاقة المصرفية** (NOWPayments، ٢٠٢٦-١١-١١) — المفاتيحُ بالدولة، وحالُ العقد، والحدود، والدفعات. */
+export const getCardPay = () => api.get<CardPayOverview>("/admin/card-pay");
+
+/** **الحدّان والسقفُ والسعر** — النموذجُ كاملاً، و`null` «بلا حدّ» أو «الأصل». */
+export const saveCardPayLimits = (body: CardPayLimits) => api.put<CardPayOverview>("/admin/card-pay/limits", body);
+
+/** **ما يقوله NOWPayments الآن عن دفعة** — الحالُ وما دُفع وما وصل. */
+export const getCardPayLive = (requestId: string) =>
+  api.get<CardPayLive>(`/admin/card-pay/payments/${requestId}/live`);
 
 /** **ما تغيّر وحدَه** — ويُدقَّق كلُّ تغييرٍ بقبله وبعده في الخادم (رقمُ الحساب أوّلُها). */
 export const updatePayMethod = (id: string, body: Partial<AdminPayMethodInput>) =>

@@ -22,10 +22,10 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 from app.core import storage
 from app.core.config import settings
 from app.core.currency import currency_for_country
-from app.core.deps import CurrentUser, DbSession, RedisDep
+from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
 from app.core.i18n import translate
-from app.models.enums import PaymentRequestPurpose, WalletOwnerType
+from app.models.enums import PaymentRequestPurpose, UserRole, WalletOwnerType
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
     MyPaymentRequestOut,
@@ -43,9 +43,20 @@ router = APIRouter(prefix="/payment-requests", tags=["payment-requests"])
 
 
 def method_out(
-    provider: PayMethod, *, test_mode: bool = False, shares_payer: bool = False, down: bool = False
+    provider: PayMethod,
+    *,
+    test_mode: bool = False,
+    shares_payer: bool = False,
+    down: bool = False,
+    gateway: object | None = None,
 ) -> PaymentMethodOut:
+    # **ما يُقال للكبتن قبل أن يدفع بالبطاقة** (NOWPayments) — عملةُ الخصم وسعرُها واسمُ الشريك ورسمُه؛ ولغيره لا شيء
+    rate = getattr(gateway, "usd_per_jod", None)
     return PaymentMethodOut(
+        charge_currency="USD" if rate is not None else None,
+        charge_rate=rate,
+        partner=getattr(gateway, "partner_name", None) if rate is not None else None,
+        partner_fee=getattr(gateway, "partner_fee", None) if rate is not None else None,
         code=provider.code,
         account_holder_latin=provider.account_holder_latin,
         min_amount=provider.min_amount,
@@ -127,11 +138,29 @@ async def list_methods(
     session: DbSession,
     purpose: PaymentRequestPurpose = Query(default=PaymentRequestPurpose.WALLET_TOPUP),
 ) -> PaymentMethodsOut:
-    """**طرقُ الدفع المفعَّلة في سوقي لهذا الغرض** — بما يلزم لأدفع: إلى أين، وما يُطلب مني."""
-    await payment_requests.require_enabled(session, user.country_code)
+    """**طرقُ الدفع المفعَّلة في سوقي لهذا الغرض** — بما يلزم لأدفع: إلى أين، وما يُطلب مني.
+
+    **ونظامُ الدفع العامُّ مطفأً في السوق** (الأردن): تُعرض طرقُ الوسيط ذي المفتاح الخاصّ وحدَها إن اشتعل مفتاحُها — **ولا شيءَ غيرُها**،
+    فكليك والطرقُ القائمةُ لا تتغيّر. وإن لم يشتعل شيءٌ رُدّ كما كان."""
+    general = await payment_requests.is_enabled(session, user.country_code)
+    own = {
+        integration
+        for integration in payment_gateways.OWN_SWITCH
+        if await payment_requests.own_switch_on(session, user.country_code, integration)
+    }
+    if not general and not own:
+        await payment_requests.require_enabled(session, user.country_code)
     providers = await payment_requests.providers_for(session, user.country_code, purpose)
     shown: list[PaymentMethodOut] = []
+    is_driver = user.has_role(UserRole.DRIVER)
     for provider in providers:
+        if provider.integration in payment_gateways.OWN_SWITCH:
+            if provider.integration not in own:
+                continue
+        elif not general:
+            continue
+        if provider.integration in payment_gateways.DRIVERS_ONLY and not is_driver:
+            continue
         if provider.integration is None:
             shown.append(method_out(provider))
             continue
@@ -152,7 +181,12 @@ async def list_methods(
         if getattr(gateway, "fallback_only", False) and not await gateway_health.is_down("chargily", user.country_code):
             continue
         down = await gateway_health.is_down(provider.integration, user.country_code)
-        shown.append(method_out(provider, test_mode=test_mode, shares_payer=shares_payer, down=down))
+        shown.append(
+            method_out(provider, test_mode=test_mode, shares_payer=shares_payer, down=down, gateway=gateway)
+        )
+    if not general and not shown:
+        # **مفتاحُ البطاقة مشتعلٌ ولا عقدَ بعد** — كما كان: النظامُ مطفأٌ في السوق، ولا طريقةَ تُعرض
+        await payment_requests.require_enabled(session, user.country_code)
     return PaymentMethodsOut(
         currency=currency_for_country(user.country_code),
         # **كلُّ مفعَّلٍ يُعرض** — اليدويُّ يُراجَع، والوسيطُ الآليُّ يُدفع في صفحته (المرحلة ٣)، وبطاقاتُ TAXO تُدخل برمزها
@@ -261,7 +295,9 @@ async def cancel_mine(
 
 
 @router.post("/checkout", response_model=PaymentCheckoutOut, status_code=status.HTTP_201_CREATED)
-async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: DbSession) -> PaymentCheckoutOut:
+async def open_checkout(
+    payload: PaymentCheckoutIn, user: CurrentUser, session: DbSession, ip: ClientIP
+) -> PaymentCheckoutOut:
     """**صفحةُ دفعٍ عند وسيطٍ آليّ** (المرحلة ٣) — يفتحها التطبيقُ ثمّ يعود إلى صفحة العودة ويسأل عن الحال (`/refresh`).
 
     **والتطبيقُ الذي فتحها يُعرف من المحفظة المعلَنة** — الاشتراكُ والمحفظةُ الكبتنُ يعودان إلى تطبيق الكبتن، وما عداهما إلى الراكب.
@@ -281,6 +317,8 @@ async def open_checkout(payload: PaymentCheckoutIn, user: CurrentUser, session: 
         plan_id=payload.plan_id,
         declared=payload.wallet,
         opened_from=opened_from,
+        # **عنوانُ الدافع** — يشترطه NOWPayments لدفع البطاقة؛ وما عداه لا يقرؤه
+        client_ip=ip if ip and ip != "unknown" else None,
     )
     await session.commit()
     await session.refresh(request, attribute_names=["provider"])

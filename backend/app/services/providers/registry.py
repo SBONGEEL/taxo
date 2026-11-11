@@ -453,6 +453,43 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **«الدفع بالبطاقة المصرفية» للكبتن في الأردن** (أمرُ المالك ٢٠٢٦-١١-١١) — لكلِّ دولة، **ولا `feature_key`**: مفتاحُه الرئيسيُّ
+    # (`nowpay_card_enabled`) قرارُ المالك من اللوحة لا ظلُّ العقد. **والمفتاحان يُدخلهما المالكُ بنفسه**، وحتى يُدخلا لا تُعرض الطريقة
+    ProviderKey.NOWPAY: ProviderSpec(
+        key=ProviderKey.NOWPAY,
+        label="NOWPayments — الدفع بالبطاقة المصرفية (الكباتن)",
+        fields=(
+            ProviderField(key="api_key", label="مفتاح API — من لوحة NOWPayments: Settings ← Payments ← API keys"),
+            ProviderField(
+                key="ipn_secret",
+                label="سرّ الإشعارات (IPN secret) — من لوحة NOWPayments: Settings ← Payments ← Instant payment notifications",
+            ),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (sandbox) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الكباتن معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="usd_per_jod",
+                label="كم دولاراً يُخصم لكلِّ دينار — فارغ = ربطُ الدينار الرسميّ 1.4104",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ الكباتن)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     ProviderKey.PAYOUT: ProviderSpec(
         key=ProviderKey.PAYOUT,
         label="مزود التحويلات الآلية للسحوبات",

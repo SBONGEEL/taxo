@@ -615,6 +615,8 @@ export type FeatureKey =
   | "map_places_enabled"
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طرقُ الدفع صفوفاً لكلِّ دولة وطابورُ الموظّف الماليّ
   | "payment_requests_enabled"
+  // **الدفعُ بالبطاقة المصرفية للكبتن** (NOWPayments، أمرُ المالك ٢٠٢٦-١١-١١) — الأردنُ وحدَه، والجزائرُ وليبيا مقفلتان في الخادم
+  | "nowpay_card_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -2830,6 +2832,51 @@ export interface AdminPayMethod {
   hidden_auto: boolean;
   /** **الإخفاقاتُ المتتاليةُ الآن** عند الوسيط */
   failure_streak: number;
+  /** **حدّا الدفعة الواحدة** — `null` بلا حدّ */
+  min_amount?: string | null;
+  max_amount?: string | null;
+}
+
+// ------------------------------------------------------------ الدفعُ بالبطاقة المصرفية (NOWPayments، ٢٠٢٦-١١-١١)
+
+export interface CardPayCountry {
+  country_code: CountryCode;
+  /** **مقفلةٌ في الخادم** — لا تُشعَل من هنا (الجزائرُ وليبيا) */
+  locked: boolean;
+  enabled: boolean;
+}
+
+export interface CardPayOverview {
+  countries: CardPayCountry[];
+  keys_entered: boolean;
+  contract_active: boolean;
+  /** **جاهزٌ للكبتن** — عقدٌ مفعَّلٌ بمفتاحيه؛ وإلا فالطريقةُ مخفيّةٌ تلقائيّاً */
+  ready: boolean;
+  sandbox: boolean;
+  usd_per_jod: string | null;
+  daily_cap: string | null;
+  today_total: string;
+  webhook_url: string;
+  partner: string | null;
+  partner_fee: string | null;
+  method: AdminPayMethod | null;
+  requests: AdminPaymentRequest[];
+}
+
+export interface CardPayLimits {
+  min_amount: string | null;
+  max_amount: string | null;
+  daily_cap: string | null;
+  usd_per_jod: string | null;
+}
+
+/** **ما يقوله NOWPayments الآن عن دفعة** — قراءةٌ لا تكتب شيئاً */
+export interface CardPayLive {
+  external_id: string;
+  status: string | null;
+  price: string | null;
+  paid: string | null;
+  received: string | null;
 }
 
 // ------------------------------------------------------------ حمايةُ الدفع (SPEC §٨٧)

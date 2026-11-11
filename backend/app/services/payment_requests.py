@@ -160,10 +160,69 @@ async def is_enabled(session: AsyncSession, country: CountryCode) -> bool:
     return await settings_service.is_feature_enabled(session, country, FeatureKey.PAYMENT_REQUESTS_ENABLED)
 
 
-async def require_enabled(session: AsyncSession, country: CountryCode) -> None:
-    """**مطفأً لا يُفتح طلبٌ ولا تُعرض طريقة** (§٧٣-هـ/٩) — والأردنُ وليبيا مطفآن فلا يمسّهما شيءٌ هنا."""
+async def own_switch_on(session: AsyncSession, country: CountryCode, integration: str | None) -> bool:
+    """**وسيطٌ بمفتاحه الخاصّ** (NOWPayments في الأردن، أمرُ المالك ٢٠٢٦-١١-١١) — مشتعلٌ في هذه الدولة، **وهي من دوله المكتوبة**.
+    `False` لكلِّ وسيطٍ بلا مفتاحٍ خاصّ — فيحكمه مفتاحُ نظام الدفع العامّ كما كان."""
+    from app.services import payment_gateways
+
+    key = payment_gateways.OWN_SWITCH.get(integration or "")
+    if key is None or CountryCode(country) not in payment_gateways.SWITCH_COUNTRIES.get(integration or "", frozenset()):
+        return False
+    return await settings_service.is_feature_enabled(session, country, key)
+
+
+async def require_enabled(session: AsyncSession, country: CountryCode, integration: str | None = None) -> None:
+    """**مطفأً لا يُفتح طلبٌ ولا تُعرض طريقة** (§٧٣-هـ/٩) — والأردنُ وليبيا مطفآن فلا يمسّهما شيءٌ هنا.
+
+    **إلا وسيطاً بمفتاحه الخاصّ** (`own_switch_on`): يُفتح بمفتاحه وحدَه ولو كان النظامُ العامُّ مطفأً — **وطرقُ السوق الأخرى لا تُفتح
+    به**: كليك والتحويلاتُ في الأردن تبقى كما كانت."""
+    from app.services import payment_gateways
+
+    if integration in payment_gateways.OWN_SWITCH:
+        if not await own_switch_on(session, country, integration):
+            raise FeatureDisabled("الدفعُ بالبطاقة المصرفية غيرُ متاحٍ في بلدك الآن")
+        return
     if not await is_enabled(session, country):
         raise FeatureDisabled("الدفعُ بهذه الطرق غيرُ متاحٍ في بلدك الآن")
+
+
+async def _integration_of(session: AsyncSession, provider_id: uuid.UUID) -> str | None:
+    """**وسيطُ الطريقة قبل أيِّ حارس** — فيُعرف بأيِّ مفتاحٍ تُفتح؛ وطريقةٌ لا وجودَ لها `None` (فيحكمها المفتاحُ العامُّ كما كان)."""
+    return await session.scalar(select(PayMethod.integration).where(PayMethod.id == provider_id))
+
+
+async def daily_total(session: AsyncSession, *, integration: str, country: CountryCode) -> Decimal:
+    """**مجموعُ ما دُفع اليومَ بهذا الوسيط في هذا السوق** — يومُ البلد لا يومُ الخادم؛ المعتمدُ وما قال وسيطُه «دُفع»."""
+    from sqlalchemy import func
+
+    from app.services import stats
+
+    start = await stats.country_day_start(session, country)
+    total = await session.scalar(
+        select(func.coalesce(func.sum(PaymentRequest.amount), 0))
+        .join(PayMethod, PayMethod.id == PaymentRequest.provider_id)
+        .where(
+            PayMethod.integration == integration,
+            PaymentRequest.country_code == country,
+            PaymentRequest.created_at >= start,
+            or_(
+                PaymentRequest.status == PaymentRequestStatus.APPROVED,
+                (PaymentRequest.status == PaymentRequestStatus.PENDING) & PaymentRequest.gateway_paid_at.is_not(None),
+            ),
+        )
+    )
+    return as_money(Decimal(str(total or 0)))
+
+
+async def require_under_daily_cap(
+    session: AsyncSession, *, gateway: object, integration: str, country: CountryCode, amount: Decimal
+) -> None:
+    """**سقفُ مجموع اليوم** (أمرُ المالك ٢٠٢٦-١١-١١) — لكلِّ الكباتن معاً؛ عقدٌ بلا سقفٍ كما كان."""
+    cap = getattr(gateway, "daily_cap", None)
+    if cap is None:
+        return
+    if await daily_total(session, integration=integration, country=country) + amount > cap:
+        raise InvalidInput("بلغ الدفعُ بالبطاقة حدَّه اليوميّ — ادفع بطريقةٍ أخرى أو حاول غداً", field="amount")
 
 
 # ------------------------------------------------------------------ الطرق
@@ -311,7 +370,7 @@ async def _prepare(
         test_accounts.require_real_money(
             owner, "حسابُ التجربة لا يُشحن بدفعٍ حقيقيّ — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
         )
-    await require_enabled(session, owner.country_code)
+    await require_enabled(session, owner.country_code, await _integration_of(session, provider_id))
     provider = await available_provider(session, provider_id, owner.country_code)
 
     if gateway and provider.integration is None:
@@ -333,6 +392,11 @@ async def _prepare(
         declared = WalletOwnerType.DRIVER
     owner_type = wallet.owner_type_for(owner, declared=declared)
     wallet.require_not_frozen(owner, owner_type)
+    from app.services import payment_gateways
+
+    # **للكبتن وحدَه** (أمرُ المالك ٢٠٢٦-١١-١١: «for DRIVERS») — ومحفظةُ الراكب لا تُشحن بهذه الطريقة
+    if provider.integration in payment_gateways.DRIVERS_ONLY and owner_type is not WalletOwnerType.DRIVER:
+        raise InvalidInput("هذه الطريقةُ للكباتن وحدَهم", field="provider_id")
 
     if gateway and purpose is PaymentRequestPurpose.SUBSCRIPTION:
         amount = Decimal("0")  # يُكتب أدناه ثمنَ الخطّة من الخادم — ولا يُقرأ ما أرسله التطبيق
@@ -343,8 +407,9 @@ async def _prepare(
         if amount <= 0:
             raise InvalidInput("المبلغُ يجب أن يكون أكبرَ من صفر", field="amount")
         await rounding.require_multiple_in(session, owner.country_code, amount)
-    if gateway and purpose is PaymentRequestPurpose.WALLET_TOPUP:
-        # **خياراتٌ ثابتةٌ إن ضبطها السوق** (§٧٤-ط/٥) — والمبلغُ واحدٌ منها وإلا رُدّ؛ وسوقٌ بلا خياراتٍ كما كان
+    if gateway and purpose is PaymentRequestPurpose.WALLET_TOPUP and provider.integration not in payment_gateways.OWN_SWITCH:
+        # **خياراتٌ ثابتةٌ إن ضبطها السوق** (§٧٤-ط/٥) — والمبلغُ واحدٌ منها وإلا رُدّ؛ وسوقٌ بلا خياراتٍ كما كان. **ووسيطُ المفتاح الخاصّ
+        # يسدّد مستحقّاتٍ بمبلغها** (البطاقةُ في الأردن) — فلا تحكمه خياراتُ شحن نظامٍ مطفأٍ في سوقه
         choices = await topup_choices(session, owner.country_code)
         if choices and amount not in choices:
             raise InvalidInput("اختر مبلغَ الشحن من الخيارات", field="amount")
@@ -706,6 +771,7 @@ async def start_checkout(
     plan_id: uuid.UUID | None,
     declared: WalletOwnerType | None,
     opened_from: str,
+    client_ip: str | None = None,
 ) -> tuple[PaymentRequest, str]:
     """**صفحةُ دفعٍ عند الوسيط** — طلبٌ معلَّقٌ بمعرّفه عنده، ويُحسم بجوابه المباشر (الـwebhook يوقظ، و`refresh` يسأل).
 
@@ -715,7 +781,7 @@ async def start_checkout(
     from app.services import payment_gateways
 
     # **العقدُ أوّلاً — فوضعُه يقرّر من يفتح الصفحة** (§٧٤-ط/٥): وضعُ التجربة لحسابات التجربة وحدَها، والحيُّ لغيرها
-    await require_enabled(session, owner.country_code)
+    await require_enabled(session, owner.country_code, await _integration_of(session, provider_id))
     chosen = await available_provider(session, provider_id, owner.country_code)
     if chosen.integration is None:
         raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")
@@ -733,6 +799,9 @@ async def start_checkout(
         declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),
     )
     provider = prepared.provider
+    await require_under_daily_cap(
+        session, gateway=gateway, integration=provider.integration or "", country=owner.country_code, amount=prepared.amount
+    )
     # **فحصُ الصحّة قبل أن يُرسل الدافعُ إلى صفحة** (SPEC §٨٢-أ/١) — متوقّفٌ أو بطيءٌ جدّاً ⇐ `GatewayDown` بلغته، ولا صفحةَ معطوبة
     from app.services import gateway_health
 
@@ -753,9 +822,17 @@ async def start_checkout(
     await session.flush()
     # **عميلُ الدافع عند الوسيط** (§٧٦-ع/٢) — فلا تسأله صفحتُه بياناتِه؛ **ولغةُ الصفحة لغةُ التطبيق** (كانت «ar» ثابتة)
     customer = await gateway_customers.customer_for(session, gateway, owner)
+    # **عنوانُ الدافع ومرجعُ طلبنا** — يُرسلهما الوسيطُ الذي يطلبهما وحدَه (NOWPayments)؛ والباقون يتجاهلونهما
+    from dataclasses import replace as _replace
+
+    customer = _replace(customer, ip=client_ip, order_ref=public_ref(request.id))
     opened = dict(
         amount=prepared.amount,
-        description=f"TAXO {'اشتراك' if purpose is PaymentRequestPurpose.SUBSCRIPTION else 'شحن رصيد'}",
+        description=(
+            f"TAXO {'subscription' if purpose is PaymentRequestPurpose.SUBSCRIPTION else 'driver dues'}"
+            if provider.integration in payment_gateways.OWN_SWITCH
+            else f"TAXO {'اشتراك' if purpose is PaymentRequestPurpose.SUBSCRIPTION else 'شحن رصيد'}"
+        ),
         return_url=payment_gateways.return_url(str(request.id), opened_from=opened_from),
         webhook_url=payment_gateways.webhook_url(provider.integration or ""),
         fee_bearer=provider.fee_bearer,
@@ -771,7 +848,9 @@ async def start_checkout(
             raise
         # **عميلٌ محفوظٌ رفضه الوسيط** (حُذف عنده أو تبدّل المفتاح) — يُنسى، **وتُفتح الصفحةُ بلا عميل** فلا يقف الدفعُ عليه
         await gateway_customers.forget(session, gateway, owner)
-        bare = payment_gateways.CheckoutCustomer(customer.full_name, customer.phone, customer.email)
+        bare = payment_gateways.CheckoutCustomer(
+            customer.full_name, customer.phone, customer.email, ip=customer.ip, order_ref=customer.order_ref
+        )
         checkout = await gateway.checkout(customer=bare, **opened)
     request.external_id = checkout.external_id
     request.reference = checkout.external_id[:120]
@@ -979,7 +1058,11 @@ async def apply_gateway_outcome(
     """
     if request.status is not PaymentRequestStatus.PENDING:
         return request
-    if outcome is not PaymentRequestStatus.APPROVED and (gateway_code or gateway_message):
+    # **ورسالةُ «دُفع» تُحفظ إن قالها الوسيط** — NOWPayments يقول فيها ما وصل حسابَ المالك بالأصل الرقميّ (أمرُ المالك ٢٠٢٦-١١-١١:
+    # «crypto received» في قائمة اللوحة)؛ وChargily وSofizPay لا يقولان شيئاً عند «دُفع» فلا يتغيّر لهما حرف
+    if (outcome is not PaymentRequestStatus.APPROVED and (gateway_code or gateway_message)) or (
+        outcome is PaymentRequestStatus.APPROVED and gateway_message
+    ):
         request.gateway_code = (gateway_code or None) and gateway_code[:32]
         request.gateway_message = (gateway_message or None) and gateway_message[:500]
     if outcome is PaymentRequestStatus.APPROVED:
@@ -1228,6 +1311,7 @@ async def open_checkout_once(
     plan_id: uuid.UUID | None,
     declared: WalletOwnerType | None,
     opened_from: str,
+    client_ip: str | None = None,
 ) -> tuple[PaymentRequest, str]:
     """**نقرتان سريعتان على «ادفع» صفحةٌ واحدة** (SPEC §٨٢-أ/٤) — قفلٌ في Redis للدافع والغرض والمبلغ والخطّة:
 
@@ -1260,7 +1344,7 @@ async def open_checkout_once(
     try:
         request, url = await start_checkout(
             session, owner=owner, provider_id=provider_id, purpose=purpose, amount=amount, plan_id=plan_id,
-            declared=declared, opened_from=opened_from,
+            declared=declared, opened_from=opened_from, client_ip=client_ip,
         )
     except BaseException:
         await redis.delete(key)
