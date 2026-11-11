@@ -35,7 +35,8 @@ from typing import Any
 
 import httpx
 
-from app.models.enums import PaymentRequestStatus
+from app.core.currency import step_of
+from app.models.enums import Currency, PaymentRequestStatus
 from app.services import payment_gateways as base
 from app.services import payment_reasons as reasons
 from app.services.providers import credentials as credentials_service
@@ -58,7 +59,6 @@ PARTNER_NAME = "Guardarian"
 PARTNER_FEE_RATE = Decimal("0.015")
 PARTNER_FEE_FIXED_USD = Decimal("2.00")
 _CENT = Decimal("0.01")
-_MILS = Decimal("0.001")
 
 
 def breakdown(amount: Decimal, fee_bearer: str | None, usd_per_jod: Decimal) -> tuple[Decimal, Decimal, Decimal]:
@@ -167,7 +167,8 @@ class NowpayGateway:
     ) -> base.Checkout:
         _card, invoice, fee = breakdown(amount, fee_bearer, self.usd_per_jod)
         # **الرسمُ بالدينار** يُكتب على الطلب بمساره القائم (`fee_payer`/`fee_amount`) — على TAXO أو على الدافع بحسب الطريقة
-        fee_jod = (fee / self.usd_per_jod).quantize(_MILS, rounding=ROUND_UP)
+        # **خطوةُ الدينار من بيتها الواحد** (`core/currency.py`، §٧٣-ج/٤) لا حرفيّةٌ هنا — مقرَّبةً للأعلى فلا يُكتب الرسمُ أصغرَ ممّا كان
+        fee_jod = (fee / self.usd_per_jod).quantize(step_of(Currency.JOD), rounding=ROUND_UP)
         payload: dict[str, Any] = {
             "price_amount": float(invoice),
             "price_currency": CHARGE_CURRENCY,
