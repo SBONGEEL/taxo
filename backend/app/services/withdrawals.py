@@ -214,7 +214,8 @@ async def minimum_withdrawal(session: AsyncSession, country: CountryCode, settin
 #: بقنواتها الأربع** ولا كليكَ فيها. والترتيبُ ترتيبُ عرضها في التطبيق.
 METHODS_BY_COUNTRY: dict[CountryCode, tuple[WithdrawalMethod, ...]] = {
     CountryCode.JO: (WithdrawalMethod.CLIQ, WithdrawalMethod.BANK),
-    CountryCode.LY: (WithdrawalMethod.CLIQ, WithdrawalMethod.BANK),
+    # **ليبيا: التحويلُ البنكيُّ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١١، البند ٤) — كليك أردنيّةٌ لا تعمل هناك، وكانت تُعرض للكبتن الليبيّ
+    CountryCode.LY: (WithdrawalMethod.BANK,),
     CountryCode.DZ: (
         WithdrawalMethod.BARIDIMOB,
         WithdrawalMethod.CCP,
@@ -236,6 +237,31 @@ def _digits(raw: str | None) -> str:
     return re.sub(r"\D", "", text)
 
 
+def _holder_name(holder: str | None) -> str:
+    """اسمُ صاحب الحساب كما في دفتره — مسافاتُه مطبَّعة."""
+    name = " ".join((holder or "").split())
+    if len(name) < 3:
+        raise InvalidInput("اكتب اسمَ صاحب الحساب كما في دفتره", field="payout_holder")
+    if len(name) > 120:
+        raise InvalidInput("اسمُ صاحب الحساب أطولُ من المسموح", field="payout_holder")
+    return name
+
+
+# **رقمُ الحساب الليبيّ أو IBAN** (يبدأ بـLY): حروفٌ لاتينيّةٌ وأرقامٌ، من ٦ إلى ٣٤ — **٣٤ أطولُ IBAN في المعيار**. ولا طولَ أدقّ:
+# **لم يُقرأ مصدرٌ رسميٌّ لأطوال الحسابات الليبيّة**، ورفضُ حسابٍ صحيحٍ بطولٍ مخمَّنٍ يحبس مالَ كابتن — والموظّفُ يرى الرقمَ قبل أن يحوّل
+_LY_ACCOUNT = re.compile(r"[A-Z0-9]{6,34}")
+_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def _libyan_bank_account(raw: str | None) -> str:
+    text = re.sub(r"[\s.\-/]", "", (raw or "").translate(_ARABIC_DIGITS)).upper()
+    if not _LY_ACCOUNT.fullmatch(text):
+        raise InvalidInput(
+            "رقمُ الحساب أو IBAN: أرقامٌ وحروفٌ لاتينيّةٌ كما في كشف حسابك", field="payout_account"
+        )
+    return text
+
+
 def payout_destination(
     country: CountryCode, method: WithdrawalMethod, account: str | None, holder: str | None
 ) -> tuple[str | None, str | None]:
@@ -243,15 +269,14 @@ def payout_destination(
 
     **الشكلُ وحدَه يُفحص لا مفتاحُ التحقّق**: RIP وRIB عشرون خانة، وCCP رقمٌ حتى عشر خاناتٍ ومفتاحُه خانتان. **وخوارزميّةُ المفتاح
     لم تُبنَ** — لا مصدرَ رسميٌّ قُرئ لها، **ورفضُ حسابٍ صحيحٍ بخوارزميّةٍ مخمَّنةٍ يحبس مالَ كابتن**؛ فالموظّفُ الماليُّ يرى
-    الرقمَ قبل أن يحوّل. **والأردنُ وليبيا لا وجهةَ لهما هنا** — كما كانا.
+    الرقمَ قبل أن يحوّل. **والأردنُ لا وجهةَ له هنا** — كما كان. **وليبيا**: البنكُ برقم حسابٍ أو IBAN واسمِ صاحبه
+    (قرارُ المالك ٢٠٢٦-١١-١١) — **الشكلُ وحدَه** للعلّة نفسِها.
     """
+    if country is CountryCode.LY and method is WithdrawalMethod.BANK:
+        return _libyan_bank_account(account), _holder_name(holder)
     if country is not CountryCode.DZ or method is WithdrawalMethod.CASH_OFFICE:
         return None, None
-    name = " ".join((holder or "").split())
-    if len(name) < 3:
-        raise InvalidInput("اكتب اسمَ صاحب الحساب كما في دفتره", field="payout_holder")
-    if len(name) > 120:
-        raise InvalidInput("اسمُ صاحب الحساب أطولُ من المسموح", field="payout_holder")
+    name = _holder_name(holder)
     digits = _digits(account)
     if method is WithdrawalMethod.CCP:
         if not 3 <= len(digits) <= 12:

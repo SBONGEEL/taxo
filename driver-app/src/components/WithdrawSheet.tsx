@@ -27,7 +27,7 @@ import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { requestWithdrawal, updateDriver } from "@/api/endpoints";
-import type { DriverWallet, WithdrawalMethod } from "@/api/types";
+import type { CountryCode, DriverWallet, WithdrawalMethod } from "@/api/types";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
@@ -53,6 +53,17 @@ const DESTINATION: Partial<Record<WithdrawalMethod, { label: string; hint: strin
   baridimob: { label: tr("رقم RIP"), hint: tr("عشرون خانة كما في تطبيق بريدي موب."), placeholder: "00799999…" },
   ccp: { label: tr("رقم CCP ومفتاحه"), hint: tr("رقمُ الحساب ثمّ المفتاح (خانتان) كما في دفتر الصكوك البريديّة."), placeholder: "0012345678 90" },
   bank: { label: tr("رقم RIB"), hint: tr("عشرون خانة كما في كشف حسابك البنكيّ."), placeholder: "…" },
+};
+/** **البنكُ بحسب السوق** (قرارُ المالك ٢٠٢٦-١١-١١): الليبيُّ رقمُ حسابٍ أو IBAN لا RIB الجزائريّ — والخلفيّةُ تفحص الشكلَ وحدَه وتجمّده
+ *  على الطلب. **جدولٌ مفتاحُه `CountryCode`** (لا شرطٌ بسوق — `check:market-literals`)، والأردنُ لا يبلغه: سوقُه فيها كليك */
+const BANK_BY_COUNTRY: Record<CountryCode, { label: string; hint: string; placeholder: string } | undefined> = {
+  JO: DESTINATION.bank,
+  DZ: DESTINATION.bank,
+  LY: {
+    label: tr("رقم الحساب المصرفيّ أو IBAN"),
+    hint: tr("كما في كشف حسابك البنكيّ، بالأرقام والحروف اللاتينيّة."),
+    placeholder: "LY…",
+  },
 };
 
 /** المبلغ كما يكتبه الكبتن: خاناتٌ ونقطةٌ واحدة، بلا `Number` ولا تقريب — **وبخانات عملته** (ثلاثٌ للأردنيّ كما كانت، ولا نقطةَ
@@ -96,7 +107,7 @@ export function WithdrawSheet({
   const [method, setMethod] = useState<WithdrawalMethod>(local ? methods[0] : "cliq");
   const [account, setAccount] = useState("");
   const [holder, setHolder] = useState("");
-  const field = DESTINATION[method];
+  const field = method === "bank" && user?.country_code ? BANK_BY_COUNTRY[user.country_code] : DESTINATION[method];
   const destinationMissing = local && field !== undefined && (account.trim().length === 0 || holder.trim().length < 3);
 
   async function submit() {

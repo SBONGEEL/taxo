@@ -1902,5 +1902,7 @@
  "المكافأة {0} — تُضاف إلى محفظتك حين تبلغ الهدف": "Prime {0} — ajoutée à votre portefeuille quand vous atteignez l'objectif",
  "مكافأة هدف": "Prime d'objectif",
  "ثمن الاشتراك": "Prix de l'abonnement",
- "رصيد من نقاطك": "Crédit de vos points"
+ "رصيد من نقاطك": "Crédit de vos points",
+ "رقم الحساب المصرفيّ أو IBAN": "Numéro de compte bancaire ou IBAN",
+ "كما في كشف حسابك البنكيّ، بالأرقام والحروف اللاتينيّة.": "Tel qu'il figure sur votre relevé bancaire, en chiffres et lettres latines."
 }

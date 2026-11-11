@@ -4,7 +4,8 @@
 
 import type { CountryCode } from "@/api/types";
 
-const CLIQ_PAYOUT: Record<CountryCode, boolean> = { JO: true, LY: true, DZ: false };
+// **وليبيا بلا كليك** (قرارُ المالك ٢٠٢٦-١١-١١): سحبُها بنكيٌّ وحدَه، فلا يُطلب منها «حساب CliQ للسحب»
+const CLIQ_PAYOUT: Record<CountryCode, boolean> = { JO: true, LY: false, DZ: false };
 
 export function hasCliqPayout(country: CountryCode | null | undefined): boolean {
   return country ? CLIQ_PAYOUT[country] : true;
