@@ -170,14 +170,19 @@ export function CardPayT2Screen() {
                 <span>{tr("وقد يضيف بنكُك رسمَ تحويل العملة، فيختلف ما في كشف حسابك قليلاً.")}</span>
               </li>
             ) : null}
-            <li>
-              <Icon name="badge" />
-              <span>{tr("قد يطلب الشريكُ أوّلَ مرّةٍ صورةَ هويّتك وصورةً شخصيّة للتحقّق.")}</span>
-            </li>
-            <li>
-              <Icon name="info" />
-              <span>{tr("يحوّل الشريكُ المبلغَ إلى أصلٍ رقميٍّ يصل حسابَ TAXO.")}</span>
-            </li>
+            {/* **سطرا الشريك يُقالان حيث يقعان وحدَه** (NOWPayments) — وWhop لا يطلب هويّةً ولا يحوّل إلى أصلٍ رقميّ */}
+            {method.partner_kyc !== false ? (
+              <li>
+                <Icon name="badge" />
+                <span>{tr("قد يطلب الشريكُ أوّلَ مرّةٍ صورةَ هويّتك وصورةً شخصيّة للتحقّق.")}</span>
+              </li>
+            ) : null}
+            {method.settles_digital !== false ? (
+              <li>
+                <Icon name="info" />
+                <span>{tr("يحوّل الشريكُ المبلغَ إلى أصلٍ رقميٍّ يصل حسابَ TAXO.")}</span>
+              </li>
+            ) : null}
             <li>
               <Icon name="check_circle" />
               <span>

@@ -617,6 +617,11 @@ export type FeatureKey =
   | "payment_requests_enabled"
   // **الدفعُ بالبطاقة المصرفية للكبتن** (NOWPayments، أمرُ المالك ٢٠٢٦-١١-١١) — الأردنُ وحدَه، والجزائرُ وليبيا مقفلتان في الخادم
   | "nowpay_card_enabled"
+  // **الدفعُ بالبطاقة المصرفية عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — الأردنُ وحدَه، ومطفأٌ حتى يؤكّد Whop الحساب
+  | "whop_card_enabled"
+  // **شحنُ محفظة الراكب ودفعُ رحلته بالبطاقة عبر Whop** (٢٠٢٦-١١-١٣) — الأردنُ وحدَه، مطفآن ابتداءً
+  | "whop_rider_topup_enabled"
+  | "whop_rider_trip_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -3700,4 +3705,43 @@ export interface LoyaltyRule {
   holders: number;
   open_points: number;
   redeemed_value: string;
+}
+
+// ------------------------------------------------------------ الدفعُ بالبطاقة عبر Whop (٢٠٢٦-١١-١٣)
+
+export interface WhopSwitch {
+  key: string;
+  title: string;
+  hint: string;
+  enabled: boolean;
+}
+
+export interface WhopMethod {
+  /** «الكباتن» أو «الركّاب» */
+  audience: string;
+  method: AdminPayMethod;
+}
+
+/** **دفعةُ Whop** — النوعُ والجمهورُ والحالُ والمبلغُ ومرجعُ Whop وما قاله */
+export interface WhopRequest extends AdminPaymentRequest {
+  audience: string;
+}
+
+export interface WhopOverview {
+  switches: WhopSwitch[];
+  locked_countries: CountryCode[];
+  keys_entered: boolean;
+  contract_active: boolean;
+  ready: boolean;
+  sandbox: boolean;
+  currency: string | null;
+  webhook_url: string;
+  methods: WhopMethod[];
+  requests: WhopRequest[];
+}
+
+/** **ما يقوله Whop الآن عن دفعة** — محاولاتُها بحالها؛ قراءةٌ لا تكتب شيئاً */
+export interface WhopLive {
+  external_id: string;
+  payments: { id?: string | null; status?: string | null; substatus?: string | null; total?: string | null }[];
 }

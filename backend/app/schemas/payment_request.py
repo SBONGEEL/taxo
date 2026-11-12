@@ -64,6 +64,10 @@ class PaymentMethodOut(BaseModel):
     charge_rate: Decimal | None = None
     partner: str | None = None
     partner_fee: str | None = None
+    #: **أيطلب معالجُ البطاقة هويّةَ الدافع؟ وأيصل المبلغُ أصلاً رقميّاً؟** (NOWPayments نعم، Whop لا) — فلا يُقال للكبتن ما لا يقع؛
+    #: و`null` لكلِّ طريقةٍ أخرى
+    partner_kyc: bool | None = None
+    settles_digital: bool | None = None
 
 
 class PaymentMethodsOut(BaseModel):

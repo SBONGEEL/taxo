@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { readPendingRide } from "@/lib/ride-topup";
+import { takeCardTrip } from "@/lib/trip-card";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -60,6 +61,14 @@ export function PayReturnT2Screen() {
       setRequest(row);
       setError(null);
       // **طلبُ رحلةٍ ينتظر هذا الشحن** (§٨٨/١) — الرئيسيةُ ترسله بسعره المثبَّت حين يغطّيه الرصيد
+      // **رحلةٌ تُدفع بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١٣) — شُحن الرصيدُ بقيمتها، فتُدفع الآن من المحفظة في شاشة دفعها
+      if (row.status === "approved") {
+        const tripId = takeCardTrip();
+        if (tripId) {
+          navigate(`/rides/${tripId}/pay`, { replace: true, state: { payWithWallet: true } });
+          return;
+        }
+      }
       if (row.status === "approved" && readPendingRide()) {
         navigate("/", { replace: true });
         return;

@@ -86,6 +86,9 @@ class NowpayGateway:
     #: **ما يُقال للكبتن قبل الدفع** — اسمُ شريك البطاقة ورسمُه كما نشرتهما NOWPayments
     partner_name = PARTNER_NAME
     partner_fee = PARTNER_FEE_TEXT
+    #: **الشريكُ يطلب هويّةَ الدافع أوّلَ مرّة، والمبلغُ يصل أصلاً رقميّاً** — سطرا إفصاحٍ يُقالان للكبتن (لا يقعان مع Whop)
+    partner_kyc = True
+    settles_digital = True
 
     def __init__(
         self,

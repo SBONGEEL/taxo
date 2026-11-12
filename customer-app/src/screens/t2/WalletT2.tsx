@@ -132,6 +132,8 @@ export function WalletT2Screen() {
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
   const payRequests = country?.features.payment_requests_enabled === true;
+  // **شحنُ المحفظة بالبطاقة عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — بمفتاحه في سوقه، ونظامُ الدفع العامُّ مطفأٌ فيه (الأردن)
+  const whopTopup = country?.features.whop_rider_topup_enabled === true;
   // **«اشتراكي»** (البند ١٣) — حيث مفتاحُه مشتعل
   const plansEnabled = country?.features.rider_plans_enabled === true;
   // **«نقاطي»** (البند ١٤)
@@ -141,7 +143,7 @@ export function WalletT2Screen() {
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
   const [resuming, setResuming] = useState<string | null>(null);
   useEffect(() => {
-    if (!payRequests) return;
+    if (!payRequests && !whopTopup) return;
     let cancelled = false;
     Promise.all([listPaymentMethods("wallet_topup"), listMyPaymentRequests(10)])
       .then(([body, mine]) => {
@@ -154,7 +156,8 @@ export function WalletT2Screen() {
     return () => {
       cancelled = true;
     };
-  }, [payRequests]);
+  }, [payRequests, whopTopup]);
+  const whopCard = whopTopup ? (methods?.find((row) => row.code === "whop_rider_card") ?? null) : null;
 
   async function cancelRequest(id: string) {
     try {
@@ -378,6 +381,15 @@ export function WalletT2Screen() {
                     <span className="t2-paytile-name">{cards === null ? tr("البطاقات") : tr("لا بطاقة محفوظة")}</span>
                   </>
                 )}
+              </button>
+            ) : null}
+            {whopCard && walletEnabled ? (
+              <button
+                type="button"
+                className="t2-paytile"
+                onClick={() => navigate("/wallet/pay", { state: { methodId: whopCard.id } })}
+              >
+                <span className="t2-paytile-name">{tr("شحن المحفظة بالبطاقة")}</span>
               </button>
             ) : null}
             {cliqEnabled && walletEnabled ? (

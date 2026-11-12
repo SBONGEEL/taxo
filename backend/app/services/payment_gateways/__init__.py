@@ -150,18 +150,20 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
     from app.services.payment_gateways.nowpay import build_nowpay
     from app.services.payment_gateways.sofizpay import build_sofizpay
+    from app.services.payment_gateways.whop import build_whop
 
-    return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay}
+    return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
-DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية"}
+DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
     "chargily": ProviderKey.CHARGILY,
     "sofizpay": ProviderKey.SOFIZPAY,
     "nowpay": ProviderKey.NOWPAY,
+    "whop": ProviderKey.WHOP,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -171,17 +173,49 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "sofizpay": frozenset({"taxo"}),
     # **NOWPayments**: رسمُه (0.5%) على TAXO من المال الواصل، **ورسمُ شريك البطاقة على الدافع بشروط الشريك** — يُعرض له قبل الدفع
     "nowpay": frozenset({"taxo"}),
+    # **Whop**: رسمُه على التاجر من المال الواصل — **والبطاقةُ تُخصم المستحقَّ وحدَه**
+    "whop": frozenset({"taxo"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
 #: على الأردن شيءٌ غيرُه**: كليك والطرقُ القائمةُ كما هي. **والدولُ المسموحةُ مكتوبةٌ هنا لا في اللوحة**: الجزائرُ تمنع الأصولَ الافتراضيّة
 #: بقانون (المادّة ١١٧ من قانون المالية ٢٠١٨)، وليبيا مقفلةٌ حتى يقول المالك — فلا يُشعَل فيهما المفتاحُ ولو ضُغط
-OWN_SWITCH: dict[str, FeatureKey] = {"nowpay": FeatureKey.NOWPAY_CARD_ENABLED}
-SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {"nowpay": frozenset({CountryCode.JO})}
+# **وWhop مثلُه** (أمرُ المالك ٢٠٢٦-١١-١٣) — الأردنُ وحدَه، **ومفتاحُه مطفأٌ حتى يؤكّد Whop حسابَ المالك**
+OWN_SWITCH: dict[str, FeatureKey] = {
+    "nowpay": FeatureKey.NOWPAY_CARD_ENABLED,
+    "whop": FeatureKey.WHOP_CARD_ENABLED,
+}
+SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
+    "nowpay": frozenset({CountryCode.JO}),
+    "whop": frozenset({CountryCode.JO}),
+}
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
 DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay"})
 #: **مفتاحٌ ⇐ وسيطُه** — فيُعرف من المفتاح أيُّ الدول مقفلة
+#: **طرقُ وسيطٍ واحدٍ بجمهورٍ ومفاتيحَ لكلٍّ منها** (Whop، أمرُ المالك ٢٠٢٦-١١-١٣) — كودُ صفِّ الطريقة ⇐ (جمهورُها، مفاتيحُها: **يكفي
+#: أحدُها مشتعلاً**). صفّان لوسيطٍ واحدٍ بعقدٍ واحدٍ وإشعارٍ واحد، **ولكلٍّ حدّاه في اللوحة**: الكبتنُ (الاشتراكُ والمستحقّات) والراكبُ
+#: (الشحنُ، ودفعُ الرحلة شحناً بقيمتها ثمّ من المحفظة)
+METHOD_SWITCHES: dict[str, tuple[str, tuple[FeatureKey, ...]]] = {
+    "whop_card": ("driver", (FeatureKey.WHOP_CARD_ENABLED,)),
+    "whop_rider_card": ("rider", (FeatureKey.WHOP_RIDER_TOPUP_ENABLED, FeatureKey.WHOP_RIDER_TRIP_ENABLED)),
+}
 SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in OWN_SWITCH.items()}
+SWITCH_OWNER.update({key.value: "whop" for _aud, keys in METHOD_SWITCHES.values() for key in keys})
+
+
+def switch_keys(integration: str | None, code: str | None) -> tuple[FeatureKey, ...]:
+    """**مفاتيحُ هذه الطريقة** — من كودها إن كان لها مفاتيحُها، وإلا مفتاحُ وسيطها الخاصّ؛ `()` لطريقةٍ بلا مفتاحٍ خاصّ."""
+    if code in METHOD_SWITCHES:
+        return METHOD_SWITCHES[code][1]
+    key = OWN_SWITCH.get(integration or "")
+    return (key,) if key is not None else ()
+
+
+def audience_of(integration: str | None, code: str | None) -> str | None:
+    """**لمن الطريقة**: «driver» · «rider» · `None` للجميع — تُسأل في العرض وفي الفتح معاً."""
+    if code in METHOD_SWITCHES:
+        return METHOD_SWITCHES[code][0]
+    return "driver" if integration in DRIVERS_ONLY else None
 
 
 def switch_allowed(feature_key: str, country: CountryCode) -> bool:

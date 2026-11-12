@@ -160,18 +160,26 @@ async def is_enabled(session: AsyncSession, country: CountryCode) -> bool:
     return await settings_service.is_feature_enabled(session, country, FeatureKey.PAYMENT_REQUESTS_ENABLED)
 
 
-async def own_switch_on(session: AsyncSession, country: CountryCode, integration: str | None) -> bool:
+async def own_switch_on(
+    session: AsyncSession, country: CountryCode, integration: str | None, code: str | None = None
+) -> bool:
     """**وسيطٌ بمفتاحه الخاصّ** (NOWPayments في الأردن، أمرُ المالك ٢٠٢٦-١١-١١) — مشتعلٌ في هذه الدولة، **وهي من دوله المكتوبة**.
     `False` لكلِّ وسيطٍ بلا مفتاحٍ خاصّ — فيحكمه مفتاحُ نظام الدفع العامّ كما كان."""
     from app.services import payment_gateways
 
-    key = payment_gateways.OWN_SWITCH.get(integration or "")
-    if key is None or CountryCode(country) not in payment_gateways.SWITCH_COUNTRIES.get(integration or "", frozenset()):
+    keys = payment_gateways.switch_keys(integration, code)
+    if not keys or CountryCode(country) not in payment_gateways.SWITCH_COUNTRIES.get(integration or "", frozenset()):
         return False
-    return await settings_service.is_feature_enabled(session, country, key)
+    # **يكفي أحدُ مفاتيح الطريقة** (شحنُ الراكب أو دفعُ رحلته بالبطاقة يفتحان طريقتَه نفسَها)
+    for key in keys:
+        if await settings_service.is_feature_enabled(session, country, key):
+            return True
+    return False
 
 
-async def require_enabled(session: AsyncSession, country: CountryCode, integration: str | None = None) -> None:
+async def require_enabled(
+    session: AsyncSession, country: CountryCode, integration: str | None = None, code: str | None = None
+) -> None:
     """**مطفأً لا يُفتح طلبٌ ولا تُعرض طريقة** (§٧٣-هـ/٩) — والأردنُ وليبيا مطفآن فلا يمسّهما شيءٌ هنا.
 
     **إلا وسيطاً بمفتاحه الخاصّ** (`own_switch_on`): يُفتح بمفتاحه وحدَه ولو كان النظامُ العامُّ مطفأً — **وطرقُ السوق الأخرى لا تُفتح
@@ -179,16 +187,18 @@ async def require_enabled(session: AsyncSession, country: CountryCode, integrati
     from app.services import payment_gateways
 
     if integration in payment_gateways.OWN_SWITCH:
-        if not await own_switch_on(session, country, integration):
+        if not await own_switch_on(session, country, integration, code):
             raise FeatureDisabled("الدفعُ بالبطاقة المصرفية غيرُ متاحٍ في بلدك الآن")
         return
     if not await is_enabled(session, country):
         raise FeatureDisabled("الدفعُ بهذه الطرق غيرُ متاحٍ في بلدك الآن")
 
 
-async def _integration_of(session: AsyncSession, provider_id: uuid.UUID) -> str | None:
-    """**وسيطُ الطريقة قبل أيِّ حارس** — فيُعرف بأيِّ مفتاحٍ تُفتح؛ وطريقةٌ لا وجودَ لها `None` (فيحكمها المفتاحُ العامُّ كما كان)."""
-    return await session.scalar(select(PayMethod.integration).where(PayMethod.id == provider_id))
+async def _method_of(session: AsyncSession, provider_id: uuid.UUID) -> tuple[str | None, str | None]:
+    """**وسيطُ الطريقة وكودُها قبل أيِّ حارس** — فيُعرف بأيِّ مفتاحٍ تُفتح؛ وطريقةٌ لا وجودَ لها `(None, None)` (فيحكمها المفتاحُ
+    العامُّ كما كان)."""
+    row = (await session.execute(select(PayMethod.integration, PayMethod.code).where(PayMethod.id == provider_id))).first()
+    return (row[0], row[1]) if row is not None else (None, None)
 
 
 async def daily_total(session: AsyncSession, *, integration: str, country: CountryCode) -> Decimal:
@@ -370,7 +380,7 @@ async def _prepare(
         test_accounts.require_real_money(
             owner, "حسابُ التجربة لا يُشحن بدفعٍ حقيقيّ — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
         )
-    await require_enabled(session, owner.country_code, await _integration_of(session, provider_id))
+    await require_enabled(session, owner.country_code, *(await _method_of(session, provider_id)))
     provider = await available_provider(session, provider_id, owner.country_code)
 
     if gateway and provider.integration is None:
@@ -395,8 +405,12 @@ async def _prepare(
     from app.services import payment_gateways
 
     # **للكبتن وحدَه** (أمرُ المالك ٢٠٢٦-١١-١١: «for DRIVERS») — ومحفظةُ الراكب لا تُشحن بهذه الطريقة
-    if provider.integration in payment_gateways.DRIVERS_ONLY and owner_type is not WalletOwnerType.DRIVER:
+    audience = payment_gateways.audience_of(provider.integration, provider.code)
+    if audience == "driver" and owner_type is not WalletOwnerType.DRIVER:
         raise InvalidInput("هذه الطريقةُ للكباتن وحدَهم", field="provider_id")
+    # **وطريقةُ الراكب لا يشحن بها كبتن** (Whop، أمرُ المالك ٢٠٢٦-١١-١٣) — لكلٍّ صفُّه وحدّاه ومفتاحُه
+    if audience == "rider" and owner_type is WalletOwnerType.DRIVER:
+        raise InvalidInput("هذه الطريقةُ للركّاب وحدَهم", field="provider_id")
 
     if gateway and purpose is PaymentRequestPurpose.SUBSCRIPTION:
         amount = Decimal("0")  # يُكتب أدناه ثمنَ الخطّة من الخادم — ولا يُقرأ ما أرسله التطبيق
@@ -781,7 +795,7 @@ async def start_checkout(
     from app.services import payment_gateways
 
     # **العقدُ أوّلاً — فوضعُه يقرّر من يفتح الصفحة** (§٧٤-ط/٥): وضعُ التجربة لحسابات التجربة وحدَها، والحيُّ لغيرها
-    await require_enabled(session, owner.country_code, await _integration_of(session, provider_id))
+    await require_enabled(session, owner.country_code, *(await _method_of(session, provider_id)))
     chosen = await available_provider(session, provider_id, owner.country_code)
     if chosen.integration is None:
         raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")

@@ -130,7 +130,9 @@ export function SubscriptionT2Screen() {
   // **وطريقةُ البطاقة المصرفية ليست «وسيطَ السوق»** — لها زرُّها في الورقة؛ فلا تُقرأ هنا بديلاً عن Chargily
   const gatewayMethod = methods?.find((row) => row.gateway && !row.charge_currency) ?? null;
   // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — بمفتاحه الخاصّ في سوقه، **ونظامُ الدفع العامُّ مطفأٌ فيه** (الأردن)
-  const bankCardOn = useCountryConfig(profile?.user?.country_code)?.features.nowpay_card_enabled === true;
+  // **ومعه Whop** (٢٠٢٦-١١-١٣) — أيُّ وسيطِ بطاقةٍ مشتعلٌ في السوق؛ والطريقةُ نفسُها تُقرأ من القائمة لا من المفتاح
+  const bankCardFeatures = useCountryConfig(profile?.user?.country_code)?.features;
+  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;

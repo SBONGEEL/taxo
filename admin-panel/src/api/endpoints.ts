@@ -15,7 +15,7 @@ import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, Expiri
 import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
 import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
-import type { CardPayLimits, CardPayLive, CardPayOverview } from "@/api/types";
+import type { CardPayLimits, CardPayLive, CardPayOverview, WhopLive, WhopMethod, WhopOverview } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2282,6 +2282,16 @@ export const saveCardPayLimits = (body: CardPayLimits) => api.put<CardPayOvervie
 /** **ما يقوله NOWPayments الآن عن دفعة** — الحالُ وما دُفع وما وصل. */
 export const getCardPayLive = (requestId: string) =>
   api.get<CardPayLive>(`/admin/card-pay/payments/${requestId}/live`);
+
+/** **الدفعُ بالبطاقة عبر Whop** (٢٠٢٦-١١-١٣) — المفاتيحُ الثلاثةُ للأردن، وحالُ العقد، والطريقتان بحدّيهما، والدفعات. */
+export const getWhopPay = () => api.get<WhopOverview>("/admin/whop");
+
+/** **ما يقوله Whop الآن عن دفعة** — محاولاتُها بحالها. */
+export const getWhopPayLive = (requestId: string) => api.get<WhopLive>(`/admin/whop/payments/${requestId}/live`);
+
+/** **حدّا الدفعة الواحدة لطريقةٍ من طريقتَي Whop** — بالدينار، و`null` بلا حدّ. */
+export const saveWhopLimits = (methodId: string, body: { min_amount: string | null; max_amount: string | null }) =>
+  api.put<WhopMethod>(`/admin/whop/methods/${methodId}/limits`, body);
 
 /** **ما تغيّر وحدَه** — ويُدقَّق كلُّ تغييرٍ بقبله وبعده في الخادم (رقمُ الحساب أوّلُها). */
 export const updatePayMethod = (id: string, body: Partial<AdminPayMethodInput>) =>

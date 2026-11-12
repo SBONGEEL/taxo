@@ -52,11 +52,15 @@ def method_out(
 ) -> PaymentMethodOut:
     # **ما يُقال للكبتن قبل أن يدفع بالبطاقة** (NOWPayments) — عملةُ الخصم وسعرُها واسمُ الشريك ورسمُه؛ ولغيره لا شيء
     rate = getattr(gateway, "usd_per_jod", None)
+    # **عملةُ خصم البطاقة** — Whop يصرّح بها (الدينارُ حيث يقبله، بلا سعر صرف)؛ وNOWPayments بالدولار بسعره كما كان
+    card = getattr(gateway, "card_currency", None) or ("USD" if rate is not None else None)
     return PaymentMethodOut(
-        charge_currency="USD" if rate is not None else None,
+        charge_currency=card,
         charge_rate=rate,
-        partner=getattr(gateway, "partner_name", None) if rate is not None else None,
-        partner_fee=getattr(gateway, "partner_fee", None) if rate is not None else None,
+        partner=getattr(gateway, "partner_name", None) if card else None,
+        partner_fee=getattr(gateway, "partner_fee", None) if card else None,
+        partner_kyc=getattr(gateway, "partner_kyc", None) if card else None,
+        settles_digital=getattr(gateway, "settles_digital", None) if card else None,
         code=provider.code,
         account_holder_latin=provider.account_holder_latin,
         min_amount=provider.min_amount,
@@ -143,23 +147,26 @@ async def list_methods(
     **ونظامُ الدفع العامُّ مطفأً في السوق** (الأردن): تُعرض طرقُ الوسيط ذي المفتاح الخاصّ وحدَها إن اشتعل مفتاحُها — **ولا شيءَ غيرُها**،
     فكليك والطرقُ القائمةُ لا تتغيّر. وإن لم يشتعل شيءٌ رُدّ كما كان."""
     general = await payment_requests.is_enabled(session, user.country_code)
+    providers = await payment_requests.providers_for(session, user.country_code, purpose)
+    # **المفتاحُ بالطريقة** (Whop: صفٌّ للكبتن وصفٌّ للراكب، لكلٍّ مفتاحُه) — ووسيطُ المفتاح الواحد كما كان
     own = {
-        integration
-        for integration in payment_gateways.OWN_SWITCH
-        if await payment_requests.own_switch_on(session, user.country_code, integration)
+        provider.id
+        for provider in providers
+        if provider.integration in payment_gateways.OWN_SWITCH
+        and await payment_requests.own_switch_on(session, user.country_code, provider.integration, provider.code)
     }
     if not general and not own:
         await payment_requests.require_enabled(session, user.country_code)
-    providers = await payment_requests.providers_for(session, user.country_code, purpose)
     shown: list[PaymentMethodOut] = []
     is_driver = user.has_role(UserRole.DRIVER)
     for provider in providers:
         if provider.integration in payment_gateways.OWN_SWITCH:
-            if provider.integration not in own:
+            if provider.id not in own:
                 continue
         elif not general:
             continue
-        if provider.integration in payment_gateways.DRIVERS_ONLY and not is_driver:
+        audience = payment_gateways.audience_of(provider.integration, provider.code)
+        if (audience == "driver" and not is_driver) or (audience == "rider" and is_driver):
             continue
         if provider.integration is None:
             shown.append(method_out(provider))

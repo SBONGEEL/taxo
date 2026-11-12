@@ -154,6 +154,10 @@ const PhotoReportsScreen = lazy(() =>
 const EmergenciesScreen = lazy(() =>
   import("@/screens/Emergencies").then((m) => ({ default: m.EmergenciesScreen })),
 );
+// **الدفعُ بالبطاقة عبر Whop** (٢٠٢٦-١١-١٣) — الكباتنُ والركّابُ في الأردن
+const WhopPayScreen = lazy(() =>
+  import("@/screens/WhopPay").then((m) => ({ default: m.WhopPayScreen })),
+);
 const CardPayScreen = lazy(() =>
   import("@/screens/CardPay").then((m) => ({ default: m.CardPayScreen })),
 );
@@ -529,6 +533,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <TaxoCardsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/whop-pay"
+                    element={
+                      <Guarded>
+                        <WhopPayScreen />
                       </Guarded>
                     }
                   />

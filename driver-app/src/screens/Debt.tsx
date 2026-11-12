@@ -96,7 +96,9 @@ export function DebtScreen() {
   const unit = roundingUnit(useCountryConfig(user?.country_code));
   const unitError = notMultipleMessage(amount, unit, currency);
   // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — جوارَ كليك حيث مفتاحُه مشتعلٌ وطريقتُه معروضة؛ **وكليكُ كما هو**
-  const bankCardOn = useCountryConfig(user?.country_code)?.features.nowpay_card_enabled === true;
+  // **ومعه Whop** (٢٠٢٦-١١-١٣) — أيُّ وسيطِ بطاقةٍ مشتعلٌ في السوق؛ والطريقةُ نفسُها تُقرأ من القائمة لا من المفتاح
+  const bankCardFeatures = useCountryConfig(user?.country_code)?.features;
+  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;

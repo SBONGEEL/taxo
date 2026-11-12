@@ -490,6 +490,52 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **«الدفع بالبطاقة المصرفية» عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — لكلِّ دولة، **ولا `feature_key`**: مفتاحُه (`whop_card_enabled`)
+    # قرارُ المالك من اللوحة. **والثلاثةُ يُدخلها المالكُ بنفسه بعد أن يؤكّد Whop حسابَه** — وحتى تُدخل لا تُعرض الطريقة
+    ProviderKey.WHOP: ProviderSpec(
+        key=ProviderKey.WHOP,
+        label="Whop — الدفع بالبطاقة المصرفية (الكباتن)",
+        fields=(
+            ProviderField(key="api_key", label="مفتاح API — من لوحة Whop: Developer ← API keys"),
+            ProviderField(
+                key="webhook_secret",
+                label="سرّ الإشعارات (يبدأ بـ ws_) — من لوحة Whop: Developer ← Webhooks، وعنوانُه في صفحة «الدفع بالبطاقة المصرفية»",
+            ),
+            ProviderField(
+                key="company_id", label="معرّف الحساب (يبدأ بـ biz_) — من لوحة Whop", secret=False,
+            ),
+            ProviderField(
+                key="currency",
+                label="عملةُ الخصم: jod (الدينار، الافتراض) أو usd (الدولار بسعر الصرف أدناه)",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (sandbox) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الكباتن معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="usd_per_jod",
+                label="كم دولاراً يُخصم لكلِّ دينار — فارغ = ربطُ الدينار الرسميّ 1.4104",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ الكباتن)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     ProviderKey.PAYOUT: ProviderSpec(
         key=ProviderKey.PAYOUT,
         label="مزود التحويلات الآلية للسحوبات",

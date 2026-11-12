@@ -1739,6 +1739,9 @@ export interface PayMethod {
   charge_rate?: string | null;
   partner?: string | null;
   partner_fee?: string | null;
+  /** **أيطلب معالجُ البطاقة هويّتَك؟ وأيصل المبلغُ أصلاً رقميّاً؟** — `false` ⇐ لا يُقال السطر؛ وغيابُه يُقرأ كما كان (يُقال) */
+  partner_kyc?: boolean | null;
+  settles_digital?: boolean | null;
 }
 
 export interface PayMethods {

@@ -35,10 +35,11 @@ import { paymentStillDue } from "@/lib/outcome";
 import { setBackOverride } from "@/lib/hardware-back";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getRide, getRidePayments, payRide } from "@/api/endpoints";
+import { getRide, getRidePayments, listPaymentMethods, payRide } from "@/api/endpoints";
+import { saveCardTrip } from "@/lib/trip-card";
 import type { Ride, RidePayments } from "@/api/types";
 import { CardChoice } from "@/components/payment/CardChoice";
 import { CliqPanel } from "@/components/payment/CliqPanel";
@@ -130,6 +131,10 @@ function stopBreakdown(
 export function PaymentScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
+  // **عائدٌ من شحن الرحلة بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١٣) — يُدفع ما بقي من المحفظة مرّةً واحدة
+  const payWithWallet = (useLocation().state as { payWithWallet?: boolean } | null)?.payWithWallet === true;
+  const walletOnce = useRef(false);
+  const [cardTripBusy, setCardTripBusy] = useState(false);
   // **أثناء القراءة رجوعٌ إلى حيث جئت** كما كان رأسُ شاشة الانتظار (`lib/back.ts`)، **وبعدها إلى الرئيسية** كما كانت الطبقة
   const goBack = useGoBack("/");
   const returnHome = useReturnHome();
@@ -320,6 +325,34 @@ export function PaymentScreen() {
     }
   }
 
+  // **«الدفع بالبطاقة» للرحلة** (قرارُ المالك ٢٠٢٦-١١-١٣) — يُشحن الرصيدُ بما بقي عليها عبر Whop، ثمّ تُدفع من المحفظة
+  const cardTripOn = country?.features.whop_rider_trip_enabled === true;
+  async function payTripByCard() {
+    if (!state?.outstanding) return;
+    setCardTripBusy(true);
+    setError(null);
+    try {
+      const body = await listPaymentMethods("wallet_topup");
+      const card = body.methods.find((row) => row.code === "whop_rider_card") ?? null;
+      if (!card) {
+        setError(tr("الدفع بالبطاقة غير متاح الآن — اختر طريقةً أخرى."));
+        return;
+      }
+      saveCardTrip(rideId);
+      navigate("/wallet/pay", { state: { amount: state.outstanding, methodId: card.id } });
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح الدفع بالبطاقة — أعد المحاولة"));
+    } finally {
+      setCardTripBusy(false);
+    }
+  }
+  useEffect(() => {
+    if (!payWithWallet || walletOnce.current || !state || !paymentStillDue(state)) return;
+    walletOnce.current = true;
+    void pay("wallet");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payWithWallet, state]);
+
   // **ما لم يبقَ عليه شيء يُطوى** (SPEC §٧٦-س): خاتمتُه لا تعود في الرئيسية، **وزرُّ الرجوع الأصليُّ إلى الرئيسية بتاريخٍ نظيف**
   const nothingDue = state !== null && !paymentStillDue(state);
   useEffect(() => {
@@ -493,6 +526,13 @@ export function PaymentScreen() {
             ) : null}
 
             <p className="t2-m-fine">{CTA[resolved.method].note}</p>
+            {/* **الدفع بالبطاقة** (Whop، الأردن) — شحنٌ بقيمة الرحلة ثمّ دفعُها من المحفظة؛ والكبتنُ يُسوّى كأيِّ رحلةٍ بالمحفظة */}
+            {cardTripOn && !commute && !cashByOther ? (
+              <button type="button" className="t2-m-link" disabled={cardTripBusy || busy !== null} onClick={() => void payTripByCard()}>
+                {cardTripBusy ? tr("جارٍ…") : tr("الدفع بالبطاقة")}
+              </button>
+            ) : null}
+            {payWithWallet && busy === "wallet" ? <p className="t2-m-fine">{tr("شُحن رصيدُك بقيمة الرحلة — جارٍ دفعُها من المحفظة…")}</p> : null}
           </motion.div>
         </AnimatePresence>
       ) : null}
