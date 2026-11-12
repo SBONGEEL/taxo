@@ -16,7 +16,7 @@ import hmac
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from redis.asyncio import Redis
@@ -617,3 +617,61 @@ def shop_totals(figures: list[BatchFigures]) -> dict[uuid.UUID, dict[str, Decima
         bucket["due_from_shop"] += row.due_from_shop
     return totals
 
+
+
+# ------------------------------------------------------------------ ملفّاتُ الدفعة (SPEC §١٠٠-أ/١)
+
+#: **«لحظةَ الإنشاء»** — بعدها لا ملفّ: الرموزُ لا تُستعاد، ومن أغلق النافذةَ بلا تنزيلٍ يُلغي الدفعةَ ويُصدر غيرَها
+EXPORT_WINDOW = timedelta(minutes=30)
+EXPORT_FORMATS = ("xlsx", "pdf", "sheet")
+
+
+async def export_batch(
+    session: AsyncSession, *, batch: CardBatch, actor: User, fmt: str, password: str, codes: list[tuple[str, str]]
+) -> tuple[bytes, str, str]:
+    """**ملفُّ الدفعة من رموزٍ في يد اللوحة** — كلُّ رمزٍ يُطابَق ببصمة بطاقته في الدفعة، **ولا يُخزَّن شيء**.
+
+    **وصفُّ التدقيق بلا رمزٍ ولا كلمة سرّ**: الصيغةُ والعددُ ومن نزّل."""
+    from app.services import card_exports
+    from app.services.stats import _zone
+
+    if fmt not in EXPORT_FORMATS:
+        raise InvalidInput("صيغةُ الملفّ غيرُ معروفة", field="format")
+    card_exports.check_password(password)
+    if _now() - batch.created_at > EXPORT_WINDOW:
+        raise InvalidInput("ملفّاتُ الدفعة تُنزَّل عند إنشائها وحدَه — الرموزُ لا تُستعاد", field="batch_id")
+    if not codes:
+        raise InvalidInput("لا رموزَ في الطلب", field="codes")
+    by_serial = {
+        row.serial: row
+        for row in (await session.scalars(select(TaxoCard).where(TaxoCard.batch_id == batch.id))).all()
+    }
+    rows: list[card_exports.CardRow] = []
+    seen: set[str] = set()
+    for serial, raw in codes:
+        card = by_serial.get(serial)
+        code = normalize_code(raw)
+        # **رمزٌ لا تطابق بصمتُه بطاقتَه لا يدخل ملفّاً** — فلا يُطبع رمزٌ مخترعٌ باسم TAXO
+        if card is None or code is None or serial in seen or not hmac.compare_digest(code_hash(code), card.code_hash):
+            raise InvalidInput("رمزٌ لا يطابق بطاقتَه في هذه الدفعة", field="codes")
+        seen.add(serial)
+        rows.append(card_exports.CardRow(serial=serial, code=printed(code), amount=card.amount, status=card.status.value))
+    rows.sort(key=lambda row: row.serial)
+    shop = await session.get(CardShop, batch.shop_id) if batch.shop_id else None
+    meta = card_exports.BatchMeta(
+        title=f"دفعة {batch.country_code.value}-B{batch.number:04d}", country=batch.country_code.value,
+        currency=batch.currency.value, amount=batch.amount, valid_from=batch.valid_from, expires_at=batch.expires_at,
+        created_at=batch.created_at, shop=shop.name if shop else None, zone=await _zone(session, batch.country_code),
+    )
+    stem = f"taxo-cards-{batch.country_code.value}-B{batch.number:04d}"
+    if fmt == "xlsx":
+        content, media, name = card_exports.batch_xlsx(meta, rows, password=password), card_exports.XLSX_MEDIA_TYPE, f"{stem}.xlsx"
+    elif fmt == "pdf":
+        content, media, name = card_exports.batch_pdf(meta, rows, password=password), card_exports.PDF_MEDIA_TYPE, f"{stem}.pdf"
+    else:
+        content, media, name = card_exports.print_sheet_pdf(meta, rows, password=password), card_exports.PDF_MEDIA_TYPE, f"{stem}-print.pdf"
+    await audit.record(
+        session, actor=actor, action=AuditAction.READ, entity_type="card_batch_export", entity_id=batch.id,
+        details={"format": fmt, "cards": len(rows)},
+    )
+    return content, media, name

@@ -9,6 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -131,6 +132,16 @@ class CardBatchOut(BaseModel):
 class CardCodeOut(BaseModel):
     serial: str
     code: str
+
+
+class CardExportIn(BaseModel):
+    """**ملفُّ الدفعة لحظةَ إنشائها** (SPEC §١٠٠-أ/١) — الرموزُ من ردّ الإنشاء في يد اللوحة، **وكلمةُ السرّ لا تُخزَّن ولا تُسجَّل**."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    format: Literal["xlsx", "pdf", "sheet"]
+    password: str = Field(min_length=8, max_length=128)
+    codes: list[CardCodeOut] = Field(min_length=1, max_length=5000)
 
 
 class CardBatchCreatedOut(BaseModel):

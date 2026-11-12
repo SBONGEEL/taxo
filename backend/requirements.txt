@@ -48,3 +48,5 @@ Pillow==13.0.0
 # **إيصالاتُ PDF** (SPEC §٨٨/٢) — `fpdf2` يكتب الصفحة، و`uharfbuzz` يشكّل العربيّةَ ويقلب اتجاهها
 fpdf2>=2.8,<3.0
 uharfbuzz>=0.39,<1.0
+segno==1.6.6
+msoffcrypto-tool==6.1.0

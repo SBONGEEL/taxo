@@ -19,6 +19,7 @@ import {
   cardShopReport,
   createCardBatch,
   createCardShop,
+  exportCardBatch,
   findTaxoCards,
   getCardLimits,
   listCardAlerts,
@@ -319,54 +320,71 @@ function BatchModal({
   );
 }
 
-/** **ملفُّ الطباعة** — يُبنى في المتصفّح من الردّ نفسِه، **ولا يُرسل إلى أيِّ مكان**. */
-function downloadCodes(created: CardBatchCreated) {
-  const head = "serial,code,amount,currency,valid_from,expires_at";
-  const lines = created.codes.map(
-    (row) =>
-      `${row.serial},${row.code},${created.batch.amount},${created.batch.currency},${created.batch.valid_from},${created.batch.expires_at}`,
-  );
-  const blob = new Blob([[head, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `taxo-cards-batch-${created.batch.number}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
+const FILES: { format: "xlsx" | "pdf" | "sheet"; label: string }[] = [
+  { format: "xlsx", label: "Excel" },
+  { format: "pdf", label: "PDF للطباعة" },
+  { format: "sheet", label: "ورقة المطبعة (QR)" },
+];
 
+/** **ملفّاتُ الدفعة** (SPEC §١٠٠-أ/١) — تُنزَّل **الآن وحدَه** بكلمة سرٍّ تكتبها هنا (لا تُحفظ ولا تُسجَّل)، **وتحفظها أنت**:
+ *  الرموزُ لا تُستعاد بعد إغلاق هذه النافذة، ولا بابَ يعيدها. والخادمُ يرفض الملفَّ بعد ٣٠ دقيقةً من الإنشاء. */
 function CodesModal({ created, onClose }: { created: CardBatchCreated; onClose: () => void }) {
-  const [saved, setSaved] = useState(false);
+  const [password, setPassword] = useState("");
+  const [done, setDone] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const ready = password.length >= 8;
+
+  async function download(format: "xlsx" | "pdf" | "sheet") {
+    setBusy(format);
+    setError(null);
+    try {
+      await exportCardBatch(created.batch.id, format, password, created.codes);
+      setDone(new Set([...done, format]));
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : "تعذّر تنزيلُ الملفّ");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
-    <Modal title={`رموز الدفعة #${created.batch.number}`} onClose={saved ? onClose : () => undefined} wide>
+    <Modal title={`ملفّات الدفعة #${created.batch.number}`} onClose={done.size ? onClose : () => undefined} wide>
       <p className="mb-12 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
-        هذه هي المرّةُ الوحيدةُ التي تظهر فيها الرموز. نزّل الملفّ واحفظه قبل الإغلاق — {digits(String(created.codes.length))} بطاقة.
+        هذه هي المرّةُ الوحيدةُ التي تُنزَّل فيها رموزُ الدفعة ({digits(String(created.codes.length))} بطاقة). اكتب كلمةَ سرٍّ للملفّات
+        ونزّلها واحفظها — بعد إغلاق النافذة لا يعيدها أحد، ومن ضاعت ملفّاتُه يُلغي الدفعةَ ويُصدر غيرَها.
       </p>
-      <div className="max-h-64 overflow-y-auto rounded-14 border border-line px-14 py-10">
-        {created.codes.slice(0, 50).map((row) => (
-          <div key={row.serial} dir="ltr" className="flex justify-between text-12 text-ink">
-            <span>{row.serial}</span>
-            <span className="font-semibold">{row.code}</span>
-          </div>
+      <label className="mb-6 block text-12 font-bold text-ink" htmlFor="batch-file-password">
+        كلمة سرّ الملفّات (8 أحرف على الأقل)
+      </label>
+      <input
+        id="batch-file-password"
+        type="password"
+        autoComplete="new-password"
+        dir="ltr"
+        className="mb-14 w-full rounded-10 border border-line bg-surface px-12 py-10 text-13 text-ink"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      <div className="flex flex-wrap gap-10">
+        {FILES.map((file) => (
+          <Button
+            key={file.format}
+            className="flex-1"
+            size="md"
+            variant={done.has(file.format) ? "secondary" : "primary"}
+            disabled={!ready || busy !== null}
+            loading={busy === file.format}
+            onClick={() => void download(file.format)}
+          >
+            {done.has(file.format) ? `✓ ${file.label}` : `نزّل ${file.label}`}
+          </Button>
         ))}
-        {created.codes.length > 50 ? (
-          <p className="mt-6 text-11 text-muted">… والباقي في الملفّ.</p>
-        ) : null}
       </div>
-      <div className="mt-18 flex gap-10">
-        <Button
-          className="flex-1"
-          size="md"
-          onClick={() => {
-            downloadCodes(created);
-            setSaved(true);
-          }}
-        >
-          نزّل ملفَّ الطباعة
-        </Button>
-        <Button className="flex-1" size="md" variant="secondary" disabled={!saved} onClick={onClose}>
-          حفظتُه — أغلق
-        </Button>
-      </div>
+      {error ? <p className="mt-10 text-12 text-danger">{error}</p> : null}
+      <Button className="mt-18 w-full" size="md" variant="secondary" disabled={!done.size} onClick={onClose}>
+        حفظتُ الملفّات — أغلق
+      </Button>
     </Modal>
   );
 }

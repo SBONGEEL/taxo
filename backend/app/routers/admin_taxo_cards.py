@@ -9,6 +9,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 
 from app.core.currency import currency_for_country
@@ -19,6 +20,7 @@ from app.models.taxo_card import CardDenomination, CardShop
 from app.models.user import User
 from app.schemas.payment_request import PaymentReasonIn
 from app.schemas.taxo_card import (
+    CardExportIn,
     CardBatchCreatedOut,
     CardBatchIn,
     CardBatchOut,
@@ -142,6 +144,21 @@ async def create_batch(payload: CardBatchIn, admin: FinanceManager, session: DbS
     return CardBatchCreatedOut(
         batch=await _one_batch(session, payload.country_code, batch.id),
         codes=[CardCodeOut(serial=serial, code=code) for serial, code in codes],
+    )
+
+
+@router.post("/batches/{batch_id}/export")
+async def export_batch(batch_id: uuid.UUID, payload: CardExportIn, admin: FinanceManager, session: DbSession) -> Response:
+    """**ملفُّ الدفعة لحظةَ إنشائها وحدَها** (SPEC §١٠٠-أ/١) — Excel أو PDF أو ورقةُ المطبعة، كلُّها بكلمة سرّ؛ **ولا يُعاد بعد ذلك**."""
+    batch = await taxo_cards.get_batch(session, batch_id)
+    content, media, name = await taxo_cards.export_batch(
+        session, batch=batch, actor=admin, fmt=payload.format, password=payload.password,
+        codes=[(row.serial, row.code) for row in payload.codes],
+    )
+    await session.commit()
+    return Response(
+        content=content, media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"},
     )
 
 

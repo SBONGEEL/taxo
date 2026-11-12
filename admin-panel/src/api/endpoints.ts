@@ -2473,6 +2473,38 @@ export const createCardBatch = (body: {
   expires_at: string;
 }) => api.post<CardBatchCreated>("/admin/taxo-cards/batches", body);
 
+/** **ملفُّ الدفعة لحظةَ إنشائها** (SPEC §١٠٠-أ/١) — Excel أو PDF أو ورقةُ المطبعة، **بكلمة سرّ**؛ والرموزُ من ردّ الإنشاء
+ *  في يد اللوحة تُطابَق في الخادم ببصماتها، **ولا يُعاد الملفُّ بعد ٣٠ دقيقة**. */
+export async function exportCardBatch(
+  batchId: string,
+  format: "xlsx" | "pdf" | "sheet",
+  password: string,
+  codes: { serial: string; code: string }[],
+): Promise<void> {
+  const answer = await fetch(`${API_URL}/admin/taxo-cards/batches/${batchId}/export`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ format, password, codes }),
+  });
+  if (!answer.ok) {
+    let message = "تعذّر تنزيلُ الملفّ";
+    try {
+      message = ((await answer.json()) as { message?: string }).message ?? message;
+    } catch {
+      /* ردٌّ غيرُ مقروء — الرسالةُ العامّةُ تكفي */
+    }
+    throw new Error(message);
+  }
+  const named = /filename="([^"]+)"/.exec(answer.headers.get("content-disposition") ?? "");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(await answer.blob());
+  link.download = named?.[1] ?? `taxo-cards.${format === "xlsx" ? "xlsx" : "pdf"}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
 export const cancelCardBatch = (id: string, reason: string) =>
   api.post<CardBatch>(`/admin/taxo-cards/batches/${id}/cancel`, { reason });
 
