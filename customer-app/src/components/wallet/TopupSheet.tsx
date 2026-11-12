@@ -26,6 +26,8 @@ export function TopupSheet({
   cliqEnabled,
   methods,
   choices = [],
+  whopCard = null,
+  cardOnTop = false,
   onClose,
 }: {
   currency: string | undefined;
@@ -39,6 +41,10 @@ export function TopupSheet({
   /** **مبالغُ الشحن عند الوسيط خياراتٌ ثابتة** (§٧٤-ط/٥) — تُعرض هنا في الورقة نفسِها (§٧٦-ع/٢، المشكلة ١٦): كانت الورقةُ تقبل
    *  مبلغاً حرّاً ثمّ تفرض الصفحةُ التاليةُ خياراتِها وتمسح ما كُتب بصمت */
   choices?: string[];
+  /** **«شحن المحفظة بالبطاقة» عبر Whop** (الأردن، ٢٠٢٦-١١-١٣) — حين مفتاحُه مشتعلٌ وعقدُه مُدخَل، و`null` في غيره */
+  whopCard?: PayMethod | null;
+  /** **البطاقةُ أوّلاً ومقترحةً** (ترتيبُ السوق من اللوحة) — وكليكُ تحتها كما هو */
+  cardOnTop?: boolean;
   onClose: () => void;
 }) {
   const navigate = useNavigate();
@@ -47,6 +53,25 @@ export function TopupSheet({
   const valid = Number(amount) > 0 && unitError === null;
   const gatewayChoices = methods?.some((method) => method.gateway) && choices.length > 0 ? choices : null;
   const chosenAllowed = gatewayChoices === null || gatewayChoices.includes(amount);
+  const whopRow = whopCard ? (
+    <div className="t2-list t2-m-gap">
+      <button
+        type="button"
+        className="t2-row t2-m-opt"
+        disabled={!valid}
+        onClick={() => navigate("/wallet/pay", { state: { amount, methodId: whopCard.id } })}
+      >
+        <Icon name="credit_card" />
+        <span className="t2-row-main">
+          <span className="t2-row-title">{tr("الدفع بالبطاقة")}</span>
+          <span className="t2-row-body">
+            {cardOnTop ? tr("مقترحة — ببطاقتك البنكيّة، يُضاف فورَ تأكيد الدفع") : tr("ببطاقتك البنكيّة — يُضاف فورَ تأكيد الدفع")}
+          </span>
+        </span>
+        <Icon name="chevron_left" className="t2-m-opt-end go" />
+      </button>
+    </div>
+  ) : null;
 
   return (
     <SheetModalT2 onClose={onClose}>
@@ -73,6 +98,8 @@ export function TopupSheet({
         )}
       </AmountCardT2>
       <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
+
+      {cardOnTop ? whopRow : null}
 
       {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد».
           والقناةُ الغائبةُ لا تُرسم معطّلةً: مفتاحُها مطفأٌ في هذا السوق */}
@@ -146,6 +173,7 @@ export function TopupSheet({
           ) : null}
         </div>
       ) : null}
+      {cardOnTop ? null : whopRow}
     </SheetModalT2>
   );
 }

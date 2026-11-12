@@ -46,6 +46,7 @@ import type {
 import { TopupSheet } from "@/components/wallet/TopupSheet";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
+import { cardFirst } from "@/lib/pay-order";
 import { roundingUnit } from "@/lib/rounding";
 import { PAYMENT_REQUEST_STATUS_LABEL, TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
@@ -158,6 +159,8 @@ export function WalletT2Screen() {
     };
   }, [payRequests, whopTopup]);
   const whopCard = whopTopup ? (methods?.find((row) => row.code === "whop_rider_card") ?? null) : null;
+  // **البطاقةُ أوّلاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — وكليكُ تحتها كما هو
+  const cardOnTop = cardFirst(country?.payment_method_order) && whopCard !== null;
 
   async function cancelRequest(id: string) {
     try {
@@ -350,7 +353,7 @@ export function WalletT2Screen() {
 
       {/* **«طرق الدفع» كما رسمتها R11** (§٦٢-ج/٢٤): مربّعُ البطاقة الافتراضية ومربّعُ كليك، و«إدارة» إلى البطاقات —
           **وكلٌّ خلف مفتاحه**. وبلا بطاقةٍ محفوظةٍ يبقى مربّعُها باباً يقول ذلك */}
-      {cardEnabled || (cliqEnabled && walletEnabled) ? (
+      {cardEnabled || (cliqEnabled && walletEnabled) || (whopCard !== null && walletEnabled) ? (
         <section>
           <div className="t2-section">
             <span>{tr("طرق الدفع")}</span>
@@ -361,6 +364,19 @@ export function WalletT2Screen() {
             ) : null}
           </div>
           <div className="t2-paytiles">
+            {cardOnTop ? (
+              <>
+            {whopCard && walletEnabled ? (
+              <button
+                type="button"
+                className="t2-paytile"
+                onClick={() => navigate("/wallet/pay", { state: { methodId: whopCard.id } })}
+              >
+                <span className="t2-paytile-name">{tr("شحن المحفظة بالبطاقة")}</span>
+              </button>
+            ) : null}
+              </>
+            ) : null}
             {cardEnabled ? (
               <button type="button" className="t2-paytile wide" onClick={() => navigate("/account/cards")}>
                 {card ? (
@@ -383,6 +399,8 @@ export function WalletT2Screen() {
                 )}
               </button>
             ) : null}
+            {cardOnTop ? null : (
+              <>
             {whopCard && walletEnabled ? (
               <button
                 type="button"
@@ -392,6 +410,8 @@ export function WalletT2Screen() {
                 <span className="t2-paytile-name">{tr("شحن المحفظة بالبطاقة")}</span>
               </button>
             ) : null}
+              </>
+            )}
             {cliqEnabled && walletEnabled ? (
               <button
                 type="button"
@@ -465,6 +485,8 @@ export function WalletT2Screen() {
           cliqEnabled={cliqEnabled}
           methods={payRequests ? (methods ?? []) : undefined}
           choices={choices}
+          whopCard={walletEnabled ? whopCard : null}
+          cardOnTop={cardOnTop}
           onClose={() => setTopupOpen(false)}
         />
       ) : null}

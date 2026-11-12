@@ -542,3 +542,30 @@ def test_a_webhook_without_a_checkout_id_names_nothing() -> None:
     gateway = whop.build_whop({"api_key": API_VALUE, "webhook_secret": HOOK_VALUE, "company_id": COMPANY})
     body, headers = _hook("not-a-checkout")
     assert gateway.webhook_ids(headers, body) == []
+
+
+# ------------------------------------------------------------------ ترتيبُ طرق الدفع (أمرُ المالك ٢٠٢٦-١١-١٣: «Whop first for Jordan»)
+
+
+async def test_the_owner_orders_payment_methods_per_country_and_the_apps_read_it(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    saved = await client.patch(
+        "/admin/settings/payments/JO", json={"payment_method_order": ["card", "wallet", "cliq", "cash"]}, headers=admin_headers
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["payment_method_order"] == ["card", "wallet", "cliq", "cash"]
+
+    published = {c["country_code"]: c for c in (await client.get("/config")).json()["countries"]}
+    assert published["JO"]["payment_method_order"] == ["card", "wallet", "cliq", "cash"]
+    # **الجزائرُ وليبيا «كما كانت»** — لا ترتيبَ يُكتب لهما
+    for other in ("DZ", "LY"):
+        if other in published:
+            assert published[other]["payment_method_order"] == []
+
+    # **كلُّ طريقةٍ مرّة، ومن الأربع وحدَها** — والفارغةُ تعيد «كما كان»
+    for bad in (["card", "card"], ["bitcoin"]):
+        refused = await client.patch("/admin/settings/payments/JO", json={"payment_method_order": bad}, headers=admin_headers)
+        assert refused.status_code == 422, refused.text
+    cleared = await client.patch("/admin/settings/payments/JO", json={"payment_method_order": []}, headers=admin_headers)
+    assert cleared.json()["payment_method_order"] == []

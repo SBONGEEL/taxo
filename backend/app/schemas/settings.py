@@ -14,6 +14,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     FeatureKey,
+    PaymentOrderKey,
     RoundingMode,
     SubscriptionDurationType,
 )
@@ -273,6 +274,8 @@ class PaymentSettingOut(BaseModel):
     rounding_unit: Decimal
     rounding_mode: RoundingMode
     rounding_enabled_at: datetime | None = None
+    #: **ترتيبُ طرق الدفع في التطبيقين** — وأوّلُها المقترحُ مسبقاً؛ وفارغةٌ «كما كان»
+    payment_method_order: list[PaymentOrderKey] = []
     updated_at: datetime
 
 
@@ -317,6 +320,17 @@ class PaymentSettingUpdate(BaseModel):
     rounding_enabled: bool | None = None
     rounding_unit: Decimal | None = Field(default=None, gt=0, le=10, max_digits=12, decimal_places=3)
     rounding_mode: RoundingMode | None = None
+
+    # ------------------- ترتيبُ الطرق (أمرُ المالك ٢٠٢٦-١١-١٣) — **عرضٌ لا إذن**، وقائمةٌ فارغةٌ تعيد «كما كان»
+    payment_method_order: list[PaymentOrderKey] | None = Field(default=None, max_length=4)
+
+    @field_validator("payment_method_order")
+    @classmethod
+    def _order_unique(cls, value: list[PaymentOrderKey] | None) -> list[PaymentOrderKey] | None:
+        """**كلُّ طريقةٍ مرّةً واحدة** — تكرارُها يجعل «الأولى» اثنتين."""
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("كلُّ طريقةٍ مرّةً واحدة في الترتيب")
+        return value
 
     @field_validator("payment_reminder_minutes")
     @classmethod

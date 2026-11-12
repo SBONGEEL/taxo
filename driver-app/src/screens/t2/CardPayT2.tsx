@@ -38,7 +38,9 @@ export interface CardPayHandoff {
 
 /** **طريقةُ البطاقة المصرفية من طرق السوق** — هي وحدَها تحمل عملةَ خصمٍ أخرى */
 export function bankCardMethod(methods: PayMethod[] | null | undefined): PayMethod | null {
-  return methods?.find((row) => row.gateway && row.charge_currency) ?? null;
+  // **Whop أوّلاً حين يُعرض** (أمرُ المالك ٢٠٢٦-١١-١٣: طريقةُ الأردن الأساسيّة) — وإلا أيُّ وسيطِ بطاقةٍ مصرفيّةٍ في السوق
+  const cards = methods?.filter((row) => row.gateway && row.charge_currency) ?? [];
+  return cards.find((row) => row.code === "whop_card") ?? cards[0] ?? null;
 }
 
 export function CardPayT2Screen() {

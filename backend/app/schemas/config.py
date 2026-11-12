@@ -86,6 +86,9 @@ class CountryConfigOut(BaseModel):
     rounding_enabled: bool = False
     rounding_unit: Decimal = DEFAULT_ROUNDING_UNIT
     rounding_mode: RoundingMode = RoundingMode.NEAREST
+    # **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — من `payment_settings` بعينه؛ **وأوّلُها يُقترح مسبقاً** في التطبيقين، والباقي
+    # تحته كما هو. وفارغةٌ «كما كان». **عرضٌ لا إذن**: ما يُعرض يحكمه مفتاحُه وعقدُه
+    payment_method_order: list[str] = []
 
 
 class DispatchOut(BaseModel):

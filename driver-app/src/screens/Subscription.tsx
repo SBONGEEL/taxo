@@ -562,6 +562,7 @@ export function ConfirmSubscriptionSheet({
   manual = true,
   onBankCard,
   bankCardFloor = null,
+  cardFirst = false,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -582,6 +583,8 @@ export function ConfirmSubscriptionSheet({
   onBankCard?: (plan: SubscriptionPlan) => void;
   /** **سطرُ الحدّ الأدنى** — حين ثمنُ الخطة تحت أقلِّ دفعٍ بالبطاقة: يُعرض مكانَ زرّها (قرارُ المالك ٢٠٢٦-١١-١١) */
   bankCardFloor?: string | null;
+  /** **البطاقةُ أوّلاً ومقترحةً مسبقاً** (ترتيبُ السوق من اللوحة) — والمحفظةُ وكليك تحتها كما هما */
+  cardFirst?: boolean;
 }) {
   const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
   const bankCard = !cardEnabled && !cardViaGateway && onBankCard !== undefined;
@@ -630,7 +633,23 @@ export function ConfirmSubscriptionSheet({
           ) : null}
         </div>
         <div className="flex flex-col gap-9">
-          <Button size="md" loading={buying !== null} onClick={() => onWallet(plan)}>
+          {/* **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — والمحفظةُ تحتها زرّاً ثانياً لا محذوفاً */}
+          {cardFirst && bankCard && !bankCardFloor ? (
+            <>
+              <Button size="md" disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
+                {tr("الدفع بالبطاقة المصرفية")}
+              </Button>
+              <p className="-mt-4 text-11 leading-note text-muted">
+                {tr("ببطاقتك البنكيّة — يُفعَّل اشتراكُك فورَ اكتمال الدفع.")}
+              </p>
+            </>
+          ) : null}
+          <Button
+            size="md"
+            variant={cardFirst && bankCard && !bankCardFloor ? "secondary" : undefined}
+            loading={buying !== null}
+            onClick={() => onWallet(plan)}
+          >
             {tr("خصم من المحفظة")}
           </Button>
           {/* **ما لا عقدَ له يُعرض معطَّلاً بعلّته لا يُخفى** (قرارُ
@@ -640,7 +659,7 @@ export function ConfirmSubscriptionSheet({
               وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
           {bankCard && bankCardFloor ? (
             <p className="text-11 leading-note text-muted">{bankCardFloor}</p>
-          ) : bankCard ? (
+          ) : bankCard && cardFirst ? null : bankCard ? (
             <>
               <Button size="md" variant="secondary" disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
                 {tr("الدفع بالبطاقة المصرفية")}

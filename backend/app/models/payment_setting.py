@@ -105,6 +105,11 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
             "rounding_unit > 0 AND rounding_mode IN ('nearest', 'up', 'down')",
             name="payment_rounding_valid",
         ),
+        # **ترتيبُ الطرق قائمةٌ** (أمرُ المالك ٢٠٢٦-١١-١٣، الترحيلة `0161`) — والمفاتيحُ وتكرارُها يحرسها المخطَّطُ في اللوحة
+        CheckConstraint(
+            "jsonb_typeof(payment_method_order) = 'array'",
+            name="payment_method_order_is_array",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -250,6 +255,12 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     #: لم يُقرَّب ولا يُقرَّب (§٧٠-أ/١١). و`null` لسوقٍ لم يُشعَل قطّ
     rounding_enabled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    #: **ترتيبُ طرق الدفع في التطبيقين** (أمرُ المالك ٢٠٢٦-١١-١٣) — قائمةٌ من `PaymentOrderKey`، **وأوّلُها هو المقترحُ مسبقاً**.
+    #: **وفارغةٌ تعني «كما كان»**: لا يتغيّر في السوق حرف (الجزائرُ وليبيا). **ترتيبُ عرضٍ لا إذن** — ولا تُجبر أحداً على طريقة
+    payment_method_order: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
 
     @property

@@ -165,6 +165,7 @@ import type {
   Reports,
   RideSharingSetting,
   RideStatus,
+  PaymentOrderKey,
   RoundingMode,
   SearchHits,
   SecurityPolicy,
@@ -751,6 +752,8 @@ export const updatePaymentSettings = (
     rounding_enabled?: boolean;
     rounding_unit?: string;
     rounding_mode?: RoundingMode;
+    /** **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — كلُّ طريقةٍ مرّة، والقائمةُ الفارغةُ تعيد «كما كان» */
+    payment_method_order?: PaymentOrderKey[];
   },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
 

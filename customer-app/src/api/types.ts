@@ -291,10 +291,15 @@ export interface CountryConfig {
   /** **اتجاهُه** — مرآةٌ لما يُنشر؛ **ولا يقرؤه هذا التطبيق**: الأجرةُ تصل مقرَّبةً وسطرُ «تقريب» يقول فرقَها، والاتجاهُ يُضبط
    *  ويُقرأ في اللوحة. */
   rounding_mode: RoundingMode;
+  /** **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — وأوّلُها المقترحُ مسبقاً؛ وفارغٌ «كما كان». عرضٌ لا إذن */
+  payment_method_order: PaymentOrderKey[];
 }
 
 /** اتجاهُ التقريب — مرآةُ `RoundingMode` في الخلفية (`check:enums`). */
 export type RoundingMode = "nearest" | "up" | "down";
+
+/** **طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** — مرآةُ `PaymentOrderKey` في الخلفية (`check:enums`). ترتيبُ عرضٍ لا إذن. */
+export type PaymentOrderKey = "card" | "wallet" | "cliq" | "cash";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {

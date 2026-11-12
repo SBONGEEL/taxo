@@ -77,6 +77,7 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         # **الوحدةُ والاتجاهُ المضبوطان ولو كان مطفأً** — اللوحةُ تقرأ الوصفَ نفسَه، والتطبيقُ لا يقرؤهما إلا مشتعلاً
         rounding_unit=pay.rounding_unit if pay is not None else policy.unit,
         rounding_mode=pay.rounding_mode if pay is not None else policy.mode,
+        payment_method_order=list(pay.payment_method_order or []) if pay is not None else [],
     )
 
 

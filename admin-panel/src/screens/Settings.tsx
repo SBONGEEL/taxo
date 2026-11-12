@@ -69,7 +69,7 @@ import {
   updateMapSettings,
   uploadCliqQr,
 } from "@/api/endpoints";
-import type {
+import type { PaymentOrderKey,
   AdvanceSetting,
   CountryCode,
   DispatchMode,
@@ -1640,6 +1640,17 @@ function PaymentForm({
   const [roundingOn, setRoundingOn] = useState(row.rounding_enabled);
   const [roundingUnit, setRoundingUnit] = useState(row.rounding_unit);
   const [roundingMode, setRoundingMode] = useState(row.rounding_mode);
+  // **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — الأولى مقترحةٌ مسبقاً في التطبيقين، وما لم يُذكر يلي بترتيبه القائم
+  const [order, setOrder] = useState<PaymentOrderKey[]>(row.payment_method_order ?? []);
+  const orderDirty = order.join(",") !== (row.payment_method_order ?? []).join(",");
+  const unordered = (Object.keys(PAY_ORDER_LABEL) as PaymentOrderKey[]).filter((key) => !order.includes(key));
+  function moveOrder(index: number, step: -1 | 1) {
+    const next = [...order];
+    const target = index + step;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setOrder(next);
+  }
 
   /** مبلغُ مالٍ كما يُكتب — **بلا أرقامٍ عربية-هندية**: حقلٌ يُكتب فيه لا يُقرأ. */
   const money = (value: string) => value.replace(/[^0-9.]/g, "");
@@ -1948,9 +1959,63 @@ function PaymentForm({
           حفظ التقريب
         </Button>
       </div>
+
+      {/* **ترتيبُ طرق الدفع في التطبيقين** (أمرُ المالك ٢٠٢٦-١١-١٣: «Whop first for Jordan») — **عرضٌ لا إذن**: الأولى تُقترح
+          مسبقاً للكبتن (الاشتراك والمستحقّات) وللراكب (شحنُ المحفظة ودفعُ الرحلة)، والباقي تحتها كما هو، **ويختار كلٌّ غيرَها متى شاء** */}
+      <div className="mt-18 border-t border-line pt-14">
+        <h3 className="mb-2 text-12.5 font-bold text-ink">ترتيب طرق الدفع</h3>
+        <p className="mb-10 text-11 leading-snug text-muted">
+          الطريقةُ الأولى تظهر أوّلاً ومقترحةً مسبقاً في التطبيقين: اشتراكُ الكبتن ومستحقّاتُه، وشحنُ محفظة الراكب، ودفعُ الرحلة. والباقي
+          تحتها كما هو، ويختار الراكبُ والكبتنُ غيرَها متى شاءا — لا يُجبر أحدٌ على طريقة. ولا يُظهر الترتيبُ طريقةً مطفأة: كلُّ طريقةٍ
+          يحكمها مفتاحُها وعقدُها. والقائمةُ الفارغةُ تعني «كما كان».
+        </p>
+        <div className="flex flex-col gap-6">
+          {order.map((key, index) => (
+            <div key={key} className="flex items-center gap-8 rounded-10 border border-line px-10 py-6">
+              <span className="w-18 text-11 font-bold text-muted">{digits(String(index + 1))}</span>
+              <span className="flex-1 text-12.5 text-ink">{PAY_ORDER_LABEL[key]}</span>
+              <Button size="sm" variant="secondary" disabled={disabled || index === 0} onClick={() => moveOrder(index, -1)}>
+                أعلى
+              </Button>
+              <Button size="sm" variant="secondary" disabled={disabled || index === order.length - 1} onClick={() => moveOrder(index, 1)}>
+                أسفل
+              </Button>
+              <Button size="sm" variant="secondary" disabled={disabled} onClick={() => setOrder(order.filter((item) => item !== key))}>
+                إزالة
+              </Button>
+            </div>
+          ))}
+          {unordered.length > 0 ? (
+            <div className="flex flex-wrap gap-6">
+              {unordered.map((key) => (
+                <Button key={key} size="sm" variant="secondary" disabled={disabled} onClick={() => setOrder([...order, key])}>
+                  + {PAY_ORDER_LABEL[key]}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <Button
+          className="mt-14"
+          size="sm"
+          disabled={disabled || !orderDirty}
+          loading={busy}
+          onClick={() => save({ payment_method_order: order }, "حُفظ ترتيبُ طرق الدفع — يراه التطبيقان من فتحهما التالي")}
+        >
+          حفظ الترتيب
+        </Button>
+      </div>
     </>
   );
 }
+
+/** **أسماءُ طرق الدفع في محرِّر الترتيب** — مفاتيحُها مرآةُ `PaymentOrderKey`. */
+const PAY_ORDER_LABEL: Record<PaymentOrderKey, string> = {
+  card: "الدفع بالبطاقة (Whop في الأردن)",
+  wallet: "المحفظة",
+  cliq: "كليك",
+  cash: "نقداً",
+};
 
 /** **ترتيبُ التذكيرات الأربعة** — نصوصُها في التصميم (§٣) لكلِّ موعد: «١٠ د» سؤالٌ، و«٢ س» إعادتُه، و«١٢ س» إنذارُ الحدّ، و«٢٣ س»
  *  التحذيرُ الأخير («بعد ساعةٍ يُعدّ المبلغُ مستلَماً» حين يصدق). */

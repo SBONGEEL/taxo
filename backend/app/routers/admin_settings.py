@@ -812,6 +812,9 @@ async def update_payment_settings(
             del updates[key]
     if isinstance(updates.get("rounding_mode"), RoundingMode):
         updates["rounding_mode"] = updates["rounding_mode"].value
+    # **ترتيبُ الطرق** (أمرُ المالك ٢٠٢٦-١١-١٣) — نصوصٌ في JSONB، و`null` صريحٌ يعيد «كما كان»
+    if "payment_method_order" in updates:
+        updates["payment_method_order"] = [str(key) for key in (updates["payment_method_order"] or [])]
     was_enabled = setting.rounding_enabled
     changed = _apply_updates(setting, updates)
     # **ويُختم وقتُ الإشعال** حين ينقلب المفتاحُ من مطفأٍ إلى مشتعل — **ومعه في سجلِّ التدقيق** قبلاً وبعداً: منه يُعرف أيُّ

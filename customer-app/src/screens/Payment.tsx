@@ -47,6 +47,7 @@ import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { useGoBack, useReturnHome } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
+import { cardFirst } from "@/lib/pay-order";
 import { roundingRow } from "@/lib/fareLines";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
@@ -173,6 +174,8 @@ export function PaymentScreen() {
   // تُختار** — فلا منتقيَ ولا زرَّ دفع (كلُّ قناةٍ من هنا ترتدّ: لم يبقَ ما يُدفع). ومن الصفّ لا من المفتاح
   const commute = ride?.commute === true;
   const { available, resolved, choose } = usePayerPreference(country, payer);
+  // **من اختار طريقةً أخرى في هذه الشاشة لا تعود البطاقةُ فوقها** — الترتيبُ اقتراحٌ لا قيد
+  const [pickedOther, setPickedOther] = useState(false);
 
   const load = useCallback(async () => {
     const [row, payments] = await Promise.all([
@@ -327,6 +330,8 @@ export function PaymentScreen() {
 
   // **«الدفع بالبطاقة» للرحلة** (قرارُ المالك ٢٠٢٦-١١-١٣) — يُشحن الرصيدُ بما بقي عليها عبر Whop، ثمّ تُدفع من المحفظة
   const cardTripOn = country?.features.whop_rider_trip_enabled === true;
+  // **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — والطرقُ الأخرى تحتها، و«طريقة أخرى» باقية
+  const cardPrimary = cardTripOn && cardFirst(country?.payment_method_order) && !pickedOther;
   async function payTripByCard() {
     if (!state?.outstanding) return;
     setCardTripBusy(true);
@@ -507,9 +512,20 @@ export function PaymentScreen() {
         <AnimatePresence mode="wait">
           <motion.div key={resolved.method} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
             {/* **الالتزامُ بالجمر** — «طلب / قبول» في الهوية */}
+            {cardPrimary && !commute && !cashByOther ? (
+              <button
+                type="button"
+                className="t2-button action t2-m-cta"
+                disabled={cardTripBusy || busy !== null}
+                aria-busy={cardTripBusy}
+                onClick={() => void payTripByCard()}
+              >
+                <BusyLabel busy={cardTripBusy}>{tr("الدفع بالبطاقة")}</BusyLabel>
+              </button>
+            ) : null}
             <button
               type="button"
-              className="t2-button action t2-m-cta"
+              className={cardPrimary && !commute && !cashByOther ? "t2-m-link" : "t2-button action t2-m-cta"}
               disabled={busy !== null}
               aria-busy={busy === resolved.method}
               onClick={() => (resolved.method === "card" ? setChoosingCard(true) : pay(resolved.method))}
@@ -527,7 +543,7 @@ export function PaymentScreen() {
 
             <p className="t2-m-fine">{CTA[resolved.method].note}</p>
             {/* **الدفع بالبطاقة** (Whop، الأردن) — شحنٌ بقيمة الرحلة ثمّ دفعُها من المحفظة؛ والكبتنُ يُسوّى كأيِّ رحلةٍ بالمحفظة */}
-            {cardTripOn && !commute && !cashByOther ? (
+            {cardTripOn && !cardPrimary && !commute && !cashByOther ? (
               <button type="button" className="t2-m-link" disabled={cardTripBusy || busy !== null} onClick={() => void payTripByCard()}>
                 {cardTripBusy ? tr("جارٍ…") : tr("الدفع بالبطاقة")}
               </button>
@@ -549,7 +565,10 @@ export function PaymentScreen() {
         <PaymentPicker
           channels={available}
           selected={resolved.method}
-          onSelect={choose}
+          onSelect={(method) => {
+            setPickedOther(true);
+            choose(method);
+          }}
           onClose={() => setPicking(false)}
         />
       ) : null}

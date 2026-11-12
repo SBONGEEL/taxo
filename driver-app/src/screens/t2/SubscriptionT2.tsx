@@ -21,6 +21,7 @@ import { listPaymentMethods } from "@/api/endpoints";
 import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
+import { cardFirst } from "@/lib/pay-order";
 import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { DISPLAY_LOCALE, digits, formatAmount } from "@/lib/utils";
@@ -132,6 +133,8 @@ export function SubscriptionT2Screen() {
   // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — بمفتاحه الخاصّ في سوقه، **ونظامُ الدفع العامُّ مطفأٌ فيه** (الأردن)
   // **ومعه Whop** (٢٠٢٦-١١-١٣) — أيُّ وسيطِ بطاقةٍ مشتعلٌ في السوق؛ والطريقةُ نفسُها تُقرأ من القائمة لا من المفتاح
   const bankCardFeatures = useCountryConfig(profile?.user?.country_code)?.features;
+  // **ترتيبُ السوق** (أمرُ المالك ٢٠٢٦-١١-١٣) — البطاقةُ أوّلاً في الأردن
+  const countryOrder = useCountryConfig(profile?.user?.country_code)?.payment_method_order;
   const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
@@ -426,6 +429,7 @@ export function SubscriptionT2Screen() {
                 ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
                 : null
             }
+            cardFirst={cardFirst(bankCardFeatures ? countryOrder : null)}
             onBankCard={
               bankCard
                 ? (chosen) =>

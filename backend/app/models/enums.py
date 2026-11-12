@@ -505,6 +505,17 @@ class FareLineKind(StrEnum):
     PLAN_DISCOUNT = "plan_discount"
 
 
+class PaymentOrderKey(StrEnum):
+    """**طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** (أمرُ المالك ٢٠٢٦-١١-١٣: «Whop first for Jordan») — **ترتيبُ عرضٍ لا إذن**:
+    ما لا يُذكر يأتي بعد المذكور بترتيبه القائم، وما يُذكر لا يُفتح بذكره (مفتاحُه وعقدُه يحكمان)."""
+
+    #: **البطاقة** — وسيطُ البطاقة في السوق (Whop في الأردن)
+    CARD = "card"
+    WALLET = "wallet"
+    CLIQ = "cliq"
+    CASH = "cash"
+
+
 class RoundingMode(StrEnum):
     """اتجاهُ التقريب إلى وحدة الدولة (SPEC §٧٠-ج/٢) — **و«الأقرب» نصفُه للأعلى**: بوحدة `0.500` تصير `2.250` ⇐ `2.500`."""
 

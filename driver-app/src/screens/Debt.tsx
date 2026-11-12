@@ -23,6 +23,7 @@ import { bankCardMethod } from "@/screens/t2/CardPayT2";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
+import { cardFirst } from "@/lib/pay-order";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
@@ -98,6 +99,8 @@ export function DebtScreen() {
   // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — جوارَ كليك حيث مفتاحُه مشتعلٌ وطريقتُه معروضة؛ **وكليكُ كما هو**
   // **ومعه Whop** (٢٠٢٦-١١-١٣) — أيُّ وسيطِ بطاقةٍ مشتعلٌ في السوق؛ والطريقةُ نفسُها تُقرأ من القائمة لا من المفتاح
   const bankCardFeatures = useCountryConfig(user?.country_code)?.features;
+  // **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — وكليكُ تحتها كما هو
+  const cardOnTop = cardFirst(useCountryConfig(user?.country_code)?.payment_method_order);
   const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
@@ -260,14 +263,9 @@ export function DebtScreen() {
                   {digits(String(state.review_max_minutes))}{" "}{tr("دقائق.")}
                 </p>
               )}
-              <button
-                type="button"
-                className="t2-debt-cta"
-                onClick={() => void pay()}
-                disabled={busy || (state.pay_via !== "topup" && !state.cliq_alias) || unitError !== null}
-              >
-                {busy ? tr("جارٍ…") : state.pay_via === "topup" ? tr("سدّد الآن") : tr("سدّد بكليك")}
-              </button>
+              {/* **البطاقةُ أوّلاً حيث رتّبها المالك** — والترتيبُ وحدَه يتغيّر، والزرّان هما هما */}
+              {cardOnTop ? (
+                <>
               {state.pay_via !== "topup" && bankCard && belowCardFloor(amount, bankCard) ? (
                 // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا زرَّ بطاقة، ويُقال لماذا
                 <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount ?? ""), 1: currency })}</p>
@@ -288,6 +286,40 @@ export function DebtScreen() {
                   </p>
                 </>
               ) : null}
+                </>
+              ) : null}
+              <button
+                type="button"
+                className="t2-debt-cta"
+                onClick={() => void pay()}
+                disabled={busy || (state.pay_via !== "topup" && !state.cliq_alias) || unitError !== null}
+              >
+                {busy ? tr("جارٍ…") : state.pay_via === "topup" ? tr("سدّد الآن") : tr("سدّد بكليك")}
+              </button>
+              {cardOnTop ? null : (
+                <>
+              {state.pay_via !== "topup" && bankCard && belowCardFloor(amount, bankCard) ? (
+                // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا زرَّ بطاقة، ويُقال لماذا
+                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount ?? ""), 1: currency })}</p>
+              ) : state.pay_via !== "topup" && bankCard ? (
+                <>
+                  <button
+                    type="button"
+                    className="t2-debt-cta"
+                    disabled={unitError !== null || amount.trim() === ""}
+                    onClick={() =>
+                      navigate("/wallet/card-pay", { state: { purpose: "wallet_topup", amount: amount.trim() } })
+                    }
+                  >
+                    {tr("الدفع بالبطاقة المصرفية")}
+                  </button>
+                  <p className="t2-fld-hint">
+                    {tr("ببطاقتك البنكيّة — تُخصم مستحقّاتُك فورَ اكتمال الدفع، بلا مراجعة.")}
+                  </p>
+                </>
+              ) : null}
+                </>
+              )}
               {state.pay_via !== "topup" && !state.cliq_alias ? (
                 <p className="t2-debt-warn">
                   {tr("لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.")}

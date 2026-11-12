@@ -160,10 +160,15 @@ export interface CountryConfig {
   /** الوحدةُ نصّاً بثلاث خانات (`"0.500"`) — مضبوطةً ولو كان مطفأً */
   rounding_unit: string;
   rounding_mode: RoundingMode;
+  /** **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — وأوّلُها المقترحُ مسبقاً؛ وفارغٌ «كما كان». عرضٌ لا إذن */
+  payment_method_order: PaymentOrderKey[];
 }
 
 /** **اتجاهُ التقريب** — مرآةُ `RoundingMode` في الخلفية (`check:enums`)، واسمُه بالعربية في `ROUNDING_MODE_LABEL`. */
 export type RoundingMode = "nearest" | "up" | "down";
+
+/** **طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** — مرآةُ `PaymentOrderKey` في الخلفية (`check:enums`). ترتيبُ عرضٍ لا إذن. */
+export type PaymentOrderKey = "card" | "wallet" | "cliq" | "cash";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {
@@ -770,6 +775,8 @@ export interface PaymentSetting {
   rounding_unit: string;
   rounding_mode: RoundingMode;
   rounding_enabled_at: string | null;
+  /** **ترتيبُ طرق الدفع في التطبيقين** — وأوّلُها المقترحُ مسبقاً؛ وفارغٌ «كما كان» */
+  payment_method_order: PaymentOrderKey[];
   updated_at: string;
 }
 
