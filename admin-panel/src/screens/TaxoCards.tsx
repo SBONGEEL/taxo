@@ -23,6 +23,7 @@ import {
   findTaxoCards,
   getCardLimits,
   listCardAlerts,
+  listBatchCards,
   listCardBatches,
   listCardDenominations,
   listCardShops,
@@ -42,6 +43,7 @@ import type {
   CountryCode,
   TaxoCardLimits,
   TaxoCardRow,
+  TaxoCardState,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
@@ -124,6 +126,7 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CardBatchCreated | null>(null);
   const [cancelling, setCancelling] = useState<CardBatch | null>(null);
+  const [opened, setOpened] = useState<CardBatch | null>(null);
 
   const load = useCallback(async () => setRows(await listCardBatches(country)), [country]);
   useEffect(() => {
@@ -167,7 +170,8 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
             <span className={cn("font-semibold", row.status === "active" ? "text-ok" : "text-muted")}>
               {TAXO_CARD_BATCH_STATUS_LABEL[row.status]}
               <span className="block text-10.5 font-normal text-muted">
-                قائمة {digits(String(row.active))} · مستعمَلة {digits(String(row.redeemed))} · ملغاة {digits(String(row.cancelled))}
+                غير مستعملة {digits(String(row.unused))} · مستعمَلة {digits(String(row.redeemed))} · منتهية{" "}
+                {digits(String(row.expired))} · ملغاة {digits(String(row.cancelled))}
               </span>
               {row.cancel_reason ? <span className="block text-10.5 font-normal text-muted">{row.cancel_reason}</span> : null}
             </span>
@@ -177,7 +181,10 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
                 استُعمل {digits(row.redeemed_amount)} من {digits(row.live_amount)} {row.currency}
               </span>
             </span>
-            <span className="flex justify-end">
+            <span className="flex flex-col items-end gap-4">
+              <button type="button" onClick={() => setOpened(row)} className="text-11.5 font-semibold text-accent">
+                البطاقات
+              </button>
               {isAdmin && row.status === "active" ? (
                 <button type="button" onClick={() => setCancelling(row)} className="text-11.5 font-semibold text-danger">
                   إلغاء الدفعة
@@ -199,6 +206,17 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
         />
       ) : null}
       {created ? <CodesModal created={created} onClose={() => setCreated(null)} /> : null}
+      {opened ? (
+        <BatchCardsModal
+          batch={opened}
+          isAdmin={isAdmin}
+          onClose={() => setOpened(null)}
+          onChanged={(message) => {
+            onDone(message);
+            void load();
+          }}
+        />
+      ) : null}
       {cancelling ? (
         <ReasonModal
           title={`إلغاء الدفعة #${cancelling.number}`}
@@ -386,6 +404,149 @@ function CodesModal({ created, onClose }: { created: CardBatchCreated; onClose: 
         حفظتُ الملفّات — أغلق
       </Button>
     </Modal>
+  );
+}
+
+// ------------------------------------------------------------------ بطاقاتُ دفعة (SPEC §١٠٠-أ/٢)
+
+const STATE_LABEL: Record<TaxoCardState, string> = {
+  unused: "غير مستعملة",
+  redeemed: "مستعمَلة",
+  expired: "منتهية",
+  cancelled: "ملغاة",
+  not_started: "لم تبدأ بعد",
+};
+const MASKED = "••••-••••-••••-••••";
+
+/** **بطاقاتُ الدفعة** — التسلسلُ والرمزُ محجوباً والحالُ ومن استعملها ومتى؛ **ولا زرَّ كشفٍ ولا إعادةَ تنزيل** (قرارُ المالك: البصمةُ
+ *  وحدَها مخزَّنة). والإلغاءُ لبطاقةٍ قائمةٍ بسببٍ مكتوب. */
+function BatchCardsModal({
+  batch,
+  isAdmin,
+  onClose,
+  onChanged,
+}: {
+  batch: CardBatch;
+  isAdmin: boolean;
+  onClose: () => void;
+  onChanged: (message: string) => void;
+}) {
+  const search = useSearch();
+  const [state, setState] = useState<TaxoCardState | "all">("all");
+  const [rows, setRows] = useState<TaxoCardRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<TaxoCardRow | null>(null);
+
+  const load = useCallback(
+    async (offset = 0) => {
+      const page = await listBatchCards(batch.id, { q: search.term, state: state === "all" ? undefined : state, offset });
+      setTotal(page.total);
+      setRows((previous) => (offset === 0 ? page.cards : [...(previous ?? []), ...page.cards]));
+    },
+    [batch.id, search.term, state],
+  );
+  useEffect(() => {
+    setRows(null);
+    load().catch((caught) => setError(errorText(caught, "تعذّر قراءة البطاقات")));
+  }, [load]);
+
+  return (
+    <Modal title={`بطاقات الدفعة #${digits(String(batch.number))}`} onClose={onClose} wide>
+      <p className="mb-10 text-12 text-muted">
+        {digits(batch.amount)} {batch.currency} × {digits(String(batch.quantity))} · الرموزُ لا تُعرض ولا تُنزَّل بعد الإنشاء — تُحفظ
+        بصماتُها وحدَها.
+      </p>
+      <Pills
+        value={state}
+        onPick={(key) => setState(key)}
+        options={[
+          { key: "all", label: "الكل" },
+          { key: "unused", label: "غير مستعملة" },
+          { key: "redeemed", label: "مستعمَلة" },
+          { key: "expired", label: "منتهية" },
+          { key: "cancelled", label: "ملغاة" },
+        ]}
+      />
+      <ErrorNote message={error} />
+      <div className="mt-10">
+        <Table
+          height="compact"
+          toolbar={<TableSearch value={search.text} onChange={search.setText} placeholder="التسلسل أو اسم من استعملها" />}
+          searching={search.searching}
+          columns="1.3fr 1.4fr 0.9fr 1.3fr 0.8fr"
+          headers={["التسلسل", "الرمز", "الحال", "الاستعمال", ""]}
+          rows={rows}
+          keyOf={(row) => row.id}
+          empty={{ title: "لا بطاقات", hint: "لا بطاقةَ بهذه الحال في الدفعة." }}
+          noResults={{ title: "لا نتيجة", hint: "جرّب جزءاً من التسلسل أو من الاسم." }}
+          render={(row) => (
+            <>
+              <span dir="ltr" className="text-start font-semibold text-ink">
+                {row.serial}
+              </span>
+              <span dir="ltr" className="text-start text-muted">
+                {MASKED}
+              </span>
+              <span className={cn("font-semibold", row.state === "unused" ? "text-ok" : "text-muted")}>
+                {STATE_LABEL[row.state]}
+                {row.cancel_reason ? <span className="block text-10.5 font-normal">{row.cancel_reason}</span> : null}
+              </span>
+              <span className="text-muted">
+                {row.redeemed_at ? (
+                  <>
+                    <span className="block text-ink">{row.redeemed_by_name ?? "—"}</span>
+                    <span className="block text-10.5">{day(row.redeemed_at)}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span className="flex justify-end">
+                {isAdmin && row.status === "active" ? (
+                  <button type="button" onClick={() => setCancelling(row)} className="text-11.5 font-semibold text-danger">
+                    إلغاء
+                  </button>
+                ) : null}
+              </span>
+            </>
+          )}
+        />
+      </div>
+      {rows && rows.length < total ? (
+        <Button className="mt-10 w-full" size="md" variant="secondary" onClick={() => void load(rows.length)}>
+          المزيد ({digits(String(total - rows.length))})
+        </Button>
+      ) : null}
+      {cancelling ? (
+        <ReasonModal
+          title={`إلغاء البطاقة ${cancelling.serial}`}
+          note="لا تشحن بعد الإلغاء، ولا تعود."
+          onClose={() => setCancelling(null)}
+          onSubmit={async (reason) => {
+            await cancelTaxoCard(cancelling.id, reason);
+            setCancelling(null);
+            onChanged("أُلغيت البطاقة");
+            await load();
+          }}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+/** **«دفعات البطاقات»** — بابٌ مستقلٌّ في القائمة الرئيسيّة (أمرُ المالك ٢٠٢٦-١١-١٣): الدفعاتُ بعدِّها، وبطاقاتُ كلِّ دفعة. */
+export function CardBatchesScreen() {
+  const { isAdmin } = useSession();
+  const { country } = useCountry();
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  return (
+    <Shell title="دفعات البطاقات" subtitle="كلُّ دفعةٍ بعدد بطاقاتها في كلِّ حال، وبطاقاتُها بالتسلسل ومن استعملها ومتى">
+      <ErrorNote message={error} />
+      <SuccessNote message={done} />
+      <BatchesTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} />
+    </Shell>
   );
 }
 

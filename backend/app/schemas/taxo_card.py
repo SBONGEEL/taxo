@@ -18,6 +18,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     TaxoCardBatchStatus,
+    TaxoCardState,
     TaxoCardStatus,
     WalletOwnerType,
 )
@@ -124,6 +125,9 @@ class CardBatchOut(BaseModel):
     active: int
     redeemed: int
     cancelled: int
+    #: **غيرُ مستعملةٍ تعمل** و**منتهيةٌ لم تُستعمل** — مجموعُهما `active`، ومن نافذة الدفعة لحظةَ القراءة
+    unused: int
+    expired: int
     redeemed_amount: Decimal
     live_amount: Decimal
     due_amount: Decimal
@@ -161,6 +165,15 @@ class TaxoCardOut(BaseModel):
     redeemed_at: datetime | None
     redeemed_by_name: str | None
     cancel_reason: str | None
+    #: **الحالُ كما تُقرأ** — `unused` · `redeemed` · `expired` · `cancelled` · `not_started` (من نافذة الدفعة لحظةَ القراءة)
+    state: TaxoCardState = TaxoCardState.UNUSED
+
+
+class BatchCardsOut(BaseModel):
+    """**بطاقاتُ دفعة** (SPEC §١٠٠-أ/٢) — بلا رمز: التسلسلُ والحالُ والاستعمال وحدَها."""
+
+    total: int
+    cards: list[TaxoCardOut]
 
 
 class CardShopReportOut(BaseModel):

@@ -1172,6 +1172,16 @@ class TaxoCardStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class TaxoCardState(StrEnum):
+    """**حالُ البطاقة كما تُقرأ** (SPEC §١٠٠-أ/٢) — المخزَّنةُ ثلاث (`TaxoCardStatus`)، و«منتهية» و«لم تبدأ» من نافذة الدفعة لحظةَ القراءة."""
+
+    UNUSED = "unused"
+    REDEEMED = "redeemed"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    NOT_STARTED = "not_started"
+
+
 class TaxoCardBatchStatus(StrEnum):
     """**حالُ الدفعة** — قائمةٌ أو ملغاةٌ كلُّها بسببٍ مكتوب (§٧٣-هـ/٢-٦)."""
 

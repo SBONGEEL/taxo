@@ -3089,6 +3089,9 @@ export interface CardBatch {
   active: number;
   redeemed: number;
   cancelled: number;
+  /** **غيرُ مستعملةٍ تعمل** و**منتهيةٌ لم تُستعمل** — مجموعُهما `active` (SPEC §١٠٠-أ/٢) */
+  unused: number;
+  expired: number;
   redeemed_amount: string;
   live_amount: string;
   due_amount: string;
@@ -3110,6 +3113,16 @@ export interface TaxoCardRow {
   redeemed_at: string | null;
   redeemed_by_name: string | null;
   cancel_reason: string | null;
+  /** **الحالُ كما تُقرأ** — من نافذة الدفعة لحظةَ القراءة */
+  state: TaxoCardState;
+}
+
+/** **حالُ البطاقة المقروءة** (SPEC §١٠٠-أ/٢) — المخزَّنةُ ثلاث، و«منتهية» و«لم تبدأ» مشتقّتان */
+export type TaxoCardState = "unused" | "redeemed" | "expired" | "cancelled" | "not_started";
+
+export interface BatchCards {
+  total: number;
+  cards: TaxoCardRow[];
 }
 
 export interface CardShopReport {

@@ -20,6 +20,7 @@ from app.models.taxo_card import CardDenomination, CardShop
 from app.models.user import User
 from app.schemas.payment_request import PaymentReasonIn
 from app.schemas.taxo_card import (
+    BatchCardsOut,
     CardExportIn,
     CardBatchCreatedOut,
     CardBatchIn,
@@ -56,6 +57,7 @@ def _batch_out(row: taxo_cards.BatchFigures) -> CardBatchOut:
         discount_percent_at_issue=batch.discount_percent_at_issue, payment_mode_at_issue=batch.payment_mode_at_issue,
         valid_from=batch.valid_from, expires_at=batch.expires_at, status=batch.status, cancel_reason=batch.cancel_reason,
         created_at=batch.created_at, active=row.active, redeemed=row.redeemed, cancelled=row.cancelled,
+        unused=row.unused, expired=row.expired,
         redeemed_amount=row.redeemed_value, live_amount=row.live_value, due_amount=row.due_from_shop,
     )
 
@@ -171,6 +173,32 @@ async def cancel_batch(batch_id: uuid.UUID, payload: PaymentReasonIn, admin: Fin
 
 
 # ------------------------------------------------------------------ البطاقات
+
+
+@router.get("/batches/{batch_id}/cards", response_model=BatchCardsOut)
+async def batch_cards(
+    batch_id: uuid.UUID,
+    _r: ListReader,
+    session: DbSession,
+    q: str | None = Query(None, max_length=64),
+    state: str | None = Query(None, pattern="^(unused|redeemed|expired|cancelled|not_started)$"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+) -> BatchCardsOut:
+    """**صفحةُ «دفعات البطاقات»** (SPEC §١٠٠-أ/٢) — بطاقاتُ دفعةٍ بالتسلسل والحال ومن استعملها ومتى؛ **ولا رمزَ ولا زرَّ كشف**."""
+    batch = await taxo_cards.get_batch(session, batch_id)
+    rows, total = await taxo_cards.batch_cards(session, batch=batch, query=q, state=state, offset=offset, limit=limit)
+    return BatchCardsOut(
+        total=total,
+        cards=[
+            TaxoCardOut(
+                id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, status=card.status,
+                batch_number=batch.number, redeemed_at=card.redeemed_at, redeemed_by_name=name,
+                cancel_reason=card.cancel_reason, state=card_state,
+            )
+            for card, card_state, name in rows
+        ],
+    )
 
 
 @router.get("/cards", response_model=list[TaxoCardOut])

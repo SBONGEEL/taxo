@@ -362,6 +362,47 @@ async def find_cards(session: AsyncSession, country: CountryCode, serial: str, *
     return list((await session.scalars(stmt)).all())
 
 
+CARD_STATES = ("unused", "redeemed", "expired", "cancelled", "not_started")
+
+
+def card_state(card: TaxoCard, batch: CardBatch, now: datetime) -> str:
+    """**حالُ البطاقة كما تُقرأ** — المخزَّنةُ ثلاث، و«منتهية» و«لم تبدأ» من نافذة الدفعة لحظةَ القراءة (§٧٣-هـ/٥)."""
+    if card.status is TaxoCardStatus.REDEEMED:
+        return "redeemed"
+    if card.status is TaxoCardStatus.CANCELLED:
+        return "cancelled"
+    if batch.expires_at <= now:
+        return "expired"
+    if batch.valid_from > now:
+        return "not_started"
+    return "unused"
+
+
+async def batch_cards(
+    session: AsyncSession, *, batch: CardBatch, query: str | None, state: str | None, offset: int, limit: int
+) -> tuple[list[tuple[TaxoCard, str, str | None]], int]:
+    """**بطاقاتُ دفعةٍ واحدة** (SPEC §١٠٠-أ/٢) — التسلسلُ والحالُ ومن استعملها ومتى؛ **ولا رمز**: البصمةُ وحدَها مخزَّنة.
+
+    **والبحثُ** بجزءٍ من التسلسل أو من اسم من استعملها؛ **والحالُ المشتقّة** تُرشَّح في الاستعلام نفسِه فلا تُقرأ الدفعةُ كلُّها."""
+    now = _now()
+    stmt = select(TaxoCard, User.name).outerjoin(User, User.id == TaxoCard.redeemed_by).where(TaxoCard.batch_id == batch.id)
+    term = (query or "").strip()
+    if term:
+        stmt = stmt.where(TaxoCard.serial.ilike(f"%{term}%") | User.name.ilike(f"%{term}%"))
+    if state == "redeemed":
+        stmt = stmt.where(TaxoCard.status == TaxoCardStatus.REDEEMED)
+    elif state == "cancelled":
+        stmt = stmt.where(TaxoCard.status == TaxoCardStatus.CANCELLED)
+    elif state in ("unused", "expired", "not_started"):
+        wanted = "expired" if batch.expires_at <= now else "not_started" if batch.valid_from > now else "unused"
+        stmt = stmt.where(TaxoCard.status == TaxoCardStatus.ACTIVE)
+        if wanted != state:
+            stmt = stmt.where(False)
+    total = await session.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = (await session.execute(stmt.order_by(TaxoCard.serial).offset(offset).limit(limit))).all()
+    return [(card, card_state(card, batch, now), name) for card, name in rows], int(total or 0)
+
+
 async def cancel_card(session: AsyncSession, *, card: TaxoCard, actor: User, reason: str | None) -> TaxoCard:
     """**إلغاءُ بطاقةٍ واحدة بسببٍ مكتوب** — قائمةٌ وحدَها: المستعمَلةُ مالُها في محفظة صاحبها ولا يُلغى بإلغاء ورقتها."""
     if card.status is not TaxoCardStatus.ACTIVE:
@@ -551,6 +592,9 @@ class BatchFigures:
     active: int
     redeemed: int
     cancelled: int
+    #: **غيرُ مستعملةٍ وما زالت تعمل** و**منتهيةٌ لم تُستعمل** — تُشتقّان من نافذة الدفعة لحظةَ القراءة (لا كنس)، **ومجموعُهما `active`**
+    unused: int
+    expired: int
     redeemed_value: Decimal
     #: **قيمةُ ما سُلِّم ولم يُلغَ** — وجهُ البطاقات بسعرها
     live_value: Decimal
@@ -582,14 +626,17 @@ async def batch_figures(session: AsyncSession, country: CountryCode) -> list[Bat
         )
         counts = {(batch_id, status): count for batch_id, status, count in rows.all()}
     out = []
+    now = _now()
     for batch in batches:
         active = counts.get((batch.id, TaxoCardStatus.ACTIVE), 0)
         redeemed = counts.get((batch.id, TaxoCardStatus.REDEEMED), 0)
         cancelled = counts.get((batch.id, TaxoCardStatus.CANCELLED), 0)
         live = active + redeemed
+        lapsed = batch.expires_at <= now
         out.append(
             BatchFigures(
                 batch=batch, active=active, redeemed=redeemed, cancelled=cancelled,
+                unused=0 if lapsed else active, expired=active if lapsed else 0,
                 redeemed_value=batch.amount * redeemed, live_value=batch.amount * live,
                 due_from_shop=_due(batch, live, redeemed),
             )

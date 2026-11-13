@@ -45,6 +45,7 @@ import type {
   TransferReviewer,
   TransferSettings,
   CardBatch,
+  BatchCards,
   CardBatchCreated,
   CardDenomination,
   CardGuessAlert,
@@ -52,6 +53,7 @@ import type {
   CardShopInput,
   CardShopReport,
   TaxoCardLimits,
+  TaxoCardState,
   TaxoCardRow,
   PaymentProviderKind,
   PaymentRequestStatus,
@@ -2504,6 +2506,12 @@ export async function exportCardBatch(
   link.remove();
   URL.revokeObjectURL(link.href);
 }
+
+/** **بطاقاتُ دفعة** (SPEC §١٠٠-أ/٢) — بلا رمز: التسلسلُ والحالُ ومن استعملها ومتى. */
+export const listBatchCards = (batchId: string, query: { q?: string; state?: TaxoCardState; offset?: number }) =>
+  api.get<BatchCards>(`/admin/taxo-cards/batches/${batchId}/cards`, {
+    query: { q: query.q, state: query.state, offset: query.offset === undefined ? undefined : String(query.offset) },
+  });
 
 export const cancelCardBatch = (id: string, reason: string) =>
   api.post<CardBatch>(`/admin/taxo-cards/batches/${id}/cancel`, { reason });
