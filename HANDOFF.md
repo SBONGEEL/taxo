@@ -1,5 +1,12 @@
 # تسليم — TAXO
 
+## Polar — اشتراكُ الكبتن الشهريّ بالبطاقة (الأردن) — ٢٠٢٦-١١-١٥ (يُقرأ أوّلاً)
+- **عند Polar (منظّمة `taxo`)**: منتجٌ واحدٌ خاصّ «TAXO Driver — Monthly Subscription» شهريٌّ متكرّر بـ**84.63 USD** = خطّةُ اللوحة «TAXO X30 — شهري» 60.000 د.أ × 1.4104 (Polar لا يقبل JOD). وإشعارٌ إلى `https://api.tajora.ly/api/v1/payment-requests/webhook/polar` (Raw، API 2026-10؛ order.paid/refunded، subscription.canceled/revoked) وسرُّه في `~/.taxo-secrets/payments/polar-webhook-secret.txt`. المعرّفاتُ في `polar-README.txt` بجانبه.
+- **الرمزُ (API token) لم يُنشأ**: Polar طلب «سجّل الدخول ثانيةً» — للمالك. الاسمُ المخطَّط `taxo-backend-production`، ٣٦٥ يوماً، checkouts:read/write · orders:read · products:read · subscriptions:read، ويُحفظ `polar-api-token.txt`. **ينتهي بعد سنة — يُجدَّد.**
+- **في TAXO**: فرعُ `feat/polar-driver-sub` (`146e55b4`) — المحوِّلُ وترحيلة 0166 (جداولُ إعدادٍ لا مال: قيمةُ provider_key، صفُّ `polar_card` للاشتراك وحدَه، ومفتاحُ `polar_card_enabled` **مطفأ**) ومرايا اللوحة والكبتن و`test_polar.py`. **لم يُدمج ولم يُرفع.**
+- **شروطٌ قبل الإشعال** (أمرُ المالك: لا إشعالَ قبل قبول Polar ودفعته التجريبيّة): (١) **التجديدُ الشهريُّ الآليّ لا يُقيَّد** — يُسجَّل ولا يحرّك مالاً؛ يُبنى قيدُه أو يُطفأ التجديدُ عند Polar · (٢) سعرُ الخطّة إن تغيّر في اللوحة يُحدَّث المنتجُ عند Polar وإلا لا يُفتح دفع · (٣) العقدُ في «العقود» ← Polar: api_key، webhook_secret، product_id.
+- **للمالك**: إعادةُ الدخول للرمز · «Account Review — Submit for review» (الهويّة) · حسابُ الاستلام عبر Stripe Connect Express بحسابٍ أردنيٍّ بالدينار · وsandbox يحتاج حساباً منفصلاً يفتحه هو.
+
 ## MoonPay حيٌّ في الأردن — ٢٠٢٦-١١-١٤ (يُقرأ أوّلاً)
 - **الإنتاج = `61cf4a4d`** (CI 43553291199، ترحيلة 0165)، والنسخة `D:\taxo-backups\20261114T083532Z` (95M). **بصمةُ المال قبل وبعد: صفرُ فرق.**
 - العقدُ حيٌّ ومختبَر، والمفتاحان true للأردن وحدَه. **الاسمُ الظاهر «الدفع بالعملات الرقمية»** (ألغى المالكُ تسميتَها «بطاقة»): لا بطاقةَ إلا بحساب MoonPay Ramps.
