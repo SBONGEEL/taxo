@@ -143,6 +143,9 @@ _KINDS: tuple[AlertKind, ...] = (
     # **مراقبةُ الوصول من الخارج** (`services/uptime.py`، أمرُ المالك ٢٠٢٦-١١-٠٥) — رابطٌ عامٌّ ساقطٌ دقيقتين، ثمّ عودتُه
     AlertKind("service_down", "support", "problem", "التطبيقُ لا يُبلَغ من الإنترنت", "انقطاعاتُ الوصول", window=0),
     AlertKind("service_up", "support", "account", "التطبيقُ عاد يُبلَغ", "عوداتُ الوصول", window=0),
+    # **خرائطُ Google** (٢٠٢٦-١١-١٥) — فشل فعمل Mapbox مكانَه آليّاً، ثمّ عاد
+    AlertKind("maps_fallback", "support", "problem", "خرائطُ Google متوقّفة — يعمل Mapbox", "رجوعاتٌ إلى Mapbox", window=0),
+    AlertKind("maps_restored", "support", "account", "خرائطُ Google عادت", "عوداتُ Google", window=0),
 )
 CATALOG: dict[str, AlertKind] = {item.kind: item for item in _KINDS}
 

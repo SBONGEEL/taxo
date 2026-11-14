@@ -655,6 +655,8 @@ class ProviderKey(StrEnum):
     #: **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — رمزُ المنظّمة وسرُّ الإشعار ومعرّفُ المنتج؛ لكلِّ دولة
     #: (الأردنُ وحدَه بالشيفرة)، **ويُعرض بمفتاحه `polar_card_enabled`** — مطفأٌ حتى يقبل Polar الحسابَ ويدفع المالكُ دفعتَه التجريبيّة
     POLAR = "polar"
+    #: **Google Maps Platform** (قرارُ المالك ٢٠٢٦-١١-١٥) — عقدٌ عامٌّ واحد: مفتاحُ الخادم (سرّيّ) ومفاتيحُ البلاطات العامّة وسقوفُ اليوم
+    GOOGLE_MAPS = "google_maps"
 
 
 class GatewayFeeBearer(StrEnum):
@@ -965,6 +967,10 @@ class FeatureKey(StrEnum):
     #: **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤: «ship it OFF») — الأردنُ وحدَه بالشيفرة، **مطفأٌ حتى يقبل
     #: Polar الحسابَ ويدفع المالكُ دفعتَه التجريبيّة**
     POLAR_CARD_ENABLED = "polar_card_enabled"
+    #: **«مزوّد الخرائط» لكلِّ دولةٍ وميزة** (قرارُ المالك ٢٠٢٦-١١-١٥) — مشتعلٌ = Google، مطفأ = Mapbox؛ والرجوعُ الآليُّ في `services/maps`
+    GOOGLE_MAPS_DISPLAY = "google_maps_display"
+    GOOGLE_PLACES_SEARCH = "google_places_search"
+    GOOGLE_ROUTES = "google_routes"
 
 
 class MapPlaceCategory(StrEnum):

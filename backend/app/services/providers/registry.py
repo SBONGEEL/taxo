@@ -90,6 +90,31 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(key="secret_token", label="التوكن السري (sk)"),
         ),
     ),
+    # **Google Maps Platform** (قرارُ المالك ٢٠٢٦-١١-١٥) — عقدٌ عامٌّ واحد؛ **والمزوّدُ لكلِّ دولةٍ وميزةٍ بمفاتيحها** («مزوّد الخرائط»)،
+    # **وMapbox فوقه يبقى كاملاً** احتياطاً آليّاً. **ومفتاحُ الخادم سرّيٌّ مقيَّدٌ بعنوان الخادم**، والعامّةُ مقيَّدةٌ بالواجهة والنطاق
+    ProviderKey.GOOGLE_MAPS: ProviderSpec(
+        key=ProviderKey.GOOGLE_MAPS,
+        label="Google Maps — الخرائط والبحث والمسارات",
+        fields=(
+            ProviderField(key="server_key", label="مفتاحُ الخادم (Places · Geocoding · Routes) — مقيَّدٌ بعنوان الخادم"),
+            ProviderField(
+                key="web_key", label="مفتاحُ البلاطات للويب وأندرويد (Map Tiles API) — مقيَّدٌ بالنطاقات",
+                secret=False, required=False, expose_to_clients=True,
+            ),
+            ProviderField(
+                key="ios_web_key", label="مفتاحُ البلاطات لـiOS — WebKit لا يرسل Referer من capacitor://، فيُقيَّد بالواجهة وحصّتها",
+                secret=False, required=False, expose_to_clients=True,
+            ),
+            ProviderField(
+                key="panel_key", label="مفتاحُ البلاطات للّوحة — مقيَّدٌ بنطاق اللوحة",
+                secret=False, required=False, expose_to_clients=True,
+            ),
+            ProviderField(key="cap_autocomplete", label="سقفُ اقتراحات البحث في اليوم — فارغ = 4000", secret=False, required=False),
+            ProviderField(key="cap_details", label="سقفُ تفاصيل الأماكن في اليوم — فارغ = 1500", secret=False, required=False),
+            ProviderField(key="cap_geocode", label="سقفُ العناوين العكسيّة في اليوم — فارغ = 3000", secret=False, required=False),
+            ProviderField(key="cap_routes", label="سقفُ المسارات في اليوم — فارغ = 6000", secret=False, required=False),
+        ),
+    ),
     # **صفحةُ فيسبوك «Taxo»** (SPEC §٩٤/١) — عامٌّ بلا دولةٍ ولا مفتاحِ ميزة: العقدُ يقول «نستطيع النشر»، والمنشورُ لا يُجدوَل إلا بموافقة
     # المالك من قسم «فيسبوك». **والرمزُ لصفحةٍ واحدة**: كلُّ نداءٍ يذهب إلى `page_id` المكتوب هنا لا غير
     ProviderKey.FACEBOOK_PAGE: ProviderSpec(

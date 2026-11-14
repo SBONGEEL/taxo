@@ -208,6 +208,29 @@ async def route_between(
     if await stress.stub_active():
         return await stress.stub_route(pickup, *stops, dropoff, with_geometry=with_geometry)
 
+    # **Google أوّلاً حين مزوّدُ المسارات في الدولة Google** (قرارُ المالك ٢٠٢٦-١١-١٥)، **وفشلُه يُعاد على Mapbox في الطلب نفسِه**
+    from app.services import google_maps, maps
+
+    google = await maps.use_google(session, country_code, "routes", "routes")
+    if google is not None:
+        points = [(p.lat, p.lng) for p in (pickup, *stops, dropoff)]
+        try:
+            found = await google_maps.route(
+                google["server_key"], points, with_geometry=with_geometry or with_steps, with_steps=with_steps
+            )
+        except google_maps.NoRoute as exc:
+            raise RoutingFailed("لا يوجد مسار بري بين النقطتين") from exc
+        except google_maps.GoogleFailed as exc:
+            await maps.note("routes", up=False, reason=exc.reason, country=country_code)
+        else:
+            await maps.note("routes", up=True)
+            return Route(
+                distance_km=found.distance_km,
+                duration_min=found.duration_min,
+                geometry=found.geometry if with_geometry else None,
+                steps=found.steps,
+            )
+
     values = await credentials_service.get_values(
         session, ProviderKey.MAPBOX, country_code
     )

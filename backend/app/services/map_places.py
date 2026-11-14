@@ -47,6 +47,7 @@ class Spot:
     lat: float
     lng: float
     source: str
+    aliases: tuple[str, ...] = ()
 
 
 def _meters(lat1: float, lng1: float, lat2: float, lng2: float) -> int:
@@ -71,7 +72,10 @@ async def visible(session: AsyncSession, country: CountryCode, *, for_map: bool 
     if for_map:
         query = query.where(MapPlace.source == SOURCE_OWNER)
     rows = await session.scalars(query)
-    spots = [Spot(row.id, row.name_ar, row.name_en, row.category, row.lat, row.lng, "place") for row in rows]
+    spots = [
+        Spot(row.id, row.name_ar, row.name_en, row.category, row.lat, row.lng, "place", tuple(row.aliases or ()))
+        for row in rows
+    ]
     for facility_id, name, lat, lng in await facilities.airports_for_rider(session, country=country):
         spots.append(Spot(facility_id, name, None, "airport", float(lat), float(lng), "facility"))
     return spots
@@ -94,6 +98,29 @@ async def search(
         ranked.append((0 if starts else 1, distance if distance is not None else 0, spot, distance))
     ranked.sort(key=lambda item: (item[0], item[1], item[2].name_ar))
     return [(spot, distance) for _, _, spot, distance in ranked[:SEARCH_LIMIT]]
+
+
+async def fuzzy_search(
+    session: AsyncSession, country: CountryCode, query: str, near: tuple[float, float] | None
+) -> list[tuple[Spot, int | None, int]]:
+    """**البحثُ الموحَّد** (٢٠٢٦-١١-١٥) — بالاسمين **والأسماء البديلة**، **ومتسامحٌ إملائيّاً** (`maps.fuzzy_score`): يبدأ به ثمّ يحويه
+    ثمّ قريبٌ منه، والأقربُ مسافةً داخل كلّ درجة."""
+    from app.services.maps import fuzzy_score
+
+    needle = normalize(query)
+    if len(needle) < 2:
+        return []
+    ranked: list[tuple[int, int, Spot, int | None]] = []
+    for spot in await visible(session, country):
+        names = [normalize(spot.name_ar)] + ([normalize(spot.name_en)] if spot.name_en else [])
+        names += [normalize(alias) for alias in spot.aliases]
+        score = fuzzy_score(needle, names)
+        if score is None:
+            continue
+        distance = _meters(near[0], near[1], spot.lat, spot.lng) if near else None
+        ranked.append((score, distance if distance is not None else 0, spot, distance))
+    ranked.sort(key=lambda item: (item[0], item[1], item[2].name_ar))
+    return [(spot, distance, score) for score, _, spot, distance in ranked[:SEARCH_LIMIT]]
 
 
 # ═════════════════════════ اللوحة — إضافةٌ وتعديلٌ وإخفاء، ولا حذف

@@ -1821,6 +1821,7 @@ export const createMapPlace = (payload: {
   lat: number;
   lng: number;
   is_hidden: boolean;
+  aliases?: string[];
 }) => api.post<MapPlace>("/admin/map-places", payload);
 
 /** **ما تغيّر وحدَه** — والتدقيقُ يقول ما تغيّر قبلاً وبعداً. */
@@ -1833,6 +1834,7 @@ export const updateMapPlace = (
     lat: number;
     lng: number;
     is_hidden: boolean;
+    aliases: string[];
   }>,
 ) => api.patch<MapPlace>(`/admin/map-places/${placeId}`, payload);
 

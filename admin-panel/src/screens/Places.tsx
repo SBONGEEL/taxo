@@ -242,6 +242,7 @@ function PlaceEditor({
 }) {
   const [nameAr, setNameAr] = useState(place?.name_ar ?? "");
   const [nameEn, setNameEn] = useState(place?.name_en ?? "");
+  const [aliasText, setAliasText] = useState((place?.aliases ?? []).join("، "));
   const [category, setCategory] = useState<MapPlaceCategory>(place?.category ?? "landmark");
   const [where, setWhere] = useState(place ? pointText(place) : "");
   const [hidden, setHidden] = useState(place?.is_hidden ?? false);
@@ -251,6 +252,7 @@ function PlaceEditor({
   const ar = nameAr.trim().replace(/\s+/g, " ");
   const en = nameEn.trim().replace(/\s+/g, " ");
   const point = parsePoint(where);
+  const aliases = aliasText.split(/[،,]/).map((item) => item.trim().replace(/\s+/g, " ")).filter((item) => item.length >= 2);
   const ready = ar.length >= 2 && ar.length <= NAME_MAX && point !== null;
 
   const changes: Parameters<typeof updateMapPlace>[1] = {};
@@ -261,6 +263,7 @@ function PlaceEditor({
     if (point && point.lat !== place.lat) changes.lat = point.lat;
     if (point && point.lng !== place.lng) changes.lng = point.lng;
     if (hidden !== place.is_hidden) changes.is_hidden = hidden;
+    if (aliases.join("|") !== (place.aliases ?? []).join("|")) changes.aliases = aliases;
   }
   const dirty = place ? Object.keys(changes).length > 0 : ar !== "" || where.trim() !== "";
 
@@ -281,6 +284,7 @@ function PlaceEditor({
           lat: point.lat,
           lng: point.lng,
           is_hidden: hidden,
+          aliases,
         });
         onSaved(`أُضيف «${ar}»`);
       }
@@ -311,6 +315,13 @@ function PlaceEditor({
             maxLength={NAME_MAX}
             placeholder="Mecca Mall"
             onChange={(event) => setNameEn(event.target.value)}
+          />
+          <Field
+            label="أسماءٌ أخرى يُبحث بها (اختياري، افصل بفاصلة)"
+            name="aliases"
+            value={aliasText}
+            placeholder="ستي مول، سيتي مول عمان"
+            onChange={(event) => setAliasText(event.target.value)}
           />
           <Select
             label="الفئة"

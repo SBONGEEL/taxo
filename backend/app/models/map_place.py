@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Boolean, CheckConstraint, Float, String, UniqueConstraint, text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -57,6 +58,10 @@ class MapPlace(UUIDMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(8), nullable=False, default=SOURCE_OWNER, server_default=text("'owner'"))
     #: «node/123» — **أصلُه في OSM**؛ فريدٌ فلا يتكرّر مكانٌ باستيرادٍ ثانٍ
     osm_ref: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    #: **أسماءٌ أخرى يُكتب بها المكان** (قرارُ المالك ٢٠٢٦-١١-١٥: «ستي مول» = «سيتي مول») — للبحث وحدَه، لا تُرسم
+    aliases: Mapped[list[str]] = mapped_column(
+        ARRAY(String(80)), nullable=False, default=list, server_default=text("'{}'::varchar[]")
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<MapPlace {self.country_code} {self.name_ar}>"

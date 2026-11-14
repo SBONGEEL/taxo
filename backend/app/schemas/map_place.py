@@ -32,6 +32,18 @@ def _required(value: str | None) -> str | None:
     return cleaned
 
 
+def _aliases(value: list[str] | None) -> list[str] | None:
+    """**أسماءٌ بديلةٌ للبحث** (٢٠٢٦-١١-١٥) — مطويّةُ المسافات، بلا فارغٍ ولا مكرَّر، عشرةٌ على الأكثر."""
+    if value is None:
+        return None
+    seen: list[str] = []
+    for item in value:
+        cleaned = _name(item)
+        if cleaned and len(cleaned) >= 2 and cleaned not in seen:
+            seen.append(cleaned[:80])
+    return seen[:10]
+
+
 class MapPlaceIn(BaseModel):
     country_code: CountryCode
     name_ar: str = Field(min_length=2, max_length=80)
@@ -40,6 +52,12 @@ class MapPlaceIn(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
     is_hidden: bool = False
+    aliases: list[str] = Field(default_factory=list, max_length=10)
+
+    @field_validator("aliases")
+    @classmethod
+    def _clean_aliases(cls, value: list[str] | None) -> list[str] | None:
+        return _aliases(value)
 
     @field_validator("name_ar")
     @classmethod
@@ -59,6 +77,12 @@ class MapPlacePatch(BaseModel):
     lat: float | None = Field(default=None, ge=-90, le=90)
     lng: float | None = Field(default=None, ge=-180, le=180)
     is_hidden: bool | None = None
+    aliases: list[str] | None = Field(default=None, max_length=10)
+
+    @field_validator("aliases")
+    @classmethod
+    def _clean_aliases(cls, value: list[str] | None) -> list[str] | None:
+        return _aliases(value)
 
     @field_validator("name_ar")
     @classmethod
@@ -80,6 +104,7 @@ class MapPlaceAdminOut(BaseModel):
     lat: float
     lng: float
     is_hidden: bool
+    aliases: list[str] = []
     #: **`owner` أو `osm`** — والمستوردُ يحمل أصلَه (`osm_ref`) ليُراجع
     source: str
     osm_ref: str | None
