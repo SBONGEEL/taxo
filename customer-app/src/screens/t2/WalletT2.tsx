@@ -135,6 +135,8 @@ export function WalletT2Screen() {
   const payRequests = country?.features.payment_requests_enabled === true;
   // **شحنُ المحفظة بالبطاقة عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — بمفتاحه في سوقه، ونظامُ الدفع العامُّ مطفأٌ فيه (الأردن)
   const whopTopup = country?.features.whop_rider_topup_enabled === true;
+  // **الشحنُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — باقاتٌ ثابتة، بمفتاحه في سوقه
+  const cryptoTopup = country?.features.moonpay_rider_enabled === true;
   // **«اشتراكي»** (البند ١٣) — حيث مفتاحُه مشتعل
   const plansEnabled = country?.features.rider_plans_enabled === true;
   // **«نقاطي»** (البند ١٤)
@@ -144,7 +146,7 @@ export function WalletT2Screen() {
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
   const [resuming, setResuming] = useState<string | null>(null);
   useEffect(() => {
-    if (!payRequests && !whopTopup) return;
+    if (!payRequests && !whopTopup && !cryptoTopup) return;
     let cancelled = false;
     Promise.all([listPaymentMethods("wallet_topup"), listMyPaymentRequests(10)])
       .then(([body, mine]) => {
@@ -157,10 +159,19 @@ export function WalletT2Screen() {
     return () => {
       cancelled = true;
     };
-  }, [payRequests, whopTopup]);
+  }, [payRequests, whopTopup, cryptoTopup]);
   const whopCard = whopTopup ? (methods?.find((row) => row.code === "whop_rider_card") ?? null) : null;
   // **البطاقةُ أوّلاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — وكليكُ تحتها كما هو
   const cardOnTop = cardFirst(country?.payment_method_order) && whopCard !== null;
+  const cryptoPay = cryptoTopup ? (methods?.find((row) => row.code === "moonpay_rider") ?? null) : null;
+  // **وأوّلاً** حيث رتّبه المالكُ كذلك (الأردن) — حقلٌ مستقلٌّ فلا يتغيّر ما ترسمه النسخُ المثبَّتة
+  const cryptoOnTop = country?.crypto_first === true;
+  const cryptoTile =
+    cryptoPay && walletEnabled ? (
+      <button type="button" className="t2-paytile" onClick={() => navigate("/wallet/pay", { state: { methodId: cryptoPay.id } })}>
+        <span className="t2-paytile-name">{tr("الشحن بالعملات الرقمية")}</span>
+      </button>
+    ) : null;
 
   async function cancelRequest(id: string) {
     try {
@@ -353,7 +364,7 @@ export function WalletT2Screen() {
 
       {/* **«طرق الدفع» كما رسمتها R11** (§٦٢-ج/٢٤): مربّعُ البطاقة الافتراضية ومربّعُ كليك، و«إدارة» إلى البطاقات —
           **وكلٌّ خلف مفتاحه**. وبلا بطاقةٍ محفوظةٍ يبقى مربّعُها باباً يقول ذلك */}
-      {cardEnabled || (cliqEnabled && walletEnabled) || (whopCard !== null && walletEnabled) ? (
+      {cardEnabled || (cliqEnabled && walletEnabled) || (whopCard !== null && walletEnabled) || cryptoTile !== null ? (
         <section>
           <div className="t2-section">
             <span>{tr("طرق الدفع")}</span>
@@ -364,6 +375,7 @@ export function WalletT2Screen() {
             ) : null}
           </div>
           <div className="t2-paytiles">
+            {cryptoOnTop ? cryptoTile : null}
             {cardOnTop ? (
               <>
             {whopCard && walletEnabled ? (
@@ -412,6 +424,7 @@ export function WalletT2Screen() {
             ) : null}
               </>
             )}
+            {cryptoOnTop ? null : cryptoTile}
             {cliqEnabled && walletEnabled ? (
               <button
                 type="button"
@@ -487,6 +500,8 @@ export function WalletT2Screen() {
           choices={choices}
           whopCard={walletEnabled ? whopCard : null}
           cardOnTop={cardOnTop}
+          cryptoPay={walletEnabled ? cryptoPay : null}
+          cryptoOnTop={cryptoOnTop}
           onClose={() => setTopupOpen(false)}
         />
       ) : null}

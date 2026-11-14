@@ -248,13 +248,16 @@ export interface CountryConfig {
   rounding_mode: RoundingMode;
   /** **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — وأوّلُها المقترحُ مسبقاً؛ وفارغٌ «كما كان». عرضٌ لا إذن */
   payment_method_order: PaymentOrderKey[];
+  /** **الدفعُ بالعملات الرقميّة أوّلاً** (MoonPay Commerce، ٢٠٢٦-١١-١٤) — حقلٌ مستقلٌّ: القائمةُ أعلاه بلا «crypto» فلا يتغيّر ما ترسمه
+   *  النسخُ المثبَّتة */
+  crypto_first?: boolean;
 }
 
 /** اتجاهُ التقريب — مرآةُ `RoundingMode` في الخلفية (`check:enums`). */
 export type RoundingMode = "nearest" | "up" | "down";
 
 /** **طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** — مرآةُ `PaymentOrderKey` في الخلفية (`check:enums`). ترتيبُ عرضٍ لا إذن. */
-export type PaymentOrderKey = "card" | "wallet" | "cliq" | "cash";
+export type PaymentOrderKey = "crypto" | "card" | "wallet" | "cliq" | "cash";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {
@@ -1747,6 +1750,12 @@ export interface PayMethod {
   /** **أيطلب معالجُ البطاقة هويّتَك؟ وأيصل المبلغُ أصلاً رقميّاً؟** — `false` ⇐ لا يُقال السطر؛ وغيابُه يُقرأ كما كان (يُقال) */
   partner_kyc?: boolean | null;
   settles_digital?: boolean | null;
+  /** **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — لا بطاقةَ فيه: يدفع من محفظته الرقميّة بسعرٍ بالدولار،
+   *  و`crypto_rate` كم دولاراً للدينار. **ولا `charge_currency` له** فلا تقرؤه النسخُ المثبَّتةُ بطاقةً */
+  crypto?: boolean;
+  crypto_rate?: string | null;
+  /** **باقاتُ شحن الراكب الثابتة** من العقد — والخادمُ يردّ غيرَها */
+  packages?: string[];
 }
 
 export interface PayMethods {

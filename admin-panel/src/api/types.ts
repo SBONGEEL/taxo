@@ -162,13 +162,16 @@ export interface CountryConfig {
   rounding_mode: RoundingMode;
   /** **ترتيبُ طرق الدفع** (أمرُ المالك ٢٠٢٦-١١-١٣) — وأوّلُها المقترحُ مسبقاً؛ وفارغٌ «كما كان». عرضٌ لا إذن */
   payment_method_order: PaymentOrderKey[];
+  /** **الدفعُ بالعملات الرقميّة أوّلاً** (MoonPay Commerce، ٢٠٢٦-١١-١٤) — حقلٌ مستقلٌّ: القائمةُ أعلاه بلا «crypto» فلا يتغيّر ما ترسمه
+   *  النسخُ المثبَّتة */
+  crypto_first?: boolean;
 }
 
 /** **اتجاهُ التقريب** — مرآةُ `RoundingMode` في الخلفية (`check:enums`)، واسمُه بالعربية في `ROUNDING_MODE_LABEL`. */
 export type RoundingMode = "nearest" | "up" | "down";
 
 /** **طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** — مرآةُ `PaymentOrderKey` في الخلفية (`check:enums`). ترتيبُ عرضٍ لا إذن. */
-export type PaymentOrderKey = "card" | "wallet" | "cliq" | "cash";
+export type PaymentOrderKey = "crypto" | "card" | "wallet" | "cliq" | "cash";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {
@@ -627,6 +630,9 @@ export type FeatureKey =
   // **شحنُ محفظة الراكب ودفعُ رحلته بالبطاقة عبر Whop** (٢٠٢٦-١١-١٣) — الأردنُ وحدَه، مطفآن ابتداءً
   | "whop_rider_topup_enabled"
   | "whop_rider_trip_enabled"
+  // **الدفعُ بالعملات الرقميّة عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه، ويُطفآن آليّاً عند الخطر
+  | "moonpay_driver_enabled"
+  | "moonpay_rider_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

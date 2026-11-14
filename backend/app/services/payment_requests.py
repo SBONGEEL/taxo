@@ -813,6 +813,16 @@ async def start_checkout(
         declared=declared, gateway=True, test_money=bool(getattr(gateway, "test_mode", False)),
     )
     provider = prepared.provider
+    # **باقاتُ الراكب الثابتة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤: «fixed-value credit packages») — والمبلغُ واحدٌ منها وإلا رُدّ؛
+    # والكبتنُ يدفع اشتراكَه ومستحقّاتِه بمبلغها
+    packages = tuple(getattr(gateway, "packages", ()) or ())
+    if (
+        getattr(gateway, "crypto", False)
+        and prepared.owner_type is not WalletOwnerType.DRIVER
+        and purpose is PaymentRequestPurpose.WALLET_TOPUP
+        and prepared.amount not in packages
+    ):
+        raise InvalidInput("اختر باقةً من الباقات المعروضة", field="amount")
     await require_under_daily_cap(
         session, gateway=gateway, integration=provider.integration or "", country=owner.country_code, amount=prepared.amount
     )
@@ -950,6 +960,11 @@ async def settle_from_gateway(
         gateway_code=event.gateway_code, gateway_message=event.gateway_message,
         test_money=bool(getattr(gateway, "test_mode", False)),
     )
+    if provider.integration == "moonpay":
+        # **مراقبةُ كلِّ دفعة** (أمرُ المالك ٢٠٢٦-١١-١٤) — مبلغٌ لا يطابق أو إخفاقاتٌ متتالية ⇐ الطريقةُ تُطفأ آليّاً ويُشعَر المالك
+        from app.services import moonpay_guard
+
+        await moonpay_guard.observe(session, request=settled, event=event)
     return settled, settled.status is not PaymentRequestStatus.PENDING
 
 

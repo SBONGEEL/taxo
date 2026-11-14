@@ -513,6 +513,8 @@ class PaymentOrderKey(StrEnum):
     """**طرقُ الدفع كما يرتّبها المالكُ لكلِّ سوق** (أمرُ المالك ٢٠٢٦-١١-١٣: «Whop first for Jordan») — **ترتيبُ عرضٍ لا إذن**:
     ما لا يُذكر يأتي بعد المذكور بترتيبه القائم، وما يُذكر لا يُفتح بذكره (مفتاحُه وعقدُه يحكمان)."""
 
+    #: **العملاتُ الرقميّة** — MoonPay Commerce في الأردن (أمرُ المالك ٢٠٢٦-١١-١٤: «first payment option, above CliQ»)
+    CRYPTO = "crypto"
     #: **البطاقة** — وسيطُ البطاقة في السوق (Whop في الأردن)
     CARD = "card"
     WALLET = "wallet"
@@ -647,6 +649,9 @@ class ProviderKey(StrEnum):
     #: **الدفعُ بالبطاقة المصرفية عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — مفتاحُ API وسرُّ الإشعار ومعرّفُ الحساب **يُدخلها المالكُ بنفسه**
     #: بعد أن يؤكّد Whop حسابَه؛ لكلِّ دولة، **ويُعرض بمفتاحه `whop_card_enabled`** — مطفأٌ ابتداءً
     WHOP = "whop"
+    #: **الدفعُ بالعملات الرقميّة عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — مفتاحُ API وسرُّه وسرُّ الإشعار ورابطُ الدفع؛
+    #: لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ويُعرض بمفتاحَيه `moonpay_driver_enabled` و`moonpay_rider_enabled`**
+    MOONPAY = "moonpay"
 
 
 class GatewayFeeBearer(StrEnum):
@@ -949,6 +954,11 @@ class FeatureKey(StrEnum):
     WHOP_RIDER_TOPUP_ENABLED = "whop_rider_topup_enabled"
     #: **دفعُ الرحلة بالبطاقة عبر Whop** — شحنٌ بقيمة الرحلة ثمّ دفعُها من المحفظة (قرارُ المالك ٢٠٢٦-١١-١٣)؛ الأردنُ وحدَه، مطفأٌ ابتداءً
     WHOP_RIDER_TRIP_ENABLED = "whop_rider_trip_enabled"
+    #: **الدفعُ بالعملات الرقميّة للكبتن عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — الاشتراكُ والمستحقّات؛ الأردنُ وحدَه بالشيفرة،
+    #: **ويُطفأ آليّاً** إن فشل توقيعُ إشعار أو افترق مبلغٌ أو تتابعت الإخفاقات (`moonpay_guard`)
+    MOONPAY_DRIVER_ENABLED = "moonpay_driver_enabled"
+    #: **باقاتُ رصيد الراكب بالعملات الرقميّة** — قيمٌ ثابتةٌ من العقد؛ الأردنُ وحدَه، ويُطفأ آليّاً مع أخيه
+    MOONPAY_RIDER_ENABLED = "moonpay_rider_enabled"
 
 
 class MapPlaceCategory(StrEnum):

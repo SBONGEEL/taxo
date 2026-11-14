@@ -134,7 +134,9 @@ export function PayRequestT2Screen() {
 
   const method = methods?.find((row) => row.id === methodId) ?? null;
   // **الشحنُ عند الوسيط خياراتٌ ثابتةٌ إن ضبطها السوق** (SPEC §٧٤-ط/٥) — فلا يُكتب مبلغ، ويُختار واحدٌ منها؛ والخادمُ يردّ غيرَها
-  const fixed = method?.gateway === true && choices.length > 0;
+  // **باقاتُ العملات الرقميّة** (MoonPay Commerce، ٢٠٢٦-١١-١٤) — مبالغُ ثابتةٌ من العقد لطريقتها وحدَها، والخادمُ يردّ غيرَها
+  const packs = method?.crypto ? (method.packages ?? []) : choices;
+  const fixed = method?.gateway === true && packs.length > 0;
 
   // **صورةُ الرمز بجلسة صاحبها** — `Blob` يصير رابطاً محلّيّاً ويُحرَّر حين تتبدّل الطريقة
   useEffect(() => {
@@ -299,17 +301,20 @@ export function PayRequestT2Screen() {
                 onClick={() => {
                   setMethodId(row.id);
                   setReceipt(null);
-                  if (row.gateway && choices.length > 0 && !choices.includes(amount)) setAmount("");
+                  const rowPacks = row.crypto ? (row.packages ?? []) : choices;
+                  if (row.gateway && rowPacks.length > 0 && !rowPacks.includes(amount)) setAmount("");
                 }}
                 className={row.id === methodId ? "t2-m-chan on" : "t2-m-chan"}
               >
                 <span className="t2-m-chan-icon">
-                  <Icon name={row.gateway ? "credit_card" : KIND_ICON[row.kind]} />
+                  <Icon name={row.crypto ? "account_balance_wallet" : row.gateway ? "credit_card" : KIND_ICON[row.kind]} />
                 </span>
                 <span className="t2-m-chan-main">
                   <span className="t2-m-chan-title">{row.name}</span>
                   <span className="t2-m-chan-hint">
-                    {row.gateway
+                    {row.crypto
+                      ? tr("من محفظتك الرقميّة (USDC وغيرها) على صفحة {0} — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "MoonPay Commerce" })
+                      : row.gateway
                       ? tr("بطاقة الذهبية أو CIB على صفحة {0} الآمنة — يُضاف فورَ تأكيده", { 0: row.gateway_name ?? "Chargily" })
                       : row.code === BARIDIMOB
                         ? tr("تحويلٌ من تطبيق BaridiMob أو حساب CCP ثمّ ترفع إيصالَه — ليس دفعاً بالبطاقة")
@@ -379,7 +384,7 @@ export function PayRequestT2Screen() {
             >
               {fixed ? (
                 <QuickAmountsT2
-                  amounts={choices}
+                  amounts={packs}
                   value={amount}
                   onPick={setAmount}
                   label={(choice) => formatMoney(choice, currency)}
@@ -489,6 +494,20 @@ export function PayRequestT2Screen() {
           ) : null}
 
           {/* **CVV2 لا PIN** (§٨٥/٩) — قبل أن يُرسَل إلى SofizPay */}
+          {method?.crypto ? (
+            <section className="t2-m-card t2-m-gap t2-pr-dest" aria-label={tr("الدفع بالعملات الرقمية")}>
+              <p className="t2-pr-instructions">
+                {tr("تدفع بعملةٍ رقميّةٍ من محفظتك (مثل USDC) بسعرٍ بالدولار الأمريكي: الدينار الواحد = {0} دولار.", { 0: method.crypto_rate ?? "" })}
+              </p>
+              <p className="t2-pr-instructions">
+                {tr("يعالج الدفعَ {0}، ورسمُه تتحمّله TAXO؛ ورسمُ الشبكة تدفعه محفظتُك عند الإرسال.", {
+                  0: method.gateway_name ?? "MoonPay Commerce",
+                })}
+              </p>
+              <p className="t2-pr-instructions">{tr("لا يمكن الدفعُ ببطاقةٍ بنكيّة هنا، ولا تطلب الصفحةُ صورةَ هويّة — تحتاج محفظةً رقميّةً فيها رصيد.")}</p>
+              <p className="t2-pr-instructions">{tr("أرسل المبلغَ الذي تطلبه الصفحةُ كاملاً — دفعٌ أقلُّ منه لا يُحتسب تلقائيّاً.")}</p>
+            </section>
+          ) : null}
           <CvvNotice gatewayName={method?.gateway_name} />
           <div className="t2-m-actions">
             {quote ? (
@@ -521,7 +540,7 @@ export function PayRequestT2Screen() {
               </button>
             )}
             {/* **مهلةُ صفحة البطاقة تُقال قبل الضغط** (SPEC §٨٤) — Edahabia تنتهي نحو خمسِ دقائقَ من فتح الدفعة */}
-            {method?.gateway && !quote ? <p className="t2-pr-instructions">{tr("صفحة البطاقة صالحةٌ نحو {0} دقائق — جهّز بطاقتك وهاتفك (لرمز الرسائل) قبل أن تضغط.", { 0: CARD_PAGE_MINUTES })}</p> : null}
+            {method?.gateway && !method.crypto && !quote ? <p className="t2-pr-instructions">{tr("صفحة البطاقة صالحةٌ نحو {0} دقائق — جهّز بطاقتك وهاتفك (لرمز الرسائل) قبل أن تضغط.", { 0: CARD_PAGE_MINUTES })}</p> : null}
           </div>
           {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — خُصم من البطاقة ولم تظهر الدفعة */}
           <SupportLine to="/account/help" />

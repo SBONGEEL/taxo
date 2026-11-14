@@ -148,15 +148,18 @@ class Gateway(Protocol):
 
 def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
+    from app.services.payment_gateways.moonpay import build_moonpay
     from app.services.payment_gateways.nowpay import build_nowpay
     from app.services.payment_gateways.sofizpay import build_sofizpay
     from app.services.payment_gateways.whop import build_whop
 
-    return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop}
+    return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop,
+            "moonpay": build_moonpay}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
-DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية"}
+DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية",
+                                "moonpay": "MoonPay Commerce"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
@@ -164,6 +167,7 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {
     "sofizpay": ProviderKey.SOFIZPAY,
     "nowpay": ProviderKey.NOWPAY,
     "whop": ProviderKey.WHOP,
+    "moonpay": ProviderKey.MOONPAY,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -175,6 +179,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "nowpay": frozenset({"taxo"}),
     # **Whop**: رسمُه على التاجر من المال الواصل — **والبطاقةُ تُخصم المستحقَّ وحدَه**
     "whop": frozenset({"taxo"}),
+    # **MoonPay Commerce**: رسمُه (٢٪) على التاجر من المال الواصل — **ورسمُ الشبكة على محفظة الدافع** يُقال له قبل الدفع
+    "moonpay": frozenset({"taxo"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
@@ -184,10 +190,13 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
 OWN_SWITCH: dict[str, FeatureKey] = {
     "nowpay": FeatureKey.NOWPAY_CARD_ENABLED,
     "whop": FeatureKey.WHOP_CARD_ENABLED,
+    # **وMoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه؛ ومفتاحاه بالطريقة في `METHOD_SWITCHES`
+    "moonpay": FeatureKey.MOONPAY_DRIVER_ENABLED,
 }
 SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "nowpay": frozenset({CountryCode.JO}),
     "whop": frozenset({CountryCode.JO}),
+    "moonpay": frozenset({CountryCode.JO}),
 }
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
 DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay"})
@@ -198,9 +207,21 @@ DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay"})
 METHOD_SWITCHES: dict[str, tuple[str, tuple[FeatureKey, ...]]] = {
     "whop_card": ("driver", (FeatureKey.WHOP_CARD_ENABLED,)),
     "whop_rider_card": ("rider", (FeatureKey.WHOP_RIDER_TOPUP_ENABLED, FeatureKey.WHOP_RIDER_TRIP_ENABLED)),
+    # **MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — صفُّ الكبتن (الاشتراكُ والمستحقّات) وصفُّ الراكب (باقاتُ الرصيد)
+    "moonpay_driver": ("driver", (FeatureKey.MOONPAY_DRIVER_ENABLED,)),
+    "moonpay_rider": ("rider", (FeatureKey.MOONPAY_RIDER_ENABLED,)),
+}
+#: **وسيطُ كلِّ طريقةٍ ذاتِ مفاتيح** — فيُعرف من المفتاح أيُّ الدول مقفلة (كان «whop» لكلِّها حين لم يكن غيرُه)
+METHOD_INTEGRATION: dict[str, str] = {
+    "whop_card": "whop",
+    "whop_rider_card": "whop",
+    "moonpay_driver": "moonpay",
+    "moonpay_rider": "moonpay",
 }
 SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in OWN_SWITCH.items()}
-SWITCH_OWNER.update({key.value: "whop" for _aud, keys in METHOD_SWITCHES.values() for key in keys})
+SWITCH_OWNER.update(
+    {key.value: METHOD_INTEGRATION[code] for code, (_aud, keys) in METHOD_SWITCHES.items() for key in keys}
+)
 
 
 def switch_keys(integration: str | None, code: str | None) -> tuple[FeatureKey, ...]:

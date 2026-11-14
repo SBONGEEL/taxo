@@ -28,6 +28,8 @@ export function TopupSheet({
   choices = [],
   whopCard = null,
   cardOnTop = false,
+  cryptoPay = null,
+  cryptoOnTop = false,
   onClose,
 }: {
   currency: string | undefined;
@@ -45,6 +47,9 @@ export function TopupSheet({
   whopCard?: PayMethod | null;
   /** **البطاقةُ أوّلاً ومقترحةً** (ترتيبُ السوق من اللوحة) — وكليكُ تحتها كما هو */
   cardOnTop?: boolean;
+  /** **الشحنُ بالعملات الرقميّة** (MoonPay Commerce، ٢٠٢٦-١١-١٤) — باقاتٌ ثابتةٌ تُختار في صفحتها، و`null` حيث مفتاحُه مطفأ */
+  cryptoPay?: PayMethod | null;
+  cryptoOnTop?: boolean;
   onClose: () => void;
 }) {
   const navigate = useNavigate();
@@ -66,6 +71,27 @@ export function TopupSheet({
           <span className="t2-row-title">{tr("الدفع بالبطاقة")}</span>
           <span className="t2-row-body">
             {cardOnTop ? tr("مقترحة — ببطاقتك البنكيّة، يُضاف فورَ تأكيد الدفع") : tr("ببطاقتك البنكيّة — يُضاف فورَ تأكيد الدفع")}
+          </span>
+        </span>
+        <Icon name="chevron_left" className="t2-m-opt-end go" />
+      </button>
+    </div>
+  ) : null;
+
+  const cryptoRow = cryptoPay ? (
+    <div className="t2-list t2-m-gap">
+      <button
+        type="button"
+        className="t2-row t2-m-opt"
+        onClick={() => navigate("/wallet/pay", { state: { methodId: cryptoPay.id } })}
+      >
+        <Icon name="account_balance_wallet" />
+        <span className="t2-row-main">
+          <span className="t2-row-title">{tr("الشحن بالعملات الرقمية")}</span>
+          <span className="t2-row-body">
+            {tr("من محفظتك الرقميّة بباقاتٍ ثابتة: {0} — تُضاف فورَ تأكيد الدفع", {
+              0: (cryptoPay.packages ?? []).map((value) => formatMoney(value, currency)).join(" · "),
+            })}
           </span>
         </span>
         <Icon name="chevron_left" className="t2-m-opt-end go" />
@@ -99,6 +125,7 @@ export function TopupSheet({
       </AmountCardT2>
       <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 
+      {cryptoOnTop ? cryptoRow : null}
       {cardOnTop ? whopRow : null}
 
       {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد».
@@ -174,6 +201,7 @@ export function TopupSheet({
         </div>
       ) : null}
       {cardOnTop ? null : whopRow}
+      {cryptoOnTop ? null : cryptoRow}
     </SheetModalT2>
   );
 }

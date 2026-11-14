@@ -563,6 +563,8 @@ export function ConfirmSubscriptionSheet({
   onBankCard,
   bankCardFloor = null,
   cardFirst = false,
+  onCrypto,
+  cryptoFirst = false,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -585,9 +587,23 @@ export function ConfirmSubscriptionSheet({
   bankCardFloor?: string | null;
   /** **البطاقةُ أوّلاً ومقترحةً مسبقاً** (ترتيبُ السوق من اللوحة) — والمحفظةُ وكليك تحتها كما هما */
   cardFirst?: boolean;
+  /** **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، ٢٠٢٦-١١-١٤) — يُمرَّر حيث طريقتُه معروضةٌ في سوقه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
+  onCrypto?: (plan: SubscriptionPlan) => void;
+  /** **وأوّلاً** حيث رتّبه المالكُ كذلك (الأردن) — وإلا تحت الطرق القائمة */
+  cryptoFirst?: boolean;
 }) {
   const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
   const bankCard = !cardEnabled && !cardViaGateway && onBankCard !== undefined;
+  const cryptoRow = onCrypto ? (
+    <>
+      <Button size="md" variant={cryptoFirst ? undefined : "secondary"} disabled={buying !== null} onClick={() => onCrypto(plan)}>
+        {tr("الدفع بالعملات الرقمية")}
+      </Button>
+      <p className="-mt-4 text-11 leading-note text-muted">
+        {tr("من محفظتك الرقميّة (USDC وغيرها) — يُفعَّل اشتراكُك فورَ اكتمال الدفع.")}
+      </p>
+    </>
+  ) : null;
   return (
     <div
       className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
@@ -633,10 +649,11 @@ export function ConfirmSubscriptionSheet({
           ) : null}
         </div>
         <div className="flex flex-col gap-9">
+          {cryptoFirst ? cryptoRow : null}
           {/* **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — والمحفظةُ تحتها زرّاً ثانياً لا محذوفاً */}
           {cardFirst && bankCard && !bankCardFloor ? (
             <>
-              <Button size="md" disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
+              <Button size="md" variant={cryptoFirst && onCrypto ? "secondary" : undefined} disabled={buying !== null} onClick={() => onBankCard?.(plan)}>
                 {tr("الدفع بالبطاقة المصرفية")}
               </Button>
               <p className="-mt-4 text-11 leading-note text-muted">
@@ -688,6 +705,7 @@ export function ConfirmSubscriptionSheet({
             </p>
           ) : null}
 
+          {cryptoFirst ? null : cryptoRow}
           {onPayRequest && manual ? (
             <Button
               size="md"

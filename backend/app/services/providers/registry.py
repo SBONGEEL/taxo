@@ -536,6 +536,51 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **«الدفع بالعملات الرقميّة» عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا
+    # `feature_key`**: مفتاحاه قرارُ المالك من اللوحة. **والمفاتيحُ من لوحة MoonPay Commerce** (Developer)، ولا تُكتب في شيفرةٍ ولا سجلّ
+    ProviderKey.MOONPAY: ProviderSpec(
+        key=ProviderKey.MOONPAY,
+        label="MoonPay Commerce — الدفع بالعملات الرقمية (الكباتن والركّاب)",
+        fields=(
+            ProviderField(key="api_key", label="مفتاح API العامّ — من لوحة MoonPay Commerce: Developer ← API Keys"),
+            ProviderField(key="secret_key", label="المفتاح السرّيّ — يظهر مرّةً عند إنشاء المفتاح"),
+            ProviderField(
+                key="webhook_secret",
+                label="سرّ الإشعار (sharedToken) — يُعطى مرّةً عند إنشاء الإشعار؛ وعنوانُه …/payment-requests/webhook/moonpay",
+            ),
+            ProviderField(key="paylink_id", label="معرّف رابط الدفع الديناميكيّ — من لوحة MoonPay Commerce", secret=False),
+            ProviderField(
+                key="rider_packages",
+                label="باقاتُ رصيد الراكب بالدينار مفصولةٌ بفواصل (مثل 5,10,20) — فارغ = لا شحنَ للراكب بهذه الطريقة",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (devnet) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الدافعين معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="usd_per_jod",
+                label="كم دولاراً يُطلب لكلِّ دينار — فارغ = ربطُ الدينار الرسميّ 1.4104",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = للجميع)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     ProviderKey.PAYOUT: ProviderSpec(
         key=ProviderKey.PAYOUT,
         label="مزود التحويلات الآلية للسحوبات",

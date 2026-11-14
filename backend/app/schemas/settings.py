@@ -322,7 +322,7 @@ class PaymentSettingUpdate(BaseModel):
     rounding_mode: RoundingMode | None = None
 
     # ------------------- ترتيبُ الطرق (أمرُ المالك ٢٠٢٦-١١-١٣) — **عرضٌ لا إذن**، وقائمةٌ فارغةٌ تعيد «كما كان»
-    payment_method_order: list[PaymentOrderKey] | None = Field(default=None, max_length=4)
+    payment_method_order: list[PaymentOrderKey] | None = Field(default=None, max_length=5)
 
     @field_validator("payment_method_order")
     @classmethod

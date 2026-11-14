@@ -77,6 +77,7 @@ const DEMO_FEATURES: Record<string, boolean> = {
   map_places_enabled: true,
   whop_rider_topup_enabled: false,
   whop_rider_trip_enabled: false,
+  moonpay_rider_enabled: false,
   payment_requests_enabled: true,
   promo_codes_enabled: false,
   ride_code_enabled: false,

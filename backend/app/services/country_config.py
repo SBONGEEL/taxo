@@ -77,7 +77,11 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         # **الوحدةُ والاتجاهُ المضبوطان ولو كان مطفأً** — اللوحةُ تقرأ الوصفَ نفسَه، والتطبيقُ لا يقرؤهما إلا مشتعلاً
         rounding_unit=pay.rounding_unit if pay is not None else policy.unit,
         rounding_mode=pay.rounding_mode if pay is not None else policy.mode,
-        payment_method_order=list(pay.payment_method_order or []) if pay is not None else [],
+        # **«crypto» لا يدخل القائمةَ التي تقرؤها النسخُ المثبَّتة** (MoonPay، ٢٠٢٦-١١-١٤): أوّلُها عندها «card» يرسم البطاقةَ أوّلاً،
+        # ولو صار «crypto» أوّلَها لنزلت البطاقةُ تحت المحفظة في كلِّ تطبيقٍ قائم — **والطرقُ القائمةُ لا تتغيّر بأمر المالك**.
+        # فالقائمةُ هي هي بلا «crypto»، **وموضعُه حقلٌ مستقلٌّ** تقرؤه النسخُ الجديدةُ وحدَها
+        payment_method_order=[key for key in (pay.payment_method_order or []) if key != "crypto"] if pay is not None else [],
+        crypto_first=bool(pay is not None and (pay.payment_method_order or [])[:1] == ["crypto"]),
     )
 
 

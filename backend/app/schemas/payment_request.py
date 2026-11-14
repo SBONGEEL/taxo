@@ -68,6 +68,11 @@ class PaymentMethodOut(BaseModel):
     #: و`null` لكلِّ طريقةٍ أخرى
     partner_kyc: bool | None = None
     settles_digital: bool | None = None
+    #: **دفعٌ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — لا بطاقة: زرُّه وحدَه، ويُقال للدافع ما يقع: السعرُ بالدولار
+    #: (`crypto_rate` لكلِّ دينار) ويُدفع من محفظةٍ رقميّة، ورسمُ الشبكة عليها؛ و`packages` باقاتُ الراكب الثابتة (فارغةٌ للكبتن)
+    crypto: bool = False
+    crypto_rate: Decimal | None = None
+    packages: list[Decimal] = Field(default_factory=list)
 
 
 class PaymentMethodsOut(BaseModel):

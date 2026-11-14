@@ -34,13 +34,20 @@ export interface CardPayHandoff {
   amount: string;
   planId?: string;
   planName?: string;
+  /** **بالعملات الرقميّة** (MoonPay Commerce) لا بالبطاقة — الشاشةُ نفسُها بسطورها هي */
+  crypto?: boolean;
 }
 
 /** **طريقةُ البطاقة المصرفية من طرق السوق** — هي وحدَها تحمل عملةَ خصمٍ أخرى */
 export function bankCardMethod(methods: PayMethod[] | null | undefined): PayMethod | null {
   // **Whop أوّلاً حين يُعرض** (أمرُ المالك ٢٠٢٦-١١-١٣: طريقةُ الأردن الأساسيّة) — وإلا أيُّ وسيطِ بطاقةٍ مصرفيّةٍ في السوق
-  const cards = methods?.filter((row) => row.gateway && row.charge_currency) ?? [];
+  const cards = methods?.filter((row) => row.gateway && row.charge_currency && !row.crypto) ?? [];
   return cards.find((row) => row.code === "whop_card") ?? cards[0] ?? null;
+}
+
+/** **طريقةُ العملات الرقميّة من طرق السوق** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — لا عملةَ خصمٍ لها، وتُعرف بـ`crypto` */
+export function cryptoMethod(methods: PayMethod[] | null | undefined): PayMethod | null {
+  return methods?.find((row) => row.gateway && row.crypto) ?? null;
 }
 
 export function CardPayT2Screen() {
@@ -60,7 +67,7 @@ export function CardPayT2Screen() {
       .then((body) => {
         if (!alive) return;
         setCurrency(body.currency);
-        setMethod(bankCardMethod(body.methods));
+        setMethod(handoff.crypto ? cryptoMethod(body.methods) : bankCardMethod(body.methods));
       })
       .catch((caught: unknown) => {
         if (!alive) return;
@@ -101,13 +108,15 @@ export function CardPayT2Screen() {
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="t2-title">{tr("الدفع بالبطاقة المصرفية")}</h1>
+        <h1 className="t2-title">{handoff?.crypto ? tr("الدفع بالعملات الرقمية") : tr("الدفع بالبطاقة المصرفية")}</h1>
       </div>
 
       {/* **شريطُ TAXO** — قبل صفحة الشريك: من يدفع لمن، وأنّ البطاقةَ لا تصلنا */}
       <div className="t2-cardpay-bar">
         <Wordmark size={18} />
-        <span className="t2-cardpay-bar-text">{tr("دفعٌ آمن — بياناتُ بطاقتك لا تصل إلى TAXO")}</span>
+        <span className="t2-cardpay-bar-text">
+          {handoff?.crypto ? tr("دفعٌ آمن من محفظتك الرقميّة — لا تصل مفاتيحُها إلى TAXO") : tr("دفعٌ آمن — بياناتُ بطاقتك لا تصل إلى TAXO")}
+        </span>
         <Icon name="lock" />
       </div>
 
@@ -125,7 +134,11 @@ export function CardPayT2Screen() {
           <Spinner />
         </div>
       ) : method === null ? (
-        <p className="t2-note">{tr("الدفع بالبطاقة المصرفية غير متاح الآن — ادفع بكليك أو حاول لاحقاً.")}</p>
+        <p className="t2-note">
+          {handoff.crypto
+            ? tr("الدفع بالعملات الرقمية غير متاح الآن — ادفع بكليك أو حاول لاحقاً.")
+            : tr("الدفع بالبطاقة المصرفية غير متاح الآن — ادفع بكليك أو حاول لاحقاً.")}
+        </p>
       ) : (
         <>
           <section className="t2-cardpay-total">
@@ -142,6 +155,44 @@ export function CardPayT2Screen() {
             </span>
           </section>
 
+          {/* **ما يُقال قبل الدفع بالعملات الرقميّة** — كلُّه كما يقع: السعرُ بالدولار، ومن يحمل أيَّ رسم، وأن لا بطاقةَ ولا صورةَ هويّة،
+              وأنّ الناقصَ لا يُضاف آليّاً */}
+          {handoff.crypto ? (
+            <ul className="t2-cardpay-facts">
+              <li>
+                <Icon name="info" />
+                <span>
+                  {tr("تدفع بعملةٍ رقميّةٍ من محفظتك (مثل USDC) بسعرٍ بالدولار الأمريكي: الدينار الواحد = {0} دولار.", {
+                    0: digits(method.crypto_rate ?? ""),
+                  })}
+                </span>
+              </li>
+              <li>
+                <Icon name="receipt_long" />
+                <span>
+                  {tr("يعالج الدفعَ {0}، ورسمُه تتحمّله TAXO؛ ورسمُ الشبكة تدفعه محفظتُك عند الإرسال.", {
+                    0: method.partner ?? method.gateway_name ?? "MoonPay Commerce",
+                  })}
+                </span>
+              </li>
+              <li>
+                <Icon name="account_balance" />
+                <span>{tr("لا يمكن الدفعُ ببطاقةٍ بنكيّة هنا، ولا تطلب الصفحةُ صورةَ هويّة — تحتاج محفظةً رقميّةً فيها رصيد.")}</span>
+              </li>
+              <li>
+                <Icon name="badge" />
+                <span>{tr("أرسل المبلغَ الذي تطلبه الصفحةُ كاملاً — دفعٌ أقلُّ منه لا يُحتسب تلقائيّاً.")}</span>
+              </li>
+              <li>
+                <Icon name="check_circle" />
+                <span>
+                  {handoff.purpose === "subscription"
+                    ? tr("يُفعَّل اشتراكُك فورَ اكتمال الدفع. وإن لم يكتمل لا يُخصم شيءٌ من محفظتك.")
+                    : tr("تُخصم مستحقّاتُك فورَ اكتمال الدفع، ويعود استقبالُ الطلبات حين تبلغ صفراً.")}
+                </span>
+              </li>
+            </ul>
+          ) : (
           <ul className="t2-cardpay-facts">
             {method.charge_rate ? (
               <li>
@@ -194,12 +245,13 @@ export function CardPayT2Screen() {
               </span>
             </li>
           </ul>
+          )}
 
           {belowFloor && floor !== null ? (
             <p className="t2-note">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(floor), 1: label })}</p>
           ) : (
             <button type="button" className="t2-debt-cta" disabled={busy || method.down === true} onClick={() => void pay()}>
-              {busy ? tr("جارٍ…") : tr("تابع إلى صفحة البطاقة")}
+              {busy ? tr("جارٍ…") : handoff.crypto ? tr("تابع إلى صفحة الدفع") : tr("تابع إلى صفحة البطاقة")}
             </button>
           )}
           {method.down ? (

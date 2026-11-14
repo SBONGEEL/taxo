@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { bankCardMethod } from "@/screens/t2/CardPayT2";
+import { bankCardMethod, cryptoMethod } from "@/screens/t2/CardPayT2";
 
 import { listPaymentMethods } from "@/api/endpoints";
 import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
@@ -129,7 +129,8 @@ export function SubscriptionT2Screen() {
     };
   }, [payRequests]);
   // **وطريقةُ البطاقة المصرفية ليست «وسيطَ السوق»** — لها زرُّها في الورقة؛ فلا تُقرأ هنا بديلاً عن Chargily
-  const gatewayMethod = methods?.find((row) => row.gateway && !row.charge_currency) ?? null;
+  // **والعملاتُ الرقميّةُ ليست «وسيطَ السوق» أيضاً** — لها زرُّها
+  const gatewayMethod = methods?.find((row) => row.gateway && !row.charge_currency && !row.crypto) ?? null;
   // **الدفعُ بالبطاقة المصرفية** (أمرُ المالك ٢٠٢٦-١١-١١) — بمفتاحه الخاصّ في سوقه، **ونظامُ الدفع العامُّ مطفأٌ فيه** (الأردن)
   // **ومعه Whop** (٢٠٢٦-١١-١٣) — أيُّ وسيطِ بطاقةٍ مشتعلٌ في السوق؛ والطريقةُ نفسُها تُقرأ من القائمة لا من المفتاح
   const bankCardFeatures = useCountryConfig(profile?.user?.country_code)?.features;
@@ -147,6 +148,20 @@ export function SubscriptionT2Screen() {
       alive = false;
     };
   }, [bankCardOn]);
+  // **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — بمفتاحه في سوقه، وأوّلاً حيث رتّبه المالك
+  const cryptoOn = bankCardFeatures?.moonpay_driver_enabled === true;
+  const cryptoOnTop = useCountryConfig(profile?.user?.country_code)?.crypto_first === true;
+  const [crypto, setCrypto] = useState<PayMethod | null>(null);
+  useEffect(() => {
+    if (!cryptoOn) return;
+    let alive = true;
+    listPaymentMethods("subscription")
+      .then((body) => alive && setCrypto(cryptoMethod(body.methods)))
+      .catch(() => alive && setCrypto(null));
+    return () => {
+      alive = false;
+    };
+  }, [cryptoOn]);
   const gatewayName = gatewayMethod?.gateway_name ?? "Chargily";
   const hasManual = methods === null || methods.some((row) => !row.gateway && row.kind !== "purchase_code");
   const plans = s.subscription?.plans ?? [];
@@ -430,6 +445,21 @@ export function SubscriptionT2Screen() {
                 : null
             }
             cardFirst={cardFirst(bankCardFeatures ? countryOrder : null)}
+            cryptoFirst={cryptoOnTop}
+            onCrypto={
+              crypto
+                ? (chosen) =>
+                    navigate("/wallet/card-pay", {
+                      state: {
+                        purpose: "subscription",
+                        crypto: true,
+                        planId: chosen.id,
+                        planName: chosen.name,
+                        amount: chosen.price_to_pay ?? chosen.price,
+                      },
+                    })
+                : undefined
+            }
             onBankCard={
               bankCard
                 ? (chosen) =>

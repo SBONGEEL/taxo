@@ -51,14 +51,20 @@ def method_out(
     gateway: object | None = None,
 ) -> PaymentMethodOut:
     # **ما يُقال للكبتن قبل أن يدفع بالبطاقة** (NOWPayments) — عملةُ الخصم وسعرُها واسمُ الشريك ورسمُه؛ ولغيره لا شيء
-    rate = getattr(gateway, "usd_per_jod", None)
+    # **العملاتُ الرقميّة ليست بطاقة** (MoonPay Commerce) — فلا تُعرض بحقول البطاقة: تطبيقٌ قديمٌ يقرأ «charge_currency» زرَّ بطاقةٍ
+    # مصرفيّة، فيُكتب لها `crypto` وسعرُها في حقلها
+    crypto = bool(getattr(gateway, "crypto", False))
+    rate = None if crypto else getattr(gateway, "usd_per_jod", None)
     # **عملةُ خصم البطاقة** — Whop يصرّح بها (الدينارُ حيث يقبله، بلا سعر صرف)؛ وNOWPayments بالدولار بسعره كما كان
-    card = getattr(gateway, "card_currency", None) or ("USD" if rate is not None else None)
+    card = None if crypto else (getattr(gateway, "card_currency", None) or ("USD" if rate is not None else None))
     return PaymentMethodOut(
         charge_currency=card,
         charge_rate=rate,
-        partner=getattr(gateway, "partner_name", None) if card else None,
-        partner_fee=getattr(gateway, "partner_fee", None) if card else None,
+        partner=getattr(gateway, "partner_name", None) if card or crypto else None,
+        partner_fee=getattr(gateway, "partner_fee", None) if card or crypto else None,
+        crypto=crypto,
+        crypto_rate=getattr(gateway, "usd_per_jod", None) if crypto else None,
+        packages=list(getattr(gateway, "packages", ())) if crypto and provider.code == "moonpay_rider" else [],
         partner_kyc=getattr(gateway, "partner_kyc", None) if card else None,
         settles_digital=getattr(gateway, "settles_digital", None) if card else None,
         code=provider.code,
@@ -430,6 +436,13 @@ async def gateway_webhook(
         except payment_gateways.WebhookSignatureInvalid:
             continue
     if ids is None:
+        # **MoonPay Commerce: إشعارٌ بتوقيعٍ لا يطابق يُطفئ الطريقةَ آليّاً ويُشعر المالك** (أمرُ المالك ٢٠٢٦-١١-١٤: «a webhook fails
+        # verification ⇐ turn the switch OFF») — وحاملُ ترويسة التوقيع وحدَه، فطرقُ بابٍ بلا توقيعٍ لا يُطفئ شيئاً
+        if integration == "moonpay" and headers.get("x-signature"):
+            from app.services import moonpay_guard
+
+            await moonpay_guard.trip(session, cause=moonpay_guard.CAUSE_SIGNATURE)
+            await session.commit()
         raise payment_gateways.WebhookSignatureInvalid()
     if not signed:
         background.add_task(_settle_webhook_in_background, integration, list(ids))

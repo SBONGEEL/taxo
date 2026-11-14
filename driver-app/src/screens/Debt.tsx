@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { getDebtState, listMyDebtClaims, listPaymentMethods, payDebtWithCliq } from "@/api/endpoints";
 import type { DebtClaim, DriverDebtSource, DriverDebtState, PayMethod } from "@/api/types";
-import { bankCardMethod } from "@/screens/t2/CardPayT2";
+import { bankCardMethod, cryptoMethod } from "@/screens/t2/CardPayT2";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
@@ -113,6 +113,36 @@ export function DebtScreen() {
       alive = false;
     };
   }, [bankCardOn]);
+  // **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — بمفتاحه في سوقه، وأوّلاً حيث رتّبه المالك؛ **وكليكُ كما هو**
+  const cryptoOn = bankCardFeatures?.moonpay_driver_enabled === true;
+  const cryptoOnTop = useCountryConfig(user?.country_code)?.crypto_first === true;
+  const [crypto, setCrypto] = useState<PayMethod | null>(null);
+  useEffect(() => {
+    if (!cryptoOn) return;
+    let alive = true;
+    listPaymentMethods("wallet_topup")
+      .then((body) => alive && setCrypto(cryptoMethod(body.methods)))
+      .catch(() => alive && setCrypto(null));
+    return () => {
+      alive = false;
+    };
+  }, [cryptoOn]);
+  const cryptoButton = (shown: boolean) =>
+    shown && crypto ? (
+      <>
+        <button
+          type="button"
+          className="t2-debt-cta"
+          disabled={unitError !== null || amount.trim() === ""}
+          onClick={() =>
+            navigate("/wallet/card-pay", { state: { purpose: "wallet_topup", crypto: true, amount: amount.trim() } })
+          }
+        >
+          {tr("الدفع بالعملات الرقمية")}
+        </button>
+        <p className="t2-fld-hint">{tr("من محفظتك الرقميّة (USDC وغيرها) — تُخصم مستحقّاتُك فورَ اكتمال الدفع، بلا مراجعة.")}</p>
+      </>
+    ) : null;
 
   return (
     <div className="t2 t2-debt scr">
@@ -263,6 +293,7 @@ export function DebtScreen() {
                   {digits(String(state.review_max_minutes))}{" "}{tr("دقائق.")}
                 </p>
               )}
+              {cryptoButton(cryptoOnTop && state.pay_via !== "topup")}
               {/* **البطاقةُ أوّلاً حيث رتّبها المالك** — والترتيبُ وحدَه يتغيّر، والزرّان هما هما */}
               {cardOnTop ? (
                 <>
@@ -320,6 +351,7 @@ export function DebtScreen() {
               ) : null}
                 </>
               )}
+              {cryptoButton(!cryptoOnTop && state.pay_via !== "topup")}
               {state.pay_via !== "topup" && !state.cliq_alias ? (
                 <p className="t2-debt-warn">
                   {tr("لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.")}
