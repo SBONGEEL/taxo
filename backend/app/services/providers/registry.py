@@ -536,6 +536,46 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا `feature_key`**:
+    # مفتاحُه (`polar_card_enabled`) قرارُ المالك. **والثلاثةُ من لوحة Polar** (Settings ← Access Tokens · Webhooks · Products)
+    ProviderKey.POLAR: ProviderSpec(
+        key=ProviderKey.POLAR,
+        label="Polar — اشتراكُ الكبتن الشهريُّ بالبطاقة المصرفية",
+        fields=(
+            ProviderField(key="api_key", label="رمزُ المنظّمة (Organization Access Token) — من لوحة Polar: Settings ← Access Tokens"),
+            ProviderField(
+                key="webhook_secret",
+                label="سرّ الإشعار (يبدأ بـ whsec_) — من لوحة Polar: Settings ← Webhooks؛ وعنوانُه …/payment-requests/webhook/polar",
+            ),
+            ProviderField(
+                key="product_id", label="معرّفُ منتج «TAXO Driver — Monthly Subscription» — من لوحة Polar: Products", secret=False,
+            ),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (sandbox) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الكباتن معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="usd_per_jod",
+                label="كم دولاراً يُخصم لكلِّ دينار — فارغ = ربطُ الدينار الرسميّ 1.4104 (ويجب أن يطابق سعرَ المنتج عند Polar)",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ الكباتن)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     # **«الدفع بالعملات الرقميّة» عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا
     # `feature_key`**: مفتاحاه قرارُ المالك من اللوحة. **والمفاتيحُ من لوحة MoonPay Commerce** (Developer)، ولا تُكتب في شيفرةٍ ولا سجلّ
     ProviderKey.MOONPAY: ProviderSpec(

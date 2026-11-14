@@ -101,7 +101,8 @@ export function DebtScreen() {
   const bankCardFeatures = useCountryConfig(user?.country_code)?.features;
   // **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — وكليكُ تحتها كما هو
   const cardOnTop = cardFirst(useCountryConfig(user?.country_code)?.payment_method_order);
-  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
+  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true ||
+    bankCardFeatures?.polar_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;

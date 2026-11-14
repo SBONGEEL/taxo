@@ -136,7 +136,8 @@ export function SubscriptionT2Screen() {
   const bankCardFeatures = useCountryConfig(profile?.user?.country_code)?.features;
   // **ترتيبُ السوق** (أمرُ المالك ٢٠٢٦-١١-١٣) — البطاقةُ أوّلاً في الأردن
   const countryOrder = useCountryConfig(profile?.user?.country_code)?.payment_method_order;
-  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true;
+  const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true ||
+    bankCardFeatures?.polar_card_enabled === true;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;

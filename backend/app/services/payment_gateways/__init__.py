@@ -150,16 +150,17 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
     from app.services.payment_gateways.moonpay import build_moonpay
     from app.services.payment_gateways.nowpay import build_nowpay
+    from app.services.payment_gateways.polar import build_polar
     from app.services.payment_gateways.sofizpay import build_sofizpay
     from app.services.payment_gateways.whop import build_whop
 
     return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop,
-            "moonpay": build_moonpay}
+            "moonpay": build_moonpay, "polar": build_polar}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
 DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية",
-                                "moonpay": "MoonPay Commerce"}
+                                "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
@@ -168,6 +169,7 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {
     "nowpay": ProviderKey.NOWPAY,
     "whop": ProviderKey.WHOP,
     "moonpay": ProviderKey.MOONPAY,
+    "polar": ProviderKey.POLAR,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -181,6 +183,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "whop": frozenset({"taxo"}),
     # **MoonPay Commerce**: رسمُه (٢٪) على التاجر من المال الواصل — **ورسمُ الشبكة على محفظة الدافع** يُقال له قبل الدفع
     "moonpay": frozenset({"taxo"}),
+    # **Polar**: رسمُه على التاجر من المال الواصل — **والبطاقةُ تُخصم سعرَ الاشتراك وحدَه**
+    "polar": frozenset({"taxo"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
@@ -192,14 +196,17 @@ OWN_SWITCH: dict[str, FeatureKey] = {
     "whop": FeatureKey.WHOP_CARD_ENABLED,
     # **وMoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه؛ ومفتاحاه بالطريقة في `METHOD_SWITCHES`
     "moonpay": FeatureKey.MOONPAY_DRIVER_ENABLED,
+    # **وPolar** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه، **مطفأٌ حتى يقبل Polar الحسابَ ويختبر المالك**
+    "polar": FeatureKey.POLAR_CARD_ENABLED,
 }
 SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "nowpay": frozenset({CountryCode.JO}),
     "whop": frozenset({CountryCode.JO}),
     "moonpay": frozenset({CountryCode.JO}),
+    "polar": frozenset({CountryCode.JO}),
 }
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
-DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay"})
+DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar"})
 #: **مفتاحٌ ⇐ وسيطُه** — فيُعرف من المفتاح أيُّ الدول مقفلة
 #: **طرقُ وسيطٍ واحدٍ بجمهورٍ ومفاتيحَ لكلٍّ منها** (Whop، أمرُ المالك ٢٠٢٦-١١-١٣) — كودُ صفِّ الطريقة ⇐ (جمهورُها، مفاتيحُها: **يكفي
 #: أحدُها مشتعلاً**). صفّان لوسيطٍ واحدٍ بعقدٍ واحدٍ وإشعارٍ واحد، **ولكلٍّ حدّاه في اللوحة**: الكبتنُ (الاشتراكُ والمستحقّات) والراكبُ

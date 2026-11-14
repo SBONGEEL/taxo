@@ -139,7 +139,8 @@ async def _run(
         return await _test_firebase_auth(values)
     if provider_key is ProviderKey.CLIQ_ACQUIRER:
         return await _test_cliq(values)
-    if provider_key in (ProviderKey.CHARGILY, ProviderKey.SOFIZPAY, ProviderKey.NOWPAY, ProviderKey.WHOP, ProviderKey.MOONPAY):
+    if provider_key in (ProviderKey.CHARGILY, ProviderKey.SOFIZPAY, ProviderKey.NOWPAY, ProviderKey.WHOP, ProviderKey.MOONPAY,
+                        ProviderKey.POLAR):
         # **وسيطا الجزائر** (§٧٣-هـ المرحلة ٣) — `Chargily` يسأل رصيدَه، و`SofizPay` يقول إن لا بابَ له يختبر بلا أثر
         from app.services import payment_gateways
 

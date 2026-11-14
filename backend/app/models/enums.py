@@ -652,6 +652,9 @@ class ProviderKey(StrEnum):
     #: **الدفعُ بالعملات الرقميّة عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — مفتاحُ API وسرُّه وسرُّ الإشعار ورابطُ الدفع؛
     #: لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ويُعرض بمفتاحَيه `moonpay_driver_enabled` و`moonpay_rider_enabled`**
     MOONPAY = "moonpay"
+    #: **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — رمزُ المنظّمة وسرُّ الإشعار ومعرّفُ المنتج؛ لكلِّ دولة
+    #: (الأردنُ وحدَه بالشيفرة)، **ويُعرض بمفتاحه `polar_card_enabled`** — مطفأٌ حتى يقبل Polar الحسابَ ويدفع المالكُ دفعتَه التجريبيّة
+    POLAR = "polar"
 
 
 class GatewayFeeBearer(StrEnum):
@@ -959,6 +962,9 @@ class FeatureKey(StrEnum):
     MOONPAY_DRIVER_ENABLED = "moonpay_driver_enabled"
     #: **باقاتُ رصيد الراكب بالعملات الرقميّة** — قيمٌ ثابتةٌ من العقد؛ الأردنُ وحدَه، ويُطفأ آليّاً مع أخيه
     MOONPAY_RIDER_ENABLED = "moonpay_rider_enabled"
+    #: **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤: «ship it OFF») — الأردنُ وحدَه بالشيفرة، **مطفأٌ حتى يقبل
+    #: Polar الحسابَ ويدفع المالكُ دفعتَه التجريبيّة**
+    POLAR_CARD_ENABLED = "polar_card_enabled"
 
 
 class MapPlaceCategory(StrEnum):
