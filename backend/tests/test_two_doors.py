@@ -152,6 +152,15 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — بطاقاتُ TAXO (SPEC §١٠٠-ب، ٢٠٢٦-١١-١٤)
+    "CardBatchOut": (
+        "بانٍ واحد: `admin_taxo_cards._batch_out` في كلِّ أبوابها (القائمةُ، وما يردّ دفعةً واحدةً عبر `_one_batch`، وقائمةُ ما يقترب انتهاؤه) من صفِّ الدفعة وأرقامها. "
+        "**و`buyer_company` و`buyer_tax_number` و`invoice_number` فارغةٌ حال**: دفعةٌ ليست لشركة (§١٠٠-ب/٧)"
+    ),
+    "TaxoCardOut": (
+        "بانٍ واحد: `admin_taxo_cards._card_out` في الأبواب الثلاثة (بطاقاتُ الدفعة والبحثُ والإلغاء)، والمصدرُ إلزاميٌّ فيه. "
+        "**و`shop_name` و`issued_by_name` فارغان حال**: دفعةٌ بلا محلّ، أو مُصدِرٌ حُذف اسمُه؛ و`issued_at` وقتُ إنشاء الدفعة لا يفرغ"
+    ),
     # ✅ مصدرٌ واحد — الحملات (البند ١٩، ٢٠٢٦-١١-١٠)
     "CampaignOut": (
         "مصدرٌ واحد: `CampaignOut.model_validate(row)` من صفِّ `notification_campaigns` كلِّه في الأبواب الأربعة (القائمةُ والإنشاءُ "

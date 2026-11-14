@@ -33,7 +33,8 @@ from typing import Any
 
 import httpx
 
-from app.models.enums import PaymentRequestStatus
+from app.core.currency import round_to_currency
+from app.models.enums import Currency, PaymentRequestStatus
 from app.services import payment_gateways as base
 from app.services import payment_reasons as reasons
 from app.services.providers import credentials as credentials_service
@@ -297,7 +298,7 @@ def _in_jod(paid_usd: Decimal | None, usd_per_jod: Decimal) -> Decimal | None:
     """**ما وصل بالدينار** — للمقارنة بالطلب وحدَها (مبلغٌ مختلفٌ لا يُقيَّد)؛ و«لا يُقرأ» صفرٌ فلا يطابق أبداً."""
     if paid_usd is None or usd_per_jod <= 0:
         return Decimal("0")
-    return (paid_usd / usd_per_jod).quantize(Decimal("0.001"))
+    return round_to_currency(paid_usd / usd_per_jod, Currency.JOD)
 
 
 def _decimal(value: Any) -> Decimal | None:
@@ -316,7 +317,7 @@ def _packages(raw: Any) -> tuple[Decimal, ...]:
     for part in str(raw or "").split(","):
         value = _decimal(part)
         if value is not None and value not in out:
-            out.append(value.quantize(Decimal("0.001")))
+            out.append(round_to_currency(value, Currency.JOD))
     return tuple(sorted(out))
 
 

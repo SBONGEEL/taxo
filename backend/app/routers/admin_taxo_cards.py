@@ -20,6 +20,7 @@ from app.models.taxo_card import CardDenomination, CardShop
 from app.models.user import User
 from app.schemas.payment_request import PaymentReasonIn
 from app.schemas.taxo_card import (
+    TaxoCardState,
     CardBatchExtendIn,
     CardKindReportOut,
     InvoiceSettingsIn,
@@ -193,6 +194,17 @@ async def cancel_batch(batch_id: uuid.UUID, payload: PaymentReasonIn, admin: Fin
 # ------------------------------------------------------------------ البطاقات
 
 
+def _card_out(card, *, batch_number: int, origin: dict, redeemed_by_name: str | None, state=None) -> TaxoCardOut:
+    """**بانٍ واحدٌ لبطاقةٍ في أبوابها الثلاثة** (بطاقاتُ الدفعة · البحثُ بالتسلسل · الإلغاء) — والمصدرُ (`origin`) إلزاميّ:
+    بابُ الإلغاء كان يردّ بلا «من باعها ومتى» وبحالٍ «غير مستعملة» لبطاقةٍ ملغاة، **وأمسكه `test_two_doors`** (٢٠٢٦-١١-١٤)."""
+    extra = {"state": state} if state is not None else {}
+    return TaxoCardOut(
+        id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, status=card.status,
+        batch_number=batch_number, redeemed_at=card.redeemed_at, redeemed_by_name=redeemed_by_name,
+        cancel_reason=card.cancel_reason, **extra, **origin,
+    )
+
+
 async def _origins(session, batches) -> dict:
     """**من باع البطاقةَ ومتى** (§١٠٠-ب/٤) — من دفعتها: المحلُّ ونوعُها، ومن أصدرها ووقتُ إصدارها."""
     ids = {b.created_by for b in batches if b.created_by}
@@ -225,11 +237,7 @@ async def batch_cards(
     return BatchCardsOut(
         total=total,
         cards=[
-            TaxoCardOut(
-                id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, status=card.status,
-                batch_number=batch.number, redeemed_at=card.redeemed_at, redeemed_by_name=name,
-                cancel_reason=card.cancel_reason, state=card_state, **origin,
-            )
+            _card_out(card, batch_number=batch.number, origin=origin, redeemed_by_name=name, state=card_state)
             for card, card_state, name in rows
         ],
     )
@@ -246,11 +254,9 @@ async def find_cards(
     } if rows else {}
     origins = await _origins(session, [row.batch for row in rows])
     return [
-        TaxoCardOut(
-            id=row.id, serial=row.serial, amount=row.amount, currency=row.currency, status=row.status,
-            batch_number=row.batch.number, redeemed_at=row.redeemed_at,
-            redeemed_by_name=names.get(row.redeemed_by) if row.redeemed_by else None, cancel_reason=row.cancel_reason,
-            **origins[row.batch_id],
+        _card_out(
+            row, batch_number=row.batch.number, origin=origins[row.batch_id],
+            redeemed_by_name=names.get(row.redeemed_by) if row.redeemed_by else None,
         )
         for row in rows
     ]
@@ -261,9 +267,9 @@ async def cancel_card(card_id: uuid.UUID, payload: PaymentReasonIn, admin: Finan
     card = await taxo_cards.get_card(session, card_id, for_update=True)
     card = await taxo_cards.cancel_card(session, card=card, actor=admin, reason=payload.reason)
     await session.commit()
-    return TaxoCardOut(
-        id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, status=card.status,
-        batch_number=card.batch.number, redeemed_at=card.redeemed_at, redeemed_by_name=None, cancel_reason=card.cancel_reason,
+    origin = (await _origins(session, [card.batch]))[card.batch.id]
+    return _card_out(
+        card, batch_number=card.batch.number, origin=origin, redeemed_by_name=None, state=TaxoCardState.CANCELLED
     )
 
 
