@@ -120,6 +120,7 @@ from app.models.taxo_card import (  # noqa: F401
     TaxoCard,
     TaxoCardSetting,
     CardGiftLink,
+    CardShopStaff,
 )
 from app.models.wallet import (
     WalletTopupRequest,

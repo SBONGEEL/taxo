@@ -333,7 +333,11 @@ async def test_no_route_grants_a_role(client, admin_headers) -> None:
     # **ينشئه المالكُ من اللوحة** (`OwnerUser`)، **بدور `payment_reviewer` وحدَه** — لا يمنح دوراً لحسابٍ قائم ولا دوراً غيرَه
     # **وبابٌ ثالثٌ بأمر المالك** (٢٠٢٦-١٠-٢٩، SPEC §21.6): `role_enrollment` يضيف الراكبَ أو الكبتنَ **وحدَهما** لحسابٍ يملك
     # الدورَ المقابل ويثبت كلمتَه — وصفُّ الكبتن `pending` يمرّ بموافقته القائمة
-    assert sorted(writers) == ["services/auth/base.py", "services/role_enrollment.py", "services/transfers.py"], writers
+    # **وبابٌ رابعٌ بأمر المالك** (٢٠٢٦-١١-١٢، SPEC §١٠٠-ب/٥): حسابُ بائع البطاقات **ينشئه المالكُ من اللوحة** (`OwnerUser`)،
+    # **بدور `card_seller` وحدَه** ومربوطاً بمحلّ — لا يمنح دوراً لحسابٍ قائم ولا دوراً غيرَه
+    assert sorted(writers) == [
+        "services/auth/base.py", "services/card_sellers.py", "services/role_enrollment.py", "services/transfers.py",
+    ], writers
 
 
 # --------------------------------------------------------------- الأسبقية

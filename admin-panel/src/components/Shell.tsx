@@ -51,6 +51,8 @@ const GROUPS: {
     permission?: string;
     roles?: string[];
     reviewer?: boolean;
+    /** **ما يراه بائعُ البطاقات** (§١٠٠-ب/٥) — وهو وحدَه ما يرى */
+    seller?: boolean;
   }[];
 }[] = [
   {
@@ -110,6 +112,8 @@ const GROUPS: {
       },
       // **بطاقاتُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — جوارَ نظام الدفع: البطاقةُ طريقةٌ فيه («رمز شراء»)
       { label: "بطاقات TAXO", icon: "confirmation_number", to: "/taxo-cards" },
+      // **صفحةُ بائع البطاقات** (SPEC §١٠٠-ب/٥) — له وحدَه
+      { label: "بيع البطاقات", icon: "point_of_sale", to: "/sell", roles: ["card_seller"], seller: true },
       // **«دفعات البطاقات»** (أمرُ المالك ٢٠٢٦-١١-١٣) — الدفعاتُ بعدِّها وبطاقاتُ كلِّ دفعةٍ بلا رمز
       { label: "دفعات البطاقات", icon: "receipt_long", to: "/card-batches" },
       // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
@@ -184,6 +188,7 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "مشرف",
   support: "دعم فني",
   payment_reviewer: "مراجع تحويلات BaridiMob",
+  card_seller: "بائع بطاقات TAXO",
 };
 
 /** **سطرٌ دائمٌ لمشرفٍ بلا عاملٍ ثانٍ** (شرطُ المالك 2026-08-21).
@@ -317,6 +322,8 @@ export function Shell({
 
   // **مراجعُ التحويلات وحدَه** (SPEC §٨٢-ب/٥): بندٌ واحدٌ في القائمة، ولا بحثَ ولا مبدّلَ سوقٍ ولا جرس — كلُّها أبوابٌ مغلقةٌ له في الخادم
   const reviewerOnly = Boolean(user?.roles?.includes("payment_reviewer") && !user?.roles?.includes("admin"));
+  // **وبائعُ البطاقات مثلُه** (SPEC §١٠٠-ب/٥): صفحةُ البيع وحدَها
+  const sellerOnly = Boolean(user?.roles?.includes("card_seller") && !user?.roles?.includes("admin"));
   const initial = (user?.name ?? "").trim().slice(0, 1);
   // **المالكُ يحمل `admin` معه** — فيُقرأ دورُه من `roles` (SPEC §٧٦-ك/١)
   const shown = user?.roles?.includes("owner") ? "owner" : user?.role;
@@ -349,7 +356,7 @@ export function Shell({
           {GROUPS.map((group) => {
             const items = group.items.filter(
               (item) =>
-                (reviewerOnly ? item.reviewer === true : true) &&
+                (reviewerOnly ? item.reviewer === true : sellerOnly ? item.seller === true : true) &&
                 (!item.roles || item.roles.some((role) => user?.roles?.includes(role as never))) &&
                 (!item.adminOnly || isAdmin) &&
                 (!item.permission || held?.has(item.permission) === true),
@@ -442,8 +449,8 @@ export function Shell({
           </span>
 
           {/* **البحثُ العامُّ أوّلَ الترويسة** (§39٫١٢٫٤): أداةُ عملٍ لا زرُّ حساب، **ومكانُه حيث تقع العينُ أوّلاً** */}
-          {reviewerOnly ? null : <GlobalSearch />}
-          {reviewerOnly ? null : <CountrySwitch />}
+          {reviewerOnly || sellerOnly ? null : <GlobalSearch />}
+          {reviewerOnly || sellerOnly ? null : <CountrySwitch />}
 
           <span className="ad-head-gap" />
 

@@ -243,6 +243,8 @@ async def create_batch(
     valid_from: datetime,
     expires_at: datetime,
     kind: str = "batch",
+    buyer_company: str | None = None,
+    buyer_tax_number: str | None = None,
 ) -> tuple[CardBatch, list[tuple[str, str]]]:
     """**دفعةٌ تُولَّد معاً** — وتعود رموزُها **مرّةً واحدةً** (`(الرقم، الرمز)`) لملفّ الطباعة، ولا تُخزَّن إلا بصماتُها.
 
@@ -259,6 +261,11 @@ async def create_batch(
     denomination = await session.get(CardDenomination, denomination_id)
     if denomination is None or denomination.country_code != country or not denomination.is_active:
         raise InvalidInput("الفئةُ غيرُ متاحةٍ في هذا السوق", field="denomination_id")
+    company = (buyer_company or "").strip() or None
+    if company is not None and shop_id is not None:
+        raise InvalidInput("دفعةُ الشركة تُباع لها مباشرةً — بلا محلّ", field="shop_id")
+    if company is not None and kind != "batch":
+        raise InvalidInput("الشركةُ تشتري دفعةً مطبوعة", field="buyer_company")
     shop: CardShop | None = None
     if shop_id is not None:
         shop = await get_shop(session, shop_id)
@@ -271,6 +278,12 @@ async def create_batch(
         select(func.coalesce(func.max(CardBatch.number), 0)).where(CardBatch.country_code == country)
     )) + 1
 
+    invoice_number = None
+    if company is not None:
+        # **رقمُ الفاتورة متتابعٌ في سوقها** — تحت قفل السوق نفسِه
+        invoice_number = (await session.scalar(
+            select(func.coalesce(func.max(CardBatch.invoice_number), 0)).where(CardBatch.country_code == country)
+        )) + 1
     currency = currency_for_country(country)
     batch = CardBatch(
         country_code=country,
@@ -286,6 +299,9 @@ async def create_batch(
         status=TaxoCardBatchStatus.ACTIVE,
         created_by=actor.id,
         kind=kind,
+        buyer_company=company,
+        buyer_tax_number=(buyer_tax_number or "").strip() or None if company else None,
+        invoice_number=invoice_number,
     )
     session.add(batch)
     await session.flush()
@@ -298,8 +314,9 @@ async def create_batch(
         while code in seen:  # pragma: no cover — ٢^٧٩ لا يتصادم في خمسة آلاف
             code = new_code()
         seen.add(code)
-        # **الهديةُ تُقرأ من رقمها** (`G`) — والدفعةُ المطبوعةُ كما كانت (`B`)
-        serial = f"{country.value}-{'G' if kind == 'gift' else 'B'}{number:04d}-{index:06d}"
+        # **الهديةُ تُقرأ من رقمها** (`G`)، **والمبيعةُ لحظةَ الطلب** (`P`، §١٠٠-ب/٥) — والدفعةُ المطبوعةُ كما كانت (`B`)
+        prefix = {"gift": "G", "pos": "P"}.get(kind, "B")
+        serial = f"{country.value}-{prefix}{number:04d}-{index:06d}"
         cards.append(
             TaxoCard(
                 batch_id=batch.id, country_code=country, currency=currency, serial=serial,
@@ -733,3 +750,102 @@ async def export_batch(
         details={"format": fmt, "cards": len(rows)},
     )
     return content, media, name
+
+
+# ------------------------------------------------------------------ فاتورةُ الشركة (§١٠٠-ب/٧)
+
+
+async def batch_invoice(session: AsyncSession, *, batch: CardBatch) -> tuple[bytes, str]:
+    """**فاتورةُ دفعةٍ بيعت لشركة** — من الدفعة نفسِها (الفئةُ × العدد والأرقامُ التسلسليّة)، **بلا رمزٍ واحد**؛ فتُنزَّل متى طُلبت."""
+    from app.services import card_exports
+    from app.services.stats import _zone
+
+    if batch.invoice_number is None:
+        raise InvalidInput("هذه الدفعةُ لم تُبَع لشركة", field="batch_id")
+    serials = list(
+        (await session.scalars(select(TaxoCard.serial).where(TaxoCard.batch_id == batch.id).order_by(TaxoCard.serial))).all()
+    )
+    settings = await session.scalar(select(TaxoCardSetting).where(TaxoCardSetting.country_code == batch.country_code))
+    zone = await _zone(session, batch.country_code)
+    number = f"INV-{batch.country_code.value}-{batch.invoice_number:06d}"
+    content = card_exports.invoice_pdf(
+        card_exports.Invoice(
+            number=number, issued_at=batch.created_at, zone=zone, country=batch.country_code.value, currency=batch.currency.value,
+            buyer_company=batch.buyer_company or "", buyer_tax_number=batch.buyer_tax_number,
+            seller_name=settings.invoice_seller_name if settings else None,
+            seller_tax_number=settings.invoice_seller_tax_number if settings else None,
+            batch_title=f"{batch.country_code.value}-B{batch.number:04d}", amount=batch.amount, quantity=batch.quantity,
+            expires_at=batch.expires_at, serials=serials,
+        )
+    )
+    return content, f"{number}.pdf"
+
+
+# ------------------------------------------------------------------ الصلاحية: التذكيرُ والتمديد (§١٠٠-ب/١٢)
+
+MAX_EXTENSION = timedelta(days=1095)
+
+
+async def extend_batch(
+    session: AsyncSession, *, batch: CardBatch, actor: User, expires_at: datetime, reason: str | None
+) -> CardBatch:
+    """**تمديدُ صلاحية دفعةٍ بسببٍ مكتوب** — إلى الأمام وحدَه، وسطرٌ في التدقيق بالقديم والجديد. **والهديةُ وبطاقةُ البيع دفعةٌ من
+    بطاقةٍ واحدة**، فتمديدُها تمديدُ البطاقة نفسِها؛ وبطاقةٌ داخل دفعةٍ مطبوعةٍ تمتدّ بدفعتها كلِّها."""
+    clean = (reason or "").strip()
+    if len(clean) < 3:
+        raise InvalidInput("اكتب سببَ التمديد", field="reason")
+    if batch.status is TaxoCardBatchStatus.CANCELLED:
+        raise InvalidInput("الدفعةُ ملغاة", field="batch_id")
+    if expires_at <= batch.expires_at:
+        raise InvalidInput("التمديدُ إلى ما بعد الصلاحية الحاليّة", field="expires_at")
+    if expires_at > _now() + MAX_EXTENSION:
+        raise InvalidInput("أقصى التمديد ثلاثُ سنواتٍ من اليوم", field="expires_at")
+    old = batch.expires_at
+    batch.expires_at = expires_at
+    await session.flush()
+    await audit.record(
+        session, actor=actor, action=AuditAction.UPDATE, entity_type="card_batch", entity_id=batch.id,
+        details={"action": "extend", "reason": clean[:500]},
+        changes={"expires_at": {"old": old.isoformat(), "new": expires_at.isoformat()}},
+    )
+    return batch
+
+
+def expiring(figures: list[BatchFigures], *, within: timedelta) -> list[BatchFigures]:
+    """**تنتهي قريباً وفيها ما لم يُستعمل** — من أرقام الدفعات نفسِها، لا عدٌّ ثانٍ."""
+    now = _now()
+    return sorted(
+        (row for row in figures if row.unused > 0 and row.batch.status is TaxoCardBatchStatus.ACTIVE
+         and now < row.batch.expires_at <= now + within),
+        key=lambda row: row.batch.expires_at,
+    )
+
+
+# ------------------------------------------------------------------ تقريرُ البطاقات (§١٠٠-ب/١٤)
+
+KINDS = ("batch", "gift", "pos")
+
+
+def kind_totals(figures: list[BatchFigures]) -> dict[str, dict[str, Decimal | int]]:
+    """**بالنوع**: ما صدر وما استُعمل، **والالتزامُ القائم** (غيرُ مستعملةٍ تعمل) **وقيمةُ المنتهية بلا استعمال** — جمعُ ما حُسب لكلِّ
+    دفعة، لا حسابٌ ثانٍ يفترق عنه."""
+    out: dict[str, dict[str, Decimal | int]] = {}
+    for kind in (*KINDS, "corporate"):
+        out[kind] = {"batches": 0, "cards": 0, "redeemed": 0, "cancelled": 0, "unused": 0, "expired": 0,
+                     "issued_value": Decimal(0), "redeemed_value": Decimal(0), "outstanding_value": Decimal(0),
+                     "expired_value": Decimal(0)}
+    for row in figures:
+        keys = [row.batch.kind] + (["corporate"] if row.batch.invoice_number is not None else [])
+        for key in keys:
+            bucket = out[key]
+            bucket["batches"] += 1
+            bucket["cards"] += row.active + row.redeemed + row.cancelled
+            bucket["redeemed"] += row.redeemed
+            bucket["cancelled"] += row.cancelled
+            bucket["unused"] += row.unused
+            bucket["expired"] += row.expired
+            bucket["issued_value"] += row.live_value
+            bucket["redeemed_value"] += row.redeemed_value
+            bucket["outstanding_value"] += row.batch.amount * row.unused
+            bucket["expired_value"] += row.batch.amount * row.expired
+    return out

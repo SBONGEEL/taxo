@@ -42,6 +42,9 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     # **مراجعُ التحويلات مُلزَمٌ دائماً** (SPEC §٨٢-ب/٥: «two-step verification mandatory, same as the OWNER») — يعتمد مالاً
     if user.has_role(UserRole.PAYMENT_REVIEWER) and not user.has_role(UserRole.ADMIN):
         return True
+    # **وبائعُ البطاقات مثلُه** (SPEC §١٠٠-ب/٥): كلُّ بيعٍ يولّد رمزاً يشحن محفظة
+    if user.has_role(UserRole.CARD_SELLER) and not user.has_role(UserRole.ADMIN):
+        return True
     if not user.has_role(UserRole.ADMIN):
         return False
 

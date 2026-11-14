@@ -135,7 +135,7 @@ def require_roles(
 
 # **ومراجعُ التحويلات طاقمٌ في الحراسة** (SPEC §٨٢-ب/٥): العاملُ الثاني وتغييرُ الكلمة يُفرضان عليه كما يُفرضان على المشرف —
 # **ولا يفتح له ذلك باباً**: الأبوابُ تسأل `admin`/`support` بالاسم، وهو لا يحملهما
-_STAFF_ROLES = frozenset({UserRole.ADMIN, UserRole.SUPPORT, UserRole.PAYMENT_REVIEWER})
+_STAFF_ROLES = frozenset({UserRole.ADMIN, UserRole.SUPPORT, UserRole.PAYMENT_REVIEWER, UserRole.CARD_SELLER})
 
 # admin كامل الصلاحية؛ support قراءة ومعالجة نزاعات فقط (SPEC القسم 13/8)
 AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
@@ -145,6 +145,8 @@ RiderUser = Annotated[User, Depends(require_roles(UserRole.RIDER))]
 OwnerUser = Annotated[User, Depends(require_roles(UserRole.OWNER))]
 # **مراجعةُ تحويلات BaridiMob** (§٨٢-ب/٤–٥): المراجعُ والمالك، واعتمادُ أحدهما يكفي
 TransferReviewer = Annotated[User, Depends(require_roles(UserRole.OWNER, UserRole.PAYMENT_REVIEWER))]
+# **بائعُ البطاقات** (SPEC §١٠٠-ب/٥): دورُه وحدَه — والمحلُّ من ربطه لا من الطلب
+CardSeller = Annotated[User, Depends(require_roles(UserRole.CARD_SELLER))]
 
 # بابُ «أمان حسابي» وحده — يفتح لطاقم اللوحة قبل أن يكون لهم عاملٌ مسجّل، **وقبل أن يغيّروا كلمتَهم**
 # (وإلا صارت حلقةً: التغييرُ محروسٌ بالعامل، والعاملُ محروسٌ بالتغيير)
@@ -155,6 +157,7 @@ SecuritySelfUser = Annotated[
             UserRole.ADMIN,
             UserRole.SUPPORT,
             UserRole.PAYMENT_REVIEWER,
+            UserRole.CARD_SELLER,
             enforce_two_factor=False,
             enforce_password_change=False,
         )
@@ -166,7 +169,7 @@ AccountSelfUser = Annotated[
     User,
     Depends(
         require_roles(
-            UserRole.ADMIN, UserRole.SUPPORT, UserRole.PAYMENT_REVIEWER, enforce_password_change=False
+            UserRole.ADMIN, UserRole.SUPPORT, UserRole.PAYMENT_REVIEWER, UserRole.CARD_SELLER, enforce_password_change=False
         )
     ),
 ]

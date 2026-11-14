@@ -90,6 +90,9 @@ const DisputesScreen = lazy(() =>
 const CardBatchesScreen = lazy(() =>
   import("@/screens/TaxoCards").then((m) => ({ default: m.CardBatchesScreen })),
 );
+const CardSellScreen = lazy(() =>
+  import("@/screens/CardSell").then((m) => ({ default: m.CardSellScreen })),
+);
 const TaxoCardsScreen = lazy(() =>
   import("@/screens/TaxoCards").then((m) => ({ default: m.TaxoCardsScreen })),
 );
@@ -274,7 +277,7 @@ function Boot({ children }: { children: ReactNode }) {
     // أوّلَ مرّةٍ فردّ `/admin/countries` بـ403 `password_change_required`، وغيّر كلمتَه، **ولم تُسأل الأسواقُ ثانيةً** — فبقي
     // المبدّلُ «JO» وحده بلا ليبيا ولا الجزائر. **فزوالُ العلَم هو ما يُعيد السؤال**
     <CountriesProvider
-      enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired && !isReviewerOnly(user?.roles)}
+      enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired && !isReviewerOnly(user?.roles) && !isSellerOnly(user?.roles)}
     >
       <CountryProvider fallback={config.default_country_code}>
         {children}
@@ -288,6 +291,11 @@ export function isReviewerOnly(roles: readonly string[] | undefined): boolean {
   return Boolean(roles?.includes("payment_reviewer") && !roles.includes("admin"));
 }
 
+/** **بائعُ البطاقات وحدَه** (SPEC §١٠٠-ب/٥) — صفحةُ البيع وحدَها، والخادمُ يردّه عن كلِّ بابٍ غيرِ بابه */
+export function isSellerOnly(roles: readonly string[] | undefined): boolean {
+  return Boolean(roles?.includes("card_seller") && !roles.includes("admin"));
+}
+
 function Guarded({ children }: { children: ReactNode }) {
   const { user, enrollmentRequired, passwordChangeRequired } = useSession();
   const { pathname } = useLocation();
@@ -299,6 +307,7 @@ function Guarded({ children }: { children: ReactNode }) {
   // **وبوّابةُ الكلمة بعدها** (SPEC §٧٦-م/٢): العاملُ أوّلاً — بابُ التغيير محروسٌ به — ثمّ الكلمة
   if (passwordChangeRequired) return <Navigate to="/account/password" replace />;
   if (isReviewerOnly(user.roles) && pathname !== "/transfers") return <Navigate to="/transfers" replace />;
+  if (isSellerOnly(user.roles) && pathname !== "/sell") return <Navigate to="/sell" replace />;
   return <>{children}</>;
 }
 
@@ -536,6 +545,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <CardBatchesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/sell"
+                    element={
+                      <Guarded>
+                        <CardSellScreen />
                       </Guarded>
                     }
                   />

@@ -50,6 +50,23 @@ function takeLinkedCode(): string {
   }
 }
 
+/** **امسح QR البطاقة** (SPEC §١٠٠-ب/١١) — صورةٌ من الكاميرا تُقرأ **في الجهاز نفسِه** (`BarcodeDetector`) **ولا تُرفع إلى أيِّ خادم**.
+ * والـQR يحمل `app.tajora.ly/redeem#<الرمز>`، فيُؤخذ ما بعد `#`. **وجهازٌ لا يملك القارئ لا يرى الزرّ** — وكاميرا الهاتف نفسُها تفتح الرابط. */
+type Detector = { detect: (image: ImageBitmap) => Promise<{ rawValue: string }[]> };
+
+function hasQrReader(): boolean {
+  return typeof window !== "undefined" && "BarcodeDetector" in window && typeof createImageBitmap === "function";
+}
+
+async function readQr(file: File): Promise<string | null> {
+  const Ctor = (window as unknown as { BarcodeDetector: new (options: { formats: string[] }) => Detector }).BarcodeDetector;
+  const found = await new Ctor({ formats: ["qr_code"] }).detect(await createImageBitmap(file));
+  const raw = found[0]?.rawValue ?? "";
+  const tail = raw.includes("#") ? raw.slice(raw.indexOf("#") + 1) : raw;
+  const plain = tail.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  return plain.length === 16 ? plain : null;
+}
+
 export function CardRedeemT2Screen() {
   const goBack = useGoBack("/wallet");
   const navigate = useNavigate();
@@ -113,6 +130,32 @@ export function CardRedeemT2Screen() {
               <BusyLabel busy={busy}>{tr("اشحن")}</BusyLabel>
             </button>
           </div>
+          {hasQrReader() ? (
+            <label className="t2-button t2-m-cta t2-m-gap" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Icon name="qr_code_scanner" />
+              {tr("امسح رمز QR")}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  try {
+                    const scanned = await readQr(file);
+                    if (scanned) {
+                      setCode(grouped(scanned));
+                      setError(null);
+                    } else setError(tr("لم يُقرأ رمزُ QR — قرّب الكاميرا أو اكتب الرمز"));
+                  } catch {
+                    setError(tr("لم يُقرأ رمزُ QR — قرّب الكاميرا أو اكتب الرمز"));
+                  }
+                }}
+              />
+            </label>
+          ) : null}
         </>
       )}
     </div>

@@ -103,6 +103,9 @@ class CardBatchIn(BaseModel):
     shop_id: uuid.UUID | None = None
     valid_from: datetime
     expires_at: datetime
+    #: **دفعةٌ تُباع لشركةٍ بفاتورة** (§١٠٠-ب/٧) — بلا محلّ
+    buyer_company: str | None = Field(default=None, min_length=2, max_length=160)
+    buyer_tax_number: str | None = Field(default=None, max_length=40)
 
 
 class CardBatchOut(BaseModel):
@@ -131,8 +134,12 @@ class CardBatchOut(BaseModel):
     redeemed_amount: Decimal
     live_amount: Decimal
     due_amount: Decimal
-    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` أو `gift`
+    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` أو `gift` أو `pos`
     kind: str = "batch"
+    #: **دفعةُ شركة** (§١٠٠-ب/٧) — اسمُها ورقمُها الضريبيّ ورقمُ فاتورتها
+    buyer_company: str | None = None
+    buyer_tax_number: str | None = None
+    invoice_number: str | None = None
 
 
 class CardCodeOut(BaseModel):
@@ -171,6 +178,11 @@ class TaxoCardOut(BaseModel):
     cancel_reason: str | None
     #: **الحالُ كما تُقرأ** — `unused` · `redeemed` · `expired` · `cancelled` · `not_started` (من نافذة الدفعة لحظةَ القراءة)
     state: TaxoCardState = TaxoCardState.UNUSED
+    #: **من باعها ومتى** (§١٠٠-ب/٤): المحلُّ من الدفعة، ونوعُها، **ومن أصدرها** (البائعُ في `pos`، والمشرفُ في غيرها) ووقتُ إصدارها
+    batch_kind: str = "batch"
+    shop_name: str | None = None
+    issued_by_name: str | None = None
+    issued_at: datetime | None = None
 
 
 class BatchCardsOut(BaseModel):
@@ -301,3 +313,150 @@ class GiftScratchedOut(BaseModel):
     code: str
     amount: Decimal
     currency: Currency
+
+
+# ------------------------------------------------------------------ البائعون والبيعُ لحظةَ الطلب (§١٠٠-ب/٤–٥)
+
+
+class PosSettingsOut(BaseModel):
+    pos_enabled: bool
+    pos_daily_cap: int
+    pos_validity_days: int
+
+
+class PosSettingsIn(BaseModel):
+    """**يفتحه المالكُ وحدَه** — والسقفُ عددُ بطاقاتٍ لا مال."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: CountryCode
+    pos_enabled: bool | None = None
+    pos_daily_cap: int | None = Field(default=None, ge=1, le=500)
+    pos_validity_days: int | None = Field(default=None, ge=30, le=1095)
+
+
+class SellerOut(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    username: str | None
+    shop_id: uuid.UUID
+    shop_name: str
+    is_active: bool
+    is_blocked: bool
+    has_factor: bool
+    must_change_password: bool
+    created_at: datetime
+    currency: Currency
+    sold: int = 0
+    redeemed: int = 0
+    cancelled: int = 0
+    sold_amount: Decimal = Decimal("0")
+    redeemed_amount: Decimal = Decimal("0")
+
+
+class SellerCreateIn(BaseModel):
+    """**يكتبه المالك** — والكلمةُ مؤقّتةٌ تتغيّر عند أوّل دخول."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    shop_id: uuid.UUID
+    name: str = Field(min_length=2, max_length=120)
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class SellerActiveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_active: bool
+
+
+class ResellerDenominationOut(BaseModel):
+    id: uuid.UUID
+    amount: Decimal
+    currency: Currency
+
+
+class ResellerMeOut(BaseModel):
+    """**ما يراه البائع**: محلُّه وفئاتُ سوقه، وهل البيعُ مفتوح، وكم باع في آخر ٢٤ ساعة من سقفه."""
+
+    name: str
+    shop_name: str
+    country_code: CountryCode
+    currency: Currency
+    enabled: bool
+    sold_today: int
+    daily_cap: int
+    validity_days: int
+    denominations: list[ResellerDenominationOut]
+
+
+class ResellerSellIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    denomination_id: uuid.UUID
+
+
+class ResellerSaleOut(BaseModel):
+    """**الرمزُ هنا مرّةً واحدةً للإيصال** — ولا يُخزَّن إلا بصمتُه."""
+
+    serial: str
+    code: str
+    amount: Decimal
+    currency: Currency
+    shop_name: str
+    sold_at: datetime
+    expires_at: datetime
+
+
+class ResellerSaleRowOut(BaseModel):
+    serial: str
+    amount: Decimal
+    currency: Currency
+    state: TaxoCardState
+    sold_at: datetime
+    redeemed_at: datetime | None
+
+
+class InvoiceSettingsOut(BaseModel):
+    """**البائعُ على فاتورة الشركات** (§١٠٠-ب/٧) — يكتبه المالك، وفارغُه يُطبع «TAXO» وحدَها."""
+
+    invoice_seller_name: str | None
+    invoice_seller_tax_number: str | None
+
+
+class InvoiceSettingsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: CountryCode
+    invoice_seller_name: str | None = Field(default=None, max_length=160)
+    invoice_seller_tax_number: str | None = Field(default=None, max_length=40)
+
+
+class CardBatchExtendIn(BaseModel):
+    """**التمديدُ بسببٍ مكتوب** (§١٠٠-ب/١٢)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    expires_at: datetime
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class CardKindReportOut(BaseModel):
+    """**سطرُ نوعٍ في تقرير البطاقات** (§١٠٠-ب/١٤) — `batch` مطبوعة · `gift` هدية · `pos` بيعٌ في المحلّ · `corporate` للشركات (من المطبوعة)."""
+
+    kind: str
+    currency: Currency
+    batches: int
+    cards: int
+    redeemed: int
+    cancelled: int
+    unused: int
+    expired: int
+    #: **نسبةُ الاستعمال** من البطاقات غير الملغاة، بخانةٍ عشريّةٍ واحدة — نصٌّ لا كسرٌ عائم
+    redemption_rate: str
+    issued_amount: Decimal
+    redeemed_amount: Decimal
+    outstanding_amount: Decimal
+    expired_amount: Decimal

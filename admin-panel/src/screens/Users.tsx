@@ -45,6 +45,8 @@ const ROLE_LABEL: Record<UserRole, string> = {
   driver: "سائق",
   // **مراجعُ تحويلات BaridiMob** (SPEC §٨٢-ب/٥) — صفحةٌ واحدة، الجزائر وحدَها
   payment_reviewer: "مراجع تحويلات BaridiMob",
+  // **بائعُ بطاقات TAXO في محلّ** (SPEC §١٠٠-ب/٥) — صفحةُ البيع وحدَها
+  card_seller: "بائع بطاقات TAXO",
 };
 
 /** **الدورُ المعروض**: المالكُ يحمل `admin` معه (فكلُّ بابٍ إداريٍّ يفتح له)، فيُقرأ من `roles` لا من `role` وحدَه. */

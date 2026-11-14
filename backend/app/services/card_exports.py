@@ -365,3 +365,112 @@ def gift_print_pdf(meta: BatchMeta, row: CardRow, *, password: str, design: str 
     pdf.set_xy(15, y_back + h + 10)
     pdf.cell(pdf.w - 30, 5, "للمطبعة: ملصقةُ كشطٍ فضّيّة فوق المستطيل البرتقاليّ، والقصُّ على الخطّ المتقطّع.", align="R")
     return bytes(pdf.output())
+
+
+# ---------------------------------------------------------------------------------------------------------------- فاتورةُ الشركة
+
+
+@dataclass(frozen=True)
+class Invoice:
+    """**فاتورةُ دفعةٍ بيعت لشركة** (§١٠٠-ب/٧) — كلُّ ما فيها من الدفعة، **ولا رمز**."""
+
+    number: str
+    issued_at: datetime
+    zone: object
+    country: str
+    currency: str
+    buyer_company: str
+    buyer_tax_number: str | None
+    seller_name: str | None
+    seller_tax_number: str | None
+    batch_title: str
+    amount: Decimal
+    quantity: int
+    expires_at: datetime
+    serials: list[str]
+
+
+def invoice_pdf(invoice: Invoice) -> bytes:
+    """**A4 عموديّ**: الرأسُ والطرفان، وسطرُ الفئة × العدد = المجموع، ثمّ الأرقامُ التسلسليّةُ في أعمدة. **بلا كلمة سرّ**: لا رمزَ فيه."""
+    from fpdf import FPDF
+
+    pdf = FPDF(orientation="P", format="A4")
+    pdf.add_font("plex", "", str(FONTS / "IBMPlexSansArabic-400.ttf"))
+    pdf.add_font("plex", "B", str(FONTS / "IBMPlexSansArabic-700.ttf"))
+    pdf.set_text_shaping(use_shaping_engine=True, direction="rtl", script="arab", language="ar")
+    pdf.set_auto_page_break(auto=True, margin=16)
+    pdf.add_page()
+    width = pdf.w - pdf.l_margin - pdf.r_margin
+
+    pdf.set_font("plex", "B", 20)
+    pdf.set_text_color(255, 107, 0)
+    pdf.cell(width, 12, "TAXO", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("plex", "B", 15)
+    pdf.cell(width, 9, "فاتورةُ بيع بطاقات شحن TAXO", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("plex", "", 10.5)
+    pdf.cell(width, 7, f"رقم الفاتورة {invoice.number} · التاريخ {_local_text(invoice.issued_at, invoice.zone)}", align="R",
+             new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    def party(title: str, name: str | None, tax: str | None) -> None:
+        pdf.set_font("plex", "B", 11)
+        pdf.cell(width, 7, title, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("plex", "", 10.5)
+        pdf.cell(width, 6.5, name or "—", align="R", new_x="LMARGIN", new_y="NEXT")
+        if tax:
+            pdf.cell(width, 6.5, f"الرقم الضريبيّ {tax}", align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+
+    party("البائع", invoice.seller_name or "TAXO", invoice.seller_tax_number)
+    party("المشتري", invoice.buyer_company, invoice.buyer_tax_number)
+
+    total = invoice.amount * invoice.quantity
+    columns = (("البيان", 0.46), ("الفئة", 0.18), ("العدد", 0.14), ("المجموع", 0.22))
+    rows = [
+        [title for title, _ in columns],
+        [
+            f"بطاقات شحن TAXO — الدفعة {invoice.batch_title}",
+            f"{amount_text(invoice.amount, invoice.currency)} {invoice.currency}",
+            str(invoice.quantity),
+            f"{amount_text(total, invoice.currency)} {invoice.currency}",
+        ],
+    ]
+    for index, values in enumerate(rows):
+        bold = index == 0
+        pdf.set_font("plex", "B" if bold else "", 10.5)
+        if bold:
+            pdf.set_fill_color(255, 233, 214)
+        x = pdf.l_margin + width
+        y = pdf.get_y()
+        for (_title, share), value in zip(columns, values, strict=True):
+            x -= width * share
+            pdf.set_xy(x, y)
+            pdf.cell(width * share, 9, value, border=1, align="C", fill=bold)
+        pdf.set_xy(pdf.l_margin, y + 9)
+    pdf.set_font("plex", "B", 12)
+    pdf.cell(width, 10, f"الإجمالي {amount_text(total, invoice.currency)} {invoice.currency}", align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("plex", "", 9.5)
+    pdf.multi_cell(
+        width, 6,
+        f"القيمةُ اسميّةٌ لكلِّ بطاقة. تُستعمل كلُّ بطاقةٍ مرّةً واحدةً في تطبيق TAXO حتى {_local_text(invoice.expires_at, invoice.zone)}.",
+        align="R", new_x="LMARGIN", new_y="NEXT",
+    )
+    pdf.ln(3)
+
+    pdf.set_font("plex", "B", 11)
+    pdf.cell(width, 8, f"الأرقامُ التسلسليّة ({invoice.quantity})", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("plex", "", 8.5)
+    per_row = 4
+    cell_w = width / per_row
+    for start in range(0, len(invoice.serials), per_row):
+        if pdf.get_y() > pdf.h - 22:
+            pdf.add_page()
+        y = pdf.get_y()
+        x = pdf.l_margin + width
+        for serial in invoice.serials[start:start + per_row]:
+            x -= cell_w
+            pdf.set_xy(x, y)
+            pdf.cell(cell_w, 5.5, serial, align="C")
+        pdf.set_xy(pdf.l_margin, y + 5.5)
+    return bytes(pdf.output())

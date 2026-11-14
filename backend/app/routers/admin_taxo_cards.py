@@ -13,13 +13,22 @@ from fastapi.responses import Response
 from sqlalchemy import select
 
 from app.core.currency import currency_for_country
-from app.core.deps import DbSession, FinanceManager, ListReader, SettingsWriter
+from app.core.deps import DbSession, FinanceManager, ListReader, OwnerUser, RedisDep, SettingsWriter
 from app.core.exceptions import NotFound
 from app.models.enums import AuditAction, CountryCode
 from app.models.taxo_card import CardDenomination, CardShop
 from app.models.user import User
 from app.schemas.payment_request import PaymentReasonIn
 from app.schemas.taxo_card import (
+    CardBatchExtendIn,
+    CardKindReportOut,
+    InvoiceSettingsIn,
+    InvoiceSettingsOut,
+    PosSettingsIn,
+    PosSettingsOut,
+    SellerActiveIn,
+    SellerCreateIn,
+    SellerOut,
     BatchCardsOut,
     CardExportIn,
     CardBatchCreatedOut,
@@ -42,7 +51,7 @@ from app.schemas.taxo_card import (
     TaxoCardLimitsOut,
     TaxoCardOut,
 )
-from app.services import audit, card_gifts, taxo_cards
+from app.services import audit, card_gifts, card_sellers, taxo_cards
 
 router = APIRouter(prefix="/admin/taxo-cards", tags=["admin"])
 
@@ -63,6 +72,10 @@ def _batch_out(row: taxo_cards.BatchFigures) -> CardBatchOut:
         created_at=batch.created_at, active=row.active, redeemed=row.redeemed, cancelled=row.cancelled,
         unused=row.unused, expired=row.expired,
         redeemed_amount=row.redeemed_value, live_amount=row.live_value, due_amount=row.due_from_shop, kind=batch.kind,
+        buyer_company=batch.buyer_company, buyer_tax_number=batch.buyer_tax_number,
+        invoice_number=(
+            f"INV-{batch.country_code.value}-{batch.invoice_number:06d}" if batch.invoice_number is not None else None
+        ),
     )
 
 
@@ -145,6 +158,7 @@ async def create_batch(payload: CardBatchIn, admin: FinanceManager, session: DbS
     batch, codes = await taxo_cards.create_batch(
         session, actor=admin, country=payload.country_code, denomination_id=payload.denomination_id,
         quantity=payload.quantity, shop_id=payload.shop_id, valid_from=payload.valid_from, expires_at=payload.expires_at,
+        buyer_company=payload.buyer_company, buyer_tax_number=payload.buyer_tax_number,
     )
     await session.commit()
     return CardBatchCreatedOut(
@@ -179,6 +193,21 @@ async def cancel_batch(batch_id: uuid.UUID, payload: PaymentReasonIn, admin: Fin
 # ------------------------------------------------------------------ البطاقات
 
 
+async def _origins(session, batches) -> dict:
+    """**من باع البطاقةَ ومتى** (§١٠٠-ب/٤) — من دفعتها: المحلُّ ونوعُها، ومن أصدرها ووقتُ إصدارها."""
+    ids = {b.created_by for b in batches if b.created_by}
+    names = (
+        {u.id: u.name for u in (await session.scalars(select(User).where(User.id.in_(ids)))).all()} if ids else {}
+    )
+    return {
+        b.id: {
+            "batch_kind": b.kind, "shop_name": b.shop.name if b.shop else None,
+            "issued_by_name": names.get(b.created_by) if b.created_by else None, "issued_at": b.created_at,
+        }
+        for b in batches
+    }
+
+
 @router.get("/batches/{batch_id}/cards", response_model=BatchCardsOut)
 async def batch_cards(
     batch_id: uuid.UUID,
@@ -192,13 +221,14 @@ async def batch_cards(
     """**صفحةُ «دفعات البطاقات»** (SPEC §١٠٠-أ/٢) — بطاقاتُ دفعةٍ بالتسلسل والحال ومن استعملها ومتى؛ **ولا رمزَ ولا زرَّ كشف**."""
     batch = await taxo_cards.get_batch(session, batch_id)
     rows, total = await taxo_cards.batch_cards(session, batch=batch, query=q, state=state, offset=offset, limit=limit)
+    origin = (await _origins(session, [batch]))[batch.id]
     return BatchCardsOut(
         total=total,
         cards=[
             TaxoCardOut(
                 id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, status=card.status,
                 batch_number=batch.number, redeemed_at=card.redeemed_at, redeemed_by_name=name,
-                cancel_reason=card.cancel_reason, state=card_state,
+                cancel_reason=card.cancel_reason, state=card_state, **origin,
             )
             for card, card_state, name in rows
         ],
@@ -214,11 +244,13 @@ async def find_cards(
         user.id: user.name
         for user in (await session.scalars(select(User).where(User.id.in_({r.redeemed_by for r in rows if r.redeemed_by})))).all()
     } if rows else {}
+    origins = await _origins(session, [row.batch for row in rows])
     return [
         TaxoCardOut(
             id=row.id, serial=row.serial, amount=row.amount, currency=row.currency, status=row.status,
             batch_number=row.batch.number, redeemed_at=row.redeemed_at,
             redeemed_by_name=names.get(row.redeemed_by) if row.redeemed_by else None, cancel_reason=row.cancel_reason,
+            **origins[row.batch_id],
         )
         for row in rows
     ]
@@ -359,3 +391,149 @@ async def cancel_gift(link_id: uuid.UUID, payload: PaymentReasonIn, admin: Finan
     link = await card_gifts.get_link(session, link_id)
     await session.refresh(link.card)
     return gift_out(link, link.card)
+
+
+# ------------------------------------------------------------------ البائعون والبيعُ لحظةَ الطلب (§١٠٠-ب/٤–٥)
+
+
+@router.get("/pos-settings", response_model=PosSettingsOut)
+async def get_pos_settings(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> PosSettingsOut:
+    row = await card_sellers.pos_settings(session, country)
+    return PosSettingsOut(pos_enabled=row.enabled, pos_daily_cap=row.daily_cap, pos_validity_days=row.validity_days)
+
+
+@router.put("/pos-settings", response_model=PosSettingsOut)
+async def save_pos_settings(payload: PosSettingsIn, owner: OwnerUser, session: DbSession) -> PosSettingsOut:
+    """**فتحُ البيع في المحلّات للمالك وحدَه** (§١٠٠-ب/٥) — كلُّ بيعٍ يولّد رمزاً يشحن محفظة."""
+    changes = payload.model_dump(exclude_unset=True, exclude={"country_code"}, exclude_none=True)
+    row = await card_sellers.save_pos_settings(session, actor=owner, country=payload.country_code, changes=changes)
+    await session.commit()
+    return PosSettingsOut(pos_enabled=row.enabled, pos_daily_cap=row.daily_cap, pos_validity_days=row.validity_days)
+
+
+async def _seller_out(session, staff, user, figures=None) -> SellerOut:
+    from app.models.admin_credential import AdminCredential
+    from app.services import totp
+
+    # **بعد الإيداع تنتهي صلاحيةُ الصفّين** — والتحميلُ الكسولُ لا يعمل في جلسةٍ غيرِ متزامنة
+    await session.refresh(staff)
+    await session.refresh(user)
+    credential = await session.scalar(select(AdminCredential).where(AdminCredential.user_id == user.id))
+    f = figures.get(user.id) if figures else None
+    return SellerOut(
+        id=staff.id, user_id=user.id, name=user.name, username=credential.username if credential else None,
+        shop_id=staff.shop_id, shop_name=staff.shop.name, is_active=staff.is_active, is_blocked=user.is_blocked,
+        has_factor=await totp.has_confirmed_factor(session, user.id),
+        must_change_password=bool(credential and credential.must_change_password), created_at=staff.created_at,
+        currency=currency_for_country(staff.shop.country_code),
+        sold=f.sold if f else 0, redeemed=f.redeemed if f else 0, cancelled=f.cancelled if f else 0,
+        sold_amount=f.sold_value if f else 0, redeemed_amount=f.redeemed_value if f else 0,
+    )
+
+
+@router.get("/sellers", response_model=list[SellerOut])
+async def list_sellers(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> list[SellerOut]:
+    """**البائعون ومبيعاتُ كلٍّ منهم** (§١٠٠-ب/٥) — عددٌ وقيمةٌ اسميّة؛ وما يستحقّه المحلُّ في «تقرير المحلّات»."""
+    figures = await card_sellers.seller_figures(session, country)
+    return [await _seller_out(session, staff, user, figures) for staff, user in await card_sellers.sellers(session, country)]
+
+
+@router.post("/sellers", response_model=SellerOut, status_code=status.HTTP_201_CREATED)
+async def create_seller(payload: SellerCreateIn, owner: OwnerUser, session: DbSession, redis: RedisDep) -> SellerOut:
+    """**ينشئه المالكُ بيده** — الاسمُ واسمُ الدخول وكلمةٌ مؤقّتة؛ والعاملُ الثاني يُسجَّل عند أوّل دخول قبل أيِّ صفحة."""
+    staff, user, _username = await card_sellers.create_seller(
+        session, redis, actor=owner, shop_id=payload.shop_id, name=payload.name, username=payload.username,
+        password=payload.password,
+    )
+    await session.commit()
+    return await _seller_out(session, staff, user)
+
+
+@router.post("/sellers/{staff_id}/active", response_model=SellerOut)
+async def set_seller_active(staff_id: uuid.UUID, payload: SellerActiveIn, owner: OwnerUser, session: DbSession) -> SellerOut:
+    staff = await card_sellers.set_seller_active(session, actor=owner, staff_id=staff_id, active=payload.is_active)
+    user_id = staff.user_id
+    await session.commit()
+    user = await session.get(User, user_id)
+    return await _seller_out(session, staff, user)
+
+
+# ------------------------------------------------------------------ بطاقاتُ الشركات بفاتورة (§١٠٠-ب/٧)
+
+
+@router.get("/batches/{batch_id}/invoice")
+async def batch_invoice(batch_id: uuid.UUID, _r: ListReader, session: DbSession) -> Response:
+    """**فاتورةُ دفعةٍ بيعت لشركة** — بلا رمزٍ واحد، فتُنزَّل متى طُلبت."""
+    batch = await taxo_cards.get_batch(session, batch_id)
+    content, name = await taxo_cards.batch_invoice(session, batch=batch)
+    return Response(
+        content=content, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"},
+    )
+
+
+@router.get("/invoice-settings", response_model=InvoiceSettingsOut)
+async def get_invoice_settings(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> InvoiceSettingsOut:
+    from app.models.taxo_card import TaxoCardSetting
+
+    row = await session.scalar(select(TaxoCardSetting).where(TaxoCardSetting.country_code == country))
+    return InvoiceSettingsOut(
+        invoice_seller_name=row.invoice_seller_name if row else None,
+        invoice_seller_tax_number=row.invoice_seller_tax_number if row else None,
+    )
+
+
+@router.put("/invoice-settings", response_model=InvoiceSettingsOut)
+async def save_invoice_settings(payload: InvoiceSettingsIn, owner: OwnerUser, session: DbSession) -> InvoiceSettingsOut:
+    """**بياناتُ الشركة على الفاتورة يكتبها المالك وحدَه** — لا تُخترع."""
+    changes = {
+        key: (value.strip() or None) if isinstance(value, str) else value
+        for key, value in payload.model_dump(exclude_unset=True, exclude={"country_code"}).items()
+    }
+    row = await card_sellers.save_pos_settings(session, actor=owner, country=payload.country_code, changes=changes)
+    del row
+    await session.commit()
+    return await get_invoice_settings(owner, session, payload.country_code)
+
+
+# ------------------------------------------------------------------ الصلاحية والتقرير (§١٠٠-ب/١٢ و١٤)
+
+
+@router.get("/expiring", response_model=list[CardBatchOut])
+async def expiring_batches(
+    _r: ListReader, session: DbSession, country: CountryCode = Query(), days: int = Query(30, ge=1, le=365)
+) -> list[CardBatchOut]:
+    """**تذكيرُ الصلاحية في اللوحة** — دفعاتٌ وهدايا وبطاقاتُ بيعٍ تنتهي خلال `days` يوماً وفيها ما لم يُستعمل."""
+    from datetime import timedelta
+
+    figures = await taxo_cards.batch_figures(session, country)
+    return [_batch_out(row) for row in taxo_cards.expiring(figures, within=timedelta(days=days))]
+
+
+@router.post("/batches/{batch_id}/extend", response_model=CardBatchOut)
+async def extend_batch(batch_id: uuid.UUID, payload: CardBatchExtendIn, admin: FinanceManager, session: DbSession) -> CardBatchOut:
+    batch = await taxo_cards.get_batch(session, batch_id, for_update=True)
+    country = batch.country_code
+    await taxo_cards.extend_batch(session, batch=batch, actor=admin, expires_at=payload.expires_at, reason=payload.reason)
+    await session.commit()
+    return await _one_batch(session, country, batch_id)
+
+
+@router.get("/report/kinds", response_model=list[CardKindReportOut])
+async def kind_report(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> list[CardKindReportOut]:
+    """**تقريرُ البطاقات بالنوع** (§١٠٠-ب/١٤) — والمحلّاتُ في `report/shops`، والبائعون في `sellers`، والدفعةُ في قائمتها."""
+    from decimal import ROUND_HALF_UP, Decimal
+
+    totals = taxo_cards.kind_totals(await taxo_cards.batch_figures(session, country))
+    currency = currency_for_country(country)
+    out = []
+    for kind, t in totals.items():
+        live = int(t["cards"]) - int(t["cancelled"])
+        rate = (Decimal(int(t["redeemed"]) * 100) / Decimal(live)).quantize(Decimal("0.1"), ROUND_HALF_UP) if live else Decimal("0")
+        out.append(CardKindReportOut(
+            kind=kind, currency=currency, batches=int(t["batches"]), cards=int(t["cards"]), redeemed=int(t["redeemed"]),
+            cancelled=int(t["cancelled"]), unused=int(t["unused"]), expired=int(t["expired"]), redemption_rate=str(rate),
+            issued_amount=t["issued_value"], redeemed_amount=t["redeemed_value"], outstanding_amount=t["outstanding_value"],
+            expired_amount=t["expired_value"],
+        ))
+    return out

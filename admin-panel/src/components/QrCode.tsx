@@ -19,10 +19,12 @@ export function QrCode({
   payload,
   size = 200,
   className,
+  alt = "رمز إعداد التحقق الثنائي",
 }: {
   payload: string;
   size?: number;
   className?: string;
+  alt?: string;
 }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function QrCode({
   return (
     <img
       src={dataUrl}
-      alt="رمز إعداد التحقق الثنائي"
+      alt={alt}
       width={size}
       height={size}
       className={cn("rounded-12 bg-white p-8", className)}

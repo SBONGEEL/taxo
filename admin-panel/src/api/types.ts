@@ -17,7 +17,7 @@ export type MarketStatus = "open" | "closed";
 /** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
 export type SignupState = "open" | "soon" | "hidden" | "stopped";
 export type Currency = "JOD" | "LYD" | "DZD";
-export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer";
+export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer" | "card_seller";
 
 export interface User {
   id: string;
@@ -3096,7 +3096,11 @@ export interface CardBatch {
   live_amount: string;
   due_amount: string;
   /** نوعُ الدفعة (§١٠٠-أ/٣) */
-  kind?: "batch" | "gift";
+  kind?: "batch" | "gift" | "pos";
+  /** **دفعةُ شركة** (§١٠٠-ب/٧) */
+  buyer_company?: string | null;
+  buyer_tax_number?: string | null;
+  invoice_number?: string | null;
 }
 
 /** **الرموزُ هنا مرّةً واحدة** — ولا بابَ يعيدها. */
@@ -3117,6 +3121,11 @@ export interface TaxoCardRow {
   cancel_reason: string | null;
   /** **الحالُ كما تُقرأ** — من نافذة الدفعة لحظةَ القراءة */
   state: TaxoCardState;
+  /** **من باعها ومتى** (§١٠٠-ب/٤): نوعُ الدفعة ومحلُّها، ومن أصدرها ووقتُ إصدارها */
+  batch_kind?: "batch" | "gift" | "pos";
+  shop_name?: string | null;
+  issued_by_name?: string | null;
+  issued_at?: string | null;
 }
 
 /** **حالُ البطاقة المقروءة** (SPEC §١٠٠-أ/٢) — المخزَّنةُ ثلاث، و«منتهية» و«لم تبدأ» مشتقّتان */
@@ -3805,4 +3814,89 @@ export interface GiftCreated {
   serial: string;
   url: string | null;
   code: { serial: string; code: string } | null;
+}
+
+
+// ------------------------------------------------------------------ البائعون والبيعُ لحظةَ الطلب (SPEC §١٠٠-ب/٤–٥)
+
+export interface PosSettings {
+  pos_enabled: boolean;
+  pos_daily_cap: number;
+  pos_validity_days: number;
+}
+
+export interface CardSeller {
+  id: string;
+  user_id: string;
+  name: string;
+  username: string | null;
+  shop_id: string;
+  shop_name: string;
+  is_active: boolean;
+  is_blocked: boolean;
+  has_factor: boolean;
+  must_change_password: boolean;
+  created_at: string;
+  currency: Currency;
+  sold: number;
+  redeemed: number;
+  cancelled: number;
+  sold_amount: string;
+  redeemed_amount: string;
+}
+
+export interface ResellerMe {
+  name: string;
+  shop_name: string;
+  country_code: CountryCode;
+  currency: Currency;
+  enabled: boolean;
+  sold_today: number;
+  daily_cap: number;
+  validity_days: number;
+  denominations: { id: string; amount: string; currency: Currency }[];
+}
+
+/** **الرمزُ هنا مرّةً واحدةً للإيصال** */
+export interface ResellerSale {
+  serial: string;
+  code: string;
+  amount: string;
+  currency: Currency;
+  shop_name: string;
+  sold_at: string;
+  expires_at: string;
+}
+
+export interface ResellerSaleRow {
+  serial: string;
+  amount: string;
+  currency: Currency;
+  state: TaxoCardState;
+  sold_at: string;
+  redeemed_at: string | null;
+}
+
+
+/** **سطرُ نوعٍ في تقرير البطاقات** (SPEC §١٠٠-ب/١٤) */
+export interface CardKindReport {
+  kind: "batch" | "gift" | "pos" | "corporate";
+  currency: Currency;
+  batches: number;
+  cards: number;
+  redeemed: number;
+  cancelled: number;
+  unused: number;
+  expired: number;
+  redemption_rate: string;
+  issued_amount: string;
+  redeemed_amount: string;
+  outstanding_amount: string;
+  expired_amount: string;
+}
+
+/** **بياناتُ البائع في فواتير الشركات** (SPEC §١٠٠-ب/٧) — يكتبها المالكُ وحدَه؛ و«TAXO» حين تُترك فارغة */
+export interface InvoiceSettings {
+  invoice_seller_name: string | null;
+  invoice_seller_tax_number: string | null;
 }

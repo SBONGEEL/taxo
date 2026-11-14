@@ -82,7 +82,9 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("country_code", "number"),
         CheckConstraint("amount > 0", name="card_batch_amount_positive"),
         CheckConstraint("quantity > 0", name="card_batch_quantity_positive"),
-        CheckConstraint("kind IN ('batch', 'gift')", name="card_batches_kind_known"),
+        CheckConstraint("kind IN ('batch', 'gift', 'pos')", name="card_batches_kind_known"),
+        UniqueConstraint("country_code", "invoice_number", name="uq_card_batches_country_invoice"),
+        CheckConstraint("(buyer_company IS NULL) = (invoice_number IS NULL)", name="card_batches_invoice_has_buyer"),
         CheckConstraint("expires_at > valid_from", name="card_batch_window"),
         CheckConstraint(
             "status <> 'cancelled' OR length(btrim(coalesce(cancel_reason, ''))) > 0", name="card_batch_cancel_has_reason"
@@ -118,8 +120,13 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
 
     shop: Mapped[CardShop | None] = relationship(CardShop, lazy="joined")
 
-    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` الدفعةُ المطبوعةُ كما كانت، و`gift` بطاقةُ هديةٍ واحدةٌ برابطٍ خاصّ
+    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` الدفعةُ المطبوعةُ كما كانت، و`gift` بطاقةُ هديةٍ واحدةٌ برابطٍ خاصّ،
+    #: و`pos` بطاقةٌ واحدةٌ وُلّدت لحظةَ البيع في محلٍّ موزّع (§١٠٠-ب/٥) — **وبائعُها `created_by` ووقتُها `created_at`**
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="batch", server_default=text("'batch'"))
+    #: **دفعةٌ بيعت لشركة** (§١٠٠-ب/٧) — اسمُها ورقمُها الضريبيّ، **ورقمُ فاتورتها متتابعٌ في سوقها**؛ فارغةٌ لكلِّ دفعةٍ غيرها
+    buyer_company: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    buyer_tax_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    invoice_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class TaxoCard(UUIDMixin, TimestampMixin, Base):
@@ -229,6 +236,14 @@ class TaxoCardSetting(UUIDMixin, TimestampMixin, Base):
     max_wrong_per_account: Mapped[int] = mapped_column(Integer, nullable=False, default=5, server_default=text("5"))
     max_wrong_per_ip: Mapped[int] = mapped_column(Integer, nullable=False, default=20, server_default=text("20"))
     window_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60, server_default=text("60"))
+    #: **البيعُ لحظةَ الطلب في المحلّات** (§١٠٠-ب/٥) — **مطفأٌ حتى يفتحه المالك**، وسقفُه اليوميُّ لكلِّ بائعٍ عددٌ لا مال،
+    #: وصلاحيةُ البطاقة المبيعة بالأيام
+    pos_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    pos_daily_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=20, server_default=text("20"))
+    pos_validity_days: Mapped[int] = mapped_column(Integer, nullable=False, default=365, server_default=text("365"))
+    #: **بياناتُ البائع على فاتورة الشركات** (§١٠٠-ب/٧) — يكتبها المالك، وفارغةٌ لا تُطبع (لا تُخترع بياناتُ شركة)
+    invoice_seller_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    invoice_seller_tax_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class CardGuessAlert(UUIDMixin, TimestampMixin, Base):
@@ -248,3 +263,23 @@ class CardGuessAlert(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CardShopStaff(UUIDMixin, TimestampMixin, Base):
+    """**بائعٌ مربوطٌ بمحلّ** (§١٠٠-ب/٥) — حسابُ لوحةٍ بدور `card_seller`، **ومحلُّه من هنا لا من الطلب**: فلا يبيع باسم غيره."""
+
+    __tablename__ = "card_shop_staff"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_card_shop_staff_user"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    shop_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("card_shops.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    shop: Mapped[CardShop] = relationship(CardShop, lazy="joined")

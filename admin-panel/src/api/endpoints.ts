@@ -46,10 +46,17 @@ import type {
   TransferSettings,
   CardBatch,
   BatchCards,
+  CardKindReport,
+  InvoiceSettings,
+  CardSeller,
   GiftChannel,
   GiftCreated,
   GiftDesign,
   GiftLink,
+  PosSettings,
+  ResellerMe,
+  ResellerSale,
+  ResellerSaleRow,
   CardBatchCreated,
   CardDenomination,
   CardGuessAlert,
@@ -2477,6 +2484,8 @@ export const createCardBatch = (body: {
   shop_id: string | null;
   valid_from: string;
   expires_at: string;
+  buyer_company?: string | null;
+  buyer_tax_number?: string | null;
 }) => api.post<CardBatchCreated>("/admin/taxo-cards/batches", body);
 
 /** **ملفُّ الدفعة لحظةَ إنشائها** (SPEC §١٠٠-أ/١) — Excel أو PDF أو ورقةُ المطبعة، **بكلمة سرّ**؛ والرموزُ من ردّ الإنشاء
@@ -2843,3 +2852,70 @@ export const markGiftSent = (id: string, channel: GiftChannel) =>
   api.post<GiftLink>(`/admin/taxo-cards/gifts/${id}/sent`, { channel });
 
 export const cancelGift = (id: string, reason: string) => api.post<GiftLink>(`/admin/taxo-cards/gifts/${id}/cancel`, { reason });
+
+
+// ------------------------------------------------------------------ البائعون والبيعُ لحظةَ الطلب (SPEC §١٠٠-ب/٤–٥)
+
+export const getPosSettings = (country: CountryCode) =>
+  api.get<PosSettings>("/admin/taxo-cards/pos-settings", { query: { country } });
+
+export const savePosSettings = (country: CountryCode, changes: Partial<PosSettings>) =>
+  api.put<PosSettings>("/admin/taxo-cards/pos-settings", { country_code: country, ...changes });
+
+export const listCardSellers = (country: CountryCode) =>
+  api.get<CardSeller[]>("/admin/taxo-cards/sellers", { query: { country } });
+
+export const createCardSeller = (body: { shop_id: string; name: string; username: string; password: string }) =>
+  api.post<CardSeller>("/admin/taxo-cards/sellers", body);
+
+export const setCardSellerActive = (id: string, isActive: boolean) =>
+  api.post<CardSeller>(`/admin/taxo-cards/sellers/${id}/active`, { is_active: isActive });
+
+export const resellerMe = () => api.get<ResellerMe>("/reseller/me");
+
+export const resellerSell = (denominationId: string) => api.post<ResellerSale>("/reseller/sell", { denomination_id: denominationId });
+
+export const resellerSales = () => api.get<ResellerSaleRow[]>("/reseller/sales");
+
+/** **فاتورةُ دفعة الشركة** (SPEC §١٠٠-ب/٧) — بلا رمز، فتُنزَّل متى طُلبت */
+export async function downloadBatchInvoice(batchId: string): Promise<void> {
+  const answer = await fetch(`${API_URL}/admin/taxo-cards/batches/${batchId}/invoice`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) {
+    let message = "تعذّر تنزيلُ الفاتورة";
+    try {
+      message = ((await answer.json()) as { message?: string }).message ?? message;
+    } catch {
+      /* ردٌّ غيرُ مقروء */
+    }
+    throw new Error(message);
+  }
+  const named = /filename="([^"]+)"/.exec(answer.headers.get("content-disposition") ?? "");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(await answer.blob());
+  link.download = named?.[1] ?? "taxo-invoice.pdf";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
+
+// ------------------------------------------------------------------ الصلاحيةُ والتقرير (SPEC §١٠٠-ب/١٢ و١٤)
+
+export const cardKindReport = (country: CountryCode) =>
+  api.get<CardKindReport[]>("/admin/taxo-cards/report/kinds", { query: { country } });
+
+export const listExpiringBatches = (country: CountryCode, days = 30) =>
+  api.get<CardBatch[]>("/admin/taxo-cards/expiring", { query: { country, days } });
+
+export const extendCardBatch = (id: string, expiresAt: string, reason: string) =>
+  api.post<CardBatch>(`/admin/taxo-cards/batches/${id}/extend`, { expires_at: expiresAt, reason });
+
+/** **بياناتُ البائع في فواتير الشركات** (SPEC §١٠٠-ب/٧) — القراءةُ للطاقم والكتابةُ للمالك يحرسها الخادم */
+export const getInvoiceSettings = (country: CountryCode) =>
+  api.get<InvoiceSettings>("/admin/taxo-cards/invoice-settings", { query: { country } });
+
+export const saveInvoiceSettings = (country: CountryCode, body: InvoiceSettings) =>
+  api.put<InvoiceSettings>("/admin/taxo-cards/invoice-settings", { country_code: country, ...body });

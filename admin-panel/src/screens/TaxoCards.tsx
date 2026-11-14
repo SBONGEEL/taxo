@@ -19,6 +19,7 @@ import {
   cancelTaxoCard,
   cardShopReport,
   createCardBatch,
+  createCardSeller,
   createCardShop,
   createGift,
   exportCardBatch,
@@ -28,7 +29,17 @@ import {
   listBatchCards,
   listCardBatches,
   listCardDenominations,
+  downloadBatchInvoice,
+  cardKindReport,
+  extendCardBatch,
+  getInvoiceSettings,
+  listCardSellers,
+  saveInvoiceSettings,
+  listExpiringBatches,
   listCardShops,
+  getPosSettings,
+  savePosSettings,
+  setCardSellerActive,
   listGifts,
   markGiftSent,
   reviewCardAlert,
@@ -44,12 +55,16 @@ import type {
   CardShop,
   CardShopPaymentMode,
   CardShopReport,
+  CardKindReport,
+  CardSeller,
   CountryCode,
+  InvoiceSettings,
   GiftChannel,
   GiftCreated,
   GiftDesign,
   GiftLink,
   GiftState,
+  PosSettings,
   TaxoCardLimits,
   TaxoCardRow,
   TaxoCardState,
@@ -72,7 +87,7 @@ import { useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, cn, digits } from "@/lib/utils";
 
-type Tab = "batches" | "gifts" | "cards" | "shops" | "denominations" | "report" | "alerts";
+type Tab = "batches" | "gifts" | "cards" | "shops" | "sellers" | "denominations" | "report" | "alerts";
 
 function day(iso: string): string {
   return digits(new Date(iso).toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long", year: "numeric" }));
@@ -101,6 +116,7 @@ export function TaxoCardsScreen() {
           { key: "gifts", label: "الهدايا" },
           { key: "cards", label: "البطاقات" },
           { key: "shops", label: "المحلّات" },
+          { key: "sellers", label: "البائعون" },
           { key: "denominations", label: "الفئات" },
           { key: "report", label: "التقرير" },
           { key: "alerts", label: "التخمين" },
@@ -113,10 +129,11 @@ export function TaxoCardsScreen() {
         {tab === "gifts" ? <GiftsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "cards" ? <CardsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "shops" ? <ShopsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
+        {tab === "sellers" ? <SellersTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "denominations" ? (
           <DenominationsTab country={country} currency={currency} isAdmin={isAdmin} onError={setError} onDone={setDone} />
         ) : null}
-        {tab === "report" ? <ReportTab country={country} onError={setError} /> : null}
+        {tab === "report" ? <ReportTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "alerts" ? <AlertsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
       </div>
     </Shell>
@@ -140,7 +157,7 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
   const [opened, setOpened] = useState<CardBatch | null>(null);
 
   const load = useCallback(
-    async () => setRows((await listCardBatches(country)).filter((row) => row.kind !== "gift")),
+    async () => setRows((await listCardBatches(country)).filter((row) => row.kind !== "gift" && row.kind !== "pos")),
     [country],
   );
   useEffect(() => {
@@ -169,7 +186,8 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
               {digits(row.amount)} × {digits(String(row.quantity))}
             </span>
             <span className="min-w-0 text-muted">
-              <span className="block truncate">{row.shop_name ?? "—"}</span>
+              <span className="block truncate">{row.buyer_company ? `شركة: ${row.buyer_company}` : (row.shop_name ?? "—")}</span>
+              {row.invoice_number ? <span className="block text-10.5" dir="ltr">{row.invoice_number}</span> : null}
               {row.payment_mode_at_issue ? (
                 <span className="block text-10.5">
                   {CARD_SHOP_PAYMENT_MODE_LABEL[row.payment_mode_at_issue]} · خصم {digits(row.discount_percent_at_issue)}٪
@@ -199,6 +217,15 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
               <button type="button" onClick={() => setOpened(row)} className="text-11.5 font-semibold text-accent">
                 البطاقات
               </button>
+              {row.invoice_number ? (
+                <button
+                  type="button"
+                  onClick={() => downloadBatchInvoice(row.id).catch((caught) => onError(errorText(caught, "تعذّر تنزيلُ الفاتورة")))}
+                  className="text-11.5 font-semibold text-ink"
+                >
+                  الفاتورة
+                </button>
+              ) : null}
               {isAdmin && row.status === "active" ? (
                 <button type="button" onClick={() => setCancelling(row)} className="text-11.5 font-semibold text-danger">
                   إلغاء الدفعة
@@ -264,6 +291,9 @@ function BatchModal({
   const [quantity, setQuantity] = useState("");
   const [validFrom, setValidFrom] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [corporate, setCorporate] = useState(false);
+  const [company, setCompany] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -287,9 +317,11 @@ function BatchModal({
           country_code: country,
           denomination_id: denominationId,
           quantity: Number(quantity),
-          shop_id: shopId || null,
+          shop_id: corporate ? null : shopId || null,
           valid_from: new Date(`${validFrom}T00:00:00`).toISOString(),
           expires_at: new Date(`${expiresAt}T23:59:59`).toISOString(),
+          buyer_company: corporate ? company.trim() : null,
+          buyer_tax_number: corporate ? taxNumber.trim() || null : null,
         }),
       );
     } catch (caught) {
@@ -318,15 +350,33 @@ function BatchModal({
           value={quantity}
           onChange={(event) => setQuantity(event.target.value.replace(/\D/g, ""))}
         />
-        <Select label="المحلّ" name="shop_id" value={shopId} onChange={(event) => setShopId(event.target.value)}>
-          <option value="">بلا محلّ (مكتب TAXO)</option>
-          {shops.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name}
-            </option>
-          ))}
-        </Select>
-        <span />
+        {corporate ? (
+          <Field label="اسمُ الشركة المشترية" name="buyer_company" value={company} onChange={(event) => setCompany(event.target.value)} />
+        ) : (
+          <Select label="المحلّ" name="shop_id" value={shopId} onChange={(event) => setShopId(event.target.value)}>
+            <option value="">بلا محلّ (مكتب TAXO)</option>
+            {shops.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </Select>
+        )}
+        {corporate ? (
+          <Field
+            label="الرقمُ الضريبيّ للشركة (اختياريّ)"
+            name="buyer_tax_number"
+            dir="ltr"
+            value={taxNumber}
+            onChange={(event) => setTaxNumber(event.target.value)}
+          />
+        ) : (
+          <span />
+        )}
+        <span className="flex items-center gap-8 text-12 text-ink sm:col-span-2">
+          <Switch checked={corporate} onChange={setCorporate} label="دفعةٌ لشركةٍ بفاتورة" />
+          دفعةٌ لشركةٍ بفاتورة — تُعلَّم الدفعةُ بها ويُصدر لها رقمُ فاتورة
+        </span>
         <DateInput label="تبدأ العمل في" name="valid_from" value={validFrom} onChange={setValidFrom} />
         <DateInput label="تنتهي صلاحيتها في" name="expires_at" value={expiresAt} onChange={setExpiresAt} />
       </div>
@@ -339,7 +389,7 @@ function BatchModal({
           className="flex-1"
           size="md"
           loading={busy}
-          disabled={!denominationId || Number(quantity) < 1 || !validFrom || !expiresAt}
+          disabled={!denominationId || Number(quantity) < 1 || !validFrom || !expiresAt || (corporate && company.trim().length < 2)}
           onClick={() => void submit()}
         >
           ولّد الدفعة
@@ -566,6 +616,13 @@ export function CardBatchesScreen() {
 
 // ------------------------------------------------------------------ البطاقات
 
+/** **من باع البطاقةَ ومتى** (§١٠٠-ب/٤) — المحلُّ ومن أصدرها ووقتُ إصدارها، ونوعُها إن لم تكن من دفعةٍ مطبوعة */
+function origin(row: TaxoCardRow): string {
+  const kind = row.batch_kind === "pos" ? "بيعٌ في المحلّ" : row.batch_kind === "gift" ? "هدية" : null;
+  const parts = [kind, row.shop_name, row.issued_by_name, row.issued_at ? day(row.issued_at) : null].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "—";
+}
+
 function CardsTab({ country, isAdmin, onError, onDone }: TabProps) {
   const search = useSearch();
   const [rows, setRows] = useState<TaxoCardRow[] | null>([]);
@@ -589,8 +646,8 @@ function CardsTab({ country, isAdmin, onError, onDone }: TabProps) {
         toolbar={<TableSearch value={search.text} onChange={search.setText} placeholder="الرقمُ التسلسليّ (ثلاثةُ أحرفٍ على الأقل)…" />}
         searching={search.searching}
         noResults={{ title: "لا بطاقة", hint: "ابحث بجزءٍ من الرقم التسلسليّ المطبوع — الرمزُ نفسُه لا يُبحث به." }}
-        columns="1.4fr 0.8fr 0.6fr 1.4fr 1fr"
-        headers={["الرقم التسلسليّ", "القيمة", "الدفعة", "الحال", ""]}
+        columns="1.3fr 0.8fr 1.3fr 1.3fr 0.6fr"
+        headers={["الرقم التسلسليّ", "القيمة", "الدفعة ومن باعها", "الحال", ""]}
         rows={rows}
         keyOf={(row) => row.id}
         empty={{ title: "ابحث عن بطاقة", hint: "اكتب جزءاً من رقمها التسلسليّ — لإلغاء بطاقةٍ ضاعت أو معرفة من استعملها." }}
@@ -602,7 +659,10 @@ function CardsTab({ country, isAdmin, onError, onDone }: TabProps) {
             <span className="text-ink">
               {digits(row.amount)} {row.currency}
             </span>
-            <span className="text-muted">#{digits(String(row.batch_number))}</span>
+            <span className="text-muted">
+              #{digits(String(row.batch_number))}
+              <span className="block text-10.5">{origin(row)}</span>
+            </span>
             <span className={cn("font-semibold", row.status === "active" ? "text-ok" : "text-muted")}>
               {TAXO_CARD_STATUS_LABEL[row.status]}
               {row.redeemed_at ? (
@@ -858,7 +918,7 @@ function DenominationsTab({
 
 // ------------------------------------------------------------------ التقرير
 
-function ReportTab({ country, onError }: { country: CountryCode; onError: (message: string | null) => void }) {
+function ShopReport({ country, onError }: { country: CountryCode; onError: (message: string | null) => void }) {
   const [rows, setRows] = useState<CardShopReport[] | null>(null);
   useEffect(() => {
     cardShopReport(country)
@@ -1387,5 +1447,473 @@ function GiftCreatedModal({ created, onSent, onClose }: { created: GiftCreated; 
         {url ? "أرسلتُ الرابط — أغلق" : "حفظتُ الملفّ — أغلق"}
       </Button>
     </Modal>
+  );
+}
+
+// ------------------------------------------------------------------ البائعون والبيعُ لحظةَ الطلب (SPEC §١٠٠-ب/٤–٥)
+
+/** **البائعون في المحلّات** — حساباتٌ ينشئها المالك، ومبيعاتُ كلٍّ منهم، **ومفتاحُ البيع للمالك وحدَه**. */
+function SellersTab({ country, onError, onDone }: TabProps) {
+  const { user } = useSession();
+  const isOwner = Boolean(user?.roles?.includes("owner"));
+  const [rows, setRows] = useState<CardSeller[] | null>(null);
+  const [pos, setPos] = useState<PosSettings | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [cap, setCap] = useState("");
+  const [validity, setValidity] = useState("");
+
+  const load = useCallback(async () => {
+    const [sellers, settings] = await Promise.all([listCardSellers(country), getPosSettings(country)]);
+    setRows(sellers);
+    setPos(settings);
+    setCap(String(settings.pos_daily_cap));
+    setValidity(String(settings.pos_validity_days));
+  }, [country]);
+  useEffect(() => {
+    load().catch((caught) => onError(errorText(caught, "تعذّر قراءة البائعين")));
+  }, [load, onError]);
+
+  async function save(changes: Partial<Omit<PosSettings, never>>, message: string) {
+    setBusy(true);
+    try {
+      setPos(await savePosSettings(country, changes));
+      onDone(message);
+    } catch (caught) {
+      onError(errorText(caught, "تعذّر الحفظ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="mb-14 rounded-card border border-line bg-surface p-14">
+        <div className="flex flex-wrap items-center gap-10">
+          <span className="text-13 font-semibold text-ink">البيعُ في المحلّات لحظةَ الطلب</span>
+          <span className={cn("text-12 font-semibold", pos?.pos_enabled ? "text-ok" : "text-muted")}>
+            {pos ? (pos.pos_enabled ? "مفتوح" : "مطفأ") : "…"}
+          </span>
+          {isOwner && pos ? (
+            <Button
+              size="sm"
+              variant={pos.pos_enabled ? "secondary" : "primary"}
+              loading={busy}
+              onClick={() => void save({ pos_enabled: !pos.pos_enabled }, pos.pos_enabled ? "أُطفئ البيعُ في المحلّات" : "فُتح البيعُ في المحلّات")}
+            >
+              {pos.pos_enabled ? "إطفاء" : "فتح البيع"}
+            </Button>
+          ) : null}
+        </div>
+        <p className="mt-6 text-11.5 text-muted">
+          كلُّ بيعٍ يولّد بطاقةً واحدةً باسم محلّ البائع، ورمزُها يظهر في الإيصال مرّةً ولا يُخزَّن. ورصيدُ المحلّ وحدُّ ائتمانه
+          وعمولتُه وتسويتُه تنتظر قيمَ المالك — وما يستحقّه المحلُّ يُقرأ في «التقرير» بخصمه المجمَّد.
+        </p>
+        {isOwner && pos ? (
+          <div className="mt-10 flex flex-wrap items-end gap-10">
+            <Field
+              label="سقفُ البيع لكلِّ بائعٍ في 24 ساعة (بطاقات)"
+              name="pos_daily_cap"
+              dir="ltr"
+              inputMode="numeric"
+              value={cap}
+              onChange={(event) => setCap(event.target.value.replace(/[^0-9]/g, ""))}
+            />
+            <Field
+              label="صلاحيةُ البطاقة المبيعة (أيام)"
+              name="pos_validity_days"
+              dir="ltr"
+              inputMode="numeric"
+              value={validity}
+              onChange={(event) => setValidity(event.target.value.replace(/[^0-9]/g, ""))}
+            />
+            <Button
+              size="md"
+              variant="secondary"
+              loading={busy}
+              disabled={!cap || !validity}
+              onClick={() => void save({ pos_daily_cap: Number(cap), pos_validity_days: Number(validity) }, "حُفظ السقفُ والصلاحية")}
+            >
+              حفظ
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      <Table
+        toolbar={
+          isOwner ? (
+            <Button size="md" onClick={() => setCreating(true)}>
+              حسابُ بائع
+            </Button>
+          ) : undefined
+        }
+        columns="1.3fr 1.1fr 0.9fr 0.7fr 0.9fr 0.7fr"
+        headers={["البائع", "المحلّ", "المبيع", "المستعمَل", "الحساب", ""]}
+        rows={rows}
+        keyOf={(row) => row.id}
+        empty={{ title: "لا بائعين بعد", hint: "ينشئ المالكُ حسابَ بائعٍ لكلِّ محلّ — يدخل اللوحةَ من هاتفه ويرى صفحةَ البيع وحدَها." }}
+        render={(row) => (
+          <>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-ink">{row.name}</span>
+              <span dir="ltr" className="block truncate text-start text-10.5 text-muted">
+                {row.username ?? "—"}
+              </span>
+            </span>
+            <span className="truncate text-ink">{row.shop_name}</span>
+            <span className="text-ink">
+              {digits(String(row.sold))}
+              <span className="block text-10.5 text-muted">
+                {digits(row.sold_amount)} {row.currency}
+              </span>
+            </span>
+            <span className="text-muted">{digits(String(row.redeemed))}</span>
+            <span className={cn("text-11.5", row.is_active && !row.is_blocked ? "font-semibold text-ok" : "text-muted")}>
+              {!row.is_active ? "موقوف" : row.is_blocked ? "محظور" : "يبيع"}
+              <span className="block text-10.5 font-normal text-muted">
+                {row.has_factor ? "العاملُ الثاني مسجَّل" : "لم يسجّل العاملَ الثاني"}
+              </span>
+            </span>
+            <span className="flex justify-end">
+              {isOwner ? (
+                <button
+                  type="button"
+                  className={cn("text-11.5 font-semibold", row.is_active ? "text-danger" : "text-ink")}
+                  onClick={async () => {
+                    try {
+                      await setCardSellerActive(row.id, !row.is_active);
+                      onDone(row.is_active ? "أُوقف البائع" : "أُعيد البائع");
+                      await load();
+                    } catch (caught) {
+                      onError(errorText(caught, "تعذّر الحفظ"));
+                    }
+                  }}
+                >
+                  {row.is_active ? "إيقاف" : "إعادة"}
+                </button>
+              ) : null}
+            </span>
+          </>
+        )}
+      />
+      {creating ? (
+        <SellerModal
+          country={country}
+          onClose={() => setCreating(false)}
+          onDone={(message) => {
+            setCreating(false);
+            onDone(message);
+            void load();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function SellerModal({
+  country,
+  onClose,
+  onDone,
+}: {
+  country: CountryCode;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [shops, setShops] = useState<CardShop[]>([]);
+  const [shopId, setShopId] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listCardShops(country)
+      .then((rows) => {
+        const live = rows.filter((row) => row.is_active);
+        setShops(live);
+        if (live[0]) setShopId(live[0].id);
+      })
+      .catch((caught) => setError(errorText(caught, "تعذّر قراءة المحلّات")));
+  }, [country]);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await createCardSeller({ shop_id: shopId, name: name.trim(), username: username.trim(), password });
+      onDone("أُنشئ حسابُ البائع — يغيّر كلمتَه ويسجّل العاملَ الثاني عند أوّل دخول");
+    } catch (caught) {
+      setError(errorText(caught, "تعذّر الإنشاء"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="حسابُ بائعٍ جديد" onClose={onClose}>
+      <div className="grid gap-12">
+        <Select label="المحلّ" name="shop_id" value={shopId} onChange={(event) => setShopId(event.target.value)}>
+          {shops.map((shop) => (
+            <option key={shop.id} value={shop.id}>
+              {shop.name}
+            </option>
+          ))}
+        </Select>
+        <Field label="اسمُ البائع" name="name" value={name} onChange={(event) => setName(event.target.value)} />
+        <Field label="اسمُ الدخول" name="username" dir="ltr" value={username} onChange={(event) => setUsername(event.target.value)} />
+        <Field
+          label="كلمةٌ مؤقّتة (تتغيّر عند أوّل دخول)"
+          name="password"
+          type="password"
+          dir="ltr"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+        <p className="text-11.5 text-muted">
+          يدخل البائعُ اللوحةَ من هاتفه أو حاسوبه، ويرى صفحةَ البيع وحدَها. والعاملُ الثاني إلزاميٌّ له قبل أيِّ بيع.
+        </p>
+      </div>
+      <ErrorNote message={error} />
+      <div className="mt-18 flex gap-10">
+        <Button
+          className="flex-1"
+          size="md"
+          loading={busy}
+          disabled={!shopId || name.trim().length < 2 || username.trim().length < 3 || password.length < 8}
+          onClick={() => void submit()}
+        >
+          إنشاء
+        </Button>
+        <Button className="flex-1" size="md" variant="secondary" onClick={onClose}>
+          تراجع
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+// ------------------------------------------------------------------ التقريرُ بالنوع والصلاحية (SPEC §١٠٠-ب/١٢ و١٤)
+
+const KIND_LABEL: Record<CardKindReport["kind"], string> = {
+  batch: "مطبوعة",
+  gift: "هدايا",
+  pos: "بيعٌ في المحلّات",
+  corporate: "للشركات (من المطبوعة)",
+};
+
+function ReportTab({ country, isAdmin, onError, onDone }: TabProps) {
+  return (
+    <div className="grid gap-18">
+      <KindSummary country={country} onError={onError} />
+      <ExpiringBatches country={country} isAdmin={isAdmin} onError={onError} onDone={onDone} />
+      <div>
+        <p className="mb-8 text-13 font-semibold text-ink">المحلّات</p>
+        <ShopReport country={country} onError={onError} />
+      </div>
+      <InvoiceSellerCard country={country} onError={onError} onDone={onDone} />
+    </div>
+  );
+}
+
+/** **ما صدر وما استُعمل، والالتزامُ القائم، وقيمةُ المنتهية بلا استعمال** — من الخلفية بالنوع */
+function KindSummary({ country, onError }: { country: CountryCode; onError: (message: string | null) => void }) {
+  const [rows, setRows] = useState<CardKindReport[] | null>(null);
+  useEffect(() => {
+    cardKindReport(country)
+      .then(setRows)
+      .catch((caught) => onError(errorText(caught, "تعذّر قراءة التقرير")));
+  }, [country, onError]);
+  return (
+    <Table
+      columns="1.2fr 0.9fr 1fr 1.2fr 1.2fr 1.1fr"
+      headers={["النوع", "البطاقات", "الاستعمال", "صدر · استُعمل", "الالتزامُ القائم", "انتهت بلا استعمال"]}
+      rows={rows}
+      keyOf={(row) => row.kind}
+      empty={{ title: "لا تقرير بعد", hint: "يظهر هنا لكلِّ نوعٍ ما صدر وما استُعمل وما بقي في أيدي الناس." }}
+      render={(row) => (
+        <>
+          <span className="font-semibold text-ink">{KIND_LABEL[row.kind]}</span>
+          <span className="text-muted">
+            {digits(String(row.cards))}
+            <span className="block text-10.5">ملغاة {digits(String(row.cancelled))}</span>
+          </span>
+          <span className="text-ink">
+            {digits(row.redemption_rate)}٪
+            <span className="block text-10.5 text-muted">مستعمَلة {digits(String(row.redeemed))}</span>
+          </span>
+          <span className="text-muted">
+            <span className="block">{digits(row.issued_amount)}</span>
+            <span className="block text-10.5">استُعمل {digits(row.redeemed_amount)}</span>
+          </span>
+          <span className="font-semibold text-ink">
+            {digits(row.outstanding_amount)} {row.currency}
+            <span className="block text-10.5 font-normal text-muted">{digits(String(row.unused))} بطاقة</span>
+          </span>
+          <span className="text-muted">
+            {digits(row.expired_amount)}
+            <span className="block text-10.5">{digits(String(row.expired))} بطاقة</span>
+          </span>
+        </>
+      )}
+    />
+  );
+}
+
+/** **تذكيرُ الصلاحية** — ما ينتهي خلال ٣٠ يوماً وفيه غيرُ مستعمَل، **والتمديدُ بسببٍ مكتوب**. والهديةُ وبطاقةُ البيع دفعةٌ من بطاقةٍ
+ *  واحدة، فتمديدُها تمديدُ البطاقة نفسِها. */
+function ExpiringBatches({ country, isAdmin, onError, onDone }: TabProps) {
+  const [rows, setRows] = useState<CardBatch[] | null>(null);
+  const [extending, setExtending] = useState<CardBatch | null>(null);
+  const load = useCallback(async () => setRows(await listExpiringBatches(country, 30)), [country]);
+  useEffect(() => {
+    load().catch((caught) => onError(errorText(caught, "تعذّر قراءة الصلاحية")));
+  }, [load, onError]);
+  return (
+    <div>
+      <p className="mb-8 text-13 font-semibold text-ink">تنتهي خلال 30 يوماً وفيها ما لم يُستعمل</p>
+      <Table
+        columns="0.8fr 1fr 1.3fr 1.2fr 0.8fr"
+        headers={["الدفعة", "النوع", "المحلّ أو الشركة", "تنتهي", ""]}
+        rows={rows}
+        keyOf={(row) => row.id}
+        empty={{ title: "لا شيءَ ينتهي قريباً", hint: "كلُّ بطاقةٍ غيرِ مستعملةٍ صلاحيتُها أبعدُ من ثلاثين يوماً." }}
+        render={(row) => (
+          <>
+            <span className="font-semibold text-ink">#{digits(String(row.number))}</span>
+            <span className="text-muted">
+              {row.kind === "gift" ? "هدية" : row.kind === "pos" ? "بيعٌ في المحلّ" : "مطبوعة"}
+              <span className="block text-10.5">
+                غير مستعملة {digits(String(row.unused))} × {digits(row.amount)} {row.currency}
+              </span>
+            </span>
+            <span className="truncate text-muted">{row.buyer_company ?? row.shop_name ?? "—"}</span>
+            <span className="text-ink">{day(row.expires_at)}</span>
+            <span className="flex justify-end">
+              {isAdmin ? (
+                <button type="button" onClick={() => setExtending(row)} className="text-11.5 font-semibold text-accent">
+                  تمديد
+                </button>
+              ) : null}
+            </span>
+          </>
+        )}
+      />
+      {extending ? (
+        <ExtendModal
+          batch={extending}
+          onClose={() => setExtending(null)}
+          onDone={(message) => {
+            setExtending(null);
+            onDone(message);
+            void load();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ExtendModal({ batch, onClose, onDone }: { batch: CardBatch; onClose: () => void; onDone: (message: string) => void }) {
+  const [until, setUntil] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await extendCardBatch(batch.id, new Date(`${until}T23:59:59`).toISOString(), reason.trim());
+      onDone(`مُدّدت الدفعة #${batch.number}`);
+    } catch (caught) {
+      setError(errorText(caught, "تعذّر التمديد"));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title={`تمديد الدفعة #${batch.number}`} onClose={onClose}>
+      <div className="grid gap-12">
+        <p className="text-12 text-muted">تنتهي اليومَ في {day(batch.expires_at)} — والتمديدُ إلى الأمام وحدَه، وسطرٌ في التدقيق.</p>
+        <DateInput label="تنتهي صلاحيتُها في" name="expires_at" value={until} onChange={setUntil} />
+        <Field label="السبب" name="reason" value={reason} onChange={(event) => setReason(event.target.value)} />
+      </div>
+      <ErrorNote message={error} />
+      <div className="mt-18 flex gap-10">
+        <Button className="flex-1" size="md" loading={busy} disabled={!until || reason.trim().length < 3} onClick={() => void submit()}>
+          مدِّد
+        </Button>
+        <Button className="flex-1" size="md" variant="secondary" onClick={onClose}>
+          تراجع
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+/** **البائعُ في فواتير الشركات** (SPEC §١٠٠-ب/٧) — يراه الطاقم، **ويكتبه المالكُ وحدَه**؛ وفارغاً تُطبع «TAXO». */
+function InvoiceSellerCard({
+  country,
+  onError,
+  onDone,
+}: {
+  country: CountryCode;
+  onError: (message: string | null) => void;
+  onDone: (message: string) => void;
+}) {
+  const { user } = useSession();
+  const isOwner = Boolean(user?.roles?.includes("owner"));
+  const [row, setRow] = useState<InvoiceSettings | null>(null);
+  const [name, setName] = useState("");
+  const [tax, setTax] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getInvoiceSettings(country)
+      .then((read) => {
+        setRow(read);
+        setName(read.invoice_seller_name ?? "");
+        setTax(read.invoice_seller_tax_number ?? "");
+      })
+      .catch((caught) => onError(errorText(caught, "تعذّر قراءة بيانات الفاتورة")));
+  }, [country, onError]);
+  async function save() {
+    setBusy(true);
+    try {
+      const saved = await saveInvoiceSettings(country, {
+        invoice_seller_name: name.trim() || null,
+        invoice_seller_tax_number: tax.trim() || null,
+      });
+      setRow(saved);
+      onDone("حُفظت بياناتُ البائع في الفواتير");
+    } catch (caught) {
+      onError(errorText(caught, "تعذّر الحفظ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="rounded-card border border-line bg-surface p-14">
+      <p className="text-13 font-semibold text-ink">البائعُ في فواتير الشركات</p>
+      <p className="mt-6 text-11.5 text-muted">
+        {row ? `${row.invoice_seller_name ?? "TAXO"}${row.invoice_seller_tax_number ? ` · الرقم الضريبي ${row.invoice_seller_tax_number}` : ""}` : "…"}
+      </p>
+      {isOwner ? (
+        <div className="mt-10 flex flex-wrap items-end gap-10">
+          <Field label="اسمُ البائع" name="invoice_seller_name" value={name} onChange={(event) => setName(event.target.value)} />
+          <Field
+            label="الرقمُ الضريبيّ"
+            name="invoice_seller_tax_number"
+            dir="ltr"
+            value={tax}
+            onChange={(event) => setTax(event.target.value)}
+          />
+          <Button size="md" variant="secondary" loading={busy} onClick={() => void save()}>
+            حفظ
+          </Button>
+        </div>
+      ) : null}
+    </div>
   );
 }
