@@ -28,6 +28,10 @@ COVERED_ELSEWHERE: dict[str, str] = {
     " والقفلُ يحفظ «من» في سطر التدقيق لا أكثر، فاختبارٌ يسقط بحذفه لا يقيس شيئاً يخسره أحد (٢٠٢٦-١١-١٠)",
     "campaigns": "تُقاد من `tasks/notifications`، ويحرس تقدّمَها"
     " `notification_deliveries` بفريدٍ على (campaign_id, user_id) لا بقفل",
+    "card_gifts": "يحرسه `test_card_gifts.py::test_an_interleaved_second_scratch_waits_and_finds_it_scratched` — كشطٌ ثانٍ"
+    " يبدأ والأوّلُ لم يلتزم؛ ويسقط بحذف القفل (قِيس ٢٠٢٦-١١-١٤)",
+    "card_sellers": "يحرسه `test_card_sellers.py::test_the_daily_cap_holds_against_concurrent_sales` — أربعُ مبيعاتٍ معاً"
+    " بسقفِ اثنتين؛ وبحذف القفل `Counter({201: 4})` (قِيس ٢٠٢٦-١١-١٤)",
     "cashback": "لا مساران متزامنان على سلسلةٍ واحدة: تُمدّ من `complete_ride` وحدَه وصفُّ الرحلة"
     " مقفول، **ولكلِّ راكبٍ رحلةٌ قائمةٌ واحدة** (`uq_rides_active_rider`) — وقيدُ الدفتر بمفتاح"
     " `cashback:<السلسلة>` لا يُكتب مرّتين. فاختبارٌ «يسقط بحذف القفل» لا يُبنى بصدق (٢٠٢٦-١٠-٠٧)",

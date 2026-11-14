@@ -113,6 +113,32 @@ async def test_two_scratches_at_once_reveal_the_code_once(client: AsyncClient, s
     assert all(r.json()["code"] == "gift_unavailable" for r in results if r.status_code == 409)
 
 
+async def test_an_interleaved_second_scratch_waits_and_finds_it_scratched(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**تداخلٌ مقصود** — الأوّلُ يكشط ويُبقي معاملتَه مفتوحة، والثاني يبدأ قبل أن يلتزم. **بالقفل ينتظر الثاني ثمّ يجده مكشوطاً؛
+    وبحذفه يقرأ المعمّى القديمَ فيخرج الرمزُ مرّتين** (قِيس ٢٠٢٦-١١-١٤: الاختبارُ المتزامنُ عبر HTTP أعلاه يمرّ بلا القفل — هذا يسقط)."""
+    await card_market(session_factory)
+    token = token_of(await make_gift(client, admin_headers))
+
+    async def second() -> str | None:
+        async with session_factory() as other:
+            try:
+                _link, code = await card_gifts.scratch(other, token)
+            except card_gifts.GiftUnavailable:
+                return None
+            await other.commit()
+            return code
+
+    async with session_factory() as first:
+        _link, code = await card_gifts.scratch(first, token)
+        assert code
+        task = asyncio.create_task(second())
+        await asyncio.sleep(0.6)
+        await first.commit()
+    assert await asyncio.wait_for(task, timeout=15) is None
+
+
 async def test_a_cancelled_gift_cannot_be_scratched_and_needs_a_reason(
     client: AsyncClient, session_factory, admin_headers: dict
 ) -> None:
