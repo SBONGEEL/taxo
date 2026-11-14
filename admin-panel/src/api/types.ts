@@ -3095,6 +3095,8 @@ export interface CardBatch {
   redeemed_amount: string;
   live_amount: string;
   due_amount: string;
+  /** نوعُ الدفعة (§١٠٠-أ/٣) */
+  kind?: "batch" | "gift";
 }
 
 /** **الرموزُ هنا مرّةً واحدة** — ولا بابَ يعيدها. */
@@ -3764,4 +3766,43 @@ export interface WhopOverview {
 export interface WhopLive {
   external_id: string;
   payments: { id?: string | null; status?: string | null; substatus?: string | null; total?: string | null }[];
+}
+
+
+// ------------------------------------------------------------------ بطاقاتُ الهدية (SPEC §١٠٠-أ/٣)
+
+export type GiftDesign = "night" | "sunrise" | "city";
+export type GiftChannel = "whatsapp" | "sms" | "email" | "copy";
+export type GiftState = "created" | "sent" | "opened" | "scratched" | "redeemed" | "expired" | "cancelled" | "printed";
+
+/** **الهديةُ بحالها وأوقاتها** — بلا رمزٍ ولا رابط. */
+export interface GiftLink {
+  id: string;
+  card_id: string;
+  serial: string;
+  amount: string;
+  currency: Currency;
+  design: GiftDesign;
+  recipient_name: string | null;
+  message: string | null;
+  state: GiftState;
+  sent_channel: GiftChannel | null;
+  created_at: string;
+  sent_at: string | null;
+  opened_at: string | null;
+  open_count: number;
+  scratched_at: string | null;
+  redeemed_at: string | null;
+  expires_at: string;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+}
+
+/** **الرابطُ أو الرمزُ هنا مرّةً واحدة.** */
+export interface GiftCreated {
+  gift: GiftLink | null;
+  batch_id: string;
+  serial: string;
+  url: string | null;
+  code: { serial: string; code: string } | null;
 }

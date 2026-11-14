@@ -283,3 +283,85 @@ def print_sheet_pdf(meta: BatchMeta, rows: list[CardRow], *, password: str) -> b
             pdf.set_xy(text_x, y0 + 39)
             pdf.cell(text_w, 5, "امسح الرمز أو اكتبه: المحفظة ← اشحن ببطاقة", align="R")
     return bytes(pdf.output())
+
+
+#: **ألوانُ تصاميم الهدية الثلاثة** (TAXO 2.0): الخلفيّة، ثمّ لونُ النصّ، ثمّ لونُ اللمسة
+GIFT_DESIGNS = {
+    "night": ((14, 17, 22), (255, 255, 255), (242, 107, 33)),
+    "sunrise": ((242, 107, 33), (255, 255, 255), (255, 214, 170)),
+    "city": ((250, 246, 240), (20, 20, 20), (242, 107, 33)),
+}
+
+
+def gift_print_pdf(meta: BatchMeta, row: CardRow, *, password: str, design: str = "night") -> bytes:
+    """**بطاقةُ الهدية المطبوعة بمنطقة كشط**: A4 فيه البطاقةُ بمقاس ٨٥×٥٤ مم مرّتين (الوجهُ والظهر) بخطوط قصّ.
+
+    **الرمزُ في مستطيلٍ واضحِ الحدود** على الظهر، **تُلصق فوقه ملصقةُ كشطٍ فضّيّة** في المطبعة. ومعه QR يحمل الرمزَ بعد `#`."""
+    if row.code is None:
+        raise InvalidInput("النسخةُ المطبوعةُ تحتاج الرمزَ كاملاً", field="format")
+    bg, ink, accent = GIFT_DESIGNS.get(design, GIFT_DESIGNS["night"])
+    pdf = _pdf("P", password)
+    pdf.set_auto_page_break(auto=False)
+    pdf.add_page()
+    w, h = 85.6, 54.0
+    x = (pdf.w - w) / 2
+    value = f"{amount_text(meta.amount, meta.currency)} {meta.currency}"
+    until = _local_text(meta.expires_at, meta.zone)[:10]
+
+    def cut_marks(y0: float) -> None:
+        with pdf.local_context():
+            pdf.set_draw_color(150, 150, 150)
+            pdf.set_line_width(0.2)
+            pdf.set_dash_pattern(dash=2, gap=1.5)
+            pdf.rect(x, y0, w, h)
+
+    # **الوجه**
+    y_front = 40.0
+    pdf.set_fill_color(*bg)
+    pdf.rect(x, y_front, w, h, style="F")
+    pdf.set_text_color(*accent)
+    pdf.set_font("plex", "B", 22)
+    pdf.set_xy(x + 6, y_front + 7)
+    pdf.cell(w - 12, 10, "TAXO", align="R")
+    pdf.set_text_color(*ink)
+    pdf.set_font("plex", "B", 13)
+    pdf.set_xy(x + 6, y_front + 22)
+    pdf.cell(w - 12, 8, "بطاقة هدية", align="R")
+    pdf.set_font("plex", "B", 18)
+    pdf.set_xy(x + 6, y_front + 31)
+    pdf.cell(w - 12, 10, value, align="R")
+    pdf.set_font("plex", "", 8)
+    pdf.set_xy(x + 6, y_front + 44)
+    pdf.cell(w - 12, 5, f"تنتهي {until}", align="R")
+    cut_marks(y_front)
+
+    # **الظهر**: منطقةُ الكشط والـQR
+    y_back = y_front + h + 20
+    pdf.set_fill_color(255, 255, 255)
+    pdf.rect(x, y_back, w, h, style="F")
+    qr = 30.0
+    pdf.image(BytesIO(qr_png(REDEEM_URL.format(code=row.code))), x=x + 5, y=y_back + 5, w=qr, h=qr)
+    pdf.set_text_color(20, 20, 20)
+    pdf.set_font("plex", "B", 9)
+    pdf.set_xy(x + qr + 9, y_back + 6)
+    pdf.cell(w - qr - 14, 5, "اكشط لترى الرمز", align="R")
+    box_x, box_y, box_w, box_h = x + qr + 9, y_back + 13, w - qr - 14, 12
+    with pdf.local_context():
+        pdf.set_draw_color(*accent)
+        pdf.set_line_width(0.6)
+        pdf.rect(box_x, box_y, box_w, box_h)
+    pdf.set_font("plex", "B", 10)
+    pdf.set_xy(box_x, box_y + 3)
+    pdf.cell(box_w, 6, row.code, align="C")
+    pdf.set_font("plex", "", 7)
+    pdf.set_xy(x + qr + 9, y_back + 28)
+    pdf.cell(w - qr - 14, 4, f"تسلسل {row.serial}", align="R")
+    pdf.set_xy(x + 5, y_back + 40)
+    pdf.cell(w - 10, 4, "امسح الرمز بتطبيق TAXO، أو اكتبه في: المحفظة ← اشحن ببطاقة", align="R")
+    cut_marks(y_back)
+
+    pdf.set_text_color(110, 110, 110)
+    pdf.set_font("plex", "", 8)
+    pdf.set_xy(15, y_back + h + 10)
+    pdf.cell(pdf.w - 30, 5, "للمطبعة: ملصقةُ كشطٍ فضّيّة فوق المستطيل البرتقاليّ، والقصُّ على الخطّ المتقطّع.", align="R")
+    return bytes(pdf.output())

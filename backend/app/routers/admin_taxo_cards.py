@@ -34,11 +34,15 @@ from app.schemas.taxo_card import (
     CardShopOut,
     CardShopReportOut,
     CardShopUpdate,
+    GiftCreatedOut,
+    GiftCreateIn,
+    GiftLinkOut,
+    GiftSentIn,
     TaxoCardLimitsIn,
     TaxoCardLimitsOut,
     TaxoCardOut,
 )
-from app.services import audit, taxo_cards
+from app.services import audit, card_gifts, taxo_cards
 
 router = APIRouter(prefix="/admin/taxo-cards", tags=["admin"])
 
@@ -58,7 +62,7 @@ def _batch_out(row: taxo_cards.BatchFigures) -> CardBatchOut:
         valid_from=batch.valid_from, expires_at=batch.expires_at, status=batch.status, cancel_reason=batch.cancel_reason,
         created_at=batch.created_at, active=row.active, redeemed=row.redeemed, cancelled=row.cancelled,
         unused=row.unused, expired=row.expired,
-        redeemed_amount=row.redeemed_value, live_amount=row.live_value, due_amount=row.due_from_shop,
+        redeemed_amount=row.redeemed_value, live_amount=row.live_value, due_amount=row.due_from_shop, kind=batch.kind,
     )
 
 
@@ -155,7 +159,7 @@ async def export_batch(batch_id: uuid.UUID, payload: CardExportIn, admin: Financ
     batch = await taxo_cards.get_batch(session, batch_id)
     content, media, name = await taxo_cards.export_batch(
         session, batch=batch, actor=admin, fmt=payload.format, password=payload.password,
-        codes=[(row.serial, row.code) for row in payload.codes],
+        codes=[(row.serial, row.code) for row in payload.codes], design=payload.design,
     )
     await session.commit()
     return Response(
@@ -297,3 +301,61 @@ async def save_limits(payload: TaxoCardLimitsIn, admin: SettingsWriter, session:
     return TaxoCardLimitsOut(
         max_wrong_per_account=row.max_wrong_per_account, max_wrong_per_ip=row.max_wrong_per_ip, window_minutes=row.window_minutes
     )
+
+
+# ------------------------------------------------------------------ بطاقاتُ الهدية (§١٠٠-أ/٣)
+
+
+def gift_out(link, card) -> GiftLinkOut:
+    from datetime import UTC, datetime
+
+    return GiftLinkOut(
+        id=link.id, card_id=card.id, serial=card.serial, amount=card.amount, currency=card.currency, design=link.design,
+        recipient_name=link.recipient_name, message=link.message, state=card_gifts.state(link, card, datetime.now(UTC)),
+        sent_channel=link.sent_channel, created_at=link.created_at, sent_at=link.sent_at, opened_at=link.opened_at,
+        open_count=link.open_count, scratched_at=link.scratched_at, redeemed_at=card.redeemed_at,
+        expires_at=card.batch.expires_at, cancelled_at=link.cancelled_at, cancel_reason=link.cancel_reason,
+    )
+
+
+@router.get("/gifts", response_model=list[GiftLinkOut])
+async def list_gifts(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> list[GiftLinkOut]:
+    """**الهدايا بحالها**: أُنشئت، أُرسلت، فُتحت، كُشطت، استُعملت، أُلغيت. بلا رمزٍ ولا رابط."""
+    return [gift_out(link, link.card) for link in await card_gifts.list_links(session, country)]
+
+
+@router.post("/gifts", response_model=GiftCreatedOut, status_code=status.HTTP_201_CREATED)
+async def create_gift(payload: GiftCreateIn, admin: FinanceManager, session: DbSession) -> GiftCreatedOut:
+    """**هديةٌ تُولَّد الآن**: الرابطُ (أو الرمزُ للمطبوعة) في هذا الردّ مرّةً واحدة."""
+    made = await card_gifts.create_gift(
+        session, actor=admin, country=payload.country_code, denomination_id=payload.denomination_id, design=payload.design,
+        delivery=payload.delivery, expires_at=payload.expires_at, recipient_name=payload.recipient_name, message=payload.message,
+    )
+    await session.commit()
+    card = await taxo_cards.get_card(session, made.card.id)
+    gift = None
+    if made.link is not None:
+        gift = gift_out(await card_gifts.get_link(session, made.link.id), card)
+    return GiftCreatedOut(
+        gift=gift, batch_id=card.batch_id, serial=card.serial, url=made.url,
+        code=CardCodeOut(serial=card.serial, code=made.code) if made.code else None,
+    )
+
+
+@router.post("/gifts/{link_id}/sent", response_model=GiftLinkOut)
+async def gift_sent(link_id: uuid.UUID, payload: GiftSentIn, admin: FinanceManager, session: DbSession) -> GiftLinkOut:
+    link = await card_gifts.get_link(session, link_id, for_update=True)
+    await card_gifts.mark_sent(session, link=link, channel=payload.channel, actor=admin)
+    await session.commit()
+    link = await card_gifts.get_link(session, link_id)
+    return gift_out(link, link.card)
+
+
+@router.post("/gifts/{link_id}/cancel", response_model=GiftLinkOut)
+async def cancel_gift(link_id: uuid.UUID, payload: PaymentReasonIn, admin: FinanceManager, session: DbSession) -> GiftLinkOut:
+    """**إلغاءُ الهدية بسببٍ مكتوب**: يُلغى الرابطُ وبطاقتُه، ويُمحى الرمزُ المعمّى."""
+    await card_gifts.cancel_link(session, link_id=link_id, actor=admin, reason=payload.reason)
+    await session.commit()
+    link = await card_gifts.get_link(session, link_id)
+    await session.refresh(link.card)
+    return gift_out(link, link.card)

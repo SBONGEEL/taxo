@@ -46,6 +46,10 @@ import type {
   TransferSettings,
   CardBatch,
   BatchCards,
+  GiftChannel,
+  GiftCreated,
+  GiftDesign,
+  GiftLink,
   CardBatchCreated,
   CardDenomination,
   CardGuessAlert,
@@ -2479,14 +2483,15 @@ export const createCardBatch = (body: {
  *  في يد اللوحة تُطابَق في الخادم ببصماتها، **ولا يُعاد الملفُّ بعد ٣٠ دقيقة**. */
 export async function exportCardBatch(
   batchId: string,
-  format: "xlsx" | "pdf" | "sheet",
+  format: "xlsx" | "pdf" | "sheet" | "gift",
   password: string,
   codes: { serial: string; code: string }[],
+  design: GiftDesign = "night",
 ): Promise<void> {
   const answer = await fetch(`${API_URL}/admin/taxo-cards/batches/${batchId}/export`, {
     method: "POST",
     headers: { Authorization: `Bearer ${tokens.access() ?? ""}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ format, password, codes }),
+    body: JSON.stringify({ format, password, codes, design }),
   });
   if (!answer.ok) {
     let message = "تعذّر تنزيلُ الملفّ";
@@ -2818,3 +2823,23 @@ export const saveLoyaltyRule = (
   country: CountryCode,
   payload: Omit<LoyaltyRule, "country_code" | "holders" | "open_points" | "redeemed_value">,
 ) => api.put<LoyaltyRule>(`/admin/loyalty?country_code=${country}`, payload);
+
+
+// ------------------------------------------------------------------ بطاقاتُ الهدية (SPEC §١٠٠-أ/٣)
+
+export const listGifts = (country: CountryCode) => api.get<GiftLink[]>("/admin/taxo-cards/gifts", { query: { country } });
+
+export const createGift = (body: {
+  country_code: CountryCode;
+  denomination_id: string;
+  design: GiftDesign;
+  delivery: "link" | "print";
+  expires_at: string;
+  recipient_name: string | null;
+  message: string | null;
+}) => api.post<GiftCreated>("/admin/taxo-cards/gifts", body);
+
+export const markGiftSent = (id: string, channel: GiftChannel) =>
+  api.post<GiftLink>(`/admin/taxo-cards/gifts/${id}/sent`, { channel });
+
+export const cancelGift = (id: string, reason: string) => api.post<GiftLink>(`/admin/taxo-cards/gifts/${id}/cancel`, { reason });

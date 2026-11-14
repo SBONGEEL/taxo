@@ -41,6 +41,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),
+        // **صفحةُ بطاقة الهدية** (SPEC §١٠٠-أ/٣): الرابطُ الخاصُّ بعد ، والرمزُ يُجلب عند الكشط وحدَه
+        gift: resolve(__dirname, "gift.html"),
         privacy: resolve(__dirname, "privacy.html"),
         terms: resolve(__dirname, "terms.html"),
         // **ولكلِّ تطبيقٍ رابطُه** (قرارُ المالك ٢٠٢٦-٠٩-٠٧): Google Play

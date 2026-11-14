@@ -131,6 +131,8 @@ class CardBatchOut(BaseModel):
     redeemed_amount: Decimal
     live_amount: Decimal
     due_amount: Decimal
+    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` أو `gift`
+    kind: str = "batch"
 
 
 class CardCodeOut(BaseModel):
@@ -143,7 +145,9 @@ class CardExportIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    format: Literal["xlsx", "pdf", "sheet"]
+    format: Literal["xlsx", "pdf", "sheet", "gift"]
+    #: **تصميمُ النسخة المطبوعة للهدية** (للصيغة `gift` وحدَها)
+    design: Literal["night", "sunrise", "city"] = "night"
     password: str = Field(min_length=8, max_length=128)
     codes: list[CardCodeOut] = Field(min_length=1, max_length=5000)
 
@@ -213,3 +217,87 @@ class TaxoCardLimitsIn(BaseModel):
     max_wrong_per_account: int | None = Field(default=None, ge=1, le=100)
     max_wrong_per_ip: int | None = Field(default=None, ge=1, le=1000)
     window_minutes: int | None = Field(default=None, ge=1, le=1440)
+
+
+# ------------------------------------------------------------------ بطاقاتُ الهدية (§١٠٠-أ/٣)
+
+
+class GiftCreateIn(BaseModel):
+    """**هديةٌ تُولَّد الآن** بفئةٍ وضعها المالك: رابطٌ خاصٌّ أو نسخةٌ مطبوعة."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: CountryCode
+    denomination_id: uuid.UUID
+    design: Literal["night", "sunrise", "city"]
+    delivery: Literal["link", "print"] = "link"
+    expires_at: datetime
+    recipient_name: str | None = Field(default=None, max_length=80)
+    message: str | None = Field(default=None, max_length=200)
+
+
+class GiftLinkOut(BaseModel):
+    """**الهديةُ بحالها وأوقاتها**، بلا رمزٍ ولا رابط."""
+
+    id: uuid.UUID
+    card_id: uuid.UUID
+    serial: str
+    amount: Decimal
+    currency: Currency
+    design: str
+    recipient_name: str | None
+    message: str | None
+    state: str
+    sent_channel: str | None
+    created_at: datetime
+    sent_at: datetime | None
+    opened_at: datetime | None
+    open_count: int
+    scratched_at: datetime | None
+    redeemed_at: datetime | None
+    expires_at: datetime
+    cancelled_at: datetime | None
+    cancel_reason: str | None
+
+
+class GiftCreatedOut(BaseModel):
+    """**الرابطُ أو الرمزُ هنا مرّةً واحدة**، ولا بابَ يعيدهما."""
+
+    gift: GiftLinkOut | None
+    batch_id: uuid.UUID
+    serial: str
+    url: str | None = None
+    code: CardCodeOut | None = None
+
+
+class GiftSentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    channel: Literal["whatsapp", "sms", "email", "copy"]
+
+
+class GiftTokenIn(BaseModel):
+    """**الرابطُ الخاصُّ في جسم الطلب** لا في المسار، فلا يقع في سجلِّ وصول."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=16, max_length=64)
+
+
+class GiftPublicOut(BaseModel):
+    """**ما تراه صفحةُ الهدية قبل الكشط**، بلا رمز."""
+
+    amount: Decimal
+    currency: Currency
+    country_code: CountryCode
+    design: str
+    recipient_name: str | None
+    message: str | None
+    state: str
+    expires_at: datetime
+
+
+class GiftScratchedOut(BaseModel):
+    code: str
+    amount: Decimal
+    currency: Currency

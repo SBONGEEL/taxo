@@ -15,10 +15,12 @@ import { ApiError } from "@/api/client";
 import {
   addCardDenomination,
   cancelCardBatch,
+  cancelGift,
   cancelTaxoCard,
   cardShopReport,
   createCardBatch,
   createCardShop,
+  createGift,
   exportCardBatch,
   findTaxoCards,
   getCardLimits,
@@ -27,6 +29,8 @@ import {
   listCardBatches,
   listCardDenominations,
   listCardShops,
+  listGifts,
+  markGiftSent,
   reviewCardAlert,
   saveCardLimits,
   setCardDenominationActive,
@@ -41,6 +45,11 @@ import type {
   CardShopPaymentMode,
   CardShopReport,
   CountryCode,
+  GiftChannel,
+  GiftCreated,
+  GiftDesign,
+  GiftLink,
+  GiftState,
   TaxoCardLimits,
   TaxoCardRow,
   TaxoCardState,
@@ -63,7 +72,7 @@ import { useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, cn, digits } from "@/lib/utils";
 
-type Tab = "batches" | "cards" | "shops" | "denominations" | "report" | "alerts";
+type Tab = "batches" | "gifts" | "cards" | "shops" | "denominations" | "report" | "alerts";
 
 function day(iso: string): string {
   return digits(new Date(iso).toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long", year: "numeric" }));
@@ -89,6 +98,7 @@ export function TaxoCardsScreen() {
         onPick={(key) => setTab(key as Tab)}
         options={[
           { key: "batches", label: "الدفعات" },
+          { key: "gifts", label: "الهدايا" },
           { key: "cards", label: "البطاقات" },
           { key: "shops", label: "المحلّات" },
           { key: "denominations", label: "الفئات" },
@@ -100,6 +110,7 @@ export function TaxoCardsScreen() {
       <SuccessNote message={done} />
       <div className="mt-12">
         {tab === "batches" ? <BatchesTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
+        {tab === "gifts" ? <GiftsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "cards" ? <CardsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "shops" ? <ShopsTab country={country} isAdmin={isAdmin} onError={setError} onDone={setDone} /> : null}
         {tab === "denominations" ? (
@@ -128,7 +139,10 @@ function BatchesTab({ country, isAdmin, onError, onDone }: TabProps) {
   const [cancelling, setCancelling] = useState<CardBatch | null>(null);
   const [opened, setOpened] = useState<CardBatch | null>(null);
 
-  const load = useCallback(async () => setRows(await listCardBatches(country)), [country]);
+  const load = useCallback(
+    async () => setRows((await listCardBatches(country)).filter((row) => row.kind !== "gift")),
+    [country],
+  );
   useEffect(() => {
     load().catch((caught) => onError(errorText(caught, "تعذّر قراءة الدفعات")));
   }, [load, onError]);
@@ -1015,6 +1029,363 @@ function ReasonModal({
           تراجع
         </Button>
       </div>
+    </Modal>
+  );
+}
+
+// ------------------------------------------------------------------ بطاقاتُ الهدية (SPEC §١٠٠-أ/٣)
+
+const GIFT_STATE_LABEL: Record<GiftState, string> = {
+  created: "أُنشئت",
+  sent: "أُرسلت",
+  opened: "فُتحت",
+  scratched: "كُشطت",
+  redeemed: "استُعملت",
+  expired: "انتهت",
+  cancelled: "أُلغيت",
+  printed: "مطبوعة",
+};
+
+const GIFT_DESIGNS: { key: GiftDesign; label: string; preview: string }[] = [
+  { key: "night", label: "ليل", preview: "radial-gradient(120% 90% at 85% 10%, rgba(242,107,33,.6), transparent 55%), #14181d" },
+  { key: "sunrise", label: "شروق", preview: "linear-gradient(135deg, #F26B21 0%, #FF8A3D 55%, #FFB36B 100%)" },
+  { key: "city", label: "مدينة", preview: "linear-gradient(115deg, transparent 40%, #F26B21 40.3%, #F26B21 41.5%, transparent 41.8%), #faf6f0" },
+];
+
+const CHANNELS: { key: GiftChannel; label: string }[] = [
+  { key: "whatsapp", label: "واتساب" },
+  { key: "sms", label: "رسالة SMS" },
+  { key: "email", label: "بريد" },
+];
+
+function shareHref(channel: GiftChannel, url: string): string {
+  const text = `هديةٌ لك من TAXO — افتح الرابط واكشط البطاقة: ${url}`;
+  if (channel === "whatsapp") return `https://wa.me/?text=${encodeURIComponent(text)}`;
+  if (channel === "sms") return `sms:?&body=${encodeURIComponent(text)}`;
+  return `mailto:?subject=${encodeURIComponent("بطاقة هدية من TAXO")}&body=${encodeURIComponent(text)}`;
+}
+
+/** **بطاقاتُ الهدية** — رابطٌ خاصٌّ يُكشط مرّةً، أو نسخةٌ مطبوعةٌ بمنطقة كشط. **والحالُ بأوقاتها**: أُرسلت، فُتحت، كُشطت، استُعملت.
+ *  **ولا رمزَ ولا رابطَ في القائمة**: الرابطُ يظهر مرّةً لحظةَ الإنشاء، والرمزُ يُخزَّن معمًّى حتى يُكشط ثمّ يُمحى. */
+function GiftsTab({ country, isAdmin, onError, onDone }: TabProps) {
+  const [rows, setRows] = useState<GiftLink[] | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<GiftCreated | null>(null);
+  const [cancelling, setCancelling] = useState<GiftLink | null>(null);
+
+  const load = useCallback(async () => setRows(await listGifts(country)), [country]);
+  useEffect(() => {
+    load().catch((caught) => onError(errorText(caught, "تعذّر قراءة الهدايا")));
+  }, [load, onError]);
+
+  return (
+    <>
+      <Table
+        toolbar={
+          isAdmin ? (
+            <Button size="md" onClick={() => setCreating(true)}>
+              هدية جديدة
+            </Button>
+          ) : undefined
+        }
+        columns="1.1fr 0.8fr 0.8fr 1.1fr 1.6fr 0.8fr"
+        headers={["البطاقة", "القيمة", "التصميم", "إلى", "الحال", ""]}
+        rows={rows}
+        keyOf={(row) => row.id}
+        empty={{ title: "لا هدايا بعد", hint: "أنشئ هديةً من فئةٍ مفعَّلة، وأرسل رابطَها بواتساب أو رسالةٍ أو بريد." }}
+        render={(row) => (
+          <>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-ink" dir="ltr">
+                {row.serial}
+              </span>
+              <span className="block text-10.5 text-muted">أُنشئت {day(row.created_at)}</span>
+            </span>
+            <span className="text-ink">
+              {digits(row.amount)} {row.currency}
+            </span>
+            <span className="text-muted">{GIFT_DESIGNS.find((d) => d.key === row.design)?.label ?? row.design}</span>
+            <span className="min-w-0 text-muted">
+              <span className="block truncate">{row.recipient_name ?? "—"}</span>
+              {row.message ? <span className="block truncate text-10.5">{row.message}</span> : null}
+            </span>
+            <span className={cn("font-semibold", row.state === "redeemed" ? "text-ok" : row.state === "cancelled" ? "text-muted" : "text-ink")}>
+              {GIFT_STATE_LABEL[row.state]}
+              <span className="block text-10.5 font-normal text-muted">
+                {row.sent_at ? `أُرسلت ${day(row.sent_at)}` : "لم تُرسل"}
+                {row.opened_at ? ` · فُتحت ${digits(String(row.open_count))}×` : ""}
+                {row.scratched_at ? ` · كُشطت ${day(row.scratched_at)}` : ""}
+                {row.redeemed_at ? ` · استُعملت ${day(row.redeemed_at)}` : ""}
+              </span>
+              <span className="block text-10.5 font-normal text-muted">تنتهي {day(row.expires_at)}</span>
+              {row.cancel_reason ? <span className="block text-10.5 font-normal text-muted">{row.cancel_reason}</span> : null}
+            </span>
+            <span className="flex flex-col items-end gap-4">
+              {isAdmin && row.state !== "cancelled" && row.state !== "redeemed" ? (
+                <button type="button" onClick={() => setCancelling(row)} className="text-11.5 font-semibold text-danger">
+                  إلغاء الهدية
+                </button>
+              ) : null}
+            </span>
+          </>
+        )}
+      />
+      {creating ? (
+        <GiftModal
+          country={country}
+          onClose={() => setCreating(false)}
+          onCreated={(body) => {
+            setCreating(false);
+            setCreated(body);
+            void load();
+          }}
+        />
+      ) : null}
+      {created ? (
+        <GiftCreatedModal
+          created={created}
+          onSent={() => void load()}
+          onClose={() => {
+            setCreated(null);
+            void load();
+          }}
+        />
+      ) : null}
+      {cancelling ? (
+        <ReasonModal
+          title={`إلغاء الهدية ${cancelling.serial}`}
+          note="يُلغى الرابطُ وبطاقتُه، ويُمحى الرمزُ المعمّى. من يفتح الرابطَ بعدها يرى «أُلغيت هذه البطاقة»."
+          onClose={() => setCancelling(null)}
+          onSubmit={async (reason) => {
+            await cancelGift(cancelling.id, reason);
+            setCancelling(null);
+            onDone("أُلغيت الهدية");
+            await load();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function inAYear(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function GiftModal({
+  country,
+  onClose,
+  onCreated,
+}: {
+  country: CountryCode;
+  onClose: () => void;
+  onCreated: (body: GiftCreated) => void;
+}) {
+  const [denominations, setDenominations] = useState<CardDenomination[]>([]);
+  const [denominationId, setDenominationId] = useState("");
+  const [design, setDesign] = useState<GiftDesign>("night");
+  const [delivery, setDelivery] = useState<"link" | "print">("link");
+  const [recipient, setRecipient] = useState("");
+  const [message, setMessage] = useState("");
+  const [expiresAt, setExpiresAt] = useState(inAYear());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listCardDenominations(country)
+      .then((rows) => {
+        const active = rows.filter((row) => row.is_active);
+        setDenominations(active);
+        setDenominationId((current) => current || active[0]?.id || "");
+      })
+      .catch((caught) => setError(errorText(caught, "تعذّر قراءة الفئات")));
+  }, [country]);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      onCreated(
+        await createGift({
+          country_code: country,
+          denomination_id: denominationId,
+          design,
+          delivery,
+          expires_at: new Date(`${expiresAt}T23:59:59`).toISOString(),
+          recipient_name: recipient.trim() || null,
+          message: message.trim() || null,
+        }),
+      );
+    } catch (caught) {
+      setError(errorText(caught, "تعذّر إنشاء الهدية"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="بطاقة هدية جديدة" onClose={onClose} wide>
+      <div className="grid gap-12 sm:grid-cols-2">
+        <Select label="الفئة" name="denomination_id" value={denominationId} onChange={(event) => setDenominationId(event.target.value)}>
+          {denominations.length === 0 ? <option value="">لا فئةَ مفعَّلة — أضفها من «الفئات»</option> : null}
+          {denominations.map((row) => (
+            <option key={row.id} value={row.id}>
+              {digits(row.amount)} {row.currency}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="طريقة التسليم"
+          name="delivery"
+          value={delivery}
+          onChange={(event) => setDelivery(event.target.value as "link" | "print")}
+        >
+          <option value="link">رابطٌ خاصّ يُكشط (واتساب · SMS · بريد)</option>
+          <option value="print">نسخةٌ مطبوعة بمنطقة كشط</option>
+        </Select>
+        <Field label="اسم المُهدى إليه (اختياريّ)" name="recipient_name" value={recipient} maxLength={80} onChange={(event) => setRecipient(event.target.value)} />
+        <DateInput label="تنتهي صلاحيتها في" name="expires_at" value={expiresAt} onChange={setExpiresAt} />
+      </div>
+      <Field label="رسالة قصيرة (اختياريّة)" name="message" value={message} maxLength={200} onChange={(event) => setMessage(event.target.value)} />
+      <p className="mb-8 mt-14 text-12 font-bold text-ink">التصميم</p>
+      <div className="grid grid-cols-3 gap-10">
+        {GIFT_DESIGNS.map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => setDesign(option.key)}
+            className={cn(
+              "flex flex-col items-center gap-6 rounded-14 border p-8 text-12 font-semibold",
+              design === option.key ? "border-accent text-ink" : "border-line text-muted",
+            )}
+          >
+            <span className="block h-[54px] w-full rounded-10" style={{ background: option.preview }} />
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className="mt-12 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
+        {delivery === "link"
+          ? "الرابطُ يظهر بعد الإنشاء مرّةً واحدة: أرسله فوراً. الرمزُ يُخزَّن معمًّى حتى يُكشط ثمّ يُمحى، ولا يراه أحدٌ قبل صاحبه."
+          : "الرمزُ يظهر مرّةً واحدة في ملفّ الطباعة: نزّله فوراً. لا يُخزَّن الرمز."}
+      </p>
+      <ErrorNote message={error} />
+      <div className="mt-18 flex gap-10">
+        <Button className="flex-1" size="md" loading={busy} disabled={!denominationId || !expiresAt} onClick={() => void submit()}>
+          أنشئ الهدية
+        </Button>
+        <Button className="flex-1" size="md" variant="secondary" onClick={onClose}>
+          تراجع
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+/** **الرابطُ أو ملفُّ الطباعة مرّةً واحدة** — بعد الإغلاق لا يعيدهما أحد؛ ومن ضاع رابطُه يُلغي الهديةَ ويُنشئ غيرَها. */
+function GiftCreatedModal({ created, onSent, onClose }: { created: GiftCreated; onSent: () => void; onClose: () => void }) {
+  const [sent, setSent] = useState<Set<GiftChannel>>(new Set());
+  const [password, setPassword] = useState("");
+  const [printed, setPrinted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const url = created.url;
+
+  async function record(channel: GiftChannel) {
+    if (!created.gift) return;
+    try {
+      await markGiftSent(created.gift.id, channel);
+      setSent(new Set([...sent, channel]));
+      onSent();
+    } catch (caught) {
+      setError(errorText(caught, "تعذّر تسجيلُ الإرسال"));
+    }
+  }
+
+  async function copy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      await record("copy");
+    } catch {
+      setError("تعذّر النسخ — حدِّد الرابطَ وانسخه بيدك");
+    }
+  }
+
+  async function print() {
+    if (!created.code) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await exportCardBatch(created.batch_id, "gift", password, [created.code], created.gift?.design ?? "night");
+      setPrinted(true);
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : "تعذّر تنزيلُ الملفّ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const finished = url ? sent.size > 0 : printed;
+  return (
+    <Modal title={`الهدية ${created.serial}`} onClose={finished ? onClose : () => undefined} wide>
+      {url ? (
+        <>
+          <p className="mb-12 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
+            هذه هي المرّةُ الوحيدةُ التي يظهر فيها الرابط. أرسله الآن. بعد إغلاق النافذة لا يعيده أحد.
+          </p>
+          <div className="mb-12 break-all rounded-10 border border-line bg-surface px-12 py-10 text-12 text-ink" dir="ltr">
+            {url}
+          </div>
+          <div className="flex flex-wrap gap-10">
+            {CHANNELS.map((channel) => (
+              <a
+                key={channel.key}
+                href={shareHref(channel.key, url)}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => void record(channel.key)}
+                className={cn(
+                  "flex min-h-[44px] flex-1 items-center justify-center rounded-12 px-12 text-13 font-semibold",
+                  sent.has(channel.key) ? "bg-surface-2 text-muted" : "bg-accent text-white",
+                )}
+              >
+                {sent.has(channel.key) ? `✓ ${channel.label}` : `أرسل ب${channel.label}`}
+              </a>
+            ))}
+            <Button className="flex-1" size="md" variant="secondary" onClick={() => void copy()}>
+              {sent.has("copy") ? "✓ نُسخ الرابط" : "انسخ الرابط"}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mb-12 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
+            هذه هي المرّةُ الوحيدةُ التي يُنزَّل فيها ملفُّ الهدية. اكتب كلمةَ سرٍّ ونزّله واحفظه.
+          </p>
+          <label className="mb-6 block text-12 font-bold text-ink" htmlFor="gift-file-password">
+            كلمة سرّ الملفّ (8 أحرف على الأقل)
+          </label>
+          <input
+            id="gift-file-password"
+            type="password"
+            autoComplete="new-password"
+            dir="ltr"
+            className="mb-14 w-full rounded-10 border border-line bg-surface px-12 py-10 text-13 text-ink"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <Button className="w-full" size="md" disabled={password.length < 8 || busy} loading={busy} onClick={() => void print()}>
+            {printed ? "✓ نُزّل ملفُّ الطباعة" : "نزّل ملفَّ الطباعة (PDF بمنطقة كشط)"}
+          </Button>
+        </>
+      )}
+      {error ? <p className="mt-10 text-12 text-danger">{error}</p> : null}
+      <Button className="mt-18 w-full" size="md" variant="secondary" disabled={!finished} onClick={onClose}>
+        {url ? "أرسلتُ الرابط — أغلق" : "حفظتُ الملفّ — أغلق"}
+      </Button>
     </Modal>
   );
 }

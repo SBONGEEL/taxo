@@ -116,6 +116,11 @@ const CardRedeemT2Screen = lazy(() =>
     default: m.CardRedeemT2Screen,
   })),
 );
+const RedeemLink = lazy(() =>
+  import("@/screens/t2/CardRedeemT2").then((m) => ({
+    default: m.RedeemLink,
+  })),
+);
 const WalletTopupScreen = lazy(() =>
   import("@/screens/WalletTopup").then((m) => ({
     default: m.WalletTopupScreen,
@@ -632,6 +637,7 @@ export default function App() {
                           </Guarded>
                         }
                       />
+                      <Route path="/redeem" element={<RedeemLink />} />
                       <Route
                         path="/wallet/card"
                         element={

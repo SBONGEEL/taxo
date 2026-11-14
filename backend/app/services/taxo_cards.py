@@ -242,6 +242,7 @@ async def create_batch(
     shop_id: uuid.UUID | None,
     valid_from: datetime,
     expires_at: datetime,
+    kind: str = "batch",
 ) -> tuple[CardBatch, list[tuple[str, str]]]:
     """**دفعةٌ تُولَّد معاً** — وتعود رموزُها **مرّةً واحدةً** (`(الرقم، الرمز)`) لملفّ الطباعة، ولا تُخزَّن إلا بصماتُها.
 
@@ -284,6 +285,7 @@ async def create_batch(
         expires_at=expires_at,
         status=TaxoCardBatchStatus.ACTIVE,
         created_by=actor.id,
+        kind=kind,
     )
     session.add(batch)
     await session.flush()
@@ -296,7 +298,8 @@ async def create_batch(
         while code in seen:  # pragma: no cover — ٢^٧٩ لا يتصادم في خمسة آلاف
             code = new_code()
         seen.add(code)
-        serial = f"{country.value}-B{number:04d}-{index:06d}"
+        # **الهديةُ تُقرأ من رقمها** (`G`) — والدفعةُ المطبوعةُ كما كانت (`B`)
+        serial = f"{country.value}-{'G' if kind == 'gift' else 'B'}{number:04d}-{index:06d}"
         cards.append(
             TaxoCard(
                 batch_id=batch.id, country_code=country, currency=currency, serial=serial,
@@ -311,7 +314,7 @@ async def create_batch(
     await audit.record(
         session, actor=actor, action=AuditAction.CREATE, entity_type="card_batch", entity_id=batch.id,
         details={
-            "country_code": country.value, "number": number, "quantity": quantity, "amount": str(denomination.amount),
+            "country_code": country.value, "number": number, "quantity": quantity, "amount": str(denomination.amount), "kind": kind,
             "shop_id": str(shop.id) if shop else None, "valid_from": valid_from.isoformat(), "expires_at": expires_at.isoformat(),
         },
     )
@@ -577,6 +580,7 @@ async def redeem(
     card.redeemed_owner_type = owner_type
     card.redeemed_at = now
     card.transaction_id = entry.id
+    card.code_envelope = None  # **لا معمًّى يبقى لبطاقةٍ استُعملت** (§١٠٠-أ/٣)
     card.payment_request_id = request.id
     # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** — كالشحن القائم حرفاً
     await cancellation.on_wallet_funded(session, user=user)
@@ -670,11 +674,12 @@ def shop_totals(figures: list[BatchFigures]) -> dict[uuid.UUID, dict[str, Decima
 
 #: **«لحظةَ الإنشاء»** — بعدها لا ملفّ: الرموزُ لا تُستعاد، ومن أغلق النافذةَ بلا تنزيلٍ يُلغي الدفعةَ ويُصدر غيرَها
 EXPORT_WINDOW = timedelta(minutes=30)
-EXPORT_FORMATS = ("xlsx", "pdf", "sheet")
+EXPORT_FORMATS = ("xlsx", "pdf", "sheet", "gift")
 
 
 async def export_batch(
-    session: AsyncSession, *, batch: CardBatch, actor: User, fmt: str, password: str, codes: list[tuple[str, str]]
+    session: AsyncSession, *, batch: CardBatch, actor: User, fmt: str, password: str, codes: list[tuple[str, str]],
+    design: str = "night",
 ) -> tuple[bytes, str, str]:
     """**ملفُّ الدفعة من رموزٍ في يد اللوحة** — كلُّ رمزٍ يُطابَق ببصمة بطاقته في الدفعة، **ولا يُخزَّن شيء**.
 
@@ -684,6 +689,9 @@ async def export_batch(
 
     if fmt not in EXPORT_FORMATS:
         raise InvalidInput("صيغةُ الملفّ غيرُ معروفة", field="format")
+    # **النسخةُ المطبوعةُ بمنطقة الكشط لبطاقة الهدية وحدَها** — والدفعةُ لا تُطبع بها
+    if (fmt == "gift") != (batch.kind == "gift"):
+        raise InvalidInput("هذه الصيغةُ لا تناسب هذه الدفعة", field="format")
     card_exports.check_password(password)
     if _now() - batch.created_at > EXPORT_WINDOW:
         raise InvalidInput("ملفّاتُ الدفعة تُنزَّل عند إنشائها وحدَه — الرموزُ لا تُستعاد", field="batch_id")
@@ -705,14 +713,17 @@ async def export_batch(
         rows.append(card_exports.CardRow(serial=serial, code=printed(code), amount=card.amount, status=card.status.value))
     rows.sort(key=lambda row: row.serial)
     shop = await session.get(CardShop, batch.shop_id) if batch.shop_id else None
+    prefix = "G" if batch.kind == "gift" else "B"
     meta = card_exports.BatchMeta(
-        title=f"دفعة {batch.country_code.value}-B{batch.number:04d}", country=batch.country_code.value,
+        title=f"{'هدية' if batch.kind == 'gift' else 'دفعة'} {batch.country_code.value}-{prefix}{batch.number:04d}", country=batch.country_code.value,
         currency=batch.currency.value, amount=batch.amount, valid_from=batch.valid_from, expires_at=batch.expires_at,
         created_at=batch.created_at, shop=shop.name if shop else None, zone=await _zone(session, batch.country_code),
     )
-    stem = f"taxo-cards-{batch.country_code.value}-B{batch.number:04d}"
+    stem = f"taxo-cards-{batch.country_code.value}-{prefix}{batch.number:04d}"
     if fmt == "xlsx":
         content, media, name = card_exports.batch_xlsx(meta, rows, password=password), card_exports.XLSX_MEDIA_TYPE, f"{stem}.xlsx"
+    elif fmt == "gift":
+        content, media, name = card_exports.gift_print_pdf(meta, rows[0], password=password, design=design), card_exports.PDF_MEDIA_TYPE, f"{stem}-gift.pdf"
     elif fmt == "pdf":
         content, media, name = card_exports.batch_pdf(meta, rows, password=password), card_exports.PDF_MEDIA_TYPE, f"{stem}.pdf"
     else:

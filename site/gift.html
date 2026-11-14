@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>بطاقة هدية TAXO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14181d">
+<link rel="icon" href="/assets/favicon.png">
+<!--
+  صفحةُ بطاقة الهدية (SPEC §١٠٠-أ/٣).
+  الرابطُ الخاصُّ بعد علامة # فلا يبلغه أيُّ خادمٍ في الطلب. والصفحةُ ترسله في جسم الطلب إلى /api/gift/…، وهذا الموقعُ يمرّره إلى
+  الخلفيّة من الأصل نفسِه. والرمزُ يُجلب لحظةَ الكشط وحدَها، مرّةً واحدة، ثمّ تمحو الخلفيّةُ نسختَه المعمّاة.
+-->
+<style>
+@font-face{font-family:"Plex";src:url(/fonts/IBMPlexSansArabic-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Plex";src:url(/fonts/IBMPlexSansArabic-700.woff2) format("woff2");font-weight:700;font-display:swap}
+:root{--orange:#F26B21;--ink:#14181d;--paper:#faf6f0;--muted:#8b949e}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:"Plex",system-ui,sans-serif;background:#0d1014;color:#fff;display:flex;flex-direction:column;align-items:center;
+  padding:28px 16px 40px;min-height:100vh;-webkit-tap-highlight-color:transparent}
+.brand{font-weight:700;letter-spacing:.08em;font-size:15px;color:var(--muted);margin-bottom:18px}
+.brand b{color:var(--orange)}
+.card{position:relative;width:100%;max-width:380px;aspect-ratio:1.586;border-radius:22px;overflow:hidden;padding:22px 22px 18px;
+  display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 24px 60px rgba(0,0,0,.45);isolation:isolate}
+.card::before{content:"";position:absolute;inset:0;z-index:-1}
+/* ثلاثةُ تصاميم TAXO 2.0 */
+.d-night{background:#14181d;color:#fff}
+.d-night::before{background:radial-gradient(120% 90% at 85% 10%,rgba(242,107,33,.55),transparent 55%),
+  radial-gradient(80% 60% at 0% 100%,rgba(242,107,33,.18),transparent 60%)}
+.d-sunrise{background:linear-gradient(135deg,#F26B21 0%,#FF8A3D 55%,#FFB36B 100%);color:#fff}
+.d-sunrise::before{background:radial-gradient(90% 70% at 100% 0%,rgba(255,255,255,.28),transparent 60%)}
+.d-city{background:var(--paper);color:var(--ink)}
+.d-city::before{background:
+  repeating-linear-gradient(90deg,transparent 0 46px,rgba(20,24,29,.05) 46px 47px),
+  repeating-linear-gradient(0deg,transparent 0 46px,rgba(20,24,29,.05) 46px 47px),
+  linear-gradient(115deg,transparent 40%,rgba(242,107,33,.9) 40.3%,rgba(242,107,33,.9) 41.3%,transparent 41.6%)}
+.x{position:absolute;inset-inline-start:-18px;bottom:-30px;font-weight:700;font-size:170px;line-height:1;opacity:.12;z-index:-1}
+.d-night .x,.d-city .x{color:var(--orange);opacity:.16}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:700;font-size:24px;letter-spacing:.06em}
+.d-night .logo,.d-city .logo{color:var(--orange)}
+.tag{font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.16)}
+.d-city .tag{background:rgba(20,24,29,.07)}
+.amount{font-size:40px;font-weight:700;line-height:1.1;direction:ltr;text-align:right}
+.amount small{font-size:18px;margin-inline-start:6px}
+.to{font-size:14px;opacity:.9;min-height:20px}
+.msg{width:100%;max-width:380px;margin:16px 0 4px;font-size:16px;line-height:1.6;text-align:center;color:#e6e9ec;min-height:10px}
+.scratch{position:relative;width:100%;max-width:380px;height:92px;margin-top:18px;border-radius:16px;overflow:hidden;
+  background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none}
+.code{font-weight:700;font-size:24px;letter-spacing:.06em;direction:ltr;font-variant-numeric:tabular-nums}
+.code.wait{font-size:15px;color:var(--muted);letter-spacing:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;transition:opacity .45s ease}
+canvas.gone{opacity:0;pointer-events:none}
+.sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.55) 45%,transparent 60%);
+  background-size:250% 100%;animation:sheen 2.4s ease-in-out infinite;mix-blend-mode:overlay}
+.sheen.off{display:none}
+@keyframes sheen{0%{background-position:120% 0}100%{background-position:-120% 0}}
+.hint{margin-top:10px;font-size:13px;color:var(--muted);text-align:center}
+.actions{display:none;flex-direction:column;gap:10px;width:100%;max-width:380px;margin-top:18px}
+.actions.on{display:flex}
+.btn{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;font:700 16px "Plex",sans-serif;border:0;
+  text-decoration:none;cursor:pointer}
+.primary{background:var(--orange);color:#fff}
+.ghost{background:#1c2229;color:#fff}
+.small{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}
+.small a{color:#cfd6dd}
+.note{width:100%;max-width:380px;margin-top:18px;padding:14px 16px;border-radius:14px;background:#1c2229;color:#e6e9ec;font-size:15px;
+  line-height:1.6;text-align:center;display:none}
+.note.on{display:block}
+.warn{color:#ffcf9e}
+@media (prefers-reduced-motion:reduce){.sheen{animation:none}canvas{transition:none}}
+</style>
+</head>
+<body>
+<div class="brand">بطاقة هدية من <b>TAXO</b></div>
+
+<div class="card d-night" id="card" aria-live="polite">
+  <div class="x" aria-hidden="true">X</div>
+  <div class="top"><div class="logo">TAXO</div><div class="tag">بطاقة هدية</div></div>
+  <div>
+    <div class="amount" id="amount">…</div>
+    <div class="to" id="to"></div>
+  </div>
+</div>
+<div class="msg" id="msg"></div>
+
+<div class="scratch" id="scratch" hidden>
+  <div class="code wait" id="code">اكشط لترى رمزك</div>
+  <canvas id="foil" aria-label="منطقة الكشط — اسحب إصبعك عليها"></canvas>
+  <div class="sheen" id="sheen"></div>
+</div>
+<div class="hint" id="hint" hidden>اسحب إصبعك على المنطقة الفضّيّة. الرمزُ يظهر مرّةً واحدة.</div>
+
+<div class="actions" id="actions">
+  <button class="btn primary" id="copy" type="button">انسخ الرمز</button>
+  <a class="btn ghost" id="redeem" href="#">اشحن في التطبيق</a>
+  <div class="small">كبتن؟ <a id="redeemDriver" href="#">اشحن في تطبيق الكبتن</a> · ليس عندك التطبيق؟ <a href="/download">حمّله</a></div>
+</div>
+<div class="note" id="note"></div>
+
+<script>
+(function () {
+  "use strict";
+  var token = (location.hash || "").replace(/^#/, "").trim();
+  // **الرابطُ لا يبقى في شريط العنوان ولا في السجلّ** بعد قراءته
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var LABEL = { JOD: "د.أ", DZD: "د.ج", LYD: "د.ل" };
+  var STATE_TEXT = {
+    scratched: "كُشطت هذه البطاقة من قبل، والرمزُ يظهر مرّةً واحدة. إن لم تحفظه فاطلب من مُرسلها بطاقةً جديدة.",
+    redeemed: "استُعملت هذه البطاقة، وأُضيفت قيمتُها إلى محفظة صاحبها.",
+    cancelled: "أُلغيت هذه البطاقة.",
+    expired: "انتهت صلاحيةُ هذه البطاقة."
+  };
+  var storeKey = null;
+
+  function note(text, warn) {
+    var el = $("note"); el.textContent = text; el.className = "note on" + (warn ? " warn" : "");
+  }
+  function money(amount, currency) {
+    // **أرقامٌ لاتينيّة** وبلا كسورٍ صفريّة
+    var n = Number(amount);
+    var shown = Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+    return shown + "<small>" + (LABEL[currency] || currency) + "</small>";
+  }
+  function post(path, body) {
+    return fetch("/api/gift/" + path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer"
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+    });
+  }
+  function showCode(code) {
+    var el = $("code"); el.textContent = code; el.className = "code";
+    $("redeem").href = "https://app.tajora.ly/redeem#" + code.replace(/-/g, "");
+    $("redeemDriver").href = "https://driver.tajora.ly/redeem#" + code.replace(/-/g, "");
+  }
+  function reveal() {
+    $("foil").className = "gone"; $("sheen").className = "sheen off"; $("hint").hidden = true;
+    $("actions").className = "actions on";
+  }
+
+  if (!token) { note("الرابطُ ناقص. افتحه كما وصلك كاملاً.", true); return; }
+
+  // **مفتاحٌ محلّيٌّ لهذه الهديّة**: إن أُعيد تحميلُ الصفحة بعد الكشط في الجلسة نفسِها يبقى الرمزُ أمام صاحبه
+  if (window.crypto && crypto.subtle && window.TextEncoder) {
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)).then(function (d) {
+      storeKey = "taxo.gift." + Array.prototype.map.call(new Uint8Array(d).slice(0, 8), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+    }).catch(function () {});
+  }
+
+  post("open", { token: token }).then(function (res) {
+    if (!res.ok) {
+      note(res.status === 429 ? "محاولاتٌ كثيرة. أعد المحاولة بعد قليل." : "الرابطُ غيرُ صحيح.", true);
+      $("amount").textContent = "—"; return;
+    }
+    var g = res.body;
+    $("card").className = "card d-" + (g.design || "night");
+    $("amount").innerHTML = money(g.amount, g.currency);
+    $("to").textContent = g.recipient_name ? ("إلى " + g.recipient_name) : "";
+    $("msg").textContent = g.message || "";
+    var saved = null;
+    try { saved = storeKey && sessionStorage.getItem(storeKey); } catch (e) {}
+    if (saved) { $("scratch").hidden = false; showCode(saved); reveal(); return; }
+    if (STATE_TEXT[g.state]) { note(STATE_TEXT[g.state], g.state !== "redeemed"); return; }
+    setupScratch(g);
+  }).catch(function () { note("تعذّر الاتصال. تحقّق من الإنترنت وأعد فتح الرابط.", true); });
+
+  function setupScratch() {
+    $("scratch").hidden = false; $("hint").hidden = false;
+    var canvas = $("foil"), box = $("scratch"), ctx = canvas.getContext("2d");
+    var ratio = Math.max(1, window.devicePixelRatio || 1);
+    var w = box.clientWidth, h = box.clientHeight;
+    canvas.width = w * ratio; canvas.height = h * ratio; ctx.scale(ratio, ratio);
+    var grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#b9bec4"); grad.addColorStop(.35, "#eef0f2"); grad.addColorStop(.6, "#a9afb6"); grad.addColorStop(1, "#d9dde1");
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+    for (var i = 0; i < 900; i++) {  // حُبيباتُ الفضّة
+      ctx.fillStyle = "rgba(255,255,255," + (Math.random() * .35) + ")";
+      ctx.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2);
+    }
+    ctx.fillStyle = "rgba(60,66,74,.85)"; ctx.font = "700 17px Plex, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("اكشط هنا", w / 2, h / 2);
+    ctx.globalCompositeOperation = "destination-out";
+
+    var started = false, done = false, drawing = false, last = null, moves = 0;
+    var audio = null, lastSound = 0;
+    function sound() {
+      var now = Date.now(); if (now - lastSound < 70) return; lastSound = now;
+      try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        var len = Math.floor(audio.sampleRate * .06), buf = audio.createBuffer(1, len, audio.sampleRate), data = buf.getChannelData(0);
+        for (var k = 0; k < len; k++) data[k] = (Math.random() * 2 - 1) * (1 - k / len);
+        var src = audio.createBufferSource(); src.buffer = buf;
+        var filter = audio.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 2600; filter.Q.value = .8;
+        var gain = audio.createGain(); gain.gain.value = .12;
+        src.connect(filter); filter.connect(gain); gain.connect(audio.destination); src.start();
+      } catch (e) {}
+    }
+    function start() {
+      if (started) return; started = true; $("sheen").className = "sheen off";
+      // **الرمزُ يُجلب لحظةَ الكشط وحدَها**
+      post("scratch", { token: token }).then(function (res) {
+        if (!res.ok) {
+          var msg = (res.body && res.body.message) || (res.status === 429 ? "محاولاتٌ كثيرة. أعد المحاولة بعد قليل." : "تعذّر الكشط.");
+          $("code").textContent = ""; canvas.className = "gone"; $("hint").hidden = true; note(msg, true); return;
+        }
+        showCode(res.body.code);
+        try { storeKey && sessionStorage.setItem(storeKey, res.body.code); } catch (e) {}
+        if (done) reveal();
+      }).catch(function () { note("انقطع الاتصال أثناء الكشط. أعد فتح الرابط.", true); });
+    }
+    function point(ev) {
+      var r = canvas.getBoundingClientRect(); var p = ev.touches ? ev.touches[0] : ev;
+      return { x: p.clientX - r.left, y: p.clientY - r.top };
+    }
+    function cleared() {
+      var img = ctx.getImageData(0, 0, canvas.width, canvas.height).data, clear = 0, total = 0;
+      for (var q = 3; q < img.length; q += 64) { total++; if (img[q] === 0) clear++; }
+      return clear / total;
+    }
+    function scrape(p) {
+      ctx.lineWidth = 34; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath(); ctx.moveTo((last || p).x, (last || p).y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p; sound();
+      if (++moves % 8 === 0 && !done && cleared() > .45) {
+        done = true;
+        if ($("code").className === "code") reveal();
+      }
+    }
+    function down(ev) { ev.preventDefault(); drawing = true; last = null; start(); scrape(point(ev)); }
+    function move(ev) { if (!drawing) return; ev.preventDefault(); scrape(point(ev)); }
+    function up() { drawing = false; last = null; }
+    canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    canvas.addEventListener("touchstart", down, { passive: false }); canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", up);
+  }
+
+  $("copy").addEventListener("click", function () {
+    var code = $("code").textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(function () {
+      $("copy").textContent = "نُسخ الرمز ✓";
+    }).catch(function () {
+      var range = document.createRange(); range.selectNodeContents($("code"));
+      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      $("copy").textContent = "حدِّد الرمز وانسخه";
+    });
+  });
+})();
+</script>
+</body>
+</html>

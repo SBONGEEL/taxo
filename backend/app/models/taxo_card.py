@@ -17,6 +17,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -24,6 +25,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -80,6 +82,7 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("country_code", "number"),
         CheckConstraint("amount > 0", name="card_batch_amount_positive"),
         CheckConstraint("quantity > 0", name="card_batch_quantity_positive"),
+        CheckConstraint("kind IN ('batch', 'gift')", name="card_batches_kind_known"),
         CheckConstraint("expires_at > valid_from", name="card_batch_window"),
         CheckConstraint(
             "status <> 'cancelled' OR length(btrim(coalesce(cancel_reason, ''))) > 0", name="card_batch_cancel_has_reason"
@@ -114,6 +117,9 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
     )
 
     shop: Mapped[CardShop | None] = relationship(CardShop, lazy="joined")
+
+    #: **نوعُ الدفعة** (§١٠٠-أ/٣): `batch` الدفعةُ المطبوعةُ كما كانت، و`gift` بطاقةُ هديةٍ واحدةٌ برابطٍ خاصّ
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="batch", server_default=text("'batch'"))
 
 
 class TaxoCard(UUIDMixin, TimestampMixin, Base):
@@ -160,8 +166,52 @@ class TaxoCard(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: **رمزُ بطاقة الهدية وحدَها معمًّى** (§١٠٠-أ/٣) حتى يُكشط، ثمّ يُمحى — **وفارغٌ لكلِّ بطاقةٍ أخرى** (البصمةُ وحدَها كما هي)
+    code_envelope: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[CardBatch] = relationship(CardBatch, lazy="joined")
+
+
+class CardGiftLink(UUIDMixin, TimestampMixin, Base):
+    """**رابطُ بطاقة الهدية الخاصّ** (§١٠٠-أ/٣) — **بصمةُ الرابط لا الرابط**: يظهر نصُّه مرّةً لحظةَ الإنشاء.
+
+    **والحالُ تُقرأ من أوقاتها**: أُنشئ ← أُرسل ← فُتح ← كُشط ← استُعملت البطاقة (من صفّها) — أو أُلغي بسببٍ مكتوب."""
+
+    __tablename__ = "card_gift_links"
+    __table_args__ = (
+        UniqueConstraint("card_id", name="uq_card_gift_links_card"),
+        UniqueConstraint("token_hash", name="uq_card_gift_links_token_hash"),
+        CheckConstraint("design IN ('night', 'sunrise', 'city')", name="card_gift_links_design_known"),
+        CheckConstraint(
+            "sent_channel IS NULL OR sent_channel IN ('whatsapp', 'sms', 'email', 'copy')", name="card_gift_links_channel_known"
+        ),
+        Index("ix_card_gift_links_country_created", "country_code", "created_at"),
+    )
+
+    card_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("taxo_cards.id", ondelete="RESTRICT"), nullable=False
+    )
+    country_code: Mapped[CountryCode] = mapped_column(pg_enum(CountryCode, "country_code"), nullable=False)
+    #: **SHA-256 للرابط** — الرابطُ نفسُه لا يُخزَّن، فلا يُستعاد من القاعدة
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    design: Mapped[str] = mapped_column(String(16), nullable=False)
+    recipient_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    message: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    sent_channel: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    open_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    scratched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cancelled_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    card: Mapped[TaxoCard] = relationship(TaxoCard, lazy="joined")
 
 
 class TaxoCardSetting(UUIDMixin, TimestampMixin, Base):

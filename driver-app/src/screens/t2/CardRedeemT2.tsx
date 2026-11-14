@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { redeemTaxoCard } from "@/api/endpoints";
@@ -25,10 +25,35 @@ function grouped(raw: string): string {
   return plain.replace(/(.{4})(?=.)/g, "$1-");
 }
 
+/** **رمزٌ وصل من رابط** (`/redeem#<الرمز>`: QR البطاقة أو زرُّ «اشحن في التطبيق» في صفحة الهدية، SPEC §١٠٠).
+ * ما بعد `#` لا يبلغ خادماً، فيُحفظ في الجلسة ويُفتح به حقلُ البطاقة، ثمّ يُمحى من شريط العنوان. */
+const REDEEM_KEY = "taxo.redeem.code";
+
+export function RedeemLink() {
+  const raw = typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "");
+  const plain = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  try {
+    if (plain) sessionStorage.setItem(REDEEM_KEY, plain);
+  } catch {
+    /* تخزينُ الجلسة ممنوع: يُكتب الرمزُ باليد */
+  }
+  return <Navigate to="/wallet/card" replace />;
+}
+
+function takeLinkedCode(): string {
+  try {
+    const saved = sessionStorage.getItem(REDEEM_KEY) ?? "";
+    sessionStorage.removeItem(REDEEM_KEY);
+    return grouped(saved);
+  } catch {
+    return "";
+  }
+}
+
 export function CardRedeemT2Screen() {
   const goBack = useGoBack("/wallet");
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(takeLinkedCode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<TaxoCardRedeemed | null>(null);
