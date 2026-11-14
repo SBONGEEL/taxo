@@ -228,7 +228,7 @@ async def test_a_forged_or_stale_webhook_is_refused_and_moves_nothing(
     fake.pay("ch_1")
 
     if forgery == "wrong_secret":
-        body, headers = _hook("ch_1", secret="ws_not-the-secret")
+        body, headers = _hook("ch_1", secret="ws_" + secrets.token_hex(8))
     elif forgery == "stale":
         # **توقيعٌ صحيحٌ لكنّه أقدمُ من خمس دقائق** — إعادةُ بثٍّ لا تُقبل
         body, headers = _hook("ch_1", at=int(time.time()) - whop.WEBHOOK_TOLERANCE_SECONDS - 60)

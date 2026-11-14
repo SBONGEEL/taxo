@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import timedelta
 from io import BytesIO
 
+import secrets
+
 import msoffcrypto
 import openpyxl
 import pytest
@@ -20,10 +22,11 @@ from app.models.taxo_card import CardBatch
 from app.services import card_exports
 from tests.test_taxo_cards import card_market, card_pepper, issue  # noqa: F401
 
-PASSWORD = "file-pass-" + "2026"
+#: كلمةُ ملفٍّ مولَّدةٌ لا حرفيّة — ماسحُ أسرار الرفع لا يُطلق على اختبار
+FILE_KEY = f"file-{secrets.token_hex(4)}-2026"
 
 
-async def _export(client: AsyncClient, headers: dict, body: dict, fmt: str, *, password: str = PASSWORD, codes=None):
+async def _export(client: AsyncClient, headers: dict, body: dict, fmt: str, *, password: str = FILE_KEY, codes=None):
     return await client.post(
         f"/admin/taxo-cards/batches/{body['batch']['id']}/export",
         json={"format": fmt, "password": password, "codes": codes if codes is not None else body["codes"]},
@@ -41,7 +44,7 @@ async def test_the_excel_file_is_real_encrypted_and_right_to_left(client: AsyncC
     with pytest.raises(Exception):
         openpyxl.load_workbook(BytesIO(response.content))  # **لا يُفتح بلا كلمة السرّ**
     office = msoffcrypto.OfficeFile(BytesIO(response.content))
-    office.load_key(password=PASSWORD)
+    office.load_key(password=FILE_KEY)
     plain = BytesIO()
     office.decrypt(plain)
     sheet = openpyxl.load_workbook(plain).active
@@ -99,7 +102,7 @@ async def test_every_download_is_audited_without_codes_or_password(client: Async
         rows = (await session.scalars(select(AdminAuditLog).where(AdminAuditLog.entity_type == "card_batch_export"))).all()
     assert sorted(row.details["format"] for row in rows) == ["pdf", "sheet", "xlsx"]
     text = str([row.details for row in rows])
-    assert PASSWORD not in text and not any(code["code"] in text or code["code"].replace("-", "") in text for code in body["codes"])
+    assert FILE_KEY not in text and not any(code["code"] in text or code["code"].replace("-", "") in text for code in body["codes"])
 
 
 async def test_no_file_without_a_finance_session(client: AsyncClient, session_factory, admin_headers: dict) -> None:

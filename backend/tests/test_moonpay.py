@@ -262,7 +262,7 @@ async def test_a_forged_webhook_is_refused_moves_nothing_and_switches_the_method
     assert (await client.post("/payment-requests/webhook/moonpay", content=body, headers=headers)).status_code == 401
     assert await _switches(session_factory) == (True, True)
 
-    body, headers = _hook(fake.token(1), secret="wh-not-the-secret")
+    body, headers = _hook(fake.token(1), secret="wh-" + secrets.token_hex(8))
     refused = await client.post("/payment-requests/webhook/moonpay", content=body, headers=headers)
     assert refused.status_code == 401
     assert (await _row(session_factory, request_id)).status.value == "pending"
