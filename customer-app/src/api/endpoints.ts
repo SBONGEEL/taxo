@@ -335,6 +335,27 @@ export const mapPlaces = () => api.get<MapPlaceSpot[]>("/map-places");
 export const searchMapPlaces = (q: string, near?: { lat: number; lng: number }, signal?: AbortSignal) =>
   api.get<MapPlaceSpot[]>("/map-places/search", { query: { q, ...(near ?? {}) }, signal });
 
+/** **البحثُ الموحَّد عبر الخلفية** (قرارُ المالك ٢٠٢٦-١١-١٥): المحفوظةُ والأخيرةُ وأماكنُ TAXO ثمّ البياناتُ المفتوحة (OpenStreetMap +
+ *  Overture) ثمّ Mapbox احتياطاً — مرتّبةً في الخلفية. */
+export interface PlaceSearchItem {
+  id: string;
+  source: "saved" | "recent" | "taxo" | "learned" | "google" | "open" | "mapbox";
+  name: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  place_id: string | null;
+  distance_m: number | null;
+}
+export interface PlaceSearchAnswer {
+  items: PlaceSearchItem[];
+  attribution: "google" | "open" | "mapbox" | null;
+  /** **نسبةُ ODbL** — تُعرض تحت القائمة حين تأتي النتائجُ من البيانات المفتوحة */
+  attribution_text: string | null;
+}
+export const placeSearch = (q: string, near?: { lat: number; lng: number }, signal?: AbortSignal) =>
+  api.get<PlaceSearchAnswer>("/places/search", { query: { q, ...(near ?? {}) }, signal });
+
 export const listPlaces = () => api.get<SavedPlace[]>("/me/places");
 
 export const createPlace = (payload: {

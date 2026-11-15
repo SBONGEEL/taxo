@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 
 import type { CountryCode, Coordinates } from "@/api/types";
-import { searchMapPlaces } from "@/api/endpoints";
+import { placeSearch, searchMapPlaces } from "@/api/endpoints";
 import { mergeSearch, searchPlaces, type Place } from "@/lib/geocode";
 import { useMapPlaces } from "@/lib/map-labels";
 import { useFeature } from "@/lib/config";
@@ -68,6 +68,7 @@ export function DestinationSearch({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
+  const [credit, setCredit] = useState<string | null>(null);
   const typing = query.trim().length >= 2;
   // **الطلبُ بالصوت** (البند ١٠) — مفتاحُ السوق وغلافٌ يحمل الملحق
   const voiceOn = useFeature(country, VOICE_FLAG) && voiceAvailable();
@@ -98,14 +99,40 @@ export function DestinationSearch({
   }, [open]);
 
   useEffect(() => {
-    if ((!token && !labels) || query.trim().length < 2) {
+    if (query.trim().length < 2) {
       setResults([]);
+      setCredit(null);
       return;
     }
 
     const controller = new AbortController();
     setSearching(true);
     const timer = window.setTimeout(async () => {
+      // **البحثُ الموحَّد عبر الخلفية أوّلاً** (٢٠٢٦-١١-١٥) — ونتيجةٌ بلا إحداثيّاتٍ (اقتراحُ Google) لا تُعرض هنا بعد:
+      // اختيارُها يحتاج `/places/resolve`، وGoogle مطفأ. **وفشلُ الخلفيّة يعيد الطريقَ القديمَ كما كان** (أماكنُ السوق + Mapbox)
+      const answer = await placeSearch(query.trim(), near ?? undefined, controller.signal).catch(() => null);
+      if (controller.signal.aborted) return;
+      if (answer) {
+        setResults(
+          answer.items
+            .filter((item) => item.lat !== null && item.lng !== null)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              address: item.address,
+              coordinates: { lat: item.lat as number, lng: item.lng as number },
+            })),
+        );
+        setCredit(answer.attribution === "open" ? answer.attribution_text : null);
+        setSearching(false);
+        return;
+      }
+      setCredit(null);
+      if (!token && !labels) {
+        setResults([]);
+        setSearching(false);
+        return;
+      }
       // **البابان معاً لا تتابعاً** — وفشلُ أحدهما يترك الآخرَ يجيب: البحثُ مكمّلٌ للدبوس، ولا خطأَ يُعرض منه
       const [own, found] = await Promise.all([
         labels
@@ -302,6 +329,8 @@ export function DestinationSearch({
               </span>
             </button>
           ))}
+          {/* **شرطُ رخصة ODbL** — نسبةُ OpenStreetMap وOverture تحت ما جاء منهما */}
+          {credit ? <p className="t2-dest-sub" dir="ltr">{credit}</p> : null}
         </div>
       ) : null}
 
