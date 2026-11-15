@@ -10,7 +10,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["**", "!verify/**"]
     tags: ["v*"]
   workflow_dispatch:
 

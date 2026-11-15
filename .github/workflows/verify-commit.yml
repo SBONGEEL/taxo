@@ -1,0 +1,188 @@
+# **قياسُ إيداعٍ بعينه بمجموعته الكاملة مقسومةً** (قرارُ المالك 2026-11-15).
+#
+# يُخرج **الإيداعَ المقيسَ نفسَه** ويشغّل **مجموعتَه هو** (اختباراتِه وconftestَه) مقسومةً بالملفّ على وظائفَ متوازية —
+# كلُّ وظيفةٍ على عدّائها وبقاعدتها. **وأدواتُ التقسيم وحدَها من هذا الفرع** (`shard_plugin`، `suite.sh`، `ci_*`)، لأن
+# الإيداعَ الأقدمَ لا يحملها؛ ولا تختار من الاختبارات شيئاً — تقسم الكلّ.
+#
+# **وحارسُ العدد**: «القياسُ الكامل» يُسقط التشغيلَ إن كان ما شُغّل في الوظائف كلِّها أقلَّ ممّا جُمع عند ذلك الإيداع
+# (`scripts/ci_shards_check.py`، الحارسُ نفسُه الذي يحرس `ci.yml`).
+#
+# · `workflow_dispatch` بمُدخل `sha` — حين يكون الملفُّ على الفرع الافتراضيّ.
+# · ودفعُ فرعٍ `verify/<sha>` — **يقيس `<sha>`**، ورأسُ الفرع أداةٌ لا موضوع.
+#
+# **ولا يخاطب الإنتاجَ إطلاقاً**، ولا سرَّ فيه — كـ`ci.yml`.
+name: قياسُ إيداع
+
+on:
+  push:
+    branches: ["verify/**"]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: الإيداعُ المقيس
+        required: true
+      shards:
+        description: عددُ الوظائف
+        default: "14"
+
+concurrency:
+  group: verify-${{ github.ref }}-${{ inputs.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DOCKER_BUILD_RECORD_UPLOAD: "false"
+  DOCKER_BUILD_SUMMARY: "false"
+
+jobs:
+  target:
+    name: الإيداعُ المقيس
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.t.outputs.sha }}
+      count: ${{ steps.t.outputs.count }}
+      shards: ${{ steps.t.outputs.shards }}
+    steps:
+      - id: t
+        env:
+          IN_SHA: ${{ inputs.sha }}
+          IN_SHARDS: ${{ inputs.shards }}
+        run: |
+          set -euo pipefail
+          sha="${IN_SHA:-${GITHUB_REF_NAME#verify/}}"
+          n="${IN_SHARDS:-14}"
+          [[ "$sha" =~ ^[0-9a-f]{7,40}$ ]] || { echo "✗ ليس إيداعاً: $sha"; exit 1; }
+          { [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 2 ] && [ "$n" -le 20 ]; } || { echo "✗ عددُ وظائف: $n"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          echo "shards=$(python3 -c "import json;print(json.dumps(list(range(1,$n+1))))")" >> "$GITHUB_OUTPUT"
+          echo "### الإيداعُ المقيس: \`$sha\` على $n وظيفة" >> "$GITHUB_STEP_SUMMARY"
+
+  image:
+    name: صورةُ الإيداع
+    needs: target
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.target.outputs.sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          cache-from: |
+            type=gha,scope=verify-${{ needs.target.outputs.sha }}
+            type=gha,scope=backend-image
+          cache-to: type=gha,scope=verify-${{ needs.target.outputs.sha }},mode=max
+
+  shard:
+    name: الإيداعُ — جزء ${{ matrix.shard }}/${{ needs.target.outputs.count }}
+    needs: [target, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.target.outputs.shards) }}
+    env:
+      COMPOSE_PROJECT_NAME: taxo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.target.outputs.sha }}
+      - uses: actions/checkout@v4
+        with:
+          path: _tools
+          sparse-checkout: |
+            scripts
+            backend/tests/shard_plugin.py
+          sparse-checkout-cone-mode: false
+
+      # **أدواتُ التقسيم من هذا الفرع، والاختباراتُ من الإيداع** — وشجرةٌ لا تعزل العمّال تُشغَّل متتابعةً في كلِّ وظيفة
+      - name: أدواتُ التقسيم
+        run: |
+          set -euo pipefail
+          cp _tools/scripts/suite.sh _tools/scripts/ci_env.sh _tools/scripts/ci_db_up.sh _tools/scripts/ci_suite_trace.sh scripts/
+          cp _tools/backend/tests/shard_plugin.py backend/tests/shard_plugin.py
+          rm -rf _tools
+          mkdir -p backend/.ci
+          if grep -q PYTEST_XDIST_WORKER backend/tests/conftest.py && grep -q '^pytest-xdist' backend/requirements.txt; then
+            echo "SUITE_WORKERS=$(nproc)" >> "$GITHUB_ENV"
+          else
+            echo "SUITE_WORKERS=0" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/cache/restore@v4
+        with:
+          path: backend/.ci/durations.json
+          key: test-durations-verify-${{ github.run_id }}
+          restore-keys: test-durations-
+
+      - name: بيئةُ التشغيل
+        run: |
+          [ -f backend/.ci/durations.json ] || echo '{}' > backend/.ci/durations.json
+          bash scripts/ci_env.sh
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: taxo-backend:latest
+          cache-from: type=gha,scope=verify-${{ needs.target.outputs.sha }}
+
+      - name: القاعدةُ وRedis
+        env:
+          TAXO_ENV_FILE: .env
+        run: bash scripts/ci_db_up.sh
+
+      - name: جزءٌ من مجموعة الإيداع
+        env:
+          SUITE_SHARD: ${{ matrix.shard }}/${{ needs.target.outputs.count }}
+          SUITE_DURATIONS: .ci/durations.json
+          SUITE_REPORT: .ci/shard-${{ matrix.shard }}
+        run: TAXO_ENV_FILE=.env bash scripts/suite.sh
+
+      - name: التقرير
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: |
+            backend/.ci/shard-${{ matrix.shard }}.*.json
+            backend/.suite.out
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+
+      - name: النتيجةُ كاملةً عند السقوط
+        if: failure() || cancelled()
+        run: bash scripts/ci_suite_trace.sh
+
+  verdict:
+    name: القياسُ الكامل
+    needs: [target, shard]
+    if: always() && needs.target.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports
+          pattern: shard-*
+      - name: الخلاصة
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/ci_verify_summary.py reports | tee -a "$GITHUB_STEP_SUMMARY"
+          started=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" --jq .run_started_at)
+          secs=$(( $(date -u +%s) - $(date -u -d "$started" +%s) ))
+          echo "- الزمن: $((secs / 60))د $((secs % 60))ث" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: كلُّ ما جُمع عند الإيداع شُغّل — والساقطُ بأسمائه
+        run: python3 scripts/ci_shards_check.py reports "${{ needs.target.outputs.count }}" out-durations.json
