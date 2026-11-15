@@ -23,7 +23,7 @@ from tests.helpers import RIDER, _enable_provider, rider_session
 pytestmark = pytest.mark.asyncio
 
 OPEN_ITEM = {"id": "osm:15315", "name": "سيتي مول", "name_en": "City Mall", "kind": "poi", "context": "أم السماق، عمّان",
-             "lat": 31.9785, "lng": 35.8337, "distance_m": 7200, "src": "osm", "score": 1.2}
+             "lat": 31.9785, "lng": 35.8337, "distance_m": 7200, "src": "osm", "score": 1.2, "cat": "mall"}
 
 
 class OpenFake:
@@ -156,3 +156,38 @@ async def test_the_panel_searches_in_the_screen_country(
     rider = (await rider_session(client, RIDER))["headers"]
     assert (await client.get("/admin/map-places/search", params={"country": "JO", "q": "مول"}, headers=rider)).status_code == 403
 
+
+async def test_each_result_carries_its_icon_category(client: AsyncClient, open_fake: OpenFake, mapbox: list) -> None:
+    """**أيقونةٌ بصنف المكان** (أمرُ المالك §١٠٤/١١) — الصنفُ من الخدمة يصل كما هو، والطلبُ يسأل عشراً."""
+    found = await _search(client)
+    assert found["items"][0]["category"] == "mall"
+    assert open_fake.calls[0]["limit"] == "10"
+
+
+async def test_the_same_place_twice_is_shown_once(client: AsyncClient, open_fake: OpenFake, mapbox: list) -> None:
+    """**لا تكرار** (§١٠٤/٧) — الاسمُ نفسُه في كيلومترٍ مكانٌ واحد، **وفرعٌ بالاسم نفسِه بعيدٌ يبقى**."""
+    near_copy = {**OPEN_ITEM, "id": "ovt:1", "lat": 31.9790, "lng": 35.8340, "src": "overture"}
+    far_branch = {**OPEN_ITEM, "id": "osm:2", "lat": 32.0600, "lng": 36.0900, "context": "الزرقاء"}
+    open_fake.items = [OPEN_ITEM, near_copy, far_branch]
+    found = await _search(client)
+    assert [i["id"] for i in found["items"]] == ["o-osm:15315", "o-osm:2"]
+
+
+async def test_a_saved_place_hides_the_same_provider_result_and_gets_a_distance(
+    client: AsyncClient, open_fake: OpenFake, mapbox: list
+) -> None:
+    """**المحفوظةُ أوّلاً ومرّةً واحدة** — ونتيجتُها تحمل مسافتَها من الراكب كنتائج الخدمة، **ولا يراها غيرُ صاحبها**."""
+    await _search(client)  # يُنشئ الراكب
+    headers = client._open_rider  # type: ignore[attr-defined]
+    created = await client.post("/me/places", json={"label": "سيتي مول", "lat": 31.9786, "lng": 35.8338, "address": "أم السماق"},
+                                headers=headers)
+    assert created.status_code == 201
+    found = await _search(client)
+    assert [(i["source"], i["category"]) for i in found["items"]] == [("saved", "saved")]
+    assert 7000 < found["items"][0]["distance_m"] < 9000
+
+    from tests.helpers import OTHER_RIDER
+
+    other = (await rider_session(client, OTHER_RIDER))["headers"]
+    theirs = (await client.get("/places/search", params={"q": "سيتي مول", "lat": 31.95, "lng": 35.91}, headers=other)).json()
+    assert [i["source"] for i in theirs["items"]] == ["open"]

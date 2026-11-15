@@ -29,6 +29,10 @@ class PlaceResultOut(BaseModel):
     lng: float | None = None
     place_id: str | None = None
     distance_m: int | None = None
+    #: **صنفُ الأيقونة** (§١٠٤/١١): airport · mall · hospital · university · mosque · restaurant · hotel · school · pharmacy · bank ·
+    #: fuel · park · roundabout · street · city · district · place · saved · recent — و`null` أيقونةٌ عامّة. **نصٌّ لا تعداد**:
+    #: الخدمةُ المفتوحة تملك قائمتَها، وصنفٌ جديدٌ فيها يصل أيقونةً عامّةً لا خطأَ تحقّق
+    category: str | None = None
 
 
 class PlaceSearchOut(BaseModel):
@@ -74,7 +78,7 @@ def place_search_out(answer: maps.SearchAnswer) -> PlaceSearchOut:
         items=[
             PlaceResultOut(
                 id=r.id, source=r.source, name=r.name, address=r.address, lat=r.lat, lng=r.lng,  # type: ignore[arg-type]
-                place_id=r.place_id, distance_m=r.distance_m,
+                place_id=r.place_id, distance_m=r.distance_m, category=r.category,
             )
             for r in answer.items
         ],

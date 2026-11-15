@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import CountryCode, FeatureKey, ProviderKey
-from app.services import google_maps, settings_service
+from app.services import approach, google_maps, settings_service
 from app.services.providers import credentials as credentials_service
 
 logger = logging.getLogger(__name__)
@@ -148,6 +148,8 @@ class Result:
     place_id: str | None = None
     distance_m: int | None = None
     extra: dict = field(default_factory=dict)
+    #: **صنفُ الأيقونة** (أمرُ المالك §١٠٤/١١) — من الخدمة المفتوحة (`cat`)، أو «saved»/«recent» لما هو للراكب؛ و`None` أيقونةٌ عامّة
+    category: str | None = None
 
 
 @dataclass
@@ -204,7 +206,7 @@ async def _open_search(country: CountryCode, query: str, near: tuple[float, floa
     base = settings.places_search_url.rstrip("/")
     if not base or await is_down("open"):
         return None
-    params: dict[str, str] = {"q": query, "cc": country.value, "limit": "8"}
+    params: dict[str, str] = {"q": query, "cc": country.value, "limit": "10"}
     if near:
         params["lat"], params["lng"] = str(near[0]), str(near[1])
     try:
@@ -224,7 +226,7 @@ async def _open_search(country: CountryCode, query: str, near: tuple[float, floa
         out.append(Result(
             id=f"o-{item['id']}", source="open", name=item["name"],
             address=item.get("context") or (item.get("name_en") or ""),
-            lat=float(item["lat"]), lng=float(item["lng"]), distance_m=item.get("distance_m"),
+            lat=float(item["lat"]), lng=float(item["lng"]), distance_m=item.get("distance_m"), category=item.get("cat"),
         ))
     return out
 
@@ -248,7 +250,7 @@ async def _recent(session: AsyncSession, user_id: uuid.UUID, needle: str) -> lis
         if key in seen or fuzzy_score(needle, [key]) is None:
             continue
         seen.add(key)
-        out.append(Result(id=f"recent-{len(out)}", source="recent", name=address, lat=lat, lng=lng))
+        out.append(Result(id=f"recent-{len(out)}", source="recent", name=address, lat=lat, lng=lng, category="recent"))
         if len(out) >= 3:
             break
     return out
@@ -274,7 +276,7 @@ async def search(
     for saved in await session.scalars(select(SavedPlace).where(SavedPlace.user_id == user_id)):
         if fuzzy_score(needle, [map_places.normalize(saved.label), map_places.normalize(saved.address or "")]) is not None:
             items.append(Result(id=f"saved-{saved.id}", source="saved", name=saved.label, address=saved.address or "",
-                                lat=saved.lat, lng=saved.lng))
+                                lat=saved.lat, lng=saved.lng, category="saved"))
 
     # ١ب — وجهاتُ الراكب الأخيرة
     items.extend(await _recent(session, user_id, needle))
@@ -318,7 +320,35 @@ async def search(
         if any(map_places.normalize(result.name) == name for _, _, name in taxo_points):
             continue
         items.append(result)
+    items = _without_repeats(items)
+    if near:
+        for result in items:
+            if result.distance_m is None and result.lat is not None and result.lng is not None:
+                result.distance_m = int(approach.distance_m(near[0], near[1], result.lat, result.lng))
     return SearchAnswer(items=items[:20], attribution=attribution)
+
+
+#: **المكانُ نفسُه من مصدرين** (أمرُ المالك §١٠٤/٧) — الاسمُ نفسُه في كيلومتر: وجهةٌ أخيرةٌ ونتيجةُ مزوّدٍ بها، أو مكانُ TAXO
+#: وما تعلّمته الرحلاتُ باسمه. **الأوّلُ في الترتيب هو الباقي**، والترتيبُ محفوظةٌ ← أخيرةٌ ← TAXO ← المزوّد
+SAME_RESULT_M = 1000
+
+
+def _without_repeats(items: list[Result]) -> list[Result]:
+    from app.services import map_places
+
+    kept: list[tuple[Result, str]] = []
+    for result in items:
+        name = map_places.normalize(result.name)
+        if any(
+            name == other_name and (
+                result.lat is None or other.lat is None or result.lng is None or other.lng is None
+                or approach.distance_m(result.lat, result.lng, other.lat, other.lng) <= SAME_RESULT_M
+            )
+            for other, other_name in kept
+        ):
+            continue
+        kept.append((result, name))
+    return [result for result, _ in kept]
 
 
 async def resolve(session: AsyncSession, country: CountryCode, place_id: str, session_token: str | None) -> google_maps.PlacePoint:
