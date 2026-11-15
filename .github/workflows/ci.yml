@@ -353,6 +353,15 @@ jobs:
           node-version: "22"
       - run: node tools/check-docs.mjs
 
+  places-search:
+    name: ترتيبُ البحث المفتوح
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # فهرسٌ صغيرٌ يُبنى في الاختبار نفسِه؛ والفهرسُ الحقيقيُّ (١٠٦ MB) يُقاس باختبار الـ١٠٥ خارج CI
+      - run: python3 -I places-search/test_server.py
+
   frontends:
     name: الحرّاسُ وبناءُ الثلاثة
     runs-on: ubuntu-latest

@@ -91,6 +91,30 @@ COMMON = {"مطار", "airport", "aeroport", "international", "الدولي", "�
           "souq", "حي", "hay", "cite", "مدرسه", "school", "مسجد", "mosque", "فندق", "hotel", "of", "de", "du", "la", "el", "al"}
 STREET_WORDS = {"شارع", "street", "st", "rue", "boulevard", "bd", "avenue", "av", "طريق", "road"}
 
+#: **قصدُ الصنف** (٢٠٢٦-١١-١٦) — «مطار هواري بومدين» يطلب مطاراً، فبلدةٌ اسمُها «هواري بومدين» لا تتقدّمه.
+#: كلمةُ الصنف خفيفةٌ في الشبه (`COMMON`) لأنها لا تختار مطاراً من مطار، **لكنها تختار المطارَ من البلدة** — فتُقرأ هنا قصداً
+CATEGORY = {"مطار": "air", "airport": "air", "aeroport": "air", "جامعه": "uni", "university": "uni", "universite": "uni",
+            "مستشفي": "hos", "hospital": "hos", "hopital": "hos", "chu": "hos", "مول": "mall", "mall": "mall"}
+#: **عاصمةُ كلِّ بلد** — ميلٌ خفيفٌ حين لا موقعَ مع البحث (اللوحة، أو راكبٌ بلا إذن موقع): «مقام الشهيد» بأسمائه العشرين في
+#: الجزائر يبدأ بالذي في العاصمة. وموقعُ الراكب إن وصل يغلبه (وزنُه ١٢٪ لا ٤٪)
+CAPITALS = {"JO": (31.9539, 35.9106), "DZ": (36.7538, 3.0588), "LY": (32.8872, 13.1913)}
+#: **سميُّ المعلَم** — مكانٌ من Overture يحمل اسمَ معلَمٍ كبيرٍ (OSM، رتبة ≥ ٨) ويقع أبعدَ من هذا عنه: مكتبُ سيّاراتٍ أو محلٌّ تسمّى
+#: باسم المطار، لا المطار. **يُسقط** ولا يُؤخَّر، لأنه يُقرأ في القائمة «مطار الملكة علياء» ويأخذ الراكبَ إلى الجبيهة
+NAMESAKE_KM = 5.0
+
+
+#: **الأرقامُ بشكليها** (٢٠٢٦-١١-١٦) — الفهرسُ يحمل «جامعة الجزائر ١» بالهنديّة والراكبُ يكتب «1»؛ فيُسأل بالشكلين ويُقارَن بالقيمة
+EASTERN = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
+WESTERN = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
+
+def _numbers(text: str) -> set[str]:
+    return {str(int(d)) for d in re.findall(r"\d+", text)}
+
+
+def _categories(text: str) -> set[str]:
+    return {CATEGORY[w] for w in text.split() if w in CATEGORY}
+
 
 def _word_cover(query: str, name: str) -> float:
     """**تغطيةُ كلمات الاستعلام** في الاسم، كلُّ كلمةٍ بأقرب كلمةٍ إليها (فيُتسامح في حرفٍ أو اثنين)، والعامّةُ بوزنٍ خفيف."""
@@ -110,6 +134,8 @@ def _word_cover(query: str, name: str) -> float:
 
 
 def _similarity(query: str, names: list[str]) -> float:
+    query = query.translate(WESTERN)
+    names = [n.translate(WESTERN) for n in names]
     q = _core(query)
     best = 0.0
     for name in names:
@@ -155,6 +181,8 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
     sql = "SELECT p.* FROM fts JOIN places p ON p.id = fts.rowid WHERE fts MATCH ? ORDER BY fts.rank LIMIT ?"
     if len(query) >= 3:
         phrase = f"{country} AND n:{_quote(query)}"
+        if query.translate(EASTERN) != query:
+            phrase = f"{country} AND (n:{_quote(query)} OR n:{_quote(query.translate(EASTERN))})"
         for row in db.execute(sql, (phrase, 150)):
             found[row["id"]] = row
         # **والأهمُّ أوّلاً بين المطابِق** — bm25 يفضّل الاسمَ القصير، فمطارٌ بأسمائه الخمسة يغرق تحت مئة مكتبٍ يحمل اسمَه
@@ -181,7 +209,8 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
             return len(qgrams & set(_trigrams(row["nalt"]))) / len(qgrams)
         found = dict(sorted(found.items(), key=lambda kv: (-overlap(kv[1]), -kv[1]["rank"], kv[1]["src"] != "osm"))[:80])
     wants_street = any(w in STREET_WORDS for w in query.split())
-    digits = set(re.findall(r"\d+", query))
+    wanted = _categories(query)
+    digits = _numbers(query)
     scored = []
     for row in found.values():
         names = row["nalt"].split(" | ")
@@ -189,19 +218,43 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
         if sim < 0.55:
             continue
         score = sim + KIND_BONUS.get(row["kind"], 0) + row["rank"] * 0.01
+        if wanted:
+            score += 0.04 if wanted & _categories(row["nalt"]) else -0.12
         if row["src"] == "osm":  # **OSM محرَّرٌ بيد** — Overture يحمل مكاتبَ تتسمّى باسم المعلَم وتقع بعيداً عنه
             score += 0.06
         if digits:  # **«جامعة الجزائر 1» ليست «2»** — الرقمُ في الاستعلام يُطابَق حرفاً
-            have = set(re.findall(r"\d+", row["nalt"]))
-            score += 0.06 if digits <= have else -0.12
+            have = _numbers(row["nalt"])
+            score += 0.06 if digits <= have else -0.25 if have else -0.12  # رقمٌ آخرُ أبعدُ من لا رقم
         if (row["kind"] == "street") != wants_street:
             score -= 0.15 if row["kind"] == "street" else 0.08
         dist = None
         if near:
             dist = _km(near[0], near[1], row["lat"], row["lng"])
             score += 0.12 * math.exp(-dist / 15.0)
+        elif cc in CAPITALS:
+            score += 0.04 * math.exp(-_km(*CAPITALS[cc], row["lat"], row["lng"]) / 30.0)
         scored.append((score, dist, row))
     scored.sort(key=lambda s: -s[0])
+    landmarks = [(_core(n), row) for _, _, row in scored if row["src"] == "osm" and row["rank"] >= 8 and row["kind"] == "poi"
+                 for n in row["nalt"].split(" | ") if n]
+
+    def namesake(row: sqlite3.Row) -> bool:
+        if row["src"] != "overture":
+            return False
+        for name in row["nalt"].split(" | "):
+            core = _core(name)
+            words = set(core.split())
+            for mark, big in landmarks:
+                same = len(mark) >= 6 and len(core) >= 6 and (mark in core or core in mark)
+                if not same:
+                    # **أو كلماتُه المميِّزةُ كلُّها والصنفُ نفسُه**: «مطار الملكة علياء _الأردن_عمان» مكتبٌ في صويلح لا المطار
+                    own = {w for w in mark.split() if w not in COMMON}
+                    same = bool(own) and len("".join(own)) >= 6 and own <= words                         and bool(_categories(mark) & _categories(core))
+                if same and _km(big["lat"], big["lng"], row["lat"], row["lng"]) > NAMESAKE_KM:
+                    return True
+        return False
+
+    scored = [s for s in scored if not namesake(s[2])]
 
     items, seen = [], set()
     for score, dist, row in scored:
