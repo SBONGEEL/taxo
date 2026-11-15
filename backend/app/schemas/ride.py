@@ -49,6 +49,9 @@ class RideEstimateRequest(BaseModel):
     # السقفُ في طبقة الإدخال **ومعه فحصٌ في الخدمة**: هذا يحرس الشكل وذاك
     # يحرس القاعدة، ومن اكتفى بالأول حرس ما يصل من تطبيقه هو
     stops: list[StopIn] = Field(default_factory=list, max_length=2)
+    # **هندسةُ المسار مع التقدير** (SPEC §١٠٢) — تُعاد حيث `rider_order_sheet_v2` مشتعلٌ لسوق الراكب وحدَه، **ومن نداء التسعير نفسِه**
+    # فالخطُّ المرسومُ هو المسارُ الذي حُسبت منه الأجرة؛ ولا تغيّر شيئاً في السعر
+    with_route: bool = False
     # **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه ويُعيد شروطَه. **ولا يُسمّى `parcel`**: طلبُ الرحلة يرث هذا المخطّط وله `parcel` بتفاصيله
     is_parcel: bool = False
     # **«أحضر غرضي»** (§٧٢-ج/١) — مع `is_parcel`: رسمُه هو ومفتاحُه هو
@@ -67,6 +70,8 @@ class RideEstimateOut(BaseModel):
     currency: Currency
     distance_km: Decimal
     duration_min: Decimal
+    #: **شكلُ مسار الأجرة** `[[lng, lat], …]` (SPEC §١٠٢) — مع `with_route` ومفتاحِه وحدَهما، و`null` في غيرهما (والساعاتُ بلا طريق)
+    route_geometry: list[list[float]] | None = None
     #: **ما سيدفعه الراكبُ بلا خصم — مقرَّباً بقاعدة سوقه** (SPEC §٧٠-ج/٤: «التقديرُ قبل الطلب»). ومطفأً هو `priced_fare` حرفاً
     estimated_fare: Decimal
     #: **الأجرةُ المسعَّرةُ بدقّتها** (`0.001`) — **منها تُحسب معاينةُ القسيمة** (`POST /rides/promo/validate` بحقلها `fare`): الخصمُ

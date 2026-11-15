@@ -1544,3 +1544,31 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-pickup-hint { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 8px 10px; border-radius: 12px; background: var(--t2-ember-soft, rgba(255, 106, 0, 0.1)); }
 .t2-pickup-hint-text { font-size: 12.5px; line-height: 1.5; white-space: normal; }
 .t2-pickup-hint-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── **ورقةُ الطلب الجديدة** (SPEC §١٠٢، `rider_order_sheet_v2`) — أصنافٌ لا تُرسم إلا مشتعلةً، فالمطفأةُ هي هي */
+.t2-reqroute.v2 { padding: 9px 14px; border-radius: 18px; }
+.t2-reqroute.v2 .t2-route-label { display: none; }
+.t2-reqroute.v2 .t2-route-join { height: 8px; }
+.t2-reqroute.v2 .t2-route-value { font-size: 14px; }
+.t2-cats.v2 .t2-cat { height: 56px; }
+.t2-cats.v2 .t2-cat:not(.on) .t2-cat-hint:empty { display: none; }
+.t2-v2-options { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+.t2-v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 17px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-v2-chip .t2-icon { font-size: 17px; }
+.t2-v2-chip.on { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-v2-bar .t2-payrow { margin: 0 0 8px; min-height: 40px; }
+.t2-v2-options-title { margin: 0 0 10px; font-size: 17px; font-weight: 700; }

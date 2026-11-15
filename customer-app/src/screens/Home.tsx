@@ -235,6 +235,8 @@ export function HomeScreen() {
   // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
   // ويُصفَّر بتبدّل الرحلة كي لا يبقى خطُّ رحلةٍ انتهت على خريطة التالية
   const [routeLine, setRouteLine] = useState<number[][] | null>(null);
+  /** **مسارُ الأجرة قبل الطلب** (SPEC §١٠٢) — تضعه ورقةُ الطلب الجديدة وحدَها، ومطفأةً لا يُكتب أبداً */
+  const [previewLine, setPreviewLine] = useState<number[][] | null>(null);
   const drawableRide = ride && tracking && ride.status !== "searching" && ride.driver
     ? ride.id
     : null;
@@ -806,7 +808,8 @@ export function HomeScreen() {
         // شيء: `ride` نفسُه لا يوجد، والكباتنُ القريبون يظلّون كما هم
         driverSkin={ride?.driver?.skin ?? null}
         // **مسارُ الرحلة على الطرق بعد القبول** (البند ٨) — ويتقلّص خلف الكبتن
-        routePoints={routeLine}
+        routePoints={routeLine ?? (phase === "confirm" ? previewLine : null)}
+        routeGlow={!routeLine && phase === "confirm" && previewLine !== null}
         trimAt={driverPing}
         // **نبضةُ الموقع الحالي** — لونُها `--brand` فتتبع الوضعَ والسِمة.
         // وتختفي أثناء الرحلة: الانتباهُ حينها لسيارة الكبتن لا لموقعي
@@ -1005,6 +1008,7 @@ export function HomeScreen() {
       ? {
           pickup,
           pickupAddress,
+          onRoutePreview: setPreviewLine,
           dropoff: target,
           dropoffAddress,
           categories: countryConfig?.vehicle_categories ?? ["economy"],
@@ -1088,6 +1092,23 @@ export function HomeScreen() {
    *  فيُقاس ارتفاعُها ويُعاد الإطارُ حين يتغيّر بما يُرى (يصل السعرُ · يُفتح الكوبون · تتبدّل الحال)، والرأسُ فوقه محفوظ.
    *  **والارتفاعُ نفسُه يرفع شعارَ الخريطة** في الأطوار كلِّها (الدبوسُ أيضاً). */
   const sheetBox = useRef<HTMLDivElement>(null);
+  /** **إطارُ المسار المرسوم لا إطارُ النقطتين** — طريقٌ يلتفّ يخرج من مربّع طرفيه */
+  const previewBox = useRef<[Coordinates, Coordinates, number] | null>(null);
+  useEffect(() => {
+    if (!confirming || !previewLine || previewLine.length < 2) {
+      previewBox.current = null;
+      return;
+    }
+    const lngs = previewLine.map((point) => point[0]);
+    const lats = previewLine.map((point) => point[1]);
+    previewBox.current = [
+      { lat: Math.min(...lats), lng: Math.min(...lngs) },
+      { lat: Math.max(...lats), lng: Math.max(...lngs) },
+      120,
+    ];
+    const [a, b, top] = previewBox.current;
+    map.current?.fitBounds(a, b, { top, bottom: (sheetBox.current?.getBoundingClientRect().height ?? 320) + 40 });
+  }, [confirming, previewLine]);
   useEffect(() => {
     const box = sheetBox.current;
     if (!sheetAttached || !box) {
@@ -1095,7 +1116,7 @@ export function HomeScreen() {
       return;
     }
     const frame = (): [Coordinates, Coordinates, number] | null => {
-      if (confirming && pickup && dropoff) return [pickup, dropoff, 120];
+      if (confirming && pickup && dropoff) return previewBox.current ?? [pickup, dropoff, 120];
       // **ساعاتٌ بلا وجهة** (§٦٣-ج/٥): مربّعٌ صغيرٌ حول الانطلاق — كما يُؤطَّر البحث
       if (confirming && pickup) {
         return [

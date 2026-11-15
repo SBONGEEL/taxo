@@ -58,6 +58,8 @@ import { NegotiateBlockT2 } from "./NegotiationT2";
 import { HourlySheetT2 } from "./HourlyT2";
 import { ParcelOptionT2, ParcelSheetT2 } from "./ParcelT2";
 import { SheetT2 } from "./SheetT2";
+import { SheetModalT2 } from "./MoneyT2";
+import { activeChips, compactAmount, oneLine } from "@/lib/order-sheet";
 import { WomenRequestHeadT2 } from "./WomenRideT2";
 import { DateField, Icon, Switch } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
@@ -206,215 +208,50 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   // **وجهةُ الساعات اختياريّة** — بلاها يُقال ذلك مكانَ العنوان، واللمسةُ تفتح البحثَ كما تفتحه لكلِّ وجهة
   const noDestination = c.hourlyMode && !c.hourlyDestination;
 
-  return (
-    <SheetT2
-      footer={
-        <>
-          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ.
-              **ومنعُ الدفع السابق يُقال في بطاقته بزرّه** (`blockedByPayment`) لا سطراً ثانياً بالنصِّ نفسِه */}
-          {blockedByPreference || blockedByPayment ? null : (
-            <ErrorNote
-              message={
-                c.error ??
-                requestError ??
-                (c.parcelUnavailable
-                  ? c.parcelFetch
-                    ? tr("«أحضر غرضي» غيرُ متاحةٍ في بلدك الآن.")
-                    : tr("الطرد غيرُ متاحٍ في بلدك الآن.")
-                  : c.hourlyBlocked
-                    ? tr("الرحلةُ بالساعة غيرُ متاحةٍ في بلدك الآن.")
-                    : null)
-              }
-              className="t2-error"
-            />
-          )}
-          <button
-            type="button"
-            className={women ? "t2-cta women" : "t2-cta"}
-            // **وساعاتٌ تعثّر تقديرُها لا تُطلب على رقمها القديم** (`hourlyBlocked`)
-            disabled={!c.estimate || c.loading || requesting || c.parcelUnavailable || c.hourlyBlocked}
-            aria-busy={requesting}
-            onClick={() =>
-              // **طردٌ بلا مستلمٍ يفتح ورقتَه** لا طلباً ترفضه الخلفية — والزرُّ يقول ذلك باسمه
-              parcelPending
-                ? setParcelOpen(true)
-                : props.onRequest(...requestArgs)
-            }
-          >
-            <span>
-              {requesting
-                ? tr("نرسل طلبك…")
-                : parcelPending
-                  ? c.parcelFetch
-                    ? tr("أكمل بيانات الغرض")
-                    : tr("أكمل بيانات الطرد")
-                  : c.parcelMode
-                    ? c.parcelFetch
-                      ? tr("اطلب إحضار غرضك")
-                      : tr("اطلب توصيل الطرد")
-                    : c.hourlyMode
-                      ? tr("اطلب بالساعة")
-                      : bargaining
-                        ? tr("تفاوض")
-                      : women
-                        ? tr("اطلبي كبتنة")
-                        : tr("اطلب {0}", { 0: VEHICLE_LABEL[c.category] })}
-            </span>
-            {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
-            {bargaining && bargain ? (
-              <span className="t2-cta-price">{formatMoney(bargain, currency)}</span>
-            ) : c.shownFare && !c.loading && !c.parcelUnavailable && !c.hourlyBlocked ? (
-              <span className="t2-cta-price">{formatMoney(c.shownFare, currency)}</span>
-            ) : null}
-          </button>
-        </>
-      }
-    >
-      {/* **RW2: الشارةُ والمسافةُ فوق المسار** — والمسافةُ في رأس الفئات في غيره */}
-      {women ? <WomenRequestHeadT2 meta={meta} /> : null}
-
-      {/* المسار: «من» و«إلى» بنقطتيهما، و«+» محطةٌ في الطريق */}
-      <div className="t2-reqroute">
-        <span className="t2-route-from" aria-hidden="true" />
-        <div className="t2-route-text">
-          <div className="t2-route-label">{tr("من")}</div>
-          {/* **وموقعُ الجهاز بعنوانه من Mapbox** كما رُسم («شارع الرينبو، جبل عمّان») — للعرض وحدَه */}
-          <div className="t2-route-value">{pickupAddress ?? props.pickupLine ?? tr("نقطة الانطلاق المحددة")}</div>
-          {/* **نقطةُ التقاطٍ أسهل** (البند ١١) — الراكبُ يقبل أو يُبقي دبّوسه */}
-          {props.pickupSuggestion ? (
-            <div className="t2-pickup-hint" role="group" aria-label={tr("نقطة التقاط أسهل")}>
-              <span className="t2-pickup-hint-text">
-                {props.pickupSuggestion.name
-                  ? tr("نقطة التقاط أسهل: «{name}» على بُعد {m} م", {
-                      name: props.pickupSuggestion.name,
-                      m: digits(props.pickupSuggestion.distance_m),
-                    })
-                  : tr("يلتقي الركّابُ عادةً على بُعد {m} م من دبّوسك", { m: digits(props.pickupSuggestion.distance_m) })}
-              </span>
-              <span className="t2-pickup-hint-actions">
-                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onUse}>
-                  {tr("استعملها")}
-                </button>
-                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onKeep}>
-                  {tr("أبقِ دبّوسي")}
-                </button>
-              </span>
-            </div>
-          ) : null}
-        </div>
-        <span />
-        <span className="t2-route-join" aria-hidden="true" />
-        <span />
-        <span />
-        <span className="t2-route-to" aria-hidden="true" />
-        <button type="button" className="t2-route-text t2-route-edit" onClick={onEditDestination}>
-          <span className="t2-route-label">{c.hourlyMode ? tr("إلى · اختياريّة") : tr("إلى")}</span>
-          <span className="t2-route-value">
-            {noDestination ? tr("بلا وجهة — تقولها للكبتن") : (dropoffAddress ?? tr("الوجهة المحددة"))}
-          </span>
+  // ── **ورقةُ الطلب الجديدة** (SPEC §١٠٢، `rider_order_sheet_v2`) — **مطفأةً كلُّ ما يُرسم هو هو حرفاً**: الكتلُ أدناه تُرسم في مواضعها
+  // القديمة، ومشتعلةً تنتقل إلى «خيارات» والشريطِ الثابت. **ولا يتغيّر طلبٌ ولا رقم** — الطلبُ هو هو والسعرُ من الخلفية
+  const v2 = c.sheetV2 && !c.hourlyMode;
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  // **المسارُ المرسومُ هو مسارُ الأجرة** — شكلُ نداء التسعير نفسِه (`route_geometry`)، ويُمحى بإغلاق الورقة
+  const routePreview = v2 && !c.loading ? (c.estimate?.route_geometry ?? null) : null;
+  const { onRoutePreview } = props;
+  useEffect(() => {
+    onRoutePreview?.(routePreview);
+  }, [routePreview, onRoutePreview]);
+  useEffect(() => () => onRoutePreview?.(null), [onRoutePreview]);
+  /** «12 د.أ» بلا أصفارٍ كسريّة، و«12.500 د.أ» بها — **كتابةٌ لا حساب** (`compactAmount`) */
+  const v2Money = (amount: string) => `${compactAmount(formatAmount(amount, currency))} ${currencyLabel(currency)}`;
+  const optionsOffered = bargainOffered || c.shareOffered || c.forOtherOffered || c.scheduled;
+  const chips = activeChips({
+    bargain: bargaining,
+    share: c.share && !c.parcelMode,
+    forOther: c.forOther !== null,
+    scheduling: c.scheduling,
+  });
+  const chipLabel = (key: string) =>
+    key === "bargain"
+      ? tr("تفاوض")
+      : key === "share"
+        ? tr("مشاركة")
+        : key === "forOther"
+          ? tr("لـ: {0}", { 0: c.forOther?.name ?? "" })
+          : tr("موعد");
+  const optionsRow = optionsOffered ? (
+    <div className="t2-v2-options">
+      <button type="button" className="t2-v2-chip" onClick={() => setOptionsOpen(true)}>
+        <span className="t2-icon" aria-hidden="true">add</span>
+        {tr("خيارات")}
+      </button>
+      {chips.map((key) => (
+        <button key={key} type="button" className="t2-v2-chip on" onClick={() => setOptionsOpen(true)}>
+          {chipLabel(key)}
         </button>
-        {/* **ولا «+» محطةٍ للساعات** (§٦٣-ج/٥) — الخلفيةُ ترفض المحطاتِ معها، والراكبُ يقول وجهاتِه للكبتن في الطريق */}
-        {c.multiStop && stops.length < MAX_STOPS && !c.hourlyMode ? (
-          <button type="button" className="t2-route-add" onClick={onAddStop} aria-label={tr("إضافة محطة")}>
-            <span className="t2-icon" aria-hidden="true">add</span>
-          </button>
-        ) : (
-          <span />
-        )}
-      </div>
+      ))}
+    </div>
+  ) : null;
 
-      {c.multiStop && !c.hourlyMode ? (
-        <StopsEditor stops={stops} onChange={onStopsChange} waitingNote={waitingNote(c.estimate)} />
-      ) : null}
-
-      {/* **كتلةُ الساعات مكانَ الفئات** (§٦٣-ج/٥) — الاقتصاديُّ وحدَه، والعدّادُ ومن أين يُدفع المحجوز؛ والمسوّدةُ عند `Home` */}
-      {c.hourlyMode && c.hourly && c.setHourly ? (
-        <HourlySheetT2
-          estimate={c.estimate}
-          loading={c.loading}
-          draft={c.hourly}
-          onChange={c.setHourly}
-          currency={currency}
-        />
-      ) : null}
-
-      {/* **والفئاتُ لكلِّ طلبٍ غيرِ الساعات** — كتلتُها أعلاه تقول «اقتصادي» ومجموعَها، ورقمٌ ثانٍ على بطاقةٍ وحيدةٍ يكرّره */}
-      {c.hourlyMode ? null : (
-        <>
-          <div className="t2-pick-head">
-            <span className="t2-pick-title">{tr("اختر الفئة")}</span>
-            {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
-          </div>
-          <div className="t2-cats" role="radiogroup" aria-label={tr("الفئة")}>
-            {shown.map((option) => {
-              const on = option === c.category;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  className={`t2-cat${on ? " on" : ""}${women ? " women" : ""}`}
-                  onClick={() => c.setCategory(option)}
-                >
-                  <span className="t2-cat-icon">
-                    <span className="t2-icon" aria-hidden="true">{CATEGORY_ICON[option] ?? "local_taxi"}</span>
-                  </span>
-                  <span className="t2-cat-main">
-                    <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
-                    {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
-                    <span className="t2-cat-hint">
-                      {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
-                      {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
-                      {/* **و«غير متاح قريباً»** (§٩١-ب/٨) — لا كبتنَ منها قريب الآن؛ **والفئةُ تبقى مطلوبة**: البحثُ يتّسع بعد الدائرة الأولى */}
-                      {available && !available.includes(option)
-                        ? tr(" · غير متاح قريباً")
-                        : eta?.[option]
-                          ? tr(" · يصل خلال {0} د", { 0: eta[option] })
-                          : ""}
-                    </span>
-                  </span>
-                  {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
-                      من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
-                  {on ? (
-                    c.loading ? (
-                      <span className="t2-cat-wait">{tr("نحسب…")}</span>
-                    ) : c.estimate ? (
-                      <Fare estimate={c.estimate} />
-                    ) : null
-                  ) : fares[option] ? (
-                    <Fare estimate={fares[option]!} />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-      {c.estimate?.minimum_fare_applied && !c.loading ? (
-        <p className="t2-sheet-fine">{tr("طُبِّق الحد الأدنى للأجرة")}</p>
-      ) : null}
-      {/* **رسمُ المطار سطرٌ هادئ** (§٦٣-ج/٢) — **داخلَ السعر أعلاه لا فوقه**: يُقال كي لا يُقرأ السعرُ غلاءً بلا سبب، ولا يُجمع
-          إليه شيء (§14). وللفئة المختارة وحدَها، **وحيث المفتاحُ مشتعلٌ في سوقه** */}
-      {airport && c.estimate?.airport_fee && !c.loading ? (
-        <p className="t2-sheet-fine">
-          {tr("يشمل رسمَ المطار")}{" "}{formatMoney(c.estimate.airport_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
-        </p>
-      ) : null}
-      {/* **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥) — **داخلَ السعر أعلاه** كرسم المطار: يُقال قبل الطلب كي يعرف الراكبُ لمَ زاد،
-          ولا يُجمع إليه شيء (§14) */}
-      {c.estimate?.rugged_fee && !c.loading ? (
-        <p className="t2-sheet-fine">
-          {tr("يشمل تسعيرة المناطق الوعرة")}{" "}{formatMoney(c.estimate.rugged_fee, c.estimate.currency)}
-        </p>
-      ) : null}
-      {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
-      {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
-        <p className="t2-sheet-fine">
-          {tr("يشمل رسمَ")}{" "}{c.parcelFetch ? tr("التوصيل") : tr("الطرد")} {formatMoney(c.estimate.parcel_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
-        </p>
-      ) : null}
-
+  const negotiateNode = (
+    <>
       {/* **«اقترح سعرك»** (SPEC §٩٢) — حيث نشر التقديرُ حدَّه، **ومطفأٌ بعلّته مع المشاركة أو الكوبون** */}
       {bargainOffered && c.estimate ? (
         c.share || c.applied ? (
@@ -424,38 +261,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         )
       ) : null}
 
-      {/* **شارةُ الطرد** — «بيانات الطرد» قبل المستلم، و«إلى: الاسم» بعده بزرِّ التعديل */}
-      {c.parcelMode ? (
-        <ParcelOptionT2 draft={c.parcel} fetch={c.parcelFetch} onOpen={() => setParcelOpen(true)} />
-      ) : null}
-
-      {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
-      {c.women.available ? (
-        <div className={women ? "t2-pref women" : "t2-pref"}>
-          <div className="t2-pref-title">{tr("تفضيل الكبتن")}</div>
-          <div className="t2-seg" role="radiogroup" aria-label={tr("تفضيل الكبتن")}>
-            {PREFERENCES.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={option.value === c.preference}
-                className={option.value === c.preference ? "t2-seg-opt on" : "t2-seg-opt"}
-                onClick={() => c.setPreference(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <p className="t2-note">
-            {c.preference === "any" ? null : (
-              <span className="t2-icon" aria-hidden="true">schedule</span>
-            )}
-            {c.preferenceNote}
-          </p>
-        </div>
-      ) : null}
-
+    </>
+  );
+  const payNode = (
+    <>
       {/* **الدفعُ والكوبونُ صفٌّ واحد** كما رُسم — وكلٌّ بشرطه: لا منتقٍ بقناةٍ وحيدة، ولا كوبونَ حيث المفتاحُ مطفأ.
           **ولا منتقيَ قناةٍ للساعات** (§٦٣-ج/٥): من أين يُدفع المحجوزُ اختيارُها في كتلتها، ومنتقٍ ثانٍ بجانبه يُقرأ خياراً ثانياً
           للشيء نفسِه — وما زاد يُدفع في النهاية من شاشة الدفع كأيِّ رحلة */}
@@ -542,6 +351,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </div>
       ) : null}
 
+    </>
+  );
+  const shareNode = (
+    <>
       {/* **المشاركة** (12-ي) بموافقتيها — وتُخفى ما دام لا سعرَ لها */}
       {c.shareOffered && !bargaining ? (
         <div className="t2-share">
@@ -594,6 +407,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </div>
       ) : null}
 
+    </>
+  );
+  const forOtherNode = (
+    <>
       {/* **«لشخص آخر»** (§٦٣-ج/١) — حيث المفتاحُ مشتعلٌ وليس حجزاً، **ومعطَّلٌ بعلّته مع المشاركة** */}
       {c.forOtherOffered ? (
         <ForOtherOptionT2
@@ -612,53 +429,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         />
       ) : null}
 
-      {blockedByPreference ? (
-        <div className="t2-callout warn" role="status">
-          <span className="t2-icon fill" aria-hidden="true">error</span>
-          <div className="t2-callout-main">
-            <div className="t2-callout-title">{tr("خدمة الكبتنات غير مفعّلة في بلدك الآن")}</div>
-            <p className="t2-callout-body">
-              {tr("في حسابك تفضيلٌ محفوظ بطلب كبتنة، ولا يمكن تنفيذه هنا — فتُرفض كل رحلة. أعِد التفضيل إلى «أي كبتن» لتتمكّني من الطلب، ويبقى بإمكانك تغييره متى عادت الخدمة.")}
-
-            </p>
-            <button type="button" className="t2-button secondary t2-callout-action" onClick={onClearPreference}>
-              {tr("اقبل أي كبتن")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* **٤٠٢ `unconfirmed_payment_blocked`** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ز) — **نصُّ الخلفية كما وصل**، وزرٌّ
-          إلى البطاقة نفسِها: من مُنع يعرف ما يفعله في ضغطة (يُقِرّ · يدفع · يبدّل الطريقة) ولا يكتشفه من الدعم. **وبلون الخطر**:
-          «بلا أحمرَ إلا للحدّ» (§٦) — وهذا هو الحدّ */}
-      {blockedByPayment ? (
-        <div className="t2-callout danger" role="alert">
-          <span className="t2-icon fill" aria-hidden="true">error</span>
-          <div className="t2-callout-main">
-            <div className="t2-callout-title">{requestError}</div>
-            <p className="t2-callout-body">{tr("يُرفع المنعُ فورَ أن تُقِرّ بالتسليم أو تدفع أو تبدّل طريقة الدفع.")}</p>
-            {onOpenUnconfirmed ? (
-              <button type="button" className="t2-button secondary t2-callout-action" onClick={onOpenUnconfirmed}>
-                {tr("افتح ما ينتظر تأكيدك")}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {c.walletNote ? <p className="t2-note warn">{c.walletNote}</p> : null}
-      {/* **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — السعرُ يُثبَّت عشرَ دقائق، ثمّ صفحةُ الشحن بما ينقص، **ويكمل الطلبُ نفسُه بعد وصول الرصيد** */}
-      {c.walletNote && c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
-        <button
-          type="button"
-          className="t2-button secondary t2-callout-action"
-          disabled={!c.estimate || c.loading || requesting}
-          onClick={() => props.onTopUpForRide?.(...requestArgs)}
-        >
-          {tr("اشحن مبلغ الرحلة الآن")}
-        </button>
-      ) : null}
-
+    </>
+  );
+  const scheduleNode = (
+    <>
       {/* **حدّد موعداً** (12-ط) — زرٌّ ثانويٌّ لا مساوٍ للأول، ويُخفى حيث المفتاح مطفأ */}
       {c.scheduled ? (
         c.scheduling ? (
@@ -748,6 +522,329 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         )
       ) : null}
 
+    </>
+  );
+
+  return (
+    <SheetT2
+      footer={
+        <>
+          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ.
+              **ومنعُ الدفع السابق يُقال في بطاقته بزرّه** (`blockedByPayment`) لا سطراً ثانياً بالنصِّ نفسِه */}
+          {blockedByPreference || blockedByPayment ? null : (
+            <ErrorNote
+              message={
+                c.error ??
+                requestError ??
+                (c.parcelUnavailable
+                  ? c.parcelFetch
+                    ? tr("«أحضر غرضي» غيرُ متاحةٍ في بلدك الآن.")
+                    : tr("الطرد غيرُ متاحٍ في بلدك الآن.")
+                  : c.hourlyBlocked
+                    ? tr("الرحلةُ بالساعة غيرُ متاحةٍ في بلدك الآن.")
+                    : null)
+              }
+              className="t2-error"
+            />
+          )}
+          {v2 ? <div className="t2-v2-bar">{payNode}</div> : null}
+          <button
+            type="button"
+            className={women ? "t2-cta women" : "t2-cta"}
+            // **وساعاتٌ تعثّر تقديرُها لا تُطلب على رقمها القديم** (`hourlyBlocked`)
+            disabled={!c.estimate || c.loading || requesting || c.parcelUnavailable || c.hourlyBlocked}
+            aria-busy={requesting}
+            onClick={() =>
+              // **طردٌ بلا مستلمٍ يفتح ورقتَه** لا طلباً ترفضه الخلفية — والزرُّ يقول ذلك باسمه
+              parcelPending
+                ? setParcelOpen(true)
+                : props.onRequest(...requestArgs)
+            }
+          >
+            <span>
+              {requesting
+                ? tr("نرسل طلبك…")
+                : parcelPending
+                  ? c.parcelFetch
+                    ? tr("أكمل بيانات الغرض")
+                    : tr("أكمل بيانات الطرد")
+                  : c.parcelMode
+                    ? c.parcelFetch
+                      ? tr("اطلب إحضار غرضك")
+                      : tr("اطلب توصيل الطرد")
+                    : c.hourlyMode
+                      ? tr("اطلب بالساعة")
+                      : bargaining
+                        ? tr("تفاوض")
+                      : women
+                        ? tr("اطلبي كبتنة")
+                        : tr("اطلب {0}", { 0: VEHICLE_LABEL[c.category] })}
+            </span>
+            {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
+            {bargaining && bargain ? (
+              <span className="t2-cta-price">{v2 ? v2Money(bargain) : formatMoney(bargain, currency)}</span>
+            ) : c.shownFare && !c.loading && !c.parcelUnavailable && !c.hourlyBlocked ? (
+              <span className="t2-cta-price">{v2 ? v2Money(c.shownFare) : formatMoney(c.shownFare, currency)}</span>
+            ) : null}
+          </button>
+        </>
+      }
+    >
+      {/* **RW2: الشارةُ والمسافةُ فوق المسار** — والمسافةُ في رأس الفئات في غيره */}
+      {women ? <WomenRequestHeadT2 meta={meta} /> : null}
+
+      {/* المسار: «من» و«إلى» بنقطتيهما، و«+» محطةٌ في الطريق */}
+      <div className={v2 ? "t2-reqroute v2" : "t2-reqroute"}>
+        <span className="t2-route-from" aria-hidden="true" />
+        <div className="t2-route-text">
+          <div className="t2-route-label">{tr("من")}</div>
+          {/* **وموقعُ الجهاز بعنوانه من Mapbox** كما رُسم («شارع الرينبو، جبل عمّان») — للعرض وحدَه */}
+          <div className="t2-route-value">
+            {v2
+              ? oneLine(pickupAddress ?? props.pickupLine) || tr("نقطة الانطلاق المحددة")
+              : (pickupAddress ?? props.pickupLine ?? tr("نقطة الانطلاق المحددة"))}
+          </div>
+          {/* **نقطةُ التقاطٍ أسهل** (البند ١١) — الراكبُ يقبل أو يُبقي دبّوسه */}
+          {props.pickupSuggestion ? (
+            <div className="t2-pickup-hint" role="group" aria-label={tr("نقطة التقاط أسهل")}>
+              <span className="t2-pickup-hint-text">
+                {props.pickupSuggestion.name
+                  ? tr("نقطة التقاط أسهل: «{name}» على بُعد {m} م", {
+                      name: props.pickupSuggestion.name,
+                      m: digits(props.pickupSuggestion.distance_m),
+                    })
+                  : tr("يلتقي الركّابُ عادةً على بُعد {m} م من دبّوسك", { m: digits(props.pickupSuggestion.distance_m) })}
+              </span>
+              <span className="t2-pickup-hint-actions">
+                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onUse}>
+                  {tr("استعملها")}
+                </button>
+                <button type="button" className="t2-chip" onClick={props.pickupSuggestion.onKeep}>
+                  {tr("أبقِ دبّوسي")}
+                </button>
+              </span>
+            </div>
+          ) : null}
+        </div>
+        <span />
+        <span className="t2-route-join" aria-hidden="true" />
+        <span />
+        <span />
+        <span className="t2-route-to" aria-hidden="true" />
+        <button type="button" className="t2-route-text t2-route-edit" onClick={onEditDestination}>
+          <span className="t2-route-label">{c.hourlyMode ? tr("إلى · اختياريّة") : tr("إلى")}</span>
+          <span className="t2-route-value">
+            {noDestination
+              ? tr("بلا وجهة — تقولها للكبتن")
+              : v2
+                ? oneLine(dropoffAddress) || tr("الوجهة المحددة")
+                : (dropoffAddress ?? tr("الوجهة المحددة"))}
+          </span>
+        </button>
+        {/* **ولا «+» محطةٍ للساعات** (§٦٣-ج/٥) — الخلفيةُ ترفض المحطاتِ معها، والراكبُ يقول وجهاتِه للكبتن في الطريق */}
+        {c.multiStop && stops.length < MAX_STOPS && !c.hourlyMode ? (
+          <button type="button" className="t2-route-add" onClick={onAddStop} aria-label={tr("إضافة محطة")}>
+            <span className="t2-icon" aria-hidden="true">add</span>
+          </button>
+        ) : (
+          <span />
+        )}
+      </div>
+
+      {c.multiStop && !c.hourlyMode ? (
+        <StopsEditor stops={stops} onChange={onStopsChange} waitingNote={waitingNote(c.estimate)} />
+      ) : null}
+
+      {/* **كتلةُ الساعات مكانَ الفئات** (§٦٣-ج/٥) — الاقتصاديُّ وحدَه، والعدّادُ ومن أين يُدفع المحجوز؛ والمسوّدةُ عند `Home` */}
+      {c.hourlyMode && c.hourly && c.setHourly ? (
+        <HourlySheetT2
+          estimate={c.estimate}
+          loading={c.loading}
+          draft={c.hourly}
+          onChange={c.setHourly}
+          currency={currency}
+        />
+      ) : null}
+
+      {/* **والفئاتُ لكلِّ طلبٍ غيرِ الساعات** — كتلتُها أعلاه تقول «اقتصادي» ومجموعَها، ورقمٌ ثانٍ على بطاقةٍ وحيدةٍ يكرّره */}
+      {c.hourlyMode ? null : (
+        <>
+          <div className="t2-pick-head">
+            <span className="t2-pick-title">{tr("اختر الفئة")}</span>
+            {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
+          </div>
+          <div className={v2 ? "t2-cats v2" : "t2-cats"} role="radiogroup" aria-label={tr("الفئة")}>
+            {shown.map((option) => {
+              const on = option === c.category;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  className={`t2-cat${on ? " on" : ""}${women ? " women" : ""}`}
+                  onClick={() => c.setCategory(option)}
+                >
+                  <span className="t2-cat-icon">
+                    <span className="t2-icon" aria-hidden="true">{CATEGORY_ICON[option] ?? "local_taxi"}</span>
+                  </span>
+                  <span className="t2-cat-main">
+                    <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
+                    {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
+                    {v2 ? (
+                      // **بلا «غير متاح قريباً» ولا أيِّ نصِّ إتاحة** (§١٠٢/١) — شاشةُ البحث تقول وُجد أم لا؛ والوصولُ إن عُرف، والوصفُ للمختارة
+                      <span className="t2-cat-hint">
+                        {eta?.[option] ? tr("يصل خلال {0} د", { 0: eta[option] }) : null}
+                        {on ? (
+                          <>
+                            {eta?.[option] ? " · " : null}
+                            {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
+                          </>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="t2-cat-hint">
+                        {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
+                        {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
+                        {/* **و«غير متاح قريباً»** (§٩١-ب/٨) — لا كبتنَ منها قريب الآن؛ **والفئةُ تبقى مطلوبة**: البحثُ يتّسع بعد الدائرة الأولى */}
+                        {available && !available.includes(option)
+                          ? tr(" · غير متاح قريباً")
+                          : eta?.[option]
+                            ? tr(" · يصل خلال {0} د", { 0: eta[option] })
+                            : ""}
+                      </span>
+                    )}
+                  </span>
+                  {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
+                      من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
+                  {on ? (
+                    c.loading ? (
+                      <span className="t2-cat-wait">{tr("نحسب…")}</span>
+                    ) : c.estimate ? (
+                      <Fare estimate={c.estimate} />
+                    ) : null
+                  ) : fares[option] ? (
+                    <Fare estimate={fares[option]!} />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {c.estimate?.minimum_fare_applied && !c.loading ? (
+        <p className="t2-sheet-fine">{tr("طُبِّق الحد الأدنى للأجرة")}</p>
+      ) : null}
+      {/* **رسمُ المطار سطرٌ هادئ** (§٦٣-ج/٢) — **داخلَ السعر أعلاه لا فوقه**: يُقال كي لا يُقرأ السعرُ غلاءً بلا سبب، ولا يُجمع
+          إليه شيء (§14). وللفئة المختارة وحدَها، **وحيث المفتاحُ مشتعلٌ في سوقه** */}
+      {airport && c.estimate?.airport_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          {tr("يشمل رسمَ المطار")}{" "}{formatMoney(c.estimate.airport_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
+        </p>
+      ) : null}
+      {/* **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥) — **داخلَ السعر أعلاه** كرسم المطار: يُقال قبل الطلب كي يعرف الراكبُ لمَ زاد،
+          ولا يُجمع إليه شيء (§14) */}
+      {c.estimate?.rugged_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          {tr("يشمل تسعيرة المناطق الوعرة")}{" "}{formatMoney(c.estimate.rugged_fee, c.estimate.currency)}
+        </p>
+      ) : null}
+      {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
+      {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          {tr("يشمل رسمَ")}{" "}{c.parcelFetch ? tr("التوصيل") : tr("الطرد")} {formatMoney(c.estimate.parcel_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
+        </p>
+      ) : null}
+
+      {v2 ? optionsRow : negotiateNode}
+
+      {/* **شارةُ الطرد** — «بيانات الطرد» قبل المستلم، و«إلى: الاسم» بعده بزرِّ التعديل */}
+      {c.parcelMode ? (
+        <ParcelOptionT2 draft={c.parcel} fetch={c.parcelFetch} onOpen={() => setParcelOpen(true)} />
+      ) : null}
+
+      {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
+      {c.women.available ? (
+        <div className={women ? "t2-pref women" : "t2-pref"}>
+          <div className="t2-pref-title">{tr("تفضيل الكبتن")}</div>
+          <div className="t2-seg" role="radiogroup" aria-label={tr("تفضيل الكبتن")}>
+            {PREFERENCES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={option.value === c.preference}
+                className={option.value === c.preference ? "t2-seg-opt on" : "t2-seg-opt"}
+                onClick={() => c.setPreference(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="t2-note">
+            {c.preference === "any" ? null : (
+              <span className="t2-icon" aria-hidden="true">schedule</span>
+            )}
+            {c.preferenceNote}
+          </p>
+        </div>
+      ) : null}
+
+      {v2 ? null : payNode}
+
+      {v2 ? null : shareNode}
+
+      {v2 ? null : forOtherNode}
+
+      {blockedByPreference ? (
+        <div className="t2-callout warn" role="status">
+          <span className="t2-icon fill" aria-hidden="true">error</span>
+          <div className="t2-callout-main">
+            <div className="t2-callout-title">{tr("خدمة الكبتنات غير مفعّلة في بلدك الآن")}</div>
+            <p className="t2-callout-body">
+              {tr("في حسابك تفضيلٌ محفوظ بطلب كبتنة، ولا يمكن تنفيذه هنا — فتُرفض كل رحلة. أعِد التفضيل إلى «أي كبتن» لتتمكّني من الطلب، ويبقى بإمكانك تغييره متى عادت الخدمة.")}
+
+            </p>
+            <button type="button" className="t2-button secondary t2-callout-action" onClick={onClearPreference}>
+              {tr("اقبل أي كبتن")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* **٤٠٢ `unconfirmed_payment_blocked`** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ز) — **نصُّ الخلفية كما وصل**، وزرٌّ
+          إلى البطاقة نفسِها: من مُنع يعرف ما يفعله في ضغطة (يُقِرّ · يدفع · يبدّل الطريقة) ولا يكتشفه من الدعم. **وبلون الخطر**:
+          «بلا أحمرَ إلا للحدّ» (§٦) — وهذا هو الحدّ */}
+      {blockedByPayment ? (
+        <div className="t2-callout danger" role="alert">
+          <span className="t2-icon fill" aria-hidden="true">error</span>
+          <div className="t2-callout-main">
+            <div className="t2-callout-title">{requestError}</div>
+            <p className="t2-callout-body">{tr("يُرفع المنعُ فورَ أن تُقِرّ بالتسليم أو تدفع أو تبدّل طريقة الدفع.")}</p>
+            {onOpenUnconfirmed ? (
+              <button type="button" className="t2-button secondary t2-callout-action" onClick={onOpenUnconfirmed}>
+                {tr("افتح ما ينتظر تأكيدك")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {c.walletNote ? <p className="t2-note warn">{c.walletNote}</p> : null}
+      {/* **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — السعرُ يُثبَّت عشرَ دقائق، ثمّ صفحةُ الشحن بما ينقص، **ويكمل الطلبُ نفسُه بعد وصول الرصيد** */}
+      {c.walletNote && c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
+        <button
+          type="button"
+          className="t2-button secondary t2-callout-action"
+          disabled={!c.estimate || c.loading || requesting}
+          onClick={() => props.onTopUpForRide?.(...requestArgs)}
+        >
+          {tr("اشحن مبلغ الرحلة الآن")}
+        </button>
+      ) : null}
+
+      {v2 ? null : scheduleNode}
+
       {/* **والساعاتُ لا يغيّرها المسار** (§٦٣-ج/٥) — يغيّرها ما زاد عليها، **ورسمُ إلغائها بعد الوصول يُقال قبل الطلب**: بابُ التقدير لا
           ينشر دقائقَه، فيُقال بلا رقمٍ لا برقمٍ يُخمَّن */}
       {c.hourlyMode ? (
@@ -794,6 +891,22 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           }}
           onClose={() => setParcelOpen(false)}
         />
+      ) : null}
+      {v2 && optionsOpen ? (
+        <SheetModalT2
+          onClose={() => setOptionsOpen(false)}
+          footer={
+            <button type="button" className="t2-button primary" onClick={() => setOptionsOpen(false)}>
+              {tr("تم")}
+            </button>
+          }
+        >
+          <div className="t2-v2-options-title">{tr("خيارات")}</div>
+          {negotiateNode}
+          {shareNode}
+          {forOtherNode}
+          {scheduleNode}
+        </SheetModalT2>
       ) : null}
     </SheetT2>
   );

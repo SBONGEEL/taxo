@@ -259,6 +259,8 @@ export const estimateRide = (payload: {
   hourly_hours?: number;
   /** **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — يثبّت هذا التقديرَ عشرَ دقائق ويعيد معرّفَه وما ينقص المحفظة */
   lock_price?: boolean;
+  /** **شكلُ مسار الأجرة مع التقدير** (SPEC §١٠٢) — يُعاد حيث `rider_order_sheet_v2` مشتعلٌ وحدَه، ومن نداء التسعير نفسِه */
+  with_route?: boolean;
 }) => api.post<RideEstimate>("/rides/estimate", payload);
 
 export const requestRide = (payload: {

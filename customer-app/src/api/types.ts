@@ -407,6 +407,8 @@ export interface RideEstimate {
   currency: Currency;
   distance_km: string;
   duration_min: string;
+  /** **شكلُ مسار الأجرة نفسِه** `[[lng, lat], …]` (SPEC §١٠٢) — مع `with_route` و`rider_order_sheet_v2` وحدَهما، وإلا `null`. يُرسم ولا يُحسب منه شيء */
+  route_geometry?: number[][] | null;
   /** **ما سيدفعه بلا خصم — مقرَّباً بقاعدة سوقه** (SPEC §٧٠-ج/٤). ومطفأً هو `priced_fare` حرفاً. */
   estimated_fare: string;
   /** **الأجرةُ المسعَّرةُ بدقّتها** (`0.001`) — **تُرسل وحدَها إلى معاينة القسيمة** (`validatePromo`): الخصمُ على الدقيقة ثمّ

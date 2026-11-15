@@ -18,7 +18,7 @@ from app.core import storage
 from app.core.exceptions import Conflict, NotFound, PermissionDenied, RideOfferExpired
 from app.models.driver import Driver
 from app.models.user import User
-from app.models.enums import CancelReasonCode, CancellationChargeStatus, DriverStatus, RideStatus, UserRole
+from app.models.enums import CancelReasonCode, CancellationChargeStatus, DriverStatus, FeatureKey, RideStatus, UserRole
 from app.models.vehicle import Vehicle
 from app.models.ride import ACTIVE_DRIVER_STATUSES, TERMINAL_STATUSES, Ride
 from app.schemas.rating import RatingCreate, RatingOut
@@ -67,6 +67,7 @@ from app.services import (
     rounding,
     route,
     pauses,
+    settings_service,
     route_line,
     sharing,
     tips as tips_service,
@@ -156,8 +157,15 @@ async def estimate_ride(
             *[_coords(stop) for stop in payload.stops],
         ],
     )
+    # **المسارُ المرسومُ هو مسارُ الأجرة** (SPEC §١٠٢) — يُطلب من نداء التسعير نفسِه، وحيث المفتاحُ مشتعلٌ وحدَه
+    with_route = (
+        payload.with_route
+        and not payload.hourly_hours
+        and await settings_service.is_feature_enabled(session, rider.country_code, FeatureKey.RIDER_ORDER_SHEET_V2)
+    )
     quote = await pricing.estimate(
         session,
+        with_geometry=with_route,
         country_code=rider.country_code,
         vehicle_category=payload.vehicle_category,
         pickup=_coords(payload.pickup),
@@ -226,6 +234,7 @@ async def estimate_ride(
         currency=quote.currency,
         distance_km=quote.route.distance_km,
         duration_min=quote.route.duration_min,
+        route_geometry=quote.route.geometry if with_route and quote.route is not None else None,
         estimated_fare=rounding.rounded(quote.fare, policy),
         priced_fare=quote.fare,
         minimum_fare_applied=quote.minimum_fare_applied,

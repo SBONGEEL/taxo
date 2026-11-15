@@ -188,6 +188,8 @@ interface MapViewProps {
    *  يقول «هذا الطريق». وهو تفريقُ القرار 38 نفسِه: يمنع خطاً نرسمه نحن، لا
    *  مساراً قاله Mapbox. */
   routePoints?: number[][] | null;
+  /** **معاينةُ مسار الأجرة في ورقة الطلب الجديدة** (SPEC §١٠٢) — هالةٌ تحت الخطّ ورسمٌ متدرّجٌ قصير. وبلا القيمة لا يتغيّر شيء */
+  routeGlow?: boolean;
   /** موضعُ الكبتن الآن — ما قبله من المسار يُقصّ (تتبّعُ التقدّم بعد البدء). */
   trimAt?: Coordinates | null;
   /** نبضةٌ حول موقع المستخدم — لونُها `--brand` فتتبع الوضعَ والسِمة. */
@@ -404,6 +406,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     dropoff,
     tripLine = true,
     routePoints = null,
+    routeGlow = false,
     trimAt = null,
     showMyLocation = null,
     searching = false,
@@ -925,14 +928,32 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       : null;
 
     const source = instance.getSource(id) as mapboxgl.GeoJSONSource | undefined;
+    if (instance.getLayer(`${id}-glow`)) {
+      instance.setLayoutProperty(`${id}-glow`, "visibility", routeGlow && drawn ? "visible" : "none");
+    }
     if (!line) {
       source?.setData({ type: "FeatureCollection", features: [] });
       return;
     }
 
     if (source) {
-      source.setData(line);
       instance.setPaintProperty(id, "line-dasharray", drawn ? [1, 0] : [1.5, 1.5]);
+      // **رسمٌ متدرّجٌ للمعاينة وحدَها** — ٦٠٠ م.ث، والخطُّ نفسُه يُكتب كاملاً في آخره
+      if (routeGlow && drawn && drawn.length > 2) {
+        const all = drawn;
+        const started = performance.now();
+        let raf = 0;
+        const step = (now: number) => {
+          const t = Math.min(1, (now - started) / 600);
+          const eased = 1 - (1 - t) ** 3;
+          const count = Math.max(2, Math.ceil(all.length * eased));
+          source.setData({ ...line, geometry: { ...line.geometry, coordinates: all.slice(0, count) } });
+          if (t < 1) raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(raf);
+      }
+      source.setData(line);
       return;
     }
 
@@ -944,6 +965,14 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       const accent = css.getPropertyValue("--t2-accent").trim();
       const casing = css.getPropertyValue("--t2-map-casing").trim();
       if (accent && casing) {
+        // **الهالة** — تحت الظلّ، مخفيّةٌ إلا في معاينة الورقة الجديدة
+        instance.addLayer({
+          id: `${id}-glow`,
+          type: "line",
+          source: id,
+          layout: { "line-cap": "round", "line-join": "round", visibility: routeGlow && drawn ? "visible" : "none" },
+          paint: { "line-color": accent, "line-width": 18, "line-opacity": 0.22, "line-blur": 8 },
+        });
         instance.addLayer({
           id: `${id}-casing`,
           type: "line",
@@ -983,7 +1012,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       // والتقطيعُ يقول ذلك بلا نصّ. والمتّصلُ يقول «هذا هو الطريق»
       drawn ? [1, 0] : [1.5, 1.5],
     );
-  }, [pickup, dropoff, tripLine, routePoints, trimAt, dark, styleVersion, t2, searching]);
+  }, [pickup, dropoff, tripLine, routePoints, routeGlow, trimAt, dark, styleVersion, t2, searching]);
 
   // ------------------------------------------------------------ التحكّم
   useImperativeHandle(

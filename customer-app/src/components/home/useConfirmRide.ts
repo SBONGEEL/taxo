@@ -32,7 +32,8 @@ import { roundingUnit } from "@/lib/rounding";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
-import { useConfig } from "@/lib/config";
+import { useConfig, useFeature } from "@/lib/config";
+import { ORDER_SHEET_V2 } from "@/lib/order-sheet";
 import { useWomenService } from "@/lib/women";
 import { formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
@@ -122,6 +123,8 @@ export interface ConfirmRideProps {
   ) => void;
   /** **«ارفع عرضك»** بعد بحثٍ لم يجد كبتناً (§٩٢-أ/٧) — تُفتح الورقةُ والتفاوضُ مشتعلٌ بالسعر السابق */
   initialOffer?: string;
+  /** **ورقةُ الطلب الجديدة** (SPEC §١٠٢) — شكلُ مسار الأجرة نفسِه يُرسم على الخريطة، و يمحوه */
+  onRoutePreview?: (points: number[][] | null) => void;
   /** **نقطةُ التقاطٍ مقترحة** (البند ١١) — بطاقةٌ تحت «من» بزرّين: «استعملها» تنقل الانطلاقَ إليها، و«أبقِ دبّوسي» تُسكتها. */
   pickupSuggestion?: { name: string | null; distance_m: number; onUse: () => void; onKeep: () => void } | null;
   requesting: boolean;
@@ -281,6 +284,8 @@ export function useConfirmRide({
   const [shareGendered, setShareGendered] = useState(false);
   const { user } = useSession();
   const country = user?.country_code ?? "JO";
+  // **ورقةُ الطلب الجديدة** (SPEC §١٠٢) — تطلب شكلَ مسار الأجرة مع تقدير المختارة وحدَها؛ مطفأةً لا يُطلب شيءٌ جديد
+  const sheetV2 = useFeature(user?.country_code, ORDER_SHEET_V2);
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [applied, setApplied] = useState<PromoPreview | null>(null);
@@ -319,6 +324,7 @@ export function useConfirmRide({
       parcel_fetch: (parcelMode && parcelFetch) || undefined,
       // **وتقديرُ ساعاتٍ بعددها** (§٦٣-ج/٥) — «الساعات × سعرها» من الخلفية، ويُعاد السؤالُ بكلِّ ضغطةٍ على العدّاد
       hourly_hours: hourly?.hours,
+      with_route: (sheetV2 && !hourly) || undefined,
     })
       .then((value) => !cancelled && setEstimate(value))
       .catch(
@@ -333,7 +339,7 @@ export function useConfirmRide({
     };
     // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
     // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
-  }, [pickup, dropoff, category, stops, parcelMode, parcelFetch, hourly?.hours]);
+  }, [pickup, dropoff, category, stops, parcelMode, parcelFetch, hourly?.hours, sheetV2]);
 
   async function apply() {
     if (!estimate) return;
@@ -413,6 +419,7 @@ export function useConfirmRide({
         : null;
 
   return {
+    sheetV2,
     women,
     scheduled,
     scheduling,

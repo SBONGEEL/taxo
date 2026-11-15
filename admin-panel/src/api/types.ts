@@ -642,6 +642,7 @@ export type FeatureKey =
   // **البحثُ ببياناتٍ مفتوحة** (٢٠٢٦-١١-١٥) — يعمل حيث لا صفّ، والإطفاءُ يعيد البحثَ إلى Mapbox
   | "open_places_search"
   | "open_map_display"
+  | "rider_order_sheet_v2"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

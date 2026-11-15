@@ -193,6 +193,7 @@ async def estimate(
     parcel_fetch: bool = False,
     hourly: "HourlyTerms | None" = None,
     rider_id: "uuid.UUID | None" = None,
+    with_geometry: bool = False,
 ) -> FareEstimate:
     """تسعيرة الدولة + مسار Mapbox → سعر مقدّر.
 
@@ -212,7 +213,9 @@ async def estimate(
         line = hourly_service.booked_line(hourly.hours, hourly.rate)
         fare, minimum_applied, lines = line.amount, False, [line]
     else:
-        route = await route_between(session, pickup, dropoff, country_code, stops=stops)
+        # **`with_geometry` يغيّر شكلَ الجواب لا الطريق** (`overview`/`geometries` عند Mapbox، والحقلُ نفسُه عند Google): النداءُ
+        # واحد، والمسافةُ والزمنُ منه كما كانا — فالخطُّ المرسومُ (SPEC §١٠٢) هو مسارُ هذه الأجرة بعينه
+        route = await route_between(session, pickup, dropoff, country_code, stops=stops, with_geometry=with_geometry)
         fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
 
     # **منطقةُ الانطلاق الوعرة** (SPEC §٧٤-أ/٥): **بعد الحدّ الأدنى وقبل رسوم الكبتن** — زيادةُ سعر رحلةٍ لا رسمٌ للكبتن، **وسطرٌ
