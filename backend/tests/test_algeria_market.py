@@ -372,6 +372,7 @@ APP = Path(__file__).resolve().parents[1] / "app"
 NOT_MONEY_STEPS = {
     "core/currency.py": "بيتُها",
     "services/directions.py": "كيلومتراتُ الطريق",
+    "services/google_maps.py": "كيلومتراتُ طريق Google (`distance_km`)",
     "services/route.py": "كيلومتراتُ المسار المسجَّل",
     "services/pauses.py": "دقائقُ الوقفة",
     "services/stress.py": "كيلومتراتُ مسار الحمل المحاكى (§٧٥-ب/٣)",
