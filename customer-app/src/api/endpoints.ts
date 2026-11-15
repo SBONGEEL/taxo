@@ -1090,3 +1090,7 @@ export interface MyLoyalty {
 }
 export const getMyLoyalty = () => api.get<MyLoyalty>("/loyalty/me");
 export const redeemLoyalty = (blocks: number) => api.post<MyLoyalty>("/loyalty/me/redeem", { blocks });
+
+/** **خريطةُ البيانات المفتوحة لم تُحمَّل** — بلاغٌ واحدٌ في الجلسة (`lib/map-engine`)، فيصل المالكَ إشعارٌ والتطبيقُ عاد إلى Mapbox. */
+export const reportMapDisplayFailure = (reason: string) =>
+  api.post<void>("/places/health", { feature: "display", reason });

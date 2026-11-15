@@ -1111,3 +1111,7 @@ export interface MyGoals {
   }[];
 }
 export const getMyGoals = () => api.get<MyGoals>("/drivers/me/goals");
+
+/** **خريطةُ البيانات المفتوحة لم تُحمَّل** — بلاغٌ واحدٌ في الجلسة (`lib/map-engine`)، فيصل المالكَ إشعارٌ والتطبيقُ عاد إلى Mapbox. */
+export const reportMapDisplayFailure = (reason: string) =>
+  api.post<void>("/places/health", { feature: "display", reason });

@@ -973,6 +973,10 @@ class FeatureKey(StrEnum):
     GOOGLE_ROUTES = "google_routes"
     # **البحثُ ببياناتٍ مفتوحة** (OpenStreetMap + Overture، من فهرسٍ على القرص في حاويةٍ وحدَها — قرارُ المالك ٢٠٢٦-١١-١٥)
     OPEN_PLACES_SEARCH = "open_places_search"
+    # **عرضُ الخريطة ببياناتٍ مفتوحة** (MapLibre + بلاطات OpenFreeMap، قرارُ المالك ٢٠٢٦-١١-١٥) — **مطفأٌ لكلِّ دولة**: مطفأً تبقى
+    # خريطةُ Mapbox كما هي حرفاً، ومشتعلاً تُرسم بنمط TAXO من `lib/open-map-style.ts`، **وفشلُ البلاطات يعيدها إلى Mapbox في الجلسة نفسِها**.
+    # ويحتاج غلافاً يحمل المحرّكين (البناءُ القادم) — والغلافُ الأقدم يتجاهله فيبقى على Mapbox
+    OPEN_MAP_DISPLAY = "open_map_display"
 
 
 class MapPlaceCategory(StrEnum):

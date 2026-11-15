@@ -194,11 +194,17 @@
   bottom: calc(var(--t2-sheet-h, 354px) - 50px);
 }
 /* شعارُ Mapbox ونسبتُه **فوق ما يغطّيه** — شرطُ الرخصة مرئيٌّ لا مرسومٌ تحت زرّ */
+.t2-hm.home .t2-hm-map:not(.open) .maplibregl-ctrl-bottom-left,
 .t2-hm.home .t2-hm-map:not(.open) .mapboxgl-ctrl-bottom-left,
+.t2-hm.home .t2-hm-map:not(.open) .maplibregl-ctrl-bottom-right,
 .t2-hm.home .t2-hm-map:not(.open) .mapboxgl-ctrl-bottom-right { bottom: 70px; }
+.t2-hm.home .t2-hm-map.open .maplibregl-ctrl-bottom-left,
 .t2-hm.home .t2-hm-map.open .mapboxgl-ctrl-bottom-left,
+.t2-hm.home .t2-hm-map.open .maplibregl-ctrl-bottom-right,
 .t2-hm.home .t2-hm-map.open .mapboxgl-ctrl-bottom-right { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.t2-hm.ride .t2-hm-map .maplibregl-ctrl-bottom-left,
 .t2-hm.ride .t2-hm-map .mapboxgl-ctrl-bottom-left,
+.t2-hm.ride .t2-hm-map .maplibregl-ctrl-bottom-right,
 .t2-hm.ride .t2-hm-map .mapboxgl-ctrl-bottom-right { bottom: 50px; }
 
 /* تدرّجُ البطاقة: قاتمٌ في الأعلى والأسفل لتُقرأ الشارةُ والزرّ — `rgba(14,16,19,.55) → 0 26% → 0 58% → .75` */

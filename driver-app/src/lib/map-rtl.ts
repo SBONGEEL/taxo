@@ -31,6 +31,7 @@
  * **وهذا يصلح كيف تُرسم. وأيَّها تُعرض يُحسم بـ`MAP_LANGUAGE` تحته.**
  */
 import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 
 /** **يُخدَم من أصلنا**، ويُزامنه `npm run check:rtl` مع الحزمة المثبَّتة. */
 const RTL_PLUGIN_URL = "/vendor/mapbox-gl-rtl-text.js";
@@ -47,6 +48,14 @@ if (mapboxgl.getRTLTextPluginStatus() === "unavailable") {
     // فيرى المستخدمُ ارتجافةً — والفرقُ ١٣٣ ك.ب مرّةً واحدة.
     false,
   );
+}
+
+// **والملحقُ نفسُه لـMapLibre** (خريطةُ البيانات المفتوحة، `lib/map-engine`) — المكتبتان تقبلانه، ولكلٍّ حالتُه العامّة فيُضبط
+// لكلٍّ مرّة. **ويُقال ولا يُبتلع** كأخيه أعلاه
+if (maplibregl.getRTLTextPluginStatus() === "unavailable") {
+  maplibregl.setRTLTextPlugin(RTL_PLUGIN_URL, false).catch((error: unknown) => {
+    console.error("[map-rtl] تعذّر تحميل ملحق العربية لـMapLibre:", error);
+  });
 }
 
 /** **لغةُ لافتات الخريطة — عربيةٌ في الأسطح الثلاثة** (قرارُ المالك 2026-08-27).

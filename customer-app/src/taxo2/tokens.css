@@ -79,6 +79,8 @@
   --t2-map-park: #d7dfca;
   --t2-map-road: #ffffff;
   --t2-map-road-minor: #fbf9f4;
+  --t2-map-water: #c9d5d6; /* الماءُ في خريطة البيانات المفتوحة (`lib/open-map-style.ts`) — رماديٌّ أزرقُ هادئ */
+  --t2-map-building: #ddd6c9; /* المباني قريباً — أغمقُ من الأرض قليلاً، فيُقرأ شكلُ الحيّ ولا ينافس المسار */
   --t2-map-casing: rgba(20, 22, 26, 0.16); /* ظلُّ خطِّ المسار تحته */
   --t2-map-me-halo: rgba(240, 90, 40, 0.18); /* هالةُ «أنت هنا» */
   --t2-map-radar-fill: rgba(240, 90, 40, 0.07); /* جوفُ حلقة رادار البحث (R07) */
@@ -159,6 +161,8 @@ html.dark .t2:not(.t2-day),
   --t2-map-park: #16201b;
   --t2-map-road: #252a32;
   --t2-map-road-minor: #1e2229;
+  --t2-map-water: #0e1418;
+  --t2-map-building: #1a1e25;
   --t2-map-label: #c9c4ba;
   --t2-map-label-minor: #8d8a83;
   --t2-map-label-halo: #13161b;

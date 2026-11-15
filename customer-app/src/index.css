@@ -184,7 +184,9 @@
 
 /* عناصر Mapbox: الشعار والإسناد إلزاميان بشروط الاستخدام فيبقيان، ويُنقلان
    فوق الورقة السفلية لا تحتها */
+.maplibregl-ctrl-bottom-left,
 .mapboxgl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right,
 .mapboxgl-ctrl-bottom-right {
   z-index: 5;
 }

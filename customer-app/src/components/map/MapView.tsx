@@ -33,6 +33,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
+import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
+import { buildOpenStyle, openMapColors } from "@/lib/open-map-style";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
@@ -392,7 +394,7 @@ function lerpAngle(from: number, to: number, ratio: number) {
   return from + delta * ratio;
 }
 
-export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
+const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>(function MapViewEngine(
   {
     token,
     center,
@@ -411,6 +413,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     onMoveEnd,
     className,
     controlsInset = 0,
+    openMap,
   },
   ref,
 ) {
@@ -443,19 +446,24 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   const labelsRef = useRef(labels);
   labelsRef.current = labels;
   const t2 = true;
+  // **المحرّكُ لهذه اللوحة** — MapLibre حين تُرسم بالبيانات المفتوحة، وMapbox كما كان غيرَ ذلك (`lib/map-engine`)
+  const gl = engine(openMap);
 
   moveEnd.current = onMoveEnd;
 
   // ------------------------------------------------------------ الإنشاء
   useEffect(() => {
-    if (!token || !container.current || map.current) return;
+    // **ألوانُ النمط المفتوح من رموز الحاوية** — و`null` (رمزٌ غائب) يعني Mapbox كما كان: لا خريطةَ بألوانٍ مخترعة
+    const openColors = openMap && container.current ? openMapColors(container.current) : null;
+    if ((!token && !openColors) || !container.current || map.current) return;
 
-    mapboxgl.accessToken = token;
+    if (!openColors && token) mapboxgl.accessToken = token;
     // لوحةٌ جديدةٌ ستايلُها لم يُحمَّل بعد — **ولو بقيت الإشارةُ مرفوعةً من لوحةٍ سبقتها**
     styleReady.current = false;
-    const instance = new mapboxgl.Map({
+    const instance = new gl.Map({
       container: container.current,
-      style: dark ? STYLE_DARK : STYLE_LIGHT,
+      // **النمطُ المفتوح كائنٌ يُبنى هنا** (بالأسماء أو بدونها كمفتاح الأسماء)، ونمطُ Mapbox عنوانُه كما كان
+      style: (openColors ? buildOpenStyle(openColors, labelsRef.current) : dark ? STYLE_DARK : STYLE_LIGHT) as string,
       language: MAP_LANGUAGE,
       center: [center.lng, center.lat],
       zoom,
@@ -478,7 +486,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       styleReady.current = true;
       instance.resize();
       // **الصبغُ قبل الإشارة** — فطبقاتُ الرحلة تُضاف فوق خريطةٍ مصبوغة
-      if (container.current) calmLook(instance, container.current, labelsRef.current);
+      // **والنمطُ المفتوحُ مبنيٌّ بألوان الهوية أصلاً** — فلا صبغَ عليه (صبغُ Mapbox يُخفي المباني ويقرأ أصنافَ طرقه هو)
+      if (container.current && !openColors) calmLook(instance, container.current, labelsRef.current);
       setStyleVersion((version) => version + 1);
     });
     instance.on("moveend", () => {
@@ -500,7 +509,25 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     const watcher = new ResizeObserver(() => instance.resize());
     if (container.current) watcher.observe(container.current);
 
+    // **الرجوعُ الآليُّ إلى Mapbox** (`markOpenMapFailed`): خريطةٌ مفتوحةٌ لم تكتمل في عشرين ثانية، أو خطأٌ قبل اكتمالها (البلاطاتُ
+    // لم تُجب)، أو خطأُ خادمٍ (5xx) بعده. **وانقطاعُ شبكة الهاتف بعد الاكتمال لا يُسقطها** — ذاك يصيب Mapbox نفسَه
+    let fallbackTimer = 0;
+    if (openColors) {
+      let loaded = false;
+      instance.once("load", () => {
+        loaded = true;
+      });
+      fallbackTimer = window.setTimeout(() => {
+        if (!loaded) markOpenMapFailed("load-timeout");
+      }, 20_000);
+      instance.on("error", (event: { error?: { message?: string; status?: number } }) => {
+        const status = event.error?.status;
+        if (!loaded || (status !== undefined && status >= 500)) markOpenMapFailed(event.error?.message ?? "error");
+      });
+    }
+
     return () => {
+      window.clearTimeout(fallbackTimer);
       watcher.disconnect();
       instance.remove();
       map.current = null;
@@ -534,7 +561,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     }
     // أنواعُ mapbox تُلزم حقلَي الخطّ المحلّي في الخيارات — والمكتبةُ تقبل `diff` وحدَه
     if (map.current) styleReady.current = false;
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT, {
+    // **والنمطُ المفتوحُ يُبنى من جديدٍ برموز المظهر الجديد** — الحاويةُ تحمل رموزَ الليل أو النهار حين يقع هذا الأثر
+    const openColors = openMap && container.current ? openMapColors(container.current) : null;
+    map.current?.setStyle((openColors ? buildOpenStyle(openColors, labelsRef.current) : dark ? STYLE_DARK : STYLE_LIGHT) as string, {
       diff: false,
     } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
@@ -677,7 +706,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       // **على الطبقة الداخلية لا القشرة** (`headingLayer`) — وكانت تُكتب على القشرة التي تملكها mapbox فتدور معها
       // إزاحتُها: سيارةٌ باتجاه ٦٠° رُسمت على بُعد ٣٣٠ بكسلاً من موضعها (قِيس ٢٠٢٦-١٠-٠٤، والحلقةُ وحدَها صُحّحت في ٠٨-٢٨)
       if (rotates) headingLayer(element).style.rotate = `${driver.heading ?? 0}deg`;
-      const marker = new mapboxgl.Marker({
+      const marker = new gl.Marker({
         element,
         rotationAlignment: rotates ? "map" : "viewport",
       })
@@ -769,7 +798,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     // على الطبقة الداخلية كالعلامات القريبة أعلاه — فالقشرةُ لـmapbox وحدَها
     if (rotates) headingLayer(element).style.rotate = `${driverLocation.heading ?? 0}deg`;
     driverMarker.current = {
-      marker: new mapboxgl.Marker({
+      marker: new gl.Marker({
         element,
         rotationAlignment: rotates ? "map" : "viewport",
       })
@@ -800,7 +829,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
     if (!myLocationMarker.current) {
-      myLocationMarker.current = new mapboxgl.Marker({
+      myLocationMarker.current = new gl.Marker({
         element: t2 ? t2MeElement(tr("موقعي")) : pulseElement(tr("موقعي")),
       })
         .setLngLat([showMyLocation.lng, showMyLocation.lat])
@@ -822,7 +851,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
     if (!searchPulse.current) {
-      searchPulse.current = new mapboxgl.Marker({
+      searchPulse.current = new gl.Marker({
         // **ونهارُ TAXO 2.0 رادارُ اللوحة** (R07): ثلاثُ حلقاتٍ واسعةٍ بالجمر ونقطةُ الانطلاق في مركزها — والليلُ نبضتُه كما كانت
         element: t2 ? t2RadarElement(tr("جارٍ البحث عن كبتن")) : pulseElement(tr("جارٍ البحث عن كبتن")),
       })
@@ -855,7 +884,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         return;
       }
       // **في نهار TAXO 2.0 دائرةٌ ومربّعٌ يقعان على النقطة نفسِها** (مركزُهما لا طرفُ دبوس)، **والليلُ دبوسُه كما كان**
-      slot.current = new mapboxgl.Marker(
+      slot.current = new gl.Marker(
         t2
           ? { element: t2PinElement(kind, label), anchor: "center" }
           : { element: pinElement(color, label), anchor: "bottom" },
@@ -987,7 +1016,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
   // **غيابُ توكن iOS يُسمّى ولا يُرسم فراغاً** (SPEC §58) — وغيرُ iOS كما كان
   const missing = useMapboxMissing();
-  if (!token) {
+  if (!token && !openMap) {
     return missing ? (
       <div
         role="alert"
@@ -1014,4 +1043,11 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       style={controlsInset > 0 ? ({ "--t2-map-inset": `${controlsInset}px` } as CSSProperties) : undefined}
     />
   );
+});
+
+/** **الخريطةُ كما يستعملها التطبيق** — تختار المحرّكَ (`useOpenMap`)، **وتبديلُه إعادةُ تركيبٍ كاملة** (`key`): لوحةٌ جديدةٌ بعلاماتٍ
+ *  وطبقاتٍ تُرسم من الصفر، لا علاماتٌ من محرّكٍ سابقٍ تُحرَّك على لوحةٍ لم تعد موجودة. والمرجعُ (`MapHandle`) يمرّ كما هو. */
+export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref) {
+  const openMap = useOpenMap();
+  return <MapViewEngine key={openMap ? "open" : "mapbox"} {...props} openMap={openMap} ref={ref} />;
 });

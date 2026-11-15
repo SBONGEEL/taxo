@@ -36,6 +36,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
+import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
+import { buildOpenStyle, openMapColors } from "@/lib/open-map-style";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
@@ -266,7 +268,8 @@ function pinElement(color: string, label: string): HTMLElement {
   return element;
 }
 
-export function MapView({
+function MapViewEngine({
+  openMap,
   token,
   center,
   heading,
@@ -288,8 +291,10 @@ export function MapView({
   heat = null,
   onTap = null,
   tapPin = null,
-}: Props) {
+}: Props & { openMap: boolean }) {
   const { dark } = useTheme();
+  // **المحرّكُ لهذه اللوحة** — MapLibre حين تُرسم بالبيانات المفتوحة (شاشاتُ TAXO 2.0 وحدَها)، وMapbox كما كان غيرَ ذلك
+  const gl = engine(openMap);
   const host = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const self = useRef<mapboxgl.Marker | null>(null);
@@ -326,11 +331,14 @@ export function MapView({
 
 
   useEffect(() => {
-    if (!token || !host.current || map.current) return;
-    mapboxgl.accessToken = token;
-    map.current = new mapboxgl.Map({
+    // **ألوانُ النمط المفتوح من رموز الحاوية** — و`null` (رمزٌ غائب) يعني Mapbox كما كان: لا خريطةَ بألوانٍ مخترعة
+    const openColors = openMap && host.current ? openMapColors(host.current) : null;
+    if ((!token && !openColors) || !host.current || map.current) return;
+    if (!openColors && token) mapboxgl.accessToken = token;
+    map.current = new gl.Map({
       container: host.current,
-      style: dark ? STYLE_DARK : STYLE_LIGHT,
+      // **النمطُ المفتوح كائنٌ يُبنى هنا** بألوان الهوية، ونمطُ Mapbox عنوانُه كما كان
+      style: (openColors ? buildOpenStyle(openColors, labelsRef.current) : dark ? STYLE_DARK : STYLE_LIGHT) as string,
       language: MAP_LANGUAGE,
       center: [
         center?.lng ?? DEFAULT_CENTER.lng,
@@ -365,11 +373,13 @@ export function MapView({
       const instance = map.current;
       instance.on("style.load", () => {
         if (host.current) {
-          calmLook(instance, host.current, labelsRef.current);
+          // **والنمطُ المفتوحُ مبنيٌّ بألوان الهوية أصلاً** — فلا صبغَ عليه (صبغُ Mapbox يُخفي المباني ويقرأ أصنافَ طرقه هو)
+          if (!openColors) calmLook(instance, host.current, labelsRef.current);
           drawOwnPlaces(instance, host.current, labelsRef.current ? placesRef.current : []);
         }
-        // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ
-        if (host.current && trafficRef.current) addTraffic(instance, host.current);
+        // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ. **ولا زحامَ على الخريطة المفتوحة**: بلاطاتُه
+        // من Mapbox (`mapbox://`) ولا بديلَ مفتوحاً له، وطلبُه هناك خطأٌ يُسقط الخريطةَ إلى Mapbox
+        if (host.current && trafficRef.current && !openColors) addTraffic(instance, host.current);
         if (heatRef.current) drawHeat(instance, heatRef.current);
       });
       // **النقرُ يُسأل عنه المرجعُ ساعتَه**: من لم يمرّر `onTap` (الخريطةُ الصغيرة والرحلة) لا تقع نقرتُه على شيء
@@ -390,7 +400,26 @@ export function MapView({
     const watcher = new ResizeObserver(() => map.current?.resize());
     if (host.current) watcher.observe(host.current);
 
+    // **الرجوعُ الآليُّ إلى Mapbox** (`markOpenMapFailed`): خريطةٌ مفتوحةٌ لم تكتمل في عشرين ثانية، أو خطأٌ قبل اكتمالها (البلاطاتُ
+    // لم تُجب)، أو خطأُ خادمٍ (5xx) بعده. **وانقطاعُ شبكة الهاتف بعد الاكتمال لا يُسقطها** — ذاك يصيب Mapbox نفسَه
+    let fallbackTimer = 0;
+    if (openColors) {
+      let loaded = false;
+      const instance = map.current;
+      instance.once("load", () => {
+        loaded = true;
+      });
+      fallbackTimer = window.setTimeout(() => {
+        if (!loaded) markOpenMapFailed("load-timeout");
+      }, 20_000);
+      instance.on("error", (event: { error?: { message?: string; status?: number } }) => {
+        const status = event.error?.status;
+        if (!loaded || (status !== undefined && status >= 500)) markOpenMapFailed(event.error?.message ?? "error");
+      });
+    }
+
     return () => {
+      window.clearTimeout(fallbackTimer);
       watcher.disconnect();
       if (animation.current !== null) cancelAnimationFrame(animation.current);
       map.current?.remove();
@@ -408,7 +437,7 @@ export function MapView({
     if (!t2 || !instance || !host.current) return;
     const apply = () => {
       if (!host.current) return;
-      if (trafficRef.current) addTraffic(instance, host.current);
+      if (trafficRef.current && !openMap) addTraffic(instance, host.current);
       else removeTraffic(instance);
     };
     if (instance.isStyleLoaded()) apply();
@@ -432,7 +461,7 @@ export function MapView({
     if (!t2 || !instance || !tapPin) return;
     const element = document.createElement("div");
     element.innerHTML = `<span class="t2-map-pin tap"></span>`;
-    tapMarker.current = new mapboxgl.Marker({ element }).setLngLat([tapPin.lng, tapPin.lat]).addTo(instance);
+    tapMarker.current = new gl.Marker({ element }).setLngLat([tapPin.lng, tapPin.lat]).addTo(instance);
   }, [tapPin, t2]);
 
   useEffect(() => {
@@ -453,7 +482,7 @@ export function MapView({
       // **`rotationAlignment: "map"`** — العلامةُ تُعاكس دورانَ الكاميرا فتبقى
       // مقدّمتُها في اتجاه السير الحقيقيّ. وبالافتراض (`viewport`) كانت تدور
       // **مع** الخريطة في طور «الاتجاه»، فتشير إلى غير ما يسير إليه
-      self.current = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+      self.current = new gl.Marker({ element, rotationAlignment: "map" })
         .setLngLat([center.lng, center.lat])
         .addTo(instance);
       instance.easeTo({ center: [center.lng, center.lat], duration: 400 });
@@ -516,7 +545,7 @@ export function MapView({
     applyMarkerHeading(element, heading, selfSkin?.map_rotates ?? true);
     const at = marker.getLngLat();
     marker.remove();
-    self.current = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+    self.current = new gl.Marker({ element, rotationAlignment: "map" })
       .setLngLat(at)
       .addTo(instance);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -561,7 +590,7 @@ export function MapView({
       // **الدورانُ من صفِّ المركبة لا من الندرة** — والعامّةُ تدور دائماً
       const element = nearbyMarkerElement(driver.skin);
       applyMarkerHeading(element, driver.heading, driver.skin?.rotates ?? true);
-      const marker = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+      const marker = new gl.Marker({ element, rotationAlignment: "map" })
         .setLngLat([point.lng, point.lat])
         .addTo(instance);
       cars.current.set(driver.ref, {
@@ -629,7 +658,7 @@ export function MapView({
       }
       if (existing) existing.setLngLat([point.lng, point.lat]);
       else {
-        pins.current[key] = new mapboxgl.Marker(
+        pins.current[key] = new gl.Marker(
           t2
             ? { element: t2PinElement(key === "pickup" ? "from" : "to", label), anchor: "center" }
             : {
@@ -775,7 +804,7 @@ export function MapView({
 
   // **غيابُ توكن iOS يُسمّى باسمه** (SPEC §58) — وغيرُ iOS كما كان حرفاً
   const missing = useMapboxMissing();
-  if (!token) {
+  if (!token && !openMap) {
     return (
       <div
         role={missing ? "alert" : undefined}
@@ -855,4 +884,11 @@ export function MapView({
       ) : null}
     </div>
   );
+}
+
+/** **الخريطةُ كما يستعملها التطبيق** — تختار المحرّكَ (`useOpenMap`)، **والمفتوحةُ لشاشات TAXO 2.0 وحدَها** (`t2`): القديمةُ تُصبغ
+ *  بغير رموز الهوية فتبقى على Mapbox. **وتبديلُ المحرّك إعادةُ تركيبٍ كاملة** (`key`): لوحةٌ جديدةٌ بعلاماتٍ وطبقاتٍ تُرسم من الصفر. */
+export function MapView(props: Props) {
+  const open = useOpenMap() && (props.t2 ?? false);
+  return <MapViewEngine key={open ? "open" : "mapbox"} {...props} openMap={open} />;
 }

@@ -699,7 +699,9 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 
 /* الرأسُ فوق الخريطة: سهمُ الرجوع أو حرفُ الحساب، والجرسُ ومبدّلُ السِمة */
 /* **شعارُ Mapbox ونسبتُه فوق الورقة الملتصقة** — شرطُ الرخصة مرئيٌّ على الخريطة لا مرسومٌ على الورقة (`controlsInset`) */
+.t2.t2-map .maplibregl-ctrl-bottom-left,
 .t2.t2-map .mapboxgl-ctrl-bottom-left,
+.t2.t2-map .maplibregl-ctrl-bottom-right,
 .t2.t2-map .mapboxgl-ctrl-bottom-right { bottom: var(--t2-map-inset, 0px); }
 
 /* موضعُه كما رُسم في R06: `top:58px` (الشريطُ ٥٠ + ٨) و`right:20px` */
