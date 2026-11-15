@@ -67,6 +67,22 @@ class LearnIn(BaseModel):
     label: str = Field(min_length=2, max_length=80)
 
 
+def place_search_out(answer: maps.SearchAnswer) -> PlaceSearchOut:
+    """**بانٍ واحدٌ لجواب البحث** — يستعمله بابُ الراكب (`/places/search`) وبابُ اللوحة (`/admin/map-places/search`) معاً،
+    فنسبةُ ODbL (`attribution_text`) لا تُملأ في بابٍ وتُنسى في الآخر (الشكلُ الثامن، `test_two_doors`)."""
+    return PlaceSearchOut(
+        items=[
+            PlaceResultOut(
+                id=r.id, source=r.source, name=r.name, address=r.address, lat=r.lat, lng=r.lng,  # type: ignore[arg-type]
+                place_id=r.place_id, distance_m=r.distance_m,
+            )
+            for r in answer.items
+        ],
+        attribution=answer.attribution,  # type: ignore[arg-type]
+        attribution_text=maps.OPEN_ATTRIBUTION if answer.attribution == "open" else None,
+    )
+
+
 @router.get("/search", response_model=PlaceSearchOut)
 async def search(
     user: CurrentUser,
@@ -80,17 +96,7 @@ async def search(
     answer = await maps.search(
         session, user_id=user.id, country=user.country_code, query=q, near=near, session_token=session_token
     )
-    return PlaceSearchOut(
-        items=[
-            PlaceResultOut(
-                id=r.id, source=r.source, name=r.name, address=r.address, lat=r.lat, lng=r.lng,  # type: ignore[arg-type]
-                place_id=r.place_id, distance_m=r.distance_m,
-            )
-            for r in answer.items
-        ],
-        attribution=answer.attribution,  # type: ignore[arg-type]
-        attribution_text=maps.OPEN_ATTRIBUTION if answer.attribution == "open" else None,
-    )
+    return place_search_out(answer)
 
 
 @router.get("/resolve", response_model=ResolvedOut)

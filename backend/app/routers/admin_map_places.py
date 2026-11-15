@@ -14,7 +14,7 @@ from app.core.deps import DbSession, SettingsWriter, StaffUser
 from app.models.enums import AuditAction, CountryCode
 from app.models.map_place import MapPlace
 from app.schemas.map_place import MapPlaceAdminOut, MapPlaceIn, MapPlacePatch
-from app.routers.place_search import PlaceResultOut, PlaceSearchOut
+from app.routers.place_search import PlaceSearchOut, place_search_out
 from app.services import audit, map_places, maps
 
 router = APIRouter(prefix="/admin/map-places", tags=["admin-map-places"])
@@ -56,17 +56,7 @@ async def search_places(
     البياناتُ المفتوحة ثمّ Mapbox احتياطاً — **بدولة الشاشة لا بدولة حساب المشرف**، فمشرفٌ أردنيٌّ يبحث في الجزائر بأسمائها.
     قراءةٌ لا تكتب شيئاً، فصلاحيتُها صلاحيةُ القائمة جارتِها."""
     answer = await maps.search(session, user_id=staff.id, country=country, query=q, near=None, session_token=None)
-    return PlaceSearchOut(
-        items=[
-            PlaceResultOut(
-                id=r.id, source=r.source, name=r.name, address=r.address, lat=r.lat, lng=r.lng,  # type: ignore[arg-type]
-                place_id=r.place_id, distance_m=r.distance_m,
-            )
-            for r in answer.items
-        ],
-        attribution=answer.attribution,  # type: ignore[arg-type]
-        attribution_text=maps.OPEN_ATTRIBUTION if answer.attribution == "open" else None,
-    )
+    return place_search_out(answer)
 
 
 @router.post("", response_model=MapPlaceAdminOut, status_code=201)

@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — بحثُ الأماكن (SPEC §«الخرائطُ والبحثُ ببياناتٍ مفتوحة»/١١، ٢٠٢٦-١١-١٥)
+    "PlaceSearchOut": (
+        "بانٍ واحد: `place_search.place_search_out` في بابي الراكب واللوحة. "
+        "**و`attribution_text` فارغٌ حال**: جوابٌ ليس من البيانات المفتوحة (Google أو Mapbox لهما نسبتُهما في الواجهة)"
+    ),
     # ✅ بانٍ واحد — بطاقاتُ TAXO (SPEC §١٠٠-ب، ٢٠٢٦-١١-١٤)
     "CardBatchOut": (
         "بانٍ واحد: `admin_taxo_cards._batch_out` في كلِّ أبوابها (القائمةُ، وما يردّ دفعةً واحدةً عبر `_one_batch`، وقائمةُ ما يقترب انتهاؤه) من صفِّ الدفعة وأرقامها. "
