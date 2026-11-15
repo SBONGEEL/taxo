@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 from pathlib import Path
 
 APP = Path(__file__).resolve().parent.parent / "app"
@@ -89,6 +90,8 @@ class _Scan(ast.NodeVisitor):
     visit_AsyncFunctionDef = _visit_function
 
 
+# **تُقرأ الشجرةُ مرّةً للاختبارين** (قِيس ٢٠٢٦-١١-١٥: ٨ث لكلِّ قراءة) — والحكمُ نفسُه، والاختباران لا يغيّران ما تعيده
+@functools.lru_cache(maxsize=1)
 def _scan_tree() -> tuple[dict[str, set[str]], set[str], int]:
     calls: dict[str, set[str]] = {}
     doors: set[str] = set()

@@ -43,6 +43,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Callable, Protocol
@@ -54,6 +55,13 @@ BATCH_JOB = re.compile(r"^المجموعةُ عند ([0-9a-f]{7,40})$")
 #: جزءٌ أحمرُ في تشغيلٍ آخرَ لا يُقبل لأن جزءاً باسمه أخضرُ عند الرأس — الأجزاءُ تُقسَم بالأزمنة فيختلف ما في «جزء ٣» بين تشغيلين
 SHARD_JOB = re.compile(r"^المجموعةُ — جزء \d+/\d+$")
 GREEN = {"success", "skipped", "neutral"}
+MEASURED = {"success", "failure"}
+#: **«قياسُ إيداع» مصدرُ قياسٍ دائم** (قرارُ المالك 2026-11-15) — فرعُ `verify/<الإيداع>` يقيس الإيداعَ بمجموعته هو مقسومةً،
+#: و«القياسُ الكامل» فيه يحمل سطرَ العدد وأسماءَ الساقط كما تحملها «المجموعةُ الكاملة»
+SPLIT_WORKFLOW = "قياسُ إيداع"
+SPLIT_VERDICT = "القياسُ الكامل"
+SPLIT_SHARD = re.compile(r"^الإيداعُ — جزء \d+/\d+$")
+COUNT_LINE = re.compile(r"COUNT collected=(\d+) selected=(\d+) ran=(\d+)")
 # **سطرُ ملخّص pytest** — قبله ختمُ وقتِ GitHub، وبعده « - سببُه»
 FAILED_LINE = re.compile(r"(?:^|\s)(?:FAILED|ERROR) (tests/[^\s:]+\.py(?:::[^\s]+)?)")
 SKIP_ATTRS = {"skip", "skipif", "xfail"}
@@ -65,6 +73,7 @@ class Api(Protocol):
     def jobs(self, run_id: int) -> list[dict]: ...
     def job_log(self, job_id: int) -> str: ...
     def recent_runs(self) -> list[dict]: ...
+    def runs_for_branch(self, branch: str) -> list[dict]: ...
 
 
 @dataclass
@@ -167,29 +176,74 @@ def _judge_batch_job(api: Api, job: dict, read_at_head) -> tuple[str, str]:
     return ("fixed" if fixed else "stop"), line
 
 
+def _judge_own_run(api: Api, commit: str, run: dict, jobs: list[dict], head_jobs: dict[str, str], read_at_head) -> tuple[str, str]:
+    """تشغيلٌ رأسُه هذا الإيداع **وقد قِيست مجموعتُه** (خضراءَ أو حمراء)."""
+    if run.get("conclusion") == "success":
+        return "ok", f"{commit[:8]}: قِيس رأساً في التشغيل {run.get('id')} — أخضر"
+    notes = []
+    for job in jobs:
+        name = job.get("name", "")
+        if BATCH_JOB.match(name) or SHARD_JOB.match(name) or job.get("conclusion") in GREEN:
+            continue  # وظيفةٌ عن إيداعٍ آخر، أو جزءٌ يحكم فيه تجميعُه، أو خضراء
+        if name == HEAD_SUITE:
+            fixed, line = _red_suite_fixed(api, job, read_at_head)
+            if not fixed:
+                return "stop", f"{commit[:8]} (التشغيل {run.get('id')}): {line}"
+            notes.append(line)
+        elif head_jobs.get(name) == "success":
+            notes.append(f"«{name}» حمراءُ هناك **وخضراءُ باسمها عند الرأس**")
+        else:
+            return "stop", f"{commit[:8]}: «{name}» حمراءُ في التشغيل {run.get('id')} ولا نظيرَ أخضرَ لها عند الرأس"
+    return "fixed", f"{commit[:8]} (التشغيل {run.get('id')}): " + " · ".join(notes)
+
+
+def _judge_split_run(api: Api, commit: str, run: dict, read_at_head) -> tuple[str, str]:
+    """**«قياسُ إيداع»** — ("ok"|"fixed"|"stop"|"unmeasured", السطر). **والعددُ شرط**: ما شُغّل = ما اختير = ما جُمع."""
+    rid = run.get("id")
+    jobs = api.jobs(rid)
+    verdict = next((j for j in jobs if j.get("name") == SPLIT_VERDICT), None)
+    shards = [j for j in jobs if SPLIT_SHARD.match(j.get("name", ""))]
+    if verdict is None or verdict.get("status") != "completed" or not shards:
+        return "unmeasured", f"{commit[:8]}: القياسُ المقسوم {rid} لم يكتمل"
+    if any(j.get("conclusion") not in MEASURED for j in shards):
+        return "unmeasured", f"{commit[:8]}: القياسُ المقسوم {rid} فيه جزءٌ لم يُقَس"
+    log = api.job_log(verdict["id"])
+    m = COUNT_LINE.search(log)
+    if not m:
+        return "stop", f"{commit[:8]}: القياسُ المقسوم {rid} بلا سطرِ عدّ — لا يُعرف ما شُغّل"
+    collected, selected, ran = map(int, m.groups())
+    if collected == 0 or not (collected == selected == ran):
+        return "stop", f"{commit[:8]}: القياسُ المقسوم {rid} — **العددُ لا يتساوى**: جُمع {collected} · اختير {selected} · شُغّل {ran}"
+    head = f"{commit[:8]}: مقسوماً في {rid} — {ran}/{collected} شُغّل"
+    if verdict.get("conclusion") == "success":
+        return "ok", head + " — أخضر"
+    fixed, line = _red_suite_fixed(api, verdict, read_at_head)
+    return ("fixed" if fixed else "stop"), f"{head} — {line}"
+
+
 def _judge_elsewhere(api: Api, commit: str, head_jobs: dict[str, str], read_at_head, recent_cache: dict) -> tuple[str, str]:
-    """إيداعٌ لم يقسه هذا التشغيل — **يُطلب قياسُه في تشغيلٍ آخر، ولا يُفترض**."""
+    """إيداعٌ لم يقسه هذا التشغيل — **يُطلب قياسُه في تشغيلٍ آخر، ولا يُفترض**.
+
+    **والملغى ليس حكماً** (قرارُ المالك 2026-11-15): تشغيلٌ أُلغيت مجموعتُه يُتخطّى إلى **أحدثِ تشغيلٍ مكتملٍ قِيس فيه الإيداعُ نفسُه** —
+    تشغيلُه هو، ثمّ «قياسُ إيداع» على `verify/<الإيداع>`، ثمّ «المجموعةُ عند <الإيداع>» في تشغيلٍ حديث. **ويقف إن لم يوجد قياسٌ مكتملٌ واحد.**
+    """
+    unmeasured: list[str] = []
     own = [r for r in api.runs_for_sha(commit) if r.get("name") == WORKFLOW and r.get("status") == "completed"]
-    if own:
-        run = max(own, key=lambda r: r.get("id", 0))
-        if run.get("conclusion") == "success":
-            return "ok", f"{commit[:8]}: قِيس رأساً في التشغيل {run.get('id')} — أخضر"
-        notes = []
-        for job in api.jobs(run["id"]):
-            if BATCH_JOB.match(job.get("name", "")) or SHARD_JOB.match(job.get("name", "")) or job.get("conclusion") in GREEN:
-                continue  # وظيفةٌ عن إيداعٍ آخر، أو خضراء
-            if job.get("name") == HEAD_SUITE:
-                if job.get("conclusion") != "failure":
-                    return "stop", f"{commit[:8]}: «{HEAD_SUITE}» في التشغيل {run.get('id')} انتهت {job.get('conclusion')} — لم تُقَس"
-                fixed, line = _red_suite_fixed(api, job, read_at_head)
-                if not fixed:
-                    return "stop", f"{commit[:8]} (التشغيل {run.get('id')}): {line}"
-                notes.append(line)
-            elif head_jobs.get(job.get("name")) == "success":
-                notes.append(f"«{job.get('name')}» حمراءُ هناك **وخضراءُ باسمها عند الرأس**")
-            else:
-                return "stop", f"{commit[:8]}: «{job.get('name')}» حمراءُ في التشغيل {run.get('id')} ولا نظيرَ أخضرَ لها عند الرأس"
-        return "fixed", f"{commit[:8]} (التشغيل {run.get('id')}): " + " · ".join(notes)
+    for run in sorted(own, key=lambda r: r.get("id", 0), reverse=True):
+        jobs = api.jobs(run["id"])
+        suite = next((j for j in jobs if j.get("name") == HEAD_SUITE), None)
+        if run.get("conclusion") != "success" and (suite is None or suite.get("conclusion") not in MEASURED):
+            unmeasured.append(f"{run.get('id')}: «{HEAD_SUITE}» {suite.get('conclusion') if suite else 'غائبة'}")
+            continue
+        return _judge_own_run(api, commit, run, jobs, head_jobs, read_at_head)
+
+    split = [r for r in api.runs_for_branch(f"verify/{commit}") if r.get("name") == SPLIT_WORKFLOW and r.get("status") == "completed"]
+    for run in sorted(split, key=lambda r: r.get("id", 0), reverse=True):
+        state, line = _judge_split_run(api, commit, run, read_at_head)
+        if state == "unmeasured":
+            unmeasured.append(line)
+            continue
+        return state, line
 
     if "runs" not in recent_cache:
         recent_cache["runs"] = [r for r in api.recent_runs() if r.get("name") == WORKFLOW]
@@ -199,9 +253,13 @@ def _judge_elsewhere(api: Api, commit: str, head_jobs: dict[str, str], read_at_h
         recent_cache[run["id"]] = jobs
         for job in jobs:
             if job.get("name") == wanted and job.get("status") == "completed":
+                if job.get("conclusion") not in MEASURED:
+                    unmeasured.append(f"{run.get('id')}: «{wanted}» {job.get('conclusion')}")
+                    continue
                 state, line = _judge_batch_job(api, job, read_at_head)
                 return state, f"{commit[:8]} (التشغيل {run.get('id')}): {line or 'أخضر'}"
-    return "stop", f"{commit[:8]} **لم يُقَس في أيِّ تشغيل** — لا رأساً ولا في مجموعة إيداعات"
+    tail = (" — وما وُجد لم يُقَس: " + " · ".join(unmeasured)) if unmeasured else ""
+    return "stop", f"{commit[:8]} **لم يُقَس في أيِّ تشغيلٍ مكتمل** — لا رأساً ولا مقسوماً ولا في مجموعة إيداعات{tail}"
 
 
 def judge(api: Api, *, sha: str, branch: str, commits: list[str] | None, read_at_head) -> Verdict:
@@ -235,10 +293,11 @@ def judge(api: Api, *, sha: str, branch: str, commits: list[str] | None, read_at
         if commit == sha:
             continue
         job = batch.get(commit) or next((j for k, j in batch.items() if commit.startswith(k) or k.startswith(commit)), None)
-        if job is not None:
+        if job is not None and job.get("conclusion") in MEASURED:
             state, line = _judge_batch_job(api, job, read_at_head)
             line = f"{commit[:8]}: {line}" if line else ""
         else:
+            job = None  # **غائبةٌ أو ملغاة** — تُطلب في تشغيلٍ مكتملٍ آخر، ولا تُفترض
             state, line = _judge_elsewhere(api, commit, head_jobs, read_at_head, recent_cache)
         if state == "stop":
             return Verdict("stop", [line], url)
@@ -286,6 +345,9 @@ class GitHub:
 
     def recent_runs(self) -> list[dict]:
         return json.loads(self._get("/actions/runs?per_page=40&status=completed")).get("workflow_runs", [])
+
+    def runs_for_branch(self, branch: str) -> list[dict]:
+        return json.loads(self._get(f"/actions/runs?branch={urllib.parse.quote(branch, safe='')}&per_page=10")).get("workflow_runs", [])
 
 
 def _git_reader(prefix: str) -> Callable[[str], str | None]:

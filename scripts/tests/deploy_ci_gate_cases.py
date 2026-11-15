@@ -61,8 +61,9 @@ def head_jobs(suite: str = "success", build: str = "success") -> list[dict]:
 
 class Fake:
     def __init__(self, runs: dict[str, list[dict]], jobs: dict[int, list[dict]], logs: dict[int, str] | None = None,
-                 recent: list[dict] | None = None) -> None:
+                 recent: list[dict] | None = None, branches: dict[str, list[dict]] | None = None) -> None:
         self._runs, self._jobs, self._logs, self._recent = runs, jobs, logs or {}, recent or []
+        self._branches = branches or {}
 
     def runs_for_sha(self, sha):
         return self._runs.get(sha, [])
@@ -75,6 +76,9 @@ class Fake:
 
     def recent_runs(self):
         return self._recent
+
+    def runs_for_branch(self, branch):
+        return self._branches.get(branch, [])
 
 
 def verdict(api: Fake, commits: list[str] | None = (A, B)) -> gate.Verdict:
@@ -165,6 +169,48 @@ case("إيداعٌ خارج السقف **جزؤه أحمرُ هناك واختب
 case("إيداعٌ خارج السقف **جزؤه أحمرُ هناك وأحمرُه مُصلَحٌ عند الرأس**", "pass",
      verdict(Fake({**m["runs"], A: [run(70, A, "agent/dz", conclusion="failure")]}, {**m["jobs"], 70: red_parts},
                   {1: log("tests/test_two_doors.py::test_every_payload_is_classified")})))
+
+# ── والملغى ليس حكماً، و«قياسُ إيداع» مصدرٌ دائم (2026-11-15) ────────────────────────────────
+def vrun(rid, commit, conclusion="success"):
+    return {"id": rid, "name": "قياسُ إيداع", "head_sha": HEAD, "head_branch": f"verify/{commit}", "event": "push",
+            "status": "completed", "conclusion": conclusion}
+
+
+def vjobs(verdict="success", shard="success"):
+    return [job(81, "الإيداعُ — جزء 1/2", shard), job(82, "الإيداعُ — جزء 2/2", "success"), job(83, "القياسُ الكامل", verdict)]
+
+
+COUNT_OK = STAMP + "- COUNT collected=10 selected=10 ran=10\n"
+cancelled_own = [job(1, "المجموعةُ الكاملة", "cancelled")]
+base = master_run([job(12, f"المجموعةُ عند {B}")], conclusion="success")
+
+m = {**base["runs"], A: [run(70, A, "master", conclusion="cancelled"), run(60, A, "master", conclusion="success")]}
+case("تشغيلُ الإيداع **ملغى** وتشغيلٌ أقدمُ له أخضر — يُقرأ الأخضر", "pass",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 60: head_jobs()})))
+m = {**base["runs"], A: [run(70, A, "master", conclusion="cancelled")]}
+case("تشغيلُ الإيداع ملغى **ولا قياسَ مكتملٌ غيرُه** — يقف", "stop", verdict(Fake(m, {**base["jobs"], 70: cancelled_own})))
+case("تشغيلُ الإيداع ملغى **والقياسُ المقسومُ أخضرُ والعددُ متساوٍ**", "pass",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs()}, {83: COUNT_OK}, branches={f"verify/{A}": [vrun(80, A)]})))
+case("القياسُ المقسوم أخضر **والعددُ ناقص** — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs()}, {83: STAMP + "- COUNT collected=10 selected=10 ran=9\n"},
+                  branches={f"verify/{A}": [vrun(80, A)]})))
+case("القياسُ المقسوم **بلا سطرِ عدّ** — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs()}, {}, branches={f"verify/{A}": [vrun(80, A)]})))
+case("القياسُ المقسوم أحمر **وساقطُه قائمٌ عند الرأس**", "pass",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs("failure", "failure")},
+                  {83: COUNT_OK + log("tests/test_two_doors.py::test_every_payload_is_classified")},
+                  branches={f"verify/{A}": [vrun(80, A, "failure")]})))
+case("القياسُ المقسوم أحمر **وساقطُه حُذف عند الرأس** — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs("failure", "failure")}, {83: COUNT_OK + log("tests/test_gone.py::test_y")},
+                  branches={f"verify/{A}": [vrun(80, A, "failure")]})))
+case("القياسُ المقسوم **جزؤه ملغى** ولا غيرُه — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: cancelled_own, 80: vjobs(shard="cancelled")}, {83: COUNT_OK},
+                  branches={f"verify/{A}": [vrun(80, A)]})))
+mb = master_run([job(12, f"المجموعةُ عند {B}", "cancelled")], conclusion="success")
+case("«المجموعةُ عند B» **ملغاةٌ في تشغيل الرأس** وتشغيلُ B نفسُه أخضر — يُقرأ", "pass",
+     verdict(Fake({**mb["runs"], A: [run(60, A, "master")], B: [run(61, B, "master")]}, {**mb["jobs"], 60: head_jobs(), 61: head_jobs()})))
+case("«المجموعةُ عند B» ملغاةٌ **ولا قياسَ له غيرُها** — يقف", "stop",
+     verdict(Fake({**mb["runs"], A: [run(60, A, "master")]}, {**mb["jobs"], 60: head_jobs()})))
 
 # ── وقراءةُ السجلّ نفسِها ─────────────────────────────────────────────────────
 parsed = gate.failed_tests(log("tests/test_a.py::test_b[x-1]", "tests/test_c.py::K::test_d") + f"{STAMP}ERROR tests/test_e.py - boom\n")
