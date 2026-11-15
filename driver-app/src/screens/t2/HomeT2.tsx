@@ -63,6 +63,8 @@ import { useFeature } from "@/lib/config";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
 import { clearDestination, getDestination, getHeatmap, setDestination, type DriverDestination } from "@/api/endpoints";
+import { SEARCH_V2_FLAG } from "@/lib/place-search";
+import { DestinationSearchT2 } from "@/screens/t2/DestinationSearchT2";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
@@ -214,12 +216,16 @@ export function HomeT2Screen() {
       .then(setDest)
       .catch(() => undefined);
   }, [mode]);
+  // **«وجهتي» بالبحث** (SPEC §١٠٤/١٦) — قائمةُ البحث الجديدة خلف `places_search_v2`، ومطفأً النقرُ في الخريطة وحدَه كما كان
+  const destSearchOn = useFeature(user?.country_code, SEARCH_V2_FLAG);
+  const [destSearch, setDestSearch] = useState(false);
   const chooseDestination = (at: Coordinates, label: string) => {
     setDestError(null);
     setDestination({ lat: at.lat, lng: at.lng, label })
       .then((next) => {
         setDest(next);
         setTapped(null);
+        setDestSearch(false);
         setOpen(false);
       })
       .catch((caught: unknown) => setDestError(caught instanceof Error ? caught.message : tr("تعذّر الحفظ")));
@@ -466,6 +472,22 @@ export function HomeT2Screen() {
             ) : null}
             {open && heatOn && heat !== null && heat.length === 0 ? (
               <p className="t2-hm-heat-note">{tr("لا طلبَ مرتفعاً في مدينتك الآن")}</p>
+            ) : null}
+            {open && destSearchOn && dest && dest.daily_uses > 0 && dest.uses_left > 0 ? (
+              <button type="button" className="t2-hm-search" onClick={() => setDestSearch(true)}>
+                <Icon name="search" />
+                <span>{tr("ابحث عن وجهتك")}</span>
+              </button>
+            ) : null}
+            {open && destSearch ? (
+              <DestinationSearchT2
+                userId={user?.id ?? null}
+                position={position}
+                onChoose={chooseDestination}
+                onPickOnMap={() => setDestSearch(false)}
+                onClose={() => setDestSearch(false)}
+                error={destError}
+              />
             ) : null}
             {open && tapped ? (
               <TapCard

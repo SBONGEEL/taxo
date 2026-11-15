@@ -127,3 +127,10 @@ test("تخزينٌ تالفٌ أو غائبٌ لا يُسقط القائمة", (
   };
   rememberPick(broken, "u1", CITY_MALL);
 });
+
+test("نسخةُ الكبتن من المكتبة هي هي بايتاً — «وجهتي» تطابق وتُظلّل وتحفظ كالراكب", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const here = new URL("../src/lib/place-search.ts", import.meta.url);
+  const there = new URL("../../driver-app/src/lib/place-search.ts", import.meta.url);
+  assert.equal(await readFile(there, "utf8"), await readFile(here, "utf8"));
+});

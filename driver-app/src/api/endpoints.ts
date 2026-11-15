@@ -305,6 +305,26 @@ export interface DriverDestination {
   daily_uses: number;
   uses_left: number;
 }
+/** **البحثُ الموحَّد عبر الخلفية** (`/places/search`) — بابُ الراكب نفسُه لكلِّ مستخدمٍ بجلسة، ودولتُه دولتُه؛ ولـ«وجهتي» هنا
+ *  (SPEC §١٠٤/١٦). المحفوظةُ والأخيرةُ في الخادم بابُ الراكب، فلا تعود للكبتن إلا نتائجُ الأماكن */
+export interface PlaceSearchItem {
+  id: string;
+  source: "saved" | "recent" | "taxo" | "learned" | "google" | "open" | "mapbox";
+  name: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  place_id: string | null;
+  distance_m: number | null;
+  category?: string | null;
+}
+export interface PlaceSearchAnswer {
+  items: PlaceSearchItem[];
+  attribution: "google" | "open" | "mapbox" | null;
+  attribution_text: string | null;
+}
+export const placeSearch = (q: string, near?: { lat: number; lng: number }, signal?: AbortSignal) =>
+  api.get<PlaceSearchAnswer>("/places/search", { query: { q, ...(near ?? {}) }, signal });
 export const getDestination = () => api.get<DriverDestination>("/drivers/me/destination");
 export const setDestination = (payload: { lat: number; lng: number; label: string }) =>
   api.put<DriverDestination>("/drivers/me/destination", payload);
