@@ -58,6 +58,7 @@ import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
 import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 import { useBackLayer } from "@/lib/back-layers";
+import { SEARCH_V2_FLAG } from "@/lib/place-search";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
 import { clearPendingRide, readPendingRide, savePendingRide } from "@/lib/ride-topup";
@@ -115,6 +116,13 @@ export function HomeScreen() {
   const [center, setCenter] = useState<Coordinates>(fallback);
   const [phase, setPhase] = useState<Phase>("idle");
   const [searchOpen, setSearchOpen] = useState(false);
+  // **عمّا تسأل قائمةُ البحث** (SPEC §١٠٤/١٦) — الوجهةُ كما كانت، **والانطلاقُ والمحطاتُ بالقائمة نفسِها حين `places_search_v2` مشتعل**
+  const searchV2 = useFeature(user?.country_code, SEARCH_V2_FLAG);
+  const [searchFor, setSearchFor] = useState<"dropoff" | "pickup" | "stop">("dropoff");
+  const openSearch = (target: "dropoff" | "pickup" | "stop") => {
+    setSearchFor(target);
+    setSearchOpen(true);
+  };
   /** **مطاراتُ السوق صفوفاً أولى في البحث** — من بلاطة «المطار» وحدَها، و`undefined` لكلِّ بابٍ غيرِه. */
   const [airportPicks, setAirportPicks] = useState<Place[] | undefined>(undefined);
   const [pickup, setPickup] = useState<Coordinates | null>(null);
@@ -364,6 +372,36 @@ export function HomeScreen() {
     setDropoffAddress(pickupAddress ?? pickupLine ?? tr("موقعي الحالي"));
     setPhase("confirm");
     map.current?.fitBounds(point, here);
+  }
+
+  /** **انطلاقٌ من قائمة البحث** (§١٠٤/١٦) — نقطتُه إحداثيّاتُ النتيجة كما وصلت، **كما يضعها الدبوسُ تماماً** (`confirmPin`) */
+  function pickPickup(place: Place) {
+    setPickup(place.coordinates);
+    setPickupAddress(place.address || place.name);
+    setPhase(dropoff || hourlyMode ? "confirm" : "idle");
+    if (dropoff) map.current?.fitBounds(place.coordinates, dropoff);
+    else map.current?.flyTo(place.coordinates, 15);
+  }
+
+  /** **محطةٌ من قائمة البحث** — تُضاف كما يضيفها الدبوس، بعنوانها من النتيجة */
+  function pickStop(place: Place) {
+    setStops((current) => [...current, { ...place.coordinates, address: place.address || place.name }]);
+    setPhase("confirm");
+  }
+
+  /** **«موقعي الحالي» انطلاقاً** — وبلا إذن موقعٍ يُختار بالدبوس */
+  function pickHere() {
+    void currentPosition().then((position) => {
+      if (!position) {
+        setPhase("pick-pickup");
+        return;
+      }
+      setCenter(position);
+      setPickup(position);
+      void describe(position, "pickup");
+      setPhase(dropoff || hourlyMode ? "confirm" : "idle");
+      map.current?.flyTo(position, 15);
+    });
   }
 
   function pickPlace(place: Place) {
@@ -859,7 +897,7 @@ export function HomeScreen() {
       endParcel();
       endHourly();
       setAirportPicks(undefined);
-      setSearchOpen(true);
+      openSearch("dropoff");
     },
     // **«إلى أين؟» دبوسٌ على الخريطة** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ) — بتصفير ما يصفّره البحثُ نفسُه، والبحثُ رابطٌ في ورقة الدبوس
     onPickOnMap: () => {
@@ -879,7 +917,7 @@ export function HomeScreen() {
       setPresetOffer(null);
       endParcel();
       endHourly();
-      setSearchOpen(true);
+      openSearch("dropoff");
       getAirports()
         .then((list) =>
           setAirportPicks(
@@ -910,13 +948,13 @@ export function HomeScreen() {
     onRepeat: repeatRide,
     map: mapNode,
     area,
-    onChangePickup: () => setPhase("pick-pickup"),
+    onChangePickup: () => (searchV2 ? openSearch("pickup") : setPhase("pick-pickup")),
     onWomenRide: () => {
       setPresetPreference("female");
       setAirportPicks(undefined);
       endParcel();
       endHourly();
-      setSearchOpen(true);
+      openSearch("dropoff");
     },
     // **«طرد»** (§٦٣-ج/٤) — منتقي الوجهة كما للرحلة، ثمّ ورقةُ الطلب بفئة الاقتصادي وورقةُ الطرد مفتوحة. **والبلاطةُ لا تناديه
     // إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
@@ -930,7 +968,7 @@ export function HomeScreen() {
       setFetchPlaced(false);
       setParcelMode(true);
       endHourly();
-      setSearchOpen(true);
+      openSearch("dropoff");
     },
     // **«أحضر غرضي»** (§٧٢-ج/١) — «أين غرضك؟» أوّلاً فيصير انطلاقاً وموقعُه وجهةً، ثمّ ورقةُ الطلب بالاقتصادي وورقتُه مفتوحة.
     // **والبلاطةُ لا تناديه إلا حيث مفتاحُه مشتعل** (`RiderHomeT2`)
@@ -944,7 +982,7 @@ export function HomeScreen() {
       setFetchPlaced(false);
       setParcelMode(true);
       endHourly();
-      setSearchOpen(true);
+      openSearch("dropoff");
     },
     // **«بالساعة»** (§٦٣-ج/٥) — منتقي الوجهة **بصفِّ «بلا وجهة»** (`skipDestination`)، ثمّ ورقةُ الطلب بكتلة الساعات. والانطلاقُ
     // موقعُ الجهاز أو ما وُضع بالدبوس كأيِّ رحلة. **والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
@@ -956,7 +994,7 @@ export function HomeScreen() {
       endParcel();
       setHourlyDraft(HOURLY_START);
       setHourlyMode(true);
-      setSearchOpen(true);
+      openSearch("dropoff");
     },
     // **شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — `null` حيث المفتاحُ مطفأ
     unconfirmed,
@@ -1014,7 +1052,7 @@ export function HomeScreen() {
           categories: countryConfig?.vehicle_categories ?? ["economy"],
           eta: nearestEta.minutes,
           available: nearestEta.available,
-          onEditDestination: () => setSearchOpen(true),
+          onEditDestination: () => openSearch("dropoff"),
           onRequest: submit,
           onTopUpForRide: topUpForRide,
           onSchedule: schedule,
@@ -1022,7 +1060,7 @@ export function HomeScreen() {
           requestError: error,
           stops,
           onStopsChange: setStops,
-          onAddStop: () => setPhase("pick-stop"),
+          onAddStop: () => (searchV2 ? openSearch("stop") : setPhase("pick-stop")),
           blockedByPreference,
           onClearPreference: () => void clearGenderPreference(),
           blockedByPayment,
@@ -1259,7 +1297,15 @@ export function HomeScreen() {
                 onConfirm={confirmPin}
                 // **والساعاتُ تعود إلى ورقتها ولو بلا وجهة** (§٦٣-ج/٥) — ما دام انطلاقُها معروفاً
                 onCancel={() => setPhase(dropoff || (hourlyMode && pickup) ? "confirm" : "idle")}
-                onSearch={phase === "pick-dropoff" ? () => setSearchOpen(true) : undefined}
+                onSearch={
+                  phase === "pick-dropoff"
+                    ? () => openSearch("dropoff")
+                    : searchV2 && phase === "pick-pickup"
+                      ? () => openSearch("pickup")
+                      : searchV2 && phase === "pick-stop"
+                        ? () => openSearch("stop")
+                        : undefined
+                }
               />
             ) : phase === "confirm" && confirmProps ? (
               <ConfirmRideT2 {...confirmProps} />
@@ -1267,7 +1313,7 @@ export function HomeScreen() {
               <WhereToSheetT2
                 places={places}
                 pickupLabel={pickupAddress ?? (pickup ? tr("الموقع المحدد") : tr("موقعي الحالي"))}
-                onSearch={() => setSearchOpen(true)}
+                onSearch={() => openSearch("dropoff")}
                 onPickPlace={(place) =>
                   pickPlace({
                     id: `place:${place.id}`,
@@ -1276,7 +1322,7 @@ export function HomeScreen() {
                     coordinates: { lat: place.lat, lng: place.lng },
                   })
                 }
-                onChangePickup={() => setPhase("pick-pickup")}
+                onChangePickup={() => (searchV2 ? openSearch("pickup") : setPhase("pick-pickup"))}
               />
             )}
           </motion.div>
@@ -1292,13 +1338,24 @@ export function HomeScreen() {
         token={token}
         country={user?.country_code ?? "JO"}
         near={pickup ?? center}
-        onPick={pickPlace}
-        onPickOnMap={() => setPhase("pick-dropoff")}
+        onPick={searchFor === "pickup" ? pickPickup : searchFor === "stop" ? pickStop : pickPlace}
+        onPickOnMap={() => setPhase(searchFor === "pickup" ? "pick-pickup" : searchFor === "stop" ? "pick-stop" : "pick-dropoff")}
         // **«بلا وجهة» للساعات وحدَها** (§٦٣-ج/٥) — وكلُّ طلبٍ غيرِها بلا صفِّه كما كان
-        onSkip={hourlyMode ? skipDestination : undefined}
-        airports={airportPicks}
+        onSkip={hourlyMode && searchFor === "dropoff" ? skipDestination : undefined}
+        onHere={searchFor === "pickup" ? pickHere : undefined}
+        airports={searchFor === "dropoff" ? airportPicks : undefined}
         // **«أحضر غرضي»** (§٧٢-ج/١): السؤالُ الأوّلُ عن مكان الغرض، وما بعده عن مكان التسليم
-        title={fetchItemStage ? tr("أين غرضك؟") : parcelMode && parcelFetch ? tr("إلى أين يصلك؟") : undefined}
+        title={
+          searchFor === "pickup"
+            ? tr("من أين تنطلق؟")
+            : searchFor === "stop"
+              ? tr("أضف محطة")
+              : fetchItemStage
+                ? tr("أين غرضك؟")
+                : parcelMode && parcelFetch
+                  ? tr("إلى أين يصلك؟")
+                  : undefined
+        }
       />
 
     </div>

@@ -22,6 +22,8 @@ import { useFeature } from "@/lib/config";
 import { listen, VOICE_FLAG, voiceAvailable } from "@/lib/voice-input";
 import { usePlaces } from "@/lib/places";
 import { DrawerT2 } from "@/screens/t2/DrawerT2";
+import { PlaceSearchV2, type PlaceSearchProps } from "@/components/home/PlaceSearchV2";
+import { SEARCH_V2_FLAG } from "@/lib/place-search";
 import { BlankT2, LoaderT2 } from "@/screens/t2/KitT2";
 import { Icon } from "@/taxo2";
 
@@ -30,7 +32,13 @@ import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
 const DEBOUNCE_MS = 350;
 
-export function DestinationSearch({
+/** **مفتاحُ السوق يختار القائمة** (SPEC §١٠٤، `places_search_v2`) — مطفأً `DestinationSearchClassic` كما كانت حرفاً */
+export function DestinationSearch(props: PlaceSearchProps) {
+  const v2 = useFeature(props.country, SEARCH_V2_FLAG);
+  return v2 ? <PlaceSearchV2 {...props} /> : <DestinationSearchClassic {...props} />;
+}
+
+function DestinationSearchClassic({
   open,
   onOpenChange,
   token,

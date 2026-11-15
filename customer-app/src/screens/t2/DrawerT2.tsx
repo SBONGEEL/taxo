@@ -4,7 +4,7 @@
  * وعنوانُها يُعلَن لقارئ الشاشة، **وسقفُها مساحةٌ محجوزةٌ من الأعلى لا نسبةٌ من الإطار** (البند ٩، قِيس على الجهاز ٢٠٢٦-٠٨-١٤)
  * — **والوجهُ وجهُ أوراق R06–R09**: حجرٌ بزاويتين ٣٠ ومقبضٍ وظلٍّ، والعنوانُ كـ«إلى أين؟» في ورقة الخريطة (`WhereToSheetT2`).
  */
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Drawer } from "vaul";
 
 import "@/taxo2";
@@ -16,11 +16,16 @@ export function DrawerT2({
   onOpenChange,
   title,
   children,
+  className,
+  style,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
   children: ReactNode;
+  /** **صنفٌ إضافيّ وموضع** — قائمةُ البحث الجديدة (§١٠٤/٩) ترفع الورقةَ فوق لوحة المفاتيح؛ وغيابُهما الورقةُ كما كانت */
+  className?: string;
+  style?: CSSProperties;
 }) {
   // **وزرُّ الرجوع يغلقها** (SPEC §٩٣-ب) — `vaul` لا يسمع زرَّ أندرويد
   useBackLayer(open, () => onOpenChange(false));
@@ -28,7 +33,7 @@ export function DrawerT2({
     <Drawer.Root open={open} onOpenChange={onOpenChange} direction="bottom">
       <Drawer.Portal>
         <Drawer.Overlay className="t2 t2-drawer-scrim" />
-        <Drawer.Content dir="rtl" className="t2 t2-drawer">
+        <Drawer.Content dir="rtl" className={className ? `t2 t2-drawer ${className}` : "t2 t2-drawer"} style={style}>
           <div className="t2-drawer-grab" aria-hidden="true" />
           {title ? (
             <Drawer.Title className="t2-drawer-title">{title}</Drawer.Title>

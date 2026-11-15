@@ -348,6 +348,8 @@ export interface PlaceSearchItem {
   lng: number | null;
   place_id: string | null;
   distance_m: number | null;
+  /** **صنفُ الأيقونة** (§١٠٤/١١) — نصٌّ لا تعداد: صنفٌ جديدٌ في الخادم أيقونةٌ عامّة (`lib/place-search.ts`)، و`null` كذلك */
+  category?: string | null;
 }
 export interface PlaceSearchAnswer {
   items: PlaceSearchItem[];
