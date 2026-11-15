@@ -1107,7 +1107,7 @@ export function HomeScreen() {
       120,
     ];
     const [a, b, top] = previewBox.current;
-    map.current?.fitBounds(a, b, { top, bottom: (sheetBox.current?.getBoundingClientRect().height ?? 320) + 40 });
+    map.current?.fitBounds(a, b, { top, bottom: (sheetBox.current?.getBoundingClientRect().height ?? 320) + 56 });
   }, [confirming, previewLine]);
   useEffect(() => {
     const box = sheetBox.current;

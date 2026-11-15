@@ -896,7 +896,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         <SheetModalT2
           onClose={() => setOptionsOpen(false)}
           footer={
-            <button type="button" className="t2-button primary" onClick={() => setOptionsOpen(false)}>
+            <button type="button" className="t2-button primary t2-m-cta" onClick={() => setOptionsOpen(false)}>
               {tr("تم")}
             </button>
           }
