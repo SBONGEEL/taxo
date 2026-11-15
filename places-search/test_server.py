@@ -32,6 +32,18 @@ ROWS = [
     ("DZ", "poi", 'المكتبة المركزية لجامعة الجزائر ١ "بن يوسف بن خدة"', None, "الجزائر", 36.7711, 3.0553, 4, "overture"),
     ("DZ", "poi", "مقام الشهيد", None, "عزيز", 35.8268, 2.4559, 7, "osm"),
     ("DZ", "poi", "مقام الشهيد", "Martyrs Memorial", "القبة", 36.7457, 3.0697, 7, "osm"),
+    # أمرُ المالك §١٠٤ (٢٠٢٦-١١-١٦): الدوّارُ طريقٌ في OSM، والمحلُّ المسمّى باسمه كان يسبقه
+    ("JO", "street", "دوار الداخلية", "Interior Roundabout", "عمان", 31.9615, 35.9078, 6, "osm"),
+    ("JO", "poi", "رم للبصريات دوار الداخليه", None, "عمان", 31.9621, 35.9081, 6, "overture"),
+    # المكانُ نفسُه ثلاثاً: من OSM، ومن Overture باللغتين في حقلٍ واحد، ونقطةٌ ثالثةٌ على بعد كيلومترين
+    ("JO", "poi", "مكة مول", "Mecca Mall", "عمان", 31.9768, 35.8436, 7, "osm"),
+    ("JO", "poi", "Mecca Mall | مكة مول", None, "عمان", 31.9770, 35.8438, 5, "overture"),
+    ("JO", "poi", "مكة مول", None, "الجبيهة", 31.9900, 35.8550, 4, "overture"),
+    ("JO", "poi", "سيتي مول", "City Mall", "عمان", 31.9787, 35.8341, 7, "osm"),
+    # حيٌّ بالعربيّة، وصفٌّ آخرُ له باللاتينيّة وحدَها
+    ("DZ", "district", "الأبيار", "El Biar", "الجزائر", 36.7680, 3.0300, 8, "osm"),
+    ("DZ", "district", None, "El Biar", "الجزائر", 36.7700, 3.0330, 5, "overture"),
+    ("DZ", "town", "الجزائر", "Alger", "الجزائر", 36.7538, 3.0588, 10, "osm"),
 ]
 
 db = sqlite3.connect(INDEX)
@@ -78,5 +90,40 @@ martyrs = srv.search("مقام الشهيد", "DZ", None, 5)
 check("بلا موقع: الذي في العاصمة أوّلاً", bool(martyrs) and martyrs[0]["context"].endswith("القبة"))
 far = srv.search("مقام الشهيد", "DZ", (35.82, 2.45), 5)
 check("وموقعُ الراكب يغلب العاصمة", bool(far) and far[0]["context"].endswith("عزيز"))
+
+# ── أمرُ المالك §١٠٤ (٢٠٢٦-١١-١٦): الدوّار، والمطابقةُ العربيّة، والتكرار، والبلد، وذاكرةُ الأجوبة
+amman = (31.9539, 35.9106)
+for q, where in [(q, w) for q in ("دوار الداخلية", "دوار الداخليه", "دوّار الداخليّة", "دوار  الداخلية ") for w in (amman, None)]:
+    got = srv.search(q, "JO", where, 5)
+    check(f"«{q}»: الدوّارُ قبل المحلِّ المسمّى باسمه", bool(got) and got[0]["name"] == "دوار الداخلية")
+    check(f"«{q}»: صنفُه دوّار", bool(got) and got[0]["cat"] == "roundabout")
+plain = srv.search("الداخلية", "JO", None, 5)
+check("بلا «دوار» يُوجد الدوّارُ أيضاً", any(i["name"] == "دوار الداخلية" for i in plain))
+
+for q in ("مكة مول", "مكه مول", "Mecca Mall", "mecca mall"):
+    got = [i["name"] for i in srv.search(q, "JO", amman, 8)]
+    check(f"«{q}»: مكة مول مرّةً واحدة", got.count("مكة مول") == 1)
+    check(f"«{q}»: لا يُعرض الاسمُ بلغتين", not any("|" in n for n in got))
+check("Latin «City Mall» يجد سيتي مول", any(i["name"] == "سيتي مول" for i in srv.search("City Mall", "JO", amman, 5)))
+check("«سيتى مول» (ى) يجد سيتي مول", any(i["name"] == "سيتي مول" for i in srv.search("سيتى مول", "JO", amman, 5)))
+check("«المكة مول» (بزيادة «ال») يجد مكة مول",
+      any(i["name"] == "مكة مول" for i in srv.search("المكة مول", "JO", amman, 5)))
+
+algiers = (36.7538, 3.0588)
+for q in ("الابيار", "الأبيار", "el biar", "El Biar"):
+    got = srv.search(q, "DZ", algiers, 6)
+    check(f"«{q}»: الأبيار مرّةً واحدة", sum(1 for i in got if i["name"] in ("الأبيار", "El Biar")) == 1)
+check("«Alger» يجد الجزائر", any(i["name"] == "الجزائر" for i in srv.search("Alger", "DZ", None, 5)))
+
+check("لا نتيجةَ من بلدٍ آخر (الأبيار من الأردن)", srv.search("الأبيار", "JO", amman, 5) == [])
+check("ولا مكة مول من الجزائر", srv.search("مكة مول", "DZ", algiers, 5) == [])
+check("حرفٌ واحدٌ لا يُسأل", srv.search("د", "JO", amman, 5) == [])
+check("بلدٌ مجهولٌ لا يُسأل", srv.search("مكة مول", "XX", None, 5) == [])
+
+first = srv.search("مكة مول", "JO", amman, 5)
+first[0]["name"] = "عبث"
+again = srv.search("مكة مول", "JO", amman, 5)
+check("ذاكرةُ الأجوبة تُعيد نسخةً لا الأصل", again[0]["name"] == "مكة مول")
+check("ولكلِّ نتيجةٍ صنفٌ للأيقونة", all(i.get("cat") for i in again))
 
 sys.exit(1 if failures else 0)

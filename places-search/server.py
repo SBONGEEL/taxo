@@ -14,6 +14,8 @@ import os
 import re
 import sqlite3
 import queue
+import threading
+from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -90,6 +92,9 @@ COMMON = {"مطار", "airport", "aeroport", "international", "الدولي", "�
           "universite", "مستشفي", "hospital", "hopital", "chu", "centre", "center", "commercial", "مركز", "سوق", "souk",
           "souq", "حي", "hay", "cite", "مدرسه", "school", "مسجد", "mosque", "فندق", "hotel", "of", "de", "du", "la", "el", "al"}
 STREET_WORDS = {"شارع", "street", "st", "rue", "boulevard", "bd", "avenue", "av", "طريق", "road"}
+#: **الدوّار** (٢٠٢٦-١١-١٦، أمرُ المالك §١٠٤/٣) — في OSM طريقٌ (`kind = street`)، فكان يُعاقب كشارعٍ لم يُطلب: «دوار الداخلية» أعاد
+#: «رم للبصريات دوار الداخليه» قبل الدوّار. **ومن كتب «دوار» طلب دوّاراً** — فلا عقوبةَ ويُزاد كقصد الصنف
+ROUNDABOUT_WORDS = {"دوار", "roundabout", "rond", "rondpoint", "circle"}
 
 #: **قصدُ الصنف** (٢٠٢٦-١١-١٦) — «مطار هواري بومدين» يطلب مطاراً، فبلدةٌ اسمُها «هواري بومدين» لا تتقدّمه.
 #: كلمةُ الصنف خفيفةٌ في الشبه (`COMMON`) لأنها لا تختار مطاراً من مطار، **لكنها تختار المطارَ من البلدة** — فتُقرأ هنا قصداً
@@ -151,18 +156,116 @@ def _similarity(query: str, names: list[str]) -> float:
     return best
 
 
+#: **المسافةُ التي يُعدّ فيها الاسمُ نفسُه المكانَ نفسَه** — حيٌّ أو مدينةٌ تتسع، ومحلٌّ أو معلمٌ نقطة
+SAME_PLACE_KM = {"city": 3.0, "town": 2.0, "district": 1.5, "neighbourhood": 1.0, "village": 1.0, "locality": 1.0}
+SAME_POINT_KM = 0.5
+#: **والمعلمُ الكبيرُ يتسع كالحيّ** — مولٌ أو جامعةٌ أو مستشفى أو مطارٌ نقطتاه في OSM وOverture قد تتباعدان كيلومترين
+#: («مكة مول ‹أم السماق›» و«مكة مول ‹التلاع الشرقي›»)، ولا يقوم معلمان كبيران بالاسم نفسِه في كيلومترين ونصف
+SAME_SITE_KM = {"mall": 2.5, "university": 2.5, "hospital": 2.0, "airport": 5.0}
+
+
+def _parts(text: str | None) -> list[str]:
+    return [part.strip() for part in (text or "").split("|") if part.strip()]
+
+
+def _display_name(row: sqlite3.Row) -> str:
+    """**اسمٌ واحدٌ يُعرض** — بعضُ صفوف Overture تحمل اللغتين في حقلٍ واحد («Mecca Mall | مكة مول»)، فيُعرض العربيُّ منهما."""
+    parts = _parts(row["name_ar"]) or _parts(row["name_en"]) or _parts(row["alt"])
+    arabic = [part for part in parts if re.search(r"[\u0600-\u06FF]", part)]
+    return (arabic or parts or [""])[0]
+
+
+def _name_set(row: sqlite3.Row, name: str) -> set[str]:
+    return {norm(n) for n in [name, *_parts(row["name_ar"]), *_parts(row["name_en"])] if n}
+
+
+def _radius(row: sqlite3.Row) -> float:
+    return SAME_PLACE_KM.get(row["kind"]) or SAME_SITE_KM.get(_category_of(row), SAME_POINT_KM)
+
+
+def _duplicate(row: sqlite3.Row, name: str, context: str, kept: list) -> bool:
+    """**المكانُ نفسُه مرّتين** (أمرُ المالك §١٠٤/٧) — من OSM وOverture، أو بالعربيّة والإنجليزيّة («الأبيار» و«El Biar»، «مكة مول»
+    و«Mecca Mall»)، أو باسمه وحيّه نفسَيهما («باب الزوار ‹حي دوزي 4›» مرّتين). الأوّلُ في الترتيب هو الباقي."""
+    names = _name_set(row, name)
+    own = norm(name)
+    for other, other_names, other_name, other_context in kept:
+        if own == other_name and context and context == other_context:
+            return True
+        if names & other_names:
+            radius = max(_radius(row), _radius(other))
+            if _km(row["lat"], row["lng"], other["lat"], other["lng"]) <= radius:
+                return True
+    return False
+
+
+#: **صنفُ الأيقونة** (§١٠٤/١١) — من نوع الصفّ ثمّ من كلماتِ اسمه؛ والفهرسُ لا يحمل صنفَ المعلم، فالاسمُ هو الدليل
+CAT_WORDS = (
+    ("airport", {"مطار", "airport", "aeroport"}), ("mall", {"مول", "mall"}),
+    ("hospital", {"مستشفي", "hospital", "hopital", "chu", "clinique"}), ("university", {"جامعه", "university", "universite"}),
+    ("mosque", {"مسجد", "جامع", "mosque", "mosquee"}), ("restaurant", {"مطعم", "restaurant", "مقهي", "cafe", "كافيه", "coffee"}),
+    ("hotel", {"فندق", "hotel"}), ("school", {"مدرسه", "school", "ecole", "lycee"}), ("pharmacy", {"صيدليه", "pharmacy", "pharmacie"}),
+    ("bank", {"بنك", "bank", "banque"}), ("fuel", {"وقود", "بنزين", "fuel", "petrol", "naftal"}),
+    ("park", {"حديقه", "منتزه", "park", "parc", "jardin"}),
+)
+
+
+def _category_of(row: sqlite3.Row) -> str:
+    words = set(row["nalt"].replace(" | ", " ").split())
+    # **الطريقُ طريقٌ أوّلاً** — «شارع مطار الملكة علياء» شارعٌ لا مطار، والدوّارُ طريقٌ اسمُه «دوار»؛ ومحلٌّ باسم الدوّار محلّ
+    if row["kind"] == "street":
+        return "roundabout" if words & ROUNDABOUT_WORDS else "street"
+    for cat, marks in CAT_WORDS:
+        if words & marks:
+            return cat
+    if row["kind"] == "street":
+        return "street"
+    if row["kind"] in ("city", "town", "village", "locality"):
+        return "city"
+    if row["kind"] in ("district", "neighbourhood"):
+        return "district"
+    return "place"
+
+
 def _km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return math.hypot((lat2 - lat1) * 111.0, (lng2 - lng1) * 111.0 * math.cos(math.radians(lat1)))
+
+
+#: **ذاكرةُ الأجوبة** (§١٠٤/٨) — مفتاحُها النصُّ المطويُّ والبلدُ والموقعُ مقرَّباً إلى ~١ كم، فراكبان في الحيّ نفسِه يتشاركانها؛
+#: والفهرسُ لا يتغيّر وهو قيد التشغيل (`immutable=1`) فلا يبلى ما فيها. **ولا يُكتب منها شيءٌ في سجلّ**
+CACHE_SIZE = 4096
+_cache: "OrderedDict[tuple, list[dict]]" = OrderedDict()
+_cache_lock = threading.Lock()
 
 
 def search(q: str, cc: str, near: tuple[float, float] | None, limit: int) -> list[dict]:
     query = norm(q)
     if len(query.replace(" ", "")) < 2 or cc not in COUNTRIES:
         return []
+    key = (query, cc, (round(near[0], 2), round(near[1], 2)) if near else None, limit)
+    with _cache_lock:
+        if key in _cache:
+            _cache.move_to_end(key)
+            return [dict(item) for item in _cache[key]]
     if _pool.qsize() == 0 and not _started:
         _fill()
     with _Lease() as db:
-        return _search(db, query, q, cc, near, limit)
+        items = _search(db, query, q, cc, near, limit)
+    with _cache_lock:
+        _cache[key] = items
+        if len(_cache) > CACHE_SIZE:
+            _cache.popitem(last=False)
+    return [dict(item) for item in items]
+
+
+def warm() -> None:
+    """**يُقرأ الفهرسُ مرّةً إلى ذاكرة النظام عند الإقلاع** (§١٠٤/٣) — أوّلُ حرفٍ بعد إعادة الحاوية كان يقرأ القرصَ صفحةً صفحة:
+    «با» ١٫١ ث و«Alger» ٣٫٤ ث باردين، و١٠٠–٢٠٠ م.ث دافئين (قِيس على الفهرس الحقيقيّ). قراءةٌ متتابعةٌ في خيطٍ جانبيّ لا تؤخّر الخدمة."""
+    try:
+        with open(INDEX, "rb") as handle:
+            while handle.read(8 << 20):
+                pass
+    except OSError:
+        pass
 
 
 _started = False
@@ -209,6 +312,8 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
             return len(qgrams & set(_trigrams(row["nalt"]))) / len(qgrams)
         found = dict(sorted(found.items(), key=lambda kv: (-overlap(kv[1]), -kv[1]["rank"], kv[1]["src"] != "osm"))[:80])
     wants_street = any(w in STREET_WORDS for w in query.split())
+    wants_roundabout = any(w in ROUNDABOUT_WORDS for w in query.split())
+    qcore = _core(query.translate(WESTERN))
     wanted = _categories(query)
     digits = _numbers(query)
     scored = []
@@ -225,8 +330,16 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
         if digits:  # **«جامعة الجزائر 1» ليست «2»** — الرقمُ في الاستعلام يُطابَق حرفاً
             have = _numbers(row["nalt"])
             score += 0.06 if digits <= have else -0.25 if have else -0.12  # رقمٌ آخرُ أبعدُ من لا رقم
-        if (row["kind"] == "street") != wants_street:
+        roundabout = row["kind"] == "street" and any(w in ROUNDABOUT_WORDS for w in row["nalt"].split())
+        if wants_roundabout and roundabout:
+            score += 0.04
+        elif (row["kind"] == "street") != wants_street:
             score -= 0.15 if row["kind"] == "street" else 0.08
+        # **الاسمُ هو المطلوبُ نفسُه** لا ما يحمله في ذيله: «دوار الداخلية» قبل «رم للبصريات دوار الداخليه»
+        # **ولا لشارعٍ لم يُطلب**: «Queen Alia Airport Street» يساوي «Queen Alia Airport» بعد حذف «Street» — والمطلوبُ المطار
+        street_unasked = row["kind"] == "street" and not wants_street and not (wants_roundabout and roundabout)
+        if qcore and not street_unasked and any(_core(n.translate(WESTERN)) == qcore for n in names):
+            score += 0.10
         dist = None
         if near:
             dist = _km(near[0], near[1], row["lat"], row["lng"])
@@ -256,18 +369,18 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
 
     scored = [s for s in scored if not namesake(s[2])]
 
-    items, seen = [], set()
+    items, kept = [], []
     for score, dist, row in scored:
-        name = row["name_ar"] or row["name_en"] or row["alt"].split(" | ")[0]
-        key = (norm(name), round(row["lat"], 3), round(row["lng"], 3))
-        if key in seen:
-            continue
-        seen.add(key)
+        name = _display_name(row)
         context = [c for c in (row["ctx_local"], row["ctx_city"]) if c and c != name]
+        if _duplicate(row, name, "، ".join(dict.fromkeys(context)), kept):
+            continue
+        kept.append((row, _name_set(row, name), norm(name), "، ".join(dict.fromkeys(context))))
         items.append({
             "id": f"{row['src']}:{row['id']}", "name": name, "name_en": row["name_en"], "kind": row["kind"],
             "context": "، ".join(dict.fromkeys(context)), "lat": round(row["lat"], 6), "lng": round(row["lng"], 6),
             "distance_m": int(dist * 1000) if dist is not None else None, "src": row["src"],
+            "cat": _category_of(row),
             "score": round(score, 3),
         })
         if len(items) >= limit:
@@ -313,6 +426,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     port = int(os.environ.get("PORT", "8090"))
     _fill()
+    threading.Thread(target=warm, daemon=True).start()
     ThreadingHTTPServer.daemon_threads = True
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
