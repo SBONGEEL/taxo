@@ -26,6 +26,11 @@ concurrency:
 permissions:
   contents: read
 
+# **لا سجلَّ بناءٍ يُرفع أثراً** — `build-push-action` يرفع افتراضاً سجلّاً لكلِّ بناء، فتزدحم الآثارُ بما لا يقرؤه أحد
+env:
+  DOCKER_BUILD_RECORD_UPLOAD: "false"
+  DOCKER_BUILD_SUMMARY: "false"
+
 jobs:
   # ══════════════ المجموعةُ مقسومةً على وظائفَ متوازية (قرارُ المالك 2026-11-15) ══════════════
   #
@@ -67,9 +72,25 @@ jobs:
           retention-days: 3
           include-hidden-files: true
 
+  # **صورةُ الخلفية تُبنى مرّةً لا في كلِّ جزء** — وقع مقيساً في التشغيل 43716600094: ستّةُ أجزاءٍ تبني معاً بذاكرةٍ باردة،
+  # فسقط أحدُها بانقطاعٍ في جلب مفتاح postgresql.org **قبل أن يبدأ اختبارٌ واحد**. فالبناءُ هنا يكتب ذاكرةَ الطبقات،
+  # والأجزاءُ تقرؤها وحدَها (`cache-from` بلا `cache-to`) فلا تخرج إلى الشبكة.
+  image:
+    name: صورةُ الخلفية
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          cache-from: type=gha,scope=backend-image
+          cache-to: type=gha,scope=backend-image,mode=max
+
   backend:
     name: المجموعةُ — جزء ${{ matrix.shard }}/${{ needs.plan.outputs.count }}
-    needs: plan
+    needs: [plan, image]
     runs-on: ubuntu-latest
     # **مساوٍ لأخيه `batch-suite`** — `check:ci-timeouts` يحرس التطابق. والهدفُ دون عشر دقائق؛ والسقفُ للعطب لا للعادة
     timeout-minutes: 40
@@ -95,7 +116,6 @@ jobs:
           load: true
           tags: taxo-backend:latest
           cache-from: type=gha,scope=backend-image
-          cache-to: type=gha,scope=backend-image,mode=max
 
       # **القاعدةُ وRedis تُقامان هنا** — و`suite.sh` يمرّ بـ`--no-deps` عمداً فلا يُقيمهما.
       - name: القاعدةُ وRedis
@@ -141,9 +161,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # **تقاريرُ الأجزاء وحدَها** — لا كلُّ ما رُفع: سجلّاتُ البناء (`.dockerbuild`) أسقطت تنزيلاً في التشغيل 43716600094
       - uses: actions/download-artifact@v4
         with:
           path: reports
+          pattern: shard-*
+      - uses: actions/download-artifact@v4
+        with:
+          name: durations-in
+          path: reports/durations-in
       - name: كلُّ ما جُمع شُغّل — والساقطُ بأسمائه
         run: |
           python3 scripts/ci_shards_check.py reports "${{ needs.plan.outputs.count }}" backend/.ci/durations.json reports/durations-in/durations.json
