@@ -73,6 +73,7 @@ import type {
   AdminCall,
   MapPlace,
   MapPlaceCategory,
+  PanelPlaceSearch,
   AdminChatReport,
   AdminChatThread,
   ChatReportStatus,
@@ -1812,6 +1813,10 @@ export const deletePromoBanner = (id: string) =>
 /** **أماكنُ السوق بما فيها المخفيّة** — فالمشرفُ يرى ما أخفاه (SPEC §٧١-د/١٤). */
 export const listMapPlaces = (country: CountryCode) =>
   api.get<MapPlace[]>("/admin/map-places", { query: { country } });
+
+/** **بحثُ اللوحة بالخدمة التي يبحث بها الراكب** (أماكنُ TAXO ثمّ البياناتُ المفتوحة ثمّ Mapbox) — بدولة الشاشة. يملأ موقعَ مكانٍ جديد. */
+export const searchPanelPlaces = (country: CountryCode, q: string) =>
+  api.get<PanelPlaceSearch>("/admin/map-places/search", { query: { country, q } });
 
 export const createMapPlace = (payload: {
   country_code: CountryCode;

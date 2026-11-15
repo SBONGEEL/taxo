@@ -745,3 +745,7 @@ button.ad-fac-name:focus-visible { border-radius: 4px; outline: 2px solid var(--
   .ad-uq-table .ad-table-head,
   .ad-uq-table .ad-table-row { min-width: 0; }
 }
+
+/* نتيجةُ «ابحث عن المكان بالاسم» في ورقة المكان — سطرٌ يُنقر فيملأ الموقع */
+.ad-place-hit { display: block; width: 100%; text-align: start; padding: 8px 12px; border: 1px solid var(--t2-line); border-radius: 10px; background: var(--t2-surface); color: var(--t2-ink); cursor: pointer; }
+.ad-place-hit:hover { border-color: var(--t2-accent); }

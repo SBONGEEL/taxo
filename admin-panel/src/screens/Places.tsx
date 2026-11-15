@@ -14,8 +14,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createMapPlace, listMapPlaces, updateMapPlace } from "@/api/endpoints";
-import type { CountryCode, MapPlace, MapPlaceCategory } from "@/api/types";
+import { createMapPlace, listMapPlaces, searchPanelPlaces, updateMapPlace } from "@/api/endpoints";
+import type { CountryCode, MapPlace, MapPlaceCategory, PanelPlaceSearch } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -335,6 +335,13 @@ function PlaceEditor({
               </option>
             ))}
           </Select>
+          <PlaceFinder
+            country={country}
+            onPick={(hit) => {
+              setWhere(`${hit.lat.toFixed(6)}, ${hit.lng.toFixed(6)}`);
+              if (!nameAr.trim()) setNameAr(hit.name.slice(0, NAME_MAX));
+            }}
+          />
           <Field
             label="الموقع"
             name="lat"
@@ -367,5 +374,86 @@ function PlaceEditor({
         </div>
       </Modal>
     </FormErrors>
+  );
+}
+
+/** **ابحث عن المكان بالاسم** — بالخدمة التي يبحث بها الراكب (`GET /admin/map-places/search`: أماكنُ TAXO ثمّ البياناتُ المفتوحة ثمّ
+ *  Mapbox احتياطاً)، بدولة الشاشة. **اختيارُ نتيجةٍ يملأ الموقعَ** (والاسمَ إن كان فارغاً) ولا يحفظ شيئاً: الحفظُ زرُّ الورقة كما كان.
+ *  **ونسبةُ البيانات المفتوحة تحت القائمة** — شرطُ ODbL حيث تُعرض نتائجُها. */
+function PlaceFinder({
+  country,
+  onPick,
+}: {
+  country: CountryCode;
+  onPick: (hit: { name: string; lat: number; lng: number }) => void;
+}) {
+  const [text, setText] = useState("");
+  const [answer, setAnswer] = useState<PanelPlaceSearch | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const q = text.trim();
+    if (q.length < 2) {
+      setAnswer(null);
+      setFailed(false);
+      return;
+    }
+    let live = true;
+    // **انتظارُ ٣٥٠ ms بعد آخر حرف** — بحثٌ لكلِّ كلمةٍ لا لكلِّ ضغطة
+    const timer = window.setTimeout(() => {
+      searchPanelPlaces(country, q)
+        .then((found) => {
+          if (!live) return;
+          setAnswer(found);
+          setFailed(false);
+        })
+        .catch(() => {
+          if (live) setFailed(true);
+        });
+    }, 350);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [text, country]);
+
+  // **ما له موقعٌ وحدَه** — نتيجةُ Google بلا إحداثيّات تحتاج «resolve»، والمزوّدُ مطفأٌ أصلاً
+  const hits = (answer?.items ?? []).filter(
+    (item): item is typeof item & { lat: number; lng: number } => item.lat !== null && item.lng !== null,
+  );
+
+  return (
+    <div className="grid gap-8">
+      <Field
+        label="ابحث عن المكان بالاسم (اختياري)"
+        name="place_search"
+        value={text}
+        placeholder="سيتي مول، شارع المدينة المنورة…"
+        onChange={(event) => setText(event.target.value)}
+        error={failed ? "تعذّر البحث — الصق الموقعَ يدويّاً" : undefined}
+      />
+      {hits.length > 0 ? (
+        <ul className="grid gap-4" role="listbox" aria-label="نتائج البحث">
+          {hits.slice(0, 6).map((hit) => (
+            <li key={hit.id}>
+              <button
+                type="button"
+                className="ad-place-hit"
+                onClick={() => {
+                  onPick(hit);
+                  setText("");
+                  setAnswer(null);
+                }}
+              >
+                <b>{hit.name}</b>
+                {hit.address ? <span className="ad-hint"> — {hit.address}</span> : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {answer?.attribution_text && hits.length > 0 ? <p className="ad-hint">{answer.attribution_text}</p> : null}
+      {answer && hits.length === 0 ? <p className="ad-hint">لا نتيجةَ بهذا الاسم — الصق الموقعَ من خرائط Google</p> : null}
+    </div>
   );
 }

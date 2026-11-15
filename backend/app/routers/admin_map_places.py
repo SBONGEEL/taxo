@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.core.deps import DbSession, SettingsWriter, StaffUser
 from app.models.enums import AuditAction, CountryCode
 from app.models.map_place import MapPlace
 from app.schemas.map_place import MapPlaceAdminOut, MapPlaceIn, MapPlacePatch
-from app.services import audit, map_places
+from app.routers.place_search import PlaceResultOut, PlaceSearchOut
+from app.services import audit, map_places, maps
 
 router = APIRouter(prefix="/admin/map-places", tags=["admin-map-places"])
 
@@ -42,6 +43,30 @@ async def list_places(
     _staff: StaffUser, session: DbSession, country: CountryCode | None = None
 ) -> list[MapPlaceAdminOut]:
     return [_out(row) for row in await map_places.list_for_panel(session, country)]
+
+
+@router.get("/search", response_model=PlaceSearchOut)
+async def search_places(
+    staff: StaffUser,
+    session: DbSession,
+    country: CountryCode,
+    q: str = Query(min_length=1, max_length=80),
+) -> PlaceSearchOut:
+    """**بحثُ اللوحة بالخدمة نفسِها التي يبحث بها الراكب** (SPEC §«الخرائطُ والبحثُ ببياناتٍ مفتوحة»/اللوحة): أماكنُ TAXO ثمّ
+    البياناتُ المفتوحة ثمّ Mapbox احتياطاً — **بدولة الشاشة لا بدولة حساب المشرف**، فمشرفٌ أردنيٌّ يبحث في الجزائر بأسمائها.
+    قراءةٌ لا تكتب شيئاً، فصلاحيتُها صلاحيةُ القائمة جارتِها."""
+    answer = await maps.search(session, user_id=staff.id, country=country, query=q, near=None, session_token=None)
+    return PlaceSearchOut(
+        items=[
+            PlaceResultOut(
+                id=r.id, source=r.source, name=r.name, address=r.address, lat=r.lat, lng=r.lng,  # type: ignore[arg-type]
+                place_id=r.place_id, distance_m=r.distance_m,
+            )
+            for r in answer.items
+        ],
+        attribution=answer.attribution,  # type: ignore[arg-type]
+        attribution_text=maps.OPEN_ATTRIBUTION if answer.attribution == "open" else None,
+    )
 
 
 @router.post("", response_model=MapPlaceAdminOut, status_code=201)

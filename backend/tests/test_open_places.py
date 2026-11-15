@@ -140,3 +140,19 @@ async def test_google_on_still_comes_before_open_data(
     await enable_features(session_factory, "google_places_search")
     found = await _search(client)
     assert found["attribution"] == "google" and open_fake.calls == []
+
+
+async def test_the_panel_searches_in_the_screen_country(
+    client: AsyncClient, open_fake: OpenFake, mapbox: list, admin_headers: dict[str, str], support_headers: dict[str, str]
+) -> None:
+    """**بحثُ اللوحة بالخدمة نفسِها** (`GET /admin/map-places/search`) — **بدولة الشاشة لا بدولة حساب المشرف**، وبالنسبة نفسِها؛
+    **وقراءةٌ** فيفتحها كلُّ موظّفٍ كالقائمة جارتِها، ولا يفتحها راكب."""
+    found = (await client.get("/admin/map-places/search", params={"country": "DZ", "q": "سيتي مول"}, headers=admin_headers)).json()
+    assert [i["source"] for i in found["items"]] == ["open"] and found["attribution"] == "open"
+    assert "OpenStreetMap" in found["attribution_text"]
+    assert open_fake.calls[-1]["cc"] == "DZ"
+
+    assert (await client.get("/admin/map-places/search", params={"country": "JO", "q": "مول"}, headers=support_headers)).status_code == 200
+    rider = (await rider_session(client, RIDER))["headers"]
+    assert (await client.get("/admin/map-places/search", params={"country": "JO", "q": "مول"}, headers=rider)).status_code == 403
+

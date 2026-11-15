@@ -2547,6 +2547,25 @@ export type MapPlaceCategory =
   | "airport"
   | "pickup";
 
+/** **نتيجةُ بحث الأماكن** — مرآةُ `PlaceResultOut` في الخلفية (`routers/place_search.py`). */
+export interface PanelPlaceResult {
+  id: string;
+  source: "saved" | "recent" | "taxo" | "learned" | "google" | "open" | "mapbox";
+  name: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  place_id: string | null;
+  distance_m: number | null;
+}
+
+export interface PanelPlaceSearch {
+  items: PanelPlaceResult[];
+  /** «open» ⇐ `attribution_text` تحت القائمة (شرطُ ODbL) */
+  attribution: "google" | "open" | "mapbox" | null;
+  attribution_text: string | null;
+}
+
 export interface MapPlace {
   id: string;
   country_code: CountryCode;
