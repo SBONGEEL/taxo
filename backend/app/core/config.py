@@ -98,6 +98,8 @@ class Settings(BaseSettings):
     taxo_card_code_pepper: str | None = None
     #: عناوينُ المُرحِّل مفصولةً بفاصلة — مثلاً `turn:turn.example:3478?transport=udp,turn:turn.example:3478?transport=tcp`
     turn_urls: str = ""
+    #: **خدمةُ البحث ببياناتٍ مفتوحة** (حاويةُ `places-search`) — فارغٌ ⇐ لا تُطرق (التطوير والاختبار)، والبحثُ إلى Mapbox
+    places_search_url: str = ""
     #: **عمرُ بيانات الدخول المؤقّتة — ساعتان، أطولُ من أطول مكالمة** (كانت عشرَ دقائق، وصُحّحت ٢٠٢٦-١٠-٠٨).
     #:
     #: **والعلّةُ في المُرحِّل لا في البدء**: الحجزُ على coturn يُجدَّد طوالَ المكالمة (`Refresh` كلَّ بضع دقائق، ومعه

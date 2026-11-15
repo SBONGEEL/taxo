@@ -31,6 +31,9 @@ DEFAULT_ENABLED_FLAGS: frozenset[str] = frozenset(
         # تمنعه علّةُ هذه القائمة: السكوتُ لا يُسقط حارساً ولا يُوقف نظاماً.
         FeatureKey.PRICING_WRITES_ENABLED.value,
         FeatureKey.WITHDRAWAL_PAYOUT_ENABLED.value,
+        # **والبحثُ ببياناتٍ مفتوحة** (٢٠٢٦-١١-١٥): اجتاز اختبارَ الـ١٠٥ (≥ ٩٠٪ في كلِّ دولة) فيعمل حيث لا صفّ، والإطفاءُ صفٌّ
+        # صريحٌ من «مزوّد الخرائط». **ولا مالَ فيه ولا كلفة**، وفشلُه يرجع إلى Mapbox في الطلب نفسِه.
+        FeatureKey.OPEN_PLACES_SEARCH.value,
     }
 )
 

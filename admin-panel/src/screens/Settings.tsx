@@ -296,6 +296,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "مزوّد الخرائط — البحث: Google",
     hint: "مشتعلٌ: البحثُ يجمع أماكنك وأماكنَ تعلّمتها الرحلات ثمّ Google Places، وعنوانُ الدبوس من Google. مطفأ: Mapbox. وفشلُ Google يُعاد على Mapbox في الحال مع إشعار. وسقفٌ يوميٌّ في العقد يوقف Google قبل أيِّ فاتورة مفاجئة.",
   },
+  open_places_search: {
+    title: "مزوّد الخرائط — البحث: بياناتٌ مفتوحة",
+    hint: "مشتعلٌ (الافتراض): البحثُ في أماكن OpenStreetMap وOverture للدولة — أحياءٌ وشوارعُ بأسمائها ومعالمُ ومبانٍ، بالعربيّة ومع الأخطاء الإملائيّة — من خادمنا بلا كلفة. وإن تعطّلت الخدمةُ أو لم تجد شيئاً يُكمل Mapbox في الطلب نفسِه ويصلك إشعار. مطفأ: Mapbox وحدَه.",
+  },
   google_routes: {
     title: "مزوّد الخرائط — المسارات: Google",
     hint: "مشتعلٌ: مسافةُ الرحلة ومدّتُها وخطُّها وتعليماتُ الكبتن من Google (بلا حركة مرور، فلا يقفز السعر مع الزحام). تنبيه: السعرُ يُحسب من المسافة، ومسافةُ Google قد تختلف قليلاً عن Mapbox. مطفأ أو فشل Google: Mapbox.",
@@ -408,6 +412,7 @@ const FLAGS: FeatureKey[] = [
   "google_maps_display",
   "google_places_search",
   "google_routes",
+  "open_places_search",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
   "otp_verification_enabled",

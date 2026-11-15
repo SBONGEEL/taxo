@@ -27,7 +27,8 @@ from app.services.providers import credentials as credentials_service
 
 logger = logging.getLogger(__name__)
 
-Feature = Literal["display", "search", "routes"]
+#: **«open»** حالُ خدمة البيانات المفتوحة — مفتاحُ حالٍ وإشعار، لا مفتاحُ Google
+Feature = Literal["display", "search", "routes", "open"]
 FEATURE_FLAGS: dict[str, FeatureKey] = {
     "display": FeatureKey.GOOGLE_MAPS_DISPLAY,
     "search": FeatureKey.GOOGLE_PLACES_SEARCH,
@@ -38,6 +39,12 @@ DOWN_SECONDS = 600
 _DOWN = "maps:google:down:{}"
 _CAP = "maps:google:calls:{}:{}"
 
+#: **نسبةُ البيانات المفتوحة كما تطلبها رخصتاها** — ODbL تشترط «© OpenStreetMap contributors»، وOverture تُذكر مصدراً
+OPEN_ATTRIBUTION = "© OpenStreetMap contributors · Overture Maps"
+#: **مهلةُ الخدمة المحلّية** — فهرسٌ على القرص يجيب في عُشر ثانية، فثانيتان سقفٌ لا تقدير
+OPEN_TIMEOUT = 2.0
+#: نقطةُ حقنٍ للاختبار وحدَه
+open_transport: httpx.AsyncBaseTransport | None = None
 MAPBOX_FORWARD = "https://api.mapbox.com/search/geocode/v6/forward"
 MAPBOX_REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse"
 
@@ -190,6 +197,63 @@ def fuzzy_score(needle: str, names: list[str]) -> int | None:
     return best
 
 
+async def _open_search(country: CountryCode, query: str, near: tuple[float, float] | None) -> list[Result] | None:
+    """**الخدمةُ المحلّية** — `None` ⇐ فشلت (فيُرجع إلى Mapbox ويُشعَر المالكُ مرّة)، وقائمةٌ فارغة ⇐ أجابت بلا نتيجة."""
+    from app.core.config import settings
+
+    base = settings.places_search_url.rstrip("/")
+    if not base or await is_down("open"):
+        return None
+    params: dict[str, str] = {"q": query, "cc": country.value, "limit": "8"}
+    if near:
+        params["lat"], params["lng"] = str(near[0]), str(near[1])
+    try:
+        async with httpx.AsyncClient(timeout=OPEN_TIMEOUT, transport=open_transport) as client:
+            response = await client.get(f"{base}/search", params=params)
+        if response.status_code == 503:
+            # **مشغولةٌ لا ساقطة** — حدُّ عمّالها امتلأ؛ هذا الطلبُ إلى Mapbox، ولا تُعلَّم متوقّفةً ولا يُشعَر أحد
+            return None
+        response.raise_for_status()
+        body = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        await note("open", up=False, reason=type(exc).__name__, country=country)
+        return None
+    await note("open", up=True)
+    out: list[Result] = []
+    for item in body.get("items") or []:
+        out.append(Result(
+            id=f"o-{item['id']}", source="open", name=item["name"],
+            address=item.get("context") or (item.get("name_en") or ""),
+            lat=float(item["lat"]), lng=float(item["lng"]), distance_m=item.get("distance_m"),
+        ))
+    return out
+
+
+async def _recent(session: AsyncSession, user_id: uuid.UUID, needle: str) -> list[Result]:
+    """**وجهاتُ الراكب الأخيرة** (ثلاثون يوماً، رحلاتٌ مكتملة) — ما طابق منها يتقدّم بعد المحفوظة."""
+    from app.models.enums import RideStatus
+    from app.models.ride import Ride
+    from app.services import map_places
+
+    rows = (await session.execute(
+        select(Ride.dropoff_address, Ride.dropoff_lat, Ride.dropoff_lng)
+        .where(Ride.rider_id == user_id, Ride.status == RideStatus.COMPLETED, Ride.dropoff_address.is_not(None),
+               Ride.created_at >= recent_cutoff())
+        .order_by(Ride.created_at.desc()).limit(30)
+    )).all()
+    out: list[Result] = []
+    seen: set[str] = set()
+    for address, lat, lng in rows:
+        key = map_places.normalize(address)
+        if key in seen or fuzzy_score(needle, [key]) is None:
+            continue
+        seen.add(key)
+        out.append(Result(id=f"recent-{len(out)}", source="recent", name=address, lat=lat, lng=lng))
+        if len(out) >= 3:
+            break
+    return out
+
+
 async def search(
     session: AsyncSession,
     *,
@@ -211,6 +275,9 @@ async def search(
         if fuzzy_score(needle, [map_places.normalize(saved.label), map_places.normalize(saved.address or "")]) is not None:
             items.append(Result(id=f"saved-{saved.id}", source="saved", name=saved.label, address=saved.address or "",
                                 lat=saved.lat, lng=saved.lng))
+
+    # ١ب — وجهاتُ الراكب الأخيرة
+    items.extend(await _recent(session, user_id, needle))
 
     # ٢ — أماكنُ TAXO: أماكنُ المالك بأسمائها البديلة، ثمّ ما تعلّمته الرحلات
     for spot, distance, score in await map_places.fuzzy_search(session, country, query, near):
@@ -236,6 +303,11 @@ async def search(
             except google_maps.GoogleFailed as exc:
                 await note("search", up=False, reason=exc.reason, country=country)
                 values = None
+        if values is None and await settings_service.is_feature_enabled(session, country, FeatureKey.OPEN_PLACES_SEARCH):
+            # **البياناتُ المفتوحة** (قرارُ المالك ٢٠٢٦-١١-١٥) — وفشلُها أو خلوُّها يمرّ إلى Mapbox تحتها
+            opened = await _open_search(country, query.strip(), near)
+            if opened:
+                provider_items, attribution, values = opened, "open", {}
         if values is None:
             provider_items = await _mapbox_forward(session, country, query.strip(), near)
             attribution = "mapbox" if provider_items else None

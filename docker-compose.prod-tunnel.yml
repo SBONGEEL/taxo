@@ -13,6 +13,8 @@ services:
   # بينما `curl` يجيب ٢٠٠. وهو الفخُّ نفسُه الذي وقع محلياً مرتين في يومٍ واحد.
   backend:
     environment:
+      # **البحثُ ببياناتٍ مفتوحة** (قرارُ المالك ٢٠٢٦-١١-١٥) — اسمُ خدمةٍ في الشبكة الداخليّة؛ وفشلُها يرجع إلى Mapbox
+      PLACES_SEARCH_URL: http://places-search:8090
       # **الأسماءُ العاريةُ والقديمةُ معاً — والجمعُ مقصود** (قلبُ النطاقات،
       # قرارُ المالك 2026-08-25). الخادمُ يصير الاسمَ العاريَ لأن **ما لا
       # يُطفأ حين يُطفأ حاسوبُ المالك هو الذي يستحقّ اسمَه الحقيقيّ**؛
@@ -131,6 +133,22 @@ services:
   # **والأهمّ**: `customer-app/public/taxo-rider.apk` كان يُخدَم من
   # `app.tajora.ly` وهو بناءُ ١٤ آب بينما آخرُ بناءٍ ١٩ آب — **مصدرٌ ثانٍ
   # للملفّ نفسِه**، وقد أُزيل. فالمصدرُ الآن **هنا وحدَه**.
+  # **بحثُ الأماكن من القرص** (قرارُ المالك ٢٠٢٦-١١-١٥): OpenStreetMap + Overture في فهرس SQLite يُبنى **خارج الخادم**
+  # (`places-search/build_index.py`) ويُنسخ إلى `/home/taxo/places/`. **حدُّ ذاكرةٍ صلب ٥٠٠ MB** ونصفُ معالج —
+  # فلا يزاحم الإنتاج — ولا منفذَ للخارج: الخلفيّةُ وحدها تكلّمه. **والمجلّدُ يُثبَّت لا الملفّ** (عقدةُ ملفٍّ مثبَّتٍ
+  # تبقى القديمةَ بعد استبداله)، وللقراءة وحدَها.
+  places-search:
+    build:
+      context: ./places-search
+    container_name: taxo-places-search
+    restart: unless-stopped
+    mem_limit: 500m
+    memswap_limit: 500m
+    cpus: 0.5
+    read_only: true
+    volumes:
+      - /home/taxo/places:/data:ro
+
   landing:
     image: nginx:1.27-alpine
     container_name: taxo-landing

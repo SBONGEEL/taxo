@@ -22,7 +22,7 @@ router = APIRouter(prefix="/places", tags=["places"])
 
 class PlaceResultOut(BaseModel):
     id: str
-    source: Literal["saved", "taxo", "learned", "google", "mapbox"]
+    source: Literal["saved", "recent", "taxo", "learned", "google", "open", "mapbox"]
     name: str
     address: str = ""
     lat: float | None = None
@@ -33,8 +33,9 @@ class PlaceResultOut(BaseModel):
 
 class PlaceSearchOut(BaseModel):
     items: list[PlaceResultOut]
-    #: «google» ⇐ يُعرض «Powered by Google» تحت القائمة؛ «mapbox» ⇐ نسبةُ Mapbox
-    attribution: Literal["google", "mapbox"] | None
+    #: «google» ⇐ يُعرض «Powered by Google» تحت القائمة؛ «open» ⇐ `attribution_text` (شرطُ ODbL)؛ «mapbox» ⇐ نسبةُ Mapbox
+    attribution: Literal["google", "open", "mapbox"] | None
+    attribution_text: str | None = None
 
 
 class ResolvedOut(BaseModel):
@@ -88,6 +89,7 @@ async def search(
             for r in answer.items
         ],
         attribution=answer.attribution,  # type: ignore[arg-type]
+        attribution_text=maps.OPEN_ATTRIBUTION if answer.attribution == "open" else None,
     )
 
 

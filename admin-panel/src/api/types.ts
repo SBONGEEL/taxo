@@ -639,6 +639,8 @@ export type FeatureKey =
   | "google_maps_display"
   | "google_places_search"
   | "google_routes"
+  // **البحثُ ببياناتٍ مفتوحة** (٢٠٢٦-١١-١٥) — يعمل حيث لا صفّ، والإطفاءُ يعيد البحثَ إلى Mapbox
+  | "open_places_search"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

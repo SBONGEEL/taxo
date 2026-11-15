@@ -971,6 +971,8 @@ class FeatureKey(StrEnum):
     GOOGLE_MAPS_DISPLAY = "google_maps_display"
     GOOGLE_PLACES_SEARCH = "google_places_search"
     GOOGLE_ROUTES = "google_routes"
+    # **البحثُ ببياناتٍ مفتوحة** (OpenStreetMap + Overture، من فهرسٍ على القرص في حاويةٍ وحدَها — قرارُ المالك ٢٠٢٦-١١-١٥)
+    OPEN_PLACES_SEARCH = "open_places_search"
 
 
 class MapPlaceCategory(StrEnum):
