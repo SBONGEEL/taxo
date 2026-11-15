@@ -50,6 +50,9 @@ from typing import Callable, Protocol
 WORKFLOW = "CI"
 HEAD_SUITE = "المجموعةُ الكاملة"
 BATCH_JOB = re.compile(r"^المجموعةُ عند ([0-9a-f]{7,40})$")
+#: **أجزاءُ المجموعة المقسومة** (قرارُ المالك 2026-11-15) — «المجموعةُ الكاملة» تجمعها وتحمل أسماءَ ساقطها، **فالحكمُ لها**:
+#: جزءٌ أحمرُ في تشغيلٍ آخرَ لا يُقبل لأن جزءاً باسمه أخضرُ عند الرأس — الأجزاءُ تُقسَم بالأزمنة فيختلف ما في «جزء ٣» بين تشغيلين
+SHARD_JOB = re.compile(r"^المجموعةُ — جزء \d+/\d+$")
 GREEN = {"success", "skipped", "neutral"}
 # **سطرُ ملخّص pytest** — قبله ختمُ وقتِ GitHub، وبعده « - سببُه»
 FAILED_LINE = re.compile(r"(?:^|\s)(?:FAILED|ERROR) (tests/[^\s:]+\.py(?:::[^\s]+)?)")
@@ -173,7 +176,7 @@ def _judge_elsewhere(api: Api, commit: str, head_jobs: dict[str, str], read_at_h
             return "ok", f"{commit[:8]}: قِيس رأساً في التشغيل {run.get('id')} — أخضر"
         notes = []
         for job in api.jobs(run["id"]):
-            if BATCH_JOB.match(job.get("name", "")) or job.get("conclusion") in GREEN:
+            if BATCH_JOB.match(job.get("name", "")) or SHARD_JOB.match(job.get("name", "")) or job.get("conclusion") in GREEN:
                 continue  # وظيفةٌ عن إيداعٍ آخر، أو خضراء
             if job.get("name") == HEAD_SUITE:
                 if job.get("conclusion") != "failure":

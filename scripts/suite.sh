@@ -80,7 +80,7 @@ DB_URL="postgresql+asyncpg://$(env_value POSTGRES_USER):$(env_value POSTGRES_PAS
 if [ -f "$MARK" ]; then
   prev=$(cat "$MARK" 2>/dev/null)
   if [ -n "$prev" ] && docker ps --format '{{.Names}}' | grep -qx "$prev"; then
-    held=$(dc exec -T db psql -U taxo -d postgres -tAc       "SELECT count(*) FROM pg_stat_activity WHERE datname='taxo_test';" 2>/dev/null | tr -d '
+    held=$(dc exec -T db psql -U taxo -d postgres -tAc       "SELECT count(*) FROM pg_stat_activity WHERE datname LIKE 'taxo_test%';" 2>/dev/null | tr -d '
  ')
     fail "تشغيلٌ سابقٌ ما زال يعمل — واسمُه مكتوبٌ في \`$MARK\`."          "  الحاوية: $prev"          "  وتمسك \`taxo_test\` بـ${held:-؟} جلسة."          ""          "**ولا تُقرأ رسالتُه كارثةً في الكود**: ما سيأتي خطأُ تهيئةٍ واحدٌ"          "يتكرر بعدد الاختبارات، لا ألفُ عطبٍ في المشروع."          "أزِلْه ثم أعد:  docker rm -f $prev"
   fi
@@ -98,13 +98,13 @@ fi
 
 # ── ٢) جلساتٌ ما زالت على قاعدة الاختبار ──────────────────────────────────
 held=$(dc exec -T db psql -U taxo -d postgres -tAc \
-  "SELECT count(*) FROM pg_stat_activity WHERE datname='taxo_test';" 2>/dev/null | tr -d '\r ')
+  "SELECT count(*) FROM pg_stat_activity WHERE datname LIKE 'taxo_test%';" 2>/dev/null | tr -d '\r ')
 if [ -n "$held" ] && [ "$held" != "0" ]; then
   fail "قاعدةُ الاختبار ممسوكةٌ بـ$held جلسة، و\`DROP DATABASE\` سيفشل." \
        "لا تقرأ ما سيأتي على أنه عطبٌ في الكود: الخطأُ واحدٌ يتكرر بعدد الاختبارات." \
        "لتحريرها:  docker compose --env-file $ENV_FILE exec -T db \\" \
        "             psql -U taxo -d postgres -c \"SELECT pg_terminate_backend(pid) \\" \
-       "             FROM pg_stat_activity WHERE datname='taxo_test';\""
+       "             FROM pg_stat_activity WHERE datname LIKE 'taxo_test%';\""
 fi
 
 # ── ٣) التشغيل — **والحاويةُ تُقتل معنا لا بعدنا** ─────────────────────────
@@ -136,7 +136,34 @@ for dep in db redis; do
   fi
 done
 
-printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s فتبقى بعد الحاوية)\n' "$OUT"
+# ══════════ التوازي (قرارُ المالك 2026-11-15) — **الطريقُ الافتراضيُّ لكلِّ تشغيل** ══════════
+#
+# · **العمّال**: `SUITE_WORKERS` (الافتراضُ عددُ الأنوية) — كلُّ عاملٍ قاعدتُه (`taxo_test_gwN`) وخادمُ Redis وحدَه
+#   (`tests/conftest.py`)، **فلا حالَ مشتركاً**. و`SUITE_WORKERS=0` تتابعٌ صريحٌ لمن أراد تشخيصَ عزلٍ لا غير.
+# · **الوظيفة**: `SUITE_SHARD=i/N` ومعه `SUITE_DURATIONS` — التقسيمُ في `tests/shard_plugin.py` بالأزمنة المقيسة.
+# · **المجموعةُ السريعة**: `SUITE_SELECT` — للإيداعات الوسيطة وحدَها (`scripts/ci_fast_set.py`)، **والرأسُ لا يُمرَّر له**.
+# · **التقرير**: `SUITE_REPORT` — ما جُمع وما شُغّل، و`scripts/ci_shards_check.py` يثبت أن لا اختبارَ سقط بين وظيفتين.
+#
+# والمساراتُ الثلاثةُ نسبةً إلى `backend/` (هي `/app` في الحاوية).
+WORKERS="${SUITE_WORKERS:-$(nproc 2>/dev/null || echo 2)}"
+PYARGS="-p tests.shard_plugin --durations=25"
+REDIS_BASE=6380
+if [ "$WORKERS" != "0" ]; then
+  PYARGS="$PYARGS -n $WORKERS --dist load"
+  # **خادمُ Redis لكلِّ عامل** في حاوية Redis نفسِها، على منافذَ متتالية — قنواتُ النشر عامّةٌ عبر قواعد Redis، فعاملان على
+  # خادمٍ واحدٍ يسمع أحدُهما بثَّ الآخر. **بلا حفظٍ على القرص**: حالُ اختبارٍ لا يعيش بعده
+  for k in $(seq 0 $((WORKERS - 1))); do
+    port=$((REDIS_BASE + k))
+    dc exec -T redis sh -c "redis-cli -p $port -a \"\$0\" ping >/dev/null 2>&1 || redis-server --port $port --requirepass \"\$0\" --save '' --appendonly no --daemonize yes >/dev/null" "$REDIS_PW" \
+      || fail "تعذّر إقامةُ خادم Redis للعامل $k على المنفذ $port."
+  done
+fi
+[ -n "${SUITE_SHARD:-}" ] && PYARGS="$PYARGS --shard=$SUITE_SHARD"
+[ -n "${SUITE_DURATIONS:-}" ] && PYARGS="$PYARGS --shard-durations=/app/$SUITE_DURATIONS"
+[ -n "${SUITE_SELECT:-}" ] && PYARGS="$PYARGS --shard-select=/app/$SUITE_SELECT"
+[ -n "${SUITE_REPORT:-}" ] && PYARGS="$PYARGS --shard-report=/app/$SUITE_REPORT"
+
+printf '→ المجموعةُ تعمل… (العمّال: %s · الوظيفة: %s — النتيجةُ تُكتب في %s فتبقى بعد الحاوية)\n' "$WORKERS" "${SUITE_SHARD:-1/1}" "$OUT"
 # **و`COLUMNS` عريضٌ عمداً**: ملخّصُ pytest يُقصّ على عرض الطرفية، وفي CI
 # ثمانون — فوصل الاسمُ `asyncpg.exceptions.Inv...` **مقطوعاً**، واحتاج
 # قارئُه أن يعيد إنتاج العطب في حاويةٍ معزولةٍ ليعرفه (2026-08-24).
@@ -168,7 +195,8 @@ dc run --rm --no-deps --name "$NAME" \
   -e COLUMNS=200 \
   -e SUITE_STAMP="$STAMP" \
   -e DATABASE_URL="$DB_URL" -e REDIS_URL="$REDIS_URL" \
-  backend sh -c "echo \"SUITE_STAMP=\$SUITE_STAMP\" > /app/.suite.out; python -u -m pytest -q ${*:-} >> /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
+  -e TAXO_TEST_REDIS_PORT_BASE="$REDIS_BASE" \
+  backend sh -c "echo \"SUITE_STAMP=\$SUITE_STAMP\" > /app/.suite.out; python -u -m pytest -q $PYARGS ${*:-} >> /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
 code=$?
 
 # **كلُّ سطرِ «FAILED» لا آخرُه وحدَه** (٢٠٢٦-١٠-١٧): CI لا يحفظ `.suite.out`، و`tail -n 3` كان يُري **اسمَ اختبارٍ واحدٍ من ستّة** —

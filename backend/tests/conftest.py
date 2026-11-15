@@ -17,7 +17,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 # قاعدة بيانات وقاعدة Redis منفصلتان عن التطوير — تُضبط قبل استيراد التطبيق
-_TEST_DB_NAME = "taxo_test"
+#
+# **وكلُّ عاملٍ متوازٍ (`pytest -n`) قاعدتُه وRedisُه وحدَه** (قرارُ المالك 2026-11-15: «each worker gets its own database …
+# with no shared state»). `PYTEST_XDIST_WORKER` يضعه xdist في كلِّ عامل (`gw0`، `gw1`…)، وغيابُه تشغيلٌ متتابعٌ كما كان.
+_WORKER = os.environ.get("PYTEST_XDIST_WORKER")
+_RUN_UID = os.environ.get("PYTEST_XDIST_TESTRUNUID", "")
+_TEST_DB_NAME = f"taxo_test_{_WORKER}" if _WORKER else "taxo_test"
+#: **قالبٌ تُنسخ منه قواعدُ العمّال** — يبنيه أوّلُ عاملٍ بالترحيلات نفسِها مرّةً، ويُنسخ للباقين في ثانية (`CREATE DATABASE … TEMPLATE`)
+_TEMPLATE_DB = "taxo_test_tpl"
 _TEST_REDIS_DB = 15
 
 
@@ -29,6 +36,12 @@ def _swap_db_name(url: str, name: str) -> str:
 def _swap_redis_db(url: str, index: int) -> str:
     parts = urlsplit(url)
     return urlunsplit(parts._replace(path=f"/{index}"))
+
+
+def _swap_redis_port(url: str, port: int) -> str:
+    parts = urlsplit(url)
+    host = parts.netloc.rsplit(":", 1)[0] if parts.port else parts.netloc
+    return urlunsplit(parts._replace(netloc=f"{host}:{port}"))
 
 
 # **بلا افتراضٍ يحمل بيانَ اعتماد** (2026-08-24): كان الافتراضُ
@@ -50,6 +63,16 @@ _base_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 os.environ["DATABASE_URL"] = _swap_db_name(_base_db_url, _TEST_DB_NAME)
 os.environ["REDIS_URL"] = _swap_redis_db(_base_redis_url, _TEST_REDIS_DB)
+if _WORKER:
+    # **خادمُ Redis لكلِّ عامل لا رقمُ قاعدةٍ لكلِّ عامل**: قنواتُ النشر (`PUBLISH`) عامّةٌ عبر قواعد Redis كلِّها، فعاملان
+    # على خادمٍ واحدٍ يسمع أحدُهما بثَّ الآخر (`broadcast.CHANNEL`). و`scripts/suite.sh` يقيم خادماً لكلِّ عاملٍ على منفذٍ متتالٍ
+    _redis_base_port = os.environ.get("TAXO_TEST_REDIS_PORT_BASE")
+    if not _redis_base_port:
+        raise RuntimeError(
+            "تشغيلٌ متوازٍ بلا `TAXO_TEST_REDIS_PORT_BASE` — والعمّالُ على خادم Redis واحدٍ يتشاركون قنواتِ النشر.\n"
+            "  المجموعةُ تُشغَّل من بابها: `bash scripts/suite.sh`، وهو يقيم خادماً لكلِّ عامل."
+        )
+    os.environ["REDIS_URL"] = _swap_redis_port(os.environ["REDIS_URL"], int(_redis_base_port) + int(_WORKER.removeprefix("gw")))
 os.environ["ENVIRONMENT"] = "test"
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 # مفتاح Fernet ثابت للاختبارات — لا علاقة له بمفتاح التطوير أو الإنتاج
@@ -80,14 +103,40 @@ async def _create_test_database() -> AsyncIterator[None]:
     admin_url = _swap_db_name(_base_db_url, "postgres")
     admin_engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
 
-    async with admin_engine.connect() as conn:
-        await conn.exec_driver_sql(f'DROP DATABASE IF EXISTS "{_TEST_DB_NAME}"')
-        await conn.exec_driver_sql(f'CREATE DATABASE "{_TEST_DB_NAME}"')
+    async def build_by_migrations() -> None:
+        async with admin_engine.connect() as conn:
+            await conn.exec_driver_sql(f'DROP DATABASE IF EXISTS "{_TEST_DB_NAME}"')
+            await conn.exec_driver_sql(f'CREATE DATABASE "{_TEST_DB_NAME}"')
+        # المخطط يُبنى من الترحيلات نفسها التي تعمل في الإنتاج — لا create_all —
+        # حتى تختبر الاختبارات ما سيُنشر فعلاً. يعمل في خيط منفصل لأن env.py
+        # يستدعي asyncio.run الذي لا يعمل داخل حلقة أحداث قائمة.
+        await asyncio.to_thread(command.upgrade, alembic_config(), "head")
 
-    # المخطط يُبنى من الترحيلات نفسها التي تعمل في الإنتاج — لا create_all —
-    # حتى تختبر الاختبارات ما سيُنشر فعلاً. يعمل في خيط منفصل لأن env.py
-    # يستدعي asyncio.run الذي لا يعمل داخل حلقة أحداث قائمة.
-    await asyncio.to_thread(command.upgrade, alembic_config(), "head")
+    if not _WORKER:
+        await build_by_migrations()
+    else:
+        # **التشغيلُ المتوازي**: أوّلُ عاملٍ يبلغ القفلَ يبني قاعدتَه بالترحيلات **ثمّ يصنع منها القالب**، والباقون ينسخونه.
+        # فالمخططُ في كلِّ عاملٍ هو مخرجُ `alembic upgrade head` نفسُه لا شيءٌ يشبهه. والعلامةُ باسم التشغيل (`testrunuid`)،
+        # فقالبٌ من تشغيلٍ سابقٍ — بترحيلاتٍ أقدم — لا يُنسخ أبداً: يُسقط ويُبنى من جديد
+        import fcntl
+
+        marker = Path(f"/tmp/taxo-test-template-{_RUN_UID}.ready")
+        lock = await asyncio.to_thread(os.open, "/tmp/taxo-test-template.lock", os.O_CREAT | os.O_RDWR)
+        await asyncio.to_thread(fcntl.flock, lock, fcntl.LOCK_EX)
+        try:
+            if not marker.exists():
+                await build_by_migrations()
+                async with admin_engine.connect() as conn:
+                    await conn.exec_driver_sql(f'DROP DATABASE IF EXISTS "{_TEMPLATE_DB}"')
+                    await conn.exec_driver_sql(f'CREATE DATABASE "{_TEMPLATE_DB}" TEMPLATE "{_TEST_DB_NAME}"')
+                marker.touch()
+            else:
+                async with admin_engine.connect() as conn:
+                    await conn.exec_driver_sql(f'DROP DATABASE IF EXISTS "{_TEST_DB_NAME}"')
+                    await conn.exec_driver_sql(f'CREATE DATABASE "{_TEST_DB_NAME}" TEMPLATE "{_TEMPLATE_DB}"')
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            os.close(lock)
 
     yield
 

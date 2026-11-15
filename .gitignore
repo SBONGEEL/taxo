@@ -145,3 +145,4 @@ landing/downloads
 
 # **ووصلةُ node_modules الرمزيّةُ أيضاً** —  يطابق المجلّدَ لا الوصلة، فدخلت إيداعاً مرّةً (٢٠٢٦-١٠-١٦)
 node_modules
+backend/.ci/

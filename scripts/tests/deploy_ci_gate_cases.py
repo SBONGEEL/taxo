@@ -150,6 +150,22 @@ case("إيداعٌ خارج السقف **بناؤه أحمرُ هناك وخضر
      verdict(Fake({**m["runs"], A: [run(70, A, "agent/dz", conclusion="failure")]},
                   {**m["jobs"], 70: head_jobs(build="failure")})))
 
+# ── والمجموعةُ مقسومةً (2026-11-15) ─────────────────────────────────────────────
+shards = [job(21, "المجموعةُ — جزء 1/2"), job(22, "المجموعةُ — جزء 2/2")]
+m = {"runs": {HEAD: [run(100, HEAD, "master")]}, "jobs": {100: head_jobs() + shards}}
+case("الرأسُ **مقسوماً** وأجزاؤه وتجميعُه خضر", "pass", verdict(Fake(m["runs"], m["jobs"]), []))
+m = {"runs": {HEAD: [run(100, HEAD, "master", conclusion="failure")]}, "jobs": {100: head_jobs() + [shards[0], job(22, "المجموعةُ — جزء 2/2", "failure")]}}
+case("**جزءٌ أحمرُ عند الرأس** ولو كان التجميعُ أخضر", "stop", verdict(Fake(m["runs"], m["jobs"]), []))
+m = master_run([job(12, f"المجموعةُ عند {B}")], conclusion="success")
+m["jobs"][100] += shards
+red_parts = head_jobs(suite="failure") + [shards[0], job(72, "المجموعةُ — جزء 2/2", "failure")]
+case("إيداعٌ خارج السقف **جزؤه أحمرُ هناك واختبارُه حُذف** — لا يُقبل لأن «جزء 2/2» أخضرُ عند الرأس", "stop",
+     verdict(Fake({**m["runs"], A: [run(70, A, "agent/dz", conclusion="failure")]}, {**m["jobs"], 70: red_parts},
+                  {1: log("tests/test_gone.py::test_y")})))
+case("إيداعٌ خارج السقف **جزؤه أحمرُ هناك وأحمرُه مُصلَحٌ عند الرأس**", "pass",
+     verdict(Fake({**m["runs"], A: [run(70, A, "agent/dz", conclusion="failure")]}, {**m["jobs"], 70: red_parts},
+                  {1: log("tests/test_two_doors.py::test_every_payload_is_classified")})))
+
 # ── وقراءةُ السجلّ نفسِها ─────────────────────────────────────────────────────
 parsed = gate.failed_tests(log("tests/test_a.py::test_b[x-1]", "tests/test_c.py::K::test_d") + f"{STAMP}ERROR tests/test_e.py - boom\n")
 picked = gate.pick_run([run(90, HEAD, "redesign"), run(100, HEAD, "master"), run(95, HEAD, "master", event="pull_request")], HEAD, "master")

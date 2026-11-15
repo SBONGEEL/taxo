@@ -16,145 +16,159 @@ on:
 
 # **إلغاءُ ما سبق على الفرع نفسِه**: أخضرُ لإيداعٍ تجاوزَته دفعةٌ أحدثُ لا يعني
 # شيئاً، وانتظارُه ينفق دقائقَ على ما لن يُرفع.
+#
+# **ولا يُلغى على master أبداً** (قرارُ المالك 2026-11-15: «Never cancel a CI run that a deploy gate depends on»): بوّابةُ
+# الرفع تقرأ «المجموعةُ عند <إيداع>» من التشغيل الأقدم، والملغاةُ «لم تُقَس» فتُوقف الرفع — وقع مقيساً في رفع 20261115T110943Z.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 permissions:
   contents: read
 
 jobs:
-  backend:
-    name: المجموعةُ الكاملة
+  # ══════════════ المجموعةُ مقسومةً على وظائفَ متوازية (قرارُ المالك 2026-11-15) ══════════════
+  #
+  # **الطريقُ الوحيدُ لتشغيل المجموعة في CI** — لا وظيفةَ تشغّلها كاملةً وحدَها. قِيس قبله: **٣٢٧٨ث (٥٥ د) لـ٢٧٦٠ اختباراً
+  # في وظيفةٍ واحدة** (CI ‏43707658269)، والهدفُ تشغيلٌ كاملٌ دون عشر دقائق **بلا حذفِ اختبارٍ ولا إضعافِه**.
+  #
+  # · `plan` يقرأ الأزمنةَ المقيسةَ من التشغيل السابق (ذاكرةُ Actions) ويحسب **عددَ الوظائف** (`scripts/ci_plan.py`)
+  #   — فحين تكبر المجموعةُ تكثر الوظائفُ وحدَها، ولا رقمَ يُكتب بيد.
+  # · `backend` وظيفةٌ لكلِّ جزء، وفي كلٍّ **عمّالٌ بعدد الأنوية** (`pytest -n`)، لكلِّ عاملٍ قاعدتُه وRedisُه.
+  #   والتوزيعُ بالأزمنة لا بقائمة (`tests/shard_plugin.py`): **ملفٌّ جديدٌ يقع في وظيفةٍ وحدَه**.
+  # · `suite` **«المجموعةُ الكاملة»** — يجمع التقارير ويُسقط CI إن **شُغّل أقلُّ ممّا جُمع** (`scripts/ci_shards_check.py`)،
+  #   ويطبع أسماءَ الساقط فيقرؤها `scripts/deploy_ci_gate.py` كما كان يقرؤها من الوظيفة الواحدة. **واسمُه هو الذي تحكم به
+  #   بوّابةُ الرفع** — فلا يُغيَّر.
+  plan:
+    name: خطّةُ التقسيم
     runs-on: ubuntu-latest
-    # **٤٠ كأخيها `batch-suite`، ويتحرّكان معاً** (رُفع من ٣٠ في ٢٠٢٦-٠٩-٠٦).
-    #
-    # **والوظيفتان تشغّلان الشيءَ نفسَه بخطواتٍ متطابقة** — قُورنتا سطراً
-    # سطراً: بيئةُ التشغيل · بناءُ صورة الخلفية · القاعدةُ وRedis · المجموعةُ
-    # الكاملة. **فرقمان مختلفان لعملٍ واحدٍ ليس معايرةً، بل نسختان تفترقان.**
-    #
-    # **ووقع مقيساً في التشغيل ‎34027019141** على `ed864f3`:
-    #
-    #     المجموعةُ الكاملة      **cancelled ٣٠د ١٥ث**  ← قُتلت بالساعة
-    #     المجموعةُ عند a65d6a0  success     ١٩د ٤٥ث
-    #     المجموعةُ عند cb4080f  success     ١٩د ٠٨ث
-    #
-    # **صفرُ اختبارٍ ساقطٍ في الثلاث** — والشيفرةُ واحدة. **فالفرقُ حظُّ
-    # العدّاء لا عبءُ العمل**، وهو المدى المكتوبُ تحت `batch-suite`
-    # (٩ دقائقَ بين الأسرع والأبطأ على الشيفرة نفسِها).
-    #
-    # **⚠ وهو تكرارُ درسٍ في هذا الملفِّ نفسِه بعد يومٍ واحد**: رُفع سقفُ
-    # `batch-suite` من ٢٥ إلى ٤٠ ‏٢٠٢٦-٠٩-٠٥ **وتُرك أخوه على ٣٠** — فقُتلت
-    # مجموعةٌ خضراءُ وأُوقف رفعٌ بلا عطب. **ومعايرةٌ تُصحَّح في موضعٍ وتُنسى
-    # في أخيه هي «بيتان لشيءٍ واحد» بحرفها.**
-    #
-    # **ويحرسه `check:ci-timeouts`** — فلا يفترقان ثالثةً بلا أن يصيح أحد.
-    timeout-minutes: 60
+    timeout-minutes: 5
+    outputs:
+      count: ${{ steps.plan.outputs.count }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      # **أحدثُ أزمنةٍ محفوظة** — والمفتاحُ لا يُطابَق أبداً عمداً، فتُؤخذ أحدثُ ما يبدأ بالبادئة
+      - uses: actions/cache/restore@v4
+        with:
+          path: backend/.ci/durations.json
+          key: test-durations-plan-${{ github.run_id }}
+          restore-keys: test-durations-
+      - id: plan
+        run: |
+          mkdir -p backend/.ci
+          [ -f backend/.ci/durations.json ] || echo '{}' > backend/.ci/durations.json
+          python3 scripts/ci_plan.py backend/.ci/durations.json
+      # **ملفُّ أزمنةٍ واحدٌ لكلِّ الوظائف** — لو قرأت كلُّ وظيفةٍ الذاكرةَ بنفسها لَأمكن أن تقرأ اثنتان نسختين فيفترق التقسيم
+      - uses: actions/upload-artifact@v4
+        with:
+          name: durations-in
+          path: backend/.ci/durations.json
+          retention-days: 3
+          include-hidden-files: true
+
+  backend:
+    name: المجموعةُ — جزء ${{ matrix.shard }}/${{ needs.plan.outputs.count }}
+    needs: plan
+    runs-on: ubuntu-latest
+    # **مساوٍ لأخيه `batch-suite`** — `check:ci-timeouts` يحرس التطابق. والهدفُ دون عشر دقائق؛ والسقفُ للعطب لا للعادة
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    env:
+      COMPOSE_PROJECT_NAME: taxo
     steps:
       - uses: actions/checkout@v4
 
-      # **قيمٌ للتشغيل وحدَه** — ولا احتياطَ صامتٌ لسرّ: الملفُّ يُكتب كاملاً
-      # فيقف الإقلاعُ إن نقص مفتاحٌ بدل أن يقع على افتراض.
+      # **قيمٌ للتشغيل وحدَه** — ولا احتياطَ صامتٌ لسرّ: الملفُّ يُكتب كاملاً فيقف الإقلاعُ إن نقص مفتاحٌ بدل أن يقع على افتراض.
       - name: بيئةُ التشغيل
-        run: |
-          python3 - <<'PY' > .env
-          import secrets, base64
-          fernet = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
-          print(f"""POSTGRES_USER=taxo
-          POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
-          POSTGRES_DB=taxo
-          DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
-          REDIS_PASSWORD={secrets.token_urlsafe(24)}
-          REDIS_URL=redis://redis:6379/0
-          JWT_SECRET={secrets.token_urlsafe(48)}
-          CREDENTIALS_ENCRYPTION_KEY={fernet}
-          ENVIRONMENT=test
-          ACCESS_TOKEN_EXPIRE_MINUTES=15
-          REFRESH_TOKEN_EXPIRE_DAYS=30
-          CUSTOMER_APP_PORT=5176
-          TELR_USE_MOCK=1
-          WA_GATEWAY_KEY={secrets.token_urlsafe(24)}
-          """.replace("          ", ""))
-          PY
-          # القيمةُ الحقيقيةُ لكلمة القاعدة تدخل عنوانَ الاتصال أيضاً
-          pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
-          sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
-          # **وكلمةُ Redis تدخل عنوانَها أيضاً** — redis يشترط المصادقة منذ 2026-09-20
-          rpw=$(grep '^REDIS_PASSWORD=' .env | cut -d= -f2-)
-          sed -i "s|redis://redis:6379/0|redis://:$rpw@redis:6379/0|" .env
+        run: bash scripts/ci_env.sh
 
+      # **صورةُ الخلفية بذاكرة الطبقات** — طبقةُ المتطلّبات لا تُبنى من الصفر إلا حين يتغيّر `requirements.txt`
+      - uses: docker/setup-buildx-action@v3
       - name: بناءُ صورة الخلفية
-        run: docker compose --env-file .env build backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: taxo-backend:latest
+          cache-from: type=gha,scope=backend-image
+          cache-to: type=gha,scope=backend-image,mode=max
 
-      # **القاعدةُ وRedis تُقامان هنا** — و`suite.sh` يمرّ بـ`--no-deps` عمداً
-      # فلا يُقيمهما (لئلّا يُعيد تشغيلَ خدمةٍ صحيحةٍ على جهاز المطوّر).
-      # **ولم تكن هذه الخطوةُ موجودةً قطّ**، فكانت المجموعةُ تعمل هنا **بلا
-      # قاعدة**: ١١٧٦ خطأَ تهيئةٍ في التشغيل ٤١ — **ولم يُرَ ذلك لأن
-      # `suite.sh` كان يخرج بصفرٍ حين يسقط** (أُصلح في الإيداع نفسِه).
+      # **القاعدةُ وRedis تُقامان هنا** — و`suite.sh` يمرّ بـ`--no-deps` عمداً فلا يُقيمهما.
       - name: القاعدةُ وRedis
-        # **والاسمُ يُصرَّح هنا أيضاً**: `db` و`redis` بلا `env_file`، فـ`up`
-        # يمرّ بدونه — **و`ps` يتحقّق من الملفِّ كلِّه** فيطلب `env_file` الخلفيةِ
-        # ويقع على `.env.local` الافتراضيّ. (عطبٌ مقيسٌ في التشغيل ٤٢.)
         env:
           TAXO_ENV_FILE: .env
-        run: |
-          docker compose --env-file .env up -d db redis
-          for i in $(seq 1 60); do
-            ok=0
-            for svc in db redis; do
-              cid=$(docker compose --env-file .env ps -q "$svc")
-              [ -n "$cid" ] || continue
-              [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] && ok=$((ok+1))
-            done
-            [ "$ok" = 2 ] && { echo "✓ القاعدةُ وRedis سليمتان بعد ${i}ث"; break; }
-            [ "$i" = 60 ] && { echo "✗ لم تصحّا في ٦٠ث"; docker compose --env-file .env ps; exit 1; }
-            sleep 1
-          done
+        run: bash scripts/ci_db_up.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: durations-in
+          path: backend/.ci
 
       # **البابُ الوحيدُ للمجموعة** — هو نفسُه محلياً وهنا، فلا تفترق بيئتان
-      - name: المجموعةُ الكاملة
+      - name: جزءٌ من المجموعة
+        env:
+          SUITE_SHARD: ${{ matrix.shard }}/${{ needs.plan.outputs.count }}
+          SUITE_DURATIONS: .ci/durations.json
+          SUITE_REPORT: .ci/shard-${{ matrix.shard }}
         run: TAXO_ENV_FILE=.env bash scripts/suite.sh
 
-      # **الأثرُ يصل كاملاً** — و`tail` وحدَه لا يكفي: بألفٍ ومئةٍ وستةٍ وسبعين
-      # خطأً تكون آخرُ ١٢٠ سطراً **قائمةَ الأسماء** لا الأثر، فيُقرأ «ما سقط»
-      # ولا يُقرأ «لماذا». (وقع مقيساً في التشغيل ٤٣، فاضطُرّ قارئُه إلى إعادة
-      # إنتاج العطب في حاويةٍ معزولةٍ ليعرف اسمَ الاستثناء.)
-      #
-      # **والرأسُ موضعُ الأثر**: أوّلُ خطأٍ يحمل التتبّعَ كاملاً وما بعده تَكرار.
-      # **والعنوانُ يُقنَّع** التزاماً بـ«لا سرَّ في سجلّ CI» — وقِيس أن
-      # SQLAlchemy تُقنّعه أصلاً، فهذا حزامٌ ثانٍ لا اعتمادٌ عليه.
-      # **والقطعُ كالسقوط** (2026-08-24): `failure()` وحدَها **لا تشمل
-      # `cancelled()`** — ومهلةُ الوظيفة تُنهيها «ملغاةً» لا «ساقطة». فمرّ
-      # التشغيلُ ٤٨ ثلاثين دقيقةً ثم قُطع **بلا سطرِ تشخيصٍ واحد**، وهو
-      # «الأثرُ المقطوع» في ثوبٍ ثالث.
+      - name: التقريرُ إلى «المجموعةُ الكاملة»
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: |
+            backend/.ci/shard-${{ matrix.shard }}.*.json
+            backend/.suite.out
+          retention-days: 3
+          if-no-files-found: warn
+          include-hidden-files: true
+
+      # **الأثرُ يصل كاملاً** — والرأسُ موضعُ الأثر، والعنوانُ يُقنَّع («لا سرَّ في سجلّ CI»)، والقطعُ كالسقوط (`cancelled()`).
       - name: النتيجةُ كاملةً عند السقوط
         if: failure() || cancelled()
+        run: bash scripts/ci_suite_trace.sh
+
+  suite:
+    name: المجموعةُ الكاملة
+    needs: [plan, backend]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports
+      - name: كلُّ ما جُمع شُغّل — والساقطُ بأسمائه
         run: |
-          if [ ! -f backend/.suite.out ]; then
-            echo "لا ملفَّ نتيجةٍ — سقط قبل أن تبدأ المجموعة."
-            exit 0
+          python3 scripts/ci_shards_check.py reports "${{ needs.plan.outputs.count }}" backend/.ci/durations.json reports/durations-in/durations.json
+      - name: الوظائفُ نفسُها خضراء
+        if: always()
+        run: |
+          [ "${{ needs.backend.result }}" = success ] || { echo "✗ جزءٌ من المجموعة لم يخضرّ: ${{ needs.backend.result }}"; exit 1; }
+      # **زمنُ التشغيل كلِّه مقيساً** — وإن تجاوز العشرَ قيل في الملخّص، والتشغيلُ التالي يزيد الوظائفَ من الأزمنة الجديدة وحدَه
+      - name: زمنُ التشغيل
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" --jq .run_started_at)
+          secs=$(( $(date -u +%s) - $(date -u -d "$started" +%s) ))
+          line="زمنُ التشغيل حتى «المجموعةُ الكاملة»: $((secs / 60))د $((secs % 60))ث على ${{ needs.plan.outputs.count }} وظيفة"
+          echo "$line"; echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$secs" -gt 600 ]; then
+            echo "- ⚠ **تجاوز عشرَ دقائق** — التشغيلُ التالي يعيد الحسابَ من هذه الأزمنة (\`scripts/ci_plan.py\`)؛ وإن تكرّر فالميزانيةُ تُراجَع" >> "$GITHUB_STEP_SUMMARY"
           fi
-          # **شكلان لا واحد** — قِيس 2026-08-24 على مخرَجٍ حقيقيّ:
-          #   ١) عنوانٌ `://مستخدم:كلمة@` — تُقنّعه SQLAlchemy أصلاً، وهذا حزامٌ ثانٍ
-          #   ٢) `ConnectionParameters(user='…', password='…')` من تتبّع asyncpg
-          #      — **وهذا هو الذي يتسرّب فعلاً**: ١٦ مرةً في مخرَجِ كلمةٍ خاطئة.
-          # **ولم يقع تسرّبٌ في التشغيل ٤٣** لأن `tail` لم يبلغ الأثرَ أصلاً —
-          # فالقطعُ الذي أخفى التشخيصَ منع التسرّبَ صدفةً. **وتوسيعُ الالتقاط
-          # يفتحه**، فيُقنَّع قبل أن يُشحن لا بعده.
-          mask() {
-            sed -E -e 's#(://[^:/@]+):[^@]*@#\1:***@#g' \
-                   -e "s#(password=)('[^']*'|\"[^\"]*\"|[^,)[:space:]]+)#\\1'***'#g" \
-                   backend/.suite.out
-          }
-          echo "════════ أوّلُ ١٢٠ سطراً — وفيها الأثر ════════"
-          mask | head -120
-          echo
-          echo "════════ آخرُ ٦٠ سطراً — الحصيلة ════════"
-          mask | tail -60
-          echo
-          echo "════════ الأسبابُ المتمايزة وعددُ كلٍّ ════════"
-          grep -oE '[A-Za-z_.]+(Error|Exception)' backend/.suite.out |
-            sort | uniq -c | sort -rn | head -15
+      - uses: actions/cache/save@v4
+        if: success()
+        with:
+          path: backend/.ci/durations.json
+          key: test-durations-${{ github.run_id }}-${{ github.run_attempt }}
 
   # ════════════════════════════════════════════════════════════════════════
   # **الملفّاتُ الخمسة** (قرارُ المالك 2026-08-25): نُقل من `CLAUDE.md`
@@ -224,136 +238,83 @@ jobs:
           echo "commits=$json" >> "$GITHUB_OUTPUT"
           echo "dropped=$dropped" >> "$GITHUB_OUTPUT"
 
+  # **الإيداعاتُ الوسيطة واحداً واحداً — بالمجموعة السريعة** (قرارُ المالك 2026-11-15): كلُّ اختبارات المال والدفتر والدفع
+  # والأمن والصلاحيات وحرّاسِ العقد، **ومعها اختباراتُ ما غيّره الإيداع** (`scripts/ci_fast_set.py`). **والرأسُ وحدَه يُختبر
+  # كاملاً** في `backend`/`suite` — وهو ما يُرفع.
+  #
+  # **وأدواتُ التشغيل من الرأس لا من الإيداع**: إيداعٌ أقدمُ من التوازي لا يحمل `shard_plugin` ولا `ci_fast_set`، فتُنسخ إليه
+  # من الرأس. **وعمّالُه بقدر ما يحتمل**: شجرةٌ لا تعزل العمّال (لا `PYTEST_XDIST_WORKER` في `conftest`) تُشغَّل متتابعةً —
+  # والتوازي على ما لا يعزل يُنتج حمرةً كاذبة.
   batch-suite:
     name: المجموعةُ عند ${{ matrix.commit }}
     needs: batch
     if: needs.batch.outputs.commits != '[]'
     runs-on: ubuntu-latest
-    # **ورُفعت إلى ٦٠ في ٢٠٢٦-٠٩-١٨ بقياس اليوم** (التشغيل 35285527773):
-    #
-    #     المجموعةُ عند 197530c  ← **قُتلت عند ٤٠د ١٦ث** وستٌّ متوازية
-    #     وهي وحدَها بإعادة تشغيل      ١٨د ٥٦ث   ← الشيفرةُ نفسُها
-    #     bc78e75 · 61faa27 · bb32820  ١٧د ٥٥ث · ١٩د ٠٣ث · ١٨د ٥٧ث
-    #     6fde80c · المجموعةُ الكاملة   ٢٢د ٥٢ث · ٢٥د ٥٧ث
-    #
-    # **فالأبطأُ الناجي ٢٥د ٥٧ث والحدُّ ٤٠ — أربعةَ عشرَ دقيقةً فارغة**،
-    # **ومع ذلك بلغت واحدةٌ الحدَّ**. فليست بطئاً متدرّجاً يُشترى بحدٍّ
-    # أوسع قليلاً، **بل تجمّدٌ تحت ستّةِ متوازيات** — والعلاجُ سقفٌ يبتلعه.
-    #
-    # **ولمَ لا تُضيَّق المصفوفةُ إلى الرأس وحدَه** (وهو البديلُ المطروح):
-    # لأنها **نزعُ حارسٍ لا توسيعُ حدّ**. المصفوفةُ تشغّل المجموعةَ عند
-    # **كلِّ إيداعٍ في الدفعة**، فيبقى كلُّ إيداعٍ أخضرَ وحدَه وتصحّ
-    # المناصفةُ (`git bisect`) على التاريخ. وتضييقُها يُخضِّر الرأسَ
-    # **ويترك ما تحته غيرَ مقيس** — وهو ما وقع فعلاً حين انقطع CI:
-    # **سبعةُ إيداعاتٍ مرّت بلا تحقّق**. **ولا يُلغى حارسٌ ليُتجاوَز عائق**
-    # (المطلقةُ الثالثة في `CLAUDE.md`)، **والسقفُ الأوسعُ يبقى سقفاً**:
-    # ما تجمّد حقّاً يموت عند ٦٠ ولا يُخفى.
-    timeout-minutes: 60
-    # **٤٠ محسوبةً على قياس اليوم لا على قياسٍ بلي** (٢٠٢٦-٠٩-٠٥).
-    #
-    # **وكانت ٢٥ محسوبةً أيضاً** (قرارُ المالك 2026-08-30): «الأبطأُ مقيساً
-    # ١٦د ٣٣ث في تشغيل ‎#84، والأربعُ المتوازيةُ بين ١٦:١٨ و١٦:٣٣ — فالتوازي
-    # يكلّف دقيقةً ونصفاً لا أضعافاً». **وشِقّا ذلك القياس سقطا معاً** في
-    # تشغيل ‎33956175135، **على الشيفرة نفسِها**:
-    #
-    #     ١٧د ٠٥ث · ١٩د ٠٣ث · ١٩د ١٣ث · ٢٣د ٤١ث · وفوق ٢٥ مرّتين
-    #
-    # **فالمدى ٩ دقائقَ لا دقيقةٌ ونصف**، **والأبطأُ ٢٣د ٤١ث لا ١٦د ٣٣ث** —
-    # فبقيت ٧٩ ثانيةً وحدَها بين الناجي والحدّ.
-    #
-    # **والتوازي شقٌّ لا الشقُّ كلُّه**: `b2c51d8` جُمد فوق ٢٥ بين ستٍّ
-    # متوازية **ومرّ في ١٩د ١٣ث وحدَه** — فالتوازي يكلّف نحوَ ستِّ دقائق.
-    # **لكنّ `d9da0a5` جُمد فوق ٢٥ وهو وحدَه أيضاً**، **فالباقي تفاوتُ
-    # العتاد** ولا يُشترى بحدٍّ أضيق.
-    #
-    # **والحاسمُ أن الجامدَ لم يكن ساقطاً**: سجلُّه **١٬٠٨٤ نقطةً ناجحةً
-    # وصفرُ `F` وصفرُ `FAILED`** — **مجموعةٌ تمرّ ونفد وقتُها**، لا اختبارٌ
-    # يكسر. **ومهلةٌ تقتل مجموعةً خضراءَ تُقرأ حمرةً فتوقف رفعاً بلا عطب.**
-    #
-    # **وحجّةُ الحصّة انقلبت بالقياس**: الحدُّ الضيّقُ كلّف اليومَ **نحوَ ٧٥
-    # دقيقةً** (قتلتان وإعادتان) **وأوقف الرفعَ مرّتين** — بينما ١٥ دقيقةً
-    # فوق الحدّ لا تُدفع إلا في عالقٍ حقيقيّ، وهو نادر. **فالأرخصُ هو
-    # الأوسع.**
+    # **مساوٍ لأخيه `backend`** — `check:ci-timeouts`
+    timeout-minutes: 40
     strategy:
-      # **ولا `fail-fast`**: سقوطُ إيداعٍ لا يُخفي حالَ الذي بعده — والغرضُ
-      # أن يُعرف **أيُّها** أحمر، لا أن يُعرف أنّ فيها أحمر.
       fail-fast: false
-      # **وأربعٌ في وقتٍ واحدٍ حدٌّ لا زينة**: الدفعةُ تكبر بعدد الإيداعات،
-      # **فستٌّ متوازيةً كلّفت ستَّ دقائقَ على كلِّ واحدة** — والرقمُ الذي
-      # عُوِّر أعلاه إنما عُوِّر لأن أحداً لم يحدّ ما عليه القياس.
-      max-parallel: 4
+      max-parallel: 6
       matrix:
         commit: ${{ fromJSON(needs.batch.outputs.commits) }}
+    env:
+      COMPOSE_PROJECT_NAME: taxo
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.commit }}
-          fetch-depth: 1
+          fetch-depth: 2
+
+      - uses: actions/checkout@v4
+        with:
+          path: _head
+          sparse-checkout: |
+            scripts
+            backend/tests/shard_plugin.py
+          sparse-checkout-cone-mode: false
+
+      - name: أدواتُ الرأس والمجموعةُ السريعة
+        run: |
+          set -euo pipefail
+          cp _head/scripts/suite.sh _head/scripts/ci_env.sh _head/scripts/ci_db_up.sh _head/scripts/ci_suite_trace.sh scripts/
+          cp _head/backend/tests/shard_plugin.py backend/tests/shard_plugin.py
+          mkdir -p backend/.ci
+          python3 _head/scripts/ci_fast_set.py . "${{ matrix.commit }}" backend/.ci/fast-set.txt
+          if grep -q PYTEST_XDIST_WORKER backend/tests/conftest.py && grep -q '^pytest-xdist' backend/requirements.txt; then
+            echo "SUITE_WORKERS=$(nproc)" >> "$GITHUB_ENV"
+          else
+            echo "SUITE_WORKERS=0" >> "$GITHUB_ENV"
+            echo "⚠ شجرةٌ أقدمُ من عزل العمّال — تُشغَّل متتابعة" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: بيئةُ التشغيل
-        run: |
-          python3 - <<'PY' > .env
-          import secrets, base64
-          fernet = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
-          print(f"""POSTGRES_USER=taxo
-          POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
-          POSTGRES_DB=taxo
-          DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
-          REDIS_PASSWORD={secrets.token_urlsafe(24)}
-          REDIS_URL=redis://redis:6379/0
-          JWT_SECRET={secrets.token_urlsafe(48)}
-          CREDENTIALS_ENCRYPTION_KEY={fernet}
-          ENVIRONMENT=test
-          ACCESS_TOKEN_EXPIRE_MINUTES=15
-          REFRESH_TOKEN_EXPIRE_DAYS=30
-          CUSTOMER_APP_PORT=5176
-          TELR_USE_MOCK=1
-          WA_GATEWAY_KEY={secrets.token_urlsafe(24)}
-          """.replace("          ", ""))
-          PY
-          pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
-          sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
-          # **وكلمةُ Redis تدخل عنوانَها أيضاً** — redis يشترط المصادقة منذ 2026-09-20
-          rpw=$(grep '^REDIS_PASSWORD=' .env | cut -d= -f2-)
-          sed -i "s|redis://redis:6379/0|redis://:$rpw@redis:6379/0|" .env
+        run: bash scripts/ci_env.sh
 
+      - uses: docker/setup-buildx-action@v3
       - name: بناءُ صورة الخلفية
-        run: docker compose --env-file .env build backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: taxo-backend:latest
+          cache-from: type=gha,scope=backend-image
+          cache-to: type=gha,scope=backend-image,mode=max
 
       - name: القاعدةُ وRedis
         env:
           TAXO_ENV_FILE: .env
-        run: |
-          docker compose --env-file .env up -d db redis
-          for i in $(seq 1 60); do
-            ok=0
-            for svc in db redis; do
-              cid=$(docker compose --env-file .env ps -q "$svc")
-              [ -n "$cid" ] || continue
-              [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] && ok=$((ok+1))
-            done
-            [ "$ok" = 2 ] && break
-            [ "$i" = 60 ] && { echo "✗ لم تصحّا في ٦٠ث"; exit 1; }
-            sleep 1
-          done
+        run: bash scripts/ci_db_up.sh
 
-      - name: المجموعةُ الكاملة
+      - name: المجموعةُ السريعة
+        env:
+          SUITE_SELECT: .ci/fast-set.txt
         run: TAXO_ENV_FILE=.env bash scripts/suite.sh
 
-      # **الأثرُ يذهب إلى السجلِّ لا إلى الملخّص وحدَه** (صُحِّح 2026-08-30
-      # ساعةَ بنائه): كان يُكتب في `GITHUB_STEP_SUMMARY` فقط، **ولا يقرأ الـAPI
-      # الملخّصات** — فقيل «أيُّ إيداعٍ أحمر» ولم يُقَل **لماذا**، ولا سبيلَ إلى
-      # معرفته إلا بفتح الصفحة بيد. **وبابٌ يقول نصفَ الخبر يُقرأ خبراً كاملاً.**
-      #
-      # **ووظيفةُ الرأس تطبع النتيجةَ كاملةً في سجلّها منذ أُصلحت** — فهذه
-      # تفعل مثلَها، **ولا نصفُ نسخةٍ من قاعدةٍ مكتوبة**.
       - name: أثرُ السقوط
         if: failure() || cancelled()
         run: |
           echo "### ✗ ${{ matrix.commit }}" >> "$GITHUB_STEP_SUMMARY"
-          grep -E '^(FAILED|ERROR)' backend/.suite.out | head -40 >> "$GITHUB_STEP_SUMMARY" || true
-          echo "══════════ النتيجةُ كاملةً عند ${{ matrix.commit }} ══════════"
-          cat backend/.suite.out || echo "لا ملفَّ نتيجة — سقط قبل أن يُكتب"
+          bash scripts/ci_suite_trace.sh
 
   docs:
     name: الملفّاتُ الخمسة
@@ -427,7 +388,7 @@ jobs:
   # يُسكت عنه: أولُ حزمةٍ بمفتاح الإصدار **لا تُحدِّث المثبَّت**.
   packages:
     name: الحزمُ وإصدارُها
-    needs: [backend, frontends]
+    needs: [suite, frontends]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 40
