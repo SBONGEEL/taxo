@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Switch } from "@/components/ui/Field";
 import { useCountry } from "@/lib/country";
+import { destinationStatus } from "../lib/destination-status";
 
 interface Feature {
   n: number;
@@ -323,7 +324,8 @@ interface CountryState {
   voice: boolean;
   pickup: boolean;
   quality: boolean;
-  destination: number;
+  /** `null` ⇐ لا صفَّ في «قواعد التوزيع» لهذه الدولة — يُقال «غيرُ مضبوطة» ولا يُخترع صفر */
+  destination: number | null;
 }
 
 /** المقترَحُ للدولتين — والعلّةُ مكتوبةٌ بجانب كلٍّ في الجدول. */
@@ -347,7 +349,7 @@ function CountrySwitches() {
         voice: flags.find((row) => row.country_code === code)?.flags.voice_order_enabled === true,
         pickup: maps.find((row) => row.country_code === code)?.pickup_suggest_enabled === true,
         quality: quality.find((row) => row.country_code === code)?.enabled === true,
-        destination: dispatch.find((row) => row.country_code === code)?.destination_daily_uses ?? 0,
+        destination: dispatch.find((row) => row.country_code === code)?.destination_daily_uses ?? null,
       };
     }
     setState(next);
@@ -474,10 +476,10 @@ function CountrySwitches() {
               <tr className="align-top">
                 <td className="p-8 font-semibold text-ink">15 · «وجهتي» للكبتن</td>
                 {SWITCH_COUNTRIES.map((country) => {
-                  const uses = state[country.code].destination;
+                  const status = destinationStatus(state[country.code].destination);
                   return (
                     <td key={country.code} className="p-8">
-                      <Badge tone={uses > 0 ? "ok" : "muted"}>{uses > 0 ? `مفعّلة — ${uses} في اليوم` : "مطفأة"}</Badge>
+                      <Badge tone={status.tone}>{status.label}</Badge>
                     </td>
                   );
                 })}
