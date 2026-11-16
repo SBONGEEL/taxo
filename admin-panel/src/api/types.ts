@@ -649,6 +649,11 @@ export type FeatureKey =
   | "icons_v2"
   | "places_search_v2"
   | "permissions_center"
+  | "quick_tile"
+  | "home_widget"
+  | "boot_resume"
+  | "app_shortcuts"
+  | "haptics"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

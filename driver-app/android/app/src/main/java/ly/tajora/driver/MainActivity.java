@@ -23,6 +23,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(InAppReviewPlugin.class);
         // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
         registerPlugin(PermissionsPlugin.class);
+        // **المُطلِق** (SPEC §١٠٣ المرحلة A/4–6، 10) — الاختصاراتُ والبلاطةُ والأداةُ تحمل فعلاً ينفّذه الويب
+        registerPlugin(LauncherPlugin.class);
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);

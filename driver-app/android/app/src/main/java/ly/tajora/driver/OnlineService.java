@@ -133,6 +133,9 @@ public class OnlineService extends Service {
 
     @Override
     public void onDestroy() {
+        // **«متّصل» يموت مع الخدمة** (SPEC §١٠٣/4–6): البلاطةُ والأداةُ تقرآنه — ولا تقولان ما ليس قائماً
+        getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).edit().putBoolean("online", false).apply();
+        LauncherPlugin.wake(this);
         watchdog.removeCallbacksAndMessages(null);
         beacon.removeCallbacksAndMessages(null);
         network.shutdownNow();

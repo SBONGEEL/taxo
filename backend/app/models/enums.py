@@ -993,6 +993,13 @@ class FeatureKey(StrEnum):
     # الدقيقة، وشارةُ تحذيرٍ في رئيسيّة الكبتن، والمرورُ الأوّلُ على الأساسيّة، **وبلاغُ المطفأ منها إلى اللوحة**. **مطفأٌ لكلِّ دولة**؛
     # ويحتاج غلافاً يحمل ملحقَ `Permissions` — والأقدمُ لا يراه ولو اشتعل. **لا يمسّ نداءً ماليّاً ولا يحجب أحداً**
     PERMISSIONS_CENTER = "permissions_center"
+    # **المُطلِق** (SPEC §١٠٣ المرحلة A/4، 5، 6، 10، 11) — كلُّها مطفأةٌ لكلِّ دولة، وتحتاج الغلافَ الجديد؛ **لا يمسّ أيٌّ منها نداءً ماليّاً**:
+    # البلاطةُ والأداةُ والاختصاراتُ وإشعارُ ما بعد الإقلاع **تفتح التطبيقَ بفعلٍ ينفّذه مسارُه القائم**، ونصُّ الأداة من `/drivers/me/earnings`
+    QUICK_TILE = "quick_tile"
+    HOME_WIDGET = "home_widget"
+    BOOT_RESUME = "boot_resume"
+    APP_SHORTCUTS = "app_shortcuts"
+    HAPTICS = "haptics"
 
 
 class MapPlaceCategory(StrEnum):

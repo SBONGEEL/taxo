@@ -60,6 +60,8 @@ import {
   useDocumentsAttention,
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
+import { useDriverLauncher } from "@/lib/launcher";
+import { useHaptics } from "@/lib/haptics";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
 import { clearDestination, getDestination, getHeatmap, setDestination, type DriverDestination } from "@/api/endpoints";
@@ -280,6 +282,20 @@ export function HomeT2Screen() {
       maybeAskForReview();
     } else goOnline();
   };
+  // **المُطلِق** (SPEC §١٠٣ المرحلة A/4–6، 10): البلاطةُ والأداةُ والاختصاراتُ وإشعارُ ما بعد الإقلاع تحمل فعلاً — **وهنا يُنفَّذ بزرِّ
+  // الاستقبال نفسِه** (`toggleOnline`)، فلا بابَ ثانياً يتجاوز الاشتراكَ والأذونات. ونصُّ الأداة نصُّ «أرباح اليوم» أدناه بحرفه
+  // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
+  useHaptics(user?.country_code);
+  useDriverLauncher({
+    country: user?.country_code,
+    online,
+    earningsText: earnings ? `${formatAmount(earnings.earned, earnings.currency)} ${CURRENCY_LABEL[earnings.currency]}` : null,
+    ridesToday: earnings ? earnings.completed_rides : null,
+    onAction: (action) => {
+      if (action === "go_online" || action === "go_offline") toggleOnline();
+      else if (action === "earnings") navigate("/wallet/earnings");
+    },
+  });
   // **التقييمُ كما يصل** (`rating_avg` بمنزلتين — «4.92» كما رُسم)؛ والشاشةُ القائمةُ تقرّبه إلى منزلة
   // **ولا شارةَ «★ 0.00» لمن لم يُقيَّم بعد** (§٦٢-ب/٤٩) — كما لا تُرسم «0 رحلة» رقماً
   const rating = profile ? ratedAverage(profile.driver.rating_avg) : null;

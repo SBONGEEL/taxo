@@ -53,6 +53,8 @@ import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
+import { useRiderLauncher } from "@/lib/launcher";
+import { useHaptics } from "@/lib/haptics";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
@@ -877,6 +879,21 @@ export function HomeScreen() {
   // **زمنُ الوصول** (§٦٢-ج/١٠): قبل الطلب ما دامت الرئيسيةُ أو ورقةُ الطلب مفتوحة، وفي الطريق إليها من مسار الاقتراب — ومطفأً لا رقم
   const nearestEta = useNearestEta(pickup ?? center, browsing || phase === "confirm");
   const approachMinutes = useApproachMinutes(tracking ? ride : null, driverPing);
+
+  // **اختصارا الأيقونة** (SPEC §١٠٣/10): «البيت» يمرّ بـ`pickPlace` نفسِه، وبلا بيتٍ محفوظٍ ⇐ «أماكني» ليضيفه
+  // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
+  useHaptics(user?.country_code);
+  useRiderLauncher(user?.country_code, (action) => {
+    if (action === "wallet") return navigate("/wallet");
+    const home = places.find((saved) => saved.icon === "home");
+    if (!home) return navigate("/account/places");
+    pickPlace({
+      id: `place:${home.id}`,
+      name: home.label,
+      address: home.address ?? "",
+      coordinates: { lat: home.lat, lng: home.lng },
+    });
+  });
 
   const homeProps: RiderHomeProps = {
     name: user?.name ?? tr("بك"),

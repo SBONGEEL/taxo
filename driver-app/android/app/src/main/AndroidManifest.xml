@@ -143,10 +143,44 @@
         <receiver
             android:name=".CallDeclineReceiver"
             android:exported="false" />
+        <!-- **المُطلِق** (SPEC §١٠٣ المرحلة A/4–6): البلاطةُ والأداةُ وإشعارُ ما بعد الإقلاع — كلُّها تفتح التطبيقَ بفعلٍ
+             ينفّذه الويبُ بمساره القائم، ومطفأةٌ لدولتها حتى يكتب الويبُ مفتاحَها (`Launcher.setPrefs`) -->
+        <service
+            android:name=".OnlineTileService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="TAXO كبتن"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <receiver
+            android:name=".EarningsWidget"
+            android:exported="false"
+            android:label="أرباح اليوم">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_earnings_info" />
+        </receiver>
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->
 
+    <!-- **المُطلِق** (SPEC §١٠٣ المرحلة A/6، 11): إشعارُ ما بعد الإقلاع، والاهتزازُ الخفيف — إذنان عاديّان لا يُطلبان -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- الموقع: دقيقٌ وتقريبيٌّ معاً — أندرويد 12+ يعطي المستخدمَ خيارَ

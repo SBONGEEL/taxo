@@ -140,6 +140,8 @@
 
     <!-- Permissions -->
 
+    <!-- **الاهتزازُ الخفيف** (SPEC §١٠٣ المرحلة A/11) — إذنٌ عاديٌّ لا يُطلب -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- الموقع: **دقيقٌ وتقريبيٌّ معاً**. أندرويد 12+ يعطي المستخدمَ خيارَ
