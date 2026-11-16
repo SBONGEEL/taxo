@@ -256,6 +256,22 @@ _cache: "OrderedDict[tuple, list[dict]]" = OrderedDict()
 _cache_lock = threading.Lock()
 
 
+def _join_particles(query: str) -> str:
+    """الكلمةُ القصيرة (≤ ٣ أحرف، لا رقم) موصولةً بالتي بعدها — «هواري بو مدين» ⇐ «هواري بومدين»، «ابو نصير» ⇐ «ابونصير»."""
+    words = query.split()
+    out: list[str] = []
+    i = 0
+    while i < len(words):
+        w = words[i]
+        if i + 1 < len(words) and len(w) <= 3 and not w.isdigit() and not words[i + 1].isdigit():
+            out.append(w + words[i + 1])
+            i += 2
+            continue
+        out.append(w)
+        i += 1
+    return " ".join(out)
+
+
 def search(q: str, cc: str, near: tuple[float, float] | None, limit: int) -> list[dict]:
     query = norm(q)
     if len(query.replace(" ", "")) < 2 or cc not in COUNTRIES:
@@ -269,6 +285,14 @@ def search(q: str, cc: str, near: tuple[float, float] | None, limit: int) -> lis
         _fill()
     with _Lease() as db:
         items = _search(db, query, q, cc, near, limit)
+        # **الاسمُ المفصولُ خطأً** (أمرُ المالك ٢٠٢٦-١١-١٧): «مطار هواري بو مدين» والفهرسُ يحمل «بومدين» كلمةً واحدة — فـ«بو» لا تطابق
+        # شيئاً، ويسقط عن المطار ما يناله الاسمُ الصحيح (التطابقُ والبداية)، فتتقدّمه «محطة مطار هواري بومدين» بقصرها.
+        # فيُسأل أيضاً بالكلمة القصيرة موصولةً بما بعدها، **ويُؤخذ الأعلى صدراً** — وصلٌ خاطئٌ («بن عكنون» ⇐ «بنعكنون») أدنى فلا يغلب
+        joined = _join_particles(query)
+        if joined != query:
+            other = _search(db, joined, q, cc, near, limit)
+            if other and (not items or other[0]["score"] > items[0]["score"]):
+                items = other
     with _cache_lock:
         _cache[key] = items
         if len(_cache) > CACHE_SIZE:
