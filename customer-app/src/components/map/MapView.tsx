@@ -577,6 +577,8 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
 
   // **والعلاماتُ تُبنى من جديدٍ مع المظهر**: سيارةُ الليل ونبضتُه بألوان §1.1، وسيارةُ النهار ودبابيسُه بلغة الهوية — والعلامةُ
   // لا تُعاد صياغتُها في مكانها. فتُرفع كلُّها هنا، **وكلُّ أثرٍ أدناه يعيد رسمَ ما يخصّه** (المظهرُ في تبعيّاته)
+  // **ولم يكن في تبعيّات أيٍّ منها** (مقيس ٢٠٢٦-١١-١٦، SPEC §١٠٥/٢): دبوسا الرحلة وموضعُك والسيّاراتُ تختفي عند تبديل المظهر
+  // حتى يتحرّك شيءٌ آخر. فـ`dark` في تبعيّات الخمسة — والأثرُ هذا قبلها في الترتيب فيسبقها في كلِّ تبديل
   const firstTheme = useRef(true);
   useEffect(() => {
     if (firstTheme.current) {
@@ -741,7 +743,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
         carMarkers.current.delete(ref);
       }
     }
-  }, [drivers, ensureLoop, t2]);
+  }, [drivers, ensureLoop, t2, dark]);
 
   // ------------------------------------------------- موقع الكبتن المُسنَد
   useEffect(() => {
@@ -823,7 +825,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       waypoints: null,
       rotates,
     };
-  }, [driverLocation, driverSkin, ensureLoop, t2]);
+  }, [driverLocation, driverSkin, ensureLoop, t2, dark]);
 
   // ------------------------------------------------ نبضةُ الموقع والبحث
   useEffect(() => {
@@ -844,7 +846,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       return;
     }
     myLocationMarker.current.setLngLat([showMyLocation.lng, showMyLocation.lat]);
-  }, [showMyLocation, t2]);
+  }, [showMyLocation, t2, dark]);
 
   // نبضةٌ حول دبوس الانطلاق ما دام البحثُ جارياً — **وتتوقف عند القبول**:
   // نبضٌ يبقى بعد أن يُسنَد الكبتن يقول «ما زلنا نبحث» وقد وُجد
@@ -867,7 +869,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       return;
     }
     searchPulse.current.setLngLat([pickup.lng, pickup.lat]);
-  }, [searching, pickup, t2]);
+  }, [searching, pickup, t2, dark]);
 
   // ----------------------------------------------------- الدبابيس والخط
   useEffect(() => {
@@ -903,7 +905,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     // **وفي بحث TAXO 2.0 يقف الرادارُ وحدَه على الانطلاق** (R07) — نقطتُه في مركزه، فدائرةُ الحبر تحتها نقطتان لشيءٍ واحد
     place(pickupMarker, t2 && searching ? null : pickup, "var(--ok)", tr("نقطة الانطلاق"), "from");
     place(dropoffMarker, dropoff, "var(--dng)", tr("الوجهة"), "to");
-  }, [pickup, dropoff, t2, searching]);
+  }, [pickup, dropoff, t2, searching, dark]);
 
   useEffect(() => {
     const instance = map.current;

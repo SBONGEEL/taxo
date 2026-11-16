@@ -325,8 +325,8 @@ html.is-hidden .eqb { animation-play-state: paused; }
 
 /* ── نسبةُ الخريطة زرَّ ⓘ (SPEC §١٠٥/٤) — بألوان المظهر لا الأبيضِ والأسودِ الثابتين، وصغيرةٌ نصفُ شفّافة. تُرى عند الفتح ثمّ تُطوى
  *    (`lib/map-attribution.ts`)، ومكانُها الزاويةُ السفلى فوق الورقة (`--t2-map-inset`) فلا تقع على المسار ولا العلامات ──────── */
-.maplibregl-ctrl.maplibregl-ctrl-attrib,
-.mapboxgl-ctrl.mapboxgl-ctrl-attrib {
+html .maplibregl-ctrl.maplibregl-ctrl-attrib,
+html .mapboxgl-ctrl.mapboxgl-ctrl-attrib {
   margin: 0 8px 8px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--t2-surface) 80%, transparent);
@@ -336,22 +336,27 @@ html.is-hidden .eqb { animation-play-state: paused; }
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-.maplibregl-ctrl-attrib a,
-.mapboxgl-ctrl-attrib a { color: var(--t2-text); }
-.maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show),
-.mapboxgl-ctrl-attrib.mapboxgl-compact:not(.mapboxgl-compact-show) { opacity: .7; }
-.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button,
-.mapboxgl-ctrl-attrib .mapboxgl-ctrl-attrib-button {
+html .maplibregl-ctrl-attrib a,
+html .mapboxgl-ctrl-attrib a { color: var(--t2-text); }
+html .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show),
+html .mapboxgl-ctrl-attrib.mapboxgl-compact:not(.mapboxgl-compact-show) { opacity: .7; }
+html .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button,
+html .mapboxgl-ctrl-attrib .mapboxgl-ctrl-attrib-button {
   background-image: none !important;
   background-color: transparent !important;
   color: var(--t2-text);
 }
-.maplibregl-ctrl-attrib-button::before,
-.mapboxgl-ctrl-attrib-button::before {
+html .maplibregl-ctrl-attrib-button::before,
+html .mapboxgl-ctrl-attrib-button::before {
   content: "i";
   display: grid;
   place-items: center;
   width: 100%;
   height: 100%;
   font: italic 700 13px/1 Georgia, "Times New Roman", serif;
+}
+/* حلقةُ التركيز بلون الهوية — أزرقُ maplibre (`#0096ff`) لونٌ ثابتٌ غريبٌ على الواجهة */
+html .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button:focus-visible,
+html .mapboxgl-ctrl-attrib .mapboxgl-ctrl-attrib-button:focus-visible {
+  box-shadow: 0 0 0 2px var(--t2-accent);
 }

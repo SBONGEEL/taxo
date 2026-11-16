@@ -151,6 +151,24 @@ for (const file of files) {
   }
 }
 
+// **ترتيبُ المظهر — ما لا يراه حسابُ الرموز** (SPEC §١٠٥/٢، مقيس ٢٠٢٦-١١-١٦): الرموزُ كلُّها صحيحةٌ والخريطةُ تُبنى من رموز `html.dark`
+// في أثرها هي، **فإن بُدِّل الصنفُ في `useEffect` جرى بعد أثر الخريطة** (آثارُ الأبناء قبل الآباء) فتُبنى بألوان المظهر السابق: خلفيّةٌ
+// نهاريّةٌ وأسماءٌ ليليّة. وقع في تطبيق الراكب بعد «إصلاحه» — نُقل المستمعُ إلى `useLayoutEffect` وبقي التبديلُ حيث كان، **والحسابُ أخضر**.
+// فيُقرأ هنا: الأثرُ الذي يبدّل `dark` على الجذر يجب أن يكون `useLayoutEffect`. **ولا يقيس الرسمَ نفسَه** — ذاك للّقطات
+const THEME = join(ROOT, "src/lib/theme.tsx");
+if (!existsSync(THEME)) failures.push("src/lib/theme.tsx غائب — ترتيبُ المظهر لم يُقس");
+else {
+  const source = readFileSync(THEME, "utf8");
+  const at = source.search(/classList\.toggle\(\s*"dark"/);
+  if (at < 0) failures.push("theme.tsx: لا تبديلَ لصنف `dark` على الجذر — ترتيبُ المظهر لم يُقس");
+  else {
+    const before = source.slice(0, at);
+    const hook = [...before.matchAll(/\b(useLayoutEffect|useEffect)\s*\(/g)].pop()?.[1];
+    if (hook !== "useLayoutEffect") failures.push(`theme.tsx: صنفُ \`dark\` يُبدَّل في ${hook ?? "؟"} — يجب \`useLayoutEffect\` فيسبق أثرَ الخريطة (وإلا نهاريّةٌ في الليل)`);
+    else console.log("  ترتيبُ المظهر: صنفُ `dark` في useLayoutEffect ✓");
+  }
+}
+
 console.log(`  تباينُ المظهرين: ${mapChecked} زوجاً من ألوان الخريطة · ${rulesChecked} قاعدةً×مظهر`);
 if (mapChecked === 0) failures.push("لم يُقرأ أيُّ لونٍ للخريطة — الرموزُ غائبةٌ أو تغيّر موضعُها (لم يُقس ≠ سليم)");
 if (failures.length) {

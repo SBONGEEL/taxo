@@ -34,10 +34,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
   const [systemDark, setSystemDark] = useState(systemPrefersDark);
 
-  // **قبل أيِّ أثرٍ في الأبناء** (SPEC §١٠٥/٢، عطبٌ مقيس): الخريطةُ تبني نمطَها من رموز `html.dark` في أثرها هي — **وآثارُ الأبناء
-  // تجري قبل آثار الآباء**، فكان الصنفُ يُبدَّل بعد أن بُنيت الخريطةُ بألوان المظهر السابق: نهاريّةٌ في الليل. و`useLayoutEffect`
-  // يجري قبل كلِّ `useEffect` في الشجرة، والتطبيقُ الأوّلُ في `useState` نفسِه فلا تُرسم أوّلُ لوحةٍ بالمظهر الخطأ
-  useLayoutEffect(() => {
+  useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const listener = (event: MediaQueryListEvent) => setSystemDark(event.matches);
     query.addEventListener("change", listener);
@@ -46,7 +43,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const dark = choice === "system" ? systemDark : choice === "dark";
 
-  useEffect(() => {
+  // **قبل أيِّ أثرٍ في الأبناء** (SPEC §١٠٥/٢، عطبٌ مقيس): الخريطةُ تبني نمطَها من رموز `html.dark` في أثرها هي — **وآثارُ الأبناء
+  // تجري قبل آثار الآباء**، فكان الصنفُ يُبدَّل بعد أن بُنيت الخريطةُ بألوان المظهر السابق: نهاريّةٌ في الليل. و`useLayoutEffect`
+  // يجري قبل كلِّ `useEffect` في الشجرة، ويجري قبل أوّل رسمٍ فلا تُرسم لوحةٌ بالمظهر الخطأ
+  useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     document
       .querySelector('meta[name="theme-color"]')

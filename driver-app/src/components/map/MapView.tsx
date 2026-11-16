@@ -428,6 +428,9 @@ function MapViewEngine({
       if (animation.current !== null) cancelAnimationFrame(animation.current);
       map.current?.remove();
       map.current = null;
+      // **العلاماتُ ذهبت مع اللوحة** — ومرجعٌ يبقى يجعل اللوحةَ التالية «تحرّك» علامةً على لوحةٍ هُدمت فلا تُرى
+      pins.current = {};
+      self.current = null;
     };
     // مرةً واحدة: تبديلُ الستايل يقع في تأثيرٍ آخر بلا إعادة بناء
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -468,11 +471,23 @@ function MapViewEngine({
     tapMarker.current = new gl.Marker({ element }).setLngLat([tapPin.lng, tapPin.lat]).addTo(instance);
   }, [tapPin, t2]);
 
+  // **تبديلُ المظهر في مكانه** (SPEC §١٠٥/٢) — كان هذا الأثرُ يخرج تحت «TaxoMap» على دعوى أنّ الشاشةَ تُفكّ مع المظهر (`ByTheme`)؛
+  // **وقِيس ٢٠٢٦-١١-١٦ أنها لا تُفكّ**: زرُّ الليل في الرئيسيّة يقلب الواجهةَ وتبقى الخريطةُ نهاريّة. فيُعاد بناءُ النمط هنا:
+  // **تحميلٌ كاملٌ لا فرق** (`diff: false`) — فيقع `style.load` ويُعاد الصبغُ والأماكنُ والزحام من معالجه، والخطُّ من أثره (`dark`
+  // في تبعيّاته). **ولا عند الإنشاء**: النمطُ مضبوطٌ في المُنشئ، ونداءٌ ثانٍ بالفرق يمحو الصبغ (قِيس في خريطة الراكب ٢٠٢٦-١٠-٠٤)
+  const styleApplied = useRef(false);
   useEffect(() => {
-    // **ولا يُعاد الستايلُ تحت «TaxoMap»** — قِيس: هذا السطرُ يقع مع الإنشاء، **والتطبيقُ بالفرق يعيد ألوانَ الستايل وأسماءَه
-    // فوق الصبغ** بعد أن يقع. والشاشةُ المرسومةُ تُفكّ مع تبديل المظهر (`ByTheme`) فلا تحتاجه (وهو ما تفعله خريطةُ الراكب)
-    if (t2) return;
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    if (!styleApplied.current) {
+      styleApplied.current = true;
+      return;
+    }
+    const instance = map.current;
+    if (!instance) return;
+    // **والنمطُ المفتوحُ يُبنى من جديدٍ برموز المظهر الجديد** — الجذرُ يحمل `dark` قبل هذا الأثر (`useLayoutEffect` في `lib/theme`)
+    const openColors = openMap && host.current ? openMapColors(host.current) : null;
+    instance.setStyle((openColors ? buildOpenStyle(openColors, labelsRef.current) : dark ? STYLE_DARK : STYLE_LIGHT) as string, {
+      diff: false,
+    } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
 
   // موقعُ الكبتن — يُنعَّم بين البثّتين بدل القفز
@@ -685,7 +700,7 @@ function MapViewEngine({
       drawOwnPlaces(instance, element, labels ? places : []);
     };
     if (instance.isStyleLoaded()) run();
-    else instance.once("style.load", run);
+    else instance.once("idle", run);
   }, [labels, places, t2]);
 
   // **خطُّ المسار** (البند ٨) — يُضاف حين يصل ويُحدَّث حين يتقدّم الكبتن.
@@ -783,9 +798,10 @@ function MapViewEngine({
     };
 
     // **الستايلُ قد لا يكون جاهزاً**: `addLayer` قبل تحميله يرمي، وتبديلُ الوضع
-    // يمسح المصادر كلَّها — فيُعاد الرسمُ على `style.load` كذلك
+    // يمسح المصادر كلَّها — فيُعاد الرسمُ عند **أوّل سكون** (`idle`) لا `style.load`: الخطُّ يصل غالباً بعد اكتمال الستايل وقبل
+    // سكون البلاطات، فيكون `isStyleLoaded()` كاذباً و`style.load` لن يتكرّر — **فلم يكن الخطُّ يُرسم أبداً** (مقيس ٢٠٢٦-١١-١٦)
     if (instance.isStyleLoaded()) draw();
-    else instance.once("style.load", draw);
+    else instance.once("idle", draw);
   }, [routePoints, trimAt, dark, t2, routeTraveled]);
 
   useEffect(() => {
