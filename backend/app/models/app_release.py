@@ -73,6 +73,10 @@ class AppRelease(Base):
         ),
         CheckConstraint("build > 0", name="ck_app_releases_build_positive"),
         CheckConstraint(
+            "open_map_min_build IS NULL OR open_map_min_build > 0",
+            name="ck_app_releases_open_map_positive",
+        ),
+        CheckConstraint(
             "min_supported_build > 0", name="ck_app_releases_min_positive"
         ),
         CheckConstraint(
@@ -98,6 +102,10 @@ class AppRelease(Base):
     )
     #: `versionCode` الحزمة — عددٌ صحيحٌ يزيد أبداً (عددُ الإيداعات).
     build: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: **أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة** (SPEC §١٠٥/٥، ٢٠٢٦-١١-١٦). الغلافُ يحمّل الواجهةَ من خادمنا،
+    #: **فما يُرفع من الواجهة يصل كلَّ غلافٍ قديمٍ وجديد** — والمفتاحُ `open_map_display` وحدَه لا يفرّق بينهما.
+    #: فارغاً (الافتراض) لا يُرسم MapLibre في أيِّ غلاف ولو اشتعل المفتاح؛ والمتصفّحُ لا غلافَ له فيحكمه المفتاحُ وحدَه.
+    open_map_min_build: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: أدنى حزمةٍ تُقبل. ما دونها **شاشةُ تحديثٍ لا تُغلق**.
     min_supported_build: Mapped[int] = mapped_column(Integer, nullable=False)
     #: من أين تُحمَّل — **ويُفحص قبل الحفظ**، فلا قفلَ بلا مخرج.

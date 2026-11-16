@@ -52,6 +52,7 @@ async def _row(
         download_url=release.download_url,
         release_notes=release.release_notes,
         reminder_hours=release.reminder_hours,
+        open_map_min_build=release.open_map_min_build,
         is_current=release.id == current_id,
         created_at=release.created_at,
         updated_at=release.updated_at,
@@ -92,6 +93,7 @@ async def list_releases(
             download_url=row.download_url,
             release_notes=row.release_notes,
             reminder_hours=row.reminder_hours,
+            open_map_min_build=row.open_map_min_build,
             is_current=row.id in current_ids,
             created_at=row.created_at,
             updated_at=row.updated_at,
@@ -115,6 +117,7 @@ async def create_release(
         release_notes=payload.release_notes,
         reminder_hours=payload.reminder_hours,
         confirmation=payload.confirm_min_supported_build,
+        open_map_min_build=payload.open_map_min_build,
     )
     await audit.record(
         session,
@@ -155,6 +158,7 @@ async def update_release(
         release_notes=payload.release_notes,
         reminder_hours=payload.reminder_hours,
         confirmation=payload.confirm_min_supported_build,
+        open_map_min_build=payload.open_map_min_build,
     )
     await audit.record(
         session,

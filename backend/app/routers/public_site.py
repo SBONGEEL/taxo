@@ -187,6 +187,7 @@ async def app_version(
         download_url=verdict.download_url,
         release_notes=verdict.release_notes,
         reminder_hours=verdict.reminder_hours,
+        open_map=verdict.open_map,
     )
 
 

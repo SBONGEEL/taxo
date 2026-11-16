@@ -31,6 +31,8 @@ class AppReleaseIn(BaseModel):
     download_url: HttpUrl
     release_notes: str = Field(min_length=1, max_length=4000)
     reminder_hours: int = Field(default=24, ge=1, le=MAX_REMINDER_HOURS)
+    #: **أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة** — فارغٌ = لا غلافَ (SPEC §١٠٥/٥)
+    open_map_min_build: int | None = Field(default=None, ge=1)
     #: **الإذنُ الثاني، مبنيٌّ في العقد لا في الشاشة** (§39٫٨: «يستأذن
     #: مرّتين»): حين يرتفع الحدُّ عمّا هو قائم **يُطلب رقمُه مكتوباً ثانيةً**.
     #: وإخفاءُ ورقةٍ في الواجهة راحةٌ، **وحقلٌ يجب أن يساوي الرقمَ شرط**.
@@ -48,6 +50,7 @@ class AppReleaseOut(BaseModel):
     download_url: str
     release_notes: str
     reminder_hours: int
+    open_map_min_build: int | None = None
     #: **أهذا هو الصفُّ الحاكم؟** — أعلى رقمٍ للتطبيق. **ويُحسب في الخلفية**:
     #: لوحةٌ تحسبه بفرزها هي تخالف الخادمَ أوّلَ صفحةٍ مقصوصة
     is_current: bool
@@ -68,3 +71,6 @@ class AppVersionOut(BaseModel):
     download_url: str | None = None
     release_notes: str | None = None
     reminder_hours: int | None = None
+    #: **أيُرسم MapLibre في هذا الغلاف؟** — محسوبٌ هنا من رقم الحزمة وحدِّ الصفِّ الحاكم (SPEC §١٠٥/٥).
+    #: **ولا يُشعل الخريطةَ وحدَه**: مفتاحُ `open_map_display` للسوق شرطٌ ثانٍ في التطبيق.
+    open_map: bool = False

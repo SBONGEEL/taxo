@@ -36,6 +36,8 @@ class VersionVerdict:
     download_url: str | None
     release_notes: str | None
     reminder_hours: int | None
+    #: **أيُرسم MapLibre في هذا الغلاف؟** (SPEC §١٠٥/٥) — لا سجلَّ أو لا حدَّ أو لا رقمَ = لا
+    open_map: bool = False
 
 
 #: **لا سجلَّ = لا تدخّل.** والغيابُ هنا يعطّل الحجبَ لا التطبيق.
@@ -98,7 +100,19 @@ async def verdict_for(
         download_url=release.download_url,
         release_notes=release.release_notes,
         reminder_hours=release.reminder_hours,
+        open_map=open_map_allowed(release, build),
     )
+
+
+def open_map_allowed(release: AppRelease, build: int | None) -> bool:
+    """**أيُرسم MapLibre في هذا الغلاف؟** (SPEC §١٠٥/٥، ٢٠٢٦-١١-١٦).
+
+    **بلا رقمٍ = لا**، عكسَ الحجب: الحجبُ عقوبةٌ لا تقع بالظنّ، **وهذه ميزةٌ لا تُعطى بالظنّ** — غلافٌ لا يعرف
+    رقمَه قد يكون قديماً لم يُقَس عليه المحرّك. **وبلا حدٍّ في الصفِّ الحاكم = لا**: الخريطةُ المفتوحةُ لا تبلغ
+    غلافاً حتى يُكتب في لوحة الإصدارات رقمُ أوّلِ غلافٍ قِيست عليه.
+    """
+    limit = release.open_map_min_build
+    return limit is not None and build is not None and build >= limit
 
 
 async def check_download_url(url: str) -> None:
@@ -199,6 +213,7 @@ async def create(
     release_notes: str,
     reminder_hours: int,
     confirmation: int | None,
+    open_map_min_build: int | None = None,
 ) -> AppRelease:
     """يضيف إصداراً — **بعد أن يطرق رابطَه ويستأذن مرّتين**."""
     if min_supported_build > build:
@@ -235,6 +250,7 @@ async def create(
         download_url=download_url,
         release_notes=release_notes,
         reminder_hours=reminder_hours,
+        open_map_min_build=open_map_min_build,
     )
     session.add(release)
     await session.flush()
@@ -257,6 +273,7 @@ async def update(
     release_notes: str,
     reminder_hours: int,
     confirmation: int | None,
+    open_map_min_build: int | None = None,
 ) -> dict[str, dict[str, object]]:
     """يعدّل صفّاً قائماً — **ولا يُعدَّل رقمُ الإصدار ولا تطبيقُه ولا نظامُه**.
 
@@ -288,6 +305,7 @@ async def update(
         ("download_url", download_url),
         ("release_notes", release_notes),
         ("reminder_hours", reminder_hours),
+        ("open_map_min_build", open_map_min_build),
     ):
         before = getattr(release, field)
         if before != value:

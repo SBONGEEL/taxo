@@ -18,6 +18,7 @@ import { useSyncExternalStore } from "react";
 import { reportMapDisplayFailure } from "@/api/endpoints";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
+import { useShellOpenMap } from "@/lib/update-gate";
 
 export const OPEN_MAP_FLAG = "open_map_display";
 
@@ -45,10 +46,12 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** **أتُرسم هذه الخريطةُ بالبيانات المفتوحة؟** — المفتاحُ لسوق المستخدم، وما لم تسقط في هذه الجلسة. */
+/** **أتُرسم هذه الخريطةُ بالبيانات المفتوحة؟** — المفتاحُ لسوق المستخدم، **والغلافُ عند حدِّ لوحة الإصدارات أو فوقه**
+ *  (SPEC §١٠٥/٥: الغلافُ القديمُ يبقى على Mapbox حرفاً ولو اشتعل المفتاح)، وما لم تسقط في هذه الجلسة. */
 export function useOpenMap(): boolean {
   const { user } = useSession();
   const on = useFeature(user?.country_code, OPEN_MAP_FLAG);
   const down = useSyncExternalStore(subscribe, () => failed);
-  return on && !down;
+  const shell = useShellOpenMap();
+  return on && shell && !down;
 }

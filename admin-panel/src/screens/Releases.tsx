@@ -73,6 +73,8 @@ interface Draft {
   url: string;
   notes: string;
   hours: string;
+  /** أدنى غلافٍ للخريطة المفتوحة — فارغٌ = لا غلاف */
+  openMap: string;
 }
 
 const EMPTY: Draft = {
@@ -83,6 +85,7 @@ const EMPTY: Draft = {
   url: "",
   notes: "",
   hours: "24",
+  openMap: "",
 };
 
 export function ReleasesScreen() {
@@ -140,6 +143,7 @@ export function ReleasesScreen() {
       url: row.download_url,
       notes: row.release_notes,
       hours: String(row.reminder_hours),
+      openMap: row.open_map_min_build === null ? "" : String(row.open_map_min_build),
     });
   }
   const rises = Number(draft.min) > standing;
@@ -171,6 +175,7 @@ export function ReleasesScreen() {
       download_url: draft.url.trim(),
       release_notes: draft.notes.trim(),
       reminder_hours: Number(draft.hours || "24"),
+      open_map_min_build: draft.openMap ? Number(draft.openMap) : null,
       ...(confirmation === undefined
         ? {}
         : { confirm_min_supported_build: confirmation }),
@@ -345,6 +350,25 @@ export function ReleasesScreen() {
               />
               <div className="col-span-2">
                 <Field
+                  label="أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة — فارغٌ: لا غلاف"
+                  name="open_map_min_build"
+                  dir="ltr"
+                  inputMode="numeric"
+                  value={draft.openMap}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      openMap: event.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                />
+                <p className="mt-4 text-11.5 text-muted">
+                  الغلافُ يحمّل الواجهةَ من الخادم، فمفتاحُ «الخريطة المفتوحة» في الإعدادات يصل كلَّ غلاف. هذا الرقمُ يحصرها في
+                  الأغلفة التي قِيست عليها؛ وما تحته يبقى على Mapbox. والمتصفّحُ يحكمه المفتاحُ وحدَه.
+                </p>
+              </div>
+              <div className="col-span-2">
+                <Field
                   label="رابطُ زرِّ «تحديث» — صفحةُ التحميل، أو صفحةُ المتجر حين يُنشر فيه"
                   name="download_url"
                   dir="ltr"
@@ -421,6 +445,11 @@ export function ReleasesScreen() {
               <span className="flex items-center gap-7 text-12.5 text-ink">
                 {APP_LABEL[row.app]}
                 {row.is_current ? <Badge tone="ok">الحاكم</Badge> : null}
+                {row.open_map_min_build !== null ? (
+                  <Badge tone="ink">
+                    {`الخريطةُ المفتوحة ≥ ${digits(String(row.open_map_min_build))}`}
+                  </Badge>
+                ) : null}
               </span>
               <span className="text-12.5 text-ink">
                 {PLATFORM_LABEL[row.platform]}

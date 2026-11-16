@@ -530,3 +530,59 @@ async def test_the_first_ios_row_asks_twice_even_after_android(
         client, admin_headers, platform="ios", build=10, min_supported_build=10
     )
     assert accepted.status_code == 201, accepted.text
+
+
+# ------------------------------------------- الخريطةُ المفتوحة ورقمُ الغلاف (SPEC §١٠٥/٥)
+
+
+async def test_open_map_needs_a_written_bar_and_a_known_build(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**الخريطةُ المفتوحةُ ميزةٌ لا تُعطى بالظنّ** — عكسَ الحجب: لا حدَّ مكتوباً = لا غلاف، ولا رقمَ = لا.
+
+    الغلافُ يحمّل الواجهةَ من خادمنا، **فالمفتاحُ وحدَه يصل كلَّ غلافٍ قديم** — والفرقُ رقمُ البناء وحدَه.
+    """
+    assert (await _version(client, "rider", 500))["open_map"] is False  # لا سجلّ
+    created = await _create(client, admin_headers, build=400, min_supported_build=380)
+    assert created.status_code == 201, created.text
+    assert created.json()["open_map_min_build"] is None
+    assert (await _version(client, "rider", 400))["open_map"] is False  # لا حدّ
+
+    release_id = created.json()["id"]
+    edited = await client.put(
+        f"/admin/releases/{release_id}",
+        json=_body(build=400, min_supported_build=380, open_map_min_build=395),
+        headers=admin_headers,
+    )
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["open_map_min_build"] == 395
+
+    assert (await _version(client, "rider", 395))["open_map"] is True
+    assert (await _version(client, "rider", 410))["open_map"] is True
+    assert (await _version(client, "rider", 394))["open_map"] is False
+    assert (await _version(client, "rider", None))["open_map"] is False
+    # **ولا يمسّ الحجب**: الغلافُ ٣٩٤ اختياريٌّ كما كان
+    assert (await _version(client, "rider", 394))["state"] == "optional"
+
+    audit = (
+        await client.get("/admin/releases", headers=admin_headers)
+    ).json()
+    assert audit[0]["open_map_min_build"] == 395
+
+
+async def test_open_map_bar_is_per_app(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**حدُّ الراكب لا يفتح الخريطةَ للكبتن** — لكلِّ تطبيقٍ غلافُه وأرقامُه."""
+    assert (
+        await _create(client, admin_headers, build=400, min_supported_build=380, open_map_min_build=390)
+    ).status_code == 201
+    assert (await _version(client, "rider", 400))["open_map"] is True
+    assert (await _version(client, "driver", 400))["open_map"] is False
+
+
+async def test_open_map_bar_is_positive(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    refused = await _create(client, admin_headers, open_map_min_build=0)
+    assert refused.status_code == 422

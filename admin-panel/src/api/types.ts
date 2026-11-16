@@ -2280,6 +2280,8 @@ export interface AppRelease {
   download_url: string;
   release_notes: string;
   reminder_hours: number;
+  /** **أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة** — فارغٌ = لا غلاف (SPEC §١٠٥/٥). */
+  open_map_min_build: number | null;
   /** **أهذا هو الصفُّ الحاكم؟** — محسوبٌ في الخلفية لا بفرزِ صفحةٍ مقصوصة. */
   is_current: boolean;
   created_at: string;
@@ -2305,6 +2307,8 @@ export interface AppVersion {
   release_notes: string | null;
   /** كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **من اللوحة لا من التطبيق**. */
   reminder_hours: number | null;
+  /** **أيُرسم MapLibre في هذا الغلاف؟** — محسوبٌ في الخلفية من رقم الحزمة وحدِّ لوحة الإصدارات (SPEC §١٠٥/٥). */
+  open_map: boolean;
 }
 
 // ------------------------------------------------ السياساتُ والشروط (البند ١٠)

@@ -53,7 +53,7 @@
 
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
 import { getAppVersion } from "@/api/endpoints";
@@ -74,6 +74,43 @@ const SNOOZE_KEY = "taxo.update.snoozed_until";
 /** **كم يُنتظر الحكمُ قبل رسم التطبيق على الهاتف** — سؤالٌ عامٌّ بلا جلسةٍ يجيب
  *  في أعشار الثانية، **وشبكةٌ أبطأُ من هذا لا تحبس أحداً**. */
 const WAIT_MS = 2000;
+
+/** **أيُرسم MapLibre في هذا الغلاف؟** (SPEC §١٠٥/٥، ٢٠٢٦-١١-١٦) — من حكم الإقلاع نفسِه (`open_map`)، والحدُّ رقمٌ في
+ *  لوحة الإصدارات. **الغلافُ يحمّل الواجهةَ من خادمنا، فمفتاحُ السوق وحدَه يصل كلَّ غلافٍ قديم** — ورقمُ البناء هو الفرق.
+ *
+ *  **ويُحفظ لإقلاعٍ قادم**: بلا حفظٍ تُرسم Mapbox ثمّ تُبدَّل بعد الجواب في كلِّ فتحة. **وسؤالٌ ساقطٌ لا يمحو المحفوظ**،
+ *  كما لا يمحو حكماً قائماً. **وفي المتصفّح لا غلاف** — فيحكمه مفتاحُ السوق وحدَه. */
+const OPEN_MAP_KEY = "taxo.shell.open_map";
+const openMapListeners = new Set<() => void>();
+let shellOpenMap = (() => {
+  try {
+    return localStorage.getItem(OPEN_MAP_KEY) === "1";
+  } catch {
+    return false;
+  }
+})();
+
+function rememberShellOpenMap(allowed: boolean): void {
+  if (allowed === shellOpenMap) return;
+  shellOpenMap = allowed;
+  try {
+    localStorage.setItem(OPEN_MAP_KEY, allowed ? "1" : "0");
+  } catch {
+    // تخزينٌ محجوب — يُسأل ثانيةً في الإقلاع القادم، ولا تسقط شاشة
+  }
+  for (const listener of openMapListeners) listener();
+}
+
+function subscribeOpenMap(listener: () => void): () => void {
+  openMapListeners.add(listener);
+  return () => openMapListeners.delete(listener);
+}
+
+/** **أيأذن الغلافُ بالخريطة المفتوحة؟** — المتصفّحُ نعم دائماً، والغلافُ بحكم رقمه. */
+export function useShellOpenMap(): boolean {
+  const allowed = useSyncExternalStore(subscribeOpenMap, () => shellOpenMap);
+  return !Capacitor.isNativePlatform() || allowed;
+}
 
 function snoozedUntil(): number {
   try {
@@ -134,7 +171,10 @@ export function UpdateGate({
       void ask(app).then((answer) => {
         if (!alive) return;
         // **سؤالٌ ساقطٌ لا يمحو حكماً قائماً** — ومن حُجب يبقى محجوباً
-        if (answer !== null) setVerdict(answer);
+        if (answer !== null) {
+          setVerdict(answer);
+          rememberShellOpenMap(answer.open_map === true);
+        }
         setSettled(true);
       });
     };

@@ -1992,6 +1992,7 @@ export const createRelease = (body: {
   download_url: string;
   release_notes: string;
   reminder_hours: number;
+  open_map_min_build: number | null;
   confirm_min_supported_build?: number;
 }) => api.post<AppRelease>("/admin/releases", body);
 
@@ -2005,6 +2006,7 @@ export const updateRelease = (
     download_url: string;
     release_notes: string;
     reminder_hours: number;
+    open_map_min_build: number | null;
     confirm_min_supported_build?: number;
   },
 ) => api.put<AppRelease>(`/admin/releases/${releaseId}`, body);
