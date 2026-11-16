@@ -25,10 +25,14 @@ import { useCallback, useEffect, useState } from "react";
 
 import { alertsAvailable, permissionStatus, type PermissionStatus } from "@/lib/offer-alert";
 import { Icon } from "@/taxo2";
-import { ROWS, type Row } from "@/lib/permission-rows"; import { tr } from "@/lib/i18n";
+import { ROWS, type Row } from "@/lib/permission-rows";
+import { usePermissionsReport } from "@/lib/permissions-report";
+import type { CountryCode } from "@/api/types"; import { tr } from "@/lib/i18n";
 
-export function PermissionNotice() {
+export function PermissionNotice({ country }: { country?: CountryCode } = {}) {
   const [state, setState] = useState<PermissionStatus | null>(null);
+  // **بلاغُ المطفأ إلى اللوحة** (SPEC §١٠٣/٢٨) — خلف `permissions_center`، ويُكتب حين تتغيّر الحالُ وحدَها
+  usePermissionsReport(country, state);
 
   const read = useCallback(async () => {
     setState(await permissionStatus());

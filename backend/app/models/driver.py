@@ -19,6 +19,7 @@ from sqlalchemy import (
     text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -61,6 +62,10 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     is_online: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, index=True
     )
+    # **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** كما بلّغها مركزُ الأذونات (SPEC §١٠٣/٢٨) — قراءةٌ للمشرف وحدَه، **لا تحجب ولا تعاقب**.
+    # `null` لم يُبلَّغ قطّ (غلافٌ أقدم أو مفتاحٌ مطفأ)، و`[]` كلُّها مشتعلة — حالتان لا يحملهما قائمةٌ وحدَها
+    permissions_off: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    permissions_reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # `use_alter`: بين الجدولين مرجع متبادل (rides.driver_id هنا وهناك)،
     # فيُنشأ هذا القيد بعد الجدولين لا معهما
     current_ride_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -30,6 +30,9 @@ import {
   type PermissionStatus,
 } from "@/lib/offer-alert";
 import { ROWS } from "@/lib/permission-rows";
+import { useFeature } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
+import { PERMISSION_META, openPermission, readPermissions, type OpenedAt } from "@/lib/permissions-center";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -66,6 +69,17 @@ export function PermissionsScreen() {
     document.addEventListener("visibilitychange", onShow);
     return () => document.removeEventListener("visibilitychange", onShow);
   }, [read]);
+
+  // **التشغيلُ التلقائيُّ في صفحة المصنّع** (SPEC §١٠٣/٢٨) — خلف `permissions_center`، ولا يظهر إلا حيث يعرف الملحقُ صفحةَ مصنّعه.
+  // **ولا يُدّعى ضبطُه**: حالُه «لا يُعرف» كما كان، والزرُّ يفتح الصفحةَ ويقول أين وقع الفتح.
+  const { profile } = useDriver();
+  const centerOn = useFeature(profile?.user.country_code, "permissions_center");
+  const [autostart, setAutostart] = useState(false);
+  const [openedAt, setOpenedAt] = useState<OpenedAt | null>(null);
+  useEffect(() => {
+    if (!centerOn) return;
+    void readPermissions().then((rows) => setAutostart(rows.some((row) => row.key === "autostart")));
+  }, [centerOn]);
 
   const missing = state
     ? ROWS.filter((row) => !row.read(state) && row.severity === "blocking")
@@ -169,6 +183,33 @@ export function PermissionsScreen() {
                 **والسطرُ مشروطٌ بالحقل لا مكتوبٌ دائماً**: يومَ يفتح أندرويد
                 باباً يقرأ إعداداتِ المصنّع يصير الحقلُ `true` **فيختفي السطرُ
                 من نفسه** — ونصٌّ ثابتٌ كان سيبقى يعتذر عن شيءٍ صار معروفاً. */}
+            {centerOn && autostart ? (
+              <div className="t2-perm-row">
+                <div className="t2-perm-top">
+                  <span className="t2-ax-tile warn" aria-hidden="true">
+                    <Icon name="battery_charging_full" />
+                  </span>
+                  <span className="t2-perm-label">{tr(PERMISSION_META.autostart.label)}</span>
+                  <span className="t2-chip warn">{tr("تحقّق منه")}</span>
+                </div>
+                <p className="t2-perm-why">{tr(PERMISSION_META.autostart.why.driver)}</p>
+                <button
+                  type="button"
+                  className="t2-perm-open"
+                  onClick={() => void openPermission("autostart").then(setOpenedAt)}
+                >
+                  {tr("افتح صفحة التشغيل التلقائي")}
+                </button>
+                {openedAt === "details" || openedAt === "none" ? (
+                  <ol className="t2-perm-why">
+                    {PERMISSION_META.autostart.steps.map((step) => (
+                      <li key={step}>{tr(step)}</li>
+                    ))}
+                  </ol>
+                ) : null}
+              </div>
+            ) : null}
+
             {!state.manufacturerSettingsKnown ? (
               <p className="t2-ax-fine t2-perm-maker">
                 <Icon name="info" />

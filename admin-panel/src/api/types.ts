@@ -360,6 +360,9 @@ export interface AdminDriverRow {
   /** **«معتمد دون وثائق»** (البند ١) — للمشرفين وحدَهم، ومعه مهلةُ الرفع. */
   exceptional: boolean;
   documents_deadline_at: string | null;
+  // **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** (SPEC §١٠٣/٢٨) — `null` لم يُبلَّغ، و`[]` كلُّها مشتعلة
+  permissions_off?: string[] | null;
+  permissions_reported_at?: string | null;
   created_at: string;
 }
 
@@ -645,6 +648,7 @@ export type FeatureKey =
   | "rider_order_sheet_v2"
   | "icons_v2"
   | "places_search_v2"
+  | "permissions_center"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

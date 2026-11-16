@@ -33,6 +33,8 @@ import {
   useScheduledRides,
 } from "@/lib/bookings";
 import { usePlaces } from "@/lib/places";
+import { useFeature } from "@/lib/config";
+import { centerAvailable } from "@/lib/permissions-center";
 import { useSession } from "@/lib/session";
 import { BecomeDriverButton } from "@/components/t2/BecomeButton";
 import { openAppTour } from "@/lib/app-tour";
@@ -60,6 +62,8 @@ export function AccountT2Screen() {
   const commuteService = useCommuteService();
   const hasCommutes = useHasCommutes();
   const intercity = useIntercityService();
+  // **«الأذونات»** (SPEC §١٠٣/٢٨) — خلف مفتاحه **وفي غلافٍ يحمل الملحق**: صفٌّ يفتح صفحةً لا تقرأ شيئاً يُقرأ عطباً
+  const permissionsOn = useFeature(user?.country_code, "permissions_center") && centerAvailable();
   const hasIntercity = useHasIntercityBookings();
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   // **الأرقامُ من الخلفية** (§٦١-ط/٢) — وحتى تصل، أو إن تعثّرت، «—» لا صفرٌ يُقرأ خبراً
@@ -98,6 +102,7 @@ export function AccountT2Screen() {
     { to: "/account/referrals", icon: "redeem", label: tr("ادعُ صديقك") },
     { to: "/account/notifications", icon: "notifications", label: tr("الإشعارات") },
     { to: "/account/settings", icon: "settings", label: tr("الإعدادات") },
+    ...(permissionsOn ? [{ to: "/account/permissions", icon: "verified_user", label: tr("الأذونات") }] : []),
     // **«المساعدة والدعم» قبل «الشروط والخصوصية» كما رُسمتا في R15** (§٦٢-ج/١٦) — الأسئلةُ وبريدُ الدعم من إعدادات الموقع
     // **«أرسل ملاحظة»** (SPEC §٧٦/٤) — قبل المساعدة: رأيٌ أو خللٌ يصل الفريقَ مباشرةً، ومعه الإصدار
     { to: "/account/feedback", icon: "rate_review", label: tr("أرسل ملاحظة") },

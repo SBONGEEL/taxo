@@ -330,6 +330,9 @@ export const setDestination = (payload: { lat: number; lng: number; label: strin
   api.put<DriverDestination>("/drivers/me/destination", payload);
 export const clearDestination = () => api.del<void>("/drivers/me/destination");
 
+/** **بلاغُ مركز الأذونات** (SPEC §١٠٣/٢٨) — الأساسيّةُ المطفأةُ الآن، ليراها المشرفُ في درجه. **قراءةٌ لا قرار.** */
+export const reportPermissions = (payload: { off: string[] }) => api.put<void>("/drivers/me/permissions", payload);
+
 /** **خريطةُ الطلب** (البند ١٨) — خلايا بنحو كيلومترٍ آخرَ نصف ساعة، **بمستوىً ١…٣ لا عدد**. */
 export const getHeatmap = () => api.get<{ lat: number; lng: number; level: number }[]>("/drivers/me/heatmap");
 

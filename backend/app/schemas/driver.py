@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.config import settings
 from app.models.enums import (
@@ -433,6 +433,9 @@ class AdminDriverRow(BaseModel):
     # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — للمشرفين وحدَهم، ولذلك هنا لا في `DriverOut` الذي يقرؤه الكبتن
     exceptional: bool = False
     documents_deadline_at: datetime | None = None
+    # **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** (SPEC §١٠٣/٢٨) — `null` لم يُبلَّغ، و`[]` كلُّها مشتعلة. قراءةٌ لا قرار
+    permissions_off: list[str] | None = None
+    permissions_reported_at: datetime | None = None
     created_at: datetime
 
 
@@ -611,3 +614,25 @@ class PresenceTokenOut(BaseModel):
 
     token: str
     expires_in: int
+
+
+#: **الأذوناتُ التي يُبلَّغ عنها** — مفاتيحُ مركز الأذونات في التطبيق (`driver-app/src/lib/permissions.ts`)، **ولا غيرها**:
+#: مفتاحٌ مجهولٌ يُردّ لا يُخزَّن، فلا يصير العمودُ مخزناً لما يكتبه أيُّ أحد
+PERMISSION_KEYS = frozenset(
+    {"location", "location_background", "notifications", "overlay", "battery", "autostart", "full_screen", "microphone"}
+)
+
+
+class DriverPermissionsIn(BaseModel):
+    """بلاغُ مركز الأذونات: ما أُطفئ من الأساسيّة الآن (SPEC §١٠٣/٢٨). **قراءةٌ للمشرف، لا قرارَ يُبنى عليه آليّاً.**"""
+
+    off: list[str] = Field(default_factory=list, max_length=len(PERMISSION_KEYS))
+    build: int | None = Field(default=None, ge=1)
+
+    @field_validator("off")
+    @classmethod
+    def _known(cls, value: list[str]) -> list[str]:
+        unknown = [key for key in value if key not in PERMISSION_KEYS]
+        if unknown:
+            raise ValueError(f"إذنٌ غيرُ معروف: {unknown[0]}")
+        return sorted(set(value))

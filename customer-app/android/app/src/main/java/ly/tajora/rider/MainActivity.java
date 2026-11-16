@@ -18,6 +18,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SecureFlushPlugin.class);
         // **تقييمُ المتجر داخل التطبيق** (البند ٦) — النافذةُ الأصليّة من Google Play
         registerPlugin(InAppReviewPlugin.class);
+        // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
+        registerPlugin(PermissionsPlugin.class);
         // **الطلبُ بالصوت** (البند ١٠) — نافذةُ التعرّف في الهاتف، بلا إذن ميكروفون
         registerPlugin(SpeechInputPlugin.class);
         // **مُحيلُ التثبيت** — رمزُ الدعوة لمن ثبّت من رابط صديق (`lib/invite.ts`)

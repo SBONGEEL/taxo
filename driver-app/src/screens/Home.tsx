@@ -692,7 +692,7 @@ export function HomeScreen() {
 
                 **ومكانُه فوق زرِّ الاستقبال كما كان**: هناك يقرؤه وهو يقرّر
                 أن يعمل، لا في شاشةٍ يفتحها باحثاً عن عطل. */}
-            <PermissionNotice />
+            <PermissionNotice country={user?.country_code} />
 
             {error || actionError ? (
               <div className="mb-10">

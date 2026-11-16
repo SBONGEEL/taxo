@@ -403,7 +403,7 @@ export function HomeT2Screen() {
               <span className="t2-hm-pref-go">{tr("تغيير")}</span>
             </button>
           ) : null}
-          <PermissionNotice />
+          <PermissionNotice country={user?.country_code} />
           {error || actionError ? (
             <p className="t2-note danger">
               <Icon name="error" fill />

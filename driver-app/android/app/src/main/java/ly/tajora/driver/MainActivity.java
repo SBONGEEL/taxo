@@ -21,6 +21,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SecureFlushPlugin.class);
         // **تقييمُ المتجر داخل التطبيق** (البند ٦) — النافذةُ الأصليّة من Google Play
         registerPlugin(InAppReviewPlugin.class);
+        // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
+        registerPlugin(PermissionsPlugin.class);
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);

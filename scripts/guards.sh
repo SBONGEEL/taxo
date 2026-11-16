@@ -79,6 +79,7 @@ run "deploy-ci-gate"        bash scripts/tests/deploy-ci-gate.test.sh
 # **ولا يموت المشغّلُ صامتاً** (٢٠٢٦-١١-١٧): رفعُ ١٦/١١ مات بعد «الصحّة عبر النفق» بلا سطر — إسنادٌ من `$(curl …|…)` ساقطٍ تحت
 # `pipefail` يقتل قبل `die`. يُقاس السلوكُ في الاتجاهين (الشكلُ يموت صامتاً بلا الحارس، ويُسمّى به) — بلا شبكة.
 run "deploy-silent-exit"    bash scripts/tests/deploy-silent-exit.test.sh
+run "permissions-plugin"    node tools/check-permissions-plugin.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

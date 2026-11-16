@@ -49,6 +49,7 @@ from app.schemas.driver import (
     DriverPointsIn,
     PointsAckOut,
     DriverOut,
+    DriverPermissionsIn,
     DriverProfileOut,
     DriverUpdate,
     NearbyDriverOut,
@@ -345,6 +346,22 @@ async def set_my_destination(
         session, redis, driver_id=driver.id, country=user.country_code, lat=payload.lat, lng=payload.lng, label=payload.label
     )
     return await _destination_out(session, redis, driver.id, user.country_code)
+
+
+@router.put("/me/permissions", status_code=status.HTTP_204_NO_CONTENT)
+async def report_my_permissions(payload: DriverPermissionsIn, driver: CurrentDriver, session: DbSession) -> Response:
+    """**بلاغُ مركز الأذونات** (SPEC §١٠٣ المرحلة A/28) — الأساسيّةُ المطفأةُ الآن على هاتفه، **ليراها المشرفُ في درجه**.
+
+    قراءةٌ لا قرار: **لا يحجب ولا يعاقب ولا يُطفئ استقبالاً** — الكبتنُ يرى الشارةَ نفسَها في رئيسيّته ويصلحها بزرّ.
+    والغلافُ يبلّغ عند كلِّ تغيّرٍ في الحال، فالكتابةُ نادرة؛ ولا مالَ ولا قفلَ صفٍّ (لا انتقالَ حالٍ يُتحقَّق منه).
+    """
+    from datetime import UTC
+    from datetime import datetime as _dt
+
+    driver.permissions_off = payload.off
+    driver.permissions_reported_at = _dt.now(UTC)
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/me/destination", status_code=status.HTTP_204_NO_CONTENT)

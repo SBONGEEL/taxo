@@ -15,6 +15,27 @@ import {
   openOverlaySettings,
   type PermissionStatus,
 } from "@/lib/offer-alert"; import { tr } from "@/lib/i18n";
+import { centerAvailable, openPermission, type PermissionKey } from "@/lib/permissions-center";
+
+/** **الصفحةُ الدقيقةُ إن حملها الغلاف** (SPEC §١٠٣/٢٨): ملحقُ `Permissions` يفتح صفحةَ الإشعارات أو البطارية نفسَها،
+ *  **والغلافُ الأقدمُ يبقى على تفاصيل التطبيق** كما كان — لا يتغيّر عليه حرف. */
+function exact(key: PermissionKey, fallback: () => Promise<void>): () => Promise<void> {
+  return async () => {
+    if (centerAvailable() && (await openPermission(key)) !== "none") return;
+    await fallback();
+  };
+}
+
+/** **مفتاحُ كلِّ صفٍّ في البلاغ** — بأسماء مركز الأذونات التي تقبلها الخلفية (`PERMISSION_KEYS`) */
+export const REPORT_KEY: Record<string, PermissionKey> = {
+  location: "location",
+  notifications: "notifications",
+  offerChannel: "notifications",
+  backgroundLocation: "location_background",
+  batteryUnrestricted: "battery",
+  overlay: "overlay",
+  fullScreenIntent: "full_screen",
+};
 
 export type Severity = "blocking" | "advisory";
 
@@ -38,7 +59,7 @@ export const ROWS: Row[] = [
     label: tr("الموقع"),
     why: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق."),
     severity: "blocking",
-    open: openAppSettings,
+    open: exact("location", openAppSettings),
   },
   {
     key: "notifications",
@@ -46,7 +67,7 @@ export const ROWS: Row[] = [
     label: tr("الإشعارات"),
     why: tr("بغيرها لا تصلك بطاقة الطلب وأنت خارج التطبيق."),
     severity: "blocking",
-    open: openAppSettings,
+    open: exact("notifications", openAppSettings),
   },
   {
     key: "offerChannel",
@@ -54,7 +75,7 @@ export const ROWS: Row[] = [
     label: tr("قناة «طلبات الرحلات»"),
     why: tr("قناة الطلبات وحدها قد تكون مطفأة والإشعارات مفتوحة — فيصمت الطلب بلا سبب ظاهر."),
     severity: "blocking",
-    open: openAppSettings,
+    open: exact("notifications", openAppSettings),
   },
   {
     key: "backgroundLocation",
@@ -62,7 +83,7 @@ export const ROWS: Row[] = [
     label: tr("الموقع في الخلفية"),
     why: tr("بغيره يتوقف بثّ موقعك حين تغلق التطبيق، فتخرج من التوزيع وأنت تعمل."),
     severity: "blocking",
-    open: openAppSettings,
+    open: exact("location_background", openAppSettings),
   },
   {
     key: "batteryUnrestricted",
@@ -70,7 +91,7 @@ export const ROWS: Row[] = [
     label: tr("استثناء من توفير الطاقة"),
     why: tr("بغيره يوقف النظام خدمة الموقع بعد دقائق من إطفاء الشاشة — فتبدو متصلاً وأنت غائب."),
     severity: "blocking",
-    open: openAppSettings,
+    open: exact("battery", openAppSettings),
   },
   {
     key: "overlay",
@@ -78,7 +99,7 @@ export const ROWS: Row[] = [
     label: tr("الرسم فوق التطبيقات"),
     why: tr("به تظهر بطاقة الطلب فوق أي شاشة وأنت تقود. وبدونه يظهر إشعار يملأ الشاشة بدلاً منها."),
     severity: "advisory",
-    open: openOverlaySettings,
+    open: exact("overlay", openOverlaySettings),
   },
   {
     key: "fullScreenIntent",
@@ -86,6 +107,6 @@ export const ROWS: Row[] = [
     label: tr("إشعار يملأ الشاشة"),
     why: tr("هو الطريق البديل حين لا تُمنح النافذة العائمة. وأندرويد الحديث ينزعه تلقائياً عن غير تطبيقات المكالمات، فيُمنح باليد."),
     severity: "advisory",
-    open: openFullScreenSettings,
+    open: exact("full_screen", openFullScreenSettings),
   },
 ];

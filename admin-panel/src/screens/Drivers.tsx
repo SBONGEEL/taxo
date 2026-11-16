@@ -30,6 +30,7 @@
  *   `users`، فلا يحمله الردُّ ولا تخمّنه الشاشة.
  */
 
+import { DriverPermissions } from "@/components/DriverPermissions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -701,6 +702,8 @@ function DriverDrawer({
             آخر. **ولـ`admin` وحدَه**، فالقسمُ يختفي عن الدعم بنفسه */}
         <ActiveRideSection driverId={row.driver_id} />
         <VehiclesSection driverId={row.driver_id} />
+        {/* **أذوناتُ هاتفه** (SPEC §١٠٣/٢٨) — قراءةٌ لا قرار */}
+        <DriverPermissions off={row.permissions_off} reportedAt={row.permissions_reported_at} />
         <SubscriptionSection driverId={row.driver_id} />
         {/* **وزرُّ التجميد هنا** (1-أ/6): التجميدُ صار صفةَ محفظةٍ، وزرُّ
             درج الراكب يجمّد محفظةَ الراكب وحدَها — فبغير هذا لا طريقَ في

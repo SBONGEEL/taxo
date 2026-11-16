@@ -143,6 +143,10 @@ const DeleteAccountScreen = lazy(() =>
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
+// **«الأذونات»** (SPEC §١٠٣ المرحلة A/28) — يُبلغ من الحساب خلف `permissions_center`
+const PermissionsScreen = lazy(() =>
+  import("@/screens/Permissions").then((m) => ({ default: m.PermissionsScreen })),
+);
 const SettingsScreen = lazy(() =>
   import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
 );
@@ -791,6 +795,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <SettingsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/permissions"
+                        element={
+                          <Guarded>
+                            <PermissionsScreen />
                           </Guarded>
                         }
                       />
