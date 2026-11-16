@@ -9,6 +9,7 @@
  */
 
 import { useRide } from "@/lib/ride";
+import { Icon } from "@/taxo2";
 
 import "@/taxo2"; import { tr } from "@/lib/i18n";
 
@@ -21,16 +22,14 @@ export function Toasts() {
       {toasts.map((toast) => (
         <div key={toast.id} className="t2-notice" role="status">
           <span className="t2-notice-icon" aria-hidden="true">
-            <span className="t2-icon">notifications</span>
+            <Icon name="notifications" />
           </span>
           <div className="t2-notice-main">
             <p className="t2-notice-title">{toast.title}</p>
             {toast.body ? <p className="t2-notice-body">{toast.body}</p> : null}
           </div>
           <button type="button" className="t2-notice-close" onClick={() => dismissToast(toast.id)} aria-label={tr("إغلاق")}>
-            <span className="t2-icon" aria-hidden="true">
-              close
-            </span>
+            <Icon name="close" />
           </button>
         </div>
       ))}

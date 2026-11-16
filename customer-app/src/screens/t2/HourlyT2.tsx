@@ -109,7 +109,7 @@ export function HourlySheetT2({
               onClick={() => onChange({ ...draft, prepay: option.value })}
             >
               <span className="t2-cat-icon">
-                <span className="t2-icon" aria-hidden="true">{option.icon}</span>
+                <Icon name={option.icon} />
               </span>
               <span className="t2-cat-main">
                 <span className="t2-cat-name">{option.label}</span>
@@ -148,7 +148,7 @@ export function HourlyTrackT2({
     <div className="t2-fo-ride">
       <div className="t2-fo-ride-card">
         <div className="t2-fo-ride-name">
-          <span className="t2-icon" aria-hidden="true">timer</span>
+          <Icon name="timer" />
           <span>
             <b>{tr("بالساعة")}</b> · {hoursLabel(ride.hourly_hours)}
             {ride.hourly_included_km !== null ? tr(" · حتى {0} كم", { 0: ride.hourly_included_km }) : ""}
@@ -156,7 +156,7 @@ export function HourlyTrackT2({
         </div>
         {before && prepay ? (
           <div className="t2-fo-ride-payer">
-            <span className="t2-icon" aria-hidden="true">{prepay === "cash" ? "payments" : "account_balance_wallet"}</span>
+            <Icon name={prepay === "cash" ? "payments" : "account_balance_wallet"} />
             <span>
               {prepay === "cash"
                 ? tr("تدفع الساعاتِ المحجوزة نقداً للكبتن عند البدء")
@@ -173,7 +173,7 @@ export function HourlyTrackT2({
           aria-busy={prepaySwitch.busy}
           onClick={prepaySwitch.toggle}
         >
-          <span className="t2-icon" aria-hidden="true">swap_horiz</span>
+          <Icon name="swap_horiz" />
           {other === "cash" ? tr("ادفع الساعاتِ نقداً بدل المحفظة") : tr("ادفعها من المحفظة بدل النقد")}
         </button>
       ) : null}

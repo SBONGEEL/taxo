@@ -187,7 +187,7 @@ export function RidesT2Screen() {
             return (
               <Link key={booking.id} to="/account/bookings" className="t2-booking">
                 <span className="t2-booking-when">
-                  <span className="t2-icon" aria-hidden="true">event_upcoming</span>
+                  <Icon name="event_upcoming" />
                   {/* **حلّ وقتُه وتطلبه الدورةُ في دقيقتها** — كحجزٍ اختارت له «أي كبتن» (§٦٤-ج/٤-١) */}
                   {requestingSoon(booking) ? (
                     tr("نطلبها لك خلال دقيقة")

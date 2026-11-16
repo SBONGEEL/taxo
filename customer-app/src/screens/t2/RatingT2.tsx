@@ -30,6 +30,7 @@ import { currencyLabel, formatAmount, formatDistance, formatMoney, formatTime } 
 import { fareLineRows } from "@/lib/fareLines";
 
 import "@/taxo2";
+import { Celebrate, Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** وسومُ R10 بترتيب اللوحة — **التسميةُ هنا والمفتاحُ من الخلفية** (`RatingTag`). */
@@ -130,9 +131,10 @@ export function RatingT2Screen() {
 
   return (
     <div className="t2 t2-r10">
+      <Celebrate />
       <div className="t2-r10-head">
         <span className="t2-r10-check" aria-hidden="true">
-          <span className="t2-icon">check</span>
+          <Icon name="check" />
         </span>
         <div className="t2-r10-head-main">
           <h1 className="t2-r10-title">{arrivedTitle(user?.gender)}</h1>
@@ -167,7 +169,7 @@ export function RatingT2Screen() {
             </div>
             {payLabel ? (
               <span className="t2-r10-pay">
-                <span className="t2-icon" aria-hidden="true">payments</span>
+                <Icon name="payments" />
                 {payLabel}
               </span>
             ) : null}
@@ -203,7 +205,7 @@ export function RatingT2Screen() {
             className={value <= r.stars ? "t2-r10-star on" : "t2-r10-star"}
             onClick={() => r.setStars(value)}
           >
-            <span className="t2-icon" aria-hidden="true">star</span>
+            <Icon name="star" />
           </button>
         ))}
       </div>

@@ -13,6 +13,7 @@ import type { SavedPlace } from "@/api/types";
 
 import { SheetT2 } from "./SheetT2";
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 export function MapHeaderT2({
@@ -38,7 +39,7 @@ export function MapHeaderT2({
     return (
       <div className="t2 t2-maphead">
         <button type="button" className="t2-mapbtn" onClick={onBack} aria-label={tr("رجوع")}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
       </div>
     );
@@ -50,7 +51,7 @@ export function MapHeaderT2({
       </button>
       <span className="t2-maphead-gap" />
       <button type="button" className="t2-mapbtn" onClick={onOpenNotifications} aria-label={tr("الإشعارات")}>
-        <span className="t2-icon" aria-hidden="true">notifications</span>
+        <Icon name="notifications" />
         {unread ? <span className="t2-home-dot" /> : null}
       </button>
       <button
@@ -59,7 +60,7 @@ export function MapHeaderT2({
         onClick={onToggleTheme}
         aria-label={dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
       >
-        <span className="t2-icon" aria-hidden="true">{dark ? "light_mode" : "dark_mode"}</span>
+        <Icon name={dark ? "light_mode" : "dark_mode"} />
       </button>
     </div>
   );
@@ -68,7 +69,7 @@ export function MapHeaderT2({
 export function LocateButtonT2({ onLocate }: { onLocate: () => void }) {
   return (
     <button type="button" className="t2 t2-mapbtn t2-locate" onClick={onLocate} aria-label={tr("موقعي الحالي")}>
-      <span className="t2-icon" aria-hidden="true">my_location</span>
+      <Icon name="my_location" />
     </button>
   );
 }
@@ -106,7 +107,7 @@ export function PickingSheetT2({
       <p className="t2-picking-address">{loading ? tr("نقرأ العنوان…") : (address ?? tr("حرّك الخريطة لقراءة العنوان"))}</p>
       {onSearch ? (
         <button type="button" className="t2-picking-search" onClick={onSearch}>
-          <span className="t2-icon" aria-hidden="true">search</span>
+          <Icon name="search" />
           <span>{tr("ابحث عن الوجهة بالاسم")}</span>
         </button>
       ) : null}
@@ -141,21 +142,21 @@ export function WhereToSheetT2({
     <SheetT2 floating>
       <p className="t2-whereto-title">{tr("إلى أين؟")}</p>
       <button type="button" className="t2-whereto-field" onClick={onSearch}>
-        <span className="t2-icon" aria-hidden="true">search</span>
+        <Icon name="search" />
         <span>{tr("ابحث عن وجهتك أو حدّدها بالدبوس")}</span>
       </button>
       {places.length > 0 ? (
         <div className="t2-home-places">
           {places.slice(0, 2).map((place) => (
             <button key={place.id} type="button" className="t2-home-chip" onClick={() => onPickPlace(place)}>
-              <span className="t2-icon" aria-hidden="true">star</span>
+              <Icon name="star" />
               <span>{place.label}</span>
             </button>
           ))}
         </div>
       ) : null}
       <button type="button" className="t2-whereto-pickup" onClick={onChangePickup}>
-        <span className="t2-icon fill" aria-hidden="true">location_on</span>
+        <Icon name="location_on" fill />
         <span className="t2-whereto-pickup-main">
           <span className="t2-route-label">{tr("نقطة الانطلاق")}</span>
           <span className="t2-route-value">{pickupLabel}</span>

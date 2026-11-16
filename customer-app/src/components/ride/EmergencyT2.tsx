@@ -13,6 +13,7 @@ import type { CountryCode } from "@/api/types";
 import { tr } from "@/lib/i18n";
 
 import "./emergency.css";
+import { Icon } from "@/taxo2";
 
 function here(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((resolve) => {
@@ -58,9 +59,9 @@ export function EmergencyRowT2({ rideId, country }: { rideId: string; country: C
   return (
     <div className="t2-sos">
       <button type="button" className="t2-trk-rowbtn t2-sos-row" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="t2-icon" aria-hidden="true">shield</span>
+        <Icon name="shield" />
         <span className="t2-trk-rowbtn-text">{tr("طوارئ")}</span>
-        <span className="t2-icon t2-trk-rowbtn-go" aria-hidden="true">{open ? "expand_more" : "chevron_left"}</span>
+        <Icon name={open ? "expand_more" : "chevron_left"} className="t2-trk-rowbtn-go" />
       </button>
       {open ? (
         <div className="t2-sos-panel" role="group" aria-label={tr("طوارئ")}>
@@ -73,7 +74,7 @@ export function EmergencyRowT2({ rideId, country }: { rideId: string; country: C
           )}
           {number ? (
             <a className="t2-sos-call" href={`tel:${number}`}>
-              <span className="t2-icon" aria-hidden="true">call</span>
+              <Icon name="call" />
               {tr("اتّصل بالطوارئ")} <span dir="ltr">{number}</span>
             </a>
           ) : null}

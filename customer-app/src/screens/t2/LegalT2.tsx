@@ -10,6 +10,7 @@ import { legalPages, openLegal } from "@/lib/legal";
 import { useSession } from "@/lib/session";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { language, tr } from "@/lib/i18n";
 
 export function LegalT2Screen() {
@@ -19,16 +20,16 @@ export function LegalT2Screen() {
     <div className="t2 t2-page t2-account pb-nav">
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => navigate(-1)}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("الشروط والخصوصية")}</h1>
       </div>
       <div className="t2-list t2-arows">
         {legalPages(user?.country_code, language).map((page) => (
           <button key={page.key} type="button" className="t2-arow" onClick={() => openLegal(page.url)}>
-            <span className="t2-icon" aria-hidden="true">{page.key === "privacy" ? "shield" : "gavel"}</span>
+            <Icon name={page.key === "privacy" ? "shield" : "gavel"} />
             <span className="t2-arow-label">{page.key === "privacy" ? tr("سياسة الخصوصية") : tr("شروط الاستخدام")}</span>
-            <span className="t2-icon t2-chev" aria-hidden="true">open_in_new</span>
+            <Icon name="open_in_new" className="t2-chev" />
           </button>
         ))}
       </div>

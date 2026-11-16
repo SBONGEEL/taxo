@@ -34,6 +34,7 @@ import {
 import { countDays } from "./count";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** **أيقونةُ كلِّ نوعٍ كما رسمتها اللوحة** — وصورُ المركبة (لم تُرسم) بالكاميرا: صورةٌ تُلتقط لا وثيقةٌ تُحمل. */
@@ -212,9 +213,7 @@ export function VehicleT2Screen() {
           aria-label={tr("رجوع")}
           onClick={() => s.goBack()}
         >
-          <span className="t2-icon" aria-hidden="true">
-            arrow_forward
-          </span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("الوثائق")}</h1>
       </div>
@@ -242,9 +241,7 @@ export function VehicleT2Screen() {
 
       {s.error ? (
         <p className="t2-note danger">
-          <span className="t2-icon" aria-hidden="true">
-            error
-          </span>
+          <Icon name="error" />
           {s.error}
         </p>
       ) : null}
@@ -339,9 +336,7 @@ export function VehicleT2Screen() {
               </button>
               {s.reverted ? (
                 <p className="t2-note warn">
-                  <span className="t2-icon" aria-hidden="true">
-                    error
-                  </span>
+                  <Icon name="error" />
                   {tr("غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة» حتى يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.")}
 
                 </p>
@@ -404,7 +399,7 @@ function DocRow({
             }
             aria-hidden="true"
           >
-            <span className="t2-icon">{DOC_ICON[docType]}</span>
+            <Icon name={DOC_ICON[docType]} />
           </span>
           <span className="t2-vdocs-main">
             <span className="t2-vdocs-title">{label}</span>
@@ -435,9 +430,7 @@ function DocRow({
       </button>
       {view.note ? (
         <p className="t2-note danger t2-vdocs-note">
-          <span className="t2-icon" aria-hidden="true">
-            error
-          </span>
+          <Icon name="error" />
           {view.note}
         </p>
       ) : null}

@@ -965,9 +965,7 @@ const PROMO_SKIN: PromoSkin = {
             {banner.body ? <div className="t2-hm-promo-body">{banner.body}</div> : null}
           </div>
           {opens ? (
-            <span className="t2-icon t2-hm-promo-go" aria-hidden="true">
-              arrow_back
-            </span>
+            <Icon name="arrow_back" className="t2-hm-promo-go" />
           ) : null}
         </div>
       </>

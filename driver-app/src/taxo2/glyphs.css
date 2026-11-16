@@ -1,0 +1,94 @@
+/* **مجموعةُ أيقونات TAXO الجديدة** (SPEC §١٠٥/٣) — الشكلُ والحركة. **لا يُرسم شيءٌ منها والمفتاحُ مطفأ**: `Icon` يرسم الخطَّ حينها.
+ *
+ * **والحركةُ زينةٌ لا شرط**: `transform` و`opacity` وحدَهما (يرسمهما المُركِّب لا المعالج، فلا تسقط إطاراتٌ على Note 20)، وتحت
+ * `html.t2-glyphs:not(.t2-calm)` و`prefers-reduced-motion: no-preference` وحدَهما — **والنقرُ يعمل قبلها وبدونها**. */
+
+.t2 {
+  --t2-glyph-tint: color-mix(in srgb, var(--t2-accent) 20%, transparent);
+  --t2-glyph-tint-on: color-mix(in srgb, var(--t2-accent) 34%, transparent);
+}
+
+svg.t2-icon.t2-glyph {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-origin: 50% 50%;
+}
+.t2-glyph .t { fill: var(--t2-glyph-tint); stroke: none; }
+.t2-glyph .f { fill: currentColor; stroke: none; }
+.t2-glyph .a { stroke: var(--t2-accent); }
+.t2-glyph.fill .t { fill: var(--t2-glyph-tint-on); }
+
+/* ── رسومُ الفئات */
+svg.t2-car { width: 3em; height: 1.75em; flex: none; display: block; overflow: visible; }
+.t2-car .cb { fill: var(--t2-accent); }
+.t2-car .cb.ink { fill: var(--t2-text); }
+.t2-car .cb.green { fill: var(--t2-success); }
+.t2-car .cb.rose { fill: color-mix(in srgb, var(--t2-accent) 45%, #c2417a); }
+.t2-car .cg { fill: var(--t2-surface); opacity: .9; }
+.t2-car .ca { fill: var(--t2-warning); }
+.t2-car .ca.line { fill: none; stroke: var(--t2-surface); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.t2-car .cl { fill: none; stroke: var(--t2-surface); stroke-opacity: .45; stroke-width: 1.4; stroke-linecap: round; }
+.t2-car .cw { fill: var(--t2-text); }
+.t2-car .ch { fill: var(--t2-surface); }
+.t2-car .t2-wheel { transform-box: fill-box; transform-origin: center; }
+
+/* ── الاحتفال */
+.t2-celebrate { position: fixed; inset-inline: 0; top: 34%; height: 0; display: flex; justify-content: center; pointer-events: none; z-index: 90; }
+.t2-celebrate-ring { position: absolute; width: 44px; height: 44px; margin-top: -22px; border-radius: 50%; border: 2px solid var(--t2-accent); opacity: 0; }
+.t2-celebrate-bit { position: absolute; width: 8px; height: 12px; border-radius: 3px; background: var(--t2-accent); opacity: 0; }
+.t2-celebrate-bit.tone-1 { background: var(--t2-success); width: 7px; height: 7px; border-radius: 50%; }
+.t2-celebrate-bit.tone-2 { background: var(--t2-warning); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* اللمس: انضغاطٌ قصيرٌ يرتدّ — يبدأ مع الضغط لا بعده */
+  html.t2-glyphs:not(.t2-calm) :is(button, a, [role="button"], [role="tab"], [role="radio"]) svg.t2-glyph {
+    transition: transform 160ms cubic-bezier(.3, 1.6, .5, 1);
+  }
+  html.t2-glyphs:not(.t2-calm) :is(button, a, [role="button"], [role="tab"], [role="radio"]):active svg.t2-glyph {
+    transform: scale(.84);
+    transition-duration: 70ms;
+  }
+  /* الاختيار: نبضةٌ واحدةٌ حين يصير العنصرُ مختاراً */
+  html.t2-glyphs:not(.t2-calm) :is(.on, .active, [aria-checked="true"], [aria-selected="true"], [aria-current="page"]) svg.t2-glyph {
+    animation: t2g-pop 340ms cubic-bezier(.3, 1.5, .5, 1);
+  }
+  /* تبدُّلُ الحال: علامةُ النجاح تُرسم، والخطأُ يهتزّ مرّة */
+  html.t2-glyphs:not(.t2-calm) svg.t2-glyph .s {
+    stroke-dasharray: 30;
+    stroke-dashoffset: 0;
+    animation: t2g-draw 460ms 80ms cubic-bezier(.6, 0, .3, 1) backwards;
+  }
+  html.t2-glyphs:not(.t2-calm) :is(svg.g-error, svg.g-warning, svg.g-cancel) {
+    animation: t2g-nudge 360ms ease-out;
+  }
+  /* الحركةُ الهادئة — **على عنصرٍ واحدٍ في الشاشة**: سيّارةُ الفئة المختارة، ومؤشّرُ البحث عن كبتن */
+  html.t2-glyphs:not(.t2-calm) :is(.on, [aria-checked="true"]) svg.t2-car {
+    animation: t2g-pop 340ms cubic-bezier(.3, 1.5, .5, 1), t2g-idle 2.6s 400ms ease-in-out infinite;
+  }
+  html.t2-glyphs:not(.t2-calm) .t2-glyph-idle {
+    animation: t2g-breathe 2.2s ease-in-out infinite;
+  }
+  html.t2-glyphs:not(.t2-calm) .t2-celebrate-ring { animation: t2g-ring 900ms ease-out forwards; }
+  html.t2-glyphs:not(.t2-calm) .t2-celebrate-bit { animation: t2g-burst 1100ms cubic-bezier(.2, .8, .3, 1) forwards; }
+}
+
+@keyframes t2g-pop { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes t2g-draw { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+@keyframes t2g-nudge { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 50% { transform: translateX(2px); } 75% { transform: translateX(-1px); } }
+@keyframes t2g-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes t2g-breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.14); opacity: .75; } }
+@keyframes t2g-ring { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
+@keyframes t2g-burst {
+  0% { transform: translate(0, 0) rotate(0) scale(.6); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translate(var(--x), calc(var(--y) + 60px)) rotate(var(--r)) scale(1); opacity: 0; }
+}

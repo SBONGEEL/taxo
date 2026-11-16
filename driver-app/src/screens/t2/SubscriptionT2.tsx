@@ -37,6 +37,7 @@ import {
 import { countDays, countHours } from "./count";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 /** مدّةُ الخطة **كما كتبتها اللوحة** (C10). */
@@ -214,9 +215,7 @@ export function SubscriptionT2Screen() {
             aria-label={tr("رجوع")}
             onClick={() => s.goBack()}
           >
-            <span className="t2-icon" aria-hidden="true">
-              arrow_forward
-            </span>
+            <Icon name="arrow_forward" />
           </button>
           <h1 className="t2-title">{tr("الاشتراك")}</h1>
         </div>
@@ -318,9 +317,7 @@ export function SubscriptionT2Screen() {
 
         {s.error ? (
           <p className="t2-note danger">
-            <span className="t2-icon" aria-hidden="true">
-              error
-            </span>
+            <Icon name="error" />
             {s.error}
           </p>
         ) : null}

@@ -16,6 +16,7 @@ import { clientInfo } from "@/lib/client-info";
 
 import "@/taxo2";
 import "./t2.css";
+import { Icon } from "@/taxo2";
 import "./feedback.css"; import { tr } from "@/lib/i18n";
 
 const FEEDBACK_APP = "rider" as const;
@@ -96,14 +97,14 @@ export function FeedbackT2Screen() {
     <div className="t2 t2-page t2-fb pb-nav">
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("أرسل ملاحظة")}</h1>
       </div>
 
       {sent ? (
         <div className="t2-fb-done" role="status">
-          <span className="t2-icon" aria-hidden="true">check_circle</span>
+          <Icon name="check_circle" />
           <p className="t2-fb-done-title">{tr("وصلت ملاحظتك — شكراً لك")}</p>
           <p className="t2-fb-lede">{tr("يقرؤها فريقُ TAXO ويعمل بها. يمكنك إرسالُ غيرها متى شئت.")}</p>
           <button type="button" className="t2-button secondary t2-fb-send" onClick={() => setSent(false)}>
@@ -149,7 +150,7 @@ export function FeedbackT2Screen() {
               </>
             ) : (
               <button type="button" className="t2-button secondary t2-fb-pick" disabled={busy} onClick={() => picker.current?.click()}>
-                <span className="t2-icon" aria-hidden="true">add_photo_alternate</span>
+                <Icon name="add_photo_alternate" />
                 {tr("أرفق صورة شاشة (اختياري)")}
               </button>
             )}
@@ -157,7 +158,7 @@ export function FeedbackT2Screen() {
 
           {error ? (
             <p className="t2-note danger" role="alert">
-              <span className="t2-icon" aria-hidden="true">error</span>
+              <Icon name="error" />
               {error}
             </p>
           ) : null}

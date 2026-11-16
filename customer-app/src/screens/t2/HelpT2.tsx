@@ -23,6 +23,7 @@ import { useSupportWhatsapp } from "@/lib/support";
 
 import "@/taxo2";
 import "./t2.css";
+import { Icon } from "@/taxo2";
 import "./help.css"; import { tr } from "@/lib/i18n";
 
 interface Help {
@@ -72,7 +73,7 @@ export function HelpT2Screen() {
     <div className="t2 t2-page t2-account t2-help pb-nav" aria-busy={loading}>
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("المساعدة والدعم")}</h1>
       </div>
@@ -80,16 +81,16 @@ export function HelpT2Screen() {
       {/* **جولةُ التطبيق تُفتح ثانيةً من هنا** (أمرُ المالك ٢٠٢٦-١٠-٢٧) — قبل الأسئلة: من يسأل «كيف» يبدأ بها */}
       <div className="t2-list t2-arows">
         <button type="button" className="t2-arow" onClick={openAppTour}>
-          <span className="t2-icon" aria-hidden="true">tour</span>
+          <Icon name="tour" />
           <span className="t2-arow-label">{tr("جولة في التطبيق")}</span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+          <Icon name="chevron_left" className="t2-chev" />
         </button>
       </div>
 
       {error ? (
         <>
           <p className="t2-note danger" role="alert">
-            <span className="t2-icon" aria-hidden="true">error</span>
+            <Icon name="error" />
             {error}
           </p>
           <button type="button" className="t2-button secondary t2-help-retry" onClick={load} disabled={loading}>
@@ -108,13 +109,13 @@ export function HelpT2Screen() {
         }}
       >
         <span className="t2-help-mail-icon" aria-hidden="true">
-          <span className="t2-icon fill">chat</span>
+          <Icon name="chat" fill />
         </span>
         <span className="t2-help-mail-main">
           <span className="t2-help-mail-title">{tr("طلباتي")}</span>
           <span className="t2-help-mail-address">{tr("محادثاتك مع الدعم والمفقودات والشكاوى")}</span>
         </span>
-        <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+        <Icon name="chevron_left" className="t2-chev" />
       </a>
 
       {whatsapp ? (
@@ -127,13 +128,13 @@ export function HelpT2Screen() {
           }}
         >
           <span className="t2-help-mail-icon" aria-hidden="true">
-            <span className="t2-icon fill">chat</span>
+            <Icon name="chat" fill />
           </span>
           <span className="t2-help-mail-main">
             <span className="t2-help-mail-title">{tr("تواصل معنا على واتساب")}</span>
             <span className="t2-help-mail-address">{tr("فريقُ الدعم يردّ عليك هناك")}</span>
           </span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+          <Icon name="chevron_left" className="t2-chev" />
         </a>
       ) : null}
 
@@ -148,7 +149,7 @@ export function HelpT2Screen() {
           }}
         >
           <span className="t2-help-mail-icon" aria-hidden="true">
-            <span className="t2-icon fill">mail</span>
+            <Icon name="mail" fill />
           </span>
           <span className="t2-help-mail-main">
             <span className="t2-help-mail-title">{tr("راسل فريق الدعم")}</span>
@@ -157,7 +158,7 @@ export function HelpT2Screen() {
               {help!.email}
             </span>
           </span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+          <Icon name="chevron_left" className="t2-chev" />
         </a>
       ) : null}
 
@@ -178,7 +179,7 @@ export function HelpT2Screen() {
                     onClick={() => setOpen(expanded ? null : index)}
                   >
                     <span className="t2-help-q-text">{item.q}</span>
-                    <span className="t2-icon t2-help-chev" aria-hidden="true">expand_more</span>
+                    <Icon name="expand_more" className="t2-help-chev" />
                   </button>
                   {/* **الجوابُ في الشجرة دائماً ومخفيٌّ حين يُطوى** — فيجد `aria-controls` ما يشير إليه */}
                   <p id={answerId} className="t2-help-a" hidden={!expanded}>

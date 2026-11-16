@@ -17,6 +17,7 @@ import { RIDE_STATUS_LABEL } from "@/lib/rideFormat";
 import { startOfToday, whenParts } from "./when";
 
 import "./t2.css";
+import { Icon } from "@/taxo2";
 import "./ride.css"; import { tr } from "@/lib/i18n";
 
 /** «سُلِّم» للطرد بدل «مكتملة» — وما سواه حالُ الرحلة كما يقوله «رحلاتي» (`RIDE_STATUS_LABEL`). */
@@ -40,17 +41,13 @@ export function ParcelsT2Screen() {
       <div className="t2-svc-scroll scr">
         <div className="t2-head">
           <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
-            <span className="t2-icon" aria-hidden="true">
-              arrow_forward
-            </span>
+            <Icon name="arrow_forward" />
           </button>
           <h1 className="t2-title">{tr("الطرود")}</h1>
         </div>
 
         <p className="t2-note">
-          <span className="t2-icon" aria-hidden="true">
-            package_2
-          </span>
+          <Icon name="package_2" />
           {tr("تصلك الطرودُ عرضاً كأيِّ رحلةٍ وعليها شارةُ «طرد». بعد القبول ترى اسمَ المستلم وعنوانَه وتتصل به، وتسلّمه الطردَ في الوجهة. وإن وجدتَ عند الاستلام ما لا تقبل نقلَه فارفض الطردَ من شاشة الرحلة — بلا مالٍ على أحد.")}
 
         </p>
@@ -59,9 +56,7 @@ export function ParcelsT2Screen() {
         {rows === null ? (
           failed ? (
             <p className="t2-note danger" role="alert">
-              <span className="t2-icon" aria-hidden="true">
-                error
-              </span>
+              <Icon name="error" />
               {tr("تعذّر قراءة رحلاتك")}
             </p>
           ) : (
@@ -80,9 +75,7 @@ export function ParcelsT2Screen() {
                 className="t2-srow"
                 onClick={() => navigate(`/rides/${ride.id}`)}
               >
-                <span className="t2-icon t2-srow-icon" aria-hidden="true">
-                  {ride.parcel_fetch ? "inventory_2" : "package_2"}
-                </span>
+                <Icon name={ride.parcel_fetch ? "inventory_2" : "package_2"} className="t2-srow-icon" />
                 <span className="t2-srow-main">
                   <span className="t2-srow-title">
                     {/* **«أحضر غرضي» معلَّمٌ بين طروده** (§٧٢-ج/١، لوحتُه C3) */}
@@ -93,9 +86,7 @@ export function ParcelsT2Screen() {
                     {whenParts(ride.created_at, today).day} · {whenParts(ride.created_at, today).time}
                   </span>
                 </span>
-                <span className="t2-icon" aria-hidden="true">
-                  chevron_left
-                </span>
+                <Icon name="chevron_left" />
               </button>
             ))}
           </div>

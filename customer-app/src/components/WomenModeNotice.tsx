@@ -18,6 +18,7 @@
  */
 
 import { useBrand } from "@/lib/brand";
+import { Icon } from "@/taxo2";
 
 import "@/taxo2"; import { tr } from "@/lib/i18n";
 
@@ -27,14 +28,10 @@ export function WomenModeNotice() {
 
   return (
     <div role="status" className="t2 t2-snack">
-      <span className="t2-icon" aria-hidden="true">
-        woman
-      </span>
+      <Icon name="woman" />
       <span>{tr("تم تفعيل الوضع النسائي — يمكنك إطفاؤه من الإعدادات")}</span>
       <button type="button" onClick={dismissNotice} aria-label={tr("إغلاق")} className="t2-snack-close">
-        <span className="t2-icon" aria-hidden="true">
-          close
-        </span>
+        <Icon name="close" />
       </button>
     </div>
   );

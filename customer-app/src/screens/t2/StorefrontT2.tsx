@@ -8,6 +8,7 @@
  */
 
 import { BannerImage, OfferCard, type PromoSkin } from "@/components/home/PromoBanners";
+import { Icon } from "@/taxo2";
 
 /** **جلدُ اللافتة**: بطاقةُ الجمر بشريطها المائل، والعنوانُ والنصُّ، **وسهمٌ حين تُفتح** — وصورتُها إن كانت لها
  *  من حافّةٍ إلى حافّة فوق النصّ، كما في اللافتة القائمة. **وعرضُ الاشتراك** (للكبتن وحدَه) بوجهه القائم. */
@@ -34,9 +35,7 @@ export const PROMO_SKIN_T2: PromoSkin = {
             {banner.body ? <div className="t2-promo-body">{banner.body}</div> : null}
           </div>
           {opens ? (
-            <span className="t2-icon t2-promo-go" aria-hidden="true">
-              arrow_back
-            </span>
+            <Icon name="arrow_back" className="t2-promo-go" />
           ) : null}
         </div>
       </>

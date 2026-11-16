@@ -14,7 +14,7 @@ import type { MyPaymentRequest } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { formatAmount } from "@/lib/utils";
-import { Icon } from "@/taxo2";
+import { Celebrate, Icon } from "@/taxo2";
 import { CARD_PAGE_MINUTES, settledReturn } from "@/lib/pay-return";
 import { announceFrameReturn } from "@/lib/sofizpay-cvv";
 
@@ -100,6 +100,7 @@ export function PayReturnT2Screen() {
         </p>
       ) : request && request.status === "approved" ? (
         <div className="t2-wdl-card t2-pr-done">
+          <Celebrate />
           <Icon name="check_circle" />
           <h2 className="t2-pr-done-title">{subscription ? tr("فُعّل اشتراكك") : tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">

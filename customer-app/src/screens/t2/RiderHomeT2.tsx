@@ -48,7 +48,7 @@ import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
-import { Wordmark } from "@/taxo2";
+import { Icon, Wordmark } from "@/taxo2";
 
 import { DrawerT2 } from "./DrawerT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
@@ -142,7 +142,7 @@ function MapCardT2({
       ) : (
         <>
           <button type="button" className="t2-home-close" onClick={() => setOpen(false)} aria-label={tr("إغلاق الخريطة")}>
-            <span className="t2-icon" aria-hidden="true">close</span>
+            <Icon name="close" />
           </button>
           {/* **وزرُّ العمل في متناوله وهي مفتوحة** — فلا يُغلقها ليطلب */}
           <div className="t2-home-map-action">
@@ -179,7 +179,7 @@ function CashbackChipT2({ cashback }: { cashback: WeeklyCashback }) {
     <>
       <button type="button" className={`t2-cbk ${tone}`} onClick={() => setOpen(true)}>
         <span className="t2-cbk-fire" aria-hidden="true">
-          <span className="t2-icon fill">local_fire_department</span>
+          <Icon name="local_fire_department" fill />
         </span>
         <span className="t2-cbk-text">
           <span className="t2-cbk-top">
@@ -192,7 +192,7 @@ function CashbackChipT2({ cashback }: { cashback: WeeklyCashback }) {
           </span>
           <span className="t2-cbk-sub">{cashbackLine(cashback)}</span>
         </span>
-        <span className="t2-icon t2-cbk-more" aria-hidden="true">chevron_left</span>
+        <Icon name="chevron_left" className="t2-cbk-more" />
       </button>
 
       <DrawerT2 open={open} onOpenChange={setOpen} title={tr("الاسترداد الأسبوعي")}>
@@ -304,9 +304,9 @@ export function RiderHomeT2({
         {/* **اسمُ منطقة نقطة الانطلاق** — ولمستُه تفتح دبوسَ الانطلاق؛ وبلا اسمٍ معروفٍ لا شارة */}
         {area ? (
           <button type="button" className="t2-home-place" onClick={onChangePickup}>
-            <span className="t2-icon fill" aria-hidden="true">location_on</span>
+            <Icon name="location_on" fill />
             <span className="t2-home-place-text">{area}</span>
-            <span className="t2-icon t2-home-place-more" aria-hidden="true">expand_more</span>
+            <Icon name="expand_more" className="t2-home-place-more" />
           </button>
         ) : null}
         <span className="t2-home-spacer" />
@@ -318,10 +318,10 @@ export function RiderHomeT2({
           onClick={() => setThemeChoice(dark ? "light" : "dark")}
           aria-label={dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
         >
-          <span className="t2-icon" aria-hidden="true">{dark ? "light_mode" : "dark_mode"}</span>
+          <Icon name={dark ? "light_mode" : "dark_mode"} />
         </button>
         <button type="button" className="t2-home-bell" onClick={onOpenNotifications} aria-label={tr("الإشعارات")}>
-          <span className="t2-icon" aria-hidden="true">notifications</span>
+          <Icon name="notifications" />
           {unread ? <span className="t2-home-dot" /> : null}
         </button>
         {/* **البرقوقُ لصاحبة الخدمة النسائية** كما رُسمت — من حسابها لا من السِمة */}
@@ -354,7 +354,7 @@ export function RiderHomeT2({
           ) : null}
         </span>
         <span className="t2-home-hero-go" aria-hidden="true">
-          <span className="t2-icon">arrow_back</span>
+          <Icon name="arrow_back" />
         </span>
       </button>
 
@@ -365,7 +365,7 @@ export function RiderHomeT2({
           className="t2-home-ride"
           onClick={intercity ? () => navigate("/account/intercity") : onAskDestination}
         >
-          <span className="t2-icon" aria-hidden="true">local_taxi</span>
+          <Icon name="local_taxi" />
           <span className="t2-home-ride-label">{tr("رحلة")}</span>
           {/* **شارةُ «3 د»** — أسرعُ ما يصل من الفئات (§٦٢-ج/١٠)؛ **ولا تُرسم والزرُّ «بين المدن»**: دقائقُ أقرب كبتنٍ لا تخصّ رحلةً بين مدينتين */}
           {fastest !== null && !intercity ? (
@@ -379,7 +379,7 @@ export function RiderHomeT2({
           className="t2-home-ride"
           onClick={() => (parcel && onParcel ? onParcel() : soon(tr("طرد")))}
         >
-          <span className="t2-icon" aria-hidden="true">package_2</span>
+          <Icon name="package_2" />
           <span className="t2-home-ride-label">{tr("طرد")}</span>
         </button>
       </div>
@@ -387,7 +387,7 @@ export function RiderHomeT2({
       {/* **خمسُ بلاطاتٍ خمسةُ أعمدة** (لوحةُ «أحضر غرضي» R1) — لا بلاطةَ وحيدةٌ في صفٍّ ثانٍ */}
       <div className={3 + (women.enabled ? 1 : 0) + (fetchOn ? 1 : 0) === 5 ? "t2-svc-row five" : "t2-svc-row"}>
         <button type="button" className="t2-svc" onClick={() => (airport && onAirport ? onAirport() : soon(tr("المطار")))}>
-          <span className="t2-icon t2-svc-icon" aria-hidden="true">flight_takeoff</span>
+          <Icon name="flight_takeoff" className="t2-svc-icon" />
           <span className="t2-svc-title">{tr("المطار")}</span>
           <span className="t2-svc-badge new">{tr("جديد")}</span>
         </button>
@@ -396,32 +396,32 @@ export function RiderHomeT2({
           className="t2-svc"
           onClick={() => (scheduled ? navigate("/account/bookings") : soon(tr("الرحلات المجدولة")))}
         >
-          <span className="t2-icon t2-svc-icon" aria-hidden="true">event_upcoming</span>
+          <Icon name="event_upcoming" className="t2-svc-icon" />
           <span className="t2-svc-title">{tr("مجدولة")}</span>
         </button>
         {/* **حيث الخدمةُ مطفأةٌ لا يظهر شيءٌ منها** — قاعدةُ اليوم (`lib/women.ts`) */}
         {women.enabled ? (
           <button type="button" className="t2-svc women" onClick={openWomen}>
-            <span className="t2-icon t2-svc-icon" aria-hidden="true">woman</span>
+            <Icon name="woman" className="t2-svc-icon" />
             <span className="t2-svc-title">{tr("نسائية")}</span>
           </button>
         ) : null}
         {/* **مشتعلاً تبدأ الطلبَ ولا شارةَ «قريباً»** (§٦٣-ج/٥) — ومطفأً كما رُسمت حرفاً */}
         {hourly ? (
           <button type="button" className="t2-svc" onClick={onHourly}>
-            <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
+            <Icon name="timer" className="t2-svc-icon" />
             <span className="t2-svc-title">{tr("بالساعة")}</span>
           </button>
         ) : (
           <button type="button" className="t2-svc soon" onClick={() => soon(tr("بالساعة"))}>
-            <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
+            <Icon name="timer" className="t2-svc-icon" />
             <span className="t2-svc-title">{tr("بالساعة")}</span>
             <span className="t2-svc-badge soon">{tr("قريباً")}</span>
           </button>
         )}
         {fetchOn ? (
           <button type="button" className="t2-svc" onClick={onFetch}>
-            <span className="t2-icon t2-svc-icon" aria-hidden="true">inventory_2</span>
+            <Icon name="inventory_2" className="t2-svc-icon" />
             <span className="t2-svc-title">{tr("أغراضي")}</span>
           </button>
         ) : null}
@@ -433,7 +433,7 @@ export function RiderHomeT2({
         onClick={() => (market ? navigate("/services/market") : soon(tr("تسوّق")))}
       >
         <span className="t2-promo-row">
-          <span className="t2-icon t2-mk-strip-icon" aria-hidden="true">shopping_bag</span>
+          <Icon name="shopping_bag" className="t2-mk-strip-icon" />
           <span className="t2-promo-text">
             <span className="t2-promo-title">{tr("تسوّق — TAXO MARKET")}</span>
             <span className="t2-promo-body">{tr("مطاعم ومتاجر قريبة، يوصلها كباتن TAXO.")}</span>

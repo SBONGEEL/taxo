@@ -38,6 +38,7 @@ import { listenToPushTaps } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
+import { IconSetSwitch } from "@/lib/icon-set";
 import { LoginScreen } from "@/screens/Login";
 
 const OverviewScreen = lazy(() =>
@@ -280,6 +281,7 @@ function Boot({ children }: { children: ReactNode }) {
       enabled={Boolean(user) && !enrollmentRequired && !passwordChangeRequired && !isReviewerOnly(user?.roles) && !isSellerOnly(user?.roles)}
     >
       <CountryProvider fallback={config.default_country_code}>
+        <IconSetSwitch />
         {children}
       </CountryProvider>
     </CountriesProvider>

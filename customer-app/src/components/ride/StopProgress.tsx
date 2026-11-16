@@ -17,6 +17,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
 import { currencyLabel, formatAmount } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
@@ -84,7 +85,7 @@ export function StopProgress({ ride }: { ride: Ride }) {
 
       {waiting?.over_max_wait ? (
         <p className="t2-note warn">
-          <span className="t2-icon" aria-hidden="true">error</span>
+          <Icon name="error" />
           <span>{tr("تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء الرحلة هنا.")}</span>
         </p>
       ) : null}

@@ -16,7 +16,7 @@ import type { MyPaymentRequest } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { play } from "@/lib/sound";
 import { formatMoney } from "@/lib/utils";
-import { Icon } from "@/taxo2";
+import { Celebrate, Icon } from "@/taxo2";
 import { CARD_PAGE_MINUTES, settledReturn } from "@/lib/pay-return";
 import { announceFrameReturn } from "@/lib/sofizpay-cvv";
 
@@ -111,6 +111,7 @@ export function PayReturnT2Screen() {
         <BannerT2 tone="danger" message={tr("لا دفعةَ في هذا الرابط — افتح المحفظة وانظر طلباتك")} />
       ) : request && request.status === "approved" ? (
         <section className="t2-m-card t2-pr-done">
+          <Celebrate />
           <Icon name="check_circle" />
           <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">{tr("أُضيف")}{" "}{formatMoney(credited ?? "0", request.currency)}{" "}{tr("إلى محفظتك.")}</p>

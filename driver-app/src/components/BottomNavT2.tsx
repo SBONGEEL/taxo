@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 import { TABS } from "@/lib/tabs";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 
 /** أيقونةُ كلِّ وجهةٍ (Material Symbols) — بالمسار لا بالترتيب، **ومن C04 حيث رُسمت**. */
 const TAB_ICON: Record<string, string> = {
@@ -35,7 +36,7 @@ export function BottomNavT2() {
             end={tab.to === "/" || tab.to === "/account"}
             className={({ isActive }) => (isActive ? "t2-tab on" : "t2-tab")}
           >
-            <span className="t2-icon" aria-hidden="true">{TAB_ICON[tab.to] ?? "circle"}</span>
+            <Icon name={TAB_ICON[tab.to] ?? "circle"} />
             <span className="t2-tab-label">{tab.label}</span>
           </NavLink>
         ))}

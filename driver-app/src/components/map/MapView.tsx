@@ -53,6 +53,7 @@ import { trimRoute } from "@/lib/route-line";
 import { drawHeat, type HeatPoint } from "@/lib/heat-layer";
 import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
+import { Icon } from "@/taxo2";
 import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
@@ -846,9 +847,7 @@ function MapViewEngine({
             title={labelFor(follow)}
             className={`t2-maploc ${follow}`}
           >
-            <span className="t2-icon" aria-hidden="true">
-              {T2_FOLLOW_ICON[follow]}
-            </span>
+            <Icon name={T2_FOLLOW_ICON[follow]} />
           </button>
         ) : null
       ) : null}

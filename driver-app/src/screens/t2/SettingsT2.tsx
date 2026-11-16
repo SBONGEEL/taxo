@@ -37,6 +37,7 @@ import { WomenModeRowT2 } from "./WomenModeT2";
 import "@/taxo2";
 import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/lib/i18n";
 import { updateMyLanguage } from "@/api/endpoints";
+import { Icon } from "@/taxo2";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */
 function Toggle({
@@ -84,7 +85,7 @@ function Toggle({
 function Soon({ icon, title }: { icon: string; title: string }) {
   return (
     <div className="t2-srow" aria-disabled="true">
-      <span className="t2-icon t2-srow-icon" aria-hidden="true">{icon}</span>
+      <Icon name={icon} className="t2-srow-icon" />
       <span className="t2-srow-main">
         <span className="t2-srow-title">{title}</span>
       </span>
@@ -154,7 +155,7 @@ export function SettingsT2Screen() {
     <div className="t2 t2-settings scr">
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("الإعدادات")}</h1>
       </div>
@@ -190,7 +191,7 @@ export function SettingsT2Screen() {
         {/* تفضيلُ جنس الركاب — **دائمٌ لا لكل رحلة، ولكلِّ كبتن**، ولا يظهر والخدمةُ مطفأةٌ في دولته (10-ج) */}
         {womenService && !available ? (
           <div className="t2-srow tall">
-            <span className="t2-icon t2-srow-icon" aria-hidden="true">person</span>
+            <Icon name="person" className="t2-srow-icon" />
             <span className="t2-srow-main">
               <span className="t2-srow-title">{tr("من أُقلّ")}</span>
               <span className="t2-srow-hint">{tr("يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.")}</span>
@@ -239,12 +240,12 @@ export function SettingsT2Screen() {
           aria-expanded={picking}
           onClick={() => setPicking(!picking)}
         >
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">navigation</span>
+          <Icon name="navigation" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("تطبيق الملاحة")}</span>
           </span>
           <span className="t2-srow-value">{NAV_APPS.find((app) => app.value === nav)?.label}</span>
-          <span className="t2-icon t2-chev" aria-hidden="true">{picking ? "expand_more" : "chevron_left"}</span>
+          <Icon name={picking ? "expand_more" : "chevron_left"} className="t2-chev" />
         </button>
         {picking ? (
           <div className="t2-navpick" role="radiogroup" aria-label={tr("تطبيق الملاحة")}>
@@ -297,7 +298,7 @@ export function SettingsT2Screen() {
             void shareApp("driver").then((outcome) => setShareMessage(shareNote(outcome)));
           }}
         >
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">share</span>
+          <Icon name="share" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("شارك التطبيق")}</span>
             {shareMessage ? (
@@ -308,13 +309,13 @@ export function SettingsT2Screen() {
           </span>
         </button>
         <button type="button" className="t2-srow" onClick={openAppTour}>
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">tour</span>
+          <Icon name="tour" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("جولة في التطبيق")}</span>
           </span>
         </button>
         <button type="button" className="t2-srow" onClick={toggle}>
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">dark_mode</span>
+          <Icon name="dark_mode" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("المظهر")}</span>
           </span>
@@ -331,7 +332,7 @@ export function SettingsT2Screen() {
               .finally(() => setLanguage(next));
           }}
         >
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">translate</span>
+          <Icon name="translate" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("اللغة")}</span>
           </span>
@@ -372,7 +373,7 @@ export function SettingsT2Screen() {
         />
         {/* **ساعاتُ الهدوء تُقرأ من `/config` لا تُكتب هنا** — فبلا سهمٍ يَعِد بتحرير */}
         <div className="t2-srow">
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">bedtime</span>
+          <Icon name="bedtime" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("ساعات الهدوء للعروض")}</span>
             <span className="t2-srow-hint">
@@ -399,7 +400,7 @@ export function SettingsT2Screen() {
         {/* **الدخولُ السريع لمن يملكه**، وسطرٌ يقول ما يفعله من لا يملكه — **وفي المتصفّح لا سطرَ ولا مفتاح** */}
         {biometry?.native && !biometry.available ? (
           <div className="t2-srow">
-            <span className="t2-icon t2-srow-icon" aria-hidden="true">verified_user</span>
+            <Icon name="verified_user" className="t2-srow-icon" />
             <span className="t2-srow-main">
               <span className="t2-srow-title">{tr("الدخول السريع")}</span>
               <span className="t2-srow-hint">
@@ -422,7 +423,7 @@ export function SettingsT2Screen() {
         ) : null}
         {hasCliqPayout(profile?.user.country_code) ? (
         <div className="t2-srow tall">
-          <span className="t2-icon t2-srow-icon" aria-hidden="true">account_balance</span>
+          <Icon name="account_balance" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("حساب CliQ للسحب")}</span>
             <span className="t2-srow-hint">{tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}</span>

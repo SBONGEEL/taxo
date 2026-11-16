@@ -643,6 +643,7 @@ export type FeatureKey =
   | "open_places_search"
   | "open_map_display"
   | "rider_order_sheet_v2"
+  | "icons_v2"
   | "places_search_v2"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما

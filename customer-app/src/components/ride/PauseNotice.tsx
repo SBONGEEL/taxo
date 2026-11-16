@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
 import { currencyLabel, formatAmount } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 import "@/screens/t2/request.css"; import { tr } from "@/lib/i18n";
 
@@ -69,7 +70,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
       </div>
       {pause.over_max ? (
         <p className="t2-note warn">
-          <span className="t2-icon" aria-hidden="true">error</span>
+          <Icon name="error" />
           <span>{tr("تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن يُنهي الرحلة عند هذه النقطة.")}</span>
         </p>
       ) : null}

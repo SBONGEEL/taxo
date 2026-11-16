@@ -22,6 +22,7 @@ import { composeBody, destinationOf } from "@/lib/notification-text";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 type Tone = "live" | "plain" | "offer" | "money" | "women" | "warn" | "danger";
@@ -140,7 +141,7 @@ export function NotificationsT2Screen() {
           aria-label={tr("رجوع")}
           onClick={() => navigate("/account")}
         >
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("الإشعارات")}</h1>
         {unread ? (
@@ -175,7 +176,7 @@ export function NotificationsT2Screen() {
                   onClick={() => to && navigate(to)}
                 >
                   <span className={`t2-badge ${style.tone}`}>
-                    <span className="t2-icon" aria-hidden="true">{style.icon}</span>
+                    <Icon name={style.icon} />
                   </span>
                   <span className="t2-row-main">
                     <span className="t2-row-top">

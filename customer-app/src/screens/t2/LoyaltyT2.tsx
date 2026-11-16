@@ -9,6 +9,7 @@ import { useGoBack } from "@/lib/back";
 import { tr } from "@/lib/i18n";
 import { DISPLAY_LOCALE, currencyLabel, digits, formatAmount } from "@/lib/utils";
 import "./support.css";
+import { Icon } from "@/taxo2";
 
 const TIER: Record<MyLoyalty["tier"], string> = { bronze: "برونزيّ", silver: "فضّيّ", gold: "ذهبيّ" };
 
@@ -41,9 +42,7 @@ export function LoyaltyT2() {
     <div className="sp-page">
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
-          <span className="t2-icon" aria-hidden="true">
-            arrow_forward
-          </span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("نقاطي")}</h1>
       </div>

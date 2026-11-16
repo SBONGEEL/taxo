@@ -18,6 +18,7 @@ import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { SheetT2 } from "@/screens/t2/SheetT2";
 
 import "@/screens/t2/t2.css";
+import { Icon } from "@/taxo2";
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
 
 /** رموزُ الهوية لقنوات الدفع. */
@@ -63,13 +64,13 @@ export function PaymentPicker({
                 }}
                 className="t2-row t2-pay-row"
               >
-                <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[method]}</span>
+                <Icon name={PAY_ICON_T2[method]} />
                 <span className="t2-row-main">
                   <span className="t2-row-title">{PAYMENT_METHOD_LABEL[method]}</span>
                   <span className="t2-row-body">{method === "wallet" && walletHint ? walletHint : hint}</span>
                 </span>
                 {method === selected ? (
-                  <span className="t2-icon t2-pay-check" aria-hidden="true">check</span>
+                  <Icon name="check" className="t2-pay-check" />
                 ) : null}
               </button>
             ))}

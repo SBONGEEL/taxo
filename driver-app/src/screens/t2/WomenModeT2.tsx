@@ -47,16 +47,12 @@ export function WomenModeRowT2({ preference }: { preference: GenderPreference })
   const navigate = useNavigate();
   return (
     <button type="button" className="t2-srow" onClick={() => navigate("/account/settings/women")}>
-      <span className="t2-icon t2-srow-icon pink" aria-hidden="true">
-        woman
-      </span>
+      <Icon name="woman" className="t2-srow-icon pink" />
       <span className="t2-srow-main">
         <span className="t2-srow-title">{tr("الخدمة النسائية")}</span>
         <span className="t2-srow-hint">{tr("تستقبلين:")}{" "}{PREFERENCE_LABEL[preference]}</span>
       </span>
-      <span className="t2-icon t2-wrow-go" aria-hidden="true">
-        chevron_left
-      </span>
+      <Icon name="chevron_left" className="t2-wrow-go" />
     </button>
   );
 }

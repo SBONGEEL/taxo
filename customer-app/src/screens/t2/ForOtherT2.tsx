@@ -19,7 +19,7 @@ import { PAYER_LINE, shareTrackLink, trackUrl, webOrigin } from "@/lib/for-other
 import { COUNTRY_LABEL, looksComplete, toE164, toNational } from "@/lib/phone";
 import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
-import { AuthBlock, AuthChoice, AuthInput, AuthPhone } from "@/taxo2";
+import { AuthBlock, AuthChoice, AuthInput, AuthPhone, Icon } from "@/taxo2";
 
 import { SheetModalT2 } from "./MoneyT2";
 import "./t2.css";
@@ -52,7 +52,7 @@ export function ForOtherOptionT2({
     return (
       <div className="t2-fo-chip">
         <span className="t2-fo-chip-icon" aria-hidden="true">
-          <span className="t2-icon">person</span>
+          <Icon name="person" />
         </span>
         <span className="t2-fo-chip-main">
           <span className="t2-fo-chip-title">{tr("لـ:")}{" "}{draft.name}</span>
@@ -61,10 +61,10 @@ export function ForOtherOptionT2({
           </span>
         </span>
         <button type="button" className="t2-fo-chip-btn" onClick={onOpen} aria-label={tr("تعديل الراكب")}>
-          <span className="t2-icon" aria-hidden="true">edit</span>
+          <Icon name="edit" />
         </button>
         <button type="button" className="t2-fo-chip-btn" onClick={onClear} aria-label={tr("إزالة — الرحلة لي")}>
-          <span className="t2-icon" aria-hidden="true">close</span>
+          <Icon name="close" />
         </button>
       </div>
     );
@@ -73,13 +73,13 @@ export function ForOtherOptionT2({
     <button type="button" className="t2-share t2-fo-open" disabled={blockedBy !== null} onClick={onOpen}>
       <span className="t2-share-main">
         <span className="t2-share-title">
-          <span className="t2-icon" aria-hidden="true">person</span>
+          <Icon name="person" />
           {tr("لشخص آخر")}
         </span>
         <span className="t2-share-body">{blockedBy ?? tr("اطلبها لغيرك — يصله الكبتنُ ويتصل به باسمه ورقمه.")}</span>
       </span>
       {blockedBy === null ? (
-        <span className="t2-icon t2-fo-open-go" aria-hidden="true">chevron_left</span>
+        <Icon name="chevron_left" className="t2-fo-open-go" />
       ) : null}
     </button>
   );
@@ -267,7 +267,7 @@ export function ForOtherSheetT2({
               onClick={() => setPayer(option.value)}
             >
               <span className="t2-cat-icon">
-                <span className="t2-icon" aria-hidden="true">{option.icon}</span>
+                <Icon name={option.icon} />
               </span>
               <span className="t2-cat-main">
                 <span className="t2-cat-name">{option.label}</span>
@@ -279,7 +279,7 @@ export function ForOtherSheetT2({
       </div>
 
       <p className="t2-note t2-fo-keep">
-        <span className="t2-icon" aria-hidden="true">lock</span>
+        <Icon name="lock" />
         {tr("نحفظ اسمه ورقمه لهذه الرحلة وحدها، ونحذفهما بعد ثلاثين يوماً.")}
       </p>
     </SheetModalT2>
@@ -322,16 +322,14 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
       <div className="t2-fo-ride-card">
         {ride.passenger_name ? (
           <div className="t2-fo-ride-name">
-            <span className="t2-icon" aria-hidden="true">person</span>
+            <Icon name="person" />
             <span>
               {tr("الراكب:")}{" "}<b>{ride.passenger_name}</b>
             </span>
           </div>
         ) : null}
         <div className="t2-fo-ride-payer">
-          <span className="t2-icon" aria-hidden="true">
-            {ride.payer === "passenger_cash" ? "payments" : "account_balance_wallet"}
-          </span>
+          <Icon name={ride.payer === "passenger_cash" ? "payments" : "account_balance_wallet"} />
           <span>{PAYER_LINE[ride.payer]}</span>
         </div>
       </div>
@@ -343,7 +341,7 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
           aria-busy={busy}
           onClick={() => void share()}
         >
-          <span className="t2-icon" aria-hidden="true">ios_share</span>
+          <Icon name="ios_share" />
           {tr("شارك رابط التتبّع")}
         </button>
       ) : null}

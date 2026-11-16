@@ -64,6 +64,7 @@ import { SheetT2 } from "./SheetT2";
 import { isWomenRide, RideCodeCardT2, WomenApproachChipT2, womenApproachTitle, WomenCaptainCardT2 } from "./WomenRideT2";
 import "@/taxo2";
 import "./t2.css";
+import { IDLE_GLYPH, Icon, useIconSetV2 } from "@/taxo2";
 import "./tracking-count.css"; import { tr } from "@/lib/i18n";
 
 export interface TrackingT2Props {
@@ -144,6 +145,7 @@ function useHourlyPrepaySwitch(ride: Ride, onChanged: () => void) {
 
 export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine, nearby = null }: TrackingT2Props) {
   const t = useTrackingSheet({ ride, onChanged });
+  const iconsV2 = useIconSetV2();
   const driverRides = useDriverRides(ride);
   const countryConfig = useCountryConfig(ride.country_code);
   // **طريقةُ الدفع تفضيلٌ محلّي** كما في ورقة الطلب — تُعرض هنا وتُبدَّل، **ولا تُرسل مع الرحلة** (`lib/payment`).
@@ -273,6 +275,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         }
       >
         <div className="t2-trk-head">
+          {iconsV2 ? <Icon name={IDLE_GLYPH} className="t2-glyph-idle t2-trk-radar" /> : null}
           <h3 className="t2-trk-title">{tr("نبحث لك عن كبتن قريب")}</h3>
           {badges}
         </div>
@@ -329,7 +332,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
         {t.women ? (
           <p className="t2-note">
-            <span className="t2-icon" aria-hidden="true">schedule</span>
+            <Icon name="schedule" />
             {tr("نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
           </p>
         ) : null}
@@ -358,9 +361,9 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   const shareRow = (
     <button type="button" className="t2-trk-rowbtn" onClick={() => void share()}>
-      <span className="t2-icon" aria-hidden="true">share_location</span>
+      <Icon name="share_location" />
       <span className="t2-trk-rowbtn-text">{t.copied ? tr("نُسخت التفاصيل") : tr("شارك رحلتك مع شخص تثق به")}</span>
-      <span className="t2-icon t2-trk-rowbtn-go" aria-hidden="true">chevron_left</span>
+      <Icon name="chevron_left" className="t2-trk-rowbtn-go" />
     </button>
   );
 
@@ -423,7 +426,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* **اقتراحُ المشاركة لمن طلبت الخدمة** لحظةَ تحرّك السيارة (المرحلة 10-ج) — كما هو اليوم */}
         {ride.status === "in_progress" && t.women && !t.shareHintClosed ? (
           <div className="t2-callout">
-            <span className="t2-icon fill" aria-hidden="true">verified_user</span>
+            <Icon name="verified_user" fill />
             <div className="t2-callout-main">
               <div className="t2-callout-title">{tr("شاركي رحلتك مع من تثقين")}</div>
               <p className="t2-callout-body">{tr("نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.")}</p>
@@ -457,7 +460,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* **«مدفوعة من اشتراكك» مكانَ صفِّ الدفع** (§٦٣-ج/٦) — صفٌّ يُقرأ ولا يُضغط: لا قناةَ تُبدَّل */}
         {commute ? (
           <div className="t2-trk-rowbtn" role="note">
-            <span className="t2-icon" aria-hidden="true">event_repeat</span>
+            <Icon name="event_repeat" />
             <span className="t2-trk-rowbtn-text">{tr("الدفع: مدفوعة من اشتراكك")}</span>
           </div>
         ) : payMethod ? (
@@ -467,7 +470,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             disabled={channels.length < 2}
             onClick={() => setPickingPay(true)}
           >
-            <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[payMethod.method]}</span>
+            <Icon name={PAY_ICON_T2[payMethod.method]} />
             <span className="t2-trk-rowbtn-text">{tr("الدفع:")}{" "}{PAYMENT_METHOD_LABEL[payMethod.method]}</span>
             {channels.length > 1 ? <span className="t2-trk-change">{tr("تغيير")}</span> : null}
           </button>
@@ -525,7 +528,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
               <div className={driverRides ? "t2-trk-rating with-rides" : "t2-trk-rating"}>
                 {ratedAverage(driver.rating_avg) ? (
                   <>
-                    <span className="t2-icon fill" aria-hidden="true">star</span>
+                    <Icon name="star" fill />
                     <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
                   </>
                 ) : null}
@@ -654,7 +657,7 @@ export function ThemeButtonT2({ dark, low, onToggle }: { dark: boolean; low: boo
       onClick={onToggle}
       aria-label={dark ? tr("الوضع النهاري") : tr("الوضع الليلي")}
     >
-      <span className="t2-icon" aria-hidden="true">{dark ? "light_mode" : "dark_mode"}</span>
+      <Icon name={dark ? "light_mode" : "dark_mode"} />
     </button>
   );
 }

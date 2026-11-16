@@ -239,7 +239,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   const optionsRow = optionsOffered ? (
     <div className="t2-v2-options">
       <button type="button" className="t2-v2-chip" onClick={() => setOptionsOpen(true)}>
-        <span className="t2-icon" aria-hidden="true">add</span>
+        <Icon name="add" />
         {tr("خيارات")}
       </button>
       {chips.map((key) => (
@@ -272,9 +272,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         <div className="t2-payrow">
           {c.payMethod && c.channels.length > 1 && !c.hourlyMode ? (
             <button type="button" className="t2-payrow-pay" onClick={() => c.setPickingPay(true)}>
-              <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[c.payMethod.method]}</span>
+              <Icon name={PAY_ICON_T2[c.payMethod.method]} />
               {PAYMENT_METHOD_LABEL[c.payMethod.method]}
-              <span className="t2-icon t2-payrow-more" aria-hidden="true">expand_more</span>
+              <Icon name="expand_more" className="t2-payrow-more" />
             </button>
           ) : null}
           {c.payMethod && c.channels.length > 1 && !c.hourlyMode && c.promoEnabled && !bargaining ? (
@@ -288,12 +288,12 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 aria-expanded={promoOpen}
                 onClick={() => setPromoOpen((open) => !open)}
               >
-                <span className="t2-icon" aria-hidden="true">sell</span>
+                <Icon name="sell" />
                 <span dir="ltr">{c.applied.code}</span>{" "}{tr("مطبّق")}
               </button>
             ) : c.couponOpen ? null : (
               <button type="button" className="t2-payrow-coupon" onClick={() => c.setCouponOpen(true)}>
-                <span className="t2-icon" aria-hidden="true">sell</span>
+                <Icon name="sell" />
                 {tr("عندي كوبون خصم")}
               </button>
             )
@@ -373,7 +373,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             />
             <span className="t2-share-main">
               <span className="t2-share-title">
-                <span className="t2-icon" aria-hidden="true">group</span>
+                <Icon name="group" />
                 {tr("شارك الرحلة ووفّر")}
               </span>
               <span className="t2-share-body">
@@ -508,7 +508,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 c.setScheduling(true);
               }}
             >
-              <span className="t2-icon" aria-hidden="true">event_upcoming</span>
+              <Icon name="event_upcoming" />
               {tr("حدّد موعداً")}
             </button>
             {c.parcelMode ? (
@@ -645,7 +645,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         {/* **ولا «+» محطةٍ للساعات** (§٦٣-ج/٥) — الخلفيةُ ترفض المحطاتِ معها، والراكبُ يقول وجهاتِه للكبتن في الطريق */}
         {c.multiStop && stops.length < MAX_STOPS && !c.hourlyMode ? (
           <button type="button" className="t2-route-add" onClick={onAddStop} aria-label={tr("إضافة محطة")}>
-            <span className="t2-icon" aria-hidden="true">add</span>
+            <Icon name="add" />
           </button>
         ) : (
           <span />
@@ -692,7 +692,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                   onClick={() => c.setCategory(option)}
                 >
                   <span className="t2-cat-icon">
-                    <span className="t2-icon" aria-hidden="true">{CATEGORY_ICON[option] ?? "local_taxi"}</span>
+                    <Icon name={CATEGORY_ICON[option] ?? "local_taxi"} art />
                   </span>
                   <span className="t2-cat-main">
                     <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
@@ -789,7 +789,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           </div>
           <p className="t2-note">
             {c.preference === "any" ? null : (
-              <span className="t2-icon" aria-hidden="true">schedule</span>
+              <Icon name="schedule" />
             )}
             {c.preferenceNote}
           </p>
@@ -804,7 +804,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
 
       {blockedByPreference ? (
         <div className="t2-callout warn" role="status">
-          <span className="t2-icon fill" aria-hidden="true">error</span>
+          <Icon name="error" fill />
           <div className="t2-callout-main">
             <div className="t2-callout-title">{tr("خدمة الكبتنات غير مفعّلة في بلدك الآن")}</div>
             <p className="t2-callout-body">
@@ -823,7 +823,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           «بلا أحمرَ إلا للحدّ» (§٦) — وهذا هو الحدّ */}
       {blockedByPayment ? (
         <div className="t2-callout danger" role="alert">
-          <span className="t2-icon fill" aria-hidden="true">error</span>
+          <Icon name="error" fill />
           <div className="t2-callout-main">
             <div className="t2-callout-title">{requestError}</div>
             <p className="t2-callout-body">{tr("يُرفع المنعُ فورَ أن تُقِرّ بالتسليم أو تدفع أو تبدّل طريقة الدفع.")}</p>
@@ -839,7 +839,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **الورقةُ الجديدة: الرصيدُ و«اشحن» سطرٌ صغيرٌ واحد** (SPEC §١٠٥/١) — والطلبُ نفسُه هو هو */}
       {v2 && c.walletNote ? (
         <div className="t2-v2-wallet" role="note">
-          <span className="t2-icon" aria-hidden="true">account_balance_wallet</span>
+          <Icon name="account_balance_wallet" />
           <span className="t2-v2-wallet-text" title={c.walletNote}>
             {c.walletShort ?? c.walletNote}
           </span>

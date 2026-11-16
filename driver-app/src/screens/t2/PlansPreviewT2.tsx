@@ -26,6 +26,7 @@ import { planSubLine } from "./SubscriptionT2";
 
 import "@/taxo2";
 import "./t2.css";
+import { Icon } from "@/taxo2";
 import "./plans.css"; import { tr } from "@/lib/i18n";
 
 export function PlansPreviewT2Screen() {
@@ -65,7 +66,7 @@ export function PlansPreviewT2Screen() {
       <div className="t2-sub-scroll scr">
         <div className="t2-head">
           <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
-            <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+            <Icon name="arrow_forward" />
           </button>
           <h1 className="t2-title">{tr("باقات الاشتراك")}</h1>
         </div>
@@ -73,7 +74,7 @@ export function PlansPreviewT2Screen() {
         {error ? (
           <>
             <p className="t2-note danger" role="alert">
-              <span className="t2-icon" aria-hidden="true">error</span>
+              <Icon name="error" />
               {error}
             </p>
             <button type="button" className="t2-button secondary t2-plans-retry" disabled={loading} onClick={load}>
@@ -129,7 +130,7 @@ export function PlansPreviewT2Screen() {
       {plans && plans.length > 0 ? (
         <div className="t2-sub-foot">
           <p className="t2-plans-later">
-            <span className="t2-icon" aria-hidden="true">hourglass_top</span>
+            <Icon name="hourglass_top" />
             {tr("يُتاح الشراءُ بعد اعتماد طلبك")}
           </p>
         </div>

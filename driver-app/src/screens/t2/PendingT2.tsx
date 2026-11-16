@@ -28,6 +28,7 @@ import { DOC_LABEL, STATUS } from "@/screens/Pending";
 
 import "@/taxo2";
 import "./t2.css";
+import { Icon } from "@/taxo2";
 import "./plans.css"; import { tr } from "@/lib/i18n";
 
 /** أيقونةُ كلِّ مستندٍ بمفردات اللوحة (C12): الرخصةُ والهويةُ والمركبة — **والصورةُ الشخصيةُ بالشخص**. */
@@ -105,7 +106,7 @@ export function PendingT2Screen() {
         <span className="t2-wait-track" />
         <span className="t2-wait-arc" />
         <span className="t2-wait-core">
-          <span className="t2-icon">{rejected ? "error" : "hourglass_top"}</span>
+          <Icon name={rejected ? "error" : "hourglass_top"} />
         </span>
       </div>
 
@@ -122,7 +123,7 @@ export function PendingT2Screen() {
       {rejected ? null : (
         <div className="t2-steps">
           <span className="t2-step-dot done">
-            <span className="t2-icon" aria-hidden="true">check</span>
+            <Icon name="check" />
           </span>
           <div>
             <div className="t2-step-title">{tr("استلمنا طلبك")}</div>
@@ -136,7 +137,7 @@ export function PendingT2Screen() {
           <span />
           {reviewed ? (
             <span className="t2-step-dot done">
-              <span className="t2-icon" aria-hidden="true">check</span>
+              <Icon name="check" />
             </span>
           ) : (
             <span className="t2-step-dot now" />
@@ -149,7 +150,7 @@ export function PendingT2Screen() {
           <span />
           {passed ? (
             <span className="t2-step-dot done">
-              <span className="t2-icon" aria-hidden="true">check</span>
+              <Icon name="check" />
             </span>
           ) : (
             <span className={appointment ? "t2-step-dot now" : "t2-step-dot"} />
@@ -179,7 +180,7 @@ export function PendingT2Screen() {
       )}
 
       <div className="t2-hint">
-        <span className="t2-icon" aria-hidden="true">info</span>
+        <Icon name="info" />
         <span>
           {tr("لن تصلك طلبات قبل الاعتماد وتفعيل اشتراك.")}
           {/* **«عرض الباقات» كما رُسم آخرَ السطر** (§٦٢-ج/٣٣) — صفحةُ عرضٍ بلا شراء، **ولمن ينتظر لا لمن رُفض** */}
@@ -200,7 +201,7 @@ export function PendingT2Screen() {
             <div key={document.id} className="t2-doc">
               <div className="t2-doc-row">
                 <span className={`t2-doc-icon ${TONE[document.review_status]}`}>
-                  <span className="t2-icon" aria-hidden="true">{DOC_ICON[document.doc_type]}</span>
+                  <Icon name={DOC_ICON[document.doc_type]} />
                 </span>
                 <span className="t2-doc-label">{DOC_LABEL[document.doc_type]}</span>
                 <span className={`t2-chip ${TONE[document.review_status]}`}>

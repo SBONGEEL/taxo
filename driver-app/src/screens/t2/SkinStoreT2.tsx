@@ -34,6 +34,7 @@ import { digits } from "@/lib/utils";
 import { useSkinStoreScreen } from "@/screens/SkinStore";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 type Filter = "all" | "owned" | Rarity;
@@ -107,17 +108,13 @@ export function SkinStoreT2Screen() {
             aria-label={tr("رجوع")}
             onClick={() => s.goBack()}
           >
-            <span className="t2-icon" aria-hidden="true">
-              arrow_forward
-            </span>
+            <Icon name="arrow_forward" />
           </button>
           <h1 className="t2-store-title">{tr("متجر المركبات")}</h1>
           {/* **الرصيدُ في الرأس** — من يتصفّح الأسعارَ يحتاج أن يعرف ما معه */}
           {s.store ? (
             <span className="t2-store-wallet" aria-label={tr("رصيد محفظتك")}>
-              <span className="t2-icon" aria-hidden="true">
-                account_balance_wallet
-              </span>
+              <Icon name="account_balance_wallet" />
               <span className="t2-store-wallet-num" dir="ltr">
                 {digits(s.store.balance)}
               </span>
@@ -141,9 +138,7 @@ export function SkinStoreT2Screen() {
               <span className="t2-store-shade" aria-hidden="true" />
               <span className="t2-store-fade" aria-hidden="true" />
               <span className="t2-store-seen">
-                <span className="t2-icon fill" aria-hidden="true">
-                  visibility
-                </span>
+                <Icon name="visibility" fill />
                 {tr("هكذا يراك الراكب")}
               </span>
               <span className="t2-store-info">
@@ -180,9 +175,7 @@ export function SkinStoreT2Screen() {
 
         {s.failed ? (
           <p className="t2-note danger">
-            <span className="t2-icon" aria-hidden="true">
-              error
-            </span>
+            <Icon name="error" />
             {s.failed}
           </p>
         ) : null}
@@ -194,17 +187,13 @@ export function SkinStoreT2Screen() {
             disabled={s.activating}
             onClick={() => void s.activateBought()}
           >
-            <span className="t2-icon" aria-hidden="true">
-              bolt
-            </span>
+            <Icon name="bolt" />
             {tr("فعّلها الآن")}
           </button>
         ) : null}
         {s.activateError ? (
           <p className="t2-note danger" role="alert">
-            <span className="t2-icon" aria-hidden="true">
-              error
-            </span>
+            <Icon name="error" />
             {s.activateError}
           </p>
         ) : null}
@@ -250,9 +239,7 @@ export function SkinStoreT2Screen() {
                   <span className="t2-store-tag">{tr("مملوكة")}</span>
                 ) : skin.blocked_reason ? (
                   <span className="t2-store-tag warn">
-                    <span className="t2-icon fill" aria-hidden="true">
-                      lock
-                    </span>
+                    <Icon name="lock" fill />
                     {BLOCKED_LABEL[skin.blocked_reason]}
                   </span>
                 ) : skin.price && skin.currency ? (
@@ -270,7 +257,7 @@ export function SkinStoreT2Screen() {
                 {stock ? <span className="t2-store-stock">{stock}</span> : null}
                 {on ? (
                   <span className="t2-store-check" aria-hidden="true">
-                    <span className="t2-icon">check</span>
+                    <Icon name="check" />
                   </span>
                 ) : null}
               </button>
@@ -332,9 +319,7 @@ export function SkinStoreT2Screen() {
               disabled={s.busy}
               onClick={() => s.setOpen(selected)}
             >
-              <span className="t2-icon fill" aria-hidden="true">
-                shopping_bag
-              </span>
+              <Icon name="shopping_bag" fill />
               {tr("شراء")}
             </button>
           ) : selected.owned ? (

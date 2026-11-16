@@ -164,18 +164,14 @@ export function ServicesT2Screen() {
       <div className="t2-svc-scroll scr">
         <div className="t2-head">
           <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
-            <span className="t2-icon" aria-hidden="true">
-              arrow_forward
-            </span>
+            <Icon name="arrow_forward" />
           </button>
           <h1 className="t2-title">{tr("خدماتك")}</h1>
         </div>
         {storefront === null ? (
           failed ? (
             <p className="t2-note danger" role="alert">
-              <span className="t2-icon" aria-hidden="true">
-                error
-              </span>
+              <Icon name="error" />
               {tr("تعذّر قراءة الخدمات")}
             </p>
           ) : (

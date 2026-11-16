@@ -21,6 +21,7 @@ import { tr } from "@/lib/i18n";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
 import "./support.css";
+import { Icon } from "@/taxo2";
 
 const APP: "rider" | "driver" = "driver";
 
@@ -61,9 +62,7 @@ function Head({ title }: { title: string }) {
   return (
     <div className="t2-head">
       <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={goBack}>
-        <span className="t2-icon" aria-hidden="true">
-          arrow_forward
-        </span>
+        <Icon name="arrow_forward" />
       </button>
       <h1 className="t2-title">{title}</h1>
     </div>

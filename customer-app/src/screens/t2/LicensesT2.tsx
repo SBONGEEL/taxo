@@ -10,6 +10,7 @@ import { MAP_CREDITS } from "@/lib/map-credits";
 import "@/taxo2";
 import "./t2.css";
 import { tr } from "@/lib/i18n";
+import { Icon } from "@/taxo2";
 
 export function LicensesT2Screen() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export function LicensesT2Screen() {
     <div className="t2 t2-page t2-account pb-nav">
       <div className="t2-head">
         <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => navigate(-1)}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
+          <Icon name="arrow_forward" />
         </button>
         <h1 className="t2-title">{tr("حول التطبيق والتراخيص")}</h1>
       </div>
@@ -31,12 +32,12 @@ export function LicensesT2Screen() {
       <div className="t2-list t2-arows">
         {MAP_CREDITS.map((credit) => (
           <button key={credit.key} type="button" className="t2-arow" onClick={() => openLegal(credit.url)}>
-            <span className="t2-icon" aria-hidden="true">map</span>
+            <Icon name="map" />
             <span className="t2-arow-label">
               <span dir="ltr">{credit.name}</span>
               <span className="t2-arow-sub">{tr(credit.what)}</span>
             </span>
-            <span className="t2-icon t2-chev" aria-hidden="true">open_in_new</span>
+            <Icon name="open_in_new" className="t2-chev" />
           </button>
         ))}
       </div>

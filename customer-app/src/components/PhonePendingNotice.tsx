@@ -19,6 +19,7 @@
 
 import { ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Icon } from "@/taxo2";
 
 import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
@@ -33,9 +34,7 @@ const PENDING_BODY =
 function CalloutT2({ tone, title, body }: { tone: "danger" | "warn"; title: string; body: string }) {
   return (
     <div role="status" className={`t2-callout ${tone}`}>
-      <span className="t2-icon fill" aria-hidden="true">
-        error
-      </span>
+      <Icon name="error" fill />
       <div className="t2-callout-main">
         <div className="t2-callout-title">{title}</div>
         <p className="t2-callout-body">{body}</p>

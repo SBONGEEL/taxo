@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/taxo2";
 
 import "@/taxo2"; import { tr } from "@/lib/i18n";
 
@@ -50,7 +51,7 @@ export function StaleShellNotice() {
     <div className="t2 t2-notices" style={{ zIndex: 95 }}>
       <div className="t2-notice" role="status">
         <span className="t2-notice-icon" aria-hidden="true">
-          <span className="t2-icon">schedule</span>
+          <Icon name="schedule" />
         </span>
         <div className="t2-notice-main">
           <p className="t2-notice-title">{offline ? tr("لا يوجد اتصال بالإنترنت") : tr("لم يصل الجواب بعد")}</p>
@@ -61,9 +62,7 @@ export function StaleShellNotice() {
           </p>
         </div>
         <button type="button" className="t2-notice-close" onClick={() => setOpen(false)} aria-label={tr("إغلاق")}>
-          <span className="t2-icon" aria-hidden="true">
-            close
-          </span>
+          <Icon name="close" />
         </button>
       </div>
     </div>

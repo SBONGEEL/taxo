@@ -66,6 +66,7 @@ import { RideComms } from "@/components/ride/RideComms";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
+import { IconSetSwitch } from "@/lib/icon-set";
 import { ReconsentGate } from "@/lib/reconsent-gate";
 import { PayReturnLinks, PublicPayReturn, isPublicPayReturn } from "@/lib/pay-return";
 import { AppTour } from "@/lib/app-tour";
@@ -584,6 +585,7 @@ export default function App() {
       <UpdateGate app="driver">
       <ConfigProvider>
         <SessionProvider>
+          <IconSetSwitch />
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من جنس صاحبة الحساب ومن
               مفتاح دولتها، فلا معنى لها قبلهما */}
           <BrandProvider>

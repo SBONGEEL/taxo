@@ -34,7 +34,7 @@ import { play } from "@/lib/sound";
 import { DISPLAY_LOCALE, digits } from "@/lib/utils";
 import { collectView, useCollectScreen } from "@/screens/Collect";
 import { useRateRider } from "@/screens/RateRider";
-import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
+import { Celebrate, Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 export function CollectT2Screen({
   ride,
@@ -148,6 +148,7 @@ export function CollectT2Screen({
   return (
     <div className="t2 t2-co">
       <div className="t2-co-head">
+        <Celebrate />
         <span className="t2-co-done" aria-hidden="true">
           <Icon name="check" />
         </span>

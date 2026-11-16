@@ -349,12 +349,10 @@ export function PayRequestT2Screen() {
           {cardMethod && purpose === "wallet_topup" ? (
             <button type="button" className="t2-wal-door t2-pr-gap" onClick={() => navigate("/wallet/card")}>
               <span className="t2-wal-txicon" aria-hidden="true">
-                <span className="t2-icon">confirmation_number</span>
+                <Icon name="confirmation_number" />
               </span>
               <span className="t2-wal-door-title">{tr("لديك بطاقة TAXO؟ أدخل رمزها")}</span>
-              <span className="t2-icon t2-wal-door-go" aria-hidden="true">
-                arrow_back
-              </span>
+              <Icon name="arrow_back" className="t2-wal-door-go" />
             </button>
           ) : null}
           <div className="t2-section">{tr("طريقة الدفع")}</div>

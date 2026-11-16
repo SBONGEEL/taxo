@@ -27,6 +27,7 @@ import { digits } from "@/lib/utils";
 import { LEVEL_LABEL, nextStep } from "@/screens/Missions";
 
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 export function MissionsT2Screen() {
@@ -64,7 +65,7 @@ export function MissionsT2Screen() {
               <span className="t2-level-stripe a" aria-hidden="true" />
               <span className="t2-level-stripe b" aria-hidden="true" />
               <div className="t2-level-head">
-                <span className="t2-icon t2-level-medal" aria-hidden="true">workspace_premium</span>
+                <Icon name="workspace_premium" className="t2-level-medal" />
                 <div>
                   <div className="t2-level-k">{tr("مستواك")}</div>
                   <div className="t2-level-v">
@@ -121,9 +122,7 @@ export function MissionsT2Screen() {
                     return (
                       <div key={item.mission.id} className={item.done ? "t2-mission done" : "t2-mission"}>
                         <div className="t2-mission-top">
-                          <span className="t2-icon" aria-hidden="true">
-                            {item.mission.metric === "min_rating" ? "star" : "flag"}
-                          </span>
+                          <Icon name={item.mission.metric === "min_rating" ? "star" : "flag"} />
                           <div className="t2-mission-main">
                             <div className="t2-mission-title">{item.mission.title}</div>
                             {item.mission.description ? (
@@ -156,7 +155,7 @@ export function MissionsT2Screen() {
               <div className="t2-list">
                 {data.badges.map((row) => (
                   <div key={row.badge.id} className="t2-badge-row">
-                    <span className="t2-icon" aria-hidden="true">verified</span>
+                    <Icon name="verified" />
                     <span className="t2-badge-main">
                       <span className="t2-badge-label">{row.badge.label}</span>
                       {row.badge.description ? (

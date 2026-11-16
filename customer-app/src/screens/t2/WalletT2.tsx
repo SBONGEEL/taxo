@@ -59,6 +59,7 @@ import "@/taxo2";
 import "./t2.css";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 import { phaseLabel } from "./PayDz";
+import { Icon } from "@/taxo2";
 
 /** أيقونةُ كلِّ نوعٍ بمفردات اللوحة — **وما لم تُرسم أيقونتُه فبأيقونة المحفظة**. */
 const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
@@ -224,24 +225,24 @@ export function WalletT2Screen() {
         {walletEnabled ? (
           <div className="t2-balance-actions">
             <button type="button" className="t2-btn ember" onClick={() => setTopupOpen(true)}>
-              <span className="t2-icon" aria-hidden="true">add</span>
+              <Icon name="add" />
               {tr("شحن الرصيد")}
             </button>
             {loyaltyEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/loyalty")}>
-                <span className="t2-icon" aria-hidden="true">diamond</span>
+                <Icon name="diamond" />
                 {tr("نقاطي")}
               </button>
             ) : null}
             {plansEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/plans")}>
-                <span className="t2-icon" aria-hidden="true">card_membership</span>
+                <Icon name="card_membership" />
                 {tr("اشتراكي")}
               </button>
             ) : null}
             {transferEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/wallet/transfer")}>
-                <span className="t2-icon" aria-hidden="true">sync_alt</span>
+                <Icon name="sync_alt" />
                 {tr("تحويل لصديق")}
               </button>
             ) : null}
@@ -254,7 +255,7 @@ export function WalletT2Screen() {
       {/* **دَينُ الإلغاء بجانب الرصيد لا مطروحاً منه** (`design/CANCELLATION-FEE.md` §4) — ورقمُه من الخلفية */}
       {Number(wallet?.cancellation_debt ?? 0) > 0 ? (
         <p className="t2-note warn">
-          <span className="t2-icon" aria-hidden="true">error</span>
+          <Icon name="error" />
           <span>
             {tr("عليك رسومُ إلغاء")}{" "}{formatMoney(wallet?.cancellation_debt, wallet?.currency)}
             {" "}{tr("— تُخصم تلقائياً من أول شحنٍ لمحفظتك.")}
@@ -263,7 +264,7 @@ export function WalletT2Screen() {
       ) : null}
       {wallet?.frozen ? (
         <p className="t2-note danger">
-          <span className="t2-icon" aria-hidden="true">lock</span>
+          <Icon name="lock" />
           <span>{tr("محفظتك مجمّدة مؤقتاً — راجع الدعم")}</span>
         </p>
       ) : null}
@@ -279,7 +280,7 @@ export function WalletT2Screen() {
               return (
                 <div key={request.id} className="t2-tx">
                   <span className="t2-tx-icon">
-                    <span className="t2-icon" aria-hidden="true">hourglass_top</span>
+                    <Icon name="hourglass_top" />
                   </span>
                   <span className="t2-tx-main">
                     <span className="t2-tx-title">{formatMoney(request.amount, request.currency)}</span>
@@ -312,9 +313,7 @@ export function WalletT2Screen() {
               return (
                 <div key={request.id} className="t2-tx">
                   <span className="t2-tx-icon">
-                    <span className="t2-icon" aria-hidden="true">
-                      {request.status === "pending" ? "hourglass_top" : request.status === "approved" ? "check_circle" : "info"}
-                    </span>
+                    <Icon name={request.status === "pending" ? "hourglass_top" : request.status === "approved" ? "check_circle" : "info"} />
                   </span>
                   <span className="t2-tx-main">
                     <span className="t2-tx-title">
@@ -405,7 +404,7 @@ export function WalletT2Screen() {
                   </>
                 ) : (
                   <>
-                    <span className="t2-icon" aria-hidden="true">credit_card</span>
+                    <Icon name="credit_card" />
                     <span className="t2-paytile-name">{cards === null ? tr("البطاقات") : tr("لا بطاقة محفوظة")}</span>
                   </>
                 )}
@@ -461,9 +460,7 @@ export function WalletT2Screen() {
                   return (
                     <div key={entry.id} className="t2-tx">
                       <span className={credit ? "t2-tx-icon in" : "t2-tx-icon"}>
-                        <span className="t2-icon" aria-hidden="true">
-                          {TX_ICON[entry.type] ?? "account_balance_wallet"}
-                        </span>
+                        <Icon name={TX_ICON[entry.type] ?? "account_balance_wallet"} />
                       </span>
                       <span className="t2-tx-main">
                         <span className="t2-tx-title">{TRANSACTION_LABEL[entry.type]}</span>

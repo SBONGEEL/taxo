@@ -41,6 +41,7 @@ import { SignOutEverywhereRow } from "@/components/account/SignOutEverywhere";
 
 import { WomenServiceCardT2 } from "./WomenServiceT2";
 import "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./t2.css"; import { tr } from "@/lib/i18n";
 
 interface Row {
@@ -125,7 +126,7 @@ export function AccountT2Screen() {
           aria-label={tr("بياناتي")}
           onClick={() => navigate("/account/profile")}
         >
-          <span className="t2-icon" aria-hidden="true">edit</span>
+          <Icon name="edit" />
         </button>
       </div>
 
@@ -156,10 +157,10 @@ export function AccountT2Screen() {
       <div className="t2-list t2-arows">
         {rows.map((row) => (
           <button key={row.to} type="button" className="t2-arow" onClick={() => navigate(row.to)}>
-            <span className="t2-icon" aria-hidden="true">{row.icon}</span>
+            <Icon name={row.icon} />
             <span className="t2-arow-label">{row.label}</span>
             {row.trailing ? <span className="t2-arow-trail">{row.trailing}</span> : null}
-            <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+            <Icon name="chevron_left" className="t2-chev" />
           </button>
         ))}
       </div>
@@ -175,15 +176,15 @@ export function AccountT2Screen() {
             void shareApp("rider").then((outcome) => setShareMessage(shareNote(outcome)));
           }}
         >
-          <span className="t2-icon" aria-hidden="true">share</span>
+          <Icon name="share" />
           <span className="t2-arow-label">{tr("شارك التطبيق")}</span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+          <Icon name="chevron_left" className="t2-chev" />
         </button>
         {shareMessage ? <p className="t2-arow-note" role="status">{shareMessage}</p> : null}
         <button type="button" className="t2-arow" onClick={openAppTour}>
-          <span className="t2-icon" aria-hidden="true">tour</span>
+          <Icon name="tour" />
           <span className="t2-arow-label">{tr("جولة في التطبيق")}</span>
-          <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
+          <Icon name="chevron_left" className="t2-chev" />
         </button>
       </div>
 

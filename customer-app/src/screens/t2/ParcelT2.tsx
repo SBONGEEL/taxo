@@ -41,7 +41,7 @@ export function ParcelOptionT2({
     return (
       <div className="t2-fo-chip">
         <span className="t2-fo-chip-icon" aria-hidden="true">
-          <span className="t2-icon">{fetch ? "inventory_2" : "package_2"}</span>
+          <Icon name={fetch ? "inventory_2" : "package_2"} />
         </span>
         <span className="t2-fo-chip-main">
           <span className="t2-fo-chip-title">
@@ -57,7 +57,7 @@ export function ParcelOptionT2({
           onClick={onOpen}
           aria-label={fetch ? tr("تعديل بيانات الغرض") : tr("تعديل بيانات الطرد")}
         >
-          <span className="t2-icon" aria-hidden="true">edit</span>
+          <Icon name="edit" />
         </button>
       </div>
     );
@@ -66,14 +66,14 @@ export function ParcelOptionT2({
     <button type="button" className="t2-share t2-fo-open" onClick={onOpen}>
       <span className="t2-share-main">
         <span className="t2-share-title">
-          <span className="t2-icon" aria-hidden="true">{fetch ? "inventory_2" : "package_2"}</span>
+          <Icon name={fetch ? "inventory_2" : "package_2"} />
           {fetch ? tr("بيانات الغرض") : tr("بيانات الطرد")}
         </span>
         <span className="t2-share-body">
           {fetch ? tr("اقرأ الشروط، واكتب الغرضَ ومن يسلّمه للكبتن.") : tr("اقرأ الشروط، واكتب المستلمَ ومن يدفع.")}
         </span>
       </span>
-      <span className="t2-icon t2-fo-open-go" aria-hidden="true">chevron_left</span>
+      <Icon name="chevron_left" className="t2-fo-open-go" />
     </button>
   );
 }
@@ -168,7 +168,7 @@ export function ParcelSheetT2({
       <div className="t2-picker-title">{fetch ? tr("أحضر غرضي") : tr("طرد")}</div>
       {fetch ? (
         <p className="t2-note t2-pf-lead">
-          <span className="t2-icon" aria-hidden="true">inventory_2</span>
+          <Icon name="inventory_2" />
           {tr("يأخذ الكبتنُ غرضك من حيث تقول ويوصله إليك.")}
         </p>
       ) : null}
@@ -252,7 +252,7 @@ export function ParcelSheetT2({
 
       {fetch ? (
         <p className="t2-note t2-fo-keep">
-          <span className="t2-icon" aria-hidden="true">payments</span>
+          <Icon name="payments" />
           {tr("تدفع أنت حين يصلك — بالمحفظة أو البطاقة أو نقداً عند التسليم.")}
         </p>
       ) : (
@@ -273,7 +273,7 @@ export function ParcelSheetT2({
               onClick={() => setPayer(option.value)}
             >
               <span className="t2-cat-icon">
-                <span className="t2-icon" aria-hidden="true">{option.icon}</span>
+                <Icon name={option.icon} />
               </span>
               <span className="t2-cat-main">
                 <span className="t2-cat-name">{option.label}</span>
@@ -287,7 +287,7 @@ export function ParcelSheetT2({
       )}
 
       <p className="t2-note t2-fo-keep">
-        <span className="t2-icon" aria-hidden="true">lock</span>
+        <Icon name="lock" />
         {fetch
           ? tr("نحفظ اسمَ من يسلّم الغرضَ ورقمَه ووصفَ الغرض لهذا الطلب وحده، ونحذفها بعد ثلاثين يوماً.")
           : tr("نحفظ بيانات المستلم لهذا التوصيل وحده، ونحذفها بعد ثلاثين يوماً.")}
@@ -306,7 +306,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
       <div className="t2-fo-ride">
         <div className="t2-fo-ride-card">
           <div className="t2-fo-ride-name">
-            <span className="t2-icon" aria-hidden="true">inventory_2</span>
+            <Icon name="inventory_2" />
             <span className="t2-pc-ride-to">
               <span>
                 {tr("من:")}{" "}<b>{ride.recipient_name}</b>
@@ -316,7 +316,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
           </div>
           {ride.parcel_item ? (
             <div className="t2-fo-ride-payer">
-              <span className="t2-icon" aria-hidden="true">package_2</span>
+              <Icon name="package_2" />
               <span>{tr("الغرض:")}{" "}{ride.parcel_item}</span>
             </div>
           ) : null}
@@ -330,7 +330,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
       <div className="t2-fo-ride-card">
         {ride.recipient_name ? (
           <div className="t2-fo-ride-name">
-            <span className="t2-icon" aria-hidden="true">package_2</span>
+            <Icon name="package_2" />
             <span className="t2-pc-ride-to">
               <span>
                 {tr("إلى:")}{" "}<b>{ride.recipient_name}</b>
@@ -341,7 +341,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
         ) : null}
         {ride.payer === "recipient_cash" ? (
           <div className="t2-fo-ride-payer">
-            <span className="t2-icon" aria-hidden="true">payments</span>
+            <Icon name="payments" />
             <span>{PAYER_LINE.recipient_cash}</span>
           </div>
         ) : null}

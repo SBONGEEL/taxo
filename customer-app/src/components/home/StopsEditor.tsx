@@ -1,3 +1,4 @@
+import { Icon } from "@/taxo2";
 /** إضافةُ المحطات الوسيطة وترتيبُها وحذفُها — قبل التأكيد لا بعده.
  *
  * **الترتيبُ والحذف يقعان هنا** لأن تغيير الوجهة بعد أن سار الكبتن يغيّر
@@ -62,7 +63,7 @@ export function StopsEditor({
               onClick={() => move(index, -1)}
               className="t2-stop-btn"
             >
-              <span className="t2-icon" aria-hidden="true">arrow_upward</span>
+              <Icon name="arrow_upward" />
             </button>
             <button
               type="button"
@@ -71,7 +72,7 @@ export function StopsEditor({
               onClick={() => move(index, 1)}
               className="t2-stop-btn"
             >
-              <span className="t2-icon" aria-hidden="true">arrow_downward</span>
+              <Icon name="arrow_downward" />
             </button>
             <button
               type="button"
@@ -79,14 +80,14 @@ export function StopsEditor({
               onClick={() => onChange(stops.filter((_, at) => at !== index))}
               className="t2-stop-btn danger"
             >
-              <span className="t2-icon" aria-hidden="true">close</span>
+              <Icon name="close" />
             </button>
           </li>
         ))}
       </ul>
       {waitingNote ? (
         <p className={compact ? "t2-note one-line" : "t2-note"} title={compact ? waitingNote : undefined}>
-          <span className="t2-icon" aria-hidden="true">location_on</span>
+          <Icon name="location_on" />
           {waitingNote}
         </p>
       ) : null}

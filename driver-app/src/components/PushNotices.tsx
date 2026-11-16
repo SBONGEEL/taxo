@@ -16,6 +16,7 @@ import { useSyncExternalStore } from "react";
 import { play } from "@/lib/sound";
 import { firstSighting } from "@/lib/notice";
 import { routeCommsPush } from "@/lib/trip-comms";
+import { Icon } from "@/taxo2";
 
 import "@/taxo2"; import { tr } from "@/lib/i18n";
 
@@ -79,7 +80,7 @@ export function PushNotices() {
       {current.map((notice) => (
         <div key={notice.id} className="t2-notice" role="status">
           <span className="t2-notice-icon" aria-hidden="true">
-            <span className="t2-icon">notifications</span>
+            <Icon name="notifications" />
           </span>
           <div className="t2-notice-main">
             <p className="t2-notice-title">{notice.title}</p>
@@ -91,9 +92,7 @@ export function PushNotices() {
             onClick={() => emit(notices.filter((item) => item.id !== notice.id))}
             aria-label={tr("إغلاق")}
           >
-            <span className="t2-icon" aria-hidden="true">
-              close
-            </span>
+            <Icon name="close" />
           </button>
         </div>
       ))}
