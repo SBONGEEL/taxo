@@ -43,6 +43,11 @@ _CAP = "maps:google:calls:{}:{}"
 OPEN_ATTRIBUTION = "© OpenStreetMap contributors · Overture Maps"
 #: **مهلةُ الخدمة المحلّية** — فهرسٌ على القرص يجيب في عُشر ثانية، فثانيتان سقفٌ لا تقدير
 OPEN_TIMEOUT = 2.0
+#: **سؤالٌ بطيءٌ ليس خدمةً ساقطة** — مهلةُ قراءةٍ واحدةٍ (خدمةٌ أجابت الاتصالَ وأبطأت بسؤالٍ نادرٍ أو في دقيقة تسخينها)
+#: كانت تُعلِّمها ساقطةً عشرَ دقائق فيذهب كلُّ البحث إلى Mapbox؛ فلا تُعلَّم إلا بثلاثٍ في دقيقة
+SLOW_STRIKES = 3
+SLOW_WINDOW_SECONDS = 60
+_SLOW = "maps:open:slow"
 #: نقطةُ حقنٍ للاختبار وحدَه
 open_transport: httpx.AsyncBaseTransport | None = None
 MAPBOX_FORWARD = "https://api.mapbox.com/search/geocode/v6/forward"
@@ -199,6 +204,18 @@ def fuzzy_score(needle: str, names: list[str]) -> int | None:
     return best
 
 
+async def _slow_strike() -> bool:
+    """**عدُّ مهلات القراءة في نافذةٍ قصيرة** — `True` حين تبلغ السقف؛ وRedis معطّلٌ يُقرأ «لم تبلغ» فلا يُعلِّم شيئاً"""
+    try:
+        redis = _redis()
+        count = int(await redis.incr(_SLOW))
+        if count == 1:
+            await redis.expire(_SLOW, SLOW_WINDOW_SECONDS)
+        return count >= SLOW_STRIKES
+    except Exception:  # pragma: no cover
+        return False
+
+
 async def _open_search(country: CountryCode, query: str, near: tuple[float, float] | None) -> list[Result] | None:
     """**الخدمةُ المحلّية** — `None` ⇐ فشلت (فيُرجع إلى Mapbox ويُشعَر المالكُ مرّة)، وقائمةٌ فارغة ⇐ أجابت بلا نتيجة."""
     from app.core.config import settings
@@ -217,6 +234,11 @@ async def _open_search(country: CountryCode, query: str, near: tuple[float, floa
             return None
         response.raise_for_status()
         body = response.json()
+    except httpx.ReadTimeout:
+        # هذا الطلبُ إلى Mapbox، والعلامةُ لا تُكتب إلا إن تكرّر البطءُ — خدمةٌ معلَّقةٌ تبلغ الثلاثَ في ثوانٍ
+        if await _slow_strike():
+            await note("open", up=False, reason="ReadTimeout", country=country)
+        return None
     except (httpx.HTTPError, ValueError) as exc:
         await note("open", up=False, reason=type(exc).__name__, country=country)
         return None

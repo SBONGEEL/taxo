@@ -22,6 +22,7 @@ import {
   browserStore,
   categoryIcon,
   distanceLabel,
+  foldText,
   forgetRecent,
   hiddenRecents,
   highlightRange,
@@ -254,8 +255,16 @@ export function PlaceSearchV2({
       .slice(0, 5);
   }, [labels, spots, near]);
 
-  const savedAt = (point: Coordinates): SavedPlace | undefined =>
-    places.find((place) => samePoint({ lat: place.lat, lng: place.lng }, point));
+  // **النجمةُ لمكانٍ باسمه لا لنقطته**: محلٌّ داخل «مكة مول» على نقطته نفسِها لا يُضاء بحفظ المول، ولا تمحو نجمتُه
+  // «البيت» إن وقع البيتُ على النقطة — البيتُ والعملُ يُغيَّران من خانتهما وحدَها
+  const savedAt = (row: Row): SavedPlace | undefined =>
+    places.find(
+      (place) =>
+        place.icon !== "home" &&
+        place.icon !== "work" &&
+        samePoint({ lat: place.lat, lng: place.lng }, row.coordinates) &&
+        foldText(place.label) === foldText(row.name.slice(0, 60)),
+    );
 
   async function choose(row: Row, remember: boolean) {
     if (savingAs) {
@@ -285,7 +294,7 @@ export function PlaceSearchV2({
     if (busyStar) return;
     setBusyStar(row.id);
     try {
-      const existing = savedAt(row.coordinates);
+      const existing = savedAt(row);
       if (existing) await deletePlace(existing.id);
       else
         await createPlace({
@@ -528,7 +537,7 @@ export function PlaceSearchV2({
       ) : (
         <div className={status === "loading" ? "t2-list t2-ps-section t2-ps-stale" : "t2-list t2-ps-section"}>
           {rows.map((row) => {
-            const saved = Boolean(savedAt(row.coordinates));
+            const saved = Boolean(savedAt(row));
             return (
               <ResultRow
                 key={row.id}

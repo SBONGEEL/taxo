@@ -34,6 +34,8 @@ class OpenFake:
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.calls.append(dict(request.url.params))
+        if self.status == 0:
+            raise httpx.ReadTimeout("slow", request=request)
         if self.status != 200:
             return httpx.Response(self.status, json={"detail": "x"})
         return httpx.Response(200, json={"items": self.items})
@@ -99,6 +101,23 @@ async def test_a_busy_service_is_not_marked_down(client: AsyncClient, open_fake:
     assert not await maps.is_down("open")
     open_fake.status = 200
     assert (await _search(client))["attribution"] == "open"
+
+
+async def test_one_slow_answer_is_not_a_dead_service(client: AsyncClient, open_fake: OpenFake, mapbox: list) -> None:
+    """**مهلةٌ واحدةٌ لا تُسقط البحثَ عشرَ دقائق** — كانت تُعلِّمها ساقطةً فيذهب كلُّ بحثٍ بعدها إلى Mapbox؛ والثالثةُ في دقيقةٍ تُعلِّم"""
+    from app.core.redis_client import get_redis_client
+
+    await get_redis_client().delete(maps._SLOW)
+    open_fake.status = 0
+    assert (await _search(client))["attribution"] == "mapbox"
+    assert not await maps.is_down("open")
+    open_fake.status = 200
+    assert (await _search(client))["attribution"] == "open", "السؤالُ التالي يطرق الخدمةَ ثانيةً"
+    open_fake.status = 0
+    await _search(client)
+    assert not await maps.is_down("open")
+    await _search(client)
+    assert await maps.is_down("open"), "ثلاثُ مهلاتٍ في دقيقةٍ خدمةٌ معلَّقةٌ لا سؤالٌ بطيء"
 
 
 async def test_no_results_fall_through_to_mapbox(client: AsyncClient, open_fake: OpenFake, mapbox: list) -> None:
