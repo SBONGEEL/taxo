@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — سجلُّ الإصدارات (SPEC §١٠٥/٥، ٢٠٢٦-١١-١٦)
+    "AppReleaseOut": (
+        "بانٍ واحد: `admin_releases._out` في القائمة والإنشاء والتعديل، من صفِّ الإصدار كلِّه. "
+        "**و`open_map_min_build` فارغٌ حال**: لا غلافَ تُرسم فيه الخريطةُ المفتوحة بعد"
+    ),
     # ✅ بانٍ واحد — بحثُ الأماكن (SPEC §«الخرائطُ والبحثُ ببياناتٍ مفتوحة»/١١، ٢٠٢٦-١١-١٥)
     "PlaceSearchOut": (
         "بانٍ واحد: `place_search.place_search_out` في بابي الراكب واللوحة. "

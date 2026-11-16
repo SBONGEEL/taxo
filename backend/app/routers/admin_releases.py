@@ -32,17 +32,8 @@ from app.services import audit, releases as releases_service
 router = APIRouter(prefix="/admin/releases", tags=["admin"])
 
 
-async def _row(
-    session: AsyncSession,
-    release: AppRelease,
-    *,
-    current_id: uuid.UUID | None = None,
-) -> AppReleaseOut:
-    if current_id is None:
-        live = await releases_service.current(
-            session, release.app, release.platform
-        )
-        current_id = None if live is None else live.id
+def _out(release: AppRelease, *, is_current: bool) -> AppReleaseOut:
+    """**البانِي الواحدُ لـ`AppReleaseOut`** — في القائمة والإنشاء والتعديل (`test_two_doors`): حقلٌ يُضاف هنا يصل الأبوابَ كلَّها."""
     return AppReleaseOut(
         id=release.id,
         app=release.app,
@@ -53,10 +44,15 @@ async def _row(
         release_notes=release.release_notes,
         reminder_hours=release.reminder_hours,
         open_map_min_build=release.open_map_min_build,
-        is_current=release.id == current_id,
+        is_current=is_current,
         created_at=release.created_at,
         updated_at=release.updated_at,
     )
+
+
+async def _row(session: AsyncSession, release: AppRelease) -> AppReleaseOut:
+    live = await releases_service.current(session, release.app, release.platform)
+    return _out(release, is_current=live is not None and live.id == release.id)
 
 
 @router.get("", response_model=list[AppReleaseOut])
@@ -83,23 +79,7 @@ async def list_releases(
             if live is not None:
                 current_ids.add(live.id)
 
-    return [
-        AppReleaseOut(
-            id=row.id,
-            app=row.app,
-            platform=row.platform,
-            build=row.build,
-            min_supported_build=row.min_supported_build,
-            download_url=row.download_url,
-            release_notes=row.release_notes,
-            reminder_hours=row.reminder_hours,
-            open_map_min_build=row.open_map_min_build,
-            is_current=row.id in current_ids,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-        )
-        for row in rows
-    ]
+    return [_out(row, is_current=row.id in current_ids) for row in rows]
 
 
 @router.post("", response_model=AppReleaseOut, status_code=status.HTTP_201_CREATED)
