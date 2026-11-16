@@ -164,6 +164,22 @@ SAME_POINT_KM = 0.5
 SAME_SITE_KM = {"mall": 2.5, "university": 2.5, "hospital": 2.0, "airport": 5.0}
 
 
+def _bare(word: str) -> str:
+    """الكلمةُ بلا «ال» في أوّلها — «الداخليه» و«داخليه» واحدة"""
+    return word[2:] if word.startswith("ال") and len(word) > 4 else word
+
+
+def _words_present(words: list[str], nalt: str) -> bool:
+    """**كلُّ كلمةٍ مطلوبةٍ في الاسم** — حرفاً أو بخطأ إملاءٍ واحد («الداخليى» تجد «الداخليه»)"""
+    have = [_bare(w) for w in nalt.replace(" | ", " ").split()]
+    for word in words:
+        if word in have:
+            continue
+        if not any(len(word) >= 4 and difflib.SequenceMatcher(None, word, own).ratio() >= 0.8 for own in have):
+            return False
+    return True
+
+
 def _parts(text: str | None) -> list[str]:
     return [part.strip() for part in (text or "").split("|") if part.strip()]
 
@@ -233,6 +249,8 @@ def _km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 #: **ذاكرةُ الأجوبة** (§١٠٤/٨) — مفتاحُها النصُّ المطويُّ والبلدُ والموقعُ مقرَّباً إلى ~١ كم، فراكبان في الحيّ نفسِه يتشاركانها؛
 #: والفهرسُ لا يتغيّر وهو قيد التشغيل (`immutable=1`) فلا يبلى ما فيها. **ولا يُكتب منها شيءٌ في سجلّ**
 CACHE_SIZE = 4096
+#: **سقفُ الثلاثيّ النادر** — عددُ الأماكن التي تحمله؛ وما فوقه شائعٌ لا يُسأل به في البحث المتسامح
+COMMON_GRAM = 6000
 _cache: "OrderedDict[tuple, list[dict]]" = OrderedDict()
 _cache_lock = threading.Lock()
 
@@ -292,10 +310,22 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
         for row in db.execute(sql.replace("ORDER BY fts.rank", "ORDER BY p.rank DESC, fts.rank"), (phrase, 40)):
             found.setdefault(row["id"], row)
     grams = _trigrams(query)
+    # **حرفٌ زائدٌ يقطع كلَّ ثلاثيّ** («biyar» و«biar» لا يشتركان في ثلاثيٍّ واحد) — فللاستعلام القصير تُسأل ثلاثيّاتُ كلِّ صورةٍ
+    # منه بحرفٍ محذوف أيضاً؛ والقياسُ بعدها (`_similarity`) هو الحَكَم، فلا يدخل ما لا يشبه
+    if 0 < len(grams) <= 6:
+        for word in query.split():
+            if 4 <= len(word) <= 8:
+                for at in range(len(word)):
+                    grams += [g for g in _trigrams(word[:at] + word[at + 1:]) if g not in grams]
     if grams and len(found) < 60:
         marks = ",".join("?" * len(grams))
         counts = dict(db.execute(f"SELECT term, doc FROM temp.vocab WHERE term IN ({marks})", grams).fetchall())
         rare = sorted((g for g in grams if counts.get(g)), key=lambda g: counts[g])[:8]
+        # **ثلاثيٌّ في كلِّ مكانٍ لا يدلّ على شيء** («el » و«ال ») — يملأ حدَّ الثلاثمئة بما لا يشبه المطلوب فيغيب المقصود:
+        # «el biyar» لم يجد «El Biar». يُسقط ما زاد عن السقف ما بقي ثلاثيّان نادران يُسأل بهما
+        uncommon = [g for g in rare if counts[g] <= COMMON_GRAM]
+        if len(uncommon) >= 2:
+            rare = uncommon
         if rare:
             fuzzy = f"{country} AND n:(" + " OR ".join(_quote(g) for g in rare) + ")"
             for row in db.execute(sql, (fuzzy, 300)):
@@ -313,6 +343,8 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
         found = dict(sorted(found.items(), key=lambda kv: (-overlap(kv[1]), -kv[1]["rank"], kv[1]["src"] != "osm"))[:80])
     wants_street = any(w in STREET_WORDS for w in query.split())
     wants_roundabout = any(w in ROUNDABOUT_WORDS for w in query.split())
+    #: **ما بعد «دوار» في الاستعلام** — الدوّارُ المقصودُ يحمله، و«دوار الكمالية» لا يتقدّم «… دوار الداخليه» لأنه دوّارٌ فحسب
+    qrest = [_bare(w) for w in query.split() if w not in ROUNDABOUT_WORDS and _bare(w)]
     qcore = _core(query.translate(WESTERN))
     wanted = _categories(query)
     digits = _numbers(query)
@@ -331,13 +363,14 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
             have = _numbers(row["nalt"])
             score += 0.06 if digits <= have else -0.25 if have else -0.12  # رقمٌ آخرُ أبعدُ من لا رقم
         roundabout = row["kind"] == "street" and any(w in ROUNDABOUT_WORDS for w in row["nalt"].split())
-        if wants_roundabout and roundabout:
+        on_target = roundabout and _words_present(qrest, row["nalt"])
+        if wants_roundabout and on_target:
             score += 0.04
         elif (row["kind"] == "street") != wants_street:
             score -= 0.15 if row["kind"] == "street" else 0.08
         # **الاسمُ هو المطلوبُ نفسُه** لا ما يحمله في ذيله: «دوار الداخلية» قبل «رم للبصريات دوار الداخليه»
         # **ولا لشارعٍ لم يُطلب**: «Queen Alia Airport Street» يساوي «Queen Alia Airport» بعد حذف «Street» — والمطلوبُ المطار
-        street_unasked = row["kind"] == "street" and not wants_street and not (wants_roundabout and roundabout)
+        street_unasked = row["kind"] == "street" and not wants_street and not (wants_roundabout and on_target)
         if qcore and not street_unasked and any(_core(n.translate(WESTERN)) == qcore for n in names):
             score += 0.10
         dist = None

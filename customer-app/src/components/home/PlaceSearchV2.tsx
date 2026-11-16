@@ -512,7 +512,7 @@ export function PlaceSearchV2({
       ) : status === "offline" ? (
         <div className="t2-ps-state">
           <BlankT2 icon="cloud_off" title={tr("لا اتصال بالإنترنت")} hint={tr("تحقّق من الاتصال ثمّ أعد المحاولة — أو حدّد المكان على الخريطة")} />
-          <button type="button" className="t2-button t2-ps-retry" onClick={() => setRetry((count) => count + 1)}>
+          <button type="button" className="t2-button primary t2-ps-retry" onClick={() => setRetry((count) => count + 1)}>
             <Icon name="refresh" />
             <span>{tr("أعد المحاولة")}</span>
           </button>
@@ -522,7 +522,7 @@ export function PlaceSearchV2({
           <BlankT2
             icon="search"
             title={tr("لم نجد هذا المكان")}
-            hint={tr("تأكّد من الإملاء أو جرّب اسماً أقصر — مثل «سيتي مول» بدل «مجمع سيتي مول التجاري»")}
+            hint={tr("تأكّد من الإملاء أو جرّب اسماً أقصر أو جزءاً من الاسم — أو حدّد المكان على الخريطة")}
           />
         </div>
       ) : (

@@ -35,6 +35,8 @@ ROWS = [
     # أمرُ المالك §١٠٤ (٢٠٢٦-١١-١٦): الدوّارُ طريقٌ في OSM، والمحلُّ المسمّى باسمه كان يسبقه
     ("JO", "street", "دوار الداخلية", "Interior Roundabout", "عمان", 31.9615, 35.9078, 6, "osm"),
     ("JO", "poi", "رم للبصريات دوار الداخليه", None, "عمان", 31.9621, 35.9081, 6, "overture"),
+    # دوّارٌ آخرُ لا يحمل «الداخلية» — كان يتقدّم المحلَّ لأنه دوّارٌ فحسب
+    ("JO", "street", "دوار الكمالية", None, "صويلح", 32.0280, 35.8430, 6, "osm"),
     # المكانُ نفسُه ثلاثاً: من OSM، ومن Overture باللغتين في حقلٍ واحد، ونقطةٌ ثالثةٌ على بعد كيلومترين
     ("JO", "poi", "مكة مول", "Mecca Mall", "عمان", 31.9768, 35.8436, 7, "osm"),
     ("JO", "poi", "Mecca Mall | مكة مول", None, "عمان", 31.9770, 35.8438, 5, "overture"),
@@ -97,6 +99,11 @@ for q, where in [(q, w) for q in ("دوار الداخلية", "دوار الد�
     got = srv.search(q, "JO", where, 5)
     check(f"«{q}»: الدوّارُ قبل المحلِّ المسمّى باسمه", bool(got) and got[0]["name"] == "دوار الداخلية")
     check(f"«{q}»: صنفُه دوّار", bool(got) and got[0]["cat"] == "roundabout")
+for q in ("دوار الداخلية", "دوار الداخليى"):
+    names = [i["name"] for i in srv.search(q, "JO", amman, 6)]
+    check(f"«{q}»: دوّارٌ آخرُ لا يتقدّم ما يحمل «الداخلية»",
+          "دوار الكمالية" not in names or names.index("دوار الكمالية") > names.index("رم للبصريات دوار الداخليه"))
+    check(f"«{q}»: والدوّارُ المقصودُ أوّلاً ولو بخطأ إملاء", bool(names) and names[0] == "دوار الداخلية")
 plain = srv.search("الداخلية", "JO", None, 5)
 check("بلا «دوار» يُوجد الدوّارُ أيضاً", any(i["name"] == "دوار الداخلية" for i in plain))
 
@@ -118,6 +125,10 @@ check("«Alger» يجد الجزائر", any(i["name"] == "الجزائر" for i
 check("لا نتيجةَ من بلدٍ آخر (الأبيار من الأردن)", srv.search("الأبيار", "JO", amman, 5) == [])
 check("ولا مكة مول من الجزائر", srv.search("مكة مول", "DZ", algiers, 5) == [])
 check("حرفٌ واحدٌ لا يُسأل", srv.search("د", "JO", amman, 5) == [])
+# **حرفٌ زائدٌ يقطع كلَّ ثلاثيّ**: «el biyar» لا يشارك «el biar» ثلاثيّاً واحداً فلم يكن يُسأل عنه أصلاً
+for q in ("el biyar", "el biarr", "elbiar"):
+    names = [i["name"] for i in srv.search(q, "DZ", algiers, 5)]
+    check(f"«{q}» تجد الأبيار", "الأبيار" in names[:2])
 check("بلدٌ مجهولٌ لا يُسأل", srv.search("مكة مول", "XX", None, 5) == [])
 
 first = srv.search("مكة مول", "JO", amman, 5)

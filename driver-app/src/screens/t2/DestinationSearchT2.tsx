@@ -209,7 +209,7 @@ export function DestinationSearchT2({
             <Icon name="cloud_off" />
             <p className="title">{tr("لا اتصال بالإنترنت")}</p>
             <p className="hint">{tr("تحقّق من الاتصال ثمّ أعد المحاولة — أو حدّد المكان على الخريطة")}</p>
-            <button type="button" className="t2-button t2-ps-retry" onClick={() => setRetry((count) => count + 1)}>
+            <button type="button" className="t2-button primary t2-ps-retry" onClick={() => setRetry((count) => count + 1)}>
               <Icon name="refresh" />
               <span>{tr("أعد المحاولة")}</span>
             </button>
