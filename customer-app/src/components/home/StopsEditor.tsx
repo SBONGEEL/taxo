@@ -25,11 +25,14 @@ export function StopsEditor({
   stops,
   onChange,
   waitingNote,
+  compact = false,
 }: {
   stops: DraftStop[];
   onChange: (next: DraftStop[]) => void;
   /** سطرُ رسم الانتظار — نصٌّ جاهزٌ من المستدعي، فلا يُصاغ مالٌ هنا. */
   waitingNote: string | null;
+  /** الورقةُ الجديدة: سطرُ الانتظار سطرٌ واحد (SPEC §١٠٥/١) */
+  compact?: boolean;
 }) {
   function move(index: number, delta: number) {
     const target = index + delta;
@@ -82,7 +85,7 @@ export function StopsEditor({
         ))}
       </ul>
       {waitingNote ? (
-        <p className="t2-note">
+        <p className={compact ? "t2-note one-line" : "t2-note"} title={compact ? waitingNote : undefined}>
           <span className="t2-icon" aria-hidden="true">location_on</span>
           {waitingNote}
         </p>

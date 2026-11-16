@@ -1572,3 +1572,27 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-v2-chip.on { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); color: var(--t2-accent-text); }
 .t2-v2-bar .t2-payrow { margin: 0 0 8px; min-height: 40px; }
 .t2-v2-options-title { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+
+/* ── ورقةُ الطلب بارتفاعين (SPEC §١٠٥/١) — نصفُ الشاشة عند الفتح وملؤها بالسحب، وما زاد يُمرَّر داخلها ───────────── */
+.t2.t2-sheet.snap { transition: max-height 220ms cubic-bezier(.2, .8, .2, 1); }
+.t2.t2-sheet.snap.half { max-height: calc(var(--vvh, 100dvh) * 0.5); }
+.t2-sheet-grab-zone {
+  flex: none; display: flex; justify-content: center; width: 100%; margin: -10px 0 0; padding: 10px 0 4px;
+  border: 0; background: transparent; cursor: grab; touch-action: none;
+}
+.t2-sheet-grab-zone .t2-sheet-grab { margin-bottom: 10px; }
+.t2-sheet-grab-zone:focus-visible .t2-sheet-grab { outline: 2px solid var(--t2-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .t2.t2-sheet.snap { transition: none; } }
+.t2-note.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t2-v2-wallet {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 10px; min-height: 36px;
+  border-radius: 12px; background: var(--t2-warning-soft); color: var(--t2-text); font-size: 12.5px;
+}
+.t2-v2-wallet .t2-icon { font-size: 17px; color: var(--t2-warning); }
+.t2-v2-wallet-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t2-v2-wallet-top {
+  flex: none; min-height: 32px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: var(--t2-accent); color: var(--t2-on-accent); font: inherit; font-weight: 700;
+}
+.t2-v2-wallet-top:disabled { opacity: .5; }
+

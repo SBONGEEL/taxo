@@ -44,7 +44,7 @@ import { estimateRide } from "@/api/endpoints";
 import type { RideEstimate, VehicleCategory } from "@/api/types";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { StopsEditor } from "@/components/home/StopsEditor";
-import { useConfirmRide, waitingNote, type ConfirmRideProps } from "@/components/home/useConfirmRide";
+import { useConfirmRide, waitingNote, waitingNoteShort, type ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { earliest, latest, localInputValue } from "@/lib/bookings";
 import { useFeature } from "@/lib/config";
@@ -527,6 +527,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
 
   return (
     <SheetT2
+      snap={v2}
       footer={
         <>
           {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ.
@@ -652,7 +653,12 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       </div>
 
       {c.multiStop && !c.hourlyMode ? (
-        <StopsEditor stops={stops} onChange={onStopsChange} waitingNote={waitingNote(c.estimate)} />
+        <StopsEditor
+          stops={stops}
+          onChange={onStopsChange}
+          waitingNote={v2 ? waitingNoteShort(c.estimate) : waitingNote(c.estimate)}
+          compact={v2}
+        />
       ) : null}
 
       {/* **كتلةُ الساعات مكانَ الفئات** (§٦٣-ج/٥) — الاقتصاديُّ وحدَه، والعدّادُ ومن أين يُدفع المحجوز؛ والمسوّدةُ عند `Home` */}
@@ -830,9 +836,28 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </div>
       ) : null}
 
-      {c.walletNote ? <p className="t2-note warn">{c.walletNote}</p> : null}
+      {/* **الورقةُ الجديدة: الرصيدُ و«اشحن» سطرٌ صغيرٌ واحد** (SPEC §١٠٥/١) — والطلبُ نفسُه هو هو */}
+      {v2 && c.walletNote ? (
+        <div className="t2-v2-wallet" role="note">
+          <span className="t2-icon" aria-hidden="true">account_balance_wallet</span>
+          <span className="t2-v2-wallet-text" title={c.walletNote}>
+            {c.walletShort ?? c.walletNote}
+          </span>
+          {c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
+            <button
+              type="button"
+              className="t2-v2-wallet-top"
+              disabled={!c.estimate || c.loading || requesting}
+              onClick={() => props.onTopUpForRide?.(...requestArgs)}
+            >
+              {tr("اشحن الآن")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {!v2 && c.walletNote ? <p className="t2-note warn">{c.walletNote}</p> : null}
       {/* **«اشحن مبلغ الرحلة الآن»** (§٨٨/١) — السعرُ يُثبَّت عشرَ دقائق، ثمّ صفحةُ الشحن بما ينقص، **ويكمل الطلبُ نفسُه بعد وصول الرصيد** */}
-      {c.walletNote && c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
+      {!v2 && c.walletNote && c.payMethod?.method === "wallet" && props.onTopUpForRide && !c.scheduling ? (
         <button
           type="button"
           className="t2-button secondary t2-callout-action"

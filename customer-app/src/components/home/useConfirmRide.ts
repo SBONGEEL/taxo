@@ -95,6 +95,17 @@ export function waitingNote(estimate: RideEstimate | null): string | null {
   return tr("{0}، ثم {1} لكل دقيقة — يظهر عدّادُه أمامك أثناء الوقوف.", { 0: head, 1: price });
 }
 
+/** **سطرُ الانتظار عند المحطّة في الورقة الجديدة** (SPEC §١٠٥/١) — سطرٌ واحدٌ بالأرقام نفسِها، والعدّادُ يظهر أثناء الوقوف */
+export function waitingNoteShort(estimate: RideEstimate | null): string | null {
+  if (!estimate) return null;
+  const free = estimate.stop_free_minutes;
+  if (Number(estimate.stop_price_per_min) <= 0) return tr("لا رسمَ على الانتظار عند المحطّات");
+  const price = formatMoney(estimate.stop_price_per_min, estimate.currency);
+  return free > 0
+    ? tr("{0} مجاناً عند كل محطة، ثم {1}/دقيقة", { 0: freeMinutes(free), 1: price })
+    : tr("الانتظار عند المحطة {0}/دقيقة", { 0: price });
+}
+
 export interface ConfirmRideProps {
   pickup: Coordinates;
   pickupAddress: string | null;
@@ -393,6 +404,19 @@ export function useConfirmRide({
   // **ورصيدٌ أقلُّ من وحدة التقريب لا يدفع شيئاً** (SPEC §٧٠-ج/٤): المحفظةُ تدفع أكبرَ مضاعفٍ للوحدة لا يتجاوزها، وهو صفرٌ هنا —
   // فترتدّ الخلفيةُ بـ«رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك»، **والسطرُ يقول ذلك قبلها** لا «سيُخصم منه ما يغطّيه». مقارنةٌ لا حساب
   const unit = roundingUnit(countryConfig);
+  // **وجهُها القصيرُ للورقة الجديدة** (SPEC §١٠٥/١) — سطرٌ صغيرٌ بجانب «اشحن»، والمعنى هو هو
+  const walletShort =
+    payMethod?.method !== "wallet" || balance === null || shownFare === null
+      ? null
+      : Number(balance) <= 0
+        ? tr("لا رصيد في محفظتك")
+        : !forOther && unit !== null && Number(balance) < Number(unit)
+          ? tr("رصيدك أقلُّ من أصغر مبلغ")
+          : Number(balance) < Number(shownFare)
+            ? forOther
+              ? tr("الرصيد لا يغطّي — الباقي بالبطاقة")
+              : tr("الرصيد لا يغطّي — الباقي كاشاً")
+            : null;
   const walletNote =
     payMethod?.method !== "wallet" || balance === null || shownFare === null
       ? null
@@ -466,6 +490,7 @@ export function useConfirmRide({
     shownFare,
     // **سطرُ المحفظة بحكم الطلب** — الساعاتُ لا تُدفع بعد الرحلة بل عند بدئها، فسطرُها غيرُ سطر الأجرة
     walletNote: hourlyMode ? hourlyWalletNote : walletNote,
+    walletShort: hourlyMode ? null : walletShort,
     // **خيارُ «لشخص آخر» حيث المفتاحُ مشتعلٌ وليس حجزاً**
     forOtherOffered: forOtherEnabled && !scheduling,
     forOther,
