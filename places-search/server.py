@@ -2,7 +2,7 @@
 يُقرأ للقراءة وحدَها، بلا مكتبةٍ خارجيّة؛ والذاكرةُ ذاكرةُ بايثون وذاكرةُ SQLite المؤقّتة (٣٢ MB لكلِّ اتصال، واتصالان) لا الفهرس.
 
 GET /search?q=&cc=JO&lat=&lng=&limit=10 → {"items":[{id,name,name_en,kind,context,lat,lng,distance_m,src}]}
-GET /health → {"ok":true,"places":N}
+GET /health → {"ok":true,"places":N}   (و503 {"detail":"warming"} حتى ينتهي التسخين — وكذا /search)
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import re
 import sqlite3
 import queue
 import threading
+import time
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -275,15 +276,57 @@ def search(q: str, cc: str, near: tuple[float, float] | None, limit: int) -> lis
     return [dict(item) for item in items]
 
 
+#: **بحوثُ التسخين** (أمرُ المالك ٢٠٢٦-١١-١٦): أسماءٌ حقيقيّةٌ من الدول الثلاث بأطوالٍ مختلفة — تمرّ بالفهرس وبمفردات الثلاثيّات
+#: وبمسار الشبه، **على كلِّ اتصالٍ في المجمّع** (ذاكرةُ SQLite المؤقّتة لكلِّ اتصالٍ وحدَه)، ولا تُكتب في ذاكرة النتائج
+WARM_QUERIES = (
+    ("با", "JO", (31.95, 35.91)), ("دوار الداخلية", "JO", (31.95, 35.91)), ("مكه مول", "JO", (31.95, 35.91)),
+    ("مستشفى", "JO", (32.55, 35.85)), ("Amman", "JO", None), ("الجامعه الاردنيه", "JO", None),
+    ("Alger", "DZ", (36.75, 3.06)), ("باب الزوار", "DZ", (36.72, 3.18)), ("حي الصنوبر البحري", "DZ", (36.75, 3.06)),
+    ("Oran", "DZ", None), ("طرابلس", "LY", (32.89, 13.19)), ("بنغازي", "LY", None),
+)
+
+#: **الخدمةُ لا تقبل بحثاً حقيقيّاً قبل أن تسخن** — المنفذُ مفتوحٌ من الثانية الأولى ويجيب 503 «warming»، والخلفيّةُ تقرأ 503
+#: «مشغولةً لا ساقطة» فتكمل على Mapbox بلا علامة توقّف (`services/maps.py`)؛ **فلا يرى راكبٌ ثانيتين في الدقيقة الأولى**
+_ready = threading.Event()
+warm_stats: dict = {}
+
+
 def warm() -> None:
-    """**يُقرأ الفهرسُ مرّةً إلى ذاكرة النظام عند الإقلاع** (§١٠٤/٣) — أوّلُ حرفٍ بعد إعادة الحاوية كان يقرأ القرصَ صفحةً صفحة:
-    «با» ١٫١ ث و«Alger» ٣٫٤ ث باردين، و١٠٠–٢٠٠ م.ث دافئين (قِيس على الفهرس الحقيقيّ). قراءةٌ متتابعةٌ في خيطٍ جانبيّ لا تؤخّر الخدمة."""
+    try:
+        _warm()
+    finally:
+        _ready.set()
+
+
+def _warm() -> None:
+    """**يُقرأ الفهرسُ إلى ذاكرة النظام ثمّ تُجرى بحوثُ التسخين على كلِّ اتصال**، وبعدها وحدَها تُقبل الحركة (§١٠٤/٣).
+    قبل هذا كان أوّلُ حرفٍ بعد إعادة الحاوية يقرأ القرصَ صفحةً صفحة: «با» ١٫١ ث و«Alger» ٣٫٤ ث باردين، والدقيقةُ الأولى تبلغ ثانيتين."""
+    started = time.monotonic()
     try:
         with open(INDEX, "rb") as handle:
             while handle.read(8 << 20):
                 pass
     except OSError:
         pass
+    read_done = time.monotonic()
+    leased = [_pool.get() for _ in range(WORKERS)]
+    failed = 0
+    try:
+        for db in leased:
+            for q, cc, near in WARM_QUERIES:
+                try:
+                    _search(db, norm(q), q, cc, near, 10)
+                except Exception:  # noqa: BLE001 — **بحثُ تسخينٍ يسقط لا يُبقي الخدمةَ 503 إلى الأبد**؛ يُعدّ ويُطبع
+                    failed += 1
+    finally:
+        for db in leased:
+            _pool.put(db)
+    warm_stats.update(failed=failed)
+    warm_stats.update(read_s=round(read_done - started, 2), queries_s=round(time.monotonic() - read_done, 2),
+                      queries=len(WARM_QUERIES) * WORKERS)
+    _ready.set()
+    print(f"places-search: ساخنة — قراءةُ الفهرس {warm_stats['read_s']} ث، و{warm_stats['queries']} بحثَ تسخينٍ في "
+          f"{warm_stats['queries_s']} ث، وسقط منها {warm_stats.get('failed', 0)}", flush=True)
 
 
 _started = False
@@ -434,12 +477,14 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         args = {k: v[0] for k, v in parse_qs(url.query).items()}
         try:
+            if url.path in ("/health", "/search") and not _ready.is_set():
+                return self._send(503, {"detail": "warming"})
             if url.path == "/health":
                 if not _started:
                     _fill()
                 with _Lease() as db:
                     count = db.execute("SELECT count(*) FROM places").fetchone()[0]
-                return self._send(200, {"ok": True, "places": count})
+                return self._send(200, {"ok": True, "places": count, "warm": warm_stats})
             if url.path == "/search":
                 near = None
                 if args.get("lat") and args.get("lng"):

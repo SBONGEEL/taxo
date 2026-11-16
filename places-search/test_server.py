@@ -137,4 +137,36 @@ again = srv.search("مكة مول", "JO", amman, 5)
 check("ذاكرةُ الأجوبة تُعيد نسخةً لا الأصل", again[0]["name"] == "مكة مول")
 check("ولكلِّ نتيجةٍ صنفٌ للأيقونة", all(i.get("cat") for i in again))
 
+# **التسخينُ قبل الحركة** (أمرُ المالك ٢٠٢٦-١١-١٦): قبل التسخين 503 «warming» للبحث والصحّة، وبعده يجيبان
+import json as _json
+import threading as _threading
+import urllib.error as _uerr
+import urllib.request as _ureq
+from http.server import ThreadingHTTPServer as _Server
+
+
+def _get(port, path):
+    try:
+        with _ureq.urlopen(f"http://127.0.0.1:{port}{path}", timeout=5) as r:
+            return r.status, _json.loads(r.read())
+    except _uerr.HTTPError as e:
+        return e.code, _json.loads(e.read())
+
+
+srv._ready.clear()
+_httpd = _Server(("127.0.0.1", 0), srv.Handler)
+_port = _httpd.server_address[1]
+_threading.Thread(target=_httpd.serve_forever, daemon=True).start()
+code, body = _get(_port, "/search?q=%D9%85%D9%83%D8%A9&cc=JO")
+check("قبل التسخين: البحثُ 503 «warming» (الخلفيّةُ تكمل على Mapbox بلا علامة توقّف)", code == 503 and body.get("detail") == "warming")
+check("وقبل التسخين: الصحّةُ 503", _get(_port, "/health")[0] == 503)
+srv.warm()
+check("التسخينُ يمرّ بكلِّ اتصالٍ ويُعلِن جاهزيّتَه", srv._ready.is_set() and srv.warm_stats.get("queries") == len(srv.WARM_QUERIES) * srv.WORKERS)
+check("والمجمّعُ كاملٌ بعده (لا اتصالَ محبوس)", srv._pool.qsize() == srv.WORKERS)
+code, body = _get(_port, "/search?q=%D9%85%D9%83%D8%A9%20%D9%85%D9%88%D9%84&cc=JO")
+check("بعد التسخين: البحثُ يجيب", code == 200 and any(i["name"] == "مكة مول" for i in body["items"]))
+code, body = _get(_port, "/health")
+check("وبعده: الصحّةُ تجيب بأرقام التسخين", code == 200 and "queries_s" in body.get("warm", {}))
+_httpd.shutdown()
+
 sys.exit(1 if failures else 0)
