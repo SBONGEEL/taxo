@@ -62,6 +62,9 @@
 # **والبوّابتان مبنيّتان الآن كما هما مكتوبتان**، والسحبُ بمفتاح نشرٍ
 # **مقصورٍ على هذا المستودع وللقراءة وحدَها** — لا رمزٍ واسع.
 set -euo pipefail
+# **لا موتَ صامتاً**: فخُّ الخروج وجلبُ الحافّة — العلّةُ في رأس الملفّ المستورد
+# shellcheck source=scripts/deploy-guard.sh
+. "$(dirname "${BASH_SOURCE[0]}")/deploy-guard.sh"
 
 # ═══ ٠) الفرع — **قبل الإعلان وقبل أيِّ نداءٍ للخادم** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
 #
@@ -287,7 +290,7 @@ _ssh_within() {
 }
 
 say() { printf '%s\n' "$*"; }
-die() { printf '\n✗ %s\n' "$*" >&2; exit 1; }
+die() { deploy_died; printf '\n✗ %s\n' "$*" >&2; exit 1; }
 
 [ "$#" -ge 0 ] || true
 
@@ -1095,7 +1098,7 @@ for _p in privacy terms driver-privacy driver-terms \
           dz-privacy-fr dz-terms-fr dz-driver-privacy-fr dz-driver-terms-fr \
           dz-privacy-en dz-terms-en dz-driver-privacy-en dz-driver-terms-en \
           delete-account delete-account-en delete-account-fr; do
-  _len="$(curl -sS --max-time 15 "$EDGE/$_p" 2>/dev/null | wc -c | tr -d ' ')"
+  _len="$(edge_get "$EDGE/$_p" | wc -c | tr -d ' ')"
   [ "${_len:-0}" -gt 4000 ] \
     || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $LOCAL"
 done
@@ -1125,10 +1128,8 @@ for _pair in "privacy:privacy_policy:rider:" "privacy-en:privacy_policy:rider:JO
   IFS=: read -r _page _doc _app _cc <<EOF
 $_pair
 EOF
-  _baked="$(curl -sS --max-time 15 "$EDGE/$_page" 2>/dev/null \
-            | grep -o 'data-policy-version="[0-9]*"' | head -1 | tr -cd '0-9')"
-  _live="$(curl -sS --max-time 15 "$EDGE/api/policy?doc_type=$_doc&app=$_app${_cc:+&country=$_cc}" 2>/dev/null \
-           | grep -o '"version":[0-9]*' | head -1 | tr -cd '0-9')"
+  _baked="$(edge_get "$EDGE/$_page" | { grep -o 'data-policy-version="[0-9]*"' || true; } | head -1 | tr -cd '0-9')"
+  _live="$(edge_get "$EDGE/api/policy?doc_type=$_doc&app=$_app${_cc:+&country=$_cc}" | { grep -o '"version":[0-9]*' || true; } | head -1 | tr -cd '0-9')"
   [ -n "$_baked" ] && [ -n "$_live" ] \
     || die "تعذّر قياسُ نسخةِ $_page (مخبوز='${_baked:-—}' حيّ='${_live:-—}') — **ولا يُقرأ صمتُه سلامة**. والنسخةُ في $LOCAL"
   [ "$_baked" = "$_live" ] \
@@ -1136,7 +1137,7 @@ EOF
 done
 say "  ✓ الحافّة: نسخةُ كلِّ صفحةِ سياسةٍ = المنشورُ في القاعدة"
 
-_API="$(curl -sS --max-time 15 "$EDGE/api/landing?country_code=JO" 2>/dev/null || true)"
+_API="$(edge_get "$EDGE/api/landing?country_code=JO")"
 printf '%s' "$_API" | grep -q '"offer"\|"commission_percent"\|"apps"' \
   || die "وكيلُ /api/ لا يجيب من $EDGE — **الصفحةُ تُخدَم بقيَمها المخبوزة ولا تشكو**. الردّ: ${_API:0:120}"
 say "  ✓ الحافّة: وكيلُ /api/ يجيب من الأصل نفسِه"

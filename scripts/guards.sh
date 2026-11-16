@@ -76,6 +76,9 @@ run "secret-scan"           bash scripts/tests/secret-scan.test.sh
 # **والبوّابةُ الثانيةُ تُقاس في الاتجاهين** (2026-10-11): تشغيلُ الدفع نفسِه لا أيُّ تشغيلٍ للإيداع، ورأسٌ أحمرُ لا يمرّ، وأحمرُ في
 # التاريخ يمرّ إن أُصلح وحدَه — **على GitHub مزيَّف، بلا شبكة**.
 run "deploy-ci-gate"        bash scripts/tests/deploy-ci-gate.test.sh
+# **ولا يموت المشغّلُ صامتاً** (٢٠٢٦-١١-١٧): رفعُ ١٦/١١ مات بعد «الصحّة عبر النفق» بلا سطر — إسنادٌ من `$(curl …|…)` ساقطٍ تحت
+# `pipefail` يقتل قبل `die`. يُقاس السلوكُ في الاتجاهين (الشكلُ يموت صامتاً بلا الحارس، ويُسمّى به) — بلا شبكة.
+run "deploy-silent-exit"    bash scripts/tests/deploy-silent-exit.test.sh
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

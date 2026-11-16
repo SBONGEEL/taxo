@@ -45,7 +45,7 @@ SANDBOX=(env PATH="$TMP/bin:$PATH" TAXO_SSH="$TMP/bin/ssh" TAXO_SSH_GAP=0
 G=(-c user.email=gate@test -c user.name=gate -c commit.gpgsign=false)
 make_repo() { # make_repo <دليل>
   mkdir -p "$1/scripts"
-  cp "$SRC/scripts/deploy-branch-gate.sh" "$SRC/scripts/deploy.sh" \
+  cp "$SRC/scripts/deploy-branch-gate.sh" "$SRC/scripts/deploy.sh" "$SRC/scripts/deploy-guard.sh" \
      "$SRC/scripts/deploy-here.sh" "$1/scripts/"
   git -C "$1" init -q
   git -C "$1" symbolic-ref HEAD refs/heads/master
