@@ -221,6 +221,25 @@ def _judge_split_run(api: Api, commit: str, run: dict, read_at_head) -> tuple[st
     return ("fixed" if fixed else "stop"), f"{head} — {line}"
 
 
+def _aggregation_only(api: Api, suite: dict | None, jobs: list[dict]) -> str:
+    """**«المجموعةُ الكاملة» حمراءُ وما سقط اختبار** (قِيس ٢٠٢٦-١١-١٦) — سببٌ إن لم تُقَس، و"" إن قِيست.
+
+    وظيفةُ التجميع تجري بعد الأجزاء (`if: always`) فتنتهي `failure` في حالين **ليس فيهما قياس**: (١) جزءٌ **ملغى** (دفعٌ أحدثُ
+    ألغى التشغيل) — `43779225667`؛ (٢) الأجزاءُ **كلُّها خضراء** وسقط التجميعُ نفسُه **بلا اختبارٍ مسمّى** (تنزيلُ المُخرَجات في نسخةِ
+    سير العملِ تلك) — `43716600094`: ٢٧٦٠ اختباراً نجحت ولا سطرَ FAILED. **فيُطلب قياسٌ مكتملٌ آخر ولا يُفترض**، كالملغى تماماً.
+    **وجزءٌ أحمرُ أو اختبارٌ مسمّى يبقى قياساً أحمرَ** يُحكم فيه كما كان."""
+    if suite is None or suite.get("conclusion") != "failure":
+        return ""
+    shards = [j for j in jobs if SHARD_JOB.match(j.get("name", ""))]
+    if not shards:
+        return ""
+    if any(j.get("conclusion") == "cancelled" for j in shards):
+        return f"«{HEAD_SUITE}» حمراءُ **وجزءٌ منها ملغى** — لم تُقَس"
+    if all(j.get("conclusion") == "success" for j in shards) and not failed_tests(api.job_log(suite["id"])):
+        return f"«{HEAD_SUITE}» حمراءُ **وأجزاؤها الـ{len(shards)} خضراء** بلا اختبارٍ مسمّى — سقط التجميعُ لا اختبار"
+    return ""
+
+
 def _judge_elsewhere(api: Api, commit: str, head_jobs: dict[str, str], read_at_head, recent_cache: dict) -> tuple[str, str]:
     """إيداعٌ لم يقسه هذا التشغيل — **يُطلب قياسُه في تشغيلٍ آخر، ولا يُفترض**.
 
@@ -234,6 +253,10 @@ def _judge_elsewhere(api: Api, commit: str, head_jobs: dict[str, str], read_at_h
         suite = next((j for j in jobs if j.get("name") == HEAD_SUITE), None)
         if run.get("conclusion") != "success" and (suite is None or suite.get("conclusion") not in MEASURED):
             unmeasured.append(f"{run.get('id')}: «{HEAD_SUITE}» {suite.get('conclusion') if suite else 'غائبة'}")
+            continue
+        aggregation = _aggregation_only(api, suite, jobs) if run.get("conclusion") != "success" else ""
+        if aggregation:
+            unmeasured.append(f"{run.get('id')}: {aggregation}")
             continue
         return _judge_own_run(api, commit, run, jobs, head_jobs, read_at_head)
 

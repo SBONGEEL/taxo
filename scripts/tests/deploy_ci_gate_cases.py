@@ -212,6 +212,32 @@ case("«المجموعةُ عند B» **ملغاةٌ في تشغيل الرأس*
 case("«المجموعةُ عند B» ملغاةٌ **ولا قياسَ له غيرُها** — يقف", "stop",
      verdict(Fake({**mb["runs"], A: [run(60, A, "master")]}, {**mb["jobs"], 60: head_jobs()})))
 
+# ── و«المجموعةُ الكاملة» حمراءُ لأن تجميعَها سقط — لم تُقَس (2026-11-16) ─────────────────────
+def shards(*conclusions):
+    return [job(40 + i, f"المجموعةُ — جزء {i + 1}/{len(conclusions)}", c) for i, c in enumerate(conclusions)]
+
+
+agg_red = [job(1, "المجموعةُ الكاملة", "failure")]
+broken_merge = STAMP + "##[error]Unable to download artifact(s): Artifact download failed after 5 retries.\n"
+m = {**base["runs"], A: [run(70, A, "ci/parallel", conclusion="failure")]}
+case("أجزاءُ تشغيل الإيداع **خضراءُ كلُّها** والتجميعُ سقط بلا اختبار **ولا قياسَ غيرُه** — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("success", "success")}, {1: broken_merge})))
+case("أجزاؤه خضراء والتجميعُ سقط **والقياسُ المقسومُ أخضرُ والعددُ متساوٍ** — يُقرأ", "pass",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("success", "success"), 80: vjobs()}, {1: broken_merge, 83: COUNT_OK},
+                  branches={f"verify/{A}": [vrun(80, A)]})))
+case("أجزاؤه خضراء **والتجميعُ يسمّي اختباراً حُذف** — قياسٌ أحمرُ لا تجميعٌ ساقط — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("success", "success"), 80: vjobs()},
+                  {1: log("tests/test_gone.py::test_x"), 83: COUNT_OK}, branches={f"verify/{A}": [vrun(80, A)]})))
+case("**جزءٌ أحمر** والتجميعُ بلا اسم — قياسٌ أحمرُ لا يُتخطّى ولو أخضرَ المقسوم — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("success", "failure"), 80: vjobs()}, {1: broken_merge, 83: COUNT_OK},
+                  branches={f"verify/{A}": [vrun(80, A)]})))
+m = {**base["runs"], A: [run(70, A, "fix/x", conclusion="cancelled")]}
+case("**جزءٌ ملغى** والتجميعُ `failure` و«المجموعةُ عند A» خضراءُ في تشغيلٍ حديث — يُقرأ", "pass",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("cancelled", "cancelled"), 55: [job(56, f"المجموعةُ عند {A}")]},
+                  {1: broken_merge}, recent=[{"id": 55, "name": "CI"}])))
+case("جزءٌ ملغى والتجميعُ `failure` **ولا قياسَ غيرُه** — يقف", "stop",
+     verdict(Fake(m, {**base["jobs"], 70: agg_red + shards("cancelled", "cancelled")}, {1: broken_merge})))
+
 # ── وقراءةُ السجلّ نفسِها ─────────────────────────────────────────────────────
 parsed = gate.failed_tests(log("tests/test_a.py::test_b[x-1]", "tests/test_c.py::K::test_d") + f"{STAMP}ERROR tests/test_e.py - boom\n")
 picked = gate.pick_run([run(90, HEAD, "redesign"), run(100, HEAD, "master"), run(95, HEAD, "master", event="pull_request")], HEAD, "master")
