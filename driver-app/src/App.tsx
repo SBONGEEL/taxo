@@ -225,6 +225,9 @@ const ReportRideT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ 
 const ReferralsScreen = lazy(() =>
   import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
 );
+const LicensesT2Screen = lazy(() =>
+  import("@/screens/t2/LicensesT2").then((m) => ({ default: m.LicensesT2Screen })),
+);
 const FeedbackT2Screen = lazy(() =>
   import("@/screens/t2/FeedbackT2").then((m) => ({ default: m.FeedbackT2Screen })),
 );
@@ -969,6 +972,15 @@ export default function App() {
                           element={
                             <Guarded>
                               <ReportRideT2 />
+                            </Guarded>
+                          }
+                        />
+                        {/* **«حول التطبيق والتراخيص»** (SPEC §١٠٥/٤) — نسبةُ بيانات الخرائط كاملة */}
+                        <Route
+                          path="/account/licenses"
+                          element={
+                            <Guarded>
+                              <LicensesT2Screen />
                             </Guarded>
                           }
                         />

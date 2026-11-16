@@ -38,6 +38,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
 import { buildOpenStyle, openMapColors } from "@/lib/open-map-style";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
@@ -345,7 +346,8 @@ function MapViewEngine({
         center?.lat ?? DEFAULT_CENTER.lat,
       ],
       zoom: 14,
-      attributionControl: true,
+      // **النسبةُ زرُّ ⓘ مطويٌّ يُضاف بعد البناء** (`lib/map-attribution.ts`، SPEC §١٠٥/٤) — لا الشريطُ الأبيضُ الكبير
+      attributionControl: false,
       // **الإيماءاتُ الكاملةُ مكتوبةٌ صراحةً لا موروثةٌ من افتراضِ المكتبة**
       // (البند ١٧-١): دورانٌ وميلٌ ونقرةٌ مزدوجة. وقيمتُها اليومَ هي افتراضُ
       // `mapbox-gl` نفسِه — **وكتابتُها هي المقصود**: ترقيةُ مكتبةٍ تُبدّل
@@ -360,6 +362,7 @@ function MapViewEngine({
       // يُترك للافتراض كي لا يصير الحدُّ قراراً في مكتبةٍ لا نملكها
       maxPitch: 60,
     });
+    foldedAttribution(map.current, gl.AttributionControl);
     // **السحبُ بيده يُخرج إلى `free`** — وكاميرا تعيده قسراً بعد ثانيةٍ تجعل
     // النظرَ إلى ما بعد المنعطف مستحيلاً، وهي أشيعُ شكوى في تطبيقات الملاحة
     const release = () => {
@@ -742,7 +745,8 @@ function MapViewEngine({
       // **خطُّ الجمر فوق ظلٍّ خافت** («TaxoMap»): الظلُّ والجمرُ من رموز الحاوية لا من لوحةٍ مكتوبة
       if (t2 && host.current) {
         const css = getComputedStyle(host.current);
-        const accent = css.getPropertyValue("--t2-accent").trim();
+        // **خطُّ المسار من رمزه** (، SPEC §١٠٥/٢) — أعمقُ نهاراً فيُرى على الأرض الفاتحة، وساطعٌ ليلاً؛ والجمرُ إن غاب
+      const accent = (css.getPropertyValue("--t2-map-route") || css.getPropertyValue("--t2-accent")).trim();
         const casing = css.getPropertyValue("--t2-map-casing").trim();
         if (accent && casing) {
           instance.addLayer({

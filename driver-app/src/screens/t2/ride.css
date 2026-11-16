@@ -422,7 +422,7 @@
   flex: none;
   border-radius: 50%;
   background: var(--t2-bg);
-  color: var(--t2-accent);
+  color: var(--t2-accent-text);
 }
 .t2-hm-go.off .t2-hm-go-power { background: var(--t2-accent); color: var(--t2-on-accent); }
 .t2-hm-go-power .t2-icon { font-size: 22px; }
@@ -504,7 +504,7 @@ button.t2-hm-tile { cursor: pointer; }
   height: 38px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--t2-accent) 12%, transparent);
-  color: var(--t2-accent);
+  color: var(--t2-accent-text);
 }
 .t2-hm-tile-icon.ok { background: color-mix(in srgb, var(--t2-success) 12%, transparent); color: var(--t2-success); }
 .t2-hm-tile-icon .t2-icon { font-size: 21px; }
@@ -512,7 +512,7 @@ button.t2-hm-tile { cursor: pointer; }
   padding: 3px 8px;
   border-radius: 99px;
   background: color-mix(in srgb, var(--t2-accent) 12%, transparent);
-  color: var(--t2-accent);
+  color: var(--t2-accent-text);
   font-size: 10.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -639,7 +639,7 @@ button.t2-hm-tile { cursor: pointer; }
   border: 1px solid var(--t2-line);
   border-radius: 99px;
   background: var(--t2-surface);
-  color: var(--t2-accent);
+  color: var(--t2-accent-text);
   font-size: 11px;
   font-weight: 600;
 }
@@ -800,7 +800,7 @@ button.t2-hm-tile { cursor: pointer; }
   gap: 8px;
   padding: 9px 16px;
   background: var(--t2-surface);
-  color: var(--t2-inverse-muted);
+  color: var(--t2-muted);
   font-size: 12.5px;
 }
 
@@ -1059,7 +1059,7 @@ button.t2-rd-chip { cursor: pointer; }
   border: 0;
   border-radius: 18px;
   background: var(--t2-danger);
-  color: var(--t2-on-accent);
+  color: var(--t2-on-danger);
   font: inherit;
   font-size: 15px;
   font-weight: 700;

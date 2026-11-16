@@ -27,6 +27,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -105,6 +106,7 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
       zoom: 12,
       attributionControl: false,
     });
+    foldedAttribution(instance, mapboxgl.AttributionControl);
     map.current = instance;
 
     const paint = () => paintRoute(instance, latest.current, host);

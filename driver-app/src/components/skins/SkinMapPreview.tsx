@@ -16,6 +16,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 
 // **ورقةُ الأنماط شرطٌ لا زينة** (وقع مقيساً 2026-08-27): بدونها لا يوجد
 // `.mapboxgl-marker { position: absolute }`، **فتسقط العلامةُ في التدفّق
@@ -77,6 +78,7 @@ export function SkinMapPreview({
       interactive: false,
       attributionControl: false,
     });
+    foldedAttribution(map.current, mapboxgl.AttributionControl);
     applied.current = dark;
     return () => {
       marker.current?.remove();

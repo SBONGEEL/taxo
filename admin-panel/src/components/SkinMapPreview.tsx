@@ -26,6 +26,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { useEffect, useMemo, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -119,6 +120,7 @@ export function SkinMapPreview({
       zoom: 15.4,
       attributionControl: false,
     });
+    foldedAttribution(instance, mapboxgl.AttributionControl);
     map.current = instance;
     // **الصبغُ مع كلِّ ستايلٍ يُحمَّل** — تبديلُ المظهر يمسحه كما يمسح الطبقات
     instance.on("style.load", () => taxoLook(instance, host));

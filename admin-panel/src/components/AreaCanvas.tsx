@@ -21,6 +21,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -89,6 +90,7 @@ export function AreaCanvas({ token, center, points, onChange }: Props) {
       zoom: 12,
       attributionControl: false,
     });
+    foldedAttribution(instance, mapboxgl.AttributionControl);
     map.current = instance;
     // **مؤشّرُ الرسم** — النقرُ هنا يضيف، ولا يُقرأ يداً تسحب الخريطة
     instance.getCanvas().style.cursor = "crosshair";

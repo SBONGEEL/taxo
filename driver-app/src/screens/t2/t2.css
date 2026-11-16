@@ -89,7 +89,7 @@
   border-radius: 50%;
   border: 2px solid var(--t2-dot-off, var(--t2-dash));
 }
-.t2-step-dot.done { border: 0; background: var(--t2-success); color: var(--t2-on-accent); }
+.t2-step-dot.done { border: 0; background: var(--t2-success); color: var(--t2-on-success); }
 .t2-step-dot.done .t2-icon { font-size: 16px; }
 .t2-step-dot.now {
   border: 0;
@@ -997,7 +997,7 @@ div.t2-srow { cursor: default; }
   padding: 3px 8px;
   border-radius: 99px;
   background: var(--t2-sunken);
-  color: var(--t2-inverse-muted);
+  color: var(--t2-muted);
   font-size: 10.5px;
   font-weight: 600;
   text-align: center; /* **سببُ المنع يلتفّ ولا يخرج من البطاقة** — «تحتاج مستوىً أعلى» أعرضُ من «بلاتيني» المرسومة */

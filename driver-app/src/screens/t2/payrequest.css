@@ -111,7 +111,7 @@
 
 /* ——— CVV2 لا PIN (SPEC §٨٥/٩) — التنبيهُ والرسمُ قبل صفحة البنك، وشريطُنا فوقها ——— */
 .t2-cvv { display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; padding: 14px; border-radius: 16px; background: var(--sur2, #1b1f25); border: 1px solid rgba(240, 90, 40, .45); }
-.t2-cvv-mark { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(240, 90, 40, .15); color: #f05a28; }
+.t2-cvv-mark { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--t2-accent-soft); color: var(--t2-accent-text); }
 .t2-cvv-body { min-width: 0; flex: 1; }
 .t2-cvv-text { margin: 0 0 10px; font-weight: 800; font-size: 15px; line-height: 1.5; color: var(--tx, #f2f0eb); }
 .t2-cvv-sub { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--mut, #9aa3ad); }

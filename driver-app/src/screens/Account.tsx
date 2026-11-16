@@ -364,6 +364,12 @@ export function AccountScreen() {
           />
         ))}
         <Row
+          icon="info"
+          label={tr("حول التطبيق والتراخيص")}
+          sub={tr("نسبةُ بيانات الخرائط ورخصُها")}
+          onClick={() => navigate("/account/licenses")}
+        />
+        <Row
           icon="delete"
           label={tr("حذف الحساب")}
           sub={tr("يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها")}

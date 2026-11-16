@@ -12,7 +12,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -43,7 +43,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const dark = choice === "dark";
 
-  useEffect(() => {
+  // **قبل أيِّ أثرٍ في الأبناء** (SPEC §١٠٥/٢، عطبٌ مقيس): الخريطةُ تبني نمطَها من رموز `html.dark` في أثرها هي — **وآثارُ الأبناء
+  // تجري قبل آثار الآباء**، فكان الصنفُ يُبدَّل بعد أن بُنيت الخريطةُ بألوان المظهر السابق: نهاريّةٌ في الليل. و`useLayoutEffect`
+  // يجري قبل كلِّ `useEffect` في الشجرة، والتطبيقُ الأوّلُ في `useState` نفسِه فلا تُرسم أوّلُ لوحةٍ بالمظهر الخطأ
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", dark);
     root.classList.toggle("light", !dark);

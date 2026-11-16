@@ -5,6 +5,7 @@
  * الطبقةُ تُعاد بعد كلِّ `setStyle` (`style.load`)، والألوانُ من رموز السمة لا ثوابت.
  */
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -73,6 +74,7 @@ export function ZonesCanvas({ token, data, picked, onPick }: Props) {
     const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
     shown.current = style;
     const instance = new mapboxgl.Map({ container: host, style, language: MAP_LANGUAGE, center: [2.6, 28.0], zoom: 3.6, attributionControl: false });
+    foldedAttribution(instance, mapboxgl.AttributionControl);
     map.current = instance;
     const draw = () => {
       if (latest.current.data) paint(instance, latest.current.data, latest.current.picked, host);

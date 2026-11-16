@@ -18,7 +18,7 @@
 export const OPEN_TILES_URL = "https://tiles.openfreemap.org/planet";
 export const OPEN_GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 export const OPEN_ATTRIBUTION =
-  '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
 /** ألوانُ الحاوية — تُقرأ من رموز `--t2-map-*` بـ`openMapColors`. */
 export interface OpenMapColors {

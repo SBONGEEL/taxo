@@ -35,6 +35,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
 import { buildOpenStyle, openMapColors } from "@/lib/open-map-style";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
@@ -470,7 +471,8 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       language: MAP_LANGUAGE,
       center: [center.lng, center.lat],
       zoom,
-      attributionControl: true,
+      // **النسبةُ زرُّ ⓘ مطويٌّ يُضاف بعد البناء** (`lib/map-attribution.ts`، SPEC §١٠٥/٤) — لا الشريطُ الأبيضُ الكبير
+      attributionControl: false,
       interactive,
       // **الإيماءاتُ الكاملةُ صراحةً** (البند ١٧-١) — انظر تعليقَ تطبيق الكبتن:
       // قيمتُها افتراضُ المكتبة اليوم، وكتابتُها تمنع ترقيةً تُسقط إيماءةً بصمت.
@@ -499,6 +501,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     });
 
     map.current = instance;
+    const unfoldAttribution = foldedAttribution(instance, gl.AttributionControl);
     // **في التطوير وحدَه**: اللوحةُ على حاويتها، فيُقرأ ما رُسم (الطبقاتُ وألوانُها) من المتصفّح لا ظنّاً
     if (import.meta.env.DEV && container.current) {
       (container.current as HTMLDivElement & { __map?: mapboxgl.Map }).__map = instance;
@@ -531,6 +534,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
 
     return () => {
       window.clearTimeout(fallbackTimer);
+      unfoldAttribution();
       watcher.disconnect();
       instance.remove();
       map.current = null;
@@ -962,7 +966,8 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     // ليس طريقاً، **ورسمُه متّصلاً كما رسمته اللوحةُ يقول «هذا هو الطريق» وليس هو**
     if (container.current) {
       const css = getComputedStyle(container.current);
-      const accent = css.getPropertyValue("--t2-accent").trim();
+      // **خطُّ المسار من رمزه** (، SPEC §١٠٥/٢) — أعمقُ نهاراً فيُرى على الأرض الفاتحة، وساطعٌ ليلاً؛ والجمرُ إن غاب
+      const accent = (css.getPropertyValue("--t2-map-route") || css.getPropertyValue("--t2-accent")).trim();
       const casing = css.getPropertyValue("--t2-map-casing").trim();
       if (accent && casing) {
         // **الهالة** — تحت الظلّ، مخفيّةٌ إلا في معاينة الورقة الجديدة

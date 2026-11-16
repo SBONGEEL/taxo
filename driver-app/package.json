@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:rtl && npm run check:navbar && npm run check:arabic && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:update-gate && npm run check:digits && npm run check:slot && npm run check:config && npm run check:target && npm run check:contract && npm run check:destinations && npm run check:service-tiles && npm run check:client-doors && npm run check:money && npm run check:market-literals && npm run check:money-format && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:rtl && npm run check:navbar && npm run check:arabic && npm run check:money-math && npm run check:scale && npm run check:contrast && npm run check:enums && npm run check:update-gate && npm run check:digits && npm run check:slot && npm run check:config && npm run check:target && npm run check:contract && npm run check:destinations && npm run check:service-tiles && npm run check:client-doors && npm run check:money && npm run check:market-literals && npm run check:money-format && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "check:enums": "node scripts/check-enums.mjs",
     "check:slot": "node scripts/check-slot.mjs",
     "check:config": "node scripts/check-config.mjs",

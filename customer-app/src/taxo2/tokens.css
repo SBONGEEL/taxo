@@ -33,18 +33,20 @@
 
   /* الجمر — لونُ الفعل والطريق، ونصُّه حبرٌ دائماً */
   --t2-accent: #f05a28;
-  --t2-accent-text: #c2410c; /* الجمرُ نصّاً على الفاتح */
+  --t2-accent-text: #ad3b0b; /* الجمرُ نصّاً على الفاتح — ≥ ٤٫٥ على `--t2-accent-soft` (`check:contrast`) */
   --t2-on-accent: #14161a;
   --t2-accent-soft: #fde6db;
   --t2-accent-line: #f6c3ae;
 
   /* المعاني (الهوية): نجاح · تنبيه · خطأ */
-  --t2-success: #1e7f55;
+  --t2-success: #186f4a; /* SPEC §١٠٥/٢: ≥ ٤٫٥ على خلفيّته الخافتة (`check:contrast`) */
   --t2-success-soft: #dceee4;
-  --t2-warning: #a86a00;
+  --t2-warning: #8a5700; /* SPEC §١٠٥/٢: ≥ ٤٫٥ على خلفيّته الخافتة (`check:contrast`) */
   --t2-warning-soft: #f4f1ea; /* التنبيهُ على الحجر — لا لونَ تنبيهٍ خافتٍ في الهوية الفاتحة */
-  --t2-danger: #c5352b;
+  --t2-danger: #ad2c23; /* SPEC §١٠٥/٢: ≥ ٤٫٥ على خلفيّته الخافتة (`check:contrast`) */
   --t2-danger-soft: #f8e1de;
+  --t2-on-danger: #ffffff; /* النصُّ فوق الخطر والنجاح — SPEC §١٠٥/٢ */
+  --t2-on-success: #ffffff;
 
   /* البرقوق — الخدمة النسائية وحدها */
   --t2-women: #9c2c6e;
@@ -76,7 +78,7 @@
 
   /* الخريطة — **لغةُ «TaxoMap» في الهوية**: أرضٌ حجريّةٌ وطرقٌ بيضاءُ وحدائقُ خضراء، بلا معالمَ ولا أسماء */
   --t2-map-land: #e8e3d8;
-  --t2-map-park: #d7dfca;
+  --t2-map-park: #cbd8bb; /* الحدائقُ تُفرَّق عن الأرض نهاراً (`check:contrast`) */
   --t2-map-road: #ffffff;
   --t2-map-road-minor: #fbf9f4;
   --t2-map-water: #c9d5d6; /* الماءُ في خريطة البيانات المفتوحة (`lib/open-map-style.ts`) — رماديٌّ أزرقُ هادئ */
@@ -91,6 +93,7 @@
   --t2-map-label: #4a4741;
   --t2-map-label-minor: #7b776f;
   --t2-map-label-halo: #f4f1ea;
+  --t2-map-route: #d4460f; /* خطُّ المسار نهاراً — ≥ ٣ على الأرض (SPEC §١٠٥/٢) */
 
   /* الحركة: سريعةٌ للّمس، ومتوسّطةٌ للتبدّل، وبطيئةٌ للانتظار */
   --t2-fast: 120ms;
@@ -133,6 +136,8 @@ html.dark .t2:not(.t2-day),
   --t2-warning-line: #3a3220;
   --t2-danger: #f0584c;
   --t2-danger-soft: #2c1615;
+  --t2-on-danger: #0e1013;
+  --t2-on-success: #0e1013;
 
   --t2-women: #f08cc0;
   --t2-women-soft: rgba(240, 140, 192, 0.12); /* كما في شاشات الكبتنة CW1–CW4 */
@@ -158,14 +163,15 @@ html.dark .t2:not(.t2-day),
 
   /* الخريطةُ ليلاً — «TaxoMap» الداكنة */
   --t2-map-land: #13161b;
-  --t2-map-park: #16201b;
+  --t2-map-park: #17291f; /* ليلاً: أخضرُ داكنٌ يُقرأ على الأرض (SPEC §١٠٥/٢) */
   --t2-map-road: #252a32;
   --t2-map-road-minor: #1e2229;
-  --t2-map-water: #0e1418;
+  --t2-map-water: #143149; /* ليلاً: أزرقُ عميقٌ يُفرَّق عن الأرض — كان يساويها */
   --t2-map-building: #1a1e25;
   --t2-map-label: #c9c4ba;
   --t2-map-label-minor: #8d8a83;
   --t2-map-label-halo: #13161b;
+  --t2-map-route: #ff6a33; /* خطُّ المسار ليلاً — الجمرُ الساطع */
 
   /* **ما رسمته شاشاتُ الكبتن C09–C12 ولا رمزَ له** — بقيم اللوحة (`design/REDESIGN-PARITY.md` §أ٢)، **في الداكن وحدَه**:
      الشاشاتُ مثبَّتةٌ عليه، **وتسقط في غيره إلى أقرب رمز** (`var(--x, var(--أقرب))`) فلا يُخترع لها فاتحٌ لم يُرسم */

@@ -102,7 +102,7 @@
   border: 0;
   border-radius: 18px;
   background: var(--t2-danger);
-  color: var(--t2-on-accent);
+  color: var(--t2-on-danger);
   font: inherit;
   font-size: 15px;
   font-weight: 700;

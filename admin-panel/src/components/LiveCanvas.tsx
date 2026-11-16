@@ -27,6 +27,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
+import { foldedAttribution } from "@/lib/map-attribution";
 import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -130,6 +131,7 @@ export function LiveCanvas({
       zoom: 11,
       attributionControl: false,
     });
+    foldedAttribution(instance, mapboxgl.AttributionControl);
     map.current = instance;
     // **صبغُ «TaxoMap» مع كلِّ ستايلٍ يُحمَّل** — تبديلُ المظهر يمسح الصبغَ كما يمسح الطبقات
     instance.on("style.load", () => {

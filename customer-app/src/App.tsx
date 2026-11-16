@@ -80,6 +80,9 @@ const ForgotPasswordScreen = lazy(() =>
     default: m.ForgotPasswordScreen,
   })),
 );
+const LicensesT2Screen = lazy(() =>
+  import("@/screens/t2/LicensesT2").then((m) => ({ default: m.LicensesT2Screen })),
+);
 const LegalT2Screen = lazy(() =>
   import("@/screens/t2/LegalT2").then((m) => ({ default: m.LegalT2Screen })),
 );
@@ -821,6 +824,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <LegalT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **«حول التطبيق والتراخيص»** (SPEC §١٠٥/٤) — نسبةُ بيانات الخرائط كاملة */}
+                      <Route
+                        path="/account/licenses"
+                        element={
+                          <Guarded>
+                            <LicensesT2Screen />
                           </Guarded>
                         }
                       />

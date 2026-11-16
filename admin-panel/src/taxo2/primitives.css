@@ -190,7 +190,7 @@ button.t2-row:enabled { cursor: pointer; }
 }
 .t2-badge.live { background: var(--t2-inverse); color: var(--t2-accent); }
 .t2-badge.offer { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
-.t2-badge.hot { background: var(--t2-accent-soft); color: var(--t2-accent); }
+.t2-badge.hot { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
 .t2-badge.money,
 .t2-badge.ok { background: var(--t2-success-soft); color: var(--t2-success); }
 .t2-badge.women { background: var(--t2-women-soft); color: var(--t2-women); }

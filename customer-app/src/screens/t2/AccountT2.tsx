@@ -103,6 +103,7 @@ export function AccountT2Screen() {
     { to: "/account/help", icon: "help", label: tr("المساعدة والدعم") },
     // **قوقل تشترط بلوغَ السياسات من داخل التطبيق** (§٦١-و/٦) — قبل الحذف الذي يبقى آخرَ القائمة
     { to: "/account/legal", icon: "gavel", label: tr("الشروط والخصوصية") },
+    { to: "/account/licenses", icon: "info", label: tr("حول التطبيق والتراخيص") },
     // **حذفُ الحساب آخرَ القائمة بقصد** (٢٠٢٦-٠٩-٠٧) — **وظاهرٌ لا مخفيّ**: شرطُ المتجر «an in-app path»
     { to: "/account/delete", icon: "delete", label: tr("حذف الحساب") },
   ];
