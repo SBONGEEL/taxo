@@ -110,8 +110,12 @@
         return reply(cmd.id, true, cmd.path);
       }
       if (cmd.kind === "back") {
-        history.back();
-        return reply(cmd.id, true, "back");
+        // **الجوابُ قبل الرجوع** — رجوعٌ يغادر الوثيقةَ يقطع طلبَ الجواب فيُقرأ «لا جواب» (كالإعادة أعلاه)
+        reply(cmd.id, true, "back");
+        setTimeout(function () {
+          history.back();
+        }, 150);
+        return;
       }
       if (cmd.kind === "click") {
         // **ينتظر العنصرَ حتى ٦ ث** — ورقةٌ تنزلق ببطءٍ على iPhone SE لم تكن قد رُسمت بعد ٩٠٠ ms (مقيسٌ: بقي SE على الدبوس)

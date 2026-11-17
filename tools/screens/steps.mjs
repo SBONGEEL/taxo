@@ -38,13 +38,15 @@ const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar",
 
 /** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
 const RIDER = [
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لديّ حساب" }], settle: 4000 },
+  // **ضغطةٌ ثانيةٌ اختياريّة** — الترحيبُ يُعاد رسمُه بعد فحص المنطقة، فضغطةٌ قبله لا تنقل (مقيسٌ: أندرويد وSE بقيا على «غيرُ متاح» والضغطةُ ✓)
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لديّ حساب" }, { kind: "click", text: "لديّ حساب", optional: true }], settle: 4000 },
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
   { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000 },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000 },
-  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "back" }, { kind: "click", text: "اطلب" }], settle: 15000 },
+  // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
+  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم" }, { kind: "click", text: "اطلب" }], settle: 15000 },
   { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
 ];
 const DRIVER = [
