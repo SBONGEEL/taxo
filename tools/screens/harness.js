@@ -117,7 +117,9 @@
         var attempt = function () {
           var el = find(cmd);
           if (!el) {
-            if (Date.now() - started < 6000) return setTimeout(attempt, 250);
+            // **الاختياريُّ ينتظر أقلّ ولا يُسقط الخطوة** — ورقةٌ تظهر في جهازٍ ولا تظهر في آخر (أذوناتُ أندرويد الأولى)
+            if (Date.now() - started < (cmd.optional ? 2500 : 6000)) return setTimeout(attempt, 250);
+            if (cmd.optional) return reply(cmd.id, true, "— لا " + (cmd.text || cmd.selector));
             return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
           }
           el.click();

@@ -49,8 +49,20 @@ const RIDER = [
 ];
 const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }], settle: 4000 },
-  { name: "home-offline", label: "الرئيسيّة — غيرُ متّصل", do: [{ kind: "reset", storage: "in" }, { kind: "click", text: "تخط" }], settle: 9000 },
+  // **وأوراقُ الأذونات الأولى (توفيرُ الطاقة…) تسبق الرئيسيّة في أندرويد** — «لاحقاً» اختياريّةٌ لأنها لا تظهر في كلِّ جهاز
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط", optional: true }, { kind: "click", text: "دخول" }], settle: 4000 },
+  {
+    name: "home-offline",
+    label: "الرئيسيّة — غيرُ متّصل",
+    do: [
+      { kind: "reset", storage: "in" },
+      { kind: "click", text: "تخط", optional: true },
+      { kind: "click", text: "لاحقاً", optional: true },
+      { kind: "click", text: "لاحقاً", optional: true },
+      { kind: "click", text: "لاحقاً", optional: true },
+    ],
+    settle: 9000,
+  },
   { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000 },
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 12000 },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000 },
