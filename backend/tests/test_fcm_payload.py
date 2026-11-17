@@ -148,3 +148,34 @@ def test_the_third_set_is_three_and_anything_newer() -> None:
     accepted = PushMessage(title="تم قبول رحلتك", body="…", data={"type": "driver_assigned"})
     shaped = channels.for_level(accepted, channels.CHANNELS_V3)
     assert shaped is not None and not shaped.data_only and shaped.android_channel_id == "taxo.accepted"
+
+
+def test_ios_events_carry_their_own_sound_and_buttons() -> None:
+    """**كلُّ حدثٍ بصوته وأزراره على iOS** — والصوتُ ملفٌّ في الحزمة فعلاً، لا اسمٌ يُرسم صامتاً."""
+    from pathlib import Path
+
+    from app.services.push.fcm import _APNS_EVENTS
+
+    def aps(kind: str) -> dict[str, str]:
+        message = PushMessage(title="t", body="b", data={"type": kind})
+        return _provider()._payload("tok", message)["message"]["apns"]["payload"]["aps"]
+
+    assert aps("ride_offer") == {
+        "sound": "taxo_request.caf",
+        "category": "TAXO_OFFER",
+        "interruption-level": "time-sensitive",
+    }
+    assert aps("incoming_call")["category"] == "TAXO_CALL"
+    assert aps("ride_completed") == {"sound": "taxo_ended.caf", "category": "TAXO_RIDE"}
+    # **وما لا يخصّه شيءٌ يبقى كما كان**
+    assert aps("admin_message") == {"sound": "default"}
+
+    # **ولا يخترق «التركيز» إلا ثلاثة** — ما يخترقه كلُّه لا يخترقه شيء
+    urgent = {k for k, v in _APNS_EVENTS.items() if v.get("interruption-level") == "time-sensitive"}
+    assert urgent == {"ride_offer", "incoming_call", "driver_arrived"}
+
+    # **كلُّ صوتٍ مسمّى موجودٌ في حزمة iOS** — اسمٌ بلا ملفٍّ يُرسم صامتاً بلا خطأ
+    sounds = Path(__file__).resolve().parents[2] / "ios-native" / "TaxoNative" / "Resources" / "sounds"
+    if sounds.is_dir():  # الحاويةُ تحمل الخلفيّةَ وحدَها — والفحصُ يُقاس حيث الشجرةُ كاملة
+        for event in _APNS_EVENTS.values():
+            assert (sounds / event["sound"]).is_file(), event["sound"]

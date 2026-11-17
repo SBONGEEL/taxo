@@ -70,6 +70,10 @@ jobs:
       - name: الحارسان — check:ios · check:mic-gate
         if: matrix.app == 'customer-app' && matrix.channel == 'public'
         run: |
+          # **ما يُشغَّل على macOS يُحلَّل هنا أوّلاً** — خطأُ صياغةٍ في أداة البناء أسقط أوّلَ تشغيلٍ على عدّاء Mac (قِيس ٢٠٢٦-١١-١٧)
+          node --check tools/build-ios.mjs
+          bash -n tools/ios/simulator-smoke.sh
+          ruby -c tools/ios/configure-xcode.rb
           node tools/check-ios.mjs
           node tools/check-mic-gate.mjs
           node -e 'require("fs").readdirSync("ios-native/TaxoNative/Resources/sounds").forEach(f=>console.log(f))'

@@ -57,8 +57,7 @@ function step(title, command, args, cwd = ROOT) {
   }
 }
 
-if (distReady) console.log("
-── الشاشاتُ مبنيّةٌ سلفاً (--dist-ready) — يقيسها الحارسُ بعد المزامنة");
+if (distReady) console.log("\n── الشاشاتُ مبنيّةٌ سلفاً (--dist-ready) — يقيسها الحارسُ بعد المزامنة");
 else step("الشاشاتُ بعنوان القناة", "node", ["tools/build-channel.mjs", app]);
 step("المزامنة — iOS مسمّاةً", "npx", ["cap", "sync", "ios"], APP_DIR);
 step("لا غلافَ في المزامَن", "node", ["tools/check-ios.mjs", "--synced", app]);

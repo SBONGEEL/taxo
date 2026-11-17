@@ -60,6 +60,30 @@ UNREGISTERED_STATUSES = frozenset({"UNREGISTERED", "NOT_FOUND", "INVALID_ARGUMEN
 logger = logging.getLogger(__name__)
 
 
+#: **الحدثُ ← ما يرسمه iOS** (أمرُ المالك ٢٠٢٦-١١-١٧): نظيرُ قنوات أندرويد (`channels.EVENT_CHANNELS_V2/V3`) على iOS —
+#: **صوتُ الحدث** من حزمة التطبيق (`ios-native/TaxoNative/Resources/sounds`)، **وفئةُ أزراره** (`TaxoNotifications.swift`)،
+#: **وما يخترق «التركيز»** (`time-sensitive`): الطلبُ والمكالمةُ ووصولُ الكبتن وحدَها — **فما يخترقه كلُّه لا يخترقه شيء**.
+#: والمفتاحُ `data["type"]` نفسُه — البيتُ الواحدُ لنوع الحدث (`ARCHITECTURE.md`). وما ليس هنا يبقى كما كان: `sound: default`.
+_APNS_EVENTS: dict[str, dict[str, str]] = {
+    "ride_offer": {"sound": "taxo_request.caf", "category": "TAXO_OFFER", "interruption-level": "time-sensitive"},
+    "incoming_call": {"sound": "taxo_call.caf", "category": "TAXO_CALL", "interruption-level": "time-sensitive"},
+    "driver_arrived": {"sound": "taxo_arrived.caf", "category": "TAXO_RIDE", "interruption-level": "time-sensitive"},
+    "driver_assigned": {"sound": "taxo_accepted.caf", "category": "TAXO_RIDE"},
+    "driver_approaching": {"sound": "taxo_approaching.caf", "category": "TAXO_RIDE"},
+    "ride_started": {"sound": "taxo_started.caf", "category": "TAXO_RIDE"},
+    "ride_completed": {"sound": "taxo_ended.caf", "category": "TAXO_RIDE"},
+    "payment_confirmed": {"sound": "taxo_payment.caf"},
+    "tip_received": {"sound": "taxo_payment.caf"},
+    "referral_rewarded": {"sound": "taxo_payment.caf"},
+    "cancellation_compensation": {"sound": "taxo_payment.caf"},
+}
+
+
+def _aps(message: PushMessage) -> dict[str, str]:
+    """`aps` لحدث الرسالة — **صوتُه وفئتُه** إن كان له ما يخصّه، وإلا الصوتُ العامّ وحدَه."""
+    return {"sound": "default", **_APNS_EVENTS.get(str(message.data.get("type", "")), {})}
+
+
 def _apns_expiration(message: PushMessage) -> dict[str, str]:
     """`apns-expiration` بثواني يونكس — **لما يحمل عمرَه وحدَه**، وإلا لا ترويسة.
 
@@ -196,7 +220,7 @@ class FcmPushProvider:
                         "apns-push-type": "alert",
                         **_apns_expiration(message),
                     },
-                    "payload": {"aps": {"sound": "default"}},
+                    "payload": {"aps": _aps(message)},
                 },
                 "webpush": {
                     "headers": {"Urgency": "high" if message.high_priority else "normal"}
