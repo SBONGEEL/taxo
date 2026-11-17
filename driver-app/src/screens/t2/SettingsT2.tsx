@@ -22,6 +22,7 @@
  */
 
 import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
+import { offerSpeechChosen, setOfferSpeech } from "@/lib/launcher";
 import { setNativeOfferTone } from "@/lib/offer-alert";
 import { setOfferAlways } from "@/lib/sound";
 import { hasCliqPayout } from "@/lib/payout";
@@ -160,6 +161,9 @@ export function SettingsT2Screen() {
   const guidanceReady = country?.features.next_instruction_enabled === true;
   // **«نغمة الإشعارات»** (ج/١) — مفتاحُ السوق
   const tonesOn = country?.features[TONES_FLAG] === true;
+  // **«انطق الطلب»** (§١٠٣ B/14) — مفتاحُ السوق يُظهره، واختيارُ الكبتن يشعله
+  const speechReady = country?.features.offer_tts === true;
+  const [speech, setSpeechState] = useState(offerSpeechChosen);
 
   return (
     <div className="t2 t2-settings scr">
@@ -249,6 +253,18 @@ export function SettingsT2Screen() {
             onToggle={toggleOfferSound}
           />
         )}
+        {speechReady ? (
+          <Toggle
+            icon="record_voice_over"
+            title={tr("انطق الطلب")}
+            hint={tr("يقرأ الهاتفُ الطلبَ بالعربيّة بعد الرنّة: الأجرة والمسافة ومكان الالتقاط.")}
+            on={speech}
+            onToggle={() => {
+              setOfferSpeech(!speech);
+              setSpeechState(!speech);
+            }}
+          />
+        ) : null}
       </Group>
 
       <Group label={tr("الملاحة")}>

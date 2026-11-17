@@ -182,6 +182,8 @@ public final class OfferAlert {
         hide(context);
         // **نبضُ فقاعة الحال** (§١٠٣ A/1) — إن كانت ظاهرة؛ ولا شيءَ إن لم تكن
         StatusBubble.pulse();
+        // **الطلبُ منطوقاً** (§١٠٣ B/14) — مفتاحُ السوق واختيارُ الكبتن معاً، وبعد الرنّة الأولى
+        OfferSpeech.speak(context, offer);
 
         if (locked(context)) {
             // **الشاشةُ المقفلةُ لملء الشاشة وحدَه** (قرارُ المالك): لا فقاعةَ
@@ -258,6 +260,7 @@ public final class OfferAlert {
 
     /** يطوي كلَّ ما قد يكون ظاهراً — <b>الثلاثةَ معاً ونغمتَها</b>، فلا يبقى أثر. */
     public static void hide(Context context) {
+        OfferSpeech.stop();
         OfferTone.stop();
         OfferBubble.hide(context);
         OfferSheetWindow.hide(context);

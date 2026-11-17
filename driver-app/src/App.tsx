@@ -47,6 +47,7 @@ import { DriverProvider, useDriver } from "@/lib/driver";
 import { GarageProvider } from "@/lib/garage";
 import { RideProvider, useRide, isActive } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
+import { SecureScreen } from "@/lib/secure-screen";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
 import { ApiError } from "@/api/client";
@@ -1023,6 +1024,7 @@ export default function App() {
                     </RouteTransition>
                     </BoundaryByRoute>
                     <HardwareBack />
+                    <SecureScreen />
                     <CaptainUnconfirmedOpening />
                     <PushRouter />
                     <PushNotices />

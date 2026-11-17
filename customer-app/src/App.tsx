@@ -50,6 +50,7 @@ import { UNCONFIRMED_FLAG, claimLaunchOpening, needsRider, refreshUnconfirmed } 
 import { RideProvider, isActive, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
+import { SecureScreen } from "@/lib/secure-screen";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
 import { useNavCovered } from "@/lib/navCover";
@@ -894,6 +895,7 @@ export default function App() {
                   </RouteTransition>
                   </BoundaryByRoute>
                   <HardwareBack />
+                  <SecureScreen />
                   <UnconfirmedOpening />
                   {/* **شاشةُ إعادة القبول** (SPEC §٧٦-ع/٧ البند ٣) — داخل الإقلاع وتحت الترحيب، فوق الشاشات */}
                   <ReconsentGate app="rider" />

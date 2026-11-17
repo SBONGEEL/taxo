@@ -24,6 +24,26 @@ interface NativeLauncher {
 
 const native = registerPlugin<NativeLauncher>("Launcher");
 
+/** **«انطق الطلب»** (§١٠٣ B/14) — اختيارُ الكبتن على جهازه؛ والنطقُ يحتاجه ومفتاحَ السوق معاً (`OfferSpeech.java`). */
+const SPEECH_KEY = "taxo.offer.speech";
+
+export function offerSpeechChosen(): boolean {
+  try {
+    return localStorage.getItem(SPEECH_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setOfferSpeech(on: boolean): void {
+  try {
+    localStorage.setItem(SPEECH_KEY, on ? "1" : "0");
+  } catch {
+    // تخزينٌ محجوب — يُكتب للطرف الأصليّ وحدَه
+  }
+  if (launcherAvailable()) void native.setPrefs({ offer_tts_user: on }).catch(() => undefined);
+}
+
 export function launcherAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Launcher");
 }
@@ -55,6 +75,8 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
   // **فقاعةُ الحال والموقعُ الأصليّ** (§١٠٣ A/1 وA/3) — مفتاحان يقرؤهما الطرفُ الأصليُّ وحدَه
   const bubble = useFeature(country, "status_bubble");
   const nativeLocation = useFeature(country, "native_location");
+  const offerCard = useFeature(country, "bubble_offer_card");
+  const offerSpeech = useFeature(country, "offer_tts");
   const latest = useRef({ online, onAction });
   latest.current = { online, onAction };
 
@@ -82,12 +104,15 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
         boot,
         status_bubble: bubble,
         native_location: nativeLocation,
+        bubble_offer_card: offerCard,
+        offer_tts: offerSpeech,
+        offer_tts_user: offerSpeechChosen(),
         online,
         widget_earnings: widget ? earningsText : null,
         widget_rides: widget && ridesToday !== null ? tr("رحلات اليوم: {0}", { 0: ridesToday }) : null,
       })
       .catch(() => undefined);
-  }, [tile, widget, boot, bubble, nativeLocation, online, earningsText, ridesToday]);
+  }, [tile, widget, boot, bubble, nativeLocation, offerCard, offerSpeech, online, earningsText, ridesToday]);
 
   useEffect(() => {
     if (!launcherAvailable()) return;

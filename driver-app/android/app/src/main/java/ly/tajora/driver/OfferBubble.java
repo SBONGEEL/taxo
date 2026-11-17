@@ -249,6 +249,14 @@ public final class OfferBubble {
             detach(c, false);
             OfferApi.accept(c, offer.rideId, ok -> {});
         }));
+        // **«رفض» من الفقاعة نفسِها** (§١٠٣ B/13) — بمسار الرفض القائم (`OfferApi.decline`) وخلف مفتاحه؛ مطفأً كما كانت
+        if (c.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).getBoolean("bubble_offer_card", false)) {
+            actions.addView(pill(c, p, "رفض", false, 1f, v -> {
+                detach(c, false);
+                OfferAlert.hide(c);
+                OfferApi.decline(c, offer.rideId, ok -> {});
+            }));
+        }
         actions.addView(pill(c, p, "تصغير", false, 1f,
                 v -> attach(c, offer, false)));
         card.addView(actions);

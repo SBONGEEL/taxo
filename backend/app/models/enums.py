@@ -1020,6 +1020,12 @@ class FeatureKey(StrEnum):
     IN_APP_REVIEW = "in_app_review"
     # **الإشعاراتُ الغنيّة للراكب** (SPEC §١٠٣/12): صورةُ الكبتن ولوحتُه وزرّا «اتصال» و«دردشة» — للحزمة الخامسة وحدَها
     RICH_NOTIFICATIONS = "rich_notifications"
+    # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
+    BUBBLE_OFFER_CARD = "bubble_offer_card"
+    # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره
+    OFFER_TTS = "offer_tts"
+    # **منعُ لقطات الشاشة في المحفظة ورمز بطاقة TAXO** (SPEC §١٠٣/26) — في التطبيقين
+    SCREEN_SECURE = "screen_secure"
 
 
 class MapPlaceCategory(StrEnum):
