@@ -13,18 +13,21 @@ import Capacitor
 /// 4. **لوحةُ المفاتيح تُقصِّر الصفحةَ ولا تغطّيها** — نظيرُ `adjustResize` في أندرويد: WKWebView لا يتقلّص مع لوحة المفاتيح، فالحقلُ
 ///    في ورقةٍ مثبَّتةٍ أسفلَ الشاشة يقع تحتها. **فيُقصَّر إطارُ الصفحة إلى حافّة اللوحة** (كما يفعل ملحقُ Keyboard لـCapacitor بوضع
 ///    `native`) — فكلُّ ما يُثبَّت في أسفلها بـCSS يصعد فوقها كما يصعد في أندرويد، **بلا سطرٍ في الشاشات ولا حزمةٍ تُضاف لأندرويد**.
+/// 5. **حجمُ الخطّ من إعداد iPhone** (`TaxoTextSize`) — كما يتبعه WebView أندرويد بنفسه.
 ///
 /// ويُشار إليها من `Main.storyboard` (`customModule="TaxoNative"`).
 open class TaxoBridgeViewController: CAPBridgeViewController {
 
     private var notificationDelegate: TaxoNotificationDelegate?
     private var keyboardObserver: NSObjectProtocol?
+    private var textSizeObserver: NSObjectProtocol?
 
     open override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
         let configuration = super.webViewConfiguration(for: instanceConfiguration)
         configuration.userContentController.addUserScript(
             WKUserScript(source: TaxoShims.source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
+        configuration.userContentController.addUserScript(TaxoTextSize.userScript())
         // **المكالمةُ داخل التطبيق** (WebRTC): الصوتُ يُشغَّل بلا لمسةٍ ثانية وفي الصفحة نفسِها
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
@@ -63,10 +66,15 @@ open class TaxoBridgeViewController: CAPBridgeViewController {
         keyboardObserver = NotificationCenter.default.addObserver(
             forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main
         ) { [weak self] note in self?.keyboardChanged(note) }
+        // **حجمُ الخطّ يتبع إعدادَ iPhone** وهو مفتوح (`TaxoTextSize`)
+        textSizeObserver = NotificationCenter.default.addObserver(
+            forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in if let webView = self?.webView { TaxoTextSize.apply(to: webView) } }
     }
 
     deinit {
         if let keyboardObserver { NotificationCenter.default.removeObserver(keyboardObserver) }
+        if let textSizeObserver { NotificationCenter.default.removeObserver(textSizeObserver) }
     }
 
     /// **الصفحةُ تنتهي حيث تبدأ اللوحة** — وتعود كاملةً حين تُغلق (التداخلُ صفر).
