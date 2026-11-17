@@ -670,6 +670,7 @@ export type FeatureKey =
   | "auto_night_keep_awake"
   | "motion_aware_location"
   | "ride_live_notification"
+  | "ride_live_tracking"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

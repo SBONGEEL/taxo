@@ -1032,6 +1032,8 @@ class FeatureKey(StrEnum):
     MOTION_AWARE_LOCATION = "motion_aware_location"
     # **إشعارُ الرحلة الحيّ للكبتن** (SPEC §١٠٣/18) — سطرُ الحال في إشعار «متّصل» نفسِه
     RIDE_LIVE_NOTIFICATION = "ride_live_notification"
+    # **إشعارُ التتبّع الحيّ للراكب** (SPEC §١٠٣/19) — إشعارٌ واحدٌ مستمرٌّ صامت
+    RIDE_LIVE_TRACKING = "ride_live_tracking"
 
 
 class MapPlaceCategory(StrEnum):

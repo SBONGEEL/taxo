@@ -56,6 +56,7 @@ import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { useRiderLauncher } from "@/lib/launcher";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
+import { useRideLive } from "@/lib/ride-live";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
@@ -886,6 +887,8 @@ export function HomeScreen() {
   useHaptics(user?.country_code);
   // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
   useNativeFlags(user?.country_code);
+  // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19) — خلف مفتاحه
+  useRideLive(user?.country_code, tracking ? ride : null, approachMinutes);
   useRiderLauncher(user?.country_code, (action) => {
     if (action === "wallet") return navigate("/wallet");
     const home = places.find((saved) => saved.icon === "home");
