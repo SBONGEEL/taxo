@@ -56,8 +56,8 @@ final class TaxoChannels {
                 NotificationManager.IMPORTANCE_DEFAULT, R.raw.taxo_notify);
         createCall(context, manager);
         int[] update = {R.raw.taxo_ride_update_1, R.raw.taxo_ride_update_2, R.raw.taxo_ride_update_3};
-        createToned(context, manager, ENDED, "انتهاء الرحلة", update);
-        createToned(context, manager, PAYMENT, "المدفوعات", update);
+        createToned(context, manager, ENDED, "انتهاء الرحلة", tones(new int[] {R.raw.taxo2_ended_1, R.raw.taxo2_ended_2, R.raw.taxo2_ended_3, R.raw.taxo2_ended_4, R.raw.taxo2_ended_5}, update));
+        createToned(context, manager, PAYMENT, "المدفوعات", tones(new int[] {R.raw.taxo2_payment_1, R.raw.taxo2_payment_2, R.raw.taxo2_payment_3, R.raw.taxo2_payment_4, R.raw.taxo2_payment_5}, update));
         OfferAlert.ensureToneChannels(context);
     }
 
@@ -66,11 +66,25 @@ final class TaxoChannels {
      * إنشائها. معرّفُها معرّفُ الحدث ولاحقةُ النغمة ({@code taxo.ended.s1_2})، <b>والقنواتُ القديمةُ تبقى كما هي</b> لمن بقي على
      * الافتراضيّ. والخادمُ يختار القناةَ بنغمة صاحب الجهاز (`push/channels.py → toned`) <b>ولا يرسل إليها قبل أن يبلّغ بها الجهاز</b>.
      */
-    static final String[] TONES = {"s1_1", "s1_2", "s1_3"};
+    static final String[] TONES = {"s2_1", "s2_2", "s2_3", "s2_4", "s2_5", "s1_1", "s1_2", "s1_3"};
+    /** <b>الافتراضيُّ الجديد</b> (قرارُ المالك ١٧/١١/٢٠٢٦): الخيارُ ٥ من المجموعة الثانية — قناتُه {@code <الحدث>.s2_5} كأخواتها. */
+    static final String NEW_DEFAULT = "s2_5";
+
+    /** اسمُ النغمة في إعدادات أندرويد: «الافتراضيّة» للخامسة من الثانية، وما عداها بترتيب الإعداد في التطبيق (١–٧). */
+    static String toneLabel(int i) {
+        return TONES[i].equals(NEW_DEFAULT) ? "الافتراضيّة" : String.valueOf(i < 4 ? i + 1 : i);
+    }
+
+    private static int[] tones(int[] second, int[] first) {
+        int[] all = new int[second.length + first.length];
+        System.arraycopy(second, 0, all, 0, second.length);
+        System.arraycopy(first, 0, all, second.length, first.length);
+        return all;
+    }
 
     static void createToned(Context context, NotificationManager manager, String base, String name, int[] raws) {
         for (int i = 0; i < TONES.length; i++) {
-            create(context, manager, base + "." + TONES[i], name + " · " + (i + 1),
+            create(context, manager, base + "." + TONES[i], name + " · " + toneLabel(i),
                     NotificationManager.IMPORTANCE_HIGH, raws[i]);
         }
         String vibrate = base + ".vibrate";

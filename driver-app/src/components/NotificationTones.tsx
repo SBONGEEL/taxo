@@ -1,5 +1,5 @@
 /** **«نغمة الإشعارات»** (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١) — قائمةُ النغمات بزرِّ معاينةٍ لكلٍّ و«اهتزاز فقط»، **واختيارُ كلِّ مستخدمٍ له وحدَه**
- *  (`users.notification_tone` في الخلفية). **والافتراضيُّ الحاليُّ يبقى لكلِّ من لم يختر.** خلف مفتاح السوق
+ *  (`users.notification_tone` في الخلفية). **والافتراضيُّ لمن لم يختر «TAXO بيب بيب»** (الخيارُ ٥ من الثانية، قرارُ المالك ١٧/١١). خلف مفتاح السوق
  *  `notification_tones_enabled` — مطفأً لا يُرسم شيء ولا تُطبَّق نغمة. */
 import { useEffect, useState } from "react";
 
@@ -7,16 +7,21 @@ import { getNotificationPreferences, setNotificationTone } from "@/api/endpoints
 import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
-import { preview, setTone, type RingTone } from "@/lib/sound";
+import { effectiveTone, preview, setTone, type RingTone } from "@/lib/sound";
 import { Icon } from "@/taxo2";
 
 export const TONES_FLAG = "notification_tones_enabled";
 
 const LABEL: Record<RingTone, string> = {
-  default: "الافتراضيّة",
-  s1_1: "نغمة 1",
-  s1_2: "نغمة 2",
-  s1_3: "نغمة 3",
+  default: "الافتراضيّة (TAXO بيب بيب)",
+  s2_1: "نغمة 1",
+  s2_2: "نغمة 2",
+  s2_3: "نغمة 3",
+  s2_4: "نغمة 4",
+  s2_5: "الافتراضيّة (TAXO بيب بيب)",
+  s1_1: "نغمة 5",
+  s1_2: "نغمة 6",
+  s1_3: "نغمة 7",
   vibrate: "اهتزاز فقط",
 };
 
@@ -34,7 +39,7 @@ export function ToneSync({ applyNative }: { applyNative?: (tone: RingTone, on: b
     getNotificationPreferences()
       .then((prefs) => {
         if (cancelled) return;
-        const tone = (prefs.notification_tone ?? "default") as RingTone;
+        const tone = effectiveTone((prefs.notification_tone ?? "default") as RingTone);
         setTone(tone);
         applyNative?.(tone, true);
       })
@@ -79,8 +84,8 @@ export function NotificationTones({ applyNative, note }: { applyNative?: (tone: 
     setError(null);
     try {
       await setNotificationTone(tone);
-      setTone(tone);
-      applyNative?.(tone, true);
+      setTone(effectiveTone(tone));
+      applyNative?.(effectiveTone(tone), true);
     } catch {
       setChosen(before);
       setError(tr("تعذّر حفظ النغمة — حاول مرّةً أخرى."));

@@ -54,4 +54,4 @@ class NotificationPreferencesUpdate(BaseModel):
     """**كلٌّ اختياريّ**: الواجهةُ القديمةُ ترسل الإعلانات وحدَها كما كانت، والجديدةُ ترسل النغمةَ وحدَها."""
 
     marketing_push_enabled: bool | None = None
-    notification_tone: Literal["default", "vibrate", "s1_1", "s1_2", "s1_3"] | None = None
+    notification_tone: Literal["default", "vibrate", "s2_1", "s2_2", "s2_3", "s2_4", "s1_1", "s1_2", "s1_3"] | None = None

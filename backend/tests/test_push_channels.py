@@ -278,13 +278,17 @@ def test_the_chosen_tone_is_a_channel_of_its_own_for_the_fourth_set_only() -> No
 
     offer = PushMessage(title="t", body="b", data={"type": "ride_offer"})
     assert channels.for_level(offer, channels.CHANNELS_V4, "s1_2").android_channel_id == "taxo.offer.v2.s1_2"
-    # **«اهتزاز فقط» لا يُسكت الطلب** — يرنّ دائماً والكبتنُ متّصل، وما عداه يهتزّ
-    assert channels.for_level(offer, channels.CHANNELS_V4, "vibrate").android_channel_id == "taxo.offer.v2"
+    assert channels.for_level(offer, channels.CHANNELS_V4, "s2_3").android_channel_id == "taxo.offer.v2.s2_3"
+    # **«اهتزاز فقط» لا يُسكت الطلب** — يرنّ دائماً والكبتنُ متّصل بالافتراضيّ الجديد، وما عداه يهتزّ
+    assert channels.for_level(offer, channels.CHANNELS_V4, "vibrate").android_channel_id == "taxo.offer.v2.s2_5"
     ended = PushMessage(title="t", body="b", data={"type": "ride_completed"})
     assert channels.for_level(ended, channels.CHANNELS_V4, "vibrate").android_channel_id == "taxo.ended.vibrate"
-    # **الافتراضيُّ وغيرُ المعروف كما هما**، والثالثةُ لا تحمل قناةَ النغمة فلا تُرسل إليها
+    # **المفتاحُ مطفأً (`None`) وغيرُ المعروف كما هما، و«الافتراضيّ» هو الخيارُ ٥ من الثانية** (قرارُ المالك ١٧/١١)؛
+    # والثالثةُ لا تحمل قناةَ النغمة فلا تُرسل إليها
     assert channels.for_level(offer, channels.CHANNELS_V4, None).android_channel_id == "taxo.offer.v2"
-    assert channels.for_level(offer, channels.CHANNELS_V4, "default").android_channel_id == "taxo.offer.v2"
+    assert channels.for_level(offer, channels.CHANNELS_V4, "default").android_channel_id == "taxo.offer.v2.s2_5"
+    assert channels.for_level(ended, channels.CHANNELS_V4, "default").android_channel_id == "taxo.ended.s2_5"
+    assert "s2_5" not in channels.TONES and channels.NEW_DEFAULT in channels.CHANNEL_TONES
     assert channels.for_level(offer, channels.CHANNELS_V4, "x9").android_channel_id == "taxo.offer.v2"
     assert channels.for_level(offer, channels.CHANNELS_V3, "s1_2").android_channel_id == "taxo.offer.v2"
     # **والعامُّ بلا قناةٍ يبقى بلا قناة**
@@ -303,6 +307,7 @@ async def test_the_tone_is_saved_per_user_and_default_is_null(client, session_fa
     read = await client.get("/me/notification-preferences", headers=rider["headers"])
     assert read.status_code == 200, read.text
     assert read.json()["notification_tone"] == "default" and "s1_1" in read.json()["tones"]
+    assert read.json()["tones"][:5] == ["default", "s2_1", "s2_2", "s2_3", "s2_4"] and read.json()["tones"][-1] == "vibrate"
 
     put = await client.put("/me/notification-preferences", json={"notification_tone": "s1_3"}, headers=rider["headers"])
     assert put.status_code == 200 and put.json()["notification_tone"] == "s1_3"

@@ -94,7 +94,7 @@ public final class OfferAlert {
     /** القناةُ التي يُرسم عليها الطلبُ الآن — <b>قناةُ النغمة إن وُجدت، وإلا الافتراضيّة</b>: قناةٌ غائبةٌ تُسقط الإشعارَ همساً. */
     static String channelFor(Context context) {
         String tone = context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).getString("tone", null);
-        if (tone == null || !tone.startsWith("s1_") || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return CHANNEL_ID;
+        if (tone == null || !(tone.startsWith("s1_") || tone.startsWith("s2_")) || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return CHANNEL_ID;
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         String id = CHANNEL_ID + "." + tone;
         return manager != null && manager.getNotificationChannel(id) != null ? id : CHANNEL_ID;
@@ -105,11 +105,12 @@ public final class OfferAlert {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager == null) return;
-        int[] raws = {R.raw.taxo_ride_request_1, R.raw.taxo_ride_request_2, R.raw.taxo_ride_request_3};
+        int[] raws = {R.raw.taxo2_ride_request_1, R.raw.taxo2_ride_request_2, R.raw.taxo2_ride_request_3, R.raw.taxo2_ride_request_4,
+                R.raw.taxo2_ride_request_5, R.raw.taxo_ride_request_1, R.raw.taxo_ride_request_2, R.raw.taxo_ride_request_3};
         for (int i = 0; i < TaxoChannels.TONES.length; i++) {
             String id = CHANNEL_ID + "." + TaxoChannels.TONES[i];
             if (manager.getNotificationChannel(id) != null) continue;
-            NotificationChannel channel = new NotificationChannel(id, "طلبات الرحلات · " + (i + 1), NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel(id, "طلبات الرحلات · " + TaxoChannels.toneLabel(i), NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("بطاقةُ طلبٍ جديد بنغمتك — تصيح ولو كان الهاتفُ صامتاً.");
             channel.enableVibration(true);
             channel.setVibrationPattern(new long[] {0, 350, 200, 350});

@@ -68,12 +68,14 @@ import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { IconSetSwitch } from "@/lib/icon-set";
 import { ToneSync } from "@/components/NotificationTones";
+import { NEW_DEFAULT } from "@/lib/sound";
 import { setNativeOfferTone } from "@/lib/offer-alert";
 import { setOfferAlways } from "@/lib/sound";
 
 /** **نغمةُ الكبتن**: الطلبُ الأصليُّ بنغمته، و«اهتزاز فقط» لا يُسكت الطلب، والطلبُ يرنّ دائماً والمفتاحُ مشتعل */
 function applyDriverTone(tone: string, on: boolean): void {
-  setNativeOfferTone(tone === "vibrate" ? "default" : tone);
+  // **«اهتزاز فقط» لا يُسكت الطلب** — يرنّ بالافتراضيّ الجديد؛ ومطفأً يعود الغلافُ إلى صوته القديم
+  setNativeOfferTone(!on ? "default" : tone === "vibrate" ? NEW_DEFAULT : tone);
   setOfferAlways(on);
 }
 import { ReconsentGate } from "@/lib/reconsent-gate";

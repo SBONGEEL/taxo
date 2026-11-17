@@ -385,7 +385,14 @@ export function stopOfferLoop(): void {
 
 /** **«نغمة الإشعارات»** (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١) — `default` الصوتُ الحاليّ، و`s1_N` خيارُ المجموعة الأولى، و`vibrate` اهتزازٌ
  *  بلا صوت. **تُضبط من تفضيلات الحساب** (`/me/notification-preferences`) حين يشتعل مفتاحُ السوق، **ومطفأً تبقى `default`** */
-export type RingTone = "default" | "s1_1" | "s1_2" | "s1_3" | "vibrate";
+export type RingTone = "default" | "s2_1" | "s2_2" | "s2_3" | "s2_4" | "s2_5" | "s1_1" | "s1_2" | "s1_3" | "vibrate";
+/** **الصوتُ الافتراضيُّ للجميع** (قرارُ المالك ١٧/١١/٢٠٢٦): الخيارُ ٥ من المجموعة الثانية — «TAXO» بصوتٍ أنثويّ مع بوق «بيب بيب».
+ *  **ومعناه حين يشتعل المفتاح وحدَه**؛ مطفأً تبقى الأصواتُ القديمة (`default`). يطابق `channels.NEW_DEFAULT` في الخلفية */
+export const NEW_DEFAULT: RingTone = "s2_5";
+/** **ما يُعزف فعلاً** لاختيارٍ محفوظ والمفتاحُ مشتعل — «الافتراضيّ» هو `NEW_DEFAULT` */
+export function effectiveTone(saved: RingTone): RingTone {
+  return saved === "default" ? NEW_DEFAULT : saved;
+}
 let tone: RingTone = "default";
 
 export function currentTone(): RingTone {
@@ -398,8 +405,14 @@ export function setTone(next: RingTone): void {
 
 /** **أيُّ ملفٍّ تعزفه النغمةُ** — ما ليس في `TONED` يبقى ملفَّه هو، فالمكالمةُ والخطأُ والمنعطفُ لا تتغيّر */
 function fileOf(cue: Cue, chosen: RingTone = tone): string {
+  // **الطلبُ يرنّ دائماً والكبتنُ متّصل** (قرارُ المالك): «اهتزاز فقط» لا يُسكته، فيرنّ بالافتراضيّ الجديد
+  if (chosen === "vibrate" && OFFER_CUES.has(cue)) chosen = NEW_DEFAULT;
+  const n = chosen.startsWith("s1_") || chosen.startsWith("s2_") ? chosen.slice(3) : null;
+  if (chosen.startsWith("s2_")) {
+    const kind2 = TONED2[cue];
+    return kind2 && n ? `sounds/tones2/${kind2}_${n}.mp3` : FILES[cue];
+  }
   const kind = TONED[cue];
-  const n = chosen.startsWith("s1_") ? chosen.slice(3) : null;
   return kind && n ? `sounds/tones/${kind}_${n}.mp3` : FILES[cue];
 }
 
@@ -416,7 +429,7 @@ export function preview(chosen: RingTone): void {
     return;
   }
   void ctx.resume();
-  const file = fileOf(PREVIEW_CUE, chosen);
+  const file = fileOf(PREVIEW_CUE, effectiveTone(chosen));
   void fetch(file)
     .then((response) => response.arrayBuffer())
     .then((bytes) => ctx.decodeAudioData(bytes))
@@ -431,6 +444,8 @@ export function preview(chosen: RingTone): void {
 
 /** **ما تتبعه النغمة** — ملفّاتُ `design/sounds/` بأسمائها في `public/sounds/tones/` */
 const TONED: Partial<Record<Cue, string>> = { offer: "request", rideStarted: "update", rideCompleted: "update", collected: "update", credited: "update" };
+/** **المجموعةُ الثانية** (`design/sounds-v2/`) — لكلِّ حدثٍ صوتُه، بأسمائها في `public/sounds/tones2/` */
+const TONED2: Partial<Record<Cue, string>> = { offer: "request", rideStarted: "started", rideCompleted: "ended", collected: "payment", credited: "payment" };
 const PREVIEW_CUE: Cue = "offer";
 
 /** **الطلبُ يرنّ دائماً والكبتنُ متّصل** حين يشتعل «نغمة الإشعارات» (أمرُ المالك ج/١/٤) — فمفتاحُ إسكاته يُخفى ولا يُقرأ */
