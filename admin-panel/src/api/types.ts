@@ -638,6 +638,10 @@ export type FeatureKey =
   | "moonpay_rider_enabled"
   // **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه، مطفأٌ حتى يقبل Polar ويختبر المالك
   | "polar_card_enabled"
+  // **Dpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — مفتاحٌ لكلِّ استعمال، مطفأةٌ حتى الرخصة وقبول Dpay
+  | "dpay_topup_enabled"
+  | "dpay_trip_enabled"
+  | "dpay_subscription_enabled"
   // **«مزوّد الخرائط» لكلِّ دولةٍ وميزة** (٢٠٢٦-١١-١٥) — مشتعلٌ Google، مطفأ Mapbox؛ والرجوعُ الآليُّ في الخلفية
   | "google_maps_display"
   | "google_places_search"

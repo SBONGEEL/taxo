@@ -148,6 +148,7 @@ class Gateway(Protocol):
 
 def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
+    from app.services.payment_gateways.dpay import build_dpay
     from app.services.payment_gateways.moonpay import build_moonpay
     from app.services.payment_gateways.nowpay import build_nowpay
     from app.services.payment_gateways.polar import build_polar
@@ -155,12 +156,12 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.whop import build_whop
 
     return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop,
-            "moonpay": build_moonpay, "polar": build_polar}
+            "moonpay": build_moonpay, "polar": build_polar, "dpay": build_dpay}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
 DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية",
-                                "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية"}
+                                "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية", "dpay": "Dpay"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
@@ -170,6 +171,7 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {
     "whop": ProviderKey.WHOP,
     "moonpay": ProviderKey.MOONPAY,
     "polar": ProviderKey.POLAR,
+    "dpay": ProviderKey.DPAY,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -185,6 +187,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "moonpay": frozenset({"taxo"}),
     # **Polar**: رسمُه على التاجر من المال الواصل — **والبطاقةُ تُخصم سعرَ الاشتراك وحدَه**
     "polar": frozenset({"taxo"}),
+    # **Dpay**: صفحتُه تضيف رسمَ الوسيلة فوق المبلغ وتعرضه للدافع قبل الدفع (`amount` «قبل رسم المزوّد») — فالرسمُ على الدافع بنيةً
+    "dpay": frozenset({"user"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
@@ -198,12 +202,30 @@ OWN_SWITCH: dict[str, FeatureKey] = {
     "moonpay": FeatureKey.MOONPAY_DRIVER_ENABLED,
     # **وPolar** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه، **مطفأٌ حتى يقبل Polar الحسابَ ويختبر المالك**
     "polar": FeatureKey.POLAR_CARD_ENABLED,
+    # **وDpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — مفتاحٌ لكلِّ استعمالٍ في `PURPOSE_SWITCHES`؛ وهذا عضويّتُه في «ذوي المفتاح الخاصّ» وحدَها
+    "dpay": FeatureKey.DPAY_SUBSCRIPTION_ENABLED,
 }
 SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "nowpay": frozenset({CountryCode.JO}),
     "whop": frozenset({CountryCode.JO}),
     "moonpay": frozenset({CountryCode.JO}),
     "polar": frozenset({CountryCode.JO}),
+    "dpay": frozenset({CountryCode.LY, CountryCode.JO}),
+}
+#: **مفتاحٌ بدولٍ أضيقَ من دول وسيطه** — شحنُ الراكب ودفعُ الرحلة عبر Dpay ليبيا وحدَها، والاشتراكُ ليبيا والأردن (البطاقةُ الدوليّة)
+KEY_COUNTRIES: dict[str, frozenset[CountryCode]] = {
+    FeatureKey.DPAY_TOPUP_ENABLED.value: frozenset({CountryCode.LY}),
+    FeatureKey.DPAY_TRIP_ENABLED.value: frozenset({CountryCode.LY}),
+    FeatureKey.DPAY_SUBSCRIPTION_ENABLED.value: frozenset({CountryCode.LY, CountryCode.JO}),
+}
+#: **وسيطٌ بمفتاحٍ لكلِّ غرض** (Dpay، أمرُ المالك ٢٠٢٦-١١-١٧: «each with its own panel switch») — الغرضُ ⇐ (جمهورُه، مفاتيحُه: يكفي
+#: أحدُها). **وشحنُ الراكب ودفعُ رحلته غرضٌ واحدٌ في الخادم** (الرحلةُ تُدفع شحناً بقيمتها ثمّ من المحفظة، كـWhop) — والتطبيقُ يعرض كلّاً
+#: بمفتاحه. **ويُسأل في العرض وفي الفتح معاً**، فطريقةٌ مشتعلٌ مفتاحُ اشتراكها لا تشحن محفظة.
+PURPOSE_SWITCHES: dict[str, dict[str, tuple[str, tuple[FeatureKey, ...]]]] = {
+    "dpay": {
+        "wallet_topup": ("rider", (FeatureKey.DPAY_TOPUP_ENABLED, FeatureKey.DPAY_TRIP_ENABLED)),
+        "subscription": ("driver", (FeatureKey.DPAY_SUBSCRIPTION_ENABLED,)),
+    },
 }
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
 DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar"})
@@ -229,25 +251,45 @@ SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in O
 SWITCH_OWNER.update(
     {key.value: METHOD_INTEGRATION[code] for code, (_aud, keys) in METHOD_SWITCHES.items() for key in keys}
 )
+SWITCH_OWNER.update(
+    {key.value: integration for integration, table in PURPOSE_SWITCHES.items() for _aud, keys in table.values() for key in keys}
+)
 
 
-def switch_keys(integration: str | None, code: str | None) -> tuple[FeatureKey, ...]:
-    """**مفاتيحُ هذه الطريقة** — من كودها إن كان لها مفاتيحُها، وإلا مفتاحُ وسيطها الخاصّ؛ `()` لطريقةٍ بلا مفتاحٍ خاصّ."""
+def _purpose_value(purpose: object) -> str | None:
+    return None if purpose is None else str(getattr(purpose, "value", purpose))
+
+
+def switch_keys(integration: str | None, code: str | None, purpose: object = None) -> tuple[FeatureKey, ...]:
+    """**مفاتيحُ هذه الطريقة** — بالغرض إن كان لوسيطها مفتاحٌ لكلِّ غرض (بلا غرضٍ: كلُّها)، أو من كودها إن كان لها مفاتيحُها، وإلا مفتاحُ
+    وسيطها الخاصّ؛ `()` لطريقةٍ بلا مفتاحٍ خاصّ."""
+    table = PURPOSE_SWITCHES.get(integration or "")
+    if table is not None:
+        wanted = _purpose_value(purpose)
+        if wanted is not None:
+            return table[wanted][1] if wanted in table else ()
+        return tuple(key for _aud, keys in table.values() for key in keys)
     if code in METHOD_SWITCHES:
         return METHOD_SWITCHES[code][1]
     key = OWN_SWITCH.get(integration or "")
     return (key,) if key is not None else ()
 
 
-def audience_of(integration: str | None, code: str | None) -> str | None:
-    """**لمن الطريقة**: «driver» · «rider» · `None` للجميع — تُسأل في العرض وفي الفتح معاً."""
+def audience_of(integration: str | None, code: str | None, purpose: object = None) -> str | None:
+    """**لمن الطريقة**: «driver» · «rider» · `None` للجميع — تُسأل في العرض وفي الفتح معاً (وبالغرض لوسيطٍ بمفتاحٍ لكلِّ غرض)."""
+    table = PURPOSE_SWITCHES.get(integration or "")
+    wanted = _purpose_value(purpose)
+    if table is not None and wanted in table:
+        return table[wanted][0]
     if code in METHOD_SWITCHES:
         return METHOD_SWITCHES[code][0]
     return "driver" if integration in DRIVERS_ONLY else None
 
 
 def switch_allowed(feature_key: str, country: CountryCode) -> bool:
-    """**أيُشعَل مفتاحُ هذا الوسيط في هذه الدولة؟** — `True` لكلِّ مفتاحٍ ليس لوسيط."""
+    """**أيُشعَل مفتاحُ هذا الوسيط في هذه الدولة؟** — `True` لكلِّ مفتاحٍ ليس لوسيط؛ ودولُ المفتاح نفسِه إن كانت أضيق."""
+    if feature_key in KEY_COUNTRIES:
+        return CountryCode(country) in KEY_COUNTRIES[feature_key]
     integration = SWITCH_OWNER.get(feature_key)
     return integration is None or CountryCode(country) in SWITCH_COUNTRIES.get(integration, frozenset())
 

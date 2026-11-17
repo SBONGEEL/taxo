@@ -329,15 +329,27 @@ export function PaymentScreen() {
   }
 
   // **«الدفع بالبطاقة» للرحلة** (قرارُ المالك ٢٠٢٦-١١-١٣) — يُشحن الرصيدُ بما بقي عليها عبر Whop، ثمّ تُدفع من المحفظة
-  const cardTripOn = country?.features.whop_rider_trip_enabled === true;
+  const whopTripOn = country?.features.whop_rider_trip_enabled === true;
+  // **ودفعُ الرحلة عبر Dpay** (ليبيا، أمرُ المالك ٢٠٢٦-١١-١٧) — المسارُ نفسُه: شحنٌ بما بقي ثمّ من المحفظة، والدافعُ يختار وسيلتَه في صفحة الدفع
+  const dpayTripOn = !whopTripOn && country?.features.dpay_trip_enabled === true;
+  const cardTripOn = whopTripOn || dpayTripOn;
   // **البطاقةُ أوّلاً ومقترحةً مسبقاً** حيث رتّبها المالكُ كذلك (الأردن، ٢٠٢٦-١١-١٣) — والطرقُ الأخرى تحتها، و«طريقة أخرى» باقية
-  const cardPrimary = cardTripOn && cardFirst(country?.payment_method_order) && !pickedOther;
+  const cardPrimary = whopTripOn && cardFirst(country?.payment_method_order) && !pickedOther;
   async function payTripByCard() {
     if (!state?.outstanding) return;
     setCardTripBusy(true);
     setError(null);
     try {
       const body = await listPaymentMethods("wallet_topup");
+      if (dpayTripOn) {
+        if (!body.methods.some((row) => (row.code ?? "").startsWith("dpay_"))) {
+          setError(tr("الدفع عبر Dpay غير متاح الآن — اختر طريقةً أخرى."));
+          return;
+        }
+        saveCardTrip(rideId);
+        navigate("/wallet/pay", { state: { amount: state.outstanding } });
+        return;
+      }
       const card = body.methods.find((row) => row.code === "whop_rider_card") ?? null;
       if (!card) {
         setError(tr("الدفع بالبطاقة غير متاح الآن — اختر طريقةً أخرى."));
@@ -545,7 +557,7 @@ export function PaymentScreen() {
             {/* **الدفع بالبطاقة** (Whop، الأردن) — شحنٌ بقيمة الرحلة ثمّ دفعُها من المحفظة؛ والكبتنُ يُسوّى كأيِّ رحلةٍ بالمحفظة */}
             {cardTripOn && !cardPrimary && !commute && !cashByOther ? (
               <button type="button" className="t2-m-link" disabled={cardTripBusy || busy !== null} onClick={() => void payTripByCard()}>
-                {cardTripBusy ? tr("جارٍ…") : tr("الدفع بالبطاقة")}
+                {cardTripBusy ? tr("جارٍ…") : dpayTripOn ? tr("الدفع عبر Dpay") : tr("الدفع بالبطاقة")}
               </button>
             ) : null}
             {payWithWallet && busy === "wallet" ? <p className="t2-m-fine">{tr("شُحن رصيدُك بقيمة الرحلة — جارٍ دفعُها من المحفظة…")}</p> : null}
