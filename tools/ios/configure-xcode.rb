@@ -46,6 +46,19 @@ unless variant
   changed << 'InfoPlist.strings'
 end
 
+# ── ١-ب) الأصواتُ في الحزمة الرئيسيّة ─────────────────────────────────
+# **لا في الكبسول**: مع `use_frameworks!` تقع موارده داخل إطاره، والنظامُ لا يجد صوتَ الإشعار ولا نغمةَ CallKit إلا في `App.app/`
+sounds_group = project.main_group.children.find { |g| g.display_name == 'TaxoSounds' } || project.main_group.new_group('TaxoSounds')
+sounds = Dir[File.join(root, 'ios-native', 'TaxoNative', 'Resources', 'sounds', '*.caf')].sort
+abort('✗ لا أصواتَ في ios-native/TaxoNative/Resources/sounds') if sounds.empty?
+added = sounds.reject { |file| sounds_group.files.any? { |f| f.real_path.to_s == file } }
+added.each do |file|
+  ref = sounds_group.new_file(file)
+  ref.source_tree = '<absolute>'
+  app.resources_build_phase.add_file_reference(ref, true)
+end
+changed << "#{added.size} صوتاً" unless added.empty?
+
 # ── ٢) امتدادُ الأدوات ───────────────────────────────────────────────────
 EXT = 'TaxoWidgets'
 unless project.targets.any? { |t| t.name == EXT }
