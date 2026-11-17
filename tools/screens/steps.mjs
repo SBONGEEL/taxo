@@ -113,8 +113,12 @@ for (const theme of ["light", "dark"]) {
   // **عمودٌ صمتت فيه الصفحةُ يُعاد مرّةً واحدة** — على محاكٍ باردٍ أُعيد تشغيلُ خدمات Google بعد الإقلاع بدقيقة، فقتل النظامُ التطبيقَ
   // لأنه يعتمد على مزوّد خطوطها («depends on provider … FontsProvider in dying proc») — التشغيل 44060665439، عمودُ الكبتن الفاتح.
   // **عطبُ بيئةٍ لا تطبيق**: فيُعاد العمودُ من أوّله ويُكتب أنه أُعيد؛ وإن صمت ثانيةً بقي أحمرَ كما هو.
-  if (process.env.FOREGROUND_CMD && rows.some((r) => r.notes.some((n) => n.includes("لا جوابَ")))) {
-    console.log(`↻ ${theme}: الصفحةُ صمتت — يُعاد العمودُ مرّةً`);
+  // **وعمودٌ سقط أكثرُه يُعاد كذلك** — iPhone 17 Pro Max رسم صفحةً بيضاءَ للعمود الفاتح كلِّه والخادمُ يُجاب (التشغيل 44140812843)،
+  // والداكنُ بعده سليم: إقلاعٌ باردٌ كالذي رُئي في `simulator-smoke.sh`.
+  const silent = process.env.FOREGROUND_CMD && rows.some((r) => r.notes.some((n) => n.includes("لا جوابَ")));
+  const mostlyFailed = rows.filter((r) => !r.reached).length * 2 > rows.length;
+  if (silent || mostlyFailed) {
+    console.log(`↻ ${theme}: ${silent ? "الصفحةُ صمتت" : "سقط أكثرُ العمود"} — يُعاد العمودُ مرّةً`);
     rows = (await pass(theme)).map((r) => ({ ...r, notes: ["↻ أُعيد العمود", ...r.notes] }));
   }
   log.push(...rows);
