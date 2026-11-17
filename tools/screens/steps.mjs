@@ -49,8 +49,9 @@ const RIDER = [
 ];
 const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
+  // **والترحيبُ يظهر عند الخروج في كلِّ جهاز، فـ«تخطَّ» إلزاميّةٌ هنا** — اختياريّةً لم تنتظره في أوّل إقلاعٍ بارد (iPhone، التشغيل 44039966678)
   // **وأوراقُ الأذونات الأولى (توفيرُ الطاقة…) تسبق الرئيسيّة في أندرويد** — «لاحقاً» اختياريّةٌ لأنها لا تظهر في كلِّ جهاز
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط", optional: true }, { kind: "click", text: "دخول" }], settle: 4000 },
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }, { kind: "click", text: "دخول" }], settle: 4000 },
   {
     name: "home-offline",
     label: "الرئيسيّة — غيرُ متّصل",
