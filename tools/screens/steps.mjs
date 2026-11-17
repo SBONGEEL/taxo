@@ -46,7 +46,7 @@ const RIDER = [
   { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000 },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000 },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
-  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم" }, { kind: "click", text: "اطلب" }], settle: 15000 },
+  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000 },
   { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
 ];
 const DRIVER = [

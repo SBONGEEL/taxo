@@ -128,8 +128,12 @@
             if (cmd.optional) return reply(cmd.id, true, "— لا " + (cmd.text || cmd.selector));
             return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
           }
-          el.click();
-          reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
+          // **يُمرَّر إليه أوّلاً كما تمرّر اليد** — «خيارات» تحت حافّة الورقة على أندرويد فضُغط ولم تظهر ورقتُه (التشغيل 44120859563)
+          el.scrollIntoView({ block: "center" });
+          setTimeout(function () {
+            el.click();
+            reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
+          }, 300);
         };
         return attempt();
       }
