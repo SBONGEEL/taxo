@@ -35,6 +35,7 @@ on:
       - "tools/check-hosts.mjs"
       - "tools/check-mic-gate.mjs"
       - "tools/ios/**"
+      - "tools/screens/**"
       - ".github/workflows/ios.yml"
   workflow_dispatch:
 
@@ -236,3 +237,169 @@ jobs:
           name: smoke-${{ matrix.app }}-${{ strategy.job-index }}
           path: ${{ runner.temp }}/shots
           retention-days: 7
+
+  # ═══════════════ لقطاتُ المقارنة: أندرويد ↔ iPhone (أمرُ المالك ٢٠٢٦-١١-١٧) ═══════════════
+  # **الشاشاتُ الحقيقيّةُ بوضع الضيف** — وخادمُ اللقطات (`tools/screens/server.mjs`) داخل الوظيفة يُجيب القراءاتِ العامّةَ وحدَها
+  # من لقطةٍ محفوظة: **لا إنتاجَ ولا تطوير**. وحزمةُ اللقطات تُبنى هنا وتُرمى — لا تُشحن (`prepare-dist.mjs`).
+  screens-web:
+    name: لقطات · حزمة · ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+      - run: node tools/screens/prepare-dist.mjs "${{ matrix.app }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ matrix.app }}/dist-screens
+          retention-days: 3
+
+  screens-ios:
+    name: لقطات · iPhone · ${{ matrix.app }} · ${{ matrix.device }}
+    # **بعد `smoke` لا معه** — فلا يزيد ما يمسكه هذا الملفُّ من عدّائي macOS على اثنين في أيِّ لحظة
+    needs: [build, screens-web, smoke]
+    if: ${{ !cancelled() }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        app: [customer-app, driver-app]
+        device: ["iPhone 17 Pro Max", "iPhone SE (3rd generation)"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-${{ matrix.app }}-sim
+          path: ${{ runner.temp }}/sim
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ runner.temp }}/dist-screens
+      - name: المحاكي — الخطوات واللقطات
+        run: |
+          col="${{ contains(matrix.device, 'SE') && 'ios-small' || 'ios-large' }}"
+          echo "COL=$col" >> "$GITHUB_ENV"
+          bash tools/screens/ios-run.sh "${{ matrix.app }}" "${{ runner.temp }}/sim/App.app.zip" "${{ runner.temp }}/dist-screens" \
+            "${{ matrix.device }}" "${{ runner.temp }}/shots/$col"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ matrix.app }}-${{ env.COL }}
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
+
+  screens-android:
+    name: لقطات · أندرويد · ${{ matrix.app }}
+    needs: screens-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-screens-${{ matrix.app }}-${{ hashFiles(format('{0}/android/**/*.gradle', matrix.app)) }}
+          restore-keys: gradle-screens-${{ matrix.app }}-
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ matrix.app }}/dist
+      # **غلافُ التجربة نفسُه** (`trial`، بناءُ التصحيح `.test.dev`) — وعنوانُه وحدَه يُبدَّل إلى خادم اللقطات، **في هذه الوظيفة لا في الشجرة**
+      - name: الغلاف — مزامنةٌ وعنوانُ اللقطات وبناء
+        env:
+          TAXO_CHANNEL: test
+          TAXO_ALLOW_NO_FIREBASE: "1"
+        run: |
+          cd "${{ matrix.app }}"
+          npx cap sync android
+          node -e 'const fs=require("fs");const f="android/app/src/main/assets/capacitor.config.json";const c=JSON.parse(fs.readFileSync(f));c.server={...(c.server||{}),url:"http://127.0.0.1:8787",cleartext:true,allowNavigation:["127.0.0.1"]};fs.writeFileSync(f,JSON.stringify(c,null,1));console.log(c.server)'
+          sed -i 's#<application #<application android:usesCleartextTraffic="true" #' android/app/src/main/AndroidManifest.xml
+          cd android && sh gradlew assembleTrialDebug --no-daemon -q
+          ls -la app/build/outputs/apk/trial/debug/
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: المحاكي — الخطوات واللقطات
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: bash tools/screens/android-run.sh "${{ matrix.app }}" "$(ls ${{ matrix.app }}/android/app/build/outputs/apk/trial/debug/*.apk | head -1)" "${{ matrix.app }}/dist" "${{ runner.temp }}/shots/android"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ matrix.app }}-android
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
+
+  screens-board:
+    name: لوحاتُ المقارنة
+    needs: [screens-ios, screens-android]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          path: ${{ runner.temp }}/all
+      - name: اللوحات — HTML ثمّ صورةٌ من Chrome
+        run: |
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-ui-core >/dev/null 2>&1 || true
+          out="${{ runner.temp }}/boards"; mkdir -p "$out"
+          for app in customer-app driver-app; do
+            d="${{ runner.temp }}/b-$app"; mkdir -p "$d"
+            for col in android ios-large ios-small; do
+              [ -d "${{ runner.temp }}/all/shots-$app-$col/$col" ] && cp -R "${{ runner.temp }}/all/shots-$app-$col/$col" "$d/$col"
+            done
+            for mode in light dark; do
+              node tools/screens/board.mjs "$app" "$d" "$mode"
+              rows=$(grep -o '<section>' "$d/board-$app-$mode.html" | wc -l)
+              google-chrome --headless=new --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
+                --window-size=1400,$(( 140 + rows * 860 )) --screenshot="$out/board-$app-$mode.png" "file://$d/board-$app-$mode.html"
+            done
+          done
+          ls -la "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boards
+          path: ${{ runner.temp }}/boards
+          retention-days: 30
