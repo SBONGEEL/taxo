@@ -19,3 +19,5 @@ public/*.apk
 
 # حزمةُ اللقطات — لا تُشحن (tools/screens/prepare-dist.mjs)
 dist-screens
+# إعدادُ Firebase لـiOS — من أسرار GitHub عند الرفع وحدَه (ios-release.yml)، لا في git
+ios/App/App/GoogleService-Info.plist

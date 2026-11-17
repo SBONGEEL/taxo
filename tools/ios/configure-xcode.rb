@@ -59,6 +59,13 @@ added.each do |file|
 end
 changed << "#{added.size} صوتاً" unless added.empty?
 
+# ── ١-ج) الصلاحيّات (الإشعارات والحسّاسةُ للوقت) — للأرشيف الموقَّع، ويتجاهلها بناءُ المحاكي ─────
+app.build_configurations.each do |config|
+  next if config.build_settings['CODE_SIGN_ENTITLEMENTS'] == 'App/App.entitlements'
+  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+  changed << "الصلاحيّات (#{config.name})"
+end
+
 # ── ٢) امتدادُ الأدوات ───────────────────────────────────────────────────
 EXT = 'TaxoWidgets'
 unless project.targets.any? { |t| t.name == EXT }

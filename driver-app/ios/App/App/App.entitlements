@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- **صلاحيّاتُ التوقيع** (يومَ حساب Apple) — تُقرأ عند الأرشيف الموقَّع وحدَه، ويتجاهلها بناءُ المحاكي بلا توقيع.
+     aps-environment: الإشعارات (Xcode يجعلها production عند التصدير للمتجر) ·
+     time-sensitive: الطلبُ والمكالمةُ ووصولُ الكبتن تخترق «التركيز» (fcm.py › _APNS_EVENTS). -->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
+</dict>
+</plist>
