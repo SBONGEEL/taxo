@@ -109,6 +109,8 @@ export function WalletT2Screen() {
 
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبٌ خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا بابَ يُرسم**
   const payRequests = useCountryConfig(w.profile?.user?.country_code)?.features.payment_requests_enabled === true;
+  // **كليك أردنيٌّ لا يُذكر حيث لا يعمل** (أمرُ المالك ٢٠٢٦-١١-١٧: «Hide CliQ in Libya») — مفتاحُ السوق نفسُه الذي يُظهر قناتَه
+  const cliqMarket = useCountryConfig(w.profile?.user?.country_code)?.features.cliq_enabled === true;
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [resuming, setResuming] = useState<string | null>(null);
@@ -264,7 +266,9 @@ export function WalletT2Screen() {
                 </span>
               </div>
               <p className="t2-wal-hint">
-                {tr("كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك، وتظهر هنا لأنها من دخلك.")}
+                {cliqMarket
+                  ? tr("كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك، وتظهر هنا لأنها من دخلك.")
+                  : tr("كاشٌ قبضتَه من الركّاب مباشرةً — لا يدخل رصيد محفظتك، ويظهر هنا لأنه من دخلك.")}
 
               </p>
               {negative ? (

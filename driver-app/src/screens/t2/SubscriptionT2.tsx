@@ -360,6 +360,8 @@ export function SubscriptionT2Screen() {
             ? tr("الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده.", { 0: gatewayName })
             : (payRequests && hasManual) || (!s.cardEnabled && !s.cliqAlias)
             ?tr("الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك.")
+            : s.cardEnabled && !s.cliqAlias
+            ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش تسجّله الإدارة بعد قبضه — ليس من التطبيق.")
             : s.cardEnabled
             ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")
             : tr("الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")}
@@ -444,7 +446,9 @@ export function SubscriptionT2Screen() {
               // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١) — خطّةٌ ثمنُها تحته لا زرَّ بطاقةٍ لها، ويُقال لماذا
               bankCard?.min_amount != null &&
               Number(s.confirming.price_to_pay ?? s.confirming.price) < Number(bankCard.min_amount)
-                ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
+                ? s.cliqAlias
+                  ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
+                  : tr("أقلُّ دفعٍ بالبطاقة {0} {1}.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
                 : null
             }
             cardFirst={cardFirst(bankCardFeatures ? countryOrder : null)}
