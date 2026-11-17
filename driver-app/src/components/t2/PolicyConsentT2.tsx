@@ -30,6 +30,8 @@ export function PolicyConsentT2({
   onLoaded: (ids: string[]) => void;
 }) {
   const [docs, setDocs] = useState<RequiredPolicy[] | null>(null);
+  // **ما وافق عليه بعينه** — والشاشةُ لا ترى إلا «أوافق على الكلّ؟»، فالزرُّ لا يُفتح بمربّعٍ واحد
+  const [accepted, setAccepted] = useState<string[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -37,6 +39,7 @@ export function PolicyConsentT2({
       .then((rows) => {
         if (!alive) return;
         setDocs(rows);
+        setAccepted([]);
         onLoaded(rows.map((row) => row.id));
       })
       // **والصمتُ مقصود** — انظر رأس الملف
@@ -51,8 +54,13 @@ export function PolicyConsentT2({
   if (!docs?.length) return null;
   return (
     <AuthConsent
-      checked={checked}
-      onToggle={() => onChange(!checked)}
+      accepted={checked ? docs.map((doc) => doc.id) : accepted}
+      onToggle={(id) => {
+        const current = checked ? docs.map((doc) => doc.id) : accepted;
+        const next = current.includes(id) ? current.filter((one) => one !== id) : [...current, id];
+        setAccepted(next);
+        onChange(docs.every((doc) => next.includes(doc.id)));
+      }}
       // **ونصُّ الفرنسيّة لمن لغتُه الفرنسيّة** (SPEC §٧٤-ل/١) — وثيقةٌ بلا نصٍّ فرنسيٍّ تُعرض بالعربيّة كما كانت
       docs={docs.map((doc) => ({
         id: doc.id,
