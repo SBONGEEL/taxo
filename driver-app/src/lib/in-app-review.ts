@@ -13,6 +13,13 @@ const ASKED_KEY = "taxo.review.asked";
 const MIN_RIDES = 3;
 const EVERY_MS = 120 * 86_400_000;
 
+/** **مفتاحُ السوق** (`in_app_review`، SPEC §١٠٣ A/9) — يكتبه `useNativeFlags`؛ ومطفأً لا يُطلب التقييمُ أبداً. */
+let allowed = false;
+
+export function setReviewAllowed(value: boolean): void {
+  allowed = value;
+}
+
 function read(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -42,6 +49,7 @@ export function noteCompletedRide(rideId: string): void {
 
 /** **اللحظةُ الهادئة** — يُطلب التقييمُ إن بلغ العددُ ومضت المدّة، بعد ثانيةٍ ونصفٍ لا فوراً. */
 export function maybeAskForReview(): void {
+  if (!allowed) return;
   if (!Capacitor.isNativePlatform() || !["android", "ios"].includes(Capacitor.getPlatform())) return;
   if (!Capacitor.isPluginAvailable("InAppReview")) return;
   if (rides().length < MIN_RIDES) return;

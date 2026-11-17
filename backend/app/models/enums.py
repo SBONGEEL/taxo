@@ -1012,6 +1012,12 @@ class FeatureKey(StrEnum):
     BOOT_RESUME = "boot_resume"
     APP_SHORTCUTS = "app_shortcuts"
     HAPTICS = "haptics"
+    # **بقيّةُ المرحلة A** (SPEC §١٠٣/1، 3، 8، 9؛ أمرُ المالك ٢٠٢٦-١١-١٨) — مطفأةٌ لكلِّ دولة، وتحتاج الغلافَ الجديد؛ **لا يمسّ أيٌّ منها نداءً ماليّاً**:
+    # فقاعةُ الحال خارجَ التطبيق · الموقعُ الأصليُّ بفاصل لوحة البثّ والشاشةُ مطفأة · تحديثُ Play داخل التطبيق · طلبُ تقييم المتجر
+    STATUS_BUBBLE = "status_bubble"
+    NATIVE_LOCATION = "native_location"
+    IN_APP_UPDATE = "in_app_update"
+    IN_APP_REVIEW = "in_app_review"
 
 
 class MapPlaceCategory(StrEnum):

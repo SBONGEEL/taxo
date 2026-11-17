@@ -90,6 +90,59 @@ public class OnlineService extends Service {
     private String endpoint = null;
     private String token = null;
 
+    /** <b>فاصلُ البثّ الفعّال</b> (SPEC §١٠٣ المرحلة A/3): {@link #BROADCAST_MS} افتراضاً، <b>وفاصلُ «المتاح» من لوحة البثّ</b> حين
+     *  يشتعل {@code native_location} — يصل من الويب مع كلِّ نبضة ({@code interval_ms})، فتغييرُ اللوحة أو طورُها المتكيّف يبلغ الخدمة. */
+    private long intervalMs = BROADCAST_MS;
+    /** <b>أدنى ما يُقبل وأعلاه</b> — حدّا حمايةٍ لا قيمتان تُضبطان: اللوحةُ تكتب ما بينهما، وخارجهما خطأُ إدخالٍ لا يُطاع. */
+    static final long MIN_INTERVAL_MS = 5_000L;
+    static final long MAX_INTERVAL_MS = 60_000L;
+    private LocationManager tracker = null;
+    private LocationListener listener = null;
+    private boolean started = false;
+
+    /** <b>الفاصلُ من اللوحة</b> — مطفأً أو بلا قيمةٍ صالحة: الافتراضيّ كما كان حرفاً. خالصٌ ومختبَر. */
+    static long effectiveInterval(boolean nativeLocation, long fromPanelMs) {
+        if (!nativeLocation || fromPanelMs <= 0) return BROADCAST_MS;
+        return Math.max(MIN_INTERVAL_MS, Math.min(MAX_INTERVAL_MS, fromPanelMs));
+    }
+
+    private boolean nativeLocation() {
+        return getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).getBoolean("native_location", false);
+    }
+
+    /** <b>موقعٌ حيٌّ والشاشةُ مطفأة</b>: بلا طلبِ تحديثاتٍ يبقى «آخرُ موقعٍ معروف» ما تركه الويبُ قبل أن يُخنق — قديماً.
+     *  فحين يشتعل المفتاحُ تطلب الخدمةُ نفسُها تحديثاتِ GPS والشبكة بالفاصل الفعّال، <b>وتحت إذن «الموقع في الخلفية» الممنوح</b> لا غيره. */
+    private void startTracking() {
+        stopTracking();
+        if (!nativeLocation()) return;
+        LocationManager manager = getSystemService(LocationManager.class);
+        if (manager == null) return;
+        LocationListener l = fix -> { };
+        try {
+            for (String provider : new String[] {LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+                if (manager.isProviderEnabled(provider)) {
+                    manager.requestLocationUpdates(provider, intervalMs, 0f, l, Looper.getMainLooper());
+                }
+            }
+            tracker = manager;
+            listener = l;
+        } catch (SecurityException | IllegalArgumentException ignored) {
+            // لا إذنَ أو لا مزوّد — يبقى «آخرُ موقعٍ معروف» كما كان
+        }
+    }
+
+    private void stopTracking() {
+        if (tracker != null && listener != null) {
+            try {
+                tracker.removeUpdates(listener);
+            } catch (Exception ignored) {
+                // أُزيلت من قبل
+            }
+        }
+        tracker = null;
+        listener = null;
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -109,6 +162,18 @@ public class OnlineService extends Service {
             String bearer = intent.getStringExtra("token");
             if (url != null) endpoint = url;
             if (bearer != null) token = bearer;
+            if (intent.hasExtra("interval_ms")) {
+                long next = effectiveInterval(nativeLocation(), intent.getLongExtra("interval_ms", 0L));
+                if (next != intervalMs || tracker == null) {
+                    intervalMs = next;
+                    startTracking();
+                }
+            }
+        }
+        if (!started) {
+            started = true;
+            // **اتّصالٌ جديد**: فقاعةُ الحال المُخفاةُ بالسحب تعود (§١٠٣ A/1) — الإخفاءُ لجلسةٍ واحدة
+            StatusBubble.resetDismissed(this);
         }
         startForegroundCompat(buildNotification(degraded || degradedNow));
         armWatchdog();
@@ -136,6 +201,8 @@ public class OnlineService extends Service {
         // **«متّصل» يموت مع الخدمة** (SPEC §١٠٣/4–6): البلاطةُ والأداةُ تقرآنه — ولا تقولان ما ليس قائماً
         getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).edit().putBoolean("online", false).apply();
         LauncherPlugin.wake(this);
+        stopTracking();
+        StatusBubble.hide(this);
         watchdog.removeCallbacksAndMessages(null);
         beacon.removeCallbacksAndMessages(null);
         network.shutdownNow();
@@ -157,7 +224,7 @@ public class OnlineService extends Service {
      */
     private void armBeacon() {
         beacon.removeCallbacksAndMessages(null);
-        beacon.postDelayed(this::broadcast, BROADCAST_MS);
+        beacon.postDelayed(this::broadcast, intervalMs);
     }
 
     private void broadcast() {

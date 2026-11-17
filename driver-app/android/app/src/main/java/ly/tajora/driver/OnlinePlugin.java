@@ -31,6 +31,9 @@ public class OnlinePlugin extends Plugin {
         Intent intent = new Intent(getContext(), OnlineService.class);
         intent.putExtra("endpoint", call.getString("endpoint"));
         intent.putExtra("token", call.getString("token"));
+        // **فاصلُ «المتاح» من لوحة البثّ** (§١٠٣ A/3) — غائبٌ من ويبٍ أقدم: الخدمةُ على فاصلها كما كانت
+        Integer seconds = call.getInt("interval_seconds");
+        if (seconds != null) intent.putExtra("interval_ms", seconds * 1000L);
         dispatch(intent);
         call.resolve();
     }

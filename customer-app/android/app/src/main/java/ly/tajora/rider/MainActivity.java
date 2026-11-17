@@ -18,6 +18,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SecureFlushPlugin.class);
         // **تقييمُ المتجر داخل التطبيق** (البند ٦) — النافذةُ الأصليّة من Google Play
         registerPlugin(InAppReviewPlugin.class);
+        // **«يوجد تحديث» من Google Play** (SPEC §١٠٣ A/8) — الحكمُ من لوحة الإصدارات، والتنفيذُ من Play إن قدر
+        registerPlugin(AppUpdatePlugin.class);
         // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
         registerPlugin(PermissionsPlugin.class);
         // **المُطلِق** (SPEC §١٠٣ المرحلة A/4–6، 10) — الاختصاراتُ والبلاطةُ والأداةُ تحمل فعلاً ينفّذه الويب

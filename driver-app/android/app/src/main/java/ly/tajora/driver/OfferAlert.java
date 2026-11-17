@@ -180,6 +180,8 @@ public final class OfferAlert {
     public static boolean show(Context context, OfferData offer) {
         ensureChannel(context);
         hide(context);
+        // **نبضُ فقاعة الحال** (§١٠٣ A/1) — إن كانت ظاهرة؛ ولا شيءَ إن لم تكن
+        StatusBubble.pulse();
 
         if (locked(context)) {
             // **الشاشةُ المقفلةُ لملء الشاشة وحدَه** (قرارُ المالك): لا فقاعةَ

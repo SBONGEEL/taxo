@@ -1,0 +1,95 @@
+# أندرويد الأصليّ — تجميعٌ واختبارُ وحدةٍ على مشغّلات GitHub، مقسوماً متوازياً (قرارُ المالك ٢٠٢٦-١١-١٨، البند ٣:
+# «Compile, build and test on GitHub runners, split across parallel jobs, not on this machine»).
+#
+# **سيرٌ منفصلٌ عن «CI» بقصد**: بوّابةُ الرفع (`scripts/deploy_ci_gate.py`) تقرأ السيرَ المسمّى «CI» وحدَه، فهذا لا يغيّر
+# حكمَها ولا يُحسب «مجموعةً» — هو قياسُ الشيفرة الأصليّة التي لم يكن يجمّعها شيءٌ قبل الحزمة الموقَّعة عند الوسم.
+# **ولا سرَّ فيه**: لا مفتاحَ توقيع (حزمُ تصحيح) ولا Firebase (`TAXO_ALLOW_NO_FIREBASE=1`) — فلا يخاطب الإنتاجَ ولا يطبع سرّاً.
+name: أندرويد
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "driver-app/android/**"
+      - "customer-app/android/**"
+      - "driver-app/package*.json"
+      - "customer-app/package*.json"
+      - "driver-app/capacitor.config.ts"
+      - "customer-app/capacitor.config.ts"
+      - "tools/channels*"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.app }} · ${{ matrix.part }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      # **كلُّ جزءٍ يُقاس وحدَه** — سقوطُ تجميع الراكب لا يُخفي حالَ الكبتن
+      fail-fast: false
+      matrix:
+        app: [driver-app, customer-app]
+        part: [compile, unit]
+        include:
+          - part: compile
+            task: assemblePublicDebug assembleTrialDebug
+          - part: unit
+            task: testPublicDebugUnitTest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `versionCode` يُشتقّ من عدد الإيداعات، والبناءُ يقف عمداً بلا تاريخ
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: الوحداتُ وواجهةٌ بديلة
+        working-directory: ${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          npm ci --silent
+          # **الواجهةُ لا تُقاس هنا** (يقيسها «CI») — `cap sync` يحتاج مجلّدَها موجوداً فقط
+          mkdir -p dist
+          [ -f dist/index.html ] || printf '<!doctype html><title>native-ci</title>\n' > dist/index.html
+          TAXO_CHANNEL=public npx cap sync android
+
+      - name: gradle — ${{ matrix.task }}
+        working-directory: ${{ matrix.app }}/android
+        env:
+          TAXO_CHANNEL: public
+          TAXO_ALLOW_NO_FIREBASE: "1"
+        run: sh gradlew ${{ matrix.task }} --no-daemon --stacktrace
+
+      - name: تقاريرُ الاختبار
+        if: always() && matrix.part == 'unit'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-${{ matrix.app }}
+          path: ${{ matrix.app }}/android/app/build/reports/tests/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: حزمةُ التجربة للمحاكي
+        if: matrix.part == 'compile'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.app }}
+          path: ${{ matrix.app }}/android/app/build/outputs/apk/trial/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7

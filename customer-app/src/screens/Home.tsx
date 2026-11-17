@@ -55,6 +55,7 @@ import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { useRiderLauncher } from "@/lib/launcher";
 import { useHaptics } from "@/lib/haptics";
+import { useNativeFlags } from "@/lib/native-flags";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
@@ -883,6 +884,8 @@ export function HomeScreen() {
   // **اختصارا الأيقونة** (SPEC §١٠٣/10): «البيت» يمرّ بـ`pickPlace` نفسِه، وبلا بيتٍ محفوظٍ ⇐ «أماكني» ليضيفه
   // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
   useHaptics(user?.country_code);
+  // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
+  useNativeFlags(user?.country_code);
   useRiderLauncher(user?.country_code, (action) => {
     if (action === "wallet") return navigate("/wallet");
     const home = places.find((saved) => saved.icon === "home");
