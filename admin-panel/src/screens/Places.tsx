@@ -163,7 +163,7 @@ export function PlacesScreen() {
         </p>
       ) : null}
 
-      <Table
+      <Table search
         columns="1.5fr 1.2fr 0.7fr 1.1fr 0.7fr 0.9fr auto"
         headers={["الاسم", "بالإنجليزيّة", "الفئة", "الموقع", "الحال", "آخر تعديل", ""]}
         rows={shown}

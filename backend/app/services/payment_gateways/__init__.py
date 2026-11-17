@@ -214,6 +214,10 @@ SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
 }
 #: **مفتاحٌ بدولٍ أضيقَ من دول وسيطه** — شحنُ الراكب ودفعُ الرحلة عبر Dpay ليبيا وحدَها، والاشتراكُ ليبيا والأردن (البطاقةُ الدوليّة)
 KEY_COUNTRIES: dict[str, frozenset[CountryCode]] = {
+    # **كليك نظامُ دفعٍ أردنيّ** (أمرُ المالك ٢٠٢٦-١١-١٧: «CliQ is a Jordanian payment system and has nothing to do with Libya») —
+    # **فمفتاحُه لا يُشعَل خارج الأردن ولو ضُغط**، ولا يُنسخ من الأردن إلى سوقٍ آخر: كلُّ نسخٍ يمرّ بـ`set_flag` وهذا القفلُ فيه.
+    # والإطفاءُ مسموحٌ دائماً. وسوقٌ جديدٌ لا يرث كليك: يُضاف هنا بقرار، لا بغياب سطر.
+    FeatureKey.CLIQ_ENABLED.value: frozenset({CountryCode.JO}),
     FeatureKey.DPAY_TOPUP_ENABLED.value: frozenset({CountryCode.LY}),
     FeatureKey.DPAY_TRIP_ENABLED.value: frozenset({CountryCode.LY}),
     FeatureKey.DPAY_SUBSCRIPTION_ENABLED.value: frozenset({CountryCode.LY, CountryCode.JO}),

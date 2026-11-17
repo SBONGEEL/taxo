@@ -63,16 +63,53 @@ EVENT_CHANNELS_V3: dict[str, str] = {"incoming_call": CALL}
 NATIVE_ONLY_KINDS: frozenset[str] = frozenset({CALL_RING_STOPPED})
 
 
+#: **المجموعةُ الرابعة: قناةٌ لكلِّ نغمة** («نغمة الإشعارات»، أمرُ المالك ٢٠٢٦-١١-١٧ ج/١). **صوتُ القناة لا يتغيّر بعد إنشائها**
+#: (أندرويد)، فالنغمةُ المختارةُ قناةٌ أخرى معرّفُها معرّفُ الحدث ولاحقةُ النغمة: `taxo.offer.v2.s1_2`. **والقنواتُ القديمةُ تبقى
+#: كما هي** للحزم الأقدم ولمن بقي على الافتراضيّ
+CHANNELS_V4 = 4
+#: **«الافتراضيّ» في الإعداد** — يُكتب `NULL` لمن لم يختر أو عاد إليه، **ومعناه حين يشتعل مفتاحُ السوق `NEW_DEFAULT`**
+DEFAULT_TONE = "default"
+#: **الصوتُ الافتراضيُّ للجميع** (قرارُ المالك ١٧/١١/٢٠٢٦، `design/OWNER-2026-11-17-DECISIONS.md` ١): **الخيارُ ٥ من المجموعة الثانية**
+#: (`design/sounds-v2/`، صوتُ «TAXO» الأنثويّ مع بوق «بيب بيب») — للطلب ولـ«الكابتن وصل» ولأصوات التحديث القصيرة
+NEW_DEFAULT = "s2_5"
+#: **ما يُختار منه في الإعداد، بترتيبه**: الافتراضيُّ (= `NEW_DEFAULT`)، ثمّ الأربعةُ الباقيةُ من المجموعة الثانية، ثمّ الثلاثةُ من الأولى
+#: (`design/sounds/`)، ثمّ «اهتزاز فقط»
+TONES: tuple[str, ...] = (DEFAULT_TONE, "s2_1", "s2_2", "s2_3", "s2_4", "s1_1", "s1_2", "s1_3", "vibrate")
+#: **لاحقاتُ القنوات التي تحملها الحزمةُ الرابعة** — كلُّ ما يُختار ومعه الافتراضيُّ الجديد بلاحقته (`taxo.offer.v2.s2_5`). والحزمةُ الرابعةُ
+#: لم تُنشر قبل هذا (1118 بُنيت ١١/١١)، فاتّسعت في مكانها ولا جهازَ منشوراً يحمل نصفَها
+CHANNEL_TONES: frozenset[str] = frozenset((*TONES[1:], NEW_DEFAULT))
+#: **ما تتبعه النغمة** — قنواتُ الأحداث ذاتُ الصوت؛ والعامُّ والمكالمةُ لا يتغيّران
+TONED_CHANNELS: frozenset[str] = frozenset(
+    {OFFER_V2, "taxo.accepted", "taxo.approaching", "taxo.arrived", "taxo.started", "taxo.ended", "taxo.payment"}
+)
+
+
 def level_of(push_channels: int | None) -> int:
-    """المجموعةُ التي يُرسَل بها — **ما دون الثانية أقدمُ كلُّه**، فلا يُخترع لها وسط. **وما فوق الثالثة ثالثةٌ**
-    حتى تُعرَّف رابعة: حزمةٌ أحدثُ من هذا الخادم تحمل ما تحمله الثالثةُ على الأقلّ."""
+    """المجموعةُ التي يُرسَل بها — **ما دون الثانية أقدمُ كلُّه**، فلا يُخترع لها وسط. **وما فوق الرابعة رابعةٌ**
+    حتى تُعرَّف خامسة: حزمةٌ أحدثُ من هذا الخادم تحمل ما تحمله الرابعةُ على الأقلّ."""
     value = push_channels or 0
+    if value >= CHANNELS_V4:
+        return CHANNELS_V4
     if value >= CHANNELS_V3:
         return CHANNELS_V3
     return CHANNELS_V2 if value >= CHANNELS_V2 else 0
 
 
-def for_level(message: PushMessage, level: int) -> PushMessage | None:
+def toned(message: PushMessage, tone: str | None) -> PushMessage:
+    """**قناةُ النغمة المختارة** — لرسالةٍ شُكّلت للمجموعة الرابعة. **`None` (المفتاحُ مطفأ) وغيرُ المعروف وما لا نغمةَ لقناته: كما هي حرفاً**،
+    و«الافتراضيّ» قناةُ `NEW_DEFAULT`."""
+    channel = message.android_channel_id
+    if tone == DEFAULT_TONE:
+        tone = NEW_DEFAULT
+    # **الطلبُ يرنّ دائماً والكبتنُ متّصل** (أمرُ المالك ج/١/٤): «اهتزاز فقط» يُسكت ما عداه، والطلبُ على الافتراضيّ الجديد
+    if tone == "vibrate" and channel == OFFER_V2:
+        tone = NEW_DEFAULT
+    if not tone or tone not in CHANNEL_TONES or channel not in TONED_CHANNELS:
+        return message
+    return replace(message, android_channel_id=f"{channel}.{tone}")
+
+
+def for_level(message: PushMessage, level: int, tone: str | None = None) -> PushMessage | None:
     """الرسالةُ كما تُرسل لمجموعةٍ بعينها — **والأقدمُ كما هي حرفاً**، **و`None` لما لا يُرسل إليها أصلاً**.
 
     **وفي الثالثة يصير الرنينُ بياناتٍ وحدَها**: نصُّ الدرج (`title`/`body`) ينتقل إلى `data` — **فالخدمةُ ترسمه كما كان
@@ -91,4 +128,6 @@ def for_level(message: PushMessage, level: int) -> PushMessage | None:
         return None
     if level < CHANNELS_V2:
         return message
-    return replace(message, android_channel_id=EVENT_CHANNELS_V2.get(kind))
+    shaped = replace(message, android_channel_id=EVENT_CHANNELS_V2.get(kind))
+    # **النغمةُ للرابعة وحدَها** — حزمةٌ أقدمُ لا تحمل قناةَ النغمة، وقناةٌ غائبةٌ تُسقط الطلبَ إلى الاحتياطية همساً
+    return toned(shaped, tone) if level >= CHANNELS_V4 else shaped

@@ -969,6 +969,9 @@ export interface Device {
 
 export interface NotificationPreferences {
   marketing_push_enabled: boolean;
+  /** **«نغمة الإشعارات»** (ج/١، ٢٠٢٦-١١-١٧) — غائبةٌ في خادمٍ أقدم */
+  notification_tone?: string;
+  tones?: string[];
 }
 
 /** حالُ حجزٍ مجدول (12-ط) — **ثلاثٌ ولا رابعة**: ما جرى بعد التسليم تقوله

@@ -88,7 +88,7 @@ export function TransfersScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
       <div className="mt-12">
-        <Table
+        <Table search
           columns="1.1fr 0.9fr 1.1fr 1fr 1fr 1.1fr 0.8fr"
           headers={["صاحبه", "المبلغ", "رقم التحويل", "مرجع TAXO", "تاريخ التحويل", "الحالة", ""]}
           rows={rows}

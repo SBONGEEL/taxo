@@ -450,3 +450,9 @@ div.t2-srow { cursor: default; }
 .t2-hero-title { position: relative; margin: 14px 0 0; font-size: 20px; font-weight: 700; line-height: 1.4; }
 .t2-hero-body { position: relative; margin: 6px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--t2-inverse-muted); }
 .t2-hero + .t2-button { height: 56px; }
+
+/* **«نغمة الإشعارات»** (ج/١، ٢٠٢٦-١١-١٧) — صفُّ اختيارٍ وزرُّ معاينةٍ في كلِّ نغمة */
+.t2-tones { display: flex; flex-direction: column; }
+.t2-tones-pick { display: flex; align-items: center; gap: 12px; flex: 1; min-height: 44px; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.t2-tones-pick[aria-checked="true"] { font-weight: 700; }
+.t2-tones-play { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: inherit; cursor: pointer; }

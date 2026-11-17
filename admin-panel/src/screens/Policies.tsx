@@ -205,7 +205,7 @@ export function PoliciesScreen() {
           </Button>
         ) : null}
 
-        <Table<PolicyVersion>
+        <Table<PolicyVersion> search
           columns={COLUMNS}
           headers={["النسخة", "الحال", "تُبرئ من", "وافق عليها", "حُفظت", ""]}
           rows={rows}

@@ -123,7 +123,7 @@ export function UsersScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <Table
+      <Table search
         columns={COLUMNS}
         headers={["المستخدم", "الهاتف", "الدور", "منذ"]}
         rows={rows}

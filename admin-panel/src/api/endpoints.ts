@@ -75,6 +75,7 @@ import type {
   MapPlaceCategory,
   PanelPlaceSearch,
   AdminChatReport,
+  AdminChatRoom,
   AdminChatThread,
   ChatReportStatus,
   DriverActivity,
@@ -1627,6 +1628,15 @@ export async function photoReportBlob(reportId: string): Promise<string> {
 /** **محادثةُ رحلة** — بصلاحية `trip_chats.read` وحدَها، **وكلُّ فتحٍ سطرٌ في التدقيق باسم من فتح** — فلا تُطلب إلا حين يُفتح
  *  تبويبُها، ولا تُعلَّم مقروءةً لطرفيها. */
 export const getRideChat = (rideId: string) => api.get<AdminChatThread>(`/admin/rides/${rideId}/chat`);
+
+/** **«غرفُ المحادثة»** (بندُ اللوحة ٧) — ما فيه بلاغٌ مفتوحٌ أوّلاً ثمّ الأحدث، بلا نصوص، وكلُّ فتحٍ يُدقَّق في الخادم. */
+export const listChatRooms = (filters: {
+  country_code?: CountryCode;
+  q?: string;
+  only_reported?: boolean;
+  limit?: number;
+  offset?: number;
+}) => api.get<AdminChatRoom[]>("/admin/chat-rooms", { query: filters });
 
 /** «الرسائلُ المبلَّغُ عنها» — المفتوحُ أوّلاً، **وفتحُ القائمة يُدقَّق** (فيها نصوصُ محادثات). */
 export const listChatReports = (filters: {

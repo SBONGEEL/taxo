@@ -92,3 +92,86 @@ svg.t2-car { width: 3em; height: 1.75em; flex: none; display: block; overflow: v
   12% { opacity: 1; }
   100% { transform: translate(var(--x), calc(var(--y) + 60px)) rotate(var(--r)) scale(1); opacity: 0; }
 }
+
+/* ═══ النمطُ C (قرارُ المالك ١٧/١١/٢٠٢٦) — ألوانُه أدوارٌ تتبدّل لا أرقامٌ في الرسم (`glyphsC.ts`) */
+svg.t2-icon.ixc { width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: middle; overflow: visible; }
+svg.ixc {
+  --ixc-body: #f05a28;
+  --ixc-back: #ffb595;
+  --ixc-detail: #b8401a;
+  --ixc-cut: var(--t2-surface, #ffffff);
+  --ixc-ground: #1f2433;
+  --ixc-ground-op: .12;
+}
+html.dark svg.ixc { --ixc-back: #8f2f10; --ixc-ground: #000000; --ixc-ground-op: .45; }
+svg.ixc .b { fill: var(--ixc-body); }
+svg.ixc .k { fill: var(--ixc-back); }
+svg.ixc .d { fill: var(--ixc-detail); }
+svg.ixc .c { fill: var(--ixc-cut); }
+svg.ixc .g { fill: var(--ixc-ground); opacity: var(--ixc-ground-op); }
+/* **على البرتقاليّ أحاديّةٌ بلون النصّ** — وإلا ذابت فيه. القائمةُ مولَّدةٌ من كلِّ صنفٍ خلفيّتُه الجمرُ ونصُّه `--t2-on-accent` */
+.ad-check.on svg.ixc,
+.cap-step.now .cap-step-dot svg.ixc,
+.cw-ember svg.ixc,
+.t2-auth-consent-row[aria-checked="true"] .t2-auth-box svg.ixc,
+.t2-ax-cta svg.ixc,
+.t2-become-icon svg.ixc,
+.t2-btn.ember svg.ixc,
+.t2-button.action svg.ixc,
+.t2-cbk.lit .t2-cbk-fire svg.ixc,
+.t2-cm-count svg.ixc,
+.t2-cm-round.accent svg.ixc,
+.t2-cm-row.mine .t2-cm-bubble svg.ixc,
+.t2-cm-send svg.ixc,
+.t2-co-btn svg.ixc,
+.t2-co-card svg.ixc,
+.t2-cta svg.ixc,
+.t2-cts-yes svg.ixc,
+.t2-dest-voice svg.ixc,
+.t2-fo-call svg.ixc,
+.t2-gar-nosub-go svg.ixc,
+.t2-hero-icon svg.ixc,
+.t2-hm-go.off .t2-hm-go-power svg.ixc,
+.t2-hm-promo svg.ixc,
+.t2-hm-traffic.on svg.ixc,
+.t2-home-hero-go svg.ixc,
+.t2-home-ride-eta svg.ixc,
+.t2-m-check input:checked + .t2-m-check-box svg.ixc,
+.t2-of-accept svg.ixc,
+.t2-perm-open svg.ixc,
+.t2-promo svg.ixc,
+.t2-rd-btn svg.ixc,
+.t2-rd-nav-tile svg.ixc,
+.t2-rd-nav.approach .t2-rd-nav-main svg.ixc,
+.t2-rd-swipe-knob svg.ixc,
+.t2-rdt-cash svg.ixc,
+.t2-rdt-yes svg.ixc,
+.t2-rst-withdraw svg.ixc,
+.t2-save svg.ixc,
+.t2-stop-num svg.ixc,
+.t2-stopbar-sq.here svg.ixc,
+.t2-store-buy svg.ixc,
+.t2-store-garage svg.ixc,
+.t2-store-check svg.ixc,
+.t2-sub-cta svg.ixc,
+.t2-v2-wallet-top svg.ixc,
+.t2-vdocs-upload svg.ixc,
+.t2-wal-withdraw svg.ixc,
+.t2-wds-send svg.ixc,
+.t2-debt-cta svg.ixc,
+.t2-clq-cta svg.ixc,
+.t2.t2-cm-strip svg.ixc,
+html.dark .rw-btn.primary svg.ixc,
+html.dark .t2:not(.t2-day) .t2-button.primary svg.ixc,
+.t2.t2-night .t2-button.primary svg.ixc,
+html.dark .t2:not(.t2-day) .t2-cbtn.ink svg.ixc,
+.t2.t2-night .t2-cbtn.ink svg.ixc,
+html.dark .t2-tab.on svg.ixc {
+  --ixc-body: currentColor;
+  --ixc-back: transparent;
+  --ixc-detail: currentColor;
+  --ixc-cut: var(--t2-accent);
+  --ixc-ground: transparent;
+}
+/* **التبويبُ غيرُ النشط خافتٌ** كما كان الخطّ: لونُ الفئة للنشط وحدَه */
+.t2-tab:not(.on) svg.ixc { filter: grayscale(1); opacity: .7; }

@@ -181,6 +181,9 @@ const FeedbackScreen = lazy(() =>
   import("@/screens/Feedback").then((m) => ({ default: m.FeedbackScreen })),
 );
 // **الرسائلُ المبلَّغُ عنها** (A30، §٦٦-ب/١٣) — بصلاحية `trip_chats.read`، والشاشةُ تقول المنعَ لمن لا يملكها
+const ChatRoomsScreen = lazy(() =>
+  import("@/screens/ChatRooms").then((m) => ({ default: m.ChatRoomsScreen })),
+);
 const ChatReportsScreen = lazy(() =>
   import("@/screens/ChatReports").then((m) => ({ default: m.ChatReportsScreen })),
 );
@@ -796,6 +799,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <FeedbackScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/chat-rooms"
+                    element={
+                      <Guarded>
+                        <ChatRoomsScreen />
                       </Guarded>
                     }
                   />

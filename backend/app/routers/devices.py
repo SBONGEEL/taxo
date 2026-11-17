@@ -16,6 +16,7 @@ from app.schemas.device import (
     NotificationPreferencesOut,
     NotificationPreferencesUpdate,
 )
+from app.services.push import channels
 from app.services import devices as devices_service
 
 router = APIRouter(prefix="/me", tags=["devices"])
@@ -56,19 +57,27 @@ async def unregister_device(
     await session.commit()
 
 
+def _preferences(user) -> NotificationPreferencesOut:
+    return NotificationPreferencesOut(
+        marketing_push_enabled=user.marketing_push_enabled,
+        notification_tone=user.notification_tone or channels.DEFAULT_TONE,
+        tones=list(channels.TONES),
+    )
+
+
 @router.get("/notification-preferences", response_model=NotificationPreferencesOut)
 async def read_preferences(user: CurrentUser) -> NotificationPreferencesOut:
-    return NotificationPreferencesOut(
-        marketing_push_enabled=user.marketing_push_enabled
-    )
+    return _preferences(user)
 
 
 @router.put("/notification-preferences", response_model=NotificationPreferencesOut)
 async def update_preferences(
     payload: NotificationPreferencesUpdate, user: CurrentUser, session: DbSession
 ) -> NotificationPreferencesOut:
-    user.marketing_push_enabled = payload.marketing_push_enabled
+    if payload.marketing_push_enabled is not None:
+        user.marketing_push_enabled = payload.marketing_push_enabled
+    if payload.notification_tone is not None:
+        # **«الافتراضيّ» يُكتب `NULL`** — فتغييرُ الافتراضيّ يوماً بقرار المالك يبلغ من لم يختر ومن عاد إليه معاً
+        user.notification_tone = None if payload.notification_tone == channels.DEFAULT_TONE else payload.notification_tone
     await session.commit()
-    return NotificationPreferencesOut(
-        marketing_push_enabled=user.marketing_push_enabled
-    )
+    return _preferences(user)

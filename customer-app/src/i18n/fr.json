@@ -941,6 +941,7 @@
   "قد ينضم راكبٌ آخر في طريقك، وتدفع": "Un autre passager peut se joindre sur votre trajet, et vous payez",
   "قرأتُ الشروط وأوافق عليها": "J’ai lu les conditions et je les accepte",
   "قرأتُ ووافقتُ على الوثيقتين أدناه.": "J’ai lu et accepté les deux documents ci-dessous.",
+  "قرأتُ ووافقتُ على {0}": "J’ai lu et j’accepte : {0}",
   "قراءة الكل": "Tout marquer comme lu",
   "قريباً": "Bientôt",
   "قفل الجهاز": "Verrouillage de l’appareil",
@@ -1735,5 +1736,19 @@
   "محفظتي": "Mon portefeuille",
   "في الرحلة": "En course",
   "وصلتَ إلى الراكب": "Vous êtes arrivé chez le passager",
-  "في الطريق إلى الراكب": "En route vers le passager"
+  "في الطريق إلى الراكب": "En route vers le passager",
+  "نغمة الإشعارات": "Sonnerie des notifications",
+  "الافتراضيّة": "Par défaut",
+  "الافتراضيّة (TAXO بيب بيب)": "Par défaut (TAXO bip bip)",
+  "نغمة 4": "Sonnerie 4",
+  "نغمة 5": "Sonnerie 5",
+  "نغمة 6": "Sonnerie 6",
+  "نغمة 7": "Sonnerie 7",
+  "نغمة 1": "Sonnerie 1",
+  "نغمة 2": "Sonnerie 2",
+  "نغمة 3": "Sonnerie 3",
+  "اهتزاز فقط": "Vibreur uniquement",
+  "تعذّر حفظ النغمة — حاول مرّةً أخرى.": "Impossible d’enregistrer la sonnerie — réessayez.",
+  "استمع إلى {0}": "Écouter {0}",
+  "طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.": "Les demandes de course sonnent toujours quand vous êtes en ligne, avec la sonnerie choisie — « Vibreur uniquement » s’applique aux autres notifications."
 }

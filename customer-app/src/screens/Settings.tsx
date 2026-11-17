@@ -20,6 +20,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "@/api/client";
 import { getNotificationPreferences, setNotificationPreferences, updateMyLanguage } from "@/api/endpoints";
 import { TestMarketSection } from "@/components/t2/TestMarket";
+import { NotificationTones } from "@/components/NotificationTones";
 import { useGoBack } from "@/lib/back";
 import { useBrand } from "@/lib/brand";
 import { useConfig } from "@/lib/config";
@@ -110,6 +111,8 @@ export function SettingsScreen() {
           disabled={marketing === null}
           onToggle={() => void toggleMarketing(!marketing)}
         />
+        {/* **«نغمة الإشعارات»** (ج/١) — خلف مفتاح السوق، ومطفأً لا شيء */}
+        <NotificationTones />
         {/* **سببُ فشل الحفظ تحت صفّه** (§٦٢/٢٠) — والمفتاحُ عاد إلى حاله */}
         {error ? (
           <p className="t2-srow-error" role="alert">

@@ -226,10 +226,13 @@ export function WalletT2Screen() {
         </div>
         {walletEnabled ? (
           <div className="t2-balance-actions">
-            <button type="button" className="t2-btn ember" onClick={() => setTopupOpen(true)}>
-              <Icon name="add" />
-              {tr("شحن الرصيد")}
-            </button>
+            {/* **لا زرَّ شحنٍ بلا قناةِ شحن** (أمرُ المالك ٢٠٢٦-١١-١٧، ليبيا): الورقةُ كانت تُفتح بحقل مبلغٍ ولا قناةَ تحته */}
+            {cardEnabled || cliqEnabled || payRequests || whopTopup || cryptoTopup ? (
+              <button type="button" className="t2-btn ember" onClick={() => setTopupOpen(true)}>
+                <Icon name="add" />
+                {tr("شحن الرصيد")}
+              </button>
+            ) : null}
             {loyaltyEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/loyalty")}>
                 <Icon name="diamond" />

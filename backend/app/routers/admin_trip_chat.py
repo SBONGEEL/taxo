@@ -14,6 +14,7 @@ from app.core.deps import DbSession, TripChatsReader
 from app.models.enums import CountryCode, RideMessageReportStatus
 from app.schemas.trip_chat import (
     AdminChatMessageOut,
+    AdminChatRoomOut,
     AdminChatReportOut,
     AdminChatThreadOut,
     ChatReportHandleIn,
@@ -52,6 +53,24 @@ async def read_ride_chat(ride_id: uuid.UUID, admin: TripChatsReader, session: Db
             for message in thread.messages
         ],
     )
+
+
+@router.get("/chat-rooms", response_model=list[AdminChatRoomOut])
+async def list_chat_rooms(
+    admin: TripChatsReader,
+    session: DbSession,
+    country_code: CountryCode | None = None,
+    q: str | None = Query(default=None, max_length=80),
+    only_reported: bool = False,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[AdminChatRoomOut]:
+    """**«غرفُ المحادثة»** — ما فيه بلاغٌ مفتوحٌ أوّلاً ثمّ الأحدث، **بلا نصوص**، وفتحُ القائمة يُدقَّق (بندُ اللوحة ٧)."""
+    rows = await trip_chat.list_rooms(
+        session, actor=admin, country=country_code, q=q, only_reported=only_reported, limit=limit, offset=offset
+    )
+    await session.commit()
+    return [AdminChatRoomOut(**{field: getattr(row, field) for field in AdminChatRoomOut.model_fields}) for row in rows]
 
 
 @router.get("/chat-reports", response_model=list[AdminChatReportOut])

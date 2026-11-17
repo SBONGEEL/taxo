@@ -93,7 +93,7 @@ export function VerificationCampaign({
         يستقبل رمزاً. والمحفظة لا تُمسّ، ويُمدَّد اشتراك الكبتن بأيام إيقافه.
       </p>
 
-      <Table
+      <Table search
         height="compact"
         columns="0.8fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 1.4fr"
         headers={[

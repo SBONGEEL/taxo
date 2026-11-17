@@ -3,9 +3,12 @@
  * **والخطُّ مقتطعٌ بأسماء ما يُستعمل** في `index.html` كلِّ تطبيق — **فمن أضاف أيقونةً أضاف اسمَها هناك**، وإلا ظهر اسمُها نصّاً
  * والمجموعةُ مطفأة. و`fill` للممتلئة (التبويبُ النشط، والملاحظة). **وزينةٌ لا نصّ** (`aria-hidden`): المعنى في الكلمة التي بجانبها.
  *
- * و`art` لأيقونة الفئة: **رسمُ سيّارةٍ** من `CAR_ART` حين تشتعل المجموعةُ ويكون للاسم رسم، وإلا الأيقونةُ نفسُها.
+ * **والمجموعةُ الجديدةُ هي النمطُ C** (قرارُ المالك ١٧/١١/٢٠٢٦: «معتمدة»): ٣٦ رسماً ملوّناً على شبكة ٤٨ من `glyphsC.ts`، **وما ليس فيها يبقى
+ * من الخطّ كما كان** — فالمجموعةُ الخطّيّةُ الأولى (`glyphs.ts`) لا تُرسم بعد اليوم (رفضها المالك ١٦/١١)، ويبقى ملفُّها حتى يُقرَّر حذفُه.
+ *
+ * و`art` لأيقونة الفئة: **مركبةُ النمط C** بثلاثة أرباع حين تشتعل المجموعةُ ويكون للاسم مركبة، وإلا الأيقونةُ نفسُها.
  */
-import { CAR_ART, GLYPHS } from "./glyphs";
+import { GLYPHS_C, VEHICLES_C } from "./glyphsC";
 import { useIconSetV2 } from "./iconSet";
 import "./glyphs.css";
 
@@ -16,12 +19,12 @@ const DIRECTIONAL = new Set(["arrow_forward", "arrow_back", "chevron_left", "che
 export function Icon({ name, fill = false, className, art = false }: { name: string; fill?: boolean; className?: string; art?: boolean }) {
   const v2 = useIconSetV2();
   const classes = ["t2-icon", fill ? "fill" : null, DIRECTIONAL.has(name) ? "t2-icon-dir" : null, className].filter(Boolean).join(" ");
-  if (v2 && art && CAR_ART[name]) {
-    return <svg className={`t2-car ${className ?? ""}`.trim()} viewBox="0 0 48 28" aria-hidden="true" dangerouslySetInnerHTML={{ __html: CAR_ART[name] }} />;
+  if (v2 && art && VEHICLES_C.has(name)) {
+    return <svg className={`t2-car ixc ${className ?? ""}`.trim()} viewBox="0 8 48 34" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPHS_C[name] }} />;
   }
-  if (v2 && GLYPHS[name]) {
+  if (v2 && GLYPHS_C[name]) {
     return (
-      <svg className={`${classes} t2-glyph g-${name}`} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPHS[name] }} />
+      <svg className={`${classes} ixc g-${name}`} viewBox="0 0 48 48" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPHS_C[name] }} />
     );
   }
   return (

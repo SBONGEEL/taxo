@@ -86,6 +86,7 @@ const GROUPS: {
       { label: "ملاحظات المستخدمين", icon: "rate_review", to: "/feedback" },
       // **الرسائلُ المبلَّغُ عنها** (A30، §٦٦-ب/١٣) — جوارَ بلاغات الصور: كلاهما بلاغٌ ينتظر قراراً. **وبصلاحيتها لا بالدور**:
       // `trip_chats.read` لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل، **وفتحُ القائمة نفسُه يُدقَّق** (فيها نصوصُ محادثات)
+      { label: "غرف المحادثة", icon: "sms", to: "/chat-rooms", permission: TRIP_CHATS_READ },
       { label: "الرسائل المبلَّغ عنها", icon: "flag", to: "/chat-reports", permission: TRIP_CHATS_READ },
     ],
   },

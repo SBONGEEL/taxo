@@ -721,18 +721,16 @@ export function ConfirmSubscriptionSheet({
           {/* **كليك اليدويّ** — يظهر حين يكون لسوقه حسابٌ مضبوط، ويُعطَّل
               بعلّته حين لا يكون. **ولا يُدّعى أنه بوّابةٌ آلية**: الشاشةُ
               التالية تقول إن التحصيل يدويّ. */}
-          <Button
-            size="md"
-            variant="secondary"
-            disabled={!cliqAlias || buying !== null}
-            onClick={() => onCliq(plan)}
-          >
-            {tr("الدفع بكليك")}
-          </Button>
-          {!cliqAlias ? (
-            <p className="-mt-4 text-11 leading-note text-muted">
-              {tr("الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.")}
-            </p>
+          {/* **وسوقٌ بلا حسابٍ مضبوطٍ لا يُرسم له زرٌّ معطّل** (أمرُ المالك ٢٠٢٦-١١-١٧، ليبيا): يُخفى ولا يُعرض بعلّته */}
+          {cliqAlias ? (
+            <Button
+              size="md"
+              variant="secondary"
+              disabled={buying !== null}
+              onClick={() => onCliq(plan)}
+            >
+              {tr("الدفع بكليك")}
+            </Button>
           ) : null}
             </>
           )}

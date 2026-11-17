@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import DevicePlatform
@@ -42,7 +44,14 @@ class NotificationPreferencesOut(BaseModel):
     """
 
     marketing_push_enabled: bool
+    #: **«نغمة الإشعارات»** (ج/١) — `default` الصوتُ الافتراضيُّ الحاليّ
+    notification_tone: str = "default"
+    #: ما يُختار منه، بترتيبه — **والقائمةُ من الخادم** فنغمةٌ تُضاف غداً لا تحتاج نسخةً جديدةً من الواجهة
+    tones: list[str] = []
 
 
 class NotificationPreferencesUpdate(BaseModel):
-    marketing_push_enabled: bool
+    """**كلٌّ اختياريّ**: الواجهةُ القديمةُ ترسل الإعلانات وحدَها كما كانت، والجديدةُ ترسل النغمةَ وحدَها."""
+
+    marketing_push_enabled: bool | None = None
+    notification_tone: Literal["default", "vibrate", "s2_1", "s2_2", "s2_3", "s2_4", "s1_1", "s1_2", "s1_3"] | None = None

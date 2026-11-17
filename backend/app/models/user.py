@@ -234,6 +234,8 @@ class User(UUIDMixin, TimestampMixin, Base):
     marketing_push_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+    # **«نغمة الإشعارات»** (ج/١، ٢٠٢٦-١١-١٧) — `NULL` الصوتُ الافتراضيُّ الحاليّ؛ وقيمُه في `push.channels.TONES`
+    notification_tone: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # --- صورةُ الراكب (قرارُ المالك 2026-08-22) ---
     #

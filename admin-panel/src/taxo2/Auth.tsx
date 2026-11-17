@@ -324,14 +324,16 @@ export function AuthWomenNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** الموافقةُ على السياسات — **مربّعٌ يُضغط**، والوثيقتان تُفتحان فقرةً فقرة (§٣٤ و§٦١-أ). */
+/** الموافقةُ على السياسات — **مربّعٌ لكلِّ وثيقة** (بندُ اللوحة ١٠، قائمةُ المالك ٢٠٢٦-١١-١٠): الخصوصيّةُ وحدَها والشروطُ وحدَها،
+ * فموافقةٌ على واحدةٍ لا تُقرأ موافقةً على الأخرى. والوثائقُ تُفتح فقرةً فقرة (§٣٤ و§٦١-أ). */
 export function AuthConsent({
-  checked,
+  accepted,
   onToggle,
   docs,
 }: {
-  checked: boolean;
-  onToggle: () => void;
+  /** معرّفاتُ ما وافق عليه بعينه */
+  accepted: readonly string[];
+  onToggle: (id: string) => void;
   docs: Array<{ id: string; title: string; body: string }>;
 }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -339,12 +341,21 @@ export function AuthConsent({
   const shown = docs.find((doc) => doc.id === open);
   return (
     <div className="t2-auth-consent">
-      <button type="button" role="checkbox" aria-checked={checked} className="t2-auth-consent-row" onClick={onToggle}>
-        <span className="t2-auth-box" aria-hidden="true">
-          <Icon name="check" />
-        </span>
-        <span>{tr("قرأتُ ووافقتُ على الوثيقتين أدناه.")}</span>
-      </button>
+      {docs.map((doc) => (
+        <button
+          key={doc.id}
+          type="button"
+          role="checkbox"
+          aria-checked={accepted.includes(doc.id)}
+          className="t2-auth-consent-row"
+          onClick={() => onToggle(doc.id)}
+        >
+          <span className="t2-auth-box" aria-hidden="true">
+            <Icon name="check" />
+          </span>
+          <span>{tr("قرأتُ ووافقتُ على {0}", { 0: doc.title })}</span>
+        </button>
+      ))}
       <div className="t2-auth-docs">
         {docs.map((doc) => (
           <button key={doc.id} type="button" aria-expanded={open === doc.id} onClick={() => setOpen(open === doc.id ? null : doc.id)}>

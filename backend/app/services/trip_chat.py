@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from redis.asyncio import Redis
-from sqlalchemy import delete, func, literal, or_, select, update
+from sqlalchemy import String, delete, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -547,6 +547,99 @@ async def admin_thread(session: AsyncSession, *, ride_id: uuid.UUID, actor: User
         details={"ride_id": str(ride.id), "message_count": len(messages)},
     )
     return AdminThread(ride=ride, messages=messages, names=names, open_reports=counts)
+
+
+@dataclass(slots=True)
+class RoomRow:
+    """**غرفةٌ في «قائمة الغرف»** — رحلةٌ فيها رسائل: طرفاها وعددُ رسائلها وآخرُها وبلاغاتُها المفتوحة. **ولا نصَّ فيها.**"""
+
+    ride_id: uuid.UUID
+    country_code: CountryCode
+    status: RideStatus
+    rider_name: str | None
+    driver_name: str | None
+    message_count: int
+    last_message_at: datetime
+    open_reports: int
+
+
+async def list_rooms(
+    session: AsyncSession,
+    *,
+    actor: User,
+    country: CountryCode | None,
+    q: str | None,
+    only_reported: bool,
+    limit: int,
+    offset: int,
+) -> list[RoomRow]:
+    """**«غرفُ المحادثة»** (أمرُ المالك ١٦/١١، بندُ اللوحة ٧) — كلُّ رحلةٍ فيها رسائل، **ما فيه بلاغٌ مفتوحٌ أوّلاً ثمّ الأحدث**.
+
+    **ولا نصَّ في القائمة**: النصُّ يُقرأ بفتح الغرفة (`admin_thread`) وذلك سطرُ تدقيقٍ مستقلّ. **وفتحُ القائمة نفسِه يُدقَّق** لأنها تقول
+    من حادث من. والبحثُ باسم الراكب أو الكبتن أو بأوّل رقم الرحلة.
+    """
+    from app.models.driver import Driver
+
+    stats = (
+        select(
+            RideMessage.ride_id.label("ride_id"),
+            func.count(RideMessage.id).label("n"),
+            func.max(RideMessage.created_at).label("last_at"),
+        )
+        .group_by(RideMessage.ride_id)
+        .subquery()
+    )
+    reported = (
+        select(RideMessage.ride_id.label("ride_id"), func.count(RideMessageReport.id).label("n"))
+        .join(RideMessageReport, RideMessageReport.message_id == RideMessage.id)
+        .where(RideMessageReport.status == RideMessageReportStatus.OPEN)
+        .group_by(RideMessage.ride_id)
+        .subquery()
+    )
+    rider = aliased(User)
+    driver_user = aliased(User)
+    open_count = func.coalesce(reported.c.n, 0)
+    stmt = (
+        select(Ride.id, Ride.country_code, Ride.status, rider.name, driver_user.name, stats.c.n, stats.c.last_at, open_count)
+        .join(stats, stats.c.ride_id == Ride.id)
+        .outerjoin(reported, reported.c.ride_id == Ride.id)
+        .join(rider, rider.id == Ride.rider_id)
+        .outerjoin(Driver, Driver.id == Ride.driver_id)
+        .outerjoin(driver_user, driver_user.id == Driver.user_id)
+        .order_by((open_count > 0).desc(), stats.c.last_at.desc(), Ride.id)
+        .limit(limit)
+        .offset(offset)
+    )
+    if country is not None:
+        stmt = stmt.where(Ride.country_code == country)
+    if only_reported:
+        stmt = stmt.where(open_count > 0)
+    needle = (q or "").strip()
+    if needle:
+        like = f"%{needle}%"
+        stmt = stmt.where(
+            or_(rider.name.ilike(like), driver_user.name.ilike(like), func.cast(Ride.id, String).ilike(f"{needle}%"))
+        )
+    rows = [
+        RoomRow(
+            ride_id=r[0], country_code=r[1], status=r[2], rider_name=r[3], driver_name=r[4],
+            message_count=int(r[5]), last_message_at=r[6], open_reports=int(r[7]),
+        )
+        for r in (await session.execute(stmt)).all()
+    ]
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.READ,
+        entity_type="chat_rooms",
+        details={
+            "country_code": country.value if country else None,
+            "searched": bool(needle),
+            "only_reported": only_reported,
+            "count": len(rows),
+        },
+    )
+    return rows
 
 
 @dataclass(slots=True)

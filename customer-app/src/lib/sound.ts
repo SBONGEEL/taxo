@@ -138,7 +138,7 @@ const loading = new Map<string, Promise<AudioBuffer | null>>();
  *  قديمةٌ تُعزف مكانه **تُخفي أنّ الملفَّ لم يصل** (الشكلُ الثاني عشر)، والمحاولةُ
  *  تُعاد في التشغيل التالي. */
 function load(cue: Cue): Promise<AudioBuffer | null> {
-  const file = FILES[cue];
+  const file = fileOf(cue);
   const ctx = context;
   if (!file || !ctx) return Promise.resolve(null);
   const ready = buffers.get(file);
@@ -169,6 +169,7 @@ function load(cue: Cue): Promise<AudioBuffer | null> {
 export function play(cue: Cue): void {
   const ctx = context;
   if (!unlocked || !ctx || !allowed(cue)) return;
+  if (tone === "vibrate" && TONED[cue]) return;
   void load(cue).then((buffer) => {
     if (!buffer) return;
     const source = ctx.createBufferSource();
@@ -180,7 +181,7 @@ export function play(cue: Cue): void {
 
 /** طولُ النغمة بالثواني — **من الملفّ نفسِه** (صفرٌ قبل فكّه). */
 export function durationOf(cue: Cue): number {
-  return buffers.get(FILES[cue])?.duration ?? 0;
+  return buffers.get(fileOf(cue))?.duration ?? 0;
 }
 
 /** **يكرّر نغمةً حتى يُوقفها من طلبها** — رنينُ المكالمة الواردة (§٦٦-د/٤). ويعيد ما يوقفها.
@@ -212,3 +213,69 @@ export function loop(cue: Cue): () => void {
     source = null;
   };
 }
+
+
+// ------------------------------------------------------------- «نغمة الإشعارات»
+
+/** **«نغمة الإشعارات»** (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١) — `default` الصوتُ الحاليّ، و`s1_N` خيارُ المجموعة الأولى، و`vibrate` اهتزازٌ
+ *  بلا صوت. **تُضبط من تفضيلات الحساب** (`/me/notification-preferences`) حين يشتعل مفتاحُ السوق، **ومطفأً تبقى `default`** */
+export type RingTone = "default" | "s2_1" | "s2_2" | "s2_3" | "s2_4" | "s2_5" | "s1_1" | "s1_2" | "s1_3" | "vibrate";
+/** **الصوتُ الافتراضيُّ للجميع** (قرارُ المالك ١٧/١١/٢٠٢٦): الخيارُ ٥ من المجموعة الثانية — «TAXO» بصوتٍ أنثويّ مع بوق «بيب بيب».
+ *  **ومعناه حين يشتعل المفتاح وحدَه**؛ مطفأً تبقى الأصواتُ القديمة (`default`). يطابق `channels.NEW_DEFAULT` في الخلفية */
+export const NEW_DEFAULT: RingTone = "s2_5";
+/** **ما يُعزف فعلاً** لاختيارٍ محفوظ والمفتاحُ مشتعل — «الافتراضيّ» هو `NEW_DEFAULT` */
+export function effectiveTone(saved: RingTone): RingTone {
+  return saved === "default" ? NEW_DEFAULT : saved;
+}
+let tone: RingTone = "default";
+
+export function currentTone(): RingTone {
+  return tone;
+}
+
+export function setTone(next: RingTone): void {
+  tone = next;
+}
+
+/** **أيُّ ملفٍّ تعزفه النغمةُ** — ما ليس في `TONED` يبقى ملفَّه هو، فالمكالمةُ والخطأُ والمنعطفُ لا تتغيّر */
+function fileOf(cue: Cue, chosen: RingTone = tone): string {
+  const n = chosen.startsWith("s1_") || chosen.startsWith("s2_") ? chosen.slice(3) : null;
+  if (chosen.startsWith("s2_")) {
+    const kind2 = TONED2[cue];
+    return kind2 && n ? `sounds/tones2/${kind2}_${n}.mp3` : FILES[cue];
+  }
+  const kind = TONED[cue];
+  return kind && n ? `sounds/tones/${kind}_${n}.mp3` : FILES[cue];
+}
+
+/** **معاينةُ نغمةٍ في الإعدادات** — تُعزف ولو كانت الأصواتُ مطفأة: صاحبُها ضغط زرَّها ليسمعها */
+export function preview(chosen: RingTone): void {
+  const ctx = context;
+  if (!ctx) return;
+  if (chosen === "vibrate") {
+    try {
+      navigator.vibrate?.([0, 350, 200, 350]);
+    } catch {
+      /* لا اهتزاز */
+    }
+    return;
+  }
+  void ctx.resume();
+  const file = fileOf(PREVIEW_CUE, effectiveTone(chosen));
+  void fetch(file)
+    .then((response) => response.arrayBuffer())
+    .then((bytes) => ctx.decodeAudioData(bytes))
+    .then((buffer) => {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    })
+    .catch(() => undefined);
+}
+
+/** **ما تتبعه النغمة** — ملفّاتُ `design/sounds/` بأسمائها في `public/sounds/tones/` */
+const TONED: Partial<Record<Cue, string>> = { accepted: "update", arrived: "arrived", started: "update", ended: "update", paid: "update", topup: "update" };
+/** **المجموعةُ الثانية** (`design/sounds-v2/`) — لكلِّ حدثٍ صوتُه، بأسمائها في `public/sounds/tones2/` */
+const TONED2: Partial<Record<Cue, string>> = { accepted: "accepted", arrived: "arrived", started: "started", ended: "ended", paid: "payment", topup: "payment" };
+const PREVIEW_CUE: Cue = "arrived";

@@ -49,7 +49,7 @@ export function PendingDeletions({ onError }: { onError: (message: string) => vo
         مانعاً — ويُحذف في الدورة التي تلي زوال سببه.
       </p>
 
-      <Table
+      <Table search
         height="compact"
         columns="1.4fr 0.9fr 0.9fr 1.8fr"
         headers={["الحساب", "طُلب", "موعد الحذف", "الحال"]}

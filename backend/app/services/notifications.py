@@ -230,9 +230,10 @@ async def notify_user(
     groups: dict[int, list[str]] = {}
     for token, push_channels in targets:
         groups.setdefault(channels.level_of(push_channels), []).append(token)
+    tone = await _chosen_tone(session, user_id) if channels.CHANNELS_V4 in groups else None
     sent: list[PushResult] = []
     for level, tokens in groups.items():
-        shaped = channels.for_level(message, level)
+        shaped = channels.for_level(message, level, tone)
         # **أمرٌ لخدمةٍ أصليّةٍ لا يحملها هذا الجهاز** (إسكاتُ الرنين، §٦٦-ج/١٧) — لا يُرسل إليه شيء
         if shaped is not None:
             sent.append(await provider.send(tokens, shaped))
@@ -245,6 +246,24 @@ async def notify_user(
         await devices.deactivate_tokens(session, result.invalid_tokens)
         await session.commit()
     return result
+
+
+async def _chosen_tone(session: AsyncSession, user_id: uuid.UUID) -> str | None:
+    """**نغمةُ صاحب الجهاز** («نغمة الإشعارات»، ج/١) — **ما دام مفتاحُ سوقه مشتعلاً**: اختيارُه، **ومن لم يختر فالافتراضيُّ الجديد**
+    (`channels.NEW_DEFAULT`، قرارُ المالك ١٧/١١). **ومطفأً `None`**: القنواتُ القديمةُ بأصواتها لكلِّ أحدٍ ولو اختار."""
+    from app.models.enums import FeatureKey
+    from app.models.user import User
+    from app.services import settings_service
+    from app.services.push import channels
+
+    row = (
+        await session.execute(_select(User.notification_tone, User.country_code).where(User.id == user_id))
+    ).first()
+    if row is None or row.country_code is None:
+        return None
+    if not await settings_service.is_feature_enabled(session, row.country_code, FeatureKey.NOTIFICATION_TONES_ENABLED):
+        return None
+    return row.notification_tone or channels.NEW_DEFAULT
 
 
 async def _safe_notify(

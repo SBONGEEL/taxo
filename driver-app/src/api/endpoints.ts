@@ -584,6 +584,10 @@ export const markNotificationsRead = (ids?: string[]) =>
 export const getNotificationPreferences = () =>
   api.get<NotificationPreferences>("/me/notification-preferences");
 
+/** **«نغمة الإشعارات»** — النغمةُ وحدَها، والإعلاناتُ لا تُمسّ */
+export const setNotificationTone = (tone: string) =>
+  api.put<NotificationPreferences>("/me/notification-preferences", { notification_tone: tone });
+
 export const setNotificationPreferences = (marketing: boolean) =>
   api.put<NotificationPreferences>("/me/notification-preferences", {
     marketing_push_enabled: marketing,

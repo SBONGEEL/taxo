@@ -267,3 +267,57 @@ def test_every_drawn_kind_is_a_known_event() -> None:
     assert notifications.RENDERED_IN_APP <= known
     # **وما لا يُحفظ يُرسم** — العابرُ بلا صفٍّ في الصندوق، فبلا بلاغٍ يمرّ بلا أثر
     assert notifications.EPHEMERAL_KINDS <= notifications.RENDERED_IN_APP
+
+
+
+# ═════════════ «نغمة الإشعارات» — المجموعةُ الرابعة (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١)
+
+
+def test_the_chosen_tone_is_a_channel_of_its_own_for_the_fourth_set_only() -> None:
+    from app.services.push import PushMessage, channels
+
+    offer = PushMessage(title="t", body="b", data={"type": "ride_offer"})
+    assert channels.for_level(offer, channels.CHANNELS_V4, "s1_2").android_channel_id == "taxo.offer.v2.s1_2"
+    assert channels.for_level(offer, channels.CHANNELS_V4, "s2_3").android_channel_id == "taxo.offer.v2.s2_3"
+    # **«اهتزاز فقط» لا يُسكت الطلب** — يرنّ دائماً والكبتنُ متّصل بالافتراضيّ الجديد، وما عداه يهتزّ
+    assert channels.for_level(offer, channels.CHANNELS_V4, "vibrate").android_channel_id == "taxo.offer.v2.s2_5"
+    ended = PushMessage(title="t", body="b", data={"type": "ride_completed"})
+    assert channels.for_level(ended, channels.CHANNELS_V4, "vibrate").android_channel_id == "taxo.ended.vibrate"
+    # **المفتاحُ مطفأً (`None`) وغيرُ المعروف كما هما، و«الافتراضيّ» هو الخيارُ ٥ من الثانية** (قرارُ المالك ١٧/١١)؛
+    # والثالثةُ لا تحمل قناةَ النغمة فلا تُرسل إليها
+    assert channels.for_level(offer, channels.CHANNELS_V4, None).android_channel_id == "taxo.offer.v2"
+    assert channels.for_level(offer, channels.CHANNELS_V4, "default").android_channel_id == "taxo.offer.v2.s2_5"
+    assert channels.for_level(ended, channels.CHANNELS_V4, "default").android_channel_id == "taxo.ended.s2_5"
+    assert "s2_5" not in channels.TONES and channels.NEW_DEFAULT in channels.CHANNEL_TONES
+    assert channels.for_level(offer, channels.CHANNELS_V4, "x9").android_channel_id == "taxo.offer.v2"
+    assert channels.for_level(offer, channels.CHANNELS_V3, "s1_2").android_channel_id == "taxo.offer.v2"
+    # **والعامُّ بلا قناةٍ يبقى بلا قناة**
+    general = PushMessage(title="t", body="b", data={"type": "campaign"})
+    assert channels.for_level(general, channels.CHANNELS_V4, "s1_2").android_channel_id is None
+    assert channels.level_of(4) == channels.CHANNELS_V4 and channels.level_of(9) == channels.CHANNELS_V4
+
+
+async def test_the_tone_is_saved_per_user_and_default_is_null(client, session_factory) -> None:
+    from sqlalchemy import select
+
+    from app.models.user import User
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    read = await client.get("/me/notification-preferences", headers=rider["headers"])
+    assert read.status_code == 200, read.text
+    assert read.json()["notification_tone"] == "default" and "s1_1" in read.json()["tones"]
+    assert read.json()["tones"][:5] == ["default", "s2_1", "s2_2", "s2_3", "s2_4"] and read.json()["tones"][-1] == "vibrate"
+
+    put = await client.put("/me/notification-preferences", json={"notification_tone": "s1_3"}, headers=rider["headers"])
+    assert put.status_code == 200 and put.json()["notification_tone"] == "s1_3"
+    assert put.json()["marketing_push_enabled"] is True  # **ما لم يُرسل لا يُمسّ**
+    async with session_factory() as session:
+        assert await session.scalar(select(User.notification_tone).where(User.id == rider["user"]["id"])) == "s1_3"
+
+    back = await client.put("/me/notification-preferences", json={"notification_tone": "default"}, headers=rider["headers"])
+    assert back.json()["notification_tone"] == "default"
+    async with session_factory() as session:
+        assert await session.scalar(select(User.notification_tone).where(User.id == rider["user"]["id"])) is None
+    bad = await client.put("/me/notification-preferences", json={"notification_tone": "loud"}, headers=rider["headers"])
+    assert bad.status_code == 422
