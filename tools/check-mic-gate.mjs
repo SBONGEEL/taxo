@@ -69,6 +69,22 @@ for (const app of APPS) {
     failures.push(`${app}: الغلافُ يُلحق «${appended}» والبيانُ لا يعلن \`RECORD_AUDIO\` — «اتصال» يظهر و\`getUserMedia\` تُرفض`);
   }
   measured += 1;
+  // ٣-ب) **iOS (٢٠٢٦-١١-١٧)**: الغلافُ يُلحق العلامةَ في مزامنة iOS ⇔ البيانُ يعلن `NSMicrophoneUsageDescription`.
+  // **ونداءُ الميكروفون بلا نصِّه يُسقط التطبيقَ على iOS** — فهذا أخطرُ من زرٍّ بلا باب: زرٌّ يُغلق التطبيق.
+  const iosAppended = code(config).match(/ios:\s*\{[^}]*appendUserAgent:\s*"([^"]+)"/)?.[1] ?? null;
+  const plistPath = join(ROOT, app, "ios", "App", "App", "Info.plist");
+  const micText = existsSync(plistPath)
+    ? /<key>NSMicrophoneUsageDescription<\/key>\s*<string>[^<]+<\/string>/.test(readFileSync(plistPath, "utf8"))
+    : false;
+  if (iosAppended && mark && iosAppended !== mark) {
+    failures.push(`${app}: غلافُ iOS يُلحق «${iosAppended}» والبوّابةُ تبحث عن «${mark}»`);
+  }
+  if (iosAppended && !micText) {
+    failures.push(`${app}: غلافُ iOS يُلحق العلامةَ وInfo.plist بلا \`NSMicrophoneUsageDescription\` — «اتصال» يُسقط التطبيق`);
+  }
+  if (!iosAppended && micText) {
+    failures.push(`${app}: Info.plist يعلن الميكروفون وغلافُ iOS لا يُلحق العلامة — «اتصال» غائبٌ بلا علّة`);
+  }
 }
 
 // ٤) نسخةٌ واحدة

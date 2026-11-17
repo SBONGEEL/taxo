@@ -41,6 +41,7 @@ import { presentNotice } from "@/components/PushNotices";
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
 import type { CliqTransfer } from "@/components/CliqTransferSheet";
+import { useRideActivity } from "@/lib/native-ios";
 import { type BroadcastMode, DriverSocket, type DriverSocketEvent } from "@/lib/socket";
 import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
@@ -399,6 +400,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
     }, remaining);
     return () => window.clearTimeout(timer);
   }, [offer]);
+
+  // **iOS: الرحلةُ على شاشة القفل وفي Dynamic Island** — صامتٌ على أندرويد والويب (`lib/native-ios.ts`)
+  useRideActivity(ride, "driver");
 
   const value = useMemo<RideState>(
     () => ({

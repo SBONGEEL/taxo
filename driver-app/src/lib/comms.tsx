@@ -39,6 +39,7 @@ import { CallSession, speakerOutput } from "@/lib/call-session";
 import { useFeature } from "@/lib/config";
 import { useCallsSupported } from "@/lib/mic-gate";
 import { ringsNatively } from "@/lib/push";
+import { useNativeCall } from "@/lib/native-ios";
 import { loop, play } from "@/lib/sound";
 import { onTripComms, setCommsPushRoute, type TripCommsEvent } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
 
@@ -968,6 +969,9 @@ export function CommsProvider({
     },
     [clearTimers, dropHeldRing, teardown],
   );
+
+  // **iOS: المكالمةُ «مكالمةً حقيقيّة» في النظام** (CallKit) — صامتٌ على أندرويد والويب (`lib/native-ios.ts`)
+  useNativeCall(call, peer?.name ?? peerRole, { hangUp, answer, toggleMute });
 
   const value = useMemo<CommsState>(
     () => ({

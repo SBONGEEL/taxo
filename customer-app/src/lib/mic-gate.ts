@@ -9,7 +9,8 @@
  * 2. **وفي الويب** (لا الغلاف) — المتصفّحُ يسأل عن الإذن بنفسه؛
  * 3. **أو في غلاف أندرويد يحمل علامةَ `CALLS_SHELL_MARK` في وكيل المستخدم** — والعلامةُ تُشحن مع الإذن نفسِه.
  *
- * **وiOS لا** — ولو حمل العلامة: البيانُ هناك يحتاج `NSMicrophoneUsageDescription` ولم يُضف، والمكالمةُ لم تُقَس عليه.
+ * **وiOS بالشرط نفسِه** (٢٠٢٦-١١-١٧): غلافُه يُلحق العلامةَ (`ios.appendUserAgent`) **وبيانُه يعلن `NSMicrophoneUsageDescription`**،
+ * ويقيس `check:mic-gate` أنهما لا يفترقان — كالإذن والعلامة في أندرويد.
  *
  * **ونسخةٌ واحدةٌ في التطبيقين حرفاً** — يقيسها `tools/check-mic-gate.mjs` مع العلامة والبيان.
  */
@@ -37,7 +38,7 @@ export function callsSupported(): boolean {
     if (typeof navigator === "undefined" || typeof navigator.mediaDevices?.getUserMedia !== "function") return false;
     if (typeof RTCPeerConnection === "undefined") return false;
     if (!Capacitor.isNativePlatform()) return true;
-    if (Capacitor.getPlatform() !== "android") return false;
+    if (!["android", "ios"].includes(Capacitor.getPlatform())) return false;
     // **لا علامةَ = لا وعد**: غلافٌ بُني قبل الإذن لا يحملها
     return navigator.userAgent.includes(CALLS_SHELL_MARK);
   })();

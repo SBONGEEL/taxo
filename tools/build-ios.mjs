@@ -25,6 +25,10 @@ import { fromEnv } from "./channels.mjs";
 
 const app = process.argv[2];
 const syncOnly = process.argv.includes("--sync-only");
+// **`--dist-ready`**: الشاشاتُ بُنيت في وظيفة Linux ونزلت أثراً (`ios.yml`) — فلا يُعاد بناؤها على عدّاء macOS
+// الأثمن. **والحارسُ بعد المزامنة يقارن المرفقَ بـ`dist` نفسِه**، فأثرٌ لقناةٍ أخرى يسقط هناك لا يمرّ.
+const distReady = process.argv.includes("--dist-ready");
+const derivedArg = process.argv.find((a) => a.startsWith("--derived="))?.slice("--derived=".length);
 if (!["customer-app", "driver-app"].includes(app ?? "")) {
   console.error(
     "الاستعمال: TAXO_CHANNEL=<public|test> node tools/build-ios.mjs <customer-app|driver-app> [--sync-only]",
@@ -53,7 +57,9 @@ function step(title, command, args, cwd = ROOT) {
   }
 }
 
-step("الشاشاتُ بعنوان القناة", "node", ["tools/build-channel.mjs", app]);
+if (distReady) console.log("
+── الشاشاتُ مبنيّةٌ سلفاً (--dist-ready) — يقيسها الحارسُ بعد المزامنة");
+else step("الشاشاتُ بعنوان القناة", "node", ["tools/build-channel.mjs", app]);
 step("المزامنة — iOS مسمّاةً", "npx", ["cap", "sync", "ios"], APP_DIR);
 step("لا غلافَ في المزامَن", "node", ["tools/check-ios.mjs", "--synced", app]);
 
@@ -66,7 +72,10 @@ if (process.platform !== "darwin") {
   process.exit(3);
 }
 
-const derived = join(APP_DIR, "ios", "DerivedData");
+// **المشروعُ يُكمَل قبل التجميع** — نصوصُ الأذونات بالفرنسيّة وامتدادُ الأدوات (`tools/ios/configure-xcode.rb`)
+step("إكمالُ مشروع Xcode", "ruby", ["tools/ios/configure-xcode.rb", app]);
+
+const derived = derivedArg ?? join(APP_DIR, "ios", "DerivedData");
 step("التجميعُ للمحاكي بلا توقيع", "xcodebuild", [
   "-workspace", "ios/App/App.xcworkspace",
   "-scheme", "App",

@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import TaxoNative
 import FirebaseCore
 import FirebaseMessaging
 
@@ -15,6 +16,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // باسمها** أدناه لا بسقوط.
         if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
+        }
+        // **إقلاعٌ باردٌ من اختصار** — لا يُنادى `performActionFor` حينها
+        if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            _ = TaxoDeepLink.handle(shortcut: shortcut)
+            return false
         }
         return true
     }
@@ -74,7 +80,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
+        // **روابطُ الأداة** (`taxo-…://open/<مسار>`) تُعامَل هنا، وما عداها يمرّ إلى Capacitor كما كان
+        if TaxoDeepLink.handle(url: url) { return true }
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
+    }
+
+    /// **اختصاراتُ أيقونة التطبيق** (ضغطٌ مطوَّلٌ على الأيقونة) — `UIApplicationShortcutItems` في البيان
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        completionHandler(TaxoDeepLink.handle(shortcut: shortcutItem))
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {

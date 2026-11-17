@@ -14,7 +14,7 @@ export const VOICE_FLAG = "voice_order_enabled";
 const plugin = registerPlugin<{ listen(options: { language: string; prompt: string }): Promise<{ text: string }> }>("SpeechInput");
 
 export function voiceAvailable(): boolean {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("SpeechInput");
+  return Capacitor.isNativePlatform() && ["android", "ios"].includes(Capacitor.getPlatform()) && Capacitor.isPluginAvailable("SpeechInput");
 }
 
 /** **ما قاله** بلغة التطبيق ولهجة سوقه («ar-JO» · «fr-DZ»)، أو نصٌّ فارغٌ إن أُلغيت النافذة. */

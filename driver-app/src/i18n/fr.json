@@ -1952,5 +1952,9 @@
   "رحلات اليوم: {0}": "Courses du jour : {0}",
   "اتصل الآن": "Se connecter",
   "اطلب رحلة إلى البيت": "Course vers la maison",
-  "محفظتي": "Mon portefeuille"
+  "محفظتي": "Mon portefeuille",
+  "في الرحلة": "En course",
+  "وصلتَ إلى الراكب": "Vous êtes arrivé chez le passager",
+  "الكبتن في الطريق إليك": "Le chauffeur arrive",
+  "وصل الكبتن": "Le chauffeur est arrivé"
 }

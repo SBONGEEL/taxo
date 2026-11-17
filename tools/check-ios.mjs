@@ -52,6 +52,8 @@ const USAGE_KEYS = {
     "NSFaceIDUsageDescription",
     "NSCameraUsageDescription",
     "NSPhotoLibraryUsageDescription",
+    "NSMicrophoneUsageDescription",
+    "NSSpeechRecognitionUsageDescription",
   ],
   "driver-app": [
     "NSLocationWhenInUseUsageDescription",
@@ -59,8 +61,18 @@ const USAGE_KEYS = {
     "NSFaceIDUsageDescription",
     "NSCameraUsageDescription",
     "NSPhotoLibraryUsageDescription",
+    "NSMicrophoneUsageDescription",
   ],
 };
+
+/** **أوضاعُ الخلفيّة وما يبرّر كلاًّ منها في الشيفرة** (٢٠٢٦-١١-١٧) — وضعٌ بلا فعلٍ يُرفض في مراجعة Apple
+ *  (Guideline 2.5.4) ويكذب. فالحارسُ يسأل عن الفعل لا عن الإعلان: `location` للكبتن وحدَه وبملحق البثّ،
+ *  و`remote-notification` بـFirebase Messaging في Podfile. **وأيُّ وضعٍ ثالثٍ يُسقط**. */
+const BACKGROUND_MODES = {
+  "customer-app": ["remote-notification"],
+  "driver-app": ["location", "remote-notification"],
+};
+const KIND = { "customer-app": "rider", "driver-app": "driver" };
 
 /** مخطّطُ كلِّ تطبيق ومخطّطُ أخيه — **كما في `AndroidManifest.xml`**. */
 const SCHEMES = {
@@ -174,10 +186,27 @@ if (mode === "--static") {
       const m = plist.match(new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`));
       if (!m || !m[1].trim()) fail(`${app}: ${key} غائبٌ أو فارغ في Info.plist`);
     }
-    // **ولا خلفيّةَ مُعلَنةٌ قبل ملحقها** (قرارُ المالك ٢٠٢٦-٠٩-٢٩): إعلانٌ بلا فعل
-    if (plist.includes("<key>UIBackgroundModes</key>")) {
-      fail(`${app}: UIBackgroundModes مُعلَنٌ ولا ملحقَ خلفيٍّ مبنيّ`);
+    // **ولا خلفيّةَ مُعلَنةٌ قبل ملحقها** (قرارُ المالك ٢٠٢٦-٠٩-٢٩): إعلانٌ بلا فعل — وقد بُني الملحقُ ٢٠٢٦-١١-١٧
+    const modes = [...(plist.match(/<key>UIBackgroundModes<\/key>\s*<array>([\s\S]*?)<\/array>/)?.[1] ?? "").matchAll(/<string>([^<]+)<\/string>/g)].map((m) => m[1]);
+    const native = join(ROOT, "ios-native", "TaxoNative", "Sources");
+    const podfile = readFileSync(join(ios, "App", "Podfile"), "utf8");
+    for (const mode of modes) {
+      if (!BACKGROUND_MODES[app].includes(mode)) fail(`${app}: UIBackgroundModes يعلن «${mode}» ولا فعلَ له في هذا التطبيق`);
     }
+    if (modes.includes("location") && !readFileSync(join(native, "OnlineServicePlugin.swift"), "utf8").includes("allowsBackgroundLocationUpdates = true")) {
+      fail(`${app}: UIBackgroundModes=location ولا بثَّ خلفيّاً في OnlineServicePlugin.swift`);
+    }
+    if (modes.includes("remote-notification") && !podfile.includes("pod 'FirebaseMessaging'")) {
+      fail(`${app}: UIBackgroundModes=remote-notification ولا FirebaseMessaging في Podfile`);
+    }
+    // **الملحقاتُ الأصليّةُ موصولة**: الحزمةُ في Podfile، والواجهةُ في اللوحة، والنوعُ في البيان
+    if (!podfile.includes("pod 'TaxoNative'")) fail(`${app}: Podfile لا يذكر TaxoNative — ملحقاتُ iOS غيرُ موصولة`);
+    const main = readFileSync(join(ios, "App", "App", "Base.lproj", "Main.storyboard"), "utf8");
+    if (!main.includes('customClass="TaxoBridgeViewController" customModule="TaxoNative"')) {
+      fail(`${app}: Main.storyboard لا يشير إلى TaxoBridgeViewController — لا ملحقَ يُسجَّل`);
+    }
+    const kind = plist.match(/<key>TaxoAppKind<\/key>\s*<string>([^<]*)<\/string>/)?.[1];
+    if (kind !== KIND[app]) fail(`${app}: TaxoAppKind = ${kind ?? "(غائب)"} والمنتظَر ${KIND[app]}`);
     // **زرُّ التبديل**: يستقبل مخطّطَه، ويسأل عن مخطّط أخيه
     const own = plist.match(/<key>CFBundleURLSchemes<\/key>\s*<array>\s*<string>([^<]*)<\/string>/)?.[1];
     const asks = plist.match(/<key>LSApplicationQueriesSchemes<\/key>\s*<array>\s*<string>([^<]*)<\/string>/)?.[1];
@@ -202,6 +231,13 @@ if (mode === "--static") {
         fail(`${app}/ios/.gitignore لا يذكر ${generated} — ناتجُ مزامنةٍ يُودَع بقناته`);
       }
     }
+  }
+  // **جسرُ iOS نسخةٌ واحدةٌ في التطبيقين بايتاً** — والاختبارُ يقيس نسخةَ الراكب (`customer-app/tests/native-ios.test.ts`)
+  for (const name of ["native-ios.ts", "native-ios-logic.ts"]) {
+    const bridges = APPS.map((app) => join(ROOT, app, "src", "lib", name));
+    if (bridges.every((file) => existsSync(file))) {
+      if (readFileSync(bridges[0], "utf8") !== readFileSync(bridges[1], "utf8")) fail(`lib/${name} يفترق بين التطبيقين`);
+    } else fail(`lib/${name} غائبٌ عن أحد التطبيقين`);
   }
   finish("ساكن");
 }
