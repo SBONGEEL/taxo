@@ -112,10 +112,18 @@
         return reply(cmd.id, true, "back");
       }
       if (cmd.kind === "click") {
-        var el = find(cmd);
-        if (!el) return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
-        el.click();
-        return reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
+        // **ينتظر العنصرَ حتى ٦ ث** — ورقةٌ تنزلق ببطءٍ على iPhone SE لم تكن قد رُسمت بعد ٩٠٠ ms (مقيسٌ: بقي SE على الدبوس)
+        var started = Date.now();
+        var attempt = function () {
+          var el = find(cmd);
+          if (!el) {
+            if (Date.now() - started < 6000) return setTimeout(attempt, 250);
+            return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
+          }
+          el.click();
+          reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
+        };
+        return attempt();
       }
       if (cmd.kind === "type") return reply(cmd.id, typeInto(cmd.text), cmd.text);
       reply(cmd.id, true, "noop");
