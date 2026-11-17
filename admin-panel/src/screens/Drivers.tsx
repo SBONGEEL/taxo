@@ -31,6 +31,7 @@
  */
 
 import { DriverPermissions } from "@/components/DriverPermissions";
+import { DeviceSignals } from "@/components/DeviceSignals";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -704,6 +705,7 @@ function DriverDrawer({
         <VehiclesSection driverId={row.driver_id} />
         {/* **أذوناتُ هاتفه** (SPEC §١٠٣/٢٨) — قراءةٌ لا قرار */}
         <DriverPermissions off={row.permissions_off} reportedAt={row.permissions_reported_at} />
+        <DeviceSignals signals={row.device_signals} reportedAt={row.device_signals_at} />
         <SubscriptionSection driverId={row.driver_id} />
         {/* **وزرُّ التجميد هنا** (1-أ/6): التجميدُ صار صفةَ محفظةٍ، وزرُّ
             درج الراكب يجمّد محفظةَ الراكب وحدَها — فبغير هذا لا طريقَ في

@@ -363,6 +363,9 @@ export interface AdminDriverRow {
   // **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** (SPEC §١٠٣/٢٨) — `null` لم يُبلَّغ، و`[]` كلُّها مشتعلة
   permissions_off?: string[] | null;
   permissions_reported_at?: string | null;
+  // **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — المقيسُ وحدَه، ومفتاحٌ غائبٌ «لم يُقس»؛ بلاغٌ لا حجب
+  device_signals?: { mock_location?: boolean; rooted?: boolean } | null;
+  device_signals_at?: string | null;
   created_at: string;
 }
 
@@ -671,6 +674,8 @@ export type FeatureKey =
   | "motion_aware_location"
   | "ride_live_notification"
   | "ride_live_tracking"
+  | "mock_location_report"
+  | "root_report"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

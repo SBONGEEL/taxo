@@ -436,6 +436,9 @@ class AdminDriverRow(BaseModel):
     # **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** (SPEC §١٠٣/٢٨) — `null` لم يُبلَّغ، و`[]` كلُّها مشتعلة. قراءةٌ لا قرار
     permissions_off: list[str] | None = None
     permissions_reported_at: datetime | None = None
+    # **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — المقيسُ وحدَه، ومفتاحٌ غائبٌ «لم يُقس». بلاغٌ لا قرار
+    device_signals: dict[str, bool] | None = None
+    device_signals_at: datetime | None = None
     created_at: datetime
 
 
@@ -621,6 +624,18 @@ class PresenceTokenOut(BaseModel):
 PERMISSION_KEYS = frozenset(
     {"location", "location_background", "notifications", "overlay", "battery", "autostart", "full_screen", "microphone"}
 )
+
+
+class DriverDeviceSignalsIn(BaseModel):
+    """إشاراتُ الجهاز (SPEC §١٠٣ B/17 و25): ما قِيس وحدَه — **بلاغٌ للمشرف، لا حجبَ ولا إيقافَ يُبنى عليه آليّاً**."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mock_location: bool | None = None
+    rooted: bool | None = None
+
+    def measured(self) -> dict[str, bool]:
+        return {key: value for key, value in (("mock_location", self.mock_location), ("rooted", self.rooted)) if value is not None}
 
 
 class DriverPermissionsIn(BaseModel):

@@ -36,6 +36,8 @@ interface OnlineServicePlugin {
   /** المقبسُ سقط والكبتنُ ما زال «مستقبِلاً» — فيقول الإشعارُ الحقيقة. */
   degraded(): Promise<void>;
   stop(): Promise<void>;
+  /** **إشاراتُ الجهاز** (§١٠٣ B/17 و25) — غلافٌ أقدمُ لا يعرفها فيرمي، ويُقرأ ذلك «لم يُقس» */
+  signals(): Promise<{ mock_location: boolean; rooted: boolean }>;
 }
 
 const plugin = registerPlugin<OnlineServicePlugin>("OnlineService");
@@ -91,3 +93,8 @@ export const onlineService = {
     call("stop");
   },
 };
+
+/** **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — من المكوِّن نفسِه لا من تسجيلٍ ثانٍ له. */
+export function readDeviceSignals(): Promise<{ mock_location: boolean; rooted: boolean }> {
+  return plugin.signals();
+}

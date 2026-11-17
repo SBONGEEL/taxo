@@ -333,6 +333,13 @@ export const clearDestination = () => api.del<void>("/drivers/me/destination");
 /** **بلاغُ مركز الأذونات** (SPEC §١٠٣/٢٨) — الأساسيّةُ المطفأةُ الآن، ليراها المشرفُ في درجه. **قراءةٌ لا قرار.** */
 export const reportPermissions = (payload: { off: string[] }) => api.put<void>("/drivers/me/permissions", payload);
 
+/** **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — المقيسُ وحده؛ بلاغٌ لا حجب. */
+export interface DeviceSignalsReport {
+  mock_location?: boolean;
+  rooted?: boolean;
+}
+export const reportDeviceSignals = (payload: DeviceSignalsReport) => api.put<void>("/drivers/me/device-signals", payload);
+
 /** **خريطةُ الطلب** (البند ١٨) — خلايا بنحو كيلومترٍ آخرَ نصف ساعة، **بمستوىً ١…٣ لا عدد**. */
 export const getHeatmap = () => api.get<{ lat: number; lng: number; level: number }[]>("/drivers/me/heatmap");
 

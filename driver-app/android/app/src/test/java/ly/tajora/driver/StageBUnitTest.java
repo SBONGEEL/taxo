@@ -50,6 +50,22 @@ public class StageBUnitTest {
     }
 
     @Test
+    public void mockSignalLastsOneDay() {
+        long now = 1_000_000_000_000L;
+        assertEquals(false, DeviceSignals.mockRecently(0L, now));
+        assertEquals(true, DeviceSignals.mockRecently(now - 60_000L, now));
+        assertEquals(false, DeviceSignals.mockRecently(now - DeviceSignals.MOCK_WINDOW_MS - 1, now));
+    }
+
+    @Test
+    public void rootedByTagsOrSu() {
+        assertEquals(true, DeviceSignals.rootedBy("release-keys", true));
+        assertEquals(true, DeviceSignals.rootedBy("test-keys", false));
+        assertEquals(false, DeviceSignals.rootedBy("release-keys", false));
+        assertEquals(false, DeviceSignals.rootedBy(null, false));
+    }
+
+    @Test
     public void unknownCurrencyIsKeptAsIs() {
         assertEquals("EUR", OfferSpeech.spokenCurrency(" EUR "));
         assertEquals("", OfferSpeech.spokenCurrency(null));

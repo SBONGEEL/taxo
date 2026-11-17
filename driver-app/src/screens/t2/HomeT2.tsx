@@ -64,6 +64,7 @@ import { useDriverLauncher, setRideActive, setRideLine } from "@/lib/launcher";
 import { rideNoticeLine } from "@/lib/ride-notice";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
+import { useDeviceSignals } from "@/lib/device-signals";
 import { useKeepAwake } from "@/lib/secure-screen";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
@@ -291,6 +292,8 @@ export function HomeT2Screen() {
   useHaptics(user?.country_code);
   // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
   useNativeFlags(user?.country_code);
+  // **إشاراتُ الجهاز للمشرف** (SPEC §١٠٣ B/17 و25) — بلاغٌ لا حجب، كلٌّ خلف مفتاحه
+  useDeviceSignals(user?.country_code);
   // **الشاشةُ مضاءةٌ أثناء الرحلة** (SPEC §١٠٣ B/16) — من القبول حتى الإنهاء، خلف مفتاحه
   useKeepAwake(useFeature(user?.country_code, "auto_night_keep_awake") && tracking);
   // **«في رحلة» للخدمة الأصليّة** (SPEC §١٠٣ B/15) — لا تقليلَ للإرسال أثناءها

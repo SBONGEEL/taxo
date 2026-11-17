@@ -3,6 +3,7 @@ package ly.tajora.driver;
 import android.content.Intent;
 import android.os.Build;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -48,6 +49,15 @@ public class OnlinePlugin extends Plugin {
     public void degraded(PluginCall call) {
         send(OnlineService.ACTION_DEGRADED);
         call.resolve();
+    }
+
+    /** <b>إشاراتُ الجهاز</b> (SPEC §١٠٣ B/17 و25) — قراءةٌ يرسلها الويبُ إلى اللوحة حين يشتعل مفتاحُها، <b>ولا تحجب شيئاً</b>. */
+    @PluginMethod
+    public void signals(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("mock_location", DeviceSignals.mockRecently(getContext()));
+        out.put("rooted", DeviceSignals.rooted());
+        call.resolve(out);
     }
 
     @PluginMethod

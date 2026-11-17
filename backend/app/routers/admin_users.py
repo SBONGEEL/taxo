@@ -485,6 +485,8 @@ async def list_drivers(
             documents_deadline_at=driver.documents_deadline_at,
             permissions_off=driver.permissions_off,
             permissions_reported_at=driver.permissions_reported_at,
+            device_signals=driver.device_signals,
+            device_signals_at=driver.device_signals_at,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
             # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد.

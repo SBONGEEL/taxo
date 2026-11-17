@@ -149,7 +149,8 @@ public class OnlineService extends Service {
         if (!nativeLocation()) return;
         LocationManager manager = getSystemService(LocationManager.class);
         if (manager == null) return;
-        LocationListener l = fix -> { };
+        // **الموقعُ المزيَّف يُرصد ولا يُرفض** (§١٠٣ B/17) — بلاغٌ للمشرف لا حجب
+        LocationListener l = fix -> DeviceSignals.noteFix(this, fix);
         try {
             for (String provider : new String[] {LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
                 if (manager.isProviderEnabled(provider)) {
@@ -274,6 +275,7 @@ public class OnlineService extends Service {
         try {
             if (endpoint != null && token != null) {
                 Location fix = lastKnownFix();
+                DeviceSignals.noteFix(this, fix);
                 if (fix != null && wantsToSend(fix)) {
                     lastSent = fix;
                     lastSentAt = SystemClock.elapsedRealtime();

@@ -49,6 +49,7 @@ from app.schemas.driver import (
     DriverPointsIn,
     PointsAckOut,
     DriverOut,
+    DriverDeviceSignalsIn,
     DriverPermissionsIn,
     DriverProfileOut,
     DriverUpdate,
@@ -360,6 +361,25 @@ async def report_my_permissions(payload: DriverPermissionsIn, driver: CurrentDri
 
     driver.permissions_off = payload.off
     driver.permissions_reported_at = _dt.now(UTC)
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/me/device-signals", status_code=status.HTTP_204_NO_CONTENT)
+async def report_my_device_signals(payload: DriverDeviceSignalsIn, driver: CurrentDriver, session: DbSession) -> Response:
+    """**إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — موقعٌ مزيَّفٌ رُصد، وجهازٌ معدَّل، **ليراها المشرفُ في درجه**.
+
+    **بلاغٌ لا حجب** (أمرُ المالك ١٨/١١): لا يوقف استقبالاً ولا يغيّر حالاً ولا يرفض رحلة. **والمقيسُ وحدَه يُكتب** —
+    بلا شيءٍ مقيسٍ ⇐ ٤٢٢ لا صفٌّ فارغٌ يُقرأ «سليم». ولا مالَ ولا قفلَ صفٍّ (لا انتقالَ حالٍ يُتحقَّق منه).
+    """
+    from datetime import UTC
+    from datetime import datetime as _dt
+
+    measured = payload.measured()
+    if not measured:
+        raise InvalidInput("لا إشارةَ مقيسة", field="mock_location")
+    driver.device_signals = measured
+    driver.device_signals_at = _dt.now(UTC)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

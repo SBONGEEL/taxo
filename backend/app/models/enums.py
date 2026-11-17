@@ -1034,6 +1034,10 @@ class FeatureKey(StrEnum):
     RIDE_LIVE_NOTIFICATION = "ride_live_notification"
     # **إشعارُ التتبّع الحيّ للراكب** (SPEC §١٠٣/19) — إشعارٌ واحدٌ مستمرٌّ صامت
     RIDE_LIVE_TRACKING = "ride_live_tracking"
+    # **بلاغُ الموقع المزيَّف** (SPEC §١٠٣/17) — للمشرف، بلا حجب. ⚠ تحديثُ سياسة الخصوصية يُنشر قبل إشعاله
+    MOCK_LOCATION_REPORT = "mock_location_report"
+    # **بلاغُ الجهاز المعدَّل (root)** (SPEC §١٠٣/25) — للمشرف، بلا حجب. ⚠ تحديثُ سياسة الخصوصية يُنشر قبل إشعاله
+    ROOT_REPORT = "root_report"
 
 
 class MapPlaceCategory(StrEnum):

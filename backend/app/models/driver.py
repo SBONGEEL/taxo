@@ -66,6 +66,10 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # `null` لم يُبلَّغ قطّ (غلافٌ أقدم أو مفتاحٌ مطفأ)، و`[]` كلُّها مشتعلة — حالتان لا يحملهما قائمةٌ وحدَها
     permissions_off: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     permissions_reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25): `{"mock_location": bool, "rooted": bool}` بالمقيس وحدَه — **بلاغٌ للمشرف لا حجب**.
+    # `null` لم يُبلَّغ قطّ، **ومفتاحٌ غائبٌ «لم يُقس» لا «لا»**
+    device_signals: Mapped[dict[str, bool] | None] = mapped_column(JSONB, nullable=True)
+    device_signals_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # `use_alter`: بين الجدولين مرجع متبادل (rides.driver_id هنا وهناك)،
     # فيُنشأ هذا القيد بعد الجدولين لا معهما
     current_ride_id: Mapped[uuid.UUID | None] = mapped_column(
