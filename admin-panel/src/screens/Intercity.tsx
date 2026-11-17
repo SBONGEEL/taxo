@@ -103,7 +103,7 @@ export function IntercityScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <Table
+      <Table search
         columns="1.3fr 1.8fr 0.8fr 0.8fr 0.6fr auto"
         headers={["المسار", "نقطتا التجمّع", "المقعد", "السيارة", "الحال", ""]}
         rows={rows}

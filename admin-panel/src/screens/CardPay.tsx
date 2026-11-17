@@ -231,7 +231,7 @@ export function CardPayScreen() {
             </div>
           </section>
 
-          <Table
+          <Table search
             columns="1.3fr 0.9fr 0.9fr 0.9fr 1.2fr 1.1fr 1.4fr 1fr"
             headers={["الكبتن", "المستحقّ", "خصمُ البطاقة", "الغرض", "مرجع NOWPayments", "الحال", "ما وصل حسابَك", "رسمٌ تحمّلته TAXO"]}
             rows={data.requests}

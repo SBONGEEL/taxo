@@ -8,7 +8,7 @@
     "build": "npm run test:unit && npm run check:rtl && npm run check:fields && npm run check:storefront-card && npm run check:money-math && npm run check:scale && npm run check:contrast && npm run check:enums && npm run check:update-gate && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:money-visible && npm run check:contract && npm run check:money && npm run check:market-literals && npm run check:money-format && npm run check:readers && npm run check:published-readers && npm run check:target && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
-    "test:unit": "node --experimental-strip-types --no-warnings --test tests/destination-status.test.ts",
+    "test:unit": "node --experimental-strip-types --no-warnings --test tests/destination-status.test.ts tests/table-search.test.ts",
     "check:scale": "node scripts/check-scale.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:enums": "node scripts/check-enums.mjs",

@@ -138,7 +138,7 @@ function HealthTab({
         {digits(String(health?.streak_limit ?? 3))} إخفاقاتٍ متتالية، ويعيدها المالكُ وحدَه.
       </p>
       <div className="mt-10">
-        <Table
+        <Table search
           columns="1.4fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1.4fr 1fr"
           headers={["الطريقة", "الحال", "النجاح", "دُفع", "رُفض", "ينتظر", "السبب", ""]}
           rows={health?.methods ?? null}
@@ -309,7 +309,7 @@ function ReconcileTab({
 
   return (
     <>
-      <Table
+      <Table search
         columns="1.2fr 1fr 0.8fr 0.8fr 0.9fr 0.9fr 1fr"
         headers={["الوقت", "الوسيط", "سُئل", "طابق", "افترق", "تعذّر", ""]}
         rows={rows}
@@ -481,7 +481,7 @@ function LedgerTab({ country, owner, onError }: { country: CountryCode; owner: b
       <ErrorNote message={failure} />
       {ledger?.truncated ? <p className="mt-8 text-11.5 text-muted">بلغت القراءةُ سقفَها قبل بداية النافذة — ضيّق التاريخ.</p> : null}
       <div className="mt-10">
-        <Table
+        <Table search
           columns="1.2fr 0.7fr 1fr 1.6fr 1.6fr"
           headers={["الوقت", "الاتجاه", "المبلغ", "المذكّرة", "المعاملة"]}
           rows={ledger?.entries ?? (failure ? [] : null)}

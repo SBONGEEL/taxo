@@ -423,7 +423,7 @@ export function ReleasesScreen() {
           </section>
         ) : null}
 
-        <Table<AppRelease>
+        <Table<AppRelease> search
           columns={COLUMNS}
           headers={[
             "التطبيق",

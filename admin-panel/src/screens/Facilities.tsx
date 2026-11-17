@@ -121,7 +121,7 @@ export function FacilitiesScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <Table
+      <Table search
         columns="1.6fr 0.6fr 1fr 0.7fr 0.9fr auto"
         headers={["الاسم", "النوع", "الرسم", "الحال", "آخر تعديل", ""]}
         rows={rows}

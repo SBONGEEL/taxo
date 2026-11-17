@@ -198,7 +198,7 @@ export function WhopPayScreen() {
             </div>
           </section>
 
-          <Table
+          <Table search
             columns="1.3fr 0.8fr 1fr 0.9fr 1.2fr 1.1fr 1.3fr"
             headers={["الدافع", "من", "النوع", "المبلغ", "مرجع Whop", "الحال", "ما قاله Whop"]}
             rows={data.requests}

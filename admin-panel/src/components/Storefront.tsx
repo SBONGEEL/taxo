@@ -211,7 +211,7 @@ export function Storefront({
         مبنيّ في التطبيق — يمنعها الخادم بعلّته.
       </p>
 
-      <Table
+      <Table search
         height="compact"
         columns="0.7fr 1fr 0.5fr 0.7fr 0.5fr 1fr 1.5fr"
         headers={[
@@ -379,7 +379,7 @@ export function Storefront({
         بطاقةٌ في الرئيسية بنافذةِ عرضٍ إلزاميّة — تختفي بانقضائها بلا نشر.
         والنافذةُ تُقاس في الخادم لا في الجهاز.
       </p>
-      <Table
+      <Table search
         height="compact"
         columns="1.2fr 0.7fr 0.9fr 0.9fr 1.6fr"
         headers={["العنوان", "الجمهور", "من", "إلى", ""]}

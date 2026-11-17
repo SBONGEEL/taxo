@@ -47,6 +47,7 @@ import {
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 import { EmptyNote, Spinner } from "@/components/ui/Feedback";
+import { foldSearch, rowText } from "@/lib/table-search";
 import { cn, digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -170,6 +171,7 @@ export function Table<T>({
   searching = false,
   toolbar,
   selection,
+  search,
   height: mode = "viewport",
 }: {
   /** قيمةُ `grid-template-columns` — واحدةٌ للرأس والصفوف معاً. */
@@ -188,6 +190,9 @@ export function Table<T>({
   toolbar?: ReactNode;
   /** **عمودُ الاختيار — وغيابُه يبقي الجدولَ كما كان بايتاً** (§50). */
   selection?: TableSelection<T>;
+  /** **بحثٌ في القائمة نفسِها** (قائمةُ المالك ٢٠٢٦-١١-١٠: «بحثٌ في كلِّ قائمة») — حقلٌ في الشريط يصفّي المعروضَ بنصِّ الصفّ.
+   * **للقوائم الكاملة وحدَها**: المرقَّمةُ أو المسقوفةُ تصفّي من الخادم بـ`TableSearch` و`q`، فبحثٌ في صفحةٍ يكذب على من يعرف أن الصفَّ موجود. */
+  search?: TableLocalSearch<T> | true;
   /** **ثلاثةُ أوضاع، والفرقُ بينها مَن يملك الصفحة**:
    *
    * - `viewport` (الافتراض) — **جدولُ الصفحة الرئيس**: يأخذ ما تبقّى من
@@ -199,6 +204,21 @@ export function Table<T>({
   height?: "viewport" | "compact" | "auto";
 }) {
   const { ref, height } = useViewportHeight<HTMLDivElement>();
+  const [query, setQuery] = useState("");
+  const needle = foldSearch(query);
+  const filtering = Boolean(search && needle);
+  const textOf = search === true || !search ? rowText : search.text;
+  if (filtering && rows) rows = rows.filter((row) => foldSearch(textOf(row)).includes(needle));
+  if (filtering) {
+    searching = true;
+    noResults ??= { title: "لا نتائج لبحثك", hint: "جرّب كلمةً أخرى، أو امسح البحث." };
+  }
+  const tools = search ? (
+    <>
+      <TableSearch value={query} onChange={setQuery} placeholder={search === true ? undefined : search.placeholder} />
+      {toolbar}
+    </>
+  ) : toolbar;
 
   // **العمودُ يُحقن هنا** — فلا يُطلب من اثنين وعشرين مستدعياً أن يتذكّروه،
   // ولا ينزاح رأسٌ عن صفوفه لأن أحدَهم نسيه
@@ -330,7 +350,7 @@ export function Table<T>({
       className={cn("ad-table", `ad-table-${mode}`)}
       style={mode === "viewport" && height ? { height } : undefined}
     >
-      {toolbar ? <div className="ad-table-tools">{toolbar}</div> : null}
+      {tools ? <div className="ad-table-tools">{tools}</div> : null}
       {/* **شريطُ الاختيار فوق الرأس وثابتٌ معه** — لا ينزلق مع الصفوف:
           من اختار خمسةً ثمّ نزل يقرأ السادسَ يفقد زرَّ الفعل من الشاشة */}
       {selection && chosen > 0 ? (
@@ -407,6 +427,12 @@ function SelectBox({
       <Icon name={partial ? "remove" : "check"} />
     </button>
   );
+}
+
+/** بحثُ القائمة الكاملة داخل `Table` — **نصُّ الصفّ** يُجمع من حقوله المعروضة. */
+export interface TableLocalSearch<T> {
+  text: (row: T) => string;
+  placeholder?: string;
 }
 
 /** حقلُ بحثِ القائمة — **واحدٌ لكلِّ جدول، في شريط أدواته**.
