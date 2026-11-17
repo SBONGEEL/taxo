@@ -346,7 +346,9 @@ jobs:
           cd "${{ matrix.app }}"
           npx cap sync android
           node -e 'const fs=require("fs");const f="android/app/src/main/assets/capacitor.config.json";const c=JSON.parse(fs.readFileSync(f));c.server={...(c.server||{}),url:"http://127.0.0.1:8787",cleartext:true,allowNavigation:["127.0.0.1"]};fs.writeFileSync(f,JSON.stringify(c,null,1));console.log(c.server)'
-          sed -i 's#<application #<application android:usesCleartextTraffic="true" #' android/app/src/main/AndroidManifest.xml
+          # **الوسمُ يتبعه سطرٌ جديدٌ لا مسافة** — فـ`sed` بمسافةٍ لم يطابق ومرّ صامتاً (ERR_CLEARTEXT_NOT_PERMITTED في اللقطات). فيُقاس بعده.
+          sed -i -E 's#<application([[:space:]]|$)#<application android:usesCleartextTraffic="true"#' android/app/src/main/AndroidManifest.xml
+          grep -q 'usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml || { echo "✗ لم يُفتح http في البيان"; exit 1; }
           cd android && sh gradlew assembleTrialDebug --no-daemon -q
           ls -la app/build/outputs/apk/trial/debug/
       - name: KVM
