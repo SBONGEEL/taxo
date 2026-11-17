@@ -52,6 +52,9 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
   const widget = useFeature(country, "home_widget");
   const boot = useFeature(country, "boot_resume");
   const shortcuts = useFeature(country, "app_shortcuts");
+  // **فقاعةُ الحال والموقعُ الأصليّ** (§١٠٣ A/1 وA/3) — مفتاحان يقرؤهما الطرفُ الأصليُّ وحدَه
+  const bubble = useFeature(country, "status_bubble");
+  const nativeLocation = useFeature(country, "native_location");
   const latest = useRef({ online, onAction });
   latest.current = { online, onAction };
 
@@ -77,12 +80,14 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
         tile,
         widget,
         boot,
+        status_bubble: bubble,
+        native_location: nativeLocation,
         online,
         widget_earnings: widget ? earningsText : null,
         widget_rides: widget && ridesToday !== null ? tr("رحلات اليوم: {0}", { 0: ridesToday }) : null,
       })
       .catch(() => undefined);
-  }, [tile, widget, boot, online, earningsText, ridesToday]);
+  }, [tile, widget, boot, bubble, nativeLocation, online, earningsText, ridesToday]);
 
   useEffect(() => {
     if (!launcherAvailable()) return;

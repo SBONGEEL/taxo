@@ -62,6 +62,7 @@ import {
 import { useFeature } from "@/lib/config";
 import { useDriverLauncher } from "@/lib/launcher";
 import { useHaptics } from "@/lib/haptics";
+import { useNativeFlags } from "@/lib/native-flags";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
 import { clearDestination, getDestination, getHeatmap, setDestination, type DriverDestination } from "@/api/endpoints";
@@ -286,6 +287,8 @@ export function HomeT2Screen() {
   // الاستقبال نفسِه** (`toggleOnline`)، فلا بابَ ثانياً يتجاوز الاشتراكَ والأذونات. ونصُّ الأداة نصُّ «أرباح اليوم» أدناه بحرفه
   // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
   useHaptics(user?.country_code);
+  // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
+  useNativeFlags(user?.country_code);
   useDriverLauncher({
     country: user?.country_code,
     online,

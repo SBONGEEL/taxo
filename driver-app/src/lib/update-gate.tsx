@@ -52,9 +52,9 @@
  */
 
 import { App } from "@capacitor/app";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { useCallback, useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import { getAppVersion } from "@/api/endpoints";
 import type { AppVersion } from "@/api/types";
@@ -110,6 +110,53 @@ function subscribeOpenMap(listener: () => void): () => void {
 export function useShellOpenMap(): boolean {
   const allowed = useSyncExternalStore(subscribeOpenMap, () => shellOpenMap);
   return !Capacitor.isNativePlatform() || allowed;
+}
+
+/** **«يوجد تحديث» من Google Play داخل التطبيق** (SPEC §١٠٣ المرحلة A/8، أمرُ المالك ٢٠٢٦-١١-١٦) — **فوق الرابط لا مكانه**:
+ *  الحكمُ (إلزاميٌّ أو اختياريّ) يبقى من لوحة الإصدارات كما هو، **وزرُّ «تحديث» يجرّب Play أوّلاً** — فوريّاً للإلزاميّ ومرناً للاختياريّ —
+ *  **وإن لم يقدر Play** (نسخةٌ من صفحة التنزيل، غلافٌ بلا الملحق، مفتاحٌ مطفأ) **يُفتح الرابطُ كما كان حرفاً**.
+ *
+ *  **والمفتاحُ لكلِّ دولة** (`in_app_update`) يكتبه التطبيقُ بعد أن يعرف سوقَه (`setPlayInAppUpdate`) ويُحفظ لإقلاعٍ قادم —
+ *  فالبوّابةُ تحكم قبل أن تُعرف الدولة. **واللوحةُ لا تكتبه**: لا Play لها، فيبقى الرابط. */
+const PLAY_KEY = "taxo.update.play";
+const appUpdate = registerPlugin<{ start(options: { immediate: boolean }): Promise<{ started: boolean }> }>("AppUpdate");
+
+export function setPlayInAppUpdate(enabled: boolean): void {
+  try {
+    localStorage.setItem(PLAY_KEY, enabled ? "1" : "0");
+  } catch {
+    // تخزينٌ محجوب — يبقى الرابطُ كما كان
+  }
+}
+
+function playUpdateAllowed(): boolean {
+  if (Capacitor.getPlatform() !== "android" || !Capacitor.isPluginAvailable("AppUpdate")) return false;
+  try {
+    return localStorage.getItem(PLAY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** **Play أوّلاً، والرابطُ بعده** — وإن لم يبدأ Play يُعاد النقرُ على الرابط نفسِه فيجري كما كان (`data-via-link`). */
+function updateClick(immediate: boolean) {
+  return (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!playUpdateAllowed()) return;
+    const anchor = event.currentTarget;
+    if (anchor.dataset.viaLink === "1") {
+      delete anchor.dataset.viaLink;
+      return;
+    }
+    event.preventDefault();
+    void appUpdate
+      .start({ immediate })
+      .then((answer) => answer.started, () => false)
+      .then((started) => {
+        if (started) return;
+        anchor.dataset.viaLink = "1";
+        anchor.click();
+      });
+  };
 }
 
 function snoozedUntil(): number {
@@ -263,6 +310,7 @@ function Blocking({ verdict }: { verdict: AppVersion }) {
           href={verdict.download_url ?? "#"}
           target="_blank"
           rel="noreferrer"
+          onClick={updateClick(true)}
           className="t2-button action t2-update-go"
         >
           {tr("تحديث")}
@@ -299,6 +347,7 @@ function Notice({
             href={verdict.download_url ?? "#"}
             target="_blank"
             rel="noreferrer"
+            onClick={updateClick(false)}
             className="flex-1 rounded-14 bg-accent px-14 py-11 text-center text-12.5 font-bold text-accent-ink"
           >
             {tr("حمّل الآن")}
