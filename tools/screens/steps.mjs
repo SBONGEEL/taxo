@@ -51,7 +51,7 @@ const RIDER = [
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000, expect: [t("إلى أين")] },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000, expect: [sel(".t2-ps input")] },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000, expect: [sel(".t2-ps-pick")] },
-  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("خيارات")] },
+  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("اطلب"), t("اختر الفئة")] },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
   { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")] },
@@ -81,8 +81,9 @@ const DRIVER = [
     expect: [sel(".t2-hm-go.off")],
   },
   // **«متّصل» بموقعٍ لا «بانتظار إشارة الموقع»** — Pro Max صُوِّر بلا موقعٍ والضغطةُ ✓ (التشغيل 44140812843)؛ والموقعُ يُعاد ضبطُه قبل كلِّ
-  // إعادة (`LOCATION_CMD`). **وطلبٌ وصل قبل اللقطة علامةٌ أيضاً**: لا يصل إلا لمتّصلٍ بموقع.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000, expect: [t("متصل — بانتظار الطلبات"), t("قبول")] },
+  // إعادة (`LOCATION_CMD`). **واللقطةُ قبل الطلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)،
+  // وبـ«قبول» علامةً صُوِّرت ورقةُ الطلب في صفِّ «متّصل» فتكرّر الصفّان (التشغيل 44195002007) — فالعلامةُ «بانتظار الطلبات» وحدَها، وتُنتظر قليلاً.
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 1500, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 2500 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
@@ -113,7 +114,7 @@ async function pass(theme) {
     }
     await wait(step.settle);
     if (step.expect) {
-      const seenAck = await command({ kind: "expect", any: step.expect, timeout: 12000 });
+      const seenAck = await command({ kind: "expect", any: step.expect, timeout: step.expectWithin ?? 12000 });
       notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
     }
     const file = join(out, `${theme}-${step.name}.png`);

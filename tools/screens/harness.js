@@ -75,6 +75,19 @@
     });
     return heads.slice(0, 3).map(function (el) { return el.innerText.trim().replace(/\s+/g, " ").slice(0, 30); }).join(" | ");
   }
+  /** **لمسةٌ كاملةٌ كما تلمس الإصبع**: ضغطٌ ثمّ رفعٌ ثمّ نقرة، في وسط العنصر — فما يستمع للضغط (أوراقٌ تُسحب) يرى ما تراه اليد.
+   *  **وليست هي علّةَ سقوط «خيارات»** — العلّةُ كانت العنصرَ المختار (انظر الترتيبَ في `find`)، وقِيس ذلك قبل أن يُكتب هذا. */
+  function tap(el) {
+    var r = el.getBoundingClientRect();
+    var o = { bubbles: true, cancelable: true, composed: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2,
+      pointerId: 1, pointerType: "touch", isPrimary: true, button: 0 };
+    var P = window.PointerEvent || MouseEvent;
+    el.dispatchEvent(new P("pointerdown", o));
+    el.dispatchEvent(new MouseEvent("mousedown", o));
+    el.dispatchEvent(new P("pointerup", o));
+    el.dispatchEvent(new MouseEvent("mouseup", o));
+    el.click();
+  }
   function find(cmd) {
     if (cmd.selector) {
       var list = Array.prototype.filter.call(document.querySelectorAll(cmd.selector), visible);
@@ -87,8 +100,14 @@
       var bare = own.replace(/^([a-z_]+\s+)+/, "");
       return own && (own.indexOf(want) === 0 || bare.indexOf(want) === 0) && visible(el);
     });
+    // **ما يُضغط أوّلاً، ثمّ الأقصرُ نصّاً** — صفُّ «خيارات» (`div.t2-v2-options`) وزرُّه بداخله يحملان النصَّ نفسَه بطوله، فاختير الصفُّ
+    // و`closest` يصعد لا ينزل، فنُقر صندوقٌ لا يفعل شيئاً والجوابُ ✓ (قِيس في Chrome على الحزمة نفسِها ٢٠٢٦-١١-١٨ — وهو سقوطُ «خيارات» على أندرويد).
+    var CLICKABLE = "button,a,[role=button],[role=option],[role=tab],label,input,textarea";
+    var rank = function (el) {
+      return el.matches(CLICKABLE) || el.closest(CLICKABLE) ? 0 : 1;
+    };
     all.sort(function (a, b) {
-      return (a.innerText || "").length - (b.innerText || "").length;
+      return rank(a) - rank(b) || (a.innerText || "").length - (b.innerText || "").length;
     });
     var hit = all[cmd.nth || 0];
     if (!hit) return null;
@@ -153,7 +172,7 @@
           setTimeout(function () {
             el.scrollIntoView({ block: "center" });
             setTimeout(function () {
-              el.click();
+              tap(el);
               reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
             }, 300);
           }, typing ? 900 : 0);
