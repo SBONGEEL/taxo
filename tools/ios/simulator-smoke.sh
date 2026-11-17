@@ -47,8 +47,15 @@ shoot() {
     xcrun simctl spawn "$udid" log show --last 2m --predicate "process == \"App\"" --style compact | tail -60 || true
     exit 1
   fi
-  xcrun simctl io "$udid" screenshot "$out/$name.png" >/dev/null
-  local size; size=$(stat -f%z "$out/$name.png")
+  # **يُعاد التصويرُ حتى ٤٥ ث قبل الحكم** — أوّلُ إقلاعٍ باردٍ لمحاكٍ جديدٍ رسم شاشةً بيضاء بعد ٢٠ ث (التشغيل 44049095452، SE، 29056 بايت)
+  # ثمّ رسم في إعادة الوظيفة نفسِها بلا تغيير. **والحدُّ لم يُخفَّف**: ما لم يُرسم في ٤٥ ث يُسقط كما كان.
+  local size=0 tries=0
+  while :; do
+    xcrun simctl io "$udid" screenshot "$out/$name.png" >/dev/null
+    size=$(stat -f%z "$out/$name.png")
+    [ "$size" -ge 40000 ] || [ "$tries" -ge 5 ] && break
+    tries=$((tries + 1)); sleep 5
+  done
   echo "   $lang: $(sips -g pixelWidth -g pixelHeight "$out/$name.png" | awk '/pixel/{printf "%s ", $2}')· ${size} بايت"
   if [ "$size" -lt 40000 ]; then
     echo "✗ $device · $lang: الشاشةُ لونٌ واحدٌ تقريباً (${size} بايت) — لم يُرسم شيء"; exit 1
