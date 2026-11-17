@@ -115,7 +115,12 @@ export function SubscriptionT2Screen() {
   const navigate = useNavigate();
   const { profile } = useDriver();
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — خيارٌ في ورقة التأكيد حيث مفتاحُه مشتعلٌ وحدَه
-  const payRequests = useCountryConfig(profile?.user?.country_code)?.features.payment_requests_enabled === true;
+  // **ودفعُ الاشتراك عبر Dpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — بمفتاحه ونظامُ الدفع العامُّ مطفأٌ في سوقه. **ولا شرطَ بالدولة**: الطرقُ تقول
+  // نفسَها — وسائلُ الدينار (ليبيا) تُعرض كوسيط السوق (أوّلُها بترتيب اللوحة زرُّ «الدفع عبر Dpay»)، **وطريقةُ البطاقة الدوليّة بعملة خصمٍ
+  // أخرى** (الأردن) تُعرض بزرّ البطاقة المصرفية أدناه
+  const subFeatures = useCountryConfig(profile?.user?.country_code)?.features;
+  const dpaySub = subFeatures?.dpay_subscription_enabled === true;
+  const payRequests = subFeatures?.payment_requests_enabled === true || dpaySub;
   // **طرقُ دفع الاشتراك في السوق** (§٧٦-ع/٢، المشكلة ٦): البطاقةُ عبر Chargily تُفتح من «الدفع ببطاقة» لا من «بتحويلٍ أو نقداً»،
   // والتحويلُ والنقدُ لا يُعرضان إلا إن وُجدت طريقةٌ يدويّة
   const [methods, setMethods] = useState<PayMethod[] | null>(null);
@@ -138,7 +143,7 @@ export function SubscriptionT2Screen() {
   // **ترتيبُ السوق** (أمرُ المالك ٢٠٢٦-١١-١٣) — البطاقةُ أوّلاً في الأردن
   const countryOrder = useCountryConfig(profile?.user?.country_code)?.payment_method_order;
   const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true ||
-    bankCardFeatures?.polar_card_enabled === true;
+    bankCardFeatures?.polar_card_enabled === true || dpaySub;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;
@@ -353,7 +358,7 @@ export function SubscriptionT2Screen() {
             ? tr("الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده، أو بتحويلٍ أو نقداً ويُفعَّل بعد اعتماد فريق المالية.", { 0: gatewayName })
             : payRequests && gatewayMethod
             ? tr("الشراء هنا من محفظتك، أو بالبطاقة عبر {0} ويُفعَّل فورَ تأكيده.", { 0: gatewayName })
-            : payRequests
+            : payRequests && hasManual
             ? tr("الشراء هنا من محفظتك، أو بتحويلٍ أو نقداً بطرق سوقك — ويُفعَّل بعد أن يعتمد فريقُ المالية دفعتَك.")
             : s.cardEnabled
             ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")

@@ -159,7 +159,7 @@ async def list_methods(
         provider.id
         for provider in providers
         if provider.integration in payment_gateways.OWN_SWITCH
-        and await payment_requests.own_switch_on(session, user.country_code, provider.integration, provider.code)
+        and await payment_requests.own_switch_on(session, user.country_code, provider.integration, provider.code, purpose)
     }
     if not general and not own:
         await payment_requests.require_enabled(session, user.country_code)
@@ -171,7 +171,7 @@ async def list_methods(
                 continue
         elif not general:
             continue
-        audience = payment_gateways.audience_of(provider.integration, provider.code)
+        audience = payment_gateways.audience_of(provider.integration, provider.code, purpose)
         if (audience == "driver" and not is_driver) or (audience == "rider" and is_driver):
             continue
         if provider.integration is None:

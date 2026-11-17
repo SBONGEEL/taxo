@@ -140,7 +140,7 @@ async def _run(
     if provider_key is ProviderKey.CLIQ_ACQUIRER:
         return await _test_cliq(values)
     if provider_key in (ProviderKey.CHARGILY, ProviderKey.SOFIZPAY, ProviderKey.NOWPAY, ProviderKey.WHOP, ProviderKey.MOONPAY,
-                        ProviderKey.POLAR):
+                        ProviderKey.POLAR, ProviderKey.DPAY):
         # **وسيطا الجزائر** (§٧٣-هـ المرحلة ٣) — `Chargily` يسأل رصيدَه، و`SofizPay` يقول إن لا بابَ له يختبر بلا أثر
         from app.services import payment_gateways
 

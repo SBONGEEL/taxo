@@ -108,3 +108,57 @@ Conditions: the same as the Dpay command.
 - Do not change any price or subscription amount.
 - No card data on our servers. Live keys only in C:\Users\loly3\.taxo-secrets\ and the panel's encrypted storage.
 - Dpay does not delay the Libya launch.
+
+
+---
+
+## أمرُ المالك ١٧/١١ الثالث — ترتيبُ العمل الموحَّد ونصُّ «أمر Dpay» كاملاً (كُتب لحظةَ وروده، ٢٠٢٦-١١-١٧ ٠٠:٣٠ UTC)
+
+> **يحلّ مشكلةَ «أمرُ Dpay الأصليّ ليس في المستودع»**: هذا نصُّه كما قاله المالك. **ويحسم التعارضَ المذكور أعلاه**: مراسلةُ Dpay **مأذونة**، و**Dpay وحده** من مزوّدي الدفع.
+> **ولا تقريرَ بين الأعمال**: رسالةٌ واحدةٌ عند افتتاح ليبيا (أو فوراً إن بقي مانع)، ولوحةُ الأيقونات وتسجيلُها، وتغيّرٌ غيرُ مخطَّطٍ في حارس المال/البصمة، وخطوةٌ تحتاج كلمةَ مروره/هويّتَه/دفعاً/توقيعَه. **ثمّ تقريرٌ عربيٌّ واحدٌ في النهاية.**
+
+ORDER OF WORK
+1. Recreate all the scheduled Gmail and provider follow-up checks listed at the top of HANDOFF.md (only if no other agent already runs them; never create duplicates).
+2. Libya launch, exactly as in design/OWNER-LIBYA-OPEN-2026-11-17.md and the work order at the top of HANDOFF.md: the readiness check item by item, matching the feature switches with Jordan and Algeria, the hidden rehearsal with a correct ledger, the server check, the launch switch with rollback steps, then OPEN Libya yourself, not before 09:00 Libya time, without waiting for another word from me. After opening: remove «قريباً» everywhere, take the money fingerprints again, and watch production for 2 hours.
+3. Dpay: the full command below. It runs in parallel and is NOT a launch blocker.
+4. Kotlin stage A, right after the Libya launch, so it is ready for the Google Play re-apply of the driver app on 26 November:
+   a. First audit the 5 features you said already exist in the driver app: the floating bubble, the full-screen ride request, background location, one-tap navigation, and the in-app review prompt. For each one: how it is built (native Kotlin in our project, a third-party plugin with name and version, or web code only); where the code is; whether it meets the standard of my Kotlin command (bubble stays on top of other apps and pulses on a request; the request shows on the LOCKED screen like an incoming call with ringtone; background location is a real foreground service with «أنت متصل» and keeps sending with the screen off, following the panel intervals; navigation opens Google Maps and Waze; the review prompt follows Google's limits); whether it was ever tested on a real phone; test it on the emulator now and record a short video; and your verdict: keep / improve / rebuild in native Kotlin. Any core driver feature (bubble, lock-screen request, background location) that is web code only or a weak plugin must be rebuilt in native Kotlin.
+   b. Then build everything missing in stage A, starting with the permissions center: the Quick Settings tile, the home-screen widget, auto-start after reboot, Play in-app updates, app icon shortcuts, rich notifications, and the manufacturer settings pages (Samsung, Xiaomi, Huawei, Oppo, Vivo, Realme, Infinix, Tecno).
+   c. Release as planned: rider app to Google Play; driver app on the closed track and the taxo.tajora.ly download page now, and to Google Play public on 26 November with the re-apply, with the Play declarations, disclosure screens and demo videos ready.
+5. Icons: style C as the base colors and fill only, with all icons redrawn in modern shapes and modern vehicles, exactly as in my icons command. Send me the final board and a short recording, and keep icons_v2 OFF until I approve.
+6. The gate 6 fix (why the deploy script stopped silently after the health check) before the next deploy, and the search case «مطار هواري بو مدين» (airport first).
+7. Kotlin stages B and C, as in my combined command.
+8. The admin panel additions (the 11 items).
+
+DPAY (full command)
+Owner note: I have started the company registration for TAXO, and I will give Dpay the company license when it is issued. Dpay gathers all the Libyan payment methods from the different banks in one place, and it can also accept international Visa and Mastercard cards in US dollars.
+- Contacting Dpay is allowed. Dpay is the ONLY payment provider you may contact. Do not open an account and do not pay anything.
+- Research Dpay's official website and documentation (API, hosted payment page, webhooks, test environment, supported cards and wallets, fees, settlement). If more than one company is called Dpay, tell me which one serves Libya before building.
+- Write the merchant requirements in Arabic in DPAY-REQUIREMENTS.md on C:\Users\loly3\OneDrive\Desktop (documents, steps, time), so I can prepare the papers.
+- If the documentation is not public, contact Dpay from aldeeb7767@gmail.com. Truth only: name Mohammad Alsaidat, TAXO is a ride-hailing app in Libya, the company registration is in progress, the license will be sent when issued, and TAXO also has drivers in Jordan. Calls in Arabic only. Follow up and add their replies, translated, to the file.
+- List every Libyan method Dpay offers (bank cards and services, wallets, pay-by-phone, purchase codes) with fees, limits and settlement time.
+- Build Dpay as ONE integration offering all these methods, provider-as-data: hosted payment page, no card data on our servers, verified webhook, credit only on a confirmed payment, idempotent, fallback status check, the existing ledger and PENDING / APPROVED states. Uses in Libya: rider wallet top-up, ride payment, driver subscription, each with its own panel switch; per method a switch, order, and Arabic name and instructions. Label: «الدفع بالبطاقة (Dpay)».
+- Compare with the Libyan methods we built by hand; report which Dpay replaces. Remove nothing.
+- Test in Dpay's test environment if they give test keys: paid, failed, repeated and late webhooks.
+- Jordan: ask Dpay whether a Libyan merchant may accept payments from customers in Jordan; which international cards with 3-D Secure; the charge currency and the settlement currency and exchange rate; where the money is paid and whether USD can be kept or sent abroad; the fees and minimum; recurring charges; and how the charge appears on the payer's statement. Build «الدفع بالبطاقة» for Jordan driver subscriptions only, OFF, showing the JOD price with the USD amount, with one exchange-rate source set from the panel. Write a section «Dpay للأردن» with your recommendation.
+- All Dpay switches stay OFF until the company license is issued, Dpay approves the merchant account, the live keys are stored, and for Jordan Dpay confirms cross-border payments in writing and a real Jordanian card payment succeeds. Then I approve.
+
+MESSAGES ALLOWED BEFORE THE END
+- One message when Libya is open (or at once if a launch blocker remains, such as missing fares or categories for Libya, the verification code not arriving on Libyan numbers, no working payment method, or a wrong ledger entry in the rehearsal).
+- The icons board and recording.
+- An unplanned money-guard or fingerprint change.
+- A step that needs my password, my identity, a payment or my signature.
+In every case, continue all other tasks that do not depend on it.
+
+FINAL REPORT (Arabic): each task and its status; the Libya launch time, readiness list, switches changed and rehearsal result; the Kotlin audit with verdicts and videos; what was released and the app versions and dates; every deploy with backup and money fingerprints before and after; the Dpay status and requirements; the phone checklist for me (S21 and Note 20); and everything that waits for me, explained simply.
+
+Conditions:
+- Do not create or change any price, fare, commission, subscription price or card value. If one is missing for Libya, it is a launch blocker: tell me and wait for that value only.
+- No money-table change without telling me first. Stop on any unplanned money-guard or fingerprint change. Test rides must leave the ledger correct.
+- Every deploy goes through all gates, with backup and money-table fingerprints before and after. Never skip or override a gate.
+- Truthful only. Do not say the company is registered until it is. Do not attribute any nationality to the owner.
+- Never type my passwords. Identity, bank, contracts and payment steps are mine. Never pay any fee.
+- No card data on our servers. Secrets and keys only in C:\Users\loly3\.taxo-secrets\ and the panel's encrypted storage. Never in code, git, chat or logs.
+- Tests run split on GitHub; no heavy local work. Check the heavy lock is free before any heavy local step.
+- The second agent works on iOS in D:\prj\TAXO-wt-ios on branch agent/ios. Do not touch its folder or branch, and do not cancel its CI runs. You alone deploy; deploy its changes when it asks in HANDOFF.md.
+- Google Maps stays OFF.

@@ -37,8 +37,14 @@ PATHS = (
     "/", "/download", "/privacy", "/terms", "/driver-privacy", "/driver-terms", "/delete-account",
     "/dz", "/dz/download", "/fr", "/en",
 )
-#: بلادٌ لا تُعرض في الشاشة — **تُعدّ ولا تُذكر** (قرارُ المالك: ليبيا لا تُذكر ولا تُعرض)
-HIDDEN_COUNTRIES = frozenset({"LY"})
+#: بلادٌ لا تُعرض في الشاشة — **تُعدّ ولا تُذكر**: **كلُّ سوقٍ مغلقٍ للعموم** (`country_visible` مطفأ) — كانت قائمةً ثابتةً «ليبيا»
+#: (قرارُ المالك: ليبيا لا تُذكر حتى تُفتح)، **فصارت تُقرأ من مفتاح السوق** (أمرُ المالك ٢٠٢٦-١١-١٧: بعد الفتح يُرفع «قريباً» في كلِّ مكان) —
+#: فتظهر ليبيا يومَ تُفتح بلا رفعٍ آخر، وتختفي إن أُغلقت.
+async def hidden_countries(session: AsyncSession) -> list[str]:
+    from app.models.enums import CountryCode
+    from app.services import markets
+
+    return [code.value for code in CountryCode if not await markets.is_open(session, code)]
 _COUNTRY = re.compile(r"^[A-Z]{2}$")
 
 
@@ -141,7 +147,7 @@ async def report(session: AsyncSession, days: int = 30) -> dict:
     now_day = today()
     since = now_day - timedelta(days=days - 1)
     win = _windows(now_day)
-    hidden = list(HIDDEN_COUNTRIES)
+    hidden = await hidden_countries(session)
 
     async def site_sum(start: date | None, column):
         stmt = select(func.coalesce(func.sum(column), 0)).where(SiteDaily.country.not_in(hidden))

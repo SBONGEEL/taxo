@@ -63,6 +63,13 @@ async def test_downloads_and_clicks_are_separate(client: AsyncClient, session_fa
 
 async def test_report_sums_site_and_play_and_hides_ly(client: AsyncClient, admin_headers: dict, session_factory) -> None:
     h = await viewer(client, admin_headers)
+    # **ليبيا مغلقةٌ للعموم** (صفٌّ صريح — السكوتُ «مفتوحة»، §٢٤) — والإخفاءُ يُقرأ من مفتاح السوق لا من قائمةٍ ثابتة
+    from app.models.enums import CountryCode
+    from app.models.feature_flag import FeatureFlag
+
+    async with session_factory() as s:
+        s.add(FeatureFlag(country_code=CountryCode.LY, feature_key="country_visible", enabled=False))
+        await s.commit()
     await client.post("/public/site/download/rider", headers={"CF-IPCountry": "DZ"})
     await client.post("/public/site/download/rider", headers={"CF-IPCountry": "LY"})
     await client.post("/public/site/hit", json={"path": "/"}, headers={"CF-IPCountry": "LY"})
@@ -79,6 +86,19 @@ async def test_report_sums_site_and_play_and_hides_ly(client: AsyncClient, admin
     # **ليبيا تُعدّ ولا تُعرض** — لا بلداً في القوائم ولا رقماً في المجاميع
     shown = {c["key"] for c in data["site_countries"] + data["download_countries"] + data["play_countries"]}
     assert "LY" not in shown
+
+    # **ويومَ تُفتح تظهر بلا رفعٍ آخر** (أمرُ المالك ٢٠٢٦-١١-١٧: بعد الفتح يُرفع «قريباً» في كلِّ مكان)
+    from sqlalchemy import update
+
+    async with session_factory() as s:
+        await s.execute(
+            update(FeatureFlag)
+            .where(FeatureFlag.country_code == CountryCode.LY, FeatureFlag.feature_key == "country_visible")
+            .values(enabled=True)
+        )
+        await s.commit()
+    opened = (await client.get("/admin/stats/report", headers=h)).json()
+    assert "LY" in {c["key"] for c in opened["site_countries"] + opened["download_countries"] + opened["play_countries"]}
 
 
 async def test_play_import_replaces_corrected_days(session_factory) -> None:

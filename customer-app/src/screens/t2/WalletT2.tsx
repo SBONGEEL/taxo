@@ -133,7 +133,9 @@ export function WalletT2Screen() {
   const card = cards?.find((row) => row.is_default) ?? cards?.[0] ?? null;
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
-  const payRequests = country?.features.payment_requests_enabled === true;
+  // **وDpay في ليبيا** (أمرُ المالك ٢٠٢٦-١١-١٧) — بمفتاحه في سوقه ونظامُ الدفع العامُّ مطفأٌ فيه: ورقةُ الشحن تعرض وسائلَه كطرق النظام
+  const dpayTopup = country?.features.dpay_topup_enabled === true;
+  const payRequests = country?.features.payment_requests_enabled === true || dpayTopup;
   // **شحنُ المحفظة بالبطاقة عبر Whop** (أمرُ المالك ٢٠٢٦-١١-١٣) — بمفتاحه في سوقه، ونظامُ الدفع العامُّ مطفأٌ فيه (الأردن)
   const whopTopup = country?.features.whop_rider_topup_enabled === true;
   // **الشحنُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — باقاتٌ ثابتة، بمفتاحه في سوقه

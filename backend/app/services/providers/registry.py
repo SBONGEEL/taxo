@@ -563,6 +563,53 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
     ),
     # **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا `feature_key`**:
     # مفتاحُه (`polar_card_enabled`) قرارُ المالك. **والثلاثةُ من لوحة Polar** (Settings ← Access Tokens · Webhooks · Products)
+    # **Dpay (dpay.ly) — بوّابةُ الدفع الليبيّة** (أمرُ المالك ٢٠٢٦-١١-١٧) — لكلِّ دولة (ليبيا، والأردنُ للاشتراك ببطاقةٍ دوليّة)، **ولا
+    # `feature_key`**: مفاتيحُه الثلاثةُ قرارُ المالك. **والاثنان من لوحة Dpay** (الإعدادات ← رموز الواجهة البرمجية · Webhooks)
+    ProviderKey.DPAY: ProviderSpec(
+        key=ProviderKey.DPAY,
+        label="Dpay — الدفعُ الليبيّ (إدفع لي · موبي كاش · سداد · معاملات · البطاقة الدوليّة …)",
+        fields=(
+            ProviderField(
+                key="api_token",
+                label="رمزُ التكامل — من لوحة Dpay: الإعدادات ← رموز الواجهة البرمجية (ورمزُ التجربة يبدأ بـ sb_tk_)",
+            ),
+            ProviderField(
+                key="webhook_secret",
+                label="سرّ الإشعار (يبدأ بـ whsec_) — من لوحة Dpay: Webhooks؛ وعنوانُه …/payment-requests/webhook/dpay "
+                "بأحداث checkout.completed و checkout.expired و checkout.cancelled",
+            ),
+            ProviderField(
+                kind="toggle", key="sandbox", label="وضع التجربة (sandbox) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="lyd_per_jod",
+                label="الأردن وحدَه: كم ديناراً ليبيّاً لكلِّ دينارٍ أردنيّ — مصدرُ السعر الواحد لاشتراك الكبتن بالبطاقة (فارغ في ليبيا)",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="usd_per_jod",
+                label="الأردن وحدَه: الدولارُ التقريبيُّ المعروضُ لكلِّ دينار — فارغ = ربطُ الدينار الرسميّ 1.4104",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بعملة الدولة لكلِّ الدافعين معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = للجميع)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     ProviderKey.POLAR: ProviderSpec(
         key=ProviderKey.POLAR,
         label="Polar — اشتراكُ الكبتن الشهريُّ بالبطاقة المصرفية",
