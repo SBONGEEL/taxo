@@ -10,11 +10,15 @@ import Capacitor
 /// 2. **سدّادتان في الويب** (`TaxoShims`): `navigator.vibrate` و`BarcodeDetector` غائبتان في WKWebView —
 ///    فتُسدّان بالملحق الأصليّ **بلا سطرٍ يتغيّر في شيفرة الشاشات**، والشاشاتُ تسأل عنهما كما تسأل اليوم.
 /// 3. **مندوبُ الإشعارات** يلتقط أزرارَ بطاقة الطلب (قبول · رفض) ويمرّر كلَّ ما عداها إلى Capacitor كما كان.
+/// 4. **لوحةُ المفاتيح تُقصِّر الصفحةَ ولا تغطّيها** — نظيرُ `adjustResize` في أندرويد: WKWebView لا يتقلّص مع لوحة المفاتيح، فالحقلُ
+///    في ورقةٍ مثبَّتةٍ أسفلَ الشاشة يقع تحتها. **فيُقصَّر إطارُ الصفحة إلى حافّة اللوحة** (كما يفعل ملحقُ Keyboard لـCapacitor بوضع
+///    `native`) — فكلُّ ما يُثبَّت في أسفلها بـCSS يصعد فوقها كما يصعد في أندرويد، **بلا سطرٍ في الشاشات ولا حزمةٍ تُضاف لأندرويد**.
 ///
 /// ويُشار إليها من `Main.storyboard` (`customModule="TaxoNative"`).
 open class TaxoBridgeViewController: CAPBridgeViewController {
 
     private var notificationDelegate: TaxoNotificationDelegate?
+    private var keyboardObserver: NSObjectProtocol?
 
     open override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
         let configuration = super.webViewConfiguration(for: instanceConfiguration)
@@ -55,5 +59,28 @@ open class TaxoBridgeViewController: CAPBridgeViewController {
         UNUserNotificationCenter.current().delegate = delegate
         notificationDelegate = delegate
         TaxoNotificationCategories.register()
+
+        keyboardObserver = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main
+        ) { [weak self] note in self?.keyboardChanged(note) }
+    }
+
+    deinit {
+        if let keyboardObserver { NotificationCenter.default.removeObserver(keyboardObserver) }
+    }
+
+    /// **الصفحةُ تنتهي حيث تبدأ اللوحة** — وتعود كاملةً حين تُغلق (التداخلُ صفر).
+    private func keyboardChanged(_ note: Notification) {
+        guard let webView, let window = webView.window,
+              let end = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else { return }
+        let overlap = max(0, window.bounds.maxY - end.minY)
+        let duration = note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
+        let frame = CGRect(x: 0, y: 0, width: window.bounds.width, height: window.bounds.height - overlap)
+        UIView.animate(withDuration: duration) {
+            webView.frame = frame
+            webView.layoutIfNeeded()
+        }
+        // **ولا إزاحةَ يضيفها WKWebView من عنده** — وإلا صعدت الصفحةُ مرّتين
+        webView.scrollView.contentInset = .zero
     }
 }
