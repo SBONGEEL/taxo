@@ -19,6 +19,7 @@ on:
       - "tools/channels*"
       - ".github/workflows/android.yml"
       - "scripts/android-emulator-films.sh"
+      - "scripts/android-emulator-films-rider.sh"
   workflow_dispatch:
 
 concurrency:
@@ -130,6 +131,42 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: films-driver
+          path: films/
+          if-no-files-found: warn
+          retention-days: 14
+
+  # **فيديو إشعار الكبتن الغنيّ عند الراكب** (SPEC §١٠٣ A/12) — حزمةُ تجربة الراكب ومسبارُها
+  emulator-rider:
+    name: المحاكي · إشعارُ الراكب الغنيّ
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk-customer-app
+          path: apk
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: التصويرُ على المحاكي
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/android-emulator-films-rider.sh apk films
+      - name: الفيديوهاتُ والسجلّات
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: films-rider
           path: films/
           if-no-files-found: warn
           retention-days: 14

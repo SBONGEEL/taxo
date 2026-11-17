@@ -244,6 +244,19 @@ public class OfferActivity extends Activity {
         OfferApi.decline(this, offer.rideId, ok -> finishAndRemoveTask());
     }
 
+    /** <b>فقاعةُ الحال لا تُغطّي الطلبَ بملء الشاشة</b> (§١٠٣ A/1، قِيس على محاكي CI ٢٠٢٦-١١-١٨: كانت فوق شارة TAXO) — وتعود بعده. */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        StatusBubble.hide(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        StatusBubble.showIfWanted(this);
+    }
+
     @Override
     protected void onDestroy() {
         if (timer != null) timer.cancel();

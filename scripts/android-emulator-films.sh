@@ -52,7 +52,10 @@ adb shell dumpsys notification --noredact > "$OUT/notification-channels.txt" 2>&
 grep -nE "taxo\.offer\.v2[^ ]*|mSound=|sound=" "$OUT/notification-channels.txt" | head -40 >> "$LOG"
 probe --es mode hide
 
-# ٣) الخدمةُ الأماميّةُ والموقعُ والشاشةُ مطفأة — يُقاس من dumpsys لا من الصورة (الشاشةُ سوداء)
+# ٣) الخدمةُ الأماميّةُ والموقعُ والشاشةُ مطفأة — يُقاس من dumpsys لا من الصورة (الشاشةُ سوداء).
+# **والتطبيقُ يُغلق قبلها** (قِيس في أوّل تشغيل): الويبُ بلا خادمٍ ولا دخولٍ هنا يقول «غيرُ متّصل» فيوقف الخدمةَ بعد ثوانٍ —
+# وهو سلوكُه الصحيح؛ فتُشغَّل الخدمةُ وحدَها في عمليّةٍ بلا نشاط، كما تعيش والكبتنُ في تطبيقٍ آخر
+adb shell am force-stop "$PKG"
 adb shell wm dismiss-keyguard
 step "بدءُ الخدمة الأماميّة" adb shell am start-foreground-service -n "$PKG/ly.tajora.driver.OnlineService" --el interval_ms 10000
 adb shell input keyevent KEYCODE_SLEEP
@@ -60,15 +63,20 @@ for i in 1 2 3 4 5 6; do adb emu geo fix 35.9$i 31.9$i >/dev/null 2>&1; sleep 5;
 adb shell dumpsys location > "$OUT/location-screen-off.txt" 2>&1
 grep -nE "$PKG|interval|Request\[" "$OUT/location-screen-off.txt" | head -30 >> "$LOG"
 adb shell dumpsys activity services "$PKG" > "$OUT/foreground-service.txt" 2>&1
-adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard
+grep -nE "OnlineService|isForeground" "$OUT/foreground-service.txt" | head -6 >> "$LOG"
+adb shell input keyevent KEYCODE_WAKEUP; adb shell input keyevent KEYCODE_MENU
 rec 03-online-notification 10
 adb shell cmd statusbar expand-notifications; sleep 6; adb shell cmd statusbar collapse
 pull 03-online-notification
 
 # ٤) بلاطةُ «متصل» في الإعدادات السريعة
 step "إضافةُ البلاطة" adb shell cmd statusbar add-tile "$PKG/ly.tajora.driver.OnlineTileService"
-rec 04-quick-tile 10
-adb shell cmd statusbar expand-settings; sleep 7; adb shell cmd statusbar collapse
+rec 04-quick-tile 14
+# البلاطةُ أُضيفت أوّلاً (QSTileHost)، **والصفحةُ الأولى تُعرض بالسحب** — ثمّ نقرةٌ عليها تفتح التطبيقَ بفعل «اتصل»
+adb shell cmd statusbar expand-settings; sleep 3
+adb shell input swipe 200 400 900 400 300; sleep 3
+adb shell cmd statusbar click-tile "$PKG/ly.tajora.driver.OnlineTileService" >>"$LOG" 2>&1; sleep 5
+adb shell cmd statusbar collapse
 pull 04-quick-tile
 
 adb logcat -d -t 2000 > "$OUT/logcat.txt" 2>&1

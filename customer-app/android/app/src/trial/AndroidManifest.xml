@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **مسبارُ إشعار الكبتن الغنيّ، في النكهة التجريبيّة وحدَها** (SPEC §١٠٣ A/12، ٢٠٢٦-١١-١٨) — يرسم `RideNotice` ببياناتٍ
+     ثابتةٍ على محاكي CI. **ومعزولٌ بالبناء**: هذا الملفُّ لا يُدمَج في `public`، فحزمةُ القناة العامّة لا تحمل المستقبِلَ ولا اسمَه. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".RideNoticeProbe"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="ly.tajora.rider.test.SHOW_RIDE_NOTICE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
