@@ -40,6 +40,7 @@ from typing import Any
 
 import httpx
 
+from app.core.currency import STORAGE_STEP
 from app.models.enums import PaymentRequestStatus
 from app.services import payment_gateways as base
 from app.services import payment_reasons as reasons
@@ -337,7 +338,7 @@ def _money(value: Any) -> Decimal | None:
     if not text:
         return None
     try:
-        return Decimal(text).quantize(Decimal("0.001"))
+        return Decimal(text).quantize(STORAGE_STEP)
     except InvalidOperation:
         return None
 
