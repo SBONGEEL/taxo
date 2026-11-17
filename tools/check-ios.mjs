@@ -253,6 +253,15 @@ if (mode === "--static") {
     const at = readFileSync(file, "utf8").search(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
     if (at >= 0) fail(`${file.slice(ROOT.length)}: حرفُ تحكّمٍ عند ${at} — غالباً \\1 أو \\0 كُتب بسلسلةٍ غيرِ خامّة`);
   }
+  // **ما يرسله الويبُ لا يُكتب في `UserDefaults` خاماً** (مقيسٌ ٢٠٢٦-١١-١٧، التشغيل 44033628421): `null` يصل `NSNull`
+  // فيُسقط `UserDefaults` التطبيقَ بـSIGABRT — سقط الكبتنُ لحظةَ كتب `widget_earnings: null`. **يمرّ بـ`plistSafe` أوّلاً.**
+  for (const file of textFiles.filter((f) => f.endsWith(".swift") && existsSync(f))) {
+    for (const [n, line] of readFileSync(file, "utf8").split("\n").entries()) {
+      if (/UserDefaults[^\n]*\.set\([^\n]*call\.(options|getObject|getArray)/.test(line) && !line.includes("plistSafe(")) {
+        fail(`${file.slice(ROOT.length)}:${n + 1}: خياراتُ الويب تُكتب في UserDefaults بلا plistSafe — null يُسقط التطبيق`);
+      }
+    }
+  }
   finish("ساكن");
 }
 

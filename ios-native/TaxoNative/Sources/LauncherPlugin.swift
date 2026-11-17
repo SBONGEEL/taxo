@@ -64,8 +64,23 @@ public class LauncherPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func setPrefs(_ call: CAPPluginCall) {
-        UserDefaults.standard.set(call.options as? [String: Any] ?? [:], forKey: "taxo.launcher.prefs")
+        UserDefaults.standard.set(LauncherPlugin.plistSafe(call.options), forKey: "taxo.launcher.prefs")
         call.resolve()
+    }
+
+    /// **`null` من الويب يصل `NSNull`، و`UserDefaults` يُسقط التطبيقَ به** (SIGABRT في `_CFPrefsValidateValueForKey`) — مقيسٌ في لقطات CI
+    /// (التشغيل 44033628421): الكبتنُ سقط لحظةَ كتب `widget_earnings: null`. **فلا يُحفظ إلا نصٌّ أو منطقيٌّ أو رقم**، والغائبُ يُحذف لا يُكتب.
+    static func plistSafe(_ options: [AnyHashable: Any]?) -> [String: Any] {
+        var out: [String: Any] = [:]
+        for (key, value) in options ?? [:] {
+            guard let key = key as? String else { continue }
+            switch value {
+            case let text as String: out[key] = text
+            case let number as NSNumber: out[key] = number   // يحمل المنطقيَّ والرقمَ معاً
+            default: continue                                 // NSNull وما عداه لا يُكتب
+            }
+        }
+        return out
     }
 
     static func symbol(for action: String) -> String {
