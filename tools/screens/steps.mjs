@@ -38,7 +38,7 @@ const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar",
 
 /** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
 const RIDER = [
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "دخول" }], settle: 4000 },
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لدي حساب" }], settle: 4000 },
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
@@ -48,8 +48,9 @@ const RIDER = [
   { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
 ];
 const DRIVER = [
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "دخول" }], settle: 4000 },
-  { name: "home-offline", label: "الرئيسيّة — غيرُ متّصل", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
+  // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }], settle: 4000 },
+  { name: "home-offline", label: "الرئيسيّة — غيرُ متّصل", do: [{ kind: "reset", storage: "in" }, { kind: "click", text: "تخط" }], settle: 9000 },
   { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000 },
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 12000 },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000 },
