@@ -31,14 +31,16 @@ async function command(body) {
 }
 
 const DEMO = JSON.stringify({ token: "screens", started_at: "2026-11-17T09:41:00Z" });
-const signedIn = (theme) => ({ "taxo.demo": DEMO, "taxo.access_token": "demo", "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
-const signedOut = (theme) => ({ "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
+// **أوّلُ فتحةٍ مقضيّة** — ورقةُ الترحيب وجولةُ التطبيق تغطّيان كلَّ لقطةٍ لو بقيتا (مقيسٌ في أوّل تشغيل)
+const SEEN = { "taxo.welcome.seen": "1", "taxo.driver.welcome.seen": "1", "taxo.driver.welcome.intro.seen": "1" };
+const signedIn = (theme) => ({ ...SEEN, "taxo.demo": DEMO, "taxo.access_token": "demo", "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
+const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
 
 /** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
 const RIDER = [
   { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "دخول" }], settle: 4000 },
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
-  { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }], settle: 3000 },
+  { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
   { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: "[role=option], .t2-place-row, li button" }], settle: 8000 },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000 },
@@ -48,7 +50,7 @@ const RIDER = [
 const DRIVER = [
   { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "دخول" }], settle: 4000 },
   { name: "home-offline", label: "الرئيسيّة — غيرُ متّصل", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", text: "ابدأ الاستقبال" }], settle: 6000 },
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000 },
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 12000 },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000 },
   { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },

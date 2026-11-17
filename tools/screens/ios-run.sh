@@ -26,6 +26,12 @@ xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --
 xcrun simctl location "$udid" set 31.9539,35.9106 || true   # عمّان — مدينةُ العرض
 xcrun simctl install "$udid" "$bundle_app"
 for p in location-always location photos camera microphone; do xcrun simctl privacy "$udid" grant "$p" "$bundle" 2>/dev/null || true; done
+# **إذنُ الإشعارات لا يمنحه `simctl privacy`** — ونافذتُه الأصليّة غطّت كلَّ لقطةٍ في أوّل تشغيل؛ فيُمنح بـapplesimutils
+if command -v applesimutils >/dev/null || { brew tap wix/brew >/dev/null 2>&1 && brew install applesimutils >/dev/null 2>&1; }; then
+  applesimutils --byId "$udid" --bundle "$bundle" --setPermissions notifications=YES || echo "⚠ لم يُمنح إذنُ الإشعارات"
+else
+  echo "⚠ لا applesimutils — قد تغطّي نافذةُ الإشعارات اللقطات"
+fi
 
 node "$root/tools/screens/server.mjs" "" > "$out/server.log" 2>&1 &
 server=$!
