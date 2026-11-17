@@ -239,6 +239,20 @@ if (mode === "--static") {
       if (readFileSync(bridges[0], "utf8") !== readFileSync(bridges[1], "utf8")) fail(`lib/${name} يفترق بين التطبيقين`);
     } else fail(`lib/${name} غائبٌ عن أحد التطبيقين`);
   }
+  // **لا حرفَ تحكّمٍ في نصوص iOS وسيرِ عملها** (مقيسٌ ٢٠٢٦-١١-١٧): `\1` كُتب `\x01` فأبطل `ios.yml` كلَّه — تشغيلٌ بصفر وظائف
+  // يُقرأ «فشل» بلا سطرٍ واحدٍ يقول لماذا، **فيُمسك هنا قبل الدفع** لا على GitHub بعده.
+  const textFiles = [
+    ...[".github/workflows/ios.yml", ".github/workflows/ios-release.yml"].map((f) => join(ROOT, f)),
+    ...["tools/screens", "tools/ios", "ios-native/TaxoNative/Sources", "ios-native/TaxoWidgets"].flatMap((dir) =>
+      existsSync(join(ROOT, dir))
+        ? readdirSync(join(ROOT, dir)).filter((f) => /\.(mjs|js|sh|rb|swift|json|plist|yml)$/.test(f)).map((f) => join(ROOT, dir, f))
+        : [],
+    ),
+  ];
+  for (const file of textFiles.filter((f) => existsSync(f))) {
+    const at = readFileSync(file, "utf8").search(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+    if (at >= 0) fail(`${file.slice(ROOT.length)}: حرفُ تحكّمٍ عند ${at} — غالباً \\1 أو \\0 كُتب بسلسلةٍ غيرِ خامّة`);
+  }
   finish("ساكن");
 }
 
