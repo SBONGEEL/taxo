@@ -24,4 +24,5 @@ APPEARANCE_CMD="bash $root/tools/screens/android-night.sh" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- 'adb exec-out screencap -p > "$SHOT"'
 # **سجلُّ الأعطال بجانب اللقطات** — تطبيقٌ أُغلق في منتصف الخطوات يُقرأ سببُه لا يُخمَّن (مقيسٌ: أُغلق بعد الدخول في التشغيل الثاني)
 adb logcat -d -b crash > "$out/crash.log" 2>/dev/null || true
-adb logcat -d -s AndroidRuntime:E Capacitor:* Capacitor/Console:* > "$out/logcat.log" 2>/dev/null || true
+adb logcat -d -v time > "$out/logcat.log" 2>/dev/null || true
+adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" > "$out/activity.txt" 2>/dev/null || true

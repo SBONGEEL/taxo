@@ -33,7 +33,7 @@ async function command(body) {
 const DEMO = JSON.stringify({ token: "screens", started_at: "2026-11-17T09:41:00Z" });
 // **أوّلُ فتحةٍ مقضيّة** — ورقةُ الترحيب وجولةُ التطبيق تغطّيان كلَّ لقطةٍ لو بقيتا (مقيسٌ في أوّل تشغيل)
 const SEEN = { "taxo.welcome.seen": "1", "taxo.driver.welcome.seen": "1", "taxo.driver.welcome.intro.seen": "1" };
-const signedIn = (theme) => ({ ...SEEN, "taxo.demo": DEMO, "taxo.access_token": "demo", "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
+const signedIn = (theme) => ({ ...SEEN, "taxo.demo": DEMO, "taxo.access_token": "demo", "taxo.driver.access_token": "demo", "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
 const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
 
 /** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
