@@ -39,7 +39,10 @@ shoot() {
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
   xcrun simctl launch "$udid" "$bundle" -AppleLanguages "($lang)" -AppleLocale "$lang" >/dev/null
   sleep 20
-  if ! xcrun simctl spawn "$udid" launchctl list | grep -q "UIKitApplication:$bundle"; then
+  # **القائمةُ تُقرأ كاملةً ثمّ يُبحث فيها** — `launchctl list | grep -q` مع `pipefail` يسقط حين يخرج grep عند أوّل تطابقٍ فيُكسر
+  # الأنبوبُ على launchctl (الإشارة ١٣): «لم يبقَ حيّاً» والتطبيقُ حيّ (مقيسٌ في التشغيل 43997796635).
+  local alive; alive="$(xcrun simctl spawn "$udid" launchctl list || true)"
+  if ! grep -q "UIKitApplication:$bundle" <<<"$alive"; then
     echo "✗ $device · $lang: التطبيقُ لم يبقَ حيّاً بعد ٢٠ ثانية"
     xcrun simctl spawn "$udid" log show --last 2m --predicate "process == \"App\"" --style compact | tail -60 || true
     exit 1
