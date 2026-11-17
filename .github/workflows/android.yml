@@ -18,6 +18,7 @@ on:
       - "customer-app/capacitor.config.ts"
       - "tools/channels*"
       - ".github/workflows/android.yml"
+      - "scripts/android-emulator-films.sh"
   workflow_dispatch:
 
 concurrency:
@@ -93,3 +94,42 @@ jobs:
           path: ${{ matrix.app }}/android/app/build/outputs/apk/trial/debug/*.apk
           if-no-files-found: error
           retention-days: 7
+
+  # **المحاكي — فيديوهاتٌ قصيرةٌ لما هو أصليٌّ خالص** (أمرُ المالك ١٨/١١ البند ٣/A): الفقاعتان، والطلبُ فوق القفل، والبلاطة، والخدمةُ
+  # الأماميّةُ والموقعُ والشاشةُ مطفأة — **بحزمة التجربة وملحقها `OfferProbe`** (في `src/trial` وحدَه). **وما يحتاج الواجهةَ وخادمَها**
+  # (مركزُ الأذونات، الملاحة، نافذةُ التقييم من Play) لا يُصوَّر هنا: حزمةُ التجربة تخاطب جهازَ مطوّرٍ لا يبلغه المشغّل، **ولا حسابَ إنتاجٍ
+  # يدخل CI** — فمكانُه فحصُ الهاتف (`PHONE-TEST-S21`). **و`screenrecord` بلا صوت**: الصوتُ يُقاس من قناته (`dumpsys notification`).
+  emulator:
+    name: المحاكي · فيديوهاتُ الكبتن
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk-driver-app
+          path: apk
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: التصويرُ على المحاكي
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/android-emulator-films.sh apk films
+      - name: الفيديوهاتُ والسجلّات
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: films-driver
+          path: films/
+          if-no-files-found: warn
+          retention-days: 14
