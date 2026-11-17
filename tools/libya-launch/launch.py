@@ -1,5 +1,8 @@
 # زرُّ إطلاق ليبيا ورجوعُه — فعلٌ واحدٌ عبر بابه الحقيقيّ (markets.set_status: فحصُ الجاهزيّة + سطرُ تدقيق + مفتاحُ country_visible).
 # ACTION=open|close   FORCE=1 يُفتح رغم نقص الجاهزيّة (قرارُ المالك وحدَه، والسببُ إلزاميّ)   REASON="..."
+# **والاستثناءُ محصورٌ في بندٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٧، `design/OWNER-2026-11-17-THIRD.md` ب): ليبيا تُفتح بلا طريقة دفعٍ إلكترونيّة،
+# **ولا يُتجاوز بـFORCE أيُّ ناقصٍ آخر** (أسعارٌ، سياسات، تقريب) — يرفض هذا الزرُّ قبل أن يكتب شيئاً. ولا يُضعف `markets.readiness`
+# لأيِّ دولة: الفحصُ كما هو، والاستثناءُ سطرٌ في التدقيق (`forced` + الناقص + السبب) باسم المالك.
 # بلا ACTION: قراءةٌ وحدَها (الحالُ والجاهزيّة).
 import asyncio, os, json
 from sqlalchemy import text
@@ -7,6 +10,10 @@ from app.core.db import SessionLocal
 from app.models.enums import CountryCode
 from app.models.user import User
 from app.services import markets
+
+#: **ما أذن المالكُ بتجاوزه وحدَه** — نصُّ `markets.readiness` حرفاً
+OWNER_EXCEPTED = {"لا طريقةَ دفعٍ عاملةً لشحن المحفظة ودفعِ الاشتراك"}
+
 
 async def main():
     action = os.environ.get("ACTION")
@@ -18,6 +25,11 @@ async def main():
         print("BEFORE", before, "SIGNUP", await markets.signup_state(s, CountryCode.LY), "MISSING", json.dumps(ready, ensure_ascii=False))
         if action not in ("open", "close"):
             await s.rollback(); return
+        if action == "open" and force:
+            others = [item for item in ready if item not in OWNER_EXCEPTED]
+            if others:
+                await s.rollback()
+                raise SystemExit(f"FORCE مرفوض: ناقصٌ خارج استثناء المالك — {others}")
         owner = (await s.execute(text("select u.id from users u join user_roles r on r.user_id=u.id where r.role='owner' limit 1"))).scalar()
         actor = await s.get(User, owner)
         after = await markets.set_status(s, country=CountryCode.LY, open_=(action == "open"), actor=actor, reason=reason, force=force)
