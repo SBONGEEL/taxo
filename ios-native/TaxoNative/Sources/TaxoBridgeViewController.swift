@@ -39,6 +39,7 @@ open class TaxoBridgeViewController: CAPBridgeViewController {
         bridge.registerPluginInstance(QrReaderPlugin())
         bridge.registerPluginInstance(CallKitPlugin())
         bridge.registerPluginInstance(LiveActivityPlugin())
+        bridge.registerPluginInstance(LauncherPlugin())
 
         switch TaxoApp.kind {
         case .driver:

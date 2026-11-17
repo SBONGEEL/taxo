@@ -14,6 +14,8 @@ public enum TaxoDeepLink {
 
     /// اختصاراتُ الأيقونة (`UIApplicationShortcutItems`) — النوعُ هو المسار
     public static func handle(shortcut: UIApplicationShortcutItem) -> Bool {
+        // **اختصارُ المُطلِق أوّلاً** (`LauncherPlugin` — يحكمه مفتاحُ `app_shortcuts`): فعلٌ يُسلَّم للويب لا مسار
+        if LauncherPlugin.deliver(shortcut) { return true }
         let path = shortcut.type.hasPrefix("/") ? shortcut.type : "/"
         return navigate(path)
     }

@@ -94,32 +94,5 @@
 		<string>location</string>
 		<string>remote-notification</string>
 	</array>
-	<key>UIApplicationShortcutItems</key>
-	<array>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>/wallet</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>المحفظة</string>
-			<key>UIApplicationShortcutItemIconSymbolName</key>
-			<string>creditcard</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>/rides</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>رحلاتي</string>
-			<key>UIApplicationShortcutItemIconSymbolName</key>
-			<string>clock.arrow.circlepath</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>/account/permissions</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>الأذونات</string>
-			<key>UIApplicationShortcutItemIconSymbolName</key>
-			<string>checkmark.shield</string>
-		</dict>
-	</array>
 </dict>
 </plist>

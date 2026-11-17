@@ -85,7 +85,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
-    /// **اختصاراتُ أيقونة التطبيق** (ضغطٌ مطوَّلٌ على الأيقونة) — `UIApplicationShortcutItems` في البيان
+    /// **اختصاراتُ أيقونة التطبيق** (ضغطٌ مطوَّلٌ على الأيقونة) — يضعها الويبُ بـ`Launcher.setShortcuts` خلف مفتاح `app_shortcuts`
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
         completionHandler(TaxoDeepLink.handle(shortcut: shortcutItem))
     }
