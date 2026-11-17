@@ -5,6 +5,8 @@
  */
 
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
 
 import { ApiError } from "@/api/client";
 import { cancelRide } from "@/api/endpoints";
@@ -55,13 +57,23 @@ export async function shareRide(ride: Ride, live: string | null = null) {
   ].filter(Boolean);
 
   const text = lines.join("\n");
-  if (navigator.share) {
-    await navigator.share({ title: tr("رحلتي على TAXO"), text, url: live ?? destination }).catch(
-      () => undefined,
-    );
+  const url = live ?? destination;
+  // **ورقةُ النظام من `@capacitor/share` في التطبيق** (SPEC §١٠٣ B/21) — `WebView` لا يعرف `navigator.share`، فكانت المشاركةُ
+  // في التطبيق المثبَّت تقع على النسخ صامتةً **ويسقط منها الرابطُ الحيّ**؛ والإلغاءُ من الورقة مشاركةٌ لم تتمّ لا نسخ
+  if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Share")) {
+    try {
+      await Share.share({ title: tr("رحلتي على TAXO"), text, url, dialogTitle: tr("أرسل تفاصيل رحلتك") });
+      return true;
+    } catch (error) {
+      const message = String((error as { message?: string })?.message ?? error).toLowerCase();
+      if (message.includes("cancel") || message.includes("abort")) return true;
+    }
+  } else if (navigator.share) {
+    await navigator.share({ title: tr("رحلتي على TAXO"), text, url }).catch(() => undefined);
     return true;
   }
-  await navigator.clipboard?.writeText(`${text}\n${destination}`).catch(() => undefined);
+  // **والنسخُ يحمل الرابطَ الحيَّ نفسَه** — لا رابطَ الوجهة وحدَه
+  await navigator.clipboard?.writeText(`${text}\n${url}`).catch(() => undefined);
   return false;
 }
 
