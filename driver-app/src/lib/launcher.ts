@@ -49,6 +49,11 @@ export function setRideActive(on: boolean): void {
   if (launcherAvailable()) void native.setPrefs({ ride_active: on }).catch(() => undefined);
 }
 
+/** **سطرُ الرحلة في إشعار «متّصل»** (§١٠٣ B/18) — `null` يمحوه فيعود الإشعارُ كما كان. */
+export function setRideLine(line: string | null): void {
+  if (launcherAvailable()) void native.setPrefs({ ride_line: line }).catch(() => undefined);
+}
+
 export function launcherAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Launcher");
 }
@@ -83,6 +88,7 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
   const offerCard = useFeature(country, "bubble_offer_card");
   const offerSpeech = useFeature(country, "offer_tts");
   const motionAware = useFeature(country, "motion_aware_location");
+  const rideLive = useFeature(country, "ride_live_notification");
   const latest = useRef({ online, onAction });
   latest.current = { online, onAction };
 
@@ -114,12 +120,13 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
         offer_tts: offerSpeech,
         offer_tts_user: offerSpeechChosen(),
         motion_aware_location: motionAware,
+        ride_live_notification: rideLive,
         online,
         widget_earnings: widget ? earningsText : null,
         widget_rides: widget && ridesToday !== null ? tr("رحلات اليوم: {0}", { 0: ridesToday }) : null,
       })
       .catch(() => undefined);
-  }, [tile, widget, boot, bubble, nativeLocation, offerCard, offerSpeech, motionAware, online, earningsText, ridesToday]);
+  }, [tile, widget, boot, bubble, nativeLocation, offerCard, offerSpeech, motionAware, rideLive, online, earningsText, ridesToday]);
 
   useEffect(() => {
     if (!launcherAvailable()) return;

@@ -41,6 +41,15 @@ public class StageBUnitTest {
     }
 
     @Test
+    public void rideLineReplacesTheTitleOnlyWhenOnAndConnected() {
+        assertEquals("في الطريق إلى الراكب", OnlineService.rideTitle(true, " في الطريق إلى الراكب ", false));
+        assertEquals(null, OnlineService.rideTitle(false, "في الطريق إلى الراكب", false));
+        assertEquals(null, OnlineService.rideTitle(true, "في الطريق إلى الراكب", true));
+        assertEquals(null, OnlineService.rideTitle(true, "", false));
+        assertEquals(null, OnlineService.rideTitle(true, null, false));
+    }
+
+    @Test
     public void unknownCurrencyIsKeptAsIs() {
         assertEquals("EUR", OfferSpeech.spokenCurrency(" EUR "));
         assertEquals("", OfferSpeech.spokenCurrency(null));

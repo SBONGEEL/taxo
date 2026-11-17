@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -105,6 +106,19 @@ public class OnlineService extends Service {
     private Location lastSent = null;
     private long lastSentAt = 0L;
 
+    /** <b>إشعارُ الرحلة الحيّ</b> (SPEC §١٠٣ B/18): سطرُ الحال يتبدّل في الإشعار القائم نفسِه — لا إشعارٌ ثانٍ ولا قناةٌ جديدة */
+    static final String RIDE_FEATURE = "ride_live_notification";
+    static final String RIDE_LINE = "ride_line";
+    private final SharedPreferences.OnSharedPreferenceChangeListener rideLineWatch = (prefs, key) -> {
+        if (RIDE_LINE.equals(key) || RIDE_FEATURE.equals(key)) refreshNotification();
+    };
+
+    /** <b>عنوانُ الإشعار أثناء الرحلة</b> — خالصٌ ومختبَر: مطفأً أو بلا سطرٍ أو والاتصالُ منقطع ⇐ {@code null} فيبقى ما كان حرفاً. */
+    static String rideTitle(boolean feature, String line, boolean degraded) {
+        if (!feature || degraded || line == null || line.trim().isEmpty()) return null;
+        return line.trim();
+    }
+
     /**
      * <b>أيُرسَل هذا الموقع؟</b> (SPEC §١٠٣ B/15) — خالصٌ ومختبَر. <b>واقفٌ لا يُرسل إلا نبضةَ اللوحة</b>: لم يتحرّك مسافةَ اللوحة منذ آخر
      * إرسال، ولم تمضِ نبضتُها ⇐ لا يُرسل. <b>ولا أقلَّ ممّا تسمح به اللوحة</b> — النبضةُ حدٌّ لا يُتجاوز، فمهلةُ الحضور لا تسقطه من
@@ -192,6 +206,7 @@ public class OnlineService extends Service {
         }
         if (!started) {
             started = true;
+            getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).registerOnSharedPreferenceChangeListener(rideLineWatch);
             // **اتّصالٌ جديد**: فقاعةُ الحال المُخفاةُ بالسحب تعود (§١٠٣ A/1) — الإخفاءُ لجلسةٍ واحدة
             StatusBubble.resetDismissed(this);
         }
@@ -221,6 +236,7 @@ public class OnlineService extends Service {
         // **«متّصل» يموت مع الخدمة** (SPEC §١٠٣/4–6): البلاطةُ والأداةُ تقرآنه — ولا تقولان ما ليس قائماً
         getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).edit().putBoolean("online", false).apply();
         LauncherPlugin.wake(this);
+        getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(rideLineWatch);
         stopTracking();
         StatusBubble.hide(this);
         watchdog.removeCallbacksAndMessages(null);
@@ -371,6 +387,11 @@ public class OnlineService extends Service {
         }
     }
 
+    private void refreshNotification() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null && started) manager.notify(NOTIFICATION_ID, buildNotification(degradedNow));
+    }
+
     private Notification buildNotification(boolean degraded) {
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
@@ -393,10 +414,14 @@ public class OnlineService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        SharedPreferences prefs = getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE);
+        String ride = rideTitle(prefs.getBoolean(RIDE_FEATURE, false), prefs.getString(RIDE_LINE, null), degraded);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(degraded ? "انقطع الاتصال" : "متصل — تستقبل الطلبات")
+            .setContentTitle(ride != null ? ride : degraded ? "انقطع الاتصال" : "متصل — تستقبل الطلبات")
             .setContentText(
-                degraded
+                ride != null
+                    ? "اضغط للعودة إلى الرحلة"
+                    : degraded
                     ? "افتح التطبيق لإعادة الاستقبال"
                     : "اضغط لفتح التطبيق"
             )

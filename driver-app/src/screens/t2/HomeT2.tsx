@@ -60,7 +60,8 @@ import {
   useDocumentsAttention,
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
-import { useDriverLauncher, setRideActive } from "@/lib/launcher";
+import { useDriverLauncher, setRideActive, setRideLine } from "@/lib/launcher";
+import { rideNoticeLine } from "@/lib/ride-notice";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
 import { useKeepAwake } from "@/lib/secure-screen";
@@ -294,6 +295,9 @@ export function HomeT2Screen() {
   useKeepAwake(useFeature(user?.country_code, "auto_night_keep_awake") && tracking);
   // **«في رحلة» للخدمة الأصليّة** (SPEC §١٠٣ B/15) — لا تقليلَ للإرسال أثناءها
   useEffect(() => setRideActive(tracking), [tracking]);
+  // **سطرُ الرحلة في إشعار «متّصل»** (SPEC §١٠٣ B/18) — بحالها، ويُمحى حين تنتهي
+  const rideStatus = tracking ? ride.status : null;
+  useEffect(() => setRideLine(rideNoticeLine(rideStatus)), [rideStatus]);
   useDriverLauncher({
     country: user?.country_code,
     online,

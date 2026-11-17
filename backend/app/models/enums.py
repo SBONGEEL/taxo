@@ -1030,6 +1030,8 @@ class FeatureKey(StrEnum):
     AUTO_NIGHT_KEEP_AWAKE = "auto_night_keep_awake"
     # **إرسالٌ أقلُّ والكبتنُ واقف** (SPEC §١٠٣/15) — لا أقلَّ من نبضة اللوحة، ولا أثناء رحلة
     MOTION_AWARE_LOCATION = "motion_aware_location"
+    # **إشعارُ الرحلة الحيّ للكبتن** (SPEC §١٠٣/18) — سطرُ الحال في إشعار «متّصل» نفسِه
+    RIDE_LIVE_NOTIFICATION = "ride_live_notification"
 
 
 class MapPlaceCategory(StrEnum):
