@@ -36,4 +36,9 @@ xcrun simctl launch "$udid" "$bundle" -AppleLanguages "(ar)" -AppleLocale "ar_JO
 sleep 12
 APPEARANCE_CMD="xcrun simctl ui $udid appearance" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- xcrun simctl io "$udid" screenshot '"$SHOT"'
+# **أثرُ خروج التطبيق يُحفظ** — مقيسٌ: الكبتنُ صار في الخلفيّة بعد ورقة الموقع بلا سطرٍ يقول لماذا (التشغيل 44026434831)
+xcrun simctl spawn "$udid" log show --last 30m --style compact   --predicate 'process == "App" OR (process == "SpringBoard" AND eventMessage CONTAINS[c] "'"$bundle"'") OR eventMessage CONTAINS[c] "terminat"'   > "$out/ios-app.log" 2>&1 || true
+crashes="$HOME/Library/Logs/DiagnosticReports"
+find "$crashes" -name "App*.ips" -newer "$out/server.log" -exec cp {} "$out/" \; 2>/dev/null || true
+ls "$out"/*.ips >/dev/null 2>&1 && echo "✗ تقريرُ انهيارٍ لـApp في $out" || echo "— لا تقريرَ انهيارٍ لـApp"
 xcrun simctl shutdown "$udid" || true
