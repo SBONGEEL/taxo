@@ -6,6 +6,8 @@
  *   click {text}      — يضغط أصغرَ عنصرٍ ظاهرٍ يبدأ نصُّه بالنصّ (أو `selector`)
  *   type {text}       — يكتب في الحقل المركَّز، أو أوّلِ حقلٍ ظاهر، كما يكتب المستخدم (حدثُ `input`)
  *   back              — `history.back()`
+ *   expect {any}      — **يقيس الشاشةَ المقصودة**: ينتظر حتى `timeout` عنصراً منها (نصّاً أو `selector`) **داخل الشاشة**، ويردّ بما وجد
+ *                       أو بما يُرى بدلَه. **فالصفُّ «بلغ» بعلامةٍ من شاشته لا بنجاح ضغطة** (أمرُ المالك ٢٠٢٦-١١-١٨).
  * **ولا يقرأ شيئاً ولا يرسل شيئاً غيرَ جوابه** — يضغط ويكتب كما تضغط اليدُ وتكتب. */
 (function () {
   var SERVER = "http://127.0.0.1:8787";
@@ -58,6 +60,20 @@
     if (r.width < 2 || r.height < 2) return false;
     var s = getComputedStyle(el);
     return s.visibility !== "hidden" && s.display !== "none" && Number(s.opacity) > 0.05;
+  }
+  /** **داخل الشاشة لا في الشجرة وحدها** — زرُّ «خيارات» في ورقةٍ انزلقت تحت حافّة iPhone SE كان «ظاهراً» وضُغط، والصورةُ خريطةٌ فارغة
+   *  (التشغيل 44140812843): `visible` يقيس أن له حجماً، وهذا يقيس أن العينَ تراه. */
+  function inView(el) {
+    var r = el.getBoundingClientRect();
+    var h = window.visualViewport ? window.visualViewport.height : innerHeight;
+    return r.bottom > 4 && r.top < h - 4 && r.right > 4 && r.left < innerWidth - 4;
+  }
+  /** **ما يُرى بدلَ العلامة** — عنوانٌ أو أوّلُ نصٍّ ظاهر، ليُكتب تحت الصفّ الأحمر فيُعرف أين وقف التطبيق. */
+  function seen() {
+    var heads = Array.prototype.filter.call(document.querySelectorAll("h1,h2,[role=heading],[role=status],button"), function (el) {
+      return visible(el) && inView(el) && (el.innerText || "").trim();
+    });
+    return heads.slice(0, 3).map(function (el) { return el.innerText.trim().replace(/\s+/g, " ").slice(0, 30); }).join(" | ");
   }
   function find(cmd) {
     if (cmd.selector) {
@@ -128,16 +144,35 @@
             if (cmd.optional) return reply(cmd.id, true, "— لا " + (cmd.text || cmd.selector));
             return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
           }
+          // **واللمسةُ تأخذ التركيزَ من الحقل كما تأخذه الإصبع** — `click()` البرمجيُّ لا يفعل، فبقيت لوحةُ المفاتيح مفتوحةً بعد اختيار النتيجة
+          // على iPhone SE وانزلقت ورقةُ الطلب تحت الحافّة (التشغيل 44140812843). فيُرفع التركيزُ ويُنتظر نزولُ اللوحة قبل الضغط.
+          var focused = document.activeElement;
+          var typing = focused && focused !== el && /INPUT|TEXTAREA/.test(focused.tagName);
+          if (typing) focused.blur();
           // **يُمرَّر إليه أوّلاً كما تمرّر اليد** — «خيارات» تحت حافّة الورقة على أندرويد فضُغط ولم تظهر ورقتُه (التشغيل 44120859563)
-          el.scrollIntoView({ block: "center" });
           setTimeout(function () {
-            el.click();
-            reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
-          }, 300);
+            el.scrollIntoView({ block: "center" });
+            setTimeout(function () {
+              el.click();
+              reply(cmd.id, true, (el.innerText || el.tagName).trim().slice(0, 40));
+            }, 300);
+          }, typing ? 900 : 0);
         };
         return attempt();
       }
       if (cmd.kind === "type") return reply(cmd.id, typeInto(cmd.text), cmd.text);
+      if (cmd.kind === "expect") {
+        var since = Date.now();
+        var look = function () {
+          for (var i = 0; i < cmd.any.length; i++) {
+            var hit = find(cmd.any[i]);
+            if (hit && inView(hit)) return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+          }
+          if (Date.now() - since < (cmd.timeout || 10000)) return setTimeout(look, 300);
+          reply(cmd.id, false, "لا علامةَ لـ«" + cmd.any.map(function (m) { return m.text || m.selector; }).join("» أو «") + "» — يُرى: " + seen());
+        };
+        return look();
+      }
       reply(cmd.id, true, "noop");
     } catch (error) {
       reply(cmd.id, false, String(error));

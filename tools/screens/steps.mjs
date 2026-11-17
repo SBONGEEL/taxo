@@ -7,6 +7,10 @@
  *   أندرويد: adb exec-out screencap -p > "$SHOT"
  * **فالشاشاتُ في النظامين بالخطوات نفسِها حرفاً** — والمقارنةُ مقارنةُ تطبيقٍ بتطبيق.
  *
+ * **و«بلغ» يعني أن علامةً من الشاشة المقصودة تُرى داخل الشاشة** (`expect` — أمرُ المالك ٢٠٢٦-١١-١٨)، لا أن الضغطةَ نجحت:
+ * في التشغيل 44140812843 نجحت كلُّ الضغطات وكانت ثلاثةُ صفوفٍ صوراً خاطئة (الدخولُ بقي على «غيرُ متاح»، وورقةُ الطلب تحت حافّة SE،
+ * والكبتنُ «بانتظار إشارة الموقع»). **وكلُّ عمودٍ فيه صفٌّ بلا علامته يُعاد مرّةً**، وما بقي بلا علامةٍ يُكتب أحمرَ بما يُرى بدلَها.
+ *
  * **ولا خطوةَ تسقط بصمت**: خطوةٌ لم يجد مُشغِّلُها زرَّها تُصوَّر كما هي **وتُكتب في `steps.json` بعلّتها** — فلوحةُ المقارنة تقول
  * «لم يُبلغ» تحت الشاشة لا صورةً خاطئةً بتسميةٍ صحيحة.
  */
@@ -36,24 +40,28 @@ const SEEN = { "taxo.welcome.seen": "1", "taxo.driver.welcome.seen": "1", "taxo.
 const signedIn = (theme) => ({ ...SEEN, "taxo.demo": DEMO, "taxo.access_token": "demo", "taxo.driver.access_token": "demo", "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
 const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar", "taxo.shell.open_map": "1" });
 
-/** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
+/** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ)،
+ *  و`expect` علاماتُ الشاشة المقصودة: **يكفي واحدةٌ منها داخل الشاشة**، وتُنتظر حتى ١٢ ث بعد `settle`. */
+const t = (text) => ({ text });
+const sel = (selector) => ({ selector });
 const RIDER = [
-  // **ضغطةٌ ثانيةٌ اختياريّة** — الترحيبُ يُعاد رسمُه بعد فحص المنطقة، فضغطةٌ قبله لا تنقل (مقيسٌ: أندرويد وSE بقيا على «غيرُ متاح» والضغطةُ ✓)
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لديّ حساب" }, { kind: "click", text: "لديّ حساب", optional: true }], settle: 4000 },
-  { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
-  { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
-  { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
-  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000 },
-  { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000 },
+  // **إلى شاشة الدخول بمسارها لا بزرِّ الترحيب** — الترحيبُ يتبدّل بفحص المنطقة («غيرُ متاحٍ في منطقتك»)، والضغطتان ✓ بقيتا عليه
+  // (أندرويد وPro Max، التشغيل 44140812843). والمسارُ هو ما يفتحه الزرّان كلاهما (`Welcome.tsx › go("/login")`).
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "nav", path: "/login" }], settle: 4000, expect: [sel("#password"), t("أهلاً من جديد")] },
+  { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000, expect: [t("إلى أين")] },
+  { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000, expect: [sel(".t2-ps input")] },
+  { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000, expect: [sel(".t2-ps-pick")] },
+  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("خيارات")] },
+  { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
-  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000 },
-  { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
+  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")] },
+  { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
 ];
 const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
   // **والترحيبُ يظهر عند الخروج في كلِّ جهاز، فـ«تخطَّ» إلزاميّةٌ هنا** — اختياريّةً لم تنتظره في أوّل إقلاعٍ بارد (iPhone، التشغيل 44039966678)
   // **وأوراقُ الأذونات الأولى (توفيرُ الطاقة…) تسبق الرئيسيّة في أندرويد** — «لاحقاً» اختياريّةٌ لأنها لا تظهر في كلِّ جهاز
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }, { kind: "click", text: "دخول" }], settle: 4000 },
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }, { kind: "click", text: "دخول" }], settle: 4000, expect: [sel("#password")] },
   {
     name: "home-offline",
     label: "الرئيسيّة — غيرُ متّصل",
@@ -70,12 +78,15 @@ const DRIVER = [
       { kind: "click", text: "ليس الآن", optional: true },
     ],
     settle: 9000,
+    expect: [sel(".t2-hm-go.off")],
   },
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000 },
+  // **«متّصل» بموقعٍ لا «بانتظار إشارة الموقع»** — Pro Max صُوِّر بلا موقعٍ والضغطةُ ✓ (التشغيل 44140812843)؛ والموقعُ يُعاد ضبطُه قبل كلِّ
+  // إعادة (`LOCATION_CMD`). **وطلبٌ وصل قبل اللقطة علامةٌ أيضاً**: لا يصل إلا لمتّصلٍ بموقع.
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000, expect: [t("متصل — بانتظار الطلبات"), t("قبول")] },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
-  { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000 },
-  { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000 },
-  { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
+  { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
+  { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
+  { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-wal-title")] },
 ];
 const steps = app === "driver-app" ? DRIVER : RIDER;
 const log = [];
@@ -94,11 +105,17 @@ async function pass(theme) {
         execSync(process.env.FOREGROUND_CMD, { stdio: "inherit", shell: "/bin/bash" });
         await wait(3000);
       }
+      // **والموقعُ يُضبط من جديد قبل كلِّ إعادة** — ضبطُه مرّةً قبل الإقلاع لم يصل الكبتنَ على Pro Max («بانتظار إشارة الموقع»)
+      if (body.kind === "reset" && process.env.LOCATION_CMD) execSync(process.env.LOCATION_CMD, { stdio: "inherit", shell: "/bin/bash" });
       const ack = await command(body);
       notes.push(`${action.kind}: ${ack.ok ? "✓" : "✗"} ${ack.note ?? ""}`.trim());
       await wait(body.kind === "reset" ? 2500 : 900);
     }
     await wait(step.settle);
+    if (step.expect) {
+      const seenAck = await command({ kind: "expect", any: step.expect, timeout: 12000 });
+      notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
+    }
     const file = join(out, `${theme}-${step.name}.png`);
     execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
     const reached = notes.every((n) => !n.includes("✗"));
@@ -115,10 +132,10 @@ for (const theme of ["light", "dark"]) {
   // **عطبُ بيئةٍ لا تطبيق**: فيُعاد العمودُ من أوّله ويُكتب أنه أُعيد؛ وإن صمت ثانيةً بقي أحمرَ كما هو.
   // **وعمودٌ سقط أكثرُه يُعاد كذلك** — iPhone 17 Pro Max رسم صفحةً بيضاءَ للعمود الفاتح كلِّه والخادمُ يُجاب (التشغيل 44140812843)،
   // والداكنُ بعده سليم: إقلاعٌ باردٌ كالذي رُئي في `simulator-smoke.sh`.
-  const silent = process.env.FOREGROUND_CMD && rows.some((r) => r.notes.some((n) => n.includes("لا جوابَ")));
-  const mostlyFailed = rows.filter((r) => !r.reached).length * 2 > rows.length;
-  if (silent || mostlyFailed) {
-    console.log(`↻ ${theme}: ${silent ? "الصفحةُ صمتت" : "سقط أكثرُ العمود"} — يُعاد العمودُ مرّةً`);
+  // **وصارت كلُّ علامةٍ غائبةٍ تعيد العمود** (أمرُ المالك ٢٠٢٦-١١-١٨) — مرّةً واحدةً لا حلقة، وما بقي أحمرَ يبقى أحمر.
+  const missed = rows.filter((r) => !r.reached).map((r) => r.name);
+  if (missed.length) {
+    console.log(`↻ ${theme}: بلا علامة — ${missed.join("، ")} — يُعاد العمودُ مرّةً`);
     rows = (await pass(theme)).map((r) => ({ ...r, notes: ["↻ أُعيد العمود", ...r.notes] }));
   }
   log.push(...rows);

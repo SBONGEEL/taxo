@@ -21,6 +21,7 @@ adb logcat -c || true
 adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 >/dev/null
 sleep 15
 FOREGROUND_CMD="adb shell monkey -p $pkg -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true" \
+LOCATION_CMD="adb emu geo fix 35.9106 31.9539 >/dev/null 2>&1 || true" \
 APPEARANCE_CMD="bash $root/tools/screens/android-night.sh" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- 'adb exec-out screencap -p > "$SHOT"'
 # **سجلُّ الأعطال بجانب اللقطات** — تطبيقٌ أُغلق في منتصف الخطوات يُقرأ سببُه لا يُخمَّن (مقيسٌ: أُغلق بعد الدخول في التشغيل الثاني)

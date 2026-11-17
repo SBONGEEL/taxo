@@ -34,6 +34,7 @@ trap 'kill $server 2>/dev/null || true' EXIT
 sleep 1
 xcrun simctl launch "$udid" "$bundle" -AppleLanguages "(ar)" -AppleLocale "ar_JO" >/dev/null
 sleep 12
+LOCATION_CMD="xcrun simctl location $udid set 31.9539,35.9106 || true" \
 APPEARANCE_CMD="xcrun simctl ui $udid appearance" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- xcrun simctl io "$udid" screenshot '"$SHOT"'
 # **أثرُ خروج التطبيق يُحفظ** — مقيسٌ: الكبتنُ صار في الخلفيّة بعد ورقة الموقع بلا سطرٍ يقول لماذا (التشغيل 44026434831)

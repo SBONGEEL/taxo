@@ -25,7 +25,7 @@
 
 | الخطوة | من يفعلها |
 |---|---|
-| مفتاحُ **App Store Connect API** (دورُ App Manager) يُنشئه المالكُ ويضعه في `~/.taxo-secrets/apple/` | المالك (دقيقتان) |
+| مفتاحُ **App Store Connect API** (دورُ **Admin** — الشهاداتُ لا تُنشأ بأقلّ؛ الخطواتُ للمالك في `DesktopAPPLE-ACCOUNT-STEPS.md`) يُنشئه المالكُ ويضعه في `~/.taxo-secrets/apple/` | المالك (دقيقتان) |
 | تسجيلُ المعرّفات: `ly.tajora.rider` · `ly.tajora.driver` (+ `.widgets` لكلٍّ) وقدراتُها: Push · Time Sensitive · App Groups | أنا بالمفتاح |
 | مفتاحُ **APNs (.p8)** ← يُرفع في Firebase للتطبيقين ← يُنزَّل `GoogleService-Info.plist` | المالك يُنشئه، وأنا أكمل |
 | شهادةُ التوزيع وملفّاتُ التزويد ← **أسرارُ GitHub المشفّرة** وحدَها | أنا بالمفتاح |
