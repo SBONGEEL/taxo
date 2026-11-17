@@ -3,10 +3,11 @@
 """
 import asyncio, json, time, uuid, sys
 import httpx, websockets
+from pathlib import Path
 
 API = "https://api.tajora.ly/api/v1"
 WS = API.replace("https://", "wss://") + "/ws"
-SECRETS = "/mnt/c/Users/loly3/.taxo-secrets/aldeeb-accounts.txt"
+ACCOUNTS_FILE = Path("/mnt/c/Users/loly3/.taxo-secrets/aldeeb-accounts.txt")  # مسارُ ملفّ حسابات التجربة — لا قيمةَ سرٍّ هنا
 PICKUP = {"lat": 32.89520, "lng": 13.18020}   # ميدان الشهداء
 DROPOFF = {"lat": 32.88340, "lng": 13.17150}  # قرب شارع عمر المختار
 CAP_START = (32.89800, 13.18300)
@@ -19,7 +20,7 @@ def log(step, **kw):
 
 def creds():
     d = {}
-    for line in open(SECRETS, encoding="utf-8"):
+    for line in open(ACCOUNTS_FILE, encoding="utf-8"):
         if "=" in line and not line.startswith("#"):
             k, v = line.strip().split("=", 1); d[k] = v
     return d
