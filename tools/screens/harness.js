@@ -11,6 +11,30 @@
   var SERVER = "http://127.0.0.1:8787";
   var DONE = "taxo.shot.done";
 
+  // **إذنُ الإشعارات يُجاب «مرفوضاً» قبل أن يبلغ الطبقةَ الأصليّة** — في حزمة اللقطات وحدَها.
+  // مقيسٌ في أوّل تشغيلين: نافذةُ iOS الأصليّة غطّت كلَّ لقطة (و`simctl` لا يمنح هذا الإذن)، وعلى أندرويد أغلق التسجيلُ التطبيقَ
+  // في غلاف التصحيح بلا Firebase. **فالشاشاتُ تُرسم كما تُرسم لمن رفض الإشعارات** — ولا شيءَ غيرُ هذا الإذن يُمسّ.
+  function quietPush() {
+    var cap = window.Capacitor;
+    if (!cap || typeof cap.nativePromise !== "function" || cap.__shotQuiet) return !!(cap && cap.__shotQuiet);
+    var real = cap.nativePromise;
+    cap.nativePromise = function (plugin, method, options) {
+      if (plugin === "PushNotifications" && (method === "checkPermissions" || method === "requestPermissions")) {
+        return Promise.resolve({ receive: "denied" });
+      }
+      if (plugin === "PushNotifications" && method === "register") return Promise.resolve();
+      return real.apply(cap, arguments);
+    };
+    cap.__shotQuiet = true;
+    return true;
+  }
+  if (!quietPush()) {
+    var tries = 0;
+    var timer = setInterval(function () {
+      if (quietPush() || ++tries > 200) clearInterval(timer);
+    }, 5);
+  }
+
   function done() {
     try {
       return Number(sessionStorage.getItem(DONE) || "0");

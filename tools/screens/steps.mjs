@@ -42,7 +42,7 @@ const RIDER = [
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
-  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: "[role=option], .t2-place-row, li button" }], settle: 8000 },
+  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000 },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000 },
   { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "back" }, { kind: "click", text: "اطلب" }], settle: 15000 },
   { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },

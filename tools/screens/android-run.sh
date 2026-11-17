@@ -17,7 +17,11 @@ adb reverse tcp:8787 tcp:8787
 adb install -r -g "$apk"
 adb emu geo fix 35.9106 31.9539 || true
 adb shell settings put system time_12_24 24 || true
+adb logcat -c || true
 adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 >/dev/null
 sleep 15
 APPEARANCE_CMD="bash $root/tools/screens/android-night.sh" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- 'adb exec-out screencap -p > "$SHOT"'
+# **سجلُّ الأعطال بجانب اللقطات** — تطبيقٌ أُغلق في منتصف الخطوات يُقرأ سببُه لا يُخمَّن (مقيسٌ: أُغلق بعد الدخول في التشغيل الثاني)
+adb logcat -d -b crash > "$out/crash.log" 2>/dev/null || true
+adb logcat -d -s AndroidRuntime:E Capacitor:* Capacitor/Console:* > "$out/logcat.log" 2>/dev/null || true
