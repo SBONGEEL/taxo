@@ -60,11 +60,15 @@ const DRIVER = [
       { kind: "click", text: "لاحقاً", optional: true },
       { kind: "click", text: "لاحقاً", optional: true },
       { kind: "click", text: "لاحقاً", optional: true },
+      // **وعلى iPhone ورقتا الأذونات الأوليان («١ / ٢»: الإشعارات ثمّ الموقع) بزرِّ «ليس الآن»** — مقيسٌ في التشغيل 44014121180
+      { kind: "click", text: "ليس الآن", optional: true },
+      { kind: "click", text: "ليس الآن", optional: true },
     ],
     settle: 9000,
   },
   { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 8000 },
-  { name: "offer", label: "طلبُ رحلة", do: [], settle: 12000 },
+  // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
+  { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000 },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000 },
   { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000 },
 ];
