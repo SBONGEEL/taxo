@@ -21,10 +21,10 @@ public enum TaxoNotificationCategories {
     public static let reject = "TAXO_REJECT"
     public static let open = "TAXO_OPEN"
 
-    /// **صوتُ الطلب** — `taxo_request.caf` من أصوات أندرويد نفسِها (`res/raw/taxo_request.ogg`) محوّلةً،
-    /// ودون ٣٠ ثانية (حدُّ Apple لصوت الإشعار). **وغيابُه يُسقط إلى صوت النظام لا إلى الصمت.**
+    /// **صوتُ الطلب** — الافتراضيُّ الجديدُ للجميع (قرارُ المالك ١٧/١١/٢٠٢٦: الخيارُ ٥ من المجموعة الثانية)، وهو ما يرسله الخادمُ
+    /// نفسُه في `aps.sound` (`fcm.py › _APNS_EVENTS`)، ودون ٣٠ ثانية (حدُّ Apple). **وغيابُه يُسقط إلى صوت النظام لا إلى الصمت.**
     static var offerSound: UNNotificationSound {
-        UNNotificationSound(named: UNNotificationSoundName("taxo_request.caf"))
+        UNNotificationSound(named: UNNotificationSoundName("taxo2_ride_request_5.caf"))
     }
 
     public static func register() {

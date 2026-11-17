@@ -162,12 +162,17 @@ def test_ios_events_carry_their_own_sound_and_buttons() -> None:
         return _provider()._payload("tok", message)["message"]["apns"]["payload"]["aps"]
 
     assert aps("ride_offer") == {
-        "sound": "taxo_request.caf",
+        "sound": "taxo2_ride_request_5.caf",
         "category": "TAXO_OFFER",
         "interruption-level": "time-sensitive",
     }
-    assert aps("incoming_call")["category"] == "TAXO_CALL"
-    assert aps("ride_completed") == {"sound": "taxo_ended.caf", "category": "TAXO_RIDE"}
+    assert aps("incoming_call") == {"sound": "taxo_call.caf", "category": "TAXO_CALL", "interruption-level": "time-sensitive"}
+    # **والافتراضيُّ الجديدُ للجميع** (قرارُ المالك ١٧/١١): كلُّ صوتِ حدثٍ غيرِ المكالمة من الخيار ٥ — `channels.NEW_DEFAULT`
+    from app.services.push import channels
+
+    assert channels.NEW_DEFAULT == "s2_5"
+    assert all(v["sound"].startswith("taxo2_") and v["sound"].endswith("_5.caf") for k, v in _APNS_EVENTS.items() if k != "incoming_call")
+    assert aps("ride_completed") == {"sound": "taxo2_ended_5.caf", "category": "TAXO_RIDE"}
     # **وما لا يخصّه شيءٌ يبقى كما كان**
     assert aps("admin_message") == {"sound": "default"}
 

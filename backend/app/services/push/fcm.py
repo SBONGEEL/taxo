@@ -64,18 +64,20 @@ logger = logging.getLogger(__name__)
 #: **صوتُ الحدث** من حزمة التطبيق (`ios-native/TaxoNative/Resources/sounds`)، **وفئةُ أزراره** (`TaxoNotifications.swift`)،
 #: **وما يخترق «التركيز»** (`time-sensitive`): الطلبُ والمكالمةُ ووصولُ الكبتن وحدَها — **فما يخترقه كلُّه لا يخترقه شيء**.
 #: والمفتاحُ `data["type"]` نفسُه — البيتُ الواحدُ لنوع الحدث (`ARCHITECTURE.md`). وما ليس هنا يبقى كما كان: `sound: default`.
+#: **والأصواتُ الافتراضيُّ الجديدُ للجميع** (قرارُ المالك ١٧/١١/٢٠٢٦: الخيارُ ٥ من المجموعة الثانية، `channels.NEW_DEFAULT`) — `taxo2_*_5`
+#: هي `design/sounds-v2/ios/option5_*` بأسماء أندرويد. **ولا «قديمَ» على iOS يُبقى له**: لم يُنشر تطبيقُه بعد. والمكالمةُ على رنينها.
 _APNS_EVENTS: dict[str, dict[str, str]] = {
-    "ride_offer": {"sound": "taxo_request.caf", "category": "TAXO_OFFER", "interruption-level": "time-sensitive"},
+    "ride_offer": {"sound": "taxo2_ride_request_5.caf", "category": "TAXO_OFFER", "interruption-level": "time-sensitive"},
     "incoming_call": {"sound": "taxo_call.caf", "category": "TAXO_CALL", "interruption-level": "time-sensitive"},
-    "driver_arrived": {"sound": "taxo_arrived.caf", "category": "TAXO_RIDE", "interruption-level": "time-sensitive"},
-    "driver_assigned": {"sound": "taxo_accepted.caf", "category": "TAXO_RIDE"},
-    "driver_approaching": {"sound": "taxo_approaching.caf", "category": "TAXO_RIDE"},
-    "ride_started": {"sound": "taxo_started.caf", "category": "TAXO_RIDE"},
-    "ride_completed": {"sound": "taxo_ended.caf", "category": "TAXO_RIDE"},
-    "payment_confirmed": {"sound": "taxo_payment.caf"},
-    "tip_received": {"sound": "taxo_payment.caf"},
-    "referral_rewarded": {"sound": "taxo_payment.caf"},
-    "cancellation_compensation": {"sound": "taxo_payment.caf"},
+    "driver_arrived": {"sound": "taxo2_captain_arrived_5.caf", "category": "TAXO_RIDE", "interruption-level": "time-sensitive"},
+    "driver_assigned": {"sound": "taxo2_accepted_5.caf", "category": "TAXO_RIDE"},
+    "driver_approaching": {"sound": "taxo2_accepted_5.caf", "category": "TAXO_RIDE"},
+    "ride_started": {"sound": "taxo2_started_5.caf", "category": "TAXO_RIDE"},
+    "ride_completed": {"sound": "taxo2_ended_5.caf", "category": "TAXO_RIDE"},
+    "payment_confirmed": {"sound": "taxo2_payment_5.caf"},
+    "tip_received": {"sound": "taxo2_payment_5.caf"},
+    "referral_rewarded": {"sound": "taxo2_payment_5.caf"},
+    "cancellation_compensation": {"sound": "taxo2_payment_5.caf"},
 }
 
 
