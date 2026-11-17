@@ -38,7 +38,7 @@ const signedOut = (theme) => ({ ...SEEN, "taxo.theme": theme, "taxo.lang": "ar",
 
 /** **الشاشاتُ بترتيبها** — `label` تحت الصورة في اللوحة، و`do` ما يُفعل قبلها، و`settle` ما يُنتظر لترسم (الخريطةُ أبطأ). */
 const RIDER = [
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لدي حساب" }], settle: 4000 },
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "لديّ حساب" }], settle: 4000 },
   { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000 },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000 },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000 },
