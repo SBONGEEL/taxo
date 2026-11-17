@@ -235,7 +235,7 @@ async def test_marketing_preference_defaults_on_and_can_be_switched(
 
     assert (
         await client.get("/me/notification-preferences", headers=headers)
-    ).json() == {"marketing_push_enabled": True}
+    ).json()["marketing_push_enabled"] is True
 
     updated = await client.put(
         "/me/notification-preferences",
@@ -243,7 +243,8 @@ async def test_marketing_preference_defaults_on_and_can_be_switched(
         headers=headers,
     )
     assert updated.status_code == 200
-    assert updated.json() == {"marketing_push_enabled": False}
+    # **والنغمةُ لا تُمسّ بمفتاح الإعلانات** («نغمة الإشعارات»، ١٧/١١)
+    assert updated.json()["marketing_push_enabled"] is False and updated.json()["notification_tone"] == "default"
 
 
 async def test_marketing_switch_does_not_touch_transactional_push(
