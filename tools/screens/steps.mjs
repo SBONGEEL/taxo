@@ -78,7 +78,8 @@ const DRIVER = [
 const steps = app === "driver-app" ? DRIVER : RIDER;
 const log = [];
 
-for (const theme of ["light", "dark"]) {
+async function pass(theme) {
+  const rows = [];
   if (process.env.APPEARANCE_CMD) execSync(`${process.env.APPEARANCE_CMD} ${theme}`, { stdio: "inherit" });
   for (const step of steps) {
     const notes = [];
@@ -99,8 +100,21 @@ for (const theme of ["light", "dark"]) {
     const file = join(out, `${theme}-${step.name}.png`);
     execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
     const reached = notes.every((n) => !n.includes("✗"));
-    log.push({ theme, name: step.name, label: step.label, file: `${theme}-${step.name}.png`, reached, notes });
+    rows.push({ theme, name: step.name, label: step.label, file: `${theme}-${step.name}.png`, reached, notes });
     console.log(`${reached ? "✓" : "✗"} ${theme} · ${step.label} — ${notes.join(" · ")}`);
   }
+  return rows;
+}
+
+for (const theme of ["light", "dark"]) {
+  let rows = await pass(theme);
+  // **عمودٌ صمتت فيه الصفحةُ يُعاد مرّةً واحدة** — على محاكٍ باردٍ أُعيد تشغيلُ خدمات Google بعد الإقلاع بدقيقة، فقتل النظامُ التطبيقَ
+  // لأنه يعتمد على مزوّد خطوطها («depends on provider … FontsProvider in dying proc») — التشغيل 44060665439، عمودُ الكبتن الفاتح.
+  // **عطبُ بيئةٍ لا تطبيق**: فيُعاد العمودُ من أوّله ويُكتب أنه أُعيد؛ وإن صمت ثانيةً بقي أحمرَ كما هو.
+  if (process.env.FOREGROUND_CMD && rows.some((r) => r.notes.some((n) => n.includes("لا جوابَ")))) {
+    console.log(`↻ ${theme}: الصفحةُ صمتت — يُعاد العمودُ مرّةً`);
+    rows = (await pass(theme)).map((r) => ({ ...r, notes: ["↻ أُعيد العمود", ...r.notes] }));
+  }
+  log.push(...rows);
 }
 writeFileSync(join(out, "steps.json"), JSON.stringify(log, null, 1));
