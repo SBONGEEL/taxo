@@ -57,6 +57,8 @@ interface OfferAlertPlugin {
   /** **`sounding`: الحزمةُ ترنّ بنفسها** على مجرى المنبّه (§٦١-ل/٥) — والأقدمُ لا تردّ شيئاً. */
   show(options: NativeOffer): Promise<{ sounding?: boolean } | undefined>;
   hide(): Promise<void>;
+  /** **«نغمة الإشعارات»** — غلافٌ أقدمُ لا يعرفها فيُبتلع خطؤه */
+  setTone(options: { tone: string }): Promise<void>;
   setSession(options: {
     apiBase: string | null;
     accessToken: string | null;
@@ -149,4 +151,11 @@ export async function maybeAskForOverlay(): Promise<void> {
     tr("لتظهر لك بطاقة الطلب فوق أي شاشة وأنت تقود، يحتاج التطبيق إذن «الرسم فوق التطبيقات». بدونه سيصلك إشعار يملأ الشاشة بدلاً منها. أتفتح موضع المنح الآن؟"),
   );
   if (wants) await openOverlaySettings();
+}
+
+
+/** **نغمةُ الطلب الأصليّ المختارة** («نغمة الإشعارات») — وغلافٌ أقدمُ بلا الطريقة يبقى على صوته. */
+export function setNativeOfferTone(tone: string): void {
+  if (Capacitor.getPlatform() !== "android") return;
+  plugin.setTone({ tone }).catch(() => undefined);
 }

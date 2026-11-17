@@ -40,6 +40,14 @@ public class OfferAlertPlugin extends Plugin {
      * النظامُ خدمةَ الموقع بعد دقائقَ من إطفاء الشاشة، <b>فيبدو الكبتنُ متصلاً
      * وهو غيرُ موجود</b> — وذاك أخطرُ من انقطاعٍ ظاهر.
      */
+    /** <b>«نغمة الإشعارات»</b> — نغمةُ الطلب الأصليّ المختارة، <b>و{@code default} يمحوها</b>. */
+    @PluginMethod
+    public void setTone(PluginCall call) {
+        String tone = call.getString("tone", "default");
+        OfferAlert.setTone(getContext(), "default".equals(tone) ? null : tone);
+        call.resolve();
+    }
+
     @PluginMethod
     public void status(PluginCall call) {
         Context context = getContext();

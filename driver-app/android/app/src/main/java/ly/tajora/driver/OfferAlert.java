@@ -83,6 +83,48 @@ public final class OfferAlert {
         return since >= 0 && since < RECENT_MS;
     }
 
+    private static final String TONE_PREFS = "taxo.tone";
+
+    /** <b>نغمةُ الطلب المختارة</b> («نغمة الإشعارات») — يكتبها الويبُ بـ{@code OfferAlert.setTone} حين يشتعل مفتاحُ سوقه، <b>ومحوُها
+     *  الافتراضيّ</b>. و«اهتزاز فقط» لا يُسكت الطلب: <b>الطلبُ يرنّ دائماً والكبتنُ متّصل</b> (أمرُ المالك ج/١/٤) فيبقى على الافتراضيّ. */
+    public static void setTone(Context context, String tone) {
+        context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).edit().putString("tone", tone).apply();
+    }
+
+    /** القناةُ التي يُرسم عليها الطلبُ الآن — <b>قناةُ النغمة إن وُجدت، وإلا الافتراضيّة</b>: قناةٌ غائبةٌ تُسقط الإشعارَ همساً. */
+    static String channelFor(Context context) {
+        String tone = context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).getString("tone", null);
+        if (tone == null || !tone.startsWith("s1_") || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return CHANNEL_ID;
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        String id = CHANNEL_ID + "." + tone;
+        return manager != null && manager.getNotificationChannel(id) != null ? id : CHANNEL_ID;
+    }
+
+    /** <b>قناةُ طلبٍ لكلِّ نغمة</b> — على مجرى المنبّه كأختها الافتراضيّة، فترنّ والهاتفُ صامت. */
+    public static void ensureToneChannels(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager == null) return;
+        int[] raws = {R.raw.taxo_ride_request_1, R.raw.taxo_ride_request_2, R.raw.taxo_ride_request_3};
+        for (int i = 0; i < TaxoChannels.TONES.length; i++) {
+            String id = CHANNEL_ID + "." + TaxoChannels.TONES[i];
+            if (manager.getNotificationChannel(id) != null) continue;
+            NotificationChannel channel = new NotificationChannel(id, "طلبات الرحلات · " + (i + 1), NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("بطاقةُ طلبٍ جديد بنغمتك — تصيح ولو كان الهاتفُ صامتاً.");
+            channel.enableVibration(true);
+            channel.setVibrationPattern(new long[] {0, 350, 200, 350});
+            channel.enableLights(true);
+            channel.setShowBadge(true);
+            channel.setSound(
+                    TaxoChannels.sound(context, raws[i]),
+                    new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build());
+            manager.createNotificationChannel(channel);
+        }
+    }
+
     /** ينشئ القناةَ إن لم تكن — <b>وإنشاؤها مرّةً واحدةً بحكم النظام</b>. */
     public static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
@@ -171,7 +213,7 @@ public final class OfferAlert {
         if (manager == null) return false;
 
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                ? new Notification.Builder(context, CHANNEL_ID)
+                ? new Notification.Builder(context, channelFor(context))
                 : new Notification.Builder(context);
         builder.setContentTitle("طلب رحلة جديد")
                 // **المهلةُ والأجرةُ في نصِّ الإشعار** (قرارُ المالك): «إشعارٌ

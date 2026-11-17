@@ -58,6 +58,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { tr } from "@/lib/i18n";
 import { UpdateGate } from "@/lib/update-gate";
 import { IconSetSwitch } from "@/lib/icon-set";
+import { ToneSync } from "@/components/NotificationTones";
 import { ReconsentGate } from "@/lib/reconsent-gate";
 import { PayReturnLinks, PublicPayReturn, isPublicPayReturn } from "@/lib/pay-return";
 import { AppTour } from "@/lib/app-tour";
@@ -501,6 +502,7 @@ export default function App() {
       <ConfigProvider>
         <SessionProvider>
           <IconSetSwitch />
+          <ToneSync />
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من إعلان صاحبة الحساب ومن
               مفتاح دولتها، فلا معنى لها قبلهما */}
           <BrandProvider>

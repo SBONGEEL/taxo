@@ -1118,3 +1118,9 @@ div.t2-srow { cursor: default; }
   transform: translateX(-50%);
   box-shadow: var(--t2-float-shadow);
 }
+
+/* **«نغمة الإشعارات»** (ج/١، ٢٠٢٦-١١-١٧) — صفُّ اختيارٍ وزرُّ معاينةٍ في كلِّ نغمة */
+.t2-tones { display: flex; flex-direction: column; }
+.t2-tones-pick { display: flex; align-items: center; gap: 12px; flex: 1; min-height: 44px; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.t2-tones-pick[aria-checked="true"] { font-weight: 700; }
+.t2-tones-play { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: inherit; cursor: pointer; }

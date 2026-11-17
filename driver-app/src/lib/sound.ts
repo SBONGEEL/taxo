@@ -184,7 +184,7 @@ export function isUnlocked(): boolean {
 function allowed(cue: Cue): boolean {
   // **الطلبُ الوارد يتخطّى المفتاحَ العام** — ومعه نغمةُ انقضائه: من قصد
   // إسكاتَ الطلب قصد إسكاتَ طرفَيه، **ونصفُ حدثٍ مسموعٌ أربكُ من صامتٍ كلِّه**
-  if (OFFER_CUES.has(cue)) return offerSoundEnabled();
+  if (OFFER_CUES.has(cue)) return offerAlways || offerSoundEnabled();
   // **ونغمةُ المنعطف تحت مفتاحها وتحت العام** — لا تحت «أصوات الرحلة والإشعارات»: من أشعل الإرشادَ قصده بعينه
   if (cue === "turn") return soundsEnabled() && guidanceSoundEnabled();
   // **وما عداه فئةٌ واحدةٌ تحت مفتاحها، وكلاهما تحت العام**: إطفاءُ العامِّ
@@ -201,7 +201,7 @@ const loading = new Map<string, Promise<AudioBuffer | null>>();
  *  قديمةٌ تُعزف مكانه **تُخفي أنّ الملفَّ لم يصل** (الشكلُ الثاني عشر)، والمحاولةُ
  *  تُعاد في التشغيل التالي. */
 function load(cue: Cue): Promise<AudioBuffer | null> {
-  const file = FILES[cue];
+  const file = fileOf(cue);
   const ctx = context;
   if (!file || !ctx) return Promise.resolve(null);
   const ready = buffers.get(file);
@@ -253,9 +253,11 @@ function sound(ctx: AudioContext, cue: Cue, buffer: AudioBuffer): void {
 export function play(cue: Cue): void {
   const ctx = context;
   if (!unlocked || !ctx || !allowed(cue)) return;
-  void load(cue).then((buffer) => {
-    if (buffer) sound(ctx, cue, buffer);
-  });
+  if (!(tone === "vibrate" && TONED[cue] && !OFFER_CUES.has(cue))) {
+    void load(cue).then((buffer) => {
+      if (buffer) sound(ctx, cue, buffer);
+    });
+  }
   buzz(cue);
 }
 
@@ -286,7 +288,7 @@ function buzz(cue: Cue): void {
 /** طولُ النغمة بالثواني — **من الملفّ نفسِه** حين يكون ملفّاً، فلا رقمَ ثانٍ
  *  لطولٍ واحد يفترق عنه أوّلَ مرّةٍ يُستبدل الملفّ. وصفرٌ لملفٍّ لم يُفكّ بعد. */
 export function durationOf(cue: Cue): number {
-  return buffers.get(FILES[cue])?.duration ?? 0;
+  return buffers.get(fileOf(cue))?.duration ?? 0;
 }
 
 /** **يكرّر نغمةً حتى يُوقفها من طلبها** — رنينُ المكالمة الواردة (§٦٦-د/٤). ويعيد ما يوقفها.
@@ -376,4 +378,63 @@ export function stopOfferLoop(): void {
     }
   }
   offerVoices.clear();
+}
+
+
+// ------------------------------------------------------------- «نغمة الإشعارات»
+
+/** **«نغمة الإشعارات»** (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١) — `default` الصوتُ الحاليّ، و`s1_N` خيارُ المجموعة الأولى، و`vibrate` اهتزازٌ
+ *  بلا صوت. **تُضبط من تفضيلات الحساب** (`/me/notification-preferences`) حين يشتعل مفتاحُ السوق، **ومطفأً تبقى `default`** */
+export type RingTone = "default" | "s1_1" | "s1_2" | "s1_3" | "vibrate";
+let tone: RingTone = "default";
+
+export function currentTone(): RingTone {
+  return tone;
+}
+
+export function setTone(next: RingTone): void {
+  tone = next;
+}
+
+/** **أيُّ ملفٍّ تعزفه النغمةُ** — ما ليس في `TONED` يبقى ملفَّه هو، فالمكالمةُ والخطأُ والمنعطفُ لا تتغيّر */
+function fileOf(cue: Cue, chosen: RingTone = tone): string {
+  const kind = TONED[cue];
+  const n = chosen.startsWith("s1_") ? chosen.slice(3) : null;
+  return kind && n ? `sounds/tones/${kind}_${n}.mp3` : FILES[cue];
+}
+
+/** **معاينةُ نغمةٍ في الإعدادات** — تُعزف ولو كانت الأصواتُ مطفأة: صاحبُها ضغط زرَّها ليسمعها */
+export function preview(chosen: RingTone): void {
+  const ctx = context;
+  if (!ctx) return;
+  if (chosen === "vibrate") {
+    try {
+      navigator.vibrate?.([0, 350, 200, 350]);
+    } catch {
+      /* لا اهتزاز */
+    }
+    return;
+  }
+  void ctx.resume();
+  const file = fileOf(PREVIEW_CUE, chosen);
+  void fetch(file)
+    .then((response) => response.arrayBuffer())
+    .then((bytes) => ctx.decodeAudioData(bytes))
+    .then((buffer) => {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    })
+    .catch(() => undefined);
+}
+
+/** **ما تتبعه النغمة** — ملفّاتُ `design/sounds/` بأسمائها في `public/sounds/tones/` */
+const TONED: Partial<Record<Cue, string>> = { offer: "request", rideStarted: "update", rideCompleted: "update", collected: "update", credited: "update" };
+const PREVIEW_CUE: Cue = "offer";
+
+/** **الطلبُ يرنّ دائماً والكبتنُ متّصل** حين يشتعل «نغمة الإشعارات» (أمرُ المالك ج/١/٤) — فمفتاحُ إسكاته يُخفى ولا يُقرأ */
+let offerAlways = false;
+export function setOfferAlways(on: boolean): void {
+  offerAlways = on;
 }

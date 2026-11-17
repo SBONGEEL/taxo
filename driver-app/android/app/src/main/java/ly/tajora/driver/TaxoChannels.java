@@ -55,6 +55,31 @@ final class TaxoChannels {
         create(context, manager, GENERAL, "إشعارات عامة",
                 NotificationManager.IMPORTANCE_DEFAULT, R.raw.taxo_notify);
         createCall(context, manager);
+        int[] update = {R.raw.taxo_ride_update_1, R.raw.taxo_ride_update_2, R.raw.taxo_ride_update_3};
+        createToned(context, manager, ENDED, "انتهاء الرحلة", update);
+        createToned(context, manager, PAYMENT, "المدفوعات", update);
+        OfferAlert.ensureToneChannels(context);
+    }
+
+    /**
+     * <b>«نغمة الإشعارات» — المجموعةُ الرابعة</b> (أمرُ المالك ٢٠٢٦-١١-١٧، ج/١): <b>قناةٌ لكلِّ نغمة</b> لأن صوتَ القناة لا يتغيّر بعد
+     * إنشائها. معرّفُها معرّفُ الحدث ولاحقةُ النغمة ({@code taxo.ended.s1_2})، <b>والقنواتُ القديمةُ تبقى كما هي</b> لمن بقي على
+     * الافتراضيّ. والخادمُ يختار القناةَ بنغمة صاحب الجهاز (`push/channels.py → toned`) <b>ولا يرسل إليها قبل أن يبلّغ بها الجهاز</b>.
+     */
+    static final String[] TONES = {"s1_1", "s1_2", "s1_3"};
+
+    static void createToned(Context context, NotificationManager manager, String base, String name, int[] raws) {
+        for (int i = 0; i < TONES.length; i++) {
+            create(context, manager, base + "." + TONES[i], name + " · " + (i + 1),
+                    NotificationManager.IMPORTANCE_HIGH, raws[i]);
+        }
+        String vibrate = base + ".vibrate";
+        if (manager.getNotificationChannel(vibrate) != null) return;
+        NotificationChannel channel = new NotificationChannel(vibrate, name + " · اهتزاز", NotificationManager.IMPORTANCE_HIGH);
+        channel.setSound(null, null);
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[] {0, 350, 200, 350});
+        manager.createNotificationChannel(channel);
     }
 
     /**

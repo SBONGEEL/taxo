@@ -1952,5 +1952,14 @@
   "رحلات اليوم: {0}": "Courses du jour : {0}",
   "اتصل الآن": "Se connecter",
   "اطلب رحلة إلى البيت": "Course vers la maison",
-  "محفظتي": "Mon portefeuille"
+  "محفظتي": "Mon portefeuille",
+  "نغمة الإشعارات": "Sonnerie des notifications",
+  "الافتراضيّة": "Par défaut",
+  "نغمة 1": "Sonnerie 1",
+  "نغمة 2": "Sonnerie 2",
+  "نغمة 3": "Sonnerie 3",
+  "اهتزاز فقط": "Vibreur uniquement",
+  "تعذّر حفظ النغمة — حاول مرّةً أخرى.": "Impossible d’enregistrer la sonnerie — réessayez.",
+  "استمع إلى {0}": "Écouter {0}",
+  "طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.": "Les demandes de course sonnent toujours quand vous êtes en ligne, avec la sonnerie choisie — « Vibreur uniquement » s’applique aux autres notifications."
 }

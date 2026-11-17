@@ -764,6 +764,9 @@ export interface CardOrder {
 
 export interface NotificationPreferences {
   marketing_push_enabled: boolean;
+  /** **«نغمة الإشعارات»** (ج/١، ٢٠٢٦-١١-١٧) — غائبةٌ في خادمٍ أقدم */
+  notification_tone?: string;
+  tones?: string[];
 }
 
 /** **قناةُ الصرف** — كليك والبنكُ للأردن وليبيا، **وقنواتُ الجزائر** (SPEC §٧٣-هـ المرحلة ٤): CCP وBaridiMob والبنكُ وكاشُ المكتب. */

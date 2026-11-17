@@ -103,6 +103,8 @@ const CHANNELS_V2 = ["taxo.offer.v2", "taxo.ended", "taxo.payment", "taxo.genera
  *  (`CallMessagingService`)، **فوجودُها شاهدٌ على الخدمة**: بها يرسل الخادمُ الرنينَ بياناتٍ وحدَها ترسمها الخدمة.
  *  **ولا تُبلَّغ دون الثانية كاملةً** — الثالثةُ تزيد عليها ولا تحلّ محلّها. */
 const CALL_CHANNEL = "taxo.call";
+/** شاهدُ المجموعة الرابعة — قناةُ «انتهت الرحلة» بالنغمة الأولى، وهي في الغلافين */
+const TONE_CHANNEL = "taxo.ended.s1_1";
 
 /** **ما أجاب به `channelSet` آخرَ مرّة** — وهو ما يُرسَل مع رمز الجهاز (`session.tsx`). */
 let reported: number | undefined;
@@ -118,7 +120,8 @@ export async function channelSet(): Promise<number | undefined> {
     const { channels } = await PushNotifications.listChannels();
     const present = new Set(channels.map((channel) => channel.id));
     if (!CHANNELS_V2.every((id) => present.has(id))) return undefined;
-    reported = present.has(CALL_CHANNEL) ? 3 : 2;
+    // **والرابعة: قناةٌ لكلِّ نغمة** («نغمة الإشعارات»، ج/١) — وهي فوق الثالثة في الحزمة نفسِها
+    reported = present.has(TONE_CHANNEL) ? 4 : present.has(CALL_CHANNEL) ? 3 : 2;
     return reported;
   } catch {
     return undefined;

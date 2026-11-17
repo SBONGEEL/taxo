@@ -21,6 +21,9 @@
  * وتقاريرُ الأعطال، وإشعاراتُ العروض، والسِمةُ الوردية.
  */
 
+import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
+import { setNativeOfferTone } from "@/lib/offer-alert";
+import { setOfferAlways } from "@/lib/sound";
 import { hasCliqPayout } from "@/lib/payout";
 import { useState, type ReactNode } from "react";
 
@@ -103,6 +106,11 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function applyDriverTone(tone: string, on: boolean): void {
+  setNativeOfferTone(tone === "vibrate" ? "default" : tone);
+  setOfferAlways(on);
+}
+
 export function SettingsT2Screen() {
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const {
@@ -150,6 +158,8 @@ export function SettingsT2Screen() {
   const [guidance, setGuidanceState] = useState(guidanceSoundEnabled);
   // **شريطُ الإرشاد مفتاحُ السوق** — مطفأً لا تعليمةَ ولا نغمة، فلا مفتاح
   const guidanceReady = country?.features.next_instruction_enabled === true;
+  // **«نغمة الإشعارات»** (ج/١) — مفتاحُ السوق
+  const tonesOn = country?.features[TONES_FLAG] === true;
 
   return (
     <div className="t2 t2-settings scr">
@@ -223,14 +233,22 @@ export function SettingsT2Screen() {
             </span>
           </div>
         ) : null}
-        {/* **نغمةُ الطلب لا يُسكتها المفتاحُ العام** (قرارُ المالك §9.2) — ولذلك تسكن مع استقبال الطلبات */}
-        <Toggle
-          icon="notifications"
-          title={tr("نغمة الطلب الوارد")}
-          hint={tr("تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات.")}
-          on={offerSound}
-          onToggle={toggleOfferSound}
-        />
+        {/* **نغمةُ الطلب لا يُسكتها المفتاحُ العام** (قرارُ المالك §9.2) — ولذلك تسكن مع استقبال الطلبات.
+            **ومع «نغمة الإشعارات» يرنّ الطلبُ دائماً** (ج/١/٤): يُختار صوتُه ولا يُسكت، فمفتاحُ إسكاته يُخفى */}
+        {tonesOn ? (
+          <NotificationTones
+            applyNative={applyDriverTone}
+            note={tr("طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.")}
+          />
+        ) : (
+          <Toggle
+            icon="notifications"
+            title={tr("نغمة الطلب الوارد")}
+            hint={tr("تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات.")}
+            on={offerSound}
+            onToggle={toggleOfferSound}
+          />
+        )}
       </Group>
 
       <Group label={tr("الملاحة")}>
