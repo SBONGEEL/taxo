@@ -67,7 +67,9 @@
     var want = cmd.text;
     var all = Array.prototype.filter.call(document.querySelectorAll("body *"), function (el) {
       var own = (el.innerText || el.getAttribute("aria-label") || el.getAttribute("placeholder") || "").trim();
-      return own && own.indexOf(want) === 0 && visible(el);
+      // **اسمُ أيقونة Material يسبق النصَّ في الزرّ** («check قبول») — يُنزع ثمّ يُطابَق (مقيسٌ: «قبول» لم يُوجد على أندرويد)
+      var bare = own.replace(/^([a-z_]+\s+)+/, "");
+      return own && (own.indexOf(want) === 0 || bare.indexOf(want) === 0) && visible(el);
     });
     all.sort(function (a, b) {
       return (a.innerText || "").length - (b.innerText || "").length;

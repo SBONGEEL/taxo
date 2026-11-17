@@ -57,11 +57,13 @@ const DRIVER = [
     do: [
       { kind: "reset", storage: "in" },
       { kind: "click", text: "تخط", optional: true },
-      { kind: "click", text: "لاحقاً", optional: true },
-      { kind: "click", text: "لاحقاً", optional: true },
-      { kind: "click", text: "لاحقاً", optional: true },
+      { kind: "click", text: "لاحق", optional: true },
+      { kind: "click", text: "لاحق", optional: true },
+      { kind: "click", text: "لاحق", optional: true },
       // **وعلى iPhone ورقتا الأذونات الأوليان («١ / ٢»: الإشعارات ثمّ الموقع) بزرِّ «ليس الآن»** — مقيسٌ في التشغيل 44014121180
       { kind: "click", text: "ليس الآن", optional: true },
+      // ثمّ ورقةُ الموقع «٢ / ٢» بزرِّ «لاحقاً» — **و«لاحق» بلا تنوينٍ تطابق الرسمين** (لاحقاً · لاحقًا)
+      { kind: "click", text: "لاحق", optional: true },
       { kind: "click", text: "ليس الآن", optional: true },
     ],
     settle: 9000,
