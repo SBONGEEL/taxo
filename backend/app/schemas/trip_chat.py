@@ -174,3 +174,16 @@ class AdminChatReportOut(BaseModel):
 
 class ChatReportHandleIn(BaseModel):
     note: str = Field(default="", max_length=500)
+
+
+class AdminChatRoomOut(BaseModel):
+    """**صفُّ «غرف المحادثة»** — رحلةٌ فيها رسائل، بلا نصّ (النصُّ بفتح الغرفة)."""
+
+    ride_id: uuid.UUID
+    country_code: CountryCode
+    status: RideStatus
+    rider_name: str | None = None
+    driver_name: str | None = None
+    message_count: int
+    last_message_at: datetime
+    open_reports: int

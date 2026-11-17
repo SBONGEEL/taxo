@@ -653,6 +653,7 @@ export type FeatureKey =
   | "icons_v2"
   | "places_search_v2"
   | "permissions_center"
+  | "notification_tones_enabled"
   | "quick_tile"
   | "home_widget"
   | "boot_resume"
@@ -2828,6 +2829,18 @@ export interface AdminReportedMessage {
   sender_id: string | null;
   sender_name: string | null;
   created_at: string;
+}
+
+/** **صفُّ «غرف المحادثة»** (بندُ اللوحة ٧) — رحلةٌ فيها رسائل، بلا نصّ: النصُّ بفتح الغرفة. */
+export interface AdminChatRoom {
+  ride_id: string;
+  country_code: CountryCode;
+  status: RideStatus;
+  rider_name: string | null;
+  driver_name: string | null;
+  message_count: number;
+  last_message_at: string;
+  open_reports: number;
 }
 
 /** **صفُّ «الرسائل المبلَّغ عنها»** — الرسالةُ ومرسلُها، ومن أبلغ، والسبب، والرحلة، والحال. */

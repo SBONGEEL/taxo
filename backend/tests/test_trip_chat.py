@@ -571,6 +571,39 @@ async def test_reports_list_and_handling_are_audited(
     assert handle_row.action is AuditAction.UPDATE and str(handle_row.actor_id) == reader["id"]
 
 
+async def test_rooms_list_without_texts_reported_first_searched_and_audited(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**«غرفُ المحادثة»** (بندُ اللوحة ٧): بلا نصوص، ما فيه بلاغٌ مفتوحٌ أوّلاً، والبحثُ بأوّل رقم الرحلة، وكلُّ فتحٍ سطرُ تدقيق،
+    **وبلا صلاحية `trip_chats.read` يُرفض**."""
+    trip = await _chat_ride(client, session_factory)
+    ride_id = trip["ride"]["id"]
+    theirs = (await _send(client, trip["driver"]["headers"], ride_id, "كلامٌ مسيء")).json()
+    await _send(client, trip["rider"]["headers"], ride_id, "مرحبا")
+    await client.post(
+        f"/rides/{ride_id}/chat/{theirs['id']}/report", json={"reason": "abuse"}, headers=trip["rider"]["headers"]
+    )
+    reader = await _chat_reader(client, admin_headers)
+
+    assert (await client.get("/admin/chat-rooms", headers=admin_headers)).status_code == 403
+    listed = await client.get("/admin/chat-rooms?country_code=JO", headers=reader["headers"])
+    assert listed.status_code == 200, listed.text
+    [row] = listed.json()
+    assert row["ride_id"] == ride_id and row["message_count"] == 2 and row["open_reports"] == 1
+    assert row["rider_name"] and row["driver_name"]
+    assert "كلامٌ مسيء" not in listed.text and "مرحبا" not in listed.text
+
+    only = await client.get("/admin/chat-rooms?only_reported=true", headers=reader["headers"])
+    assert [r["ride_id"] for r in only.json()] == [ride_id]
+    found = await client.get(f"/admin/chat-rooms?q={ride_id[:8]}", headers=reader["headers"])
+    assert [r["ride_id"] for r in found.json()] == [ride_id]
+    missed = await client.get("/admin/chat-rooms?q=zzzzzz", headers=reader["headers"])
+    assert missed.json() == []
+
+    rows = await _audit_rows(session_factory, "chat_rooms")
+    assert len(rows) == 4 and all(str(r.actor_id) == reader["id"] for r in rows)
+
+
 # ═════════════════════════ ٨) القديمُ يُحذف في موعده — والمبلَّغُ عنه حتى يُعالَج
 
 
