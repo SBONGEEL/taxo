@@ -25,8 +25,12 @@ REC=$!
 sleep 1
 adb shell am broadcast -a ly.tajora.rider.test.SHOW_RIDE_NOTICE -p "$PKG" \
   --es photo_url "https://github.githubassets.com/images/gravatars/gravatar-user-420.png" >>"$LOG" 2>&1
-sleep 5
-adb shell cmd statusbar expand-notifications; sleep 7
+sleep 3
+adb shell cmd statusbar expand-notifications; sleep 3
+# **لقطةٌ ثابتةٌ مع الفيديو** — قِيس في الجولة الثانية: الإشعارُ رُسم (dumpsys) والتسجيلُ فاته
+adb shell screencap -p /sdcard/05-rich-notification.png
+adb pull /sdcard/05-rich-notification.png "$OUT/05-rich-notification.png" >>"$LOG" 2>&1 && say "✓ لقطة 05-rich-notification" || say "✗ لقطة 05-rich-notification"
+sleep 6
 adb shell cmd statusbar collapse
 wait "$REC" 2>/dev/null; sleep 1
 adb pull /sdcard/05-rich-notification.mp4 "$OUT/05-rich-notification.mp4" >>"$LOG" 2>&1 && say "✓ فيديو 05-rich-notification" || say "✗ فيديو 05-rich-notification"
