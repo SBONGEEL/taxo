@@ -1026,6 +1026,10 @@ class FeatureKey(StrEnum):
     OFFER_TTS = "offer_tts"
     # **منعُ لقطات الشاشة في المحفظة ورمز بطاقة TAXO** (SPEC §١٠٣/26) — في التطبيقين
     SCREEN_SECURE = "screen_secure"
+    # **المظهرُ «تلقائي» والشاشةُ مضاءةٌ أثناء الرحلة** (SPEC §١٠٣/16) — الكبتن
+    AUTO_NIGHT_KEEP_AWAKE = "auto_night_keep_awake"
+    # **إرسالٌ أقلُّ والكبتنُ واقف** (SPEC §١٠٣/15) — لا أقلَّ من نبضة اللوحة، ولا أثناء رحلة
+    MOTION_AWARE_LOCATION = "motion_aware_location"
 
 
 class MapPlaceCategory(StrEnum):

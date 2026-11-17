@@ -291,7 +291,7 @@ export class DriverSocket {
     const now = Date.now();
     if (now - this.lastPulseAt >= PULSE_MS && this.open_()) {
       this.lastPulseAt = now;
-      onlineService.start(this.policy.available_seconds);
+      onlineService.start(this.policy.available_seconds, this.policy.heartbeat_seconds, this.policy.move_meters);
     }
     if (this.mode === "trip") {
       this.record(false);
@@ -410,7 +410,7 @@ export class DriverSocket {
       this.sent = null;
       this.sendLocation();
       for (const batch of this.pending) batch.sentAt = 0;
-      onlineService.start(this.policy.available_seconds);
+      onlineService.start(this.policy.available_seconds, this.policy.heartbeat_seconds, this.policy.move_meters);
       this.lastPulseAt = Date.now();
       this.options.onOpen?.();
     };

@@ -26,7 +26,13 @@ import { demoActive } from "@/demo/mode";
 interface OnlineServicePlugin {
   /** `endpoint` و`token` يُمرَّران مع كلِّ نبضة — فالخدمةُ تبثّ بنفسها حين
    *  يخنق النظامُ مؤقتاتِ الـWebView، **بالبابِ نفسِه** الذي ينادي الويب. */
-  start(options: { endpoint: string; token: string | null; interval_seconds?: number }): Promise<void>;
+  start(options: {
+    endpoint: string;
+    token: string | null;
+    interval_seconds?: number;
+    heartbeat_seconds?: number;
+    move_meters?: number;
+  }): Promise<void>;
   /** المقبسُ سقط والكبتنُ ما زال «مستقبِلاً» — فيقول الإشعارُ الحقيقة. */
   degraded(): Promise<void>;
   stop(): Promise<void>;
@@ -60,7 +66,7 @@ export const onlineService = {
    * كلَّ عشرين ثانية، **فيصير الإلغاءُ ضجيجاً لا حدثاً**.
    */
   /** `intervalSeconds` فاصلُ «المتاح» من لوحة البثّ (§١٠٣ A/3) — تقرؤه الخدمةُ حين يشتعل `native_location`، وغيابُه فاصلُها كما كان */
-  start: (intervalSeconds?: number) => {
+  start: (intervalSeconds?: number, heartbeatSeconds?: number, moveMeters?: number) => {
     // **وضعُ الضيف لا يبثّ موقعاً إلى الخادم** (SPEC §٧٦-ن/٢) — فلا خدمةَ استقبالٍ تبدأ
     if (!Capacitor.isNativePlatform() || demoActive()) return;
     void (async () => {
@@ -70,6 +76,9 @@ export const onlineService = {
           endpoint: locationBroadcastUrl(),
           token: cached,
           ...(intervalSeconds ? { interval_seconds: Math.round(intervalSeconds) } : {}),
+          // **نبضةُ اللوحة ومسافةُ الحركة** (§١٠٣ B/15) — إرسالٌ أقلُّ والكبتنُ واقف، ولا أقلَّ من النبضة
+          ...(heartbeatSeconds ? { heartbeat_seconds: Math.round(heartbeatSeconds) } : {}),
+          ...(moveMeters ? { move_meters: Math.round(moveMeters) } : {}),
         });
       } catch (error) {
         console.warn("تعذّر بدءُ خدمة الاستقبال", error);

@@ -143,8 +143,8 @@ def test_the_stop_order_goes_to_the_native_service_alone() -> None:
 
 def test_the_third_set_is_three_and_anything_newer() -> None:
     """**ما دون الثانية أقدم، وما فوق الثالثة ثالثة** — حزمةٌ أحدثُ من الخادم تحمل ما تحمله الثالثةُ على الأقلّ."""
-    # **والرابعةُ (قناةٌ لكلِّ نغمة، ١٧/١١) تعلوها** — وما فوقها رابعة
-    assert [channels.level_of(value) for value in (None, 1, 2, 3, 4, 7)] == [0, 0, 2, 3, 4, 4]
+    # **والرابعةُ (قناةٌ لكلِّ نغمة، ١٧/١١) تعلوها، والخامسةُ (إشعارُ الكبتن الغنيّ، ١٨/١١) فوقها** — وما فوقها خامسة
+    assert [channels.level_of(value) for value in (None, 1, 2, 3, 4, 7)] == [0, 0, 2, 3, 4, 5]
     # **وما ليس رنيناً في الثالثة كما في الثانية** — قناتُه، ويرسمه النظام
     accepted = PushMessage(title="تم قبول رحلتك", body="…", data={"type": "driver_assigned"})
     shaped = channels.for_level(accepted, channels.CHANNELS_V3)

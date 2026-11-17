@@ -124,7 +124,7 @@ def create_push_photo_token(ride_id: str, driver_id: str) -> str:
     """**رمزُ صورة كبتن رحلةٍ في إشعارٍ يرسمه الهاتف** (SPEC §١٠٣/12) — الخدمةُ الأصليّةُ لا تحمل رمزَ دخول الراكب،
     فيحمل الإشعارُ رابطاً **لهذه الصورة وحدَها، لهذه الرحلة وكبتنها، ٤٥ دقيقة**. ولا يفتح شيئاً غيرَها: نوعُه `push_photo`
     يرفضه كلُّ بابٍ يطلب `access`."""
-    token, _, _ = _create_token(ride_id, "push_photo", PUSH_PHOTO_TTL, {"drv": driver_id})
+    token, _, _ = _create_token(str(ride_id), "push_photo", PUSH_PHOTO_TTL, {"drv": str(driver_id)})
     return token
 
 

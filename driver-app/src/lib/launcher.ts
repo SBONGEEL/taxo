@@ -44,6 +44,11 @@ export function setOfferSpeech(on: boolean): void {
   if (launcherAvailable()) void native.setPrefs({ offer_tts_user: on }).catch(() => undefined);
 }
 
+/** **«في رحلة»** (§١٠٣ B/15) — يقرؤه `OnlineService`: لا تقليلَ للإرسال أثناء رحلة. */
+export function setRideActive(on: boolean): void {
+  if (launcherAvailable()) void native.setPrefs({ ride_active: on }).catch(() => undefined);
+}
+
 export function launcherAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Launcher");
 }
@@ -77,6 +82,7 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
   const nativeLocation = useFeature(country, "native_location");
   const offerCard = useFeature(country, "bubble_offer_card");
   const offerSpeech = useFeature(country, "offer_tts");
+  const motionAware = useFeature(country, "motion_aware_location");
   const latest = useRef({ online, onAction });
   latest.current = { online, onAction };
 
@@ -107,12 +113,13 @@ export function useDriverLauncher({ country, online, earningsText, ridesToday, o
         bubble_offer_card: offerCard,
         offer_tts: offerSpeech,
         offer_tts_user: offerSpeechChosen(),
+        motion_aware_location: motionAware,
         online,
         widget_earnings: widget ? earningsText : null,
         widget_rides: widget && ridesToday !== null ? tr("رحلات اليوم: {0}", { 0: ridesToday }) : null,
       })
       .catch(() => undefined);
-  }, [tile, widget, boot, bubble, nativeLocation, offerCard, offerSpeech, online, earningsText, ridesToday]);
+  }, [tile, widget, boot, bubble, nativeLocation, offerCard, offerSpeech, motionAware, online, earningsText, ridesToday]);
 
   useEffect(() => {
     if (!launcherAvailable()) return;

@@ -23,6 +23,7 @@
 
 import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
 import { offerSpeechChosen, setOfferSpeech } from "@/lib/launcher";
+import { useTheme } from "@/lib/theme";
 import { setNativeOfferTone } from "@/lib/offer-alert";
 import { setOfferAlways } from "@/lib/sound";
 import { hasCliqPayout } from "@/lib/payout";
@@ -163,6 +164,9 @@ export function SettingsT2Screen() {
   const tonesOn = country?.features[TONES_FLAG] === true;
   // **«انطق الطلب»** (§١٠٣ B/14) — مفتاحُ السوق يُظهره، واختيارُ الكبتن يشعله
   const speechReady = country?.features.offer_tts === true;
+  // **«تلقائي» في المظهر** (§١٠٣ B/16)
+  const autoNight = country?.features.auto_night_keep_awake === true;
+  const theme = useTheme();
   const [speech, setSpeechState] = useState(offerSpeechChosen);
 
   return (
@@ -348,12 +352,21 @@ export function SettingsT2Screen() {
             <span className="t2-srow-title">{tr("جولة في التطبيق")}</span>
           </span>
         </button>
-        <button type="button" className="t2-srow" onClick={toggle}>
+        {/* **«تلقائي» خيارٌ ثالث** (§١٠٣ B/16) حين يشتعل مفتاحُ السوق: ليلي ← نهاري ← تلقائي */}
+        <button
+          type="button"
+          className="t2-srow"
+          onClick={() =>
+            autoNight ? theme.setChoice(choice === "dark" ? "light" : choice === "light" ? "auto" : "dark") : toggle()
+          }
+        >
           <Icon name="dark_mode" className="t2-srow-icon" />
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("المظهر")}</span>
           </span>
-          <span className="t2-srow-value">{choice === "dark" ? tr("ليلي") : tr("نهاري")}</span>
+          <span className="t2-srow-value">
+            {choice === "auto" ? tr("تلقائي") : choice === "dark" ? tr("ليلي") : tr("نهاري")}
+          </span>
         </button>
         {/* **اللغة** (SPEC §٧٣-هـ المرحلة ٥) — لغتان، فالضغطُ يقلب بينهما كالمظهر؛ وتُحفظ في الحساب ثمّ يُعاد تحميلُ التطبيق */}
         <button

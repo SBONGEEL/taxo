@@ -34,6 +34,11 @@ public class OnlinePlugin extends Plugin {
         // **فاصلُ «المتاح» من لوحة البثّ** (§١٠٣ A/3) — غائبٌ من ويبٍ أقدم: الخدمةُ على فاصلها كما كانت
         Integer seconds = call.getInt("interval_seconds");
         if (seconds != null) intent.putExtra("interval_ms", seconds * 1000L);
+        // **نبضةُ اللوحة ومسافةُ الحركة** (§١٠٣ B/15) — لإرسالٍ أقلّ والكبتنُ واقف، لا أقلَّ من النبضة
+        Integer heartbeat = call.getInt("heartbeat_seconds");
+        if (heartbeat != null) intent.putExtra("heartbeat_ms", heartbeat * 1000L);
+        Integer move = call.getInt("move_meters");
+        if (move != null) intent.putExtra("move_meters", (int) move);
         dispatch(intent);
         call.resolve();
     }

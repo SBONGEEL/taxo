@@ -9,7 +9,20 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
-const screenSecure = registerPlugin<{ set(options: { on: boolean }): Promise<void> }>("ScreenSecure");
+const screenSecure = registerPlugin<{
+  set(options: { on: boolean }): Promise<void>;
+  keepOn(options: { on: boolean }): Promise<void>;
+}>("ScreenSecure");
+
+/** **الشاشةُ مضاءةٌ ما دام `on`** (SPEC §١٠٣ B/16) — الرحلةُ الجاريةُ ومفتاحُ السوق؛ ويُرفع عند انتهائها أو مغادرة الشاشة. */
+export function useKeepAwake(on: boolean): void {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("ScreenSecure")) return;
+    void screenSecure.keepOn({ on }).catch(() => undefined);
+    if (!on) return;
+    return () => void screenSecure.keepOn({ on: false }).catch(() => undefined);
+  }, [on]);
+}
 
 export function securedPath(pathname: string): boolean {
   return pathname === "/wallet" || pathname.startsWith("/wallet/");

@@ -99,6 +99,24 @@ public class OnlineService extends Service {
     private LocationManager tracker = null;
     private LocationListener listener = null;
     private boolean started = false;
+    /** <b>القيادةُ والوقوف</b> (§١٠٣ B/15): نبضةُ اللوحة ومسافةُ الحركة — يصلان مع الفاصل، وبلاهما لا يتغيّر شيء */
+    private long heartbeatMs = 0L;
+    private int moveMeters = 30;
+    private Location lastSent = null;
+    private long lastSentAt = 0L;
+
+    /**
+     * <b>أيُرسَل هذا الموقع؟</b> (SPEC §١٠٣ B/15) — خالصٌ ومختبَر. <b>واقفٌ لا يُرسل إلا نبضةَ اللوحة</b>: لم يتحرّك مسافةَ اللوحة منذ آخر
+     * إرسال، ولم تمضِ نبضتُها ⇐ لا يُرسل. <b>ولا أقلَّ ممّا تسمح به اللوحة</b> — النبضةُ حدٌّ لا يُتجاوز، فمهلةُ الحضور لا تسقطه من
+     * التوزيع؛ <b>ولا تقليلَ أثناء رحلة</b> ولا والمفتاحُ مطفأ ولا بلا نبضةٍ معروفة.
+     */
+    static boolean shouldSend(boolean motionAware, boolean rideActive, float movedMeters, long sinceLastMs,
+                              long heartbeatMs, int moveMeters) {
+        if (!motionAware || rideActive || heartbeatMs <= 0) return true;
+        if (movedMeters < 0) return true;
+        if (movedMeters >= moveMeters) return true;
+        return sinceLastMs >= heartbeatMs;
+    }
 
     /** <b>الفاصلُ من اللوحة</b> — مطفأً أو بلا قيمةٍ صالحة: الافتراضيّ كما كان حرفاً. خالصٌ ومختبَر. */
     static long effectiveInterval(boolean nativeLocation, long fromPanelMs) {
@@ -162,6 +180,8 @@ public class OnlineService extends Service {
             String bearer = intent.getStringExtra("token");
             if (url != null) endpoint = url;
             if (bearer != null) token = bearer;
+            if (intent.hasExtra("heartbeat_ms")) heartbeatMs = intent.getLongExtra("heartbeat_ms", 0L);
+            if (intent.hasExtra("move_meters")) moveMeters = intent.getIntExtra("move_meters", 30);
             if (intent.hasExtra("interval_ms")) {
                 long next = effectiveInterval(nativeLocation(), intent.getLongExtra("interval_ms", 0L));
                 if (next != intervalMs || tracker == null) {
@@ -222,6 +242,13 @@ public class OnlineService extends Service {
      * حين يسقط مقبسُه (`POST /drivers/me/location`) — فليست كاتباً ثانياً
      * لحقيقةٍ لها كاتب.
      */
+    private boolean wantsToSend(Location fix) {
+        android.content.SharedPreferences prefs = getSharedPreferences(LauncherPlugin.PREFS, MODE_PRIVATE);
+        float moved = lastSent == null ? -1f : fix.distanceTo(lastSent);
+        return shouldSend(prefs.getBoolean("motion_aware_location", false), prefs.getBoolean("ride_active", false),
+                moved, SystemClock.elapsedRealtime() - lastSentAt, heartbeatMs, moveMeters);
+    }
+
     private void armBeacon() {
         beacon.removeCallbacksAndMessages(null);
         beacon.postDelayed(this::broadcast, intervalMs);
@@ -231,7 +258,11 @@ public class OnlineService extends Service {
         try {
             if (endpoint != null && token != null) {
                 Location fix = lastKnownFix();
-                if (fix != null) post(fix);
+                if (fix != null && wantsToSend(fix)) {
+                    lastSent = fix;
+                    lastSentAt = SystemClock.elapsedRealtime();
+                    post(fix);
+                }
             }
         } catch (SecurityException ignored) {
             // إذنُ الموقع سُحب من الإعدادات أثناء العمل — والشاشةُ تقولها،

@@ -667,6 +667,8 @@ export type FeatureKey =
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"
+  | "auto_night_keep_awake"
+  | "motion_aware_location"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

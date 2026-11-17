@@ -12,13 +12,20 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useState,
 } from "react";
 import type { ReactNode } from "react";
 
-type ThemeChoice = "dark" | "light";
+/** **و«تلقائي»** (SPEC §١٠٣ B/16، خلف `auto_night_keep_awake`): ليليٌّ من السادسة مساءً إلى السادسة صباحاً بساعة الهاتف —
+ *  **بالساعة لا بضوء المكان ولا بوضع النظام**، فلا يبيضّ في نفقٍ ولا يسودّ تحت جسر (العلّةُ التي في رأس هذا الملفّ). */
+type ThemeChoice = "dark" | "light" | "auto";
+
+export function nightAt(hour: number): boolean {
+  return hour >= 18 || hour < 6;
+}
 
 const KEY = "taxo.driver.theme";
 
@@ -29,6 +36,11 @@ interface ThemeState {
   toggle: () => void;
 }
 
+function storedChoice(): ThemeChoice {
+  const raw = localStorage.getItem(KEY);
+  return raw === "light" || raw === "auto" ? raw : "dark";
+}
+
 const ThemeContext = createContext<ThemeState>({
   choice: "dark",
   dark: true,
@@ -37,11 +49,19 @@ const ThemeContext = createContext<ThemeState>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [choice, setStoredChoice] = useState<ThemeChoice>(
-    () => (localStorage.getItem(KEY) as ThemeChoice | null) ?? "dark",
-  );
+  const [choice, setStoredChoice] = useState<ThemeChoice>(storedChoice);
+  const [night, setNight] = useState(() => nightAt(new Date().getHours()));
 
-  const dark = choice === "dark";
+  // **«تلقائي» يُراجَع كلَّ دقيقة** — والتطبيقُ مفتوحٌ ساعاتٍ متّصلة
+  useEffect(() => {
+    if (choice !== "auto") return;
+    const check = () => setNight(nightAt(new Date().getHours()));
+    check();
+    const timer = window.setInterval(check, 60_000);
+    return () => window.clearInterval(timer);
+  }, [choice]);
+
+  const dark = choice === "auto" ? night : choice === "dark";
 
   // **قبل أيِّ أثرٍ في الأبناء** (SPEC §١٠٥/٢، عطبٌ مقيس): الخريطةُ تبني نمطَها من رموز `html.dark` في أثرها هي — **وآثارُ الأبناء
   // تجري قبل آثار الآباء**، فكان الصنفُ يُبدَّل بعد أن بُنيت الخريطةُ بألوان المظهر السابق: نهاريّةٌ في الليل. و`useLayoutEffect`

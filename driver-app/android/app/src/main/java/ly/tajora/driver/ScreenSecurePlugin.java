@@ -30,4 +30,20 @@ public class ScreenSecurePlugin extends Plugin {
             call.resolve();
         });
     }
+
+    /** <b>الشاشةُ مضاءةٌ أثناء الرحلة</b> (SPEC §١٠٣ B/16) — {@code FLAG_KEEP_SCREEN_ON} ما دامت الرحلةُ جاريةً والتطبيقُ أمامه. */
+    @PluginMethod
+    public void keepOn(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.resolve();
+            return;
+        }
+        activity.runOnUiThread(() -> {
+            if (on) activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            call.resolve();
+        });
+    }
 }

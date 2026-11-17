@@ -294,7 +294,7 @@ def test_the_chosen_tone_is_a_channel_of_its_own_for_the_fourth_set_only() -> No
     # **والعامُّ بلا قناةٍ يبقى بلا قناة**
     general = PushMessage(title="t", body="b", data={"type": "campaign"})
     assert channels.for_level(general, channels.CHANNELS_V4, "s1_2").android_channel_id is None
-    assert channels.level_of(4) == channels.CHANNELS_V4 and channels.level_of(9) == channels.CHANNELS_V4
+    assert channels.level_of(4) == channels.CHANNELS_V4 and channels.level_of(9) == channels.CHANNELS_V5  # الخامسةُ (§١٠٣/12) فوقها
 
 
 async def test_the_tone_is_saved_per_user_and_default_is_null(client, session_factory) -> None:

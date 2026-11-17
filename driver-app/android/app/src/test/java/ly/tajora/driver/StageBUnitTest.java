@@ -24,6 +24,23 @@ public class StageBUnitTest {
     }
 
     @Test
+    public void standingStillSendsOnlyThePanelHeartbeat() {
+        // واقف (٥ م < ٣٠) والنبضةُ ٦٠ ث: لا يُرسل قبلها، ويُرسل عندها
+        assertEquals(false, OnlineService.shouldSend(true, false, 5f, 20_000L, 60_000L, 30));
+        assertEquals(true, OnlineService.shouldSend(true, false, 5f, 60_000L, 60_000L, 30));
+        // تحرّك مسافةَ اللوحة ⇐ يُرسل
+        assertEquals(true, OnlineService.shouldSend(true, false, 31f, 1_000L, 60_000L, 30));
+    }
+
+    @Test
+    public void neverReducedDuringRideOrWhenOff() {
+        assertEquals(true, OnlineService.shouldSend(true, true, 0f, 1_000L, 60_000L, 30));
+        assertEquals(true, OnlineService.shouldSend(false, false, 0f, 1_000L, 60_000L, 30));
+        assertEquals(true, OnlineService.shouldSend(true, false, 0f, 1_000L, 0L, 30));
+        assertEquals(true, OnlineService.shouldSend(true, false, -1f, 1_000L, 60_000L, 30));
+    }
+
+    @Test
     public void unknownCurrencyIsKeptAsIs() {
         assertEquals("EUR", OfferSpeech.spokenCurrency(" EUR "));
         assertEquals("", OfferSpeech.spokenCurrency(null));

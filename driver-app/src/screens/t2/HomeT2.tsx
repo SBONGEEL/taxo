@@ -60,9 +60,10 @@ import {
   useDocumentsAttention,
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
-import { useDriverLauncher } from "@/lib/launcher";
+import { useDriverLauncher, setRideActive } from "@/lib/launcher";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
+import { useKeepAwake } from "@/lib/secure-screen";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import type { HeatPoint } from "@/lib/heat-layer";
 import { clearDestination, getDestination, getHeatmap, setDestination, type DriverDestination } from "@/api/endpoints";
@@ -289,6 +290,10 @@ export function HomeT2Screen() {
   useHaptics(user?.country_code);
   // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
   useNativeFlags(user?.country_code);
+  // **الشاشةُ مضاءةٌ أثناء الرحلة** (SPEC §١٠٣ B/16) — من القبول حتى الإنهاء، خلف مفتاحه
+  useKeepAwake(useFeature(user?.country_code, "auto_night_keep_awake") && tracking);
+  // **«في رحلة» للخدمة الأصليّة** (SPEC §١٠٣ B/15) — لا تقليلَ للإرسال أثناءها
+  useEffect(() => setRideActive(tracking), [tracking]);
   useDriverLauncher({
     country: user?.country_code,
     online,
