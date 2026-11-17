@@ -158,12 +158,20 @@ Demo account: <from apple-review.txt>
 
 Payments (3.1.3(e)): rides are physical transport consumed outside the app. Riders pay cash, from a wallet
 that can only be spent on rides, by card on the payment provider's page, or by bank transfer. No digital
-content is sold. Drivers pay a platform fee (subscription) to offer that physical service; it is paid the
-same ways and unlocks no digital content.
+content is sold.
+
+Driver subscription (driver app only): independent drivers pay a monthly platform fee for the right to
+receive ride requests from riders. What they buy is access to physical transport work done in their own
+car on the road (3.1.3(e)); it unlocks no digital content, no media and no in-app features for personal
+use. The fee is paid from the driver's earnings wallet, in cash to the operator, by bank transfer, or by card
+on the payment provider's page, the same rails used for the rides themselves. The app does not use
+Apple in-app purchase for it, as the purchase is a service consumed outside the app.
 
 Driver app background location: see the note above (used only while online; blue indicator shown).
 
-Account deletion: Account → Delete account (in-app, 30-day grace period).
+Account deletion: Account → Delete account (in-app, 30-day grace period; signing in during it cancels
+the deletion). A rider with a wallet balance is first offered to transfer it to another user, or must
+confirm explicitly that the balance will be lost, before the deletion starts.
 
 Languages: Arabic (default) and French.
 ```
