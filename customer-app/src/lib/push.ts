@@ -94,6 +94,8 @@ const CHANNELS_V2 = [
 const CALL_CHANNEL = "taxo.call";
 /** شاهدُ المجموعة الرابعة — قناةُ «انتهت الرحلة» بالنغمة الأولى، وهي في الغلافين */
 const TONE_CHANNEL = "taxo.ended.s1_1";
+/** **شاهدُ المجموعة الخامسة** (§١٠٣/12) — قناةُ «رحلتك الآن» يُنشئها الغلافُ الذي يرسم إشعارَ الكبتن الغنيّ (`RideNotice.java`) */
+const RICH_CHANNEL = "taxo.ride.live";
 
 /** **ما أجاب به `channelSet` آخرَ مرّة** — وهو ما يُرسَل مع رمز الجهاز (`session.tsx`). */
 let reported: number | undefined;
@@ -110,7 +112,13 @@ export async function channelSet(): Promise<number | undefined> {
     const present = new Set(channels.map((channel) => channel.id));
     if (!CHANNELS_V2.every((id) => present.has(id))) return undefined;
     // **والرابعة: قناةٌ لكلِّ نغمة** («نغمة الإشعارات»، ج/١) — وهي فوق الثالثة في الحزمة نفسِها
-    reported = present.has(TONE_CHANNEL) ? 4 : present.has(CALL_CHANNEL) ? 3 : 2;
+    reported = present.has(TONE_CHANNEL)
+      ? present.has(RICH_CHANNEL)
+        ? 5
+        : 4
+      : present.has(CALL_CHANNEL)
+        ? 3
+        : 2;
     return reported;
   } catch {
     return undefined;

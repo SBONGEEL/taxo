@@ -12,7 +12,7 @@ import jwt
 from app.core.config import settings
 
 # **`guest` رمزُ جلسة عرضٍ لا حساب** (SPEC §٧٦-ن/أ): بنوعٍ لا يقبله `decode_token(…, "access")` — فلا يفتح باباً لصاحب حسابٍ أبداً
-TokenType = Literal["access", "refresh", "guest"]
+TokenType = Literal["access", "refresh", "guest", "push_photo"]
 
 _BCRYPT_ROUNDS = 12
 
@@ -114,6 +114,18 @@ def create_refresh_token(
     return _create_token(
         subject, "refresh", None, claims, jti=jti, issued_at=issued_at
     )
+
+
+#: **عمرُ رابط صورة الإشعار الغنيّ** (SPEC §١٠٣/12) — يكفي لرسم الإشعار وإعادة رسمه حتى «وصل»، ولا يبقى بعد الرحلة
+PUSH_PHOTO_TTL = timedelta(minutes=45)
+
+
+def create_push_photo_token(ride_id: str, driver_id: str) -> str:
+    """**رمزُ صورة كبتن رحلةٍ في إشعارٍ يرسمه الهاتف** (SPEC §١٠٣/12) — الخدمةُ الأصليّةُ لا تحمل رمزَ دخول الراكب،
+    فيحمل الإشعارُ رابطاً **لهذه الصورة وحدَها، لهذه الرحلة وكبتنها، ٤٥ دقيقة**. ولا يفتح شيئاً غيرَها: نوعُه `push_photo`
+    يرفضه كلُّ بابٍ يطلب `access`."""
+    token, _, _ = _create_token(ride_id, "push_photo", PUSH_PHOTO_TTL, {"drv": driver_id})
+    return token
 
 
 class TokenError(Exception):

@@ -35,6 +35,14 @@ public class CallMessagingService extends MessagingService {
             CallAlert.cancel(this, data.get(CallAlert.EXTRA_CALL_ID));
             return;
         }
+        // **إشعارُ الكبتن الغنيّ** (§١٠٣/12) — بياناتٌ وحدَها للمجموعة الخامسة، يُرسم هنا والتطبيقُ غائب
+        if (RideNotice.handles(data) && remoteMessage.getNotification() == null && !CallAlert.appInFront(this)) {
+            try {
+                RideNotice.show(this, data);
+            } catch (RuntimeException failed) {
+                // لا يُسقط الرسمُ ما بعده — الرحلةُ تُقرأ حين يُفتح التطبيق
+            }
+        }
         if (CallAlert.RING.equals(type)
                 && remoteMessage.getNotification() == null
                 && !CallAlert.appInFront(this)) {

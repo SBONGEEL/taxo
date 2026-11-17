@@ -595,7 +595,41 @@ async def get_driver_photo(
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
     if ride.driver_id is None:
         raise NotFound("لا كبتن لهذه الرحلة بعد")
+    return await _driver_photo_response(session, ride)
 
+
+@router.get("/{ride_id}/driver/photo/push")
+async def get_driver_photo_for_push(
+    ride_id: uuid.UUID, session: DbSession, t: Annotated[str, Query(max_length=2048)]
+) -> Response:
+    """**صورةُ الكبتن لإشعارٍ يرسمه هاتفُ الراكب** (SPEC §١٠٣/12) — الخدمةُ الأصليّةُ لا تحمل رمزَ دخوله.
+
+    **والمفتاحُ رمزٌ موقَّعٌ لهذه الرحلة وكبتنها وحدهما، ٤٥ دقيقة** (`security.create_push_photo_token`)، يحمله الإشعارُ نفسُه.
+    **ولا يُفتح بعد أن تخرج الرحلةُ من نافذة الكبتن** ولا لكبتنٍ غيرِ الذي سُكّ له — فرحلةٌ أُعيد إسنادُها لا تُري وجهَ الأوّل.
+    **والردُّ نفسُه حرفاً** (حرفُ الاسم لمن لا صورةَ مقبولةً له، بطولٍ ثابت) — فلا يصير هذا البابُ قناةً تُقرأ منها حال.
+    """
+    from app.core.security import TokenError, decode_token
+
+    try:
+        claims = decode_token(t, "push_photo")
+    except TokenError:
+        raise NotFound("لا صورة")
+    if claims.get("sub") != str(ride_id):
+        raise NotFound("لا صورة")
+    ride = await session.get(Ride, ride_id)
+    if (
+        ride is None
+        or ride.driver_id is None
+        or str(ride.driver_id) != claims.get("drv")
+        or ride.status not in ACTIVE_DRIVER_STATUSES
+    ):
+        raise NotFound("لا صورة")
+    return await _driver_photo_response(session, ride)
+
+
+async def _driver_photo_response(session: AsyncSession, ride: Ride) -> Response:
+    """**ردُّ صورة الكبتن الواحد لبابيها** — بطولٍ ثابتٍ ونوعٍ واحد، والحرفُ لمن لا صورةَ مقبولةً له."""
+    assert ride.driver_id is not None
     photo = await documents_service.approved_photo(session, ride.driver_id)
     raw: bytes | None = None
     if photo is not None:

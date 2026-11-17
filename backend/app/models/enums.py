@@ -1018,6 +1018,8 @@ class FeatureKey(StrEnum):
     NATIVE_LOCATION = "native_location"
     IN_APP_UPDATE = "in_app_update"
     IN_APP_REVIEW = "in_app_review"
+    # **الإشعاراتُ الغنيّة للراكب** (SPEC §١٠٣/12): صورةُ الكبتن ولوحتُه وزرّا «اتصال» و«دردشة» — للحزمة الخامسة وحدَها
+    RICH_NOTIFICATIONS = "rich_notifications"
 
 
 class MapPlaceCategory(StrEnum):

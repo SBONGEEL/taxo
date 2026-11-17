@@ -274,6 +274,8 @@ export function CommsProvider({
   canCallRef.current = canCall;
   const liveRef = useRef(live);
   liveRef.current = live;
+  /** **«اتصال» من إشعارٍ ينتظر شروطَه** (§١٠٣/12) — المقبسُ يُفتح بعد النقرة بثوانٍ في الإقلاع البارد */
+  const heldStart = useRef<{ rideId: string; timer: number } | null>(null);
 
   // ── رحلةٌ جديدة: لا شارةَ قديمة
   useEffect(() => {
@@ -922,6 +924,24 @@ export function CommsProvider({
         if (rideId === rideRef.current?.id) alertMessage(null);
         return true;
       }
+      // **زرُّ «اتصال» في إشعار الكبتن الغنيّ** (§١٠٣/12): بشروط زرِّ «اتصال» نفسِها (`canCall`) — **ويُحفظ حتى تتحقّق**،
+      // **وإن لم تتحقّق في مهلة المقبس فُتحت المحادثةُ بدلها**: نقرةٌ لا يتبعها شيءٌ أسوأُ من بابٍ آخرَ إلى الطرف نفسِه
+      if (data.type === "start_call") {
+        if (heldStart.current) window.clearTimeout(heldStart.current.timer);
+        heldStart.current = null;
+        if (canCallRef.current) {
+          void startCall();
+          return true;
+        }
+        heldStart.current = {
+          rideId,
+          timer: window.setTimeout(() => {
+            heldStart.current = null;
+            openChat(rideId);
+          }, LIVE_WAIT_MS),
+        };
+        return true;
+      }
       if (data.type === "incoming_call" && data.call_id) {
         const callId = data.call_id;
         if (callRef.current?.callId === callId) return true;
@@ -944,8 +964,17 @@ export function CommsProvider({
       }
       return false;
     },
-    [alertMessage, dropHeldRing, load, missed, openChat, ringFromPush],
+    [alertMessage, dropHeldRing, load, missed, openChat, ringFromPush, startCall],
   );
+
+  // **تحقّقت شروطُ «اتصال» ونقرةٌ من إشعارٍ تنتظرها** — تبدأ المكالمةُ الآن
+  useEffect(() => {
+    const held = heldStart.current;
+    if (!canCall || !held) return;
+    window.clearTimeout(held.timer);
+    heldStart.current = null;
+    void startCall();
+  }, [canCall, startCall]);
 
   // **فُتح المقبس ورنينٌ من إشعارٍ ينتظره** — يُسأل الآن أترنّ بعدُ
   useEffect(() => {

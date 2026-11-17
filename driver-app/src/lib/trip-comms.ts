@@ -78,7 +78,8 @@ export function onTripComms(listener: (event: TripCommsEvent) => void): () => vo
 
 /** **أنواعُ الإشعار التي تخصّ الطبقة** — **ولا `missed_call`**: إشعارٌ عاديٌّ يبقى في الصندوق ويُرسم بلاغاً كأيِّ إشعار
  *  (`notifications.publish_missed_call`)، ونقرتُه تفتح الرحلةَ كصفّه في الوارد. */
-const PUSH_TYPES: ReadonlySet<string> = new Set(["chat_message", "incoming_call"]);
+// **و`start_call` زرُّ «اتصال» في إشعار الكبتن الغنيّ** (§١٠٣/12) — نقرةٌ لا حدث، تمرّ من البابِ نفسِه فتُحفظ في الإقلاع البارد
+const PUSH_TYPES: ReadonlySet<string> = new Set(["chat_message", "incoming_call", "start_call"]);
 
 type PushRoute = (data: Record<string, string>, how: "tap" | "received") => boolean;
 

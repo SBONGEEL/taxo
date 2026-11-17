@@ -230,10 +230,15 @@ async def notify_user(
     groups: dict[int, list[str]] = {}
     for token, push_channels in targets:
         groups.setdefault(channels.level_of(push_channels), []).append(token)
-    tone = await _chosen_tone(session, user_id) if channels.CHANNELS_V4 in groups else None
+    tone = await _chosen_tone(session, user_id) if any(level >= channels.CHANNELS_V4 for level in groups) else None
+    rich = (
+        await _rich_enabled(session, user_id)
+        if channels.CHANNELS_V5 in groups and message.data.get("type") in channels.RICH_KINDS
+        else False
+    )
     sent: list[PushResult] = []
     for level, tokens in groups.items():
-        shaped = channels.for_level(message, level, tone)
+        shaped = channels.for_level(message, level, tone, rich)
         # **أمرٌ لخدمةٍ أصليّةٍ لا يحملها هذا الجهاز** (إسكاتُ الرنين، §٦٦-ج/١٧) — لا يُرسل إليه شيء
         if shaped is not None:
             sent.append(await provider.send(tokens, shaped))
@@ -264,6 +269,56 @@ async def _chosen_tone(session: AsyncSession, user_id: uuid.UUID) -> str | None:
     if not await settings_service.is_feature_enabled(session, row.country_code, FeatureKey.NOTIFICATION_TONES_ENABLED):
         return None
     return row.notification_tone or channels.NEW_DEFAULT
+
+
+async def _rich_enabled(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    """**مفتاحُ الإشعارات الغنيّة لسوق صاحب الجهاز** (SPEC §١٠٣/12) — مطفأً تُرسم كما كانت حرفاً."""
+    from app.models.enums import FeatureKey
+    from app.models.user import User
+    from app.services import settings_service
+
+    country = await session.scalar(_select(User.country_code).where(User.id == user_id))
+    if country is None:
+        return False
+    return await settings_service.is_feature_enabled(session, country, FeatureKey.RICH_NOTIFICATIONS)
+
+
+async def _rich_driver_data(session: AsyncSession, ride: Ride) -> dict[str, str]:
+    """**ما يرسم به هاتفُ الراكب إشعارَ كبتنه** (SPEC §١٠٣/12): اسمُه ولوحتُه ومركبتُه ورابطُ صورته الموقَّع.
+
+    **ما يعرفه الراكبُ أصلاً بعد القبول** (`RideDriverOut`) لا أكثر — والصورةُ من البابِ نفسِه الذي يقرؤها منه التطبيق
+    (حرفُ الاسم لمن لا صورةَ مقبولةً له، بطولٍ ثابت). **وأيُّ عطبٍ هنا يُسقط الغنى لا الإشعار.**"""
+    from app.core.config import settings
+    from app.core.security import create_push_photo_token
+    from app.models.driver import Driver
+    from app.models.user import User
+    from app.models.vehicle import Vehicle
+
+    if ride.driver_id is None:
+        return {}
+    try:
+        name = await session.scalar(
+            _select(User.name).join(Driver, Driver.user_id == User.id).where(Driver.id == ride.driver_id)
+        )
+        vehicle = (
+            await session.execute(
+                _select(Vehicle.plate_number, Vehicle.make, Vehicle.model, Vehicle.color)
+                .where(Vehicle.driver_id == ride.driver_id)
+                .limit(1)
+            )
+        ).first()
+    except Exception:  # pragma: no cover - يعتمد على عطل قاعدة
+        logger.exception("تعذّر جمعُ بطاقة الكبتن للإشعار الغنيّ %s", ride.id)
+        return {}
+    token = create_push_photo_token(str(ride.id), str(ride.driver_id))
+    data = {
+        "driver_name": name or "",
+        "photo_url": f"{settings.public_api_base_url.rstrip('/')}/rides/{ride.id}/driver/photo/push?t={token}",
+    }
+    if vehicle is not None:
+        data["plate"] = vehicle.plate_number
+        data["vehicle"] = " ".join(part for part in (vehicle.make, vehicle.model, vehicle.color) if part)
+    return data
 
 
 async def _safe_notify(
@@ -378,7 +433,11 @@ async def publish_ride_event(
             "status": ride.status.value,
         },
     )
-    await _safe_notify(session, redis, user_id=ride.rider_id, message=message)
+    # **الغنيُّ للراكب وحدَه** (§١٠٣/12) — الكبتنُ لا يرى صورتَه في إشعاره
+    rider_message = message
+    if event.value in channels.RICH_KINDS:
+        rider_message = _replace(message, native_data=await _rich_driver_data(session, ride))
+    await _safe_notify(session, redis, user_id=ride.rider_id, message=rider_message)
 
     if ride.driver is None:
         return

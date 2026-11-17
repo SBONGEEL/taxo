@@ -10,6 +10,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor
 import type { CountryCode } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
+import { routeCommsPush } from "@/lib/trip-comms";
 
 export type RiderAction = "ride_home" | "wallet";
 
@@ -26,6 +27,14 @@ export function launcherAvailable(): boolean {
 }
 
 /** خالصٌ ومختبَر — المجهولُ يُتجاهل */
+/** **زرّا إشعار الكبتن الغنيّ** (§١٠٣/12، `RideNotice.java`): `ride_call:<رحلة>` و`ride_chat:<رحلة>` — يمرّان بباب الإشعارات
+ *  القائم (`routeCommsPush`) كنقرةٍ على إشعار محادثة، **فالطبقةُ وحدَها تقرّر** وتحفظهما في الإقلاع البارد. */
+export function rideCommsAction(raw: string | null | undefined): { type: string; ride_id: string } | null {
+  const match = /^ride_(call|chat):([0-9a-fA-F-]{8,64})$/.exec(raw ?? "");
+  if (!match) return null;
+  return { type: match[1] === "call" ? "start_call" : "chat_message", ride_id: match[2] };
+}
+
 export function riderAction(raw: string | null | undefined): RiderAction | null {
   return raw === "ride_home" || raw === "wallet" ? raw : null;
 }
@@ -38,6 +47,11 @@ export function useRiderLauncher(country: CountryCode | undefined, onAction: (ac
   useEffect(() => {
     if (!launcherAvailable()) return;
     const run = (raw: string | null | undefined) => {
+      const comms = rideCommsAction(raw);
+      if (comms) {
+        routeCommsPush(comms, "tap");
+        return;
+      }
       const action = riderAction(raw);
       if (action) latest.current(action);
     };

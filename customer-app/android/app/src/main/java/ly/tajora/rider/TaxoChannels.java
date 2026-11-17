@@ -67,6 +67,8 @@ final class TaxoChannels {
         createToned(context, manager, ENDED, "انتهاء الرحلة", tones(new int[] {R.raw.taxo2_ended_1, R.raw.taxo2_ended_2, R.raw.taxo2_ended_3, R.raw.taxo2_ended_4, R.raw.taxo2_ended_5}, update));
         createToned(context, manager, PAYMENT, "الدفع والشحن", tones(new int[] {R.raw.taxo2_payment_1, R.raw.taxo2_payment_2, R.raw.taxo2_payment_3, R.raw.taxo2_payment_4, R.raw.taxo2_payment_5}, update));
         createCall(context, manager);
+        // **شاهدُ المجموعة الخامسة** (§١٠٣/12) — الغلافُ الذي يرسم إشعارَ الكبتن الغنيّ
+        RideNotice.ensureChannel(context);
     }
 
     /** عنوانُ صوتٍ من {@code res/raw} — <b>باسم الحزمة المثبَّتة</b> (حزمةُ التجربة {@code .test}). */

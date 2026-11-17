@@ -84,10 +84,19 @@ TONED_CHANNELS: frozenset[str] = frozenset(
 )
 
 
+#: **المجموعةُ الخامسة: إشعارُ الكبتن الغنيّ يرسمه الراكبُ بنفسه** (SPEC §١٠٣/12، ٢٠٢٦-١١-١٨) — الحزمةُ التي تحمل `RideNotice`
+#: تُنشئ قناةَ الرحلة الحيّة `taxo.ride.live`، **فوجودُها شاهدٌ على الراسم** كما شهدت `taxo.call` على خدمة الرنين
+CHANNELS_V5 = 5
+#: **ما يُرسم غنيّاً**: قبولُ الكبتن واقترابُه ووصولُه — حيث تنفع صورتُه ولوحتُه وزرّا «اتصال» و«دردشة»
+RICH_KINDS: frozenset[str] = frozenset({"driver_assigned", "driver_approaching", "driver_arrived"})
+
+
 def level_of(push_channels: int | None) -> int:
     """المجموعةُ التي يُرسَل بها — **ما دون الثانية أقدمُ كلُّه**، فلا يُخترع لها وسط. **وما فوق الرابعة رابعةٌ**
     حتى تُعرَّف خامسة: حزمةٌ أحدثُ من هذا الخادم تحمل ما تحمله الرابعةُ على الأقلّ."""
     value = push_channels or 0
+    if value >= CHANNELS_V5:
+        return CHANNELS_V5
     if value >= CHANNELS_V4:
         return CHANNELS_V4
     if value >= CHANNELS_V3:
@@ -109,7 +118,7 @@ def toned(message: PushMessage, tone: str | None) -> PushMessage:
     return replace(message, android_channel_id=f"{channel}.{tone}")
 
 
-def for_level(message: PushMessage, level: int, tone: str | None = None) -> PushMessage | None:
+def for_level(message: PushMessage, level: int, tone: str | None = None, rich: bool = False) -> PushMessage | None:
     """الرسالةُ كما تُرسل لمجموعةٍ بعينها — **والأقدمُ كما هي حرفاً**، **و`None` لما لا يُرسل إليها أصلاً**.
 
     **وفي الثالثة يصير الرنينُ بياناتٍ وحدَها**: نصُّ الدرج (`title`/`body`) ينتقل إلى `data` — **فالخدمةُ ترسمه كما كان
@@ -129,5 +138,16 @@ def for_level(message: PushMessage, level: int, tone: str | None = None) -> Push
     if level < CHANNELS_V2:
         return message
     shaped = replace(message, android_channel_id=EVENT_CHANNELS_V2.get(kind))
+    # **الغنيُّ للخامسة ومفتاحِها وحدهما** (§١٠٣/12): بياناتٌ ترسمها `RideNotice` **على قناة النغمة نفسِها** (`channel`) —
+    # فالصوتُ لا يتغيّر، ويُضاف الوجهُ واللوحةُ والزرّان. **وبلا ما يُرسم به** (`native_data` فارغ) يبقى إشعاراً يرسمه النظام
+    if rich and level >= CHANNELS_V5 and kind in RICH_KINDS and message.native_data:
+        toned_message = toned(shaped, tone)
+        tray = {"title": message.title, "body": message.body}
+        channel = {"channel": toned_message.android_channel_id} if toned_message.android_channel_id else {}
+        return replace(
+            toned_message,
+            data={**message.data, **message.native_data, **tray, **channel, "rich": "1"},
+            data_only=True,
+        )
     # **النغمةُ للرابعة وحدَها** — حزمةٌ أقدمُ لا تحمل قناةَ النغمة، وقناةٌ غائبةٌ تُسقط الطلبَ إلى الاحتياطية همساً
     return toned(shaped, tone) if level >= CHANNELS_V4 else shaped
