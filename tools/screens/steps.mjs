@@ -85,6 +85,12 @@ for (const theme of ["light", "dark"]) {
     for (const action of step.do) {
       const body = { ...action };
       if (body.kind === "reset") body.storage = action.storage === "in" ? signedIn(theme) : signedOut(theme);
+      // **التطبيقُ إلى المقدّمة قبل كلِّ إعادة** — صفحةٌ في الخلفيّة لا تسأل الخادمَ عن الأمر، فتسقط كلُّ خطوةٍ بعدها (مقيسٌ: أندرويد
+      // ذهب إلى الخلفيّة بعد رحلة الفاتح، فكان عمودُ الداكن كلُّه شاشةَ المُطلِق — التشغيل 44039966678)
+      if (body.kind === "reset" && process.env.FOREGROUND_CMD) {
+        execSync(process.env.FOREGROUND_CMD, { stdio: "inherit", shell: "/bin/bash" });
+        await wait(3000);
+      }
       const ack = await command(body);
       notes.push(`${action.kind}: ${ack.ok ? "✓" : "✗"} ${ack.note ?? ""}`.trim());
       await wait(body.kind === "reset" ? 2500 : 900);
