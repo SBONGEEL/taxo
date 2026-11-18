@@ -190,13 +190,24 @@
       }
       if (cmd.kind === "expect") {
         var since = Date.now();
+        var offView = null;
+        var goText = function () {
+          var el = document.querySelector(".t2-hm-go");
+          return el ? (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60) : null;
+        };
+        var goAtStart = goText();
         var look = function () {
           for (var i = 0; i < cmd.any.length; i++) {
             var hit = find(cmd.any[i]);
             if (hit && inView(hit)) return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+            if (hit) offView = cmd.any[i].text || cmd.any[i].selector;
           }
           if (Date.now() - since < (cmd.timeout || 10000)) return setTimeout(look, 300);
-          reply(cmd.id, false, "لا علامةَ لـ«" + cmd.any.map(function (m) { return m.text || m.selector; }).join("» أو «") + "» — يُرى: " + seen());
+          // **وما رآه في المهلة يُقال** — «موجودٌ خارج الشاشة» غيرُ «لم يظهر»، و«الزرُّ قال كذا» يسمّي الطورَ الذي وقف فيه
+          var goNow = goText();
+          reply(cmd.id, false, "لا علامةَ لـ«" + cmd.any.map(function (m) { return m.text || m.selector; }).join("» أو «") + "»" +
+            (offView ? " (وُجد «" + offView + "» خارج الشاشة)" : "") +
+            (goAtStart !== null || goNow !== null ? " — الزرّ أوّلاً: «" + goAtStart + "» وآخراً: «" + goNow + "»" : "") + " — يُرى: " + seen());
         };
         return look();
       }

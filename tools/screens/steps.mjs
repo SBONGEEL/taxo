@@ -99,7 +99,7 @@ const DRIVER = [
   // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
   // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
   // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "location" }, { kind: "click", text: "رفض" }, { kind: "location" }, { kind: "show", selector: ".t2-hm-go" }], settle: 500, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض" }, { kind: "show", selector: ".t2-hm-go" }], settle: 500, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
@@ -114,8 +114,8 @@ async function pass(theme) {
   for (const step of steps) {
     const notes = [];
     for (const action of step.do) {
-      // **«location» يُنفَّذ هنا لا في الصفحة** — الموقعُ يُرسل بعد أن بدأ التطبيقُ يستمع (الاتصال)، فالمحاكي لا يعيد ما أرسله قبلها:
-      // بقي أندرويد «بانتظار إشارة الموقع» بعد رفض الطلب (التشغيل 44208851709)
+      // **«location» يُنفَّذ هنا لا في الصفحة** (أمرُ `LOCATION_CMD` على المحاكي). ولا يحتاجه «متّصل»: العرضُ يزيّف الموقعَ في الصفحة،
+      // و«بانتظار إشارة الموقع» الذي بقي هناك كان عطباً في التطبيق — المقبسُ لا يراقب الموقعَ في العرض (أُصلح في `lib/socket.ts`)
       if (action.kind === "location") {
         if (process.env.LOCATION_CMD) execSync(process.env.LOCATION_CMD, { stdio: "inherit", shell: "/bin/bash" });
         notes.push("location: ✓");
