@@ -54,6 +54,11 @@ jobs:
               if "usesCleartextTraffic" not in x:
                   x = re.sub(r"<application\b", '<application android:usesCleartextTraffic="true"', x, count=1)
               m.write_text(x, encoding="utf-8")
+              # **وبناءُ التصحيح يُطفئ مهمّةَ Google Services في الوسم** (لأنّ `.dev` لا عميلَ له في Firebase) — فبقي الإعدادُ الوهميُّ
+              # بلا أثرٍ وانهار التطبيقُ بعد الدخول في 44283491864. **تُعاد هنا في نسخة المشغّل وحدَها**، والإعدادُ الوهميُّ يحمل `.test.dev`
+              g = pathlib.Path(app, "android/app/build.gradle"); gs = g.read_text(encoding="utf-8")
+              assert gs.count("task.enabled = false") == 1, app
+              g.write_text(gs.replace("task.enabled = false", "task.enabled = true"), encoding="utf-8")
               # **إعدادُ Firebase وهميٌّ لحزمة التجربة وحدَها** (قِيس في 44280442083: بلا إعدادٍ يسقط التطبيقُ عند تسجيل الإشعارات بعد الدخول
               # — «Default FirebaseApp is not initialized»). مشروعٌ مختلَقٌ بلا مفتاحٍ حقيقيّ: يقوم Firebase، ويفشل التسجيلُ بهدوءٍ بلا انهيار
               base = {"customer-app": "ly.tajora.rider", "driver-app": "ly.tajora.driver"}[app]
