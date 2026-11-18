@@ -76,7 +76,7 @@ with open(os.path.join(WORK, "buildings.geojsonl"), "w", encoding="utf-8") as ou
           WHERE bbox.xmin BETWEEN {x0} AND {x1} AND bbox.ymin BETWEEN {y0} AND {y1}
         """
         for (geometry,) in con.execute(q).fetchall():
-            out.write(json.dumps({"type": "Feature", "tippecanoe": {"minzoom": 14}, "properties": {},
+            out.write(json.dumps({"type": "Feature", "properties": {},
                                   "geometry": json.loads(geometry)}) + "\n")
             n += 1
         print("buildings so far", n, flush=True)

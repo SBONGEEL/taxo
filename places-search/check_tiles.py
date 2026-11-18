@@ -1,9 +1,10 @@
 """**كلُّ مكانٍ في المدخل في بلاطةٍ عند أقصى تكبير** — حارسُ `map-data.yml` (قِيس ٢٠٢٦-١١-١٨).
 
-    python check_tiles.py work/places.mbtiles work/places.geojsonl work/works.geojsonl
+    python check_tiles.py work/places.mbtiles work/places-z*.geojsonl work/works.geojsonl   # places-z12 … ⇐ طبقةُ places
 
-**العلّةُ مقيسة**: أوّلُ بناءٍ (التشغيل 44334108854) أدخل ٢٦٩٬٤٩٤ مكاناً **وخرج منه عند z16 ‏٦٦٬٥٦٥** — `--drop-densest-as-needed`
-ومعدّلُ الإسقاط الافتراضيُّ أسقطا ثلاثةَ أرباعها بلا خطأٍ ولا تحذير، **والبناءُ أخضر**. فهذا يعدّ ما في طبقتَي `places` و`works` عند
+**العلّةُ مقيسة**: أوّلُ بناءٍ (التشغيل 44334108854) أدخل ٢٦٩٬٤٩٤ مكاناً **وخرج منه عند z16 ‏٥٧ ألفاً** بلا خطأٍ ولا تحذير، **والبناءُ أخضر**.
+وظُنّ الإسقاطَ فأُزيل (`-r1`) فبقي الرقم — **وهذا الحارسُ هو الذي أمسك الظنَّ الخاطئ** (التشغيل 44352796302). والعلّةُ الحقّ مفتاحُ
+`tippecanoe.minzoom` لكلِّ عنصرٍ في tippecanoe 2.49 (عيّنةُ عمّان: ٦٬٤٥٩ ⇐ ١٠٧ به، وكلُّها بدونه). فهذا يعدّ ما في طبقتَي `places` و`works` عند
 أقصى تكبيرٍ (كلُّ عنصرٍ في بلاطته مرّةً — الحاشيةُ لا تُعدّ) ويقارنه بأسطر المدخل، ويُسقط البناءَ إن نقص واحد.
 
 **وما لا يقيسه — مكتوب**: المباني (يُسمح بإسقاط أكثفها في التكبير البعيد عمداً، لخفّة البلاطة على الهاتف)، ولا صحّةَ الاسم أو الفئة.
@@ -87,9 +88,9 @@ def main() -> None:
     top = db.execute("select max(zoom_level) from tiles").fetchone()[0]
     expected = {}
     for path in sources:
-        layer = path.rsplit("/", 1)[-1].split(".")[0]
+        layer = path.rsplit("/", 1)[-1].split(".")[0].split("-z")[0]
         with open(path, encoding="utf-8") as f:
-            expected[layer] = sum(1 for line in f if line.strip())
+            expected[layer] = expected.get(layer, 0) + sum(1 for line in f if line.strip())
     found = dict.fromkeys(expected, 0)
     for (data,) in db.execute("select tile_data from tiles where zoom_level = ?", (top,)):
         if data[:2] == b"\x1f\x8b":

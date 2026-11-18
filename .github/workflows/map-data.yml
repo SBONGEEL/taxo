@@ -51,14 +51,20 @@ jobs:
         run: python -I places-search/build_map_data.py work
       - name: المربّعات (tippecanoe)
         run: |
-          # **الأماكنُ والصيانةُ بلا إسقاطٍ البتّة** (قِيس ١٨/١١: الخياراتُ الأولى أسقطت ٢٠٣ آلافَ مكانٍ من ٢٦٩ ألفاً بلا تحذير) — `-r1` يُبطل
-          # معدّلَ الإسقاط، والكثافةُ يحكمها `minzoom` لكلِّ فئةٍ في البناء. **والمباني وحدَها يُسقَط أكثفُها** في التكبير البعيد لخفّة البلاطة
-          tippecanoe -o work/points.mbtiles -Z11 -z16 --force -r1 --no-feature-limit --no-tile-size-limit -n "TAXO open places" \
-            -L places:work/places.geojsonl -L works:work/works.geojsonl
-          tippecanoe -o work/buildings.mbtiles -Z14 -z16 --force --drop-densest-as-needed --extend-zooms-if-still-dropping \
+          # **مجموعةٌ لكلِّ تكبيرِ بدءٍ، كلٌّ بـ`-Z<N>` وبلا إسقاط (`-r1`)، ثمّ `tile-join`** (قِيس ١٨/١١): مفتاحُ `tippecanoe.minzoom` لكلِّ عنصرٍ
+          # أسقط في tippecanoe 2.49 قرابةَ ٨٠٪ من الأماكن بلا تحذير — والإسقاطُ الكثيف لم يكن العلّة. **والمباني وحدَها يُسقَط أكثفُها.**
+          parts=()
+          for f in work/places-z*.geojsonl; do
+            z="${f##*-z}"; z="${z%.geojsonl}"
+            tippecanoe -q -o "work/p$z.mbtiles" -Z"$z" -z16 --force -r1 --no-feature-limit --no-tile-size-limit -L places:"$f"
+            parts+=("work/p$z.mbtiles")
+          done
+          tippecanoe -q -o work/works.mbtiles -Z13 -z16 --force -r1 --no-feature-limit --no-tile-size-limit -L works:work/works.geojsonl
+          tippecanoe -q -o work/buildings.mbtiles -Z14 -z16 --force --drop-densest-as-needed --extend-zooms-if-still-dropping \
             -L buildings:work/buildings.geojsonl
-          tile-join -o work/places.mbtiles --force --no-tile-size-limit -n "TAXO open places" work/points.mbtiles work/buildings.mbtiles
-          python3 places-search/check_tiles.py work/places.mbtiles work/places.geojsonl work/works.geojsonl
+          tile-join -o work/places.mbtiles --force --no-tile-size-limit -n "TAXO open places" \
+            "${parts[@]}" work/works.mbtiles work/buildings.mbtiles
+          python3 places-search/check_tiles.py work/places.mbtiles work/places-z*.geojsonl work/works.geojsonl
           ls -la work/*.mbtiles work/*.sqlite
       - name: الأرقام
         run: |

@@ -4,7 +4,7 @@ usage: python -I build_map_data.py <workdir>
   reads   <workdir>/places.sqlite             (build_index.py + postprocess.py — the SAME rows the search answers from)
           <workdir>/pbf/<country>.osm.pbf     (Geofabrik — roads, works/closures)
           <workdir>/buildings.geojsonl        (optional — Overture Buildings for the eight cities, from DuckDB in the workflow)
-  writes  <workdir>/places.geojsonl  works.geojsonl  roads.sqlite  stats.json
+  writes  <workdir>/places-z<N>.geojsonl (N = تكبيرُ البدء 11..16)  works.geojsonl  roads.sqlite  stats.json
 
 **أمرُ المالك ٢٠٢٦-١١-١٨ السابع، المهمّتان ٢ و٣** (`design/MAP-OPEN-DATA-TRAFFIC.md`):
 - **الأماكنُ على الخريطة هي أماكنُ البحث نفسُها** — من `places.sqlite` لا من مصدرٍ ثانٍ يفترق عنه.
@@ -102,7 +102,10 @@ def export_places(stats):
     db = sqlite3.connect(f"file:{os.path.join(WORK, 'places.sqlite')}?mode=ro", uri=True)
     rows = db.execute("SELECT cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src FROM places WHERE kind IN ('poi', 'building')")
     n = 0
-    with open(os.path.join(WORK, "places.geojsonl"), "w", encoding="utf-8") as out:
+    # **ملفٌّ لكلِّ تكبيرِ بدءٍ لا مفتاحُ `tippecanoe.minzoom`** (قِيس ١٨/١١): tippecanoe 2.49 أسقط مع ذلك المفتاح ٩٨٪ من نقاط عيّنةٍ
+    # في عمّان عند z16 (٦٬٤٥٩ ⇐ ١٠٧)، وبدونه بقيت كلُّها — فالمجموعةُ تُبنى وحدَها بـ`-Z<N>` في `map-data.yml` ثمّ تُدمج بـ`tile-join`.
+    files = {}
+    try:
         for cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src in rows:
             name = display_name(name_ar, name_en, alt)
             if not name:
@@ -113,8 +116,10 @@ def export_places(stats):
                 props["o"] = tag.split(" op=")[1]  # public | private — من `operator:type`، وما لا وسمَ له لا يُوصف
             if name_en and name_en.strip() != props["n"]:
                 props["e"] = name_en.strip()[:60]
-            minzoom = MIN_ZOOM.get(cat, 16) - (1 if (rank or 0) >= 7 else 0)
-            out.write(json.dumps({"type": "Feature", "tippecanoe": {"minzoom": max(minzoom, 11)}, "properties": props,
+            minzoom = max(MIN_ZOOM.get(cat, 16) - (1 if (rank or 0) >= 7 else 0), 11)
+            if minzoom not in files:
+                files[minzoom] = open(os.path.join(WORK, f"places-z{minzoom}.geojsonl"), "w", encoding="utf-8")
+            files[minzoom].write(json.dumps({"type": "Feature", "properties": props,
                                   "geometry": {"type": "Point", "coordinates": [round(lng, 6), round(lat, 6)]}},
                                  ensure_ascii=False) + "\n")
             n += 1
@@ -123,6 +128,9 @@ def export_places(stats):
                     stats["cities"].setdefault(city, {"places": {}, "streets_named": 0, "buildings": 0})
                     bucket = stats["cities"][city]["places"]
                     bucket[cat] = bucket.get(cat, 0) + 1
+    finally:
+        for f in files.values():
+            f.close()
     stats["places_total"] = n
     print("places", n, flush=True)
 
@@ -173,7 +181,7 @@ class Roads(osmium.SimpleHandler):
             work = "closed"
         if work:
             mid = pts[len(pts) // 2]
-            self.works.write(json.dumps({"type": "Feature", "tippecanoe": {"minzoom": 13},
+            self.works.write(json.dumps({"type": "Feature",  # تكبيرُ البدء ١٣ من `-Z13` في `map-data.yml` لا من مفتاحٍ هنا
                                          "properties": {"k": work, "n": (tags.get("name:ar") or tags.get("name") or "")[:60]},
                                          "geometry": {"type": "Point", "coordinates": [round(mid[0], 6), round(mid[1], 6)]}},
                                         ensure_ascii=False) + "\n")
