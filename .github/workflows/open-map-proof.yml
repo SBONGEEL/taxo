@@ -59,7 +59,7 @@ jobs:
           mkdir -p ../apk
           for app in customer-app driver-app; do
             (cd "$app" && npm ci --silent && mkdir -p dist && printf '<!doctype html><title>shell</title>\n' > dist/index.html \
-              && TAXO_CHANNEL=test npx cap sync android && cd android && ./gradlew --no-daemon -q assembleTrialDebug)
+              && TAXO_CHANNEL=test npx cap sync android && cd android && TAXO_ALLOW_NO_FIREBASE=1 ./gradlew --no-daemon -q assembleTrialDebug)
             cp "$app"/android/app/build/outputs/apk/trial/debug/*.apk "../apk/$app.apk"
           done
           ls -la ../apk
