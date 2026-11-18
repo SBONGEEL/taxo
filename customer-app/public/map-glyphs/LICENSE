@@ -1,0 +1,6 @@
+Noto Sans — Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+SIL Open Font License, Version 1.1 — https://openfontlicense.org
+
+Glyph ranges here are derived from the OpenFreeMap font PBFs (https://openfreemap.org): the Arabic range 1536-1791
+with U+0660–0669 and U+06F0–06F9 drawn as the Latin digits 0–9 of the same font. Everything else is unchanged.
+Built by tools/map-latin-digits-glyphs.py.

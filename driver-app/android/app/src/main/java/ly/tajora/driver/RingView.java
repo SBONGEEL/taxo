@@ -20,13 +20,12 @@ import android.view.View;
  * <p><b>والرقمُ في وسطها يُرسم هنا</b> لا في عرضٍ ثانٍ فوقها: نصٌّ مركزيٌّ
  * واحدٌ أدقُّ من تكديس <code>FrameLayout</code>، ويُقاس بالخطّ نفسِه.
  *
- * <p><b>والخاناتُ عربيّةٌ-هنديّة</b> كما في التصميم (<code>_fmtN</code> يحوّل
- * في العربية وحدَها)، <b>وهذه الأسطحُ عربيّةٌ دائماً</b> بقرار المالك
- * 2026-08-30: «عربيّ. الإنجليزية في التصميم مرجع لا شحنة».
+ * <p><b>والخاناتُ لاتينيّةٌ أبداً</b> (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني: «يجب أن تكون الأرقامُ لاتينيّة»، وقاعدةُ
+ * التطبيقين منذ ٢٠٢٦-٠٨-١٩ — <code>check:digits</code>). كانت هنا عربيّةً-هنديّةً نقلاً عن <code>_fmtN</code> في التصميم،
+ * فكانت عدّادُ شاشات الطلب الأصليّة <b>الموضعَ الوحيدَ في التطبيقين</b> برقمٍ غيرِ لاتينيّ — ورآه المالكُ في اللقطات.
+ * <b>والأسطحُ عربيّةٌ دائماً</b> بقرار المالك 2026-08-30، والأرقامُ فيها لاتينيّة.
  */
 public class RingView extends View {
-
-    private static final String[] AR = {"٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"};
 
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -57,12 +56,9 @@ public class RingView extends View {
         invalidate();
     }
 
-    private static String arabic(int value) {
-        StringBuilder out = new StringBuilder();
-        for (char c : String.valueOf(value).toCharArray()) {
-            out.append(c >= '0' && c <= '9' ? AR[c - '0'] : String.valueOf(c));
-        }
-        return out.toString();
+    /** **الرقمُ لاتينيّاً** — `Integer.toString` لا يتبع لغةَ الجهاز (عكسَ `String.format`)، فلا يصير «١٢» على هاتفٍ عربيّ. */
+    static String digits(int value) {
+        return Integer.toString(value);
     }
 
     @Override
@@ -83,6 +79,6 @@ public class RingView extends View {
         if (sweep > 0) canvas.drawArc(box, -90f, sweep, false, arc);
 
         float baseline = cy - (label.descent() + label.ascent()) / 2f;
-        canvas.drawText(arabic(left), cx, baseline, label);
+        canvas.drawText(digits(left), cx, baseline, label);
     }
 }

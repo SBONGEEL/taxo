@@ -34,7 +34,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
-import { buildOpenStyle, openMapColors } from "@/lib/open-map-style";
+import { buildOpenStyle, openMapColors, openTransformRequest } from "@/lib/open-map-style";
 import { foldedAttribution } from "@/lib/map-attribution";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
@@ -468,6 +468,8 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
       container: container.current,
       // **النمطُ المفتوح كائنٌ يُبنى هنا** (بالأسماء أو بدونها كمفتاح الأسماء)، ونمطُ Mapbox عنوانُه كما كان
       style: (openColors ? buildOpenStyle(openColors, labelsRef.current) : dark ? STYLE_DARK : STYLE_LIGHT) as string,
+      // **أرقامُ الخريطة لاتينيّة** — نطاقُ الخطّ العربيّ من ملفّات التطبيق، للنمط المفتوح وحدَه
+      ...(openColors ? { transformRequest: openTransformRequest } : {}),
       language: MAP_LANGUAGE,
       center: [center.lng, center.lat],
       zoom,

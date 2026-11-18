@@ -17,6 +17,18 @@
 /** بلاطاتُ OpenFreeMap (TileJSON) وخطوطُها — وفيها نطاقُ العربيّة (U+0600–06FF) في «Noto Sans». */
 export const OPEN_TILES_URL = "https://tiles.openfreemap.org/planet";
 export const OPEN_GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+
+/** **نطاقُ الخطّ العربيّ بأرقامٍ لاتينيّة** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني: «يجب أن تكون الأرقامُ لاتينيّة») — أسماءُ OpenStreetMap العربيّة
+ *  تحمل أحياناً «٢٠»، ولا تعبيرَ في المكتبة يبدّل حرفاً بحرف، **فيُبدَّل الشكل**: هذا النطاقُ وحدَه من ملفّات التطبيق
+ *  (`tools/map-latin-digits-glyphs.py` يبنيها، و`--check` يقيسها)، وبقيّةُ النطاقات من OpenFreeMap كما كانت. */
+const ARABIC_GLYPHS = /\/fonts\/([^/]+)\/1536-1791\.pbf$/;
+
+export function openTransformRequest(url: string, kind?: string): { url: string } {
+  const hit = kind === "Glyphs" && url.startsWith("https://tiles.openfreemap.org/") ? ARABIC_GLYPHS.exec(url) : null;
+  if (!hit) return { url };
+  const base = typeof location === "undefined" ? "/" : new URL(import.meta.env?.BASE_URL ?? "/", location.href).href;
+  return { url: `${base.replace(/\/$/, "")}/map-glyphs/${hit[1]}/1536-1791.pbf` };
+}
 export const OPEN_ATTRIBUTION =
   '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
@@ -51,8 +63,9 @@ export function openMapColors(host: HTMLElement): OpenMapColors | null {
   return Object.values(out).every(Boolean) ? out : null;
 }
 
-/** **الاسمُ بالعربيّة، والمحلّيُّ حيث لا عربيّ** — فلا تخرج خريطةٌ نصفُها إنجليزيّ (قرارُ المالك 2026-08-27، `MAP_LANGUAGE`). */
-const NAME = ["coalesce", ["get", "name:ar"], ["get", "name"]];
+/** **الاسمُ بالعربيّة، ثمّ المحلّيّ، ثمّ الإنجليزيّ** — فلا تخرج خريطةٌ نصفُها إنجليزيّ (قرارُ المالك 2026-08-27، `MAP_LANGUAGE`)،
+ *  **ولا يبقى مكانٌ بلا اسم** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني §٣). */
+const NAME = ["coalesce", ["get", "name:ar"], ["get", "name"], ["get", "name:en"], ["get", "name_en"]];
 const FONT = ["Noto Sans Regular"];
 const FONT_BOLD = ["Noto Sans Bold"];
 
