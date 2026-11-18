@@ -1026,6 +1026,8 @@ class FeatureKey(StrEnum):
     NATIVE_CRASH_REPORTS = "native_crash_reports"
     # **حرارةُ الطلب في الفقاعة العائمة** (SPEC §١٠٣/29) — من جواب الطلب القائم، الكبتن
     BUBBLE_DEMAND_HEAT = "bubble_demand_heat"
+    # **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣/32) — يبدأ بالموقع، عرضٌ وحدَه بلا رسم
+    PICKUP_WAIT_TIMER = "pickup_wait_timer"
     # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
     BUBBLE_OFFER_CARD = "bubble_offer_card"
     # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره

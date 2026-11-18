@@ -291,6 +291,8 @@ export function HomeT2Screen() {
   // **«آخر رحلة»** (SPEC §١٠٣ C/30، خلف `last_ride_mode`) — تنتهي الجاريةُ (إنهاءً أو إلغاءً) ⇐ خروجٌ من الاستقبال بالباب نفسِه
   // (`goOffline`)، فلا يصله عرضٌ بعدها. **ولا يمسّ الرحلةَ ولا التحصيل**: التحصيلُ نداءاتُ REST لا تحتاج الاستقبال
   const lastRideOn = useFeature(user?.country_code, "last_ride_mode");
+  // **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — عرضٌ وحدَه
+  const pickupTimerOn = useFeature(user?.country_code, "pickup_wait_timer");
   const [lastRide, setLastRide] = useState(false);
   const hadRide = useRef(false);
   useEffect(() => {
@@ -678,6 +680,7 @@ export function HomeT2Screen() {
           // **«ارفض الطرد»** (§٦٣-ج/٤) — بابُه وحدَه، والرحلةُ تعود ملغاةً كما يعيدها الإلغاء
           onRefuseParcel={() => void run(async () => setRide(await refuseParcel(ride.id)))}
           lastRide={lastRideOn && online ? { on: lastRide, toggle: () => setLastRide((value) => !value) } : null}
+          pickupTimer={pickupTimerOn}
         />
       ) : null}
 

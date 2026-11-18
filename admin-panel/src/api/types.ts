@@ -670,6 +670,7 @@ export type FeatureKey =
   | "display_accessibility"
   | "native_crash_reports"
   | "bubble_demand_heat"
+  | "pickup_wait_timer"
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"

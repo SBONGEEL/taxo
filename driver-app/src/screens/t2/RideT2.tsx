@@ -78,6 +78,8 @@ interface Props {
   onRefuseParcel: () => void;
   /** **«آخر رحلة»** (SPEC §١٠٣ C/30) — مفعّلٌ ⇐ يخرج الكبتنُ من الاستقبال حين تنتهي هذه؛ و`null` حين يكون المفتاحُ مطفأً. */
   lastRide?: { on: boolean; toggle: () => void } | null;
+  /** **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — عرضٌ وحدَه، مفتاحُه من `HomeT2`. */
+  pickupTimer?: boolean;
 }
 
 export function RideT2({
@@ -103,6 +105,7 @@ export function RideT2({
   onResumeStop,
   onRefuseParcel,
   lastRide = null,
+  pickupTimer = false,
 }: Props) {
   const { phase, riding, waiting, stopAction, picking, setPicking, reason, setReason, reasons, mapTarget } =
     useActiveRide(ride, genderPreference);
@@ -297,6 +300,7 @@ export function RideT2({
           )
         ) : null}
 
+        {pickupTimer && !riding ? <PickupWaitT2 ride={ride} position={position} /> : null}
         <StopsT2 ride={ride} currencyLabel={currencyLabel} />
         <PauseT2 ride={ride} currencyLabel={currencyLabel} />
 
@@ -525,6 +529,30 @@ function TripHead({
               : tr("تقديرياً")}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** حدُّ «عند نقطة الالتقاط» بالـGPS — نصفُ قطرٍ يتّسع لدقّة موقع الهاتف في الشارع. */
+const PICKUP_NEAR_METERS = 80;
+
+/** **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — يبدأ **بالموقع** لحظةَ يبلغ الكبتنُ النقطة (أو بـ«وصلت» إن سبقه)، ويقول منذ كم
+ *  ينتظر. **عرضٌ وحدَه**: لا رسمَ انتظارٍ عند الالتقاط اليوم (رسمُ الانتظار للمحطات وحدَها)، فلا يُنشأ رسمٌ ولا يُرسل شيءٌ إلى الخادم. */
+function PickupWaitT2({ ride, position }: { ride: Ride; position: Coordinates | null }) {
+  const [reachedAt, setReachedAt] = useState<string | null>(null);
+  const near = ride.status === "accepted" && position !== null && metersBetween(position, ride.pickup) <= PICKUP_NEAR_METERS;
+  useEffect(() => {
+    if (near && reachedAt === null) setReachedAt(new Date().toISOString());
+  }, [near, reachedAt]);
+  const arrived = ride.status === "arrived" ? ride.arrived_at : null;
+  // **الأسبقُ منهما** — الموقعُ قبل الزرّ عادةً، والزرُّ وحدَه حين يضعف الـGPS
+  const since =
+    reachedAt && arrived ? (reachedAt < arrived ? reachedAt : arrived) : (reachedAt ?? arrived);
+  const minutes = useElapsedMinutes(since);
+  if (since === null || (ride.status !== "accepted" && ride.status !== "arrived")) return null;
+  return (
+    <div className="t2-rd-wait" role="timer" aria-live="off">
+      <span>{tr("عند نقطة الالتقاط منذ {0} دقيقة", { 0: digits(String(minutes)) })}</span>
     </div>
   );
 }
