@@ -69,6 +69,18 @@
     var h = window.visualViewport ? window.visualViewport.height : innerHeight;
     return r.bottom > 4 && r.top < h - 4 && r.right > 4 && r.left < innerWidth - 4;
   }
+  /** **فوقَ غيره لا تحته** — خانةُ `#password` كانت في الصفحة تحت شاشة الترحيب («وقتك بيدك») وتحت «غيرُ متاحٍ في منطقتك»، فقُرئت العلامةُ ✓
+   *  والصورةُ شاشةٌ أخرى؛ واختير زرُّ «دخول» المعطَّلُ في النموذج المحجوب بدلَ زرِّ الترحيب (لوحاتُ 44255793642). فيُسأل المتصفّحُ: ما الذي
+   *  تحت مركز العنصر حقّاً؟ */
+  function onTop(el) {
+    var r = el.getBoundingClientRect();
+    var h = window.visualViewport ? window.visualViewport.height : innerHeight;
+    var x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+    var y = Math.min(Math.max(r.top + r.height / 2, 1), h - 1);
+    var hit = document.elementFromPoint(x, y);
+    if (!hit) return false;
+    return el === hit || el.contains(hit) || (hit.contains(el) && hit !== document.body && hit !== document.documentElement);
+  }
   /** **أخطاءُ الصفحة تُحفظ لتُكتب تحت الصفّ الأحمر** — شاشةُ «حدث خطأ في هذه الشاشة» بعد «قبول» لم يكن لها أثرٌ في logcat ولا في
    *  سجلّ iPhone (44223334154)، فلا يُعرف سببُها إلا من الصفحة نفسِها. حدُّ الخطأ في React يكتب الخطأ بـ`console.error`. */
   var errors = [];
@@ -113,6 +125,8 @@
   function find(cmd) {
     if (cmd.selector) {
       var list = Array.prototype.filter.call(document.querySelectorAll(cmd.selector), visible);
+      // **الظاهرُ فوق غيره أوّلاً** — ثمّ ترتيبُ الصفحة كما كان
+      if (!cmd.nth) list.sort(function (a, b) { return (inView(a) && onTop(a) ? 0 : 1) - (inView(b) && onTop(b) ? 0 : 1); });
       return list[cmd.nth || 0] || null;
     }
     var want = cmd.text;
@@ -126,7 +140,8 @@
     // و`closest` يصعد لا ينزل، فنُقر صندوقٌ لا يفعل شيئاً والجوابُ ✓ (قِيس في Chrome على الحزمة نفسِها ٢٠٢٦-١١-١٨ — وهو سقوطُ «خيارات» على أندرويد).
     var CLICKABLE = "button,a,[role=button],[role=option],[role=tab],label,input,textarea";
     var rank = function (el) {
-      return el.matches(CLICKABLE) || el.closest(CLICKABLE) ? 0 : 1;
+      var target = el.closest(CLICKABLE) || el;
+      return (inView(target) && onTop(target) ? 0 : 2) + (el.matches(CLICKABLE) || el.closest(CLICKABLE) ? 0 : 1);
     };
     all.sort(function (a, b) {
       return rank(a) - rank(b) || (a.innerText || "").length - (b.innerText || "").length;
@@ -215,6 +230,7 @@
       if (cmd.kind === "expect") {
         var since = Date.now();
         var offView = null;
+        var lastHit = null, lastKey = null;
         var goText = function () {
           var el = document.querySelector(".t2-hm-go");
           return el ? (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60) : null;
@@ -223,14 +239,24 @@
         var look = function () {
           for (var i = 0; i < cmd.any.length; i++) {
             var hit = find(cmd.any[i]);
-            if (hit && inView(hit)) return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+            if (hit && inView(hit) && onTop(hit)) {
+              // **وثابتةٌ في موضعها** — قُرئت «الكبتن في الطريق إليك» والورقةُ تنزلق صاعدةً فصُوِّرت الخريطةُ وحدَها (أندرويد الفاتح · 44255793642)؛
+              // فلا تُقبل حتى تقرأ في الموضع نفسِه مرّتين بينهما ٣٠٠ ms
+              var r = hit.getBoundingClientRect();
+              var key = Math.round(r.top) + ":" + Math.round(r.left) + ":" + Math.round(r.height);
+              if (lastHit === hit && lastKey === key) return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+              lastHit = hit; lastKey = key;
+              if (Date.now() - since < (cmd.timeout || 10000) + 600) return setTimeout(look, 300);
+              // **وما لم يسكن في المهلة يُقبل ويُقال** — عنصرٌ يتحرّك أبداً (نبضٌ أو عدّاد) لا يُعلِّق الخطوة
+              return reply(cmd.id, true, "علامة (لم تسكن): " + (cmd.any[i].text || cmd.any[i].selector));
+            }
             if (hit) offView = cmd.any[i].text || cmd.any[i].selector;
           }
           if (Date.now() - since < (cmd.timeout || 10000)) return setTimeout(look, 300);
           // **وما رآه في المهلة يُقال** — «موجودٌ خارج الشاشة» غيرُ «لم يظهر»، و«الزرُّ قال كذا» يسمّي الطورَ الذي وقف فيه
           var goNow = goText();
           reply(cmd.id, false, "لا علامةَ لـ«" + cmd.any.map(function (m) { return m.text || m.selector; }).join("» أو «") + "»" +
-            (offView ? " (وُجد «" + offView + "» خارج الشاشة)" : "") +
+            (offView ? " (وُجد «" + offView + "» خارج الشاشة أو محجوباً تحت غيره)" : "") +
             (goAtStart !== null || goNow !== null ? " — الزرّ أوّلاً: «" + goAtStart + "» وآخراً: «" + goNow + "»" : "") + " — يُرى: " + seen() + lastErrors());
         };
         return look();
