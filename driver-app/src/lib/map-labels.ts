@@ -60,6 +60,10 @@ function palette(host: HTMLElement): Palette | null {
 
 /** **طبقةُ رموزٍ واحدة**: تُظهَر بألوان الهوية إن كانت من الأسماء والمفتاحُ مشتعل، **وتُخفى كما كانت في غير ذلك**. يناديها `calmLook`. */
 export function styleSymbolLayer(instance: MapboxMap, id: string, colors: Palette | null) {
+  // **طبقاتُنا (`taxo-*`) تملك ظهورَها** — أماكنُ المالك والخريطةُ المفتوحةُ والبلاغات؛ مفتاحُ الأسماء لأسماء المزوّد وحدَها.
+  // **وقع مقيساً ٢٠٢٦-١١-١٩ على الإنتاج**: `taxo-open-places` لا يطابق `SHOWN` فأُخفي كلّما أُعيد هذا بعد إضافتها — في طرابلس
+  // وصلت ٢٤٣ مكاناً في المربّع ولم يُرسم واحد، وفي عمّان ظهرت لأنّ أماكنَ المالك وصلت قبلها: **سباقُ توقيتٍ لا نقصُ بيانات**.
+  if (id.startsWith("taxo-")) return;
   if (!colors || !SHOWN.test(id)) {
     instance.setLayoutProperty(id, "visibility", "none");
     return;
