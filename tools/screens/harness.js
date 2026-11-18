@@ -6,6 +6,7 @@
  *   click {text}      — يضغط أصغرَ عنصرٍ ظاهرٍ يبدأ نصُّه بالنصّ (أو `selector`)
  *   type {text}       — يكتب في الحقل المركَّز، أو أوّلِ حقلٍ ظاهر، كما يكتب المستخدم (حدثُ `input`)
  *   back              — `history.back()`
+ *   show {selector}   — يمرّر إلى العنصر بلا ضغط
  *   expect {any}      — **يقيس الشاشةَ المقصودة**: ينتظر حتى `timeout` عنصراً منها (نصّاً أو `selector`) **داخل الشاشة**، ويردّ بما وجد
  *                       أو بما يُرى بدلَه. **فالصفُّ «بلغ» بعلامةٍ من شاشته لا بنجاح ضغطة** (أمرُ المالك ٢٠٢٦-١١-١٨).
  * **ولا يقرأ شيئاً ولا يرسل شيئاً غيرَ جوابه** — يضغط ويكتب كما تضغط اليدُ وتكتب. */
@@ -180,6 +181,13 @@
         return attempt();
       }
       if (cmd.kind === "type") return reply(cmd.id, typeInto(cmd.text), cmd.text);
+      // **يُمرَّر إلى عنصرٍ بلا ضغط** — كما يمرّر الكبتنُ الرئيسيّةَ ليبلغ زرَّ الاتصال تحت بطاقة الأذونات على iPhone SE
+      if (cmd.kind === "show") {
+        var shown = find(cmd);
+        if (!shown) return reply(cmd.id, false, "لا عنصرَ: " + (cmd.text || cmd.selector));
+        shown.scrollIntoView({ block: "center" });
+        return reply(cmd.id, true, "show " + (cmd.text || cmd.selector));
+      }
       if (cmd.kind === "expect") {
         var since = Date.now();
         var look = function () {

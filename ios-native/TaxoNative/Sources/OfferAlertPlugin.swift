@@ -41,8 +41,10 @@ public class OfferAlertPlugin: CAPPlugin, CAPBridgedPlugin {
                     "overlay": true,
                     "fullScreenIntent": true,
                     "batteryUnrestricted": true,
-                    // **نظيرُ «قناة الطلبات»**: إشعارٌ بلا صوتٍ أو بلا تنبيهٍ يصل همساً — فيُعدّ مطفأً
-                    "offerChannel": notifications && settings.soundSetting == .enabled && settings.alertSetting == .enabled,
+                    // **نظيرُ «قناة الطلبات»**: إشعارٌ بلا صوتٍ أو بلا تنبيهٍ يصل همساً — فيُعدّ مطفأً.
+                    // **ولا يُبلَّغ عنه والإشعاراتُ نفسُها مرفوضة** — كان الصفّان يظهران معاً لعلّةٍ واحدة («الإشعارات» و«قناة طلبات الرحلات»)
+                    // فدفعا زرَّ الاتصال تحت شريط iPhone SE (لقطاتُ التشغيل 44199806732). وiOS لا قناةَ فيه يفتحها الكبتنُ غيرَ الإشعارات نفسِها.
+                    "offerChannel": !notifications || (settings.soundSetting == .enabled && settings.alertSetting == .enabled),
                     "manufacturerSettingsKnown": false,
                 ])
             }

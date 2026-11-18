@@ -54,7 +54,7 @@ const RIDER = [
   { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("اطلب"), t("اختر الفئة")] },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
-  { name: "ride-status", label: "الكبتن في الطريق", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")] },
+  { name: "ride-status", label: "حالةُ الرحلة — الكبتن قادمٌ أو وصل", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 15000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")] },
   { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
 ];
 const DRIVER = [
@@ -76,14 +76,17 @@ const DRIVER = [
       // ثمّ ورقةُ الموقع «٢ / ٢» بزرِّ «لاحقاً» — **و«لاحق» بلا تنوينٍ تطابق الرسمين** (لاحقاً · لاحقًا)
       { kind: "click", text: "لاحق", optional: true },
       { kind: "click", text: "ليس الآن", optional: true },
+      // **وزرُّ الاتصال قد يكون تحت بطاقة «لا تصلك طلبات الآن»** — على iPhone SE كان تحت الشريط والصورةُ بلا زرّ (44199806732)
+      { kind: "show", selector: ".t2-hm-go" },
     ],
     settle: 9000,
     expect: [sel(".t2-hm-go.off")],
   },
   // **«متّصل» بموقعٍ لا «بانتظار إشارة الموقع»** — Pro Max صُوِّر بلا موقعٍ والضغطةُ ✓ (التشغيل 44140812843)؛ والموقعُ يُعاد ضبطُه قبل كلِّ
-  // إعادة (`LOCATION_CMD`). **واللقطةُ قبل الطلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)،
-  // وبـ«قبول» علامةً صُوِّرت ورقةُ الطلب في صفِّ «متّصل» فتكرّر الصفّان (التشغيل 44195002007) — فالعلامةُ «بانتظار الطلبات» وحدَها، وتُنتظر قليلاً.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }], settle: 1500, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 2500 },
+  // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
+  // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
+  // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض" }], settle: 1000, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 3000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
