@@ -671,6 +671,7 @@ export type FeatureKey =
   | "native_crash_reports"
   | "bubble_demand_heat"
   | "pickup_wait_timer"
+  | "smart_destination"
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"

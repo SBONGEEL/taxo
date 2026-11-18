@@ -1028,6 +1028,8 @@ class FeatureKey(StrEnum):
     BUBBLE_DEMAND_HEAT = "bubble_demand_heat"
     # **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣/32) — يبدأ بالموقع، عرضٌ وحدَه بلا رسم
     PICKUP_WAIT_TIMER = "pickup_wait_timer"
+    # **اقتراحُ الوجهة الذكيّ** (SPEC §١٠٣/35) — يُحسب في هاتف الراكب من وجهاته وحدَها، بلا نداء
+    SMART_DESTINATION = "smart_destination"
     # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
     BUBBLE_OFFER_CARD = "bubble_offer_card"
     # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره

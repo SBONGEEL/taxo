@@ -73,6 +73,7 @@ import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { RiderHomeT2 } from "@/screens/t2/RiderHomeT2";
+import { useRecordDestination, useSmartDestination } from "@/lib/smart-destination";
 import { ConfirmRideT2 } from "@/screens/t2/ConfirmRideT2";
 import {
   LocateButtonT2,
@@ -906,6 +907,10 @@ export function HomeScreen() {
     });
   });
 
+  // **اقتراحُ الوجهة الذكيّ** (SPEC §١٠٣ C/35) — يُسجَّل في الهاتف عند كلِّ طلب، ويُقترح من سجلّه وحدَه
+  useRecordDestination(user?.country_code, user?.id, ride);
+  const smart = useSmartDestination(user?.country_code, user?.id, pickup ?? center);
+
   const homeProps: RiderHomeProps = {
     name: user?.name ?? tr("بك"),
     // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
@@ -918,6 +923,18 @@ export function HomeScreen() {
     onOpenNotifications: () => navigate("/account/notifications"),
     onOpenWallet: () => navigate("/wallet"),
     onOpenAccount: () => navigate("/account"),
+    suggestion: smart
+      ? {
+          address: smart.address,
+          onPick: () =>
+            pickPlace({
+              id: `smart:${smart.lat},${smart.lng}`,
+              name: smart.address,
+              address: smart.address,
+              coordinates: { lat: smart.lat, lng: smart.lng },
+            }),
+        }
+      : null,
     onAskDestination: () => {
       setPresetPreference(undefined);
       setPresetSchedule(null);

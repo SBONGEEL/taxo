@@ -76,6 +76,8 @@ export interface RiderHomeProps {
   onOpenWallet: () => void;
   onOpenAccount: () => void;
   onAskDestination: () => void;
+  /** **اقتراحُ الوجهة الذكيّ** (SPEC §١٠٣ C/35) — من وجهاته هو في هذا الهاتف؛ `null` حيث المفتاحُ مطفأٌ أو لا نمط. */
+  suggestion?: { address: string; onPick: () => void } | null;
   /** **«إلى أين؟» يفتح الخريطةَ بدبوس** (أمرُ المالك ٢٠٢٦-١١-٠٢، SPEC §٩٣-أ) — والبحثُ رابطٌ في ورقة الدبوس؛ وغيابُه يُبقي البحث. */
   onPickOnMap?: () => void;
   places: SavedPlace[];
@@ -245,6 +247,7 @@ export function RiderHomeT2({
   onAirport,
   unconfirmed = null,
   onOpenUnconfirmed,
+  suggestion = null,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
@@ -357,6 +360,16 @@ export function RiderHomeT2({
           <Icon name="arrow_back" />
         </span>
       </button>
+
+      {/* **اقتراحُ الوجهة** (SPEC §١٠٣ C/35) — لمسةٌ تختارها وجهةً كما يختار «أماكني» */}
+      {suggestion ? (
+        <div className="t2-home-places">
+          <button type="button" className="t2-home-chip" onClick={suggestion.onPick}>
+            <Icon name="auto_awesome" />
+            <span>{tr("إلى {0}؟", { 0: suggestion.address })}</span>
+          </button>
+        </div>
+      ) : null}
 
       <div className="t2-home-grid">
         <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} />
