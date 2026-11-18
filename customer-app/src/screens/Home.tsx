@@ -57,6 +57,7 @@ import { useRiderLauncher } from "@/lib/launcher";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
 import { useRideLive } from "@/lib/ride-live";
+import { useVolumeEmergency } from "@/lib/volume-emergency";
 import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { usePickupSuggestion } from "@/lib/pickup-suggestion";
@@ -889,6 +890,8 @@ export function HomeScreen() {
   useNativeFlags(user?.country_code);
   // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19) — خلف مفتاحه
   useRideLive(user?.country_code, tracking ? ride : null, approachMinutes);
+  // **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يشعله الراكبُ من «الإعدادات»، ويُسلَّح في الرحلة الجارية وحدَها
+  useVolumeEmergency(user?.country_code, tracking ? ride : null);
   useRiderLauncher(user?.country_code, (action) => {
     if (action === "wallet") return navigate("/wallet");
     const home = places.find((saved) => saved.icon === "home");

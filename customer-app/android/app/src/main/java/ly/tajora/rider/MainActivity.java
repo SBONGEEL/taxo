@@ -22,6 +22,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ScreenSecurePlugin.class);
         // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19)
         registerPlugin(RideLivePlugin.class);
+        // **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يشعله الراكبُ بنفسه
+        registerPlugin(VolumeTriggerPlugin.class);
         // **«يوجد تحديث» من Google Play** (SPEC §١٠٣ A/8) — الحكمُ من لوحة الإصدارات، والتنفيذُ من Play إن قدر
         registerPlugin(AppUpdatePlugin.class);
         // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
@@ -73,5 +75,12 @@ public class MainActivity extends BridgeActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) CallAlert.onAppFocused(this);
+    }
+
+    /** **يُعدّ ولا يُؤكل** (§١٠٣ B/22) — `VolumeTriggerPlugin` يرى المفتاحَ، والصوتُ يتغيّر كما اعتاد صاحبُه. */
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        VolumeTriggerPlugin.onKey(event);
+        return super.dispatchKeyEvent(event);
     }
 }

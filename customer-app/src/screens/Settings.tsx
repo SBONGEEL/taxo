@@ -35,6 +35,7 @@ import {
   soundsEnabled,
 } from "@/lib/sound";
 import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
+import { VolumeEmergencySetting } from "@/components/VolumeEmergencySetting";
 import { AuthChoice, Icon, Switch } from "@/taxo2";
 import { SubHeadT2 } from "@/screens/t2/KitT2";
 
@@ -205,6 +206,9 @@ export function SettingsScreen() {
           }}
         />
       </Group>
+
+      {/* **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يظهر حيث يشتعل مفتاحُ السوق، ويشعله الراكبُ بنفسه */}
+      <VolumeEmergencySetting country={user?.country_code} />
 
       {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ
           بلا بصمةٍ مسجَّلة. **والغيابُ الصامتُ عائلةُ «الشبكة ضعيفة»** (تصحيحُ المالك 2026-08-29): سطرٌ يقول **ما يفعله

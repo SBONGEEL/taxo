@@ -1038,6 +1038,8 @@ class FeatureKey(StrEnum):
     MOCK_LOCATION_REPORT = "mock_location_report"
     # **بلاغُ الجهاز المعدَّل (root)** (SPEC §١٠٣/25) — للمشرف، بلا حجب. ⚠ تحديثُ سياسة الخصوصية يُنشر قبل إشعاله
     ROOT_REPORT = "root_report"
+    # **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣/22) — يشعله الراكبُ بنفسه. ⚠ تحديثُ سياسة الخصوصية يُنشر قبل إشعاله
+    VOLUME_EMERGENCY = "volume_emergency"
 
 
 class MapPlaceCategory(StrEnum):
