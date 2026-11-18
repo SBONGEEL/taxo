@@ -243,6 +243,9 @@ export const GLYPHS: Readonly<Record<string, string>> = {
   hub: tc(12, 12, 3) + c(5, 5, 1.8) + c(19, 5, 1.8) + c(5, 19, 1.8) + c(19, 19, 1.8) + p("M6.3 6.3l3.5 3.5M17.7 6.3l-3.5 3.5M6.3 17.7l3.5-3.5M17.7 17.7l-3.5-3.5"),
   light_mode: tc(12, 12, 4) + p("M12 2.5v2M12 19.5v2M4.6 4.6L6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"),
   dark_mode: tp(MOON),
+  // **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40)
+  format_size: p("M3 7V5h11v2M8.5 5v14M6.5 19h4M13 12v-1.5h8V12M17 10.5V19M15.5 19h3"),
+  contrast: c(12, 12, 8.5) + p("M12 3.5a8.5 8.5 0 0 1 0 17z", "f"),
   bedtime: tp(MOON) + p("M17 3.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z", "a"),
   apartment: tp("M4 21V7l7-3v17") + p("M11 10h7a2 2 0 0 1 2 2v9M3 21h18M7 9h1M7 12h1M7 15h1M14.5 14h2M14.5 17h2"),
   location_city: tp("M4 21V10l5-3v14") + p("M9 21V4h7v17M16 11h4v10M3 21h18M12 8h1M12 11h1M12 14h1"),
