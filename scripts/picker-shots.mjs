@@ -17,14 +17,20 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForTimeout(2500);
   const trigger = page.locator(".t2-auth-country").first();
   // **وصفحةُ الترحيب قبل الحقل** («أهلاً وسهلاً» ثمّ «حساب جديد») — تُعبر إن ظهرت
-  if (!(await trigger.waitFor({ state: "visible", timeout: 8000 }).then(() => true, () => false))) {
-    await page.getByRole("button", { name: /جديد/ }).first().click({ timeout: 15000 });
-  }
+  // **«حساب جديد» تُنقر بإحداثيّاتها** (قِيس في 44293160597: نقرةُ الدور أصابت غيرَه فبقيت اللقطةُ على «أهلاً وسهلاً»)
+  const tapText = async (text) => {
+    const box = await page.getByText(text, { exact: true }).first().boundingBox().catch(() => null);
+    if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    return Boolean(box);
+  };
+  if (await tapText("حساب جديد")) await page.waitForTimeout(2500);
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${out}/picker-${mode}-${scheme}-before.png` });
   // **الزرُّ موجودٌ في الشجرة ولا يصير «ظاهراً» لـPlaywright** (قِيس في 44283491864: «waiting for element to be visible» عشرين ثانية)
   // — فيُنقر بالسكربت، والورقةُ تُنتظر بعده
-  await trigger.evaluate((el) => el.click());
+  const tb = await trigger.boundingBox().catch(() => null);
+  if (tb && tb.width > 0) await page.mouse.click(tb.x + tb.width / 2, tb.y + tb.height / 2);
+  else await trigger.evaluate((el) => el.click());
   await page.locator(".t2-country-sheet").waitFor();
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${out}/picker-${mode}-${scheme}.png` });
