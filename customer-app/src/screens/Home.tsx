@@ -83,7 +83,8 @@ import {
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
 import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
-import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2"; import { language, tr } from "@/lib/i18n";
+import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
+import { SheetModalT2 } from "@/screens/t2/MoneyT2"; import { language, tr } from "@/lib/i18n";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -239,6 +240,8 @@ export function HomeScreen() {
   // **ومسوّدتُها هنا كمسوّدة الطرد** — الساعاتُ ومن أين يُدفع محجوزُها تبقى إن طُويت الورقةُ لتعديل الوجهة. **ووجهةٌ لم تُختر
   // تبقى `null` هنا** (فلا يُرسم دبوسُها) **وتُرسل نقطةُ الانطلاق مكانَها** بعقد الخلفية (`target` أدناه)
   const [hourlyMode, setHourlyMode] = useState(false);
+  // **مكانٌ لُمس على الخريطة** (أمرُ المالك ١٨/١١ الثاني §٣/٣) — يُعرض اسمُه وخياران، ولا يُختار شيءٌ قبل أن يضغط
+  const [tappedPlace, setTappedPlace] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [hourlyDraft, setHourlyDraft] = useState<RideHourly>(HOURLY_START);
   const endHourly = () => {
     setHourlyMode(false);
@@ -408,6 +411,22 @@ export function HomeScreen() {
       setPhase(dropoff || hourlyMode ? "confirm" : "idle");
       map.current?.flyTo(position, 15);
     });
+  }
+
+  /** **المكانُ الملموسُ انطلاقاً أو وجهة** — الوجهةُ بالباب نفسِه الذي يختار منه البحثُ (`pickPlace`)، والانطلاقُ كما يثبّته الدبوس */
+  function choosePlaceAs(role: "pickup" | "dropoff") {
+    const place = tappedPlace;
+    setTappedPlace(null);
+    if (!place) return;
+    const point = { lat: place.lat, lng: place.lng };
+    if (role === "dropoff") {
+      pickPlace({ id: `map:${place.lat},${place.lng}`, name: place.name, address: place.name, coordinates: point });
+      return;
+    }
+    setPickup(point);
+    setPickupAddress(place.name);
+    setCenter(point);
+    setPhase(dropoff || hourlyMode ? "confirm" : "idle");
   }
 
   function pickPlace(place: Place) {
@@ -864,6 +883,7 @@ export function HomeScreen() {
         searching={ride?.status === "searching" || ride?.status === "requested"}
         // **شعارُ Mapbox ونسبتُه فوق الورقة الملتصقة لا عليها** — شرطُ الرخصة يبقى مرئيّاً على الخريطة
         controlsInset={sheetInset}
+        onPlaceTap={tracking || picking ? undefined : setTappedPlace}
         onMoveEnd={(point) => {
           setCenter(point);
           // بلا رمزٍ لا نداء — كما في `describe` بالضبط
@@ -1238,6 +1258,17 @@ export function HomeScreen() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
+      {tappedPlace ? (
+        <SheetModalT2 onClose={() => setTappedPlace(null)}>
+          <div className="t2-picker-title">{tappedPlace.name}</div>
+          <button type="button" className="t2-button primary" onClick={() => choosePlaceAs("dropoff")}>
+            {tr("اذهب إلى هنا")}
+          </button>
+          <button type="button" className="t2-button secondary" onClick={() => choosePlaceAs("pickup")}>
+            {tr("انطلق من هنا")}
+          </button>
+        </SheetModalT2>
+      ) : null}
       {browsing ? (
         <RiderHomeT2 {...homeProps} />
       ) : (

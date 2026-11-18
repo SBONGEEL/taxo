@@ -36,7 +36,7 @@ import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
 import { buildOpenStyle, openMapColors, openTransformRequest } from "@/lib/open-map-style";
 import { foldedAttribution } from "@/lib/map-attribution";
-import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
+import { applyLabels, bindPlaceTap, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
@@ -198,6 +198,8 @@ interface MapViewProps {
   /** نبضةٌ حول دبوس الانطلاق **أثناء البحث عن كبتن** — تتوقف عند القبول. */
   searching?: boolean;
   onMoveEnd?: (center: Coordinates) => void;
+  /** **لمسُ مكانٍ من أماكننا** — اسمُه وموضعُه، والشاشةُ تعرض «انطلاق» أو «وجهة» (§٣/٣ من أمر ١٨/١١ الثاني) */
+  onPlaceTap?: (place: { name: string; lat: number; lng: number }) => void;
   className?: string;
   /** **ما يغطّي أسفلَ الخريطة بالبكسل** — ورقةُ «R06» الملتصقة. **شعارُ Mapbox ونسبتُه شرطُ الرخصة** فيرتفعان فوقها
    *  ولا يُرسمان عليها. وبلا قيمةٍ لا يُكتب على الحاوية شيء. */
@@ -415,6 +417,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     driverSkin = null,
     interactive = true,
     onMoveEnd,
+    onPlaceTap,
     className,
     controlsInset = 0,
     openMap,
@@ -454,6 +457,8 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
   const gl = engine(openMap);
 
   moveEnd.current = onMoveEnd;
+  const placeTap = useRef(onPlaceTap);
+  placeTap.current = onPlaceTap;
 
   // ------------------------------------------------------------ الإنشاء
   useEffect(() => {
@@ -555,6 +560,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     if (!instance || !container.current || styleVersion === 0 || !styleReady.current) return;
     applyLabels(instance, container.current, labels);
     drawOwnPlaces(instance, container.current, labels ? places : []);
+    bindPlaceTap(instance, (place) => placeTap.current?.(place));
   }, [labels, places, styleVersion]);
 
   // تبديل الستايل مع الوضع الليلي

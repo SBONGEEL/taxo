@@ -210,3 +210,28 @@ export function useMapPlaces(): { labels: boolean; places: MapPlaceSpot[] } {
 
   return { labels, places };
 }
+
+/** **لمسُ مكانٍ من أماكننا** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني §٣/٣: «لمسُ مكانٍ يجعله نقطةَ انطلاقٍ أو وجهة») — يُربط **مرّةً لكلِّ خريطة**
+ *  ويسأل الطبقاتِ الثلاث الموجودةَ **لحظةَ اللمس** (الأيقونةُ تُضاف بعد أن تُرسم صورُها). **وهامشُ ١٢ نقطةً** حول الإصبع: الدبوسُ صغيرٌ والإصبعُ
+ *  أعرض. **ولا يقرّر شيئاً**: يُسلّم الاسمَ والموضعَ لمن يسأل، والشاشةُ تعرض الخيارين. */
+const tapBound = new WeakSet<object>();
+export function bindPlaceTap(instance: MapboxMap, handler: (place: { name: string; lat: number; lng: number }) => void) {
+  if (tapBound.has(instance)) return;
+  tapBound.add(instance);
+  instance.on("click", (event) => {
+    const layers = [ICON, LABEL, DOT].filter((id) => instance.getLayer(id));
+    if (layers.length === 0) return;
+    const { x, y } = event.point;
+    const hit = instance.queryRenderedFeatures(
+      [
+        [x - 12, y - 12],
+        [x + 12, y + 12],
+      ],
+      { layers },
+    )[0];
+    if (!hit || hit.geometry.type !== "Point") return;
+    const [lng, lat] = hit.geometry.coordinates as [number, number];
+    const name = String(hit.properties?.name ?? "").trim();
+    if (name) handler({ name, lat, lng });
+  });
+}
