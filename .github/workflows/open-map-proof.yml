@@ -138,7 +138,9 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          cores: 4
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           script: bash scripts/android-emulator-open-map.sh apk proof ci-secrets/rider.session ci-secrets/driver.session
 
       - name: سجلُّ الخلفية

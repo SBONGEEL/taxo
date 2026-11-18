@@ -19,6 +19,11 @@ TAJOURA_LON=13.3420; TAJOURA_LAT=32.8790
 
 for p in 5173 5174 8001; do adb reverse "tcp:$p" "tcp:$p" >>"$LOG" 2>&1; done
 for apk in "$APK_DIR"/*.apk; do step "تثبيت $(basename "$apk")" adb install -r -g "$apk"; done
+# **المحاكي يُترك يهدأ بعد الإقلاع، ونوافذُ «لا يستجيب» تُخفى** (قِيس في التشغيل 44278177440: مُطلِقُ النظام علق تحت الحمل
+# فغطّت نافذتُه الشاشةَ في اللقطات الثماني كلِّها، والتطبيقُ خلفها)
+adb shell settings put global hide_error_dialogs 1 >>"$LOG" 2>&1
+sleep 45
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >>"$LOG" 2>&1
 adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard
 adb emu geo fix "$TAJOURA_LON" "$TAJOURA_LAT" >>"$LOG" 2>&1
 
@@ -32,12 +37,15 @@ cdp() { # cdp <pkg> <js> — يقيّم تعبيراً في صفحة الغلا�
   adb forward tcp:9222 "localabstract:$sock" >/dev/null 2>&1 || return 1
   node scripts/cdp-eval.mjs 9222 "$2"
 }
+cdp_retry() { local i; for i in 1 2 3 4; do cdp "$@" && return 0; sleep 5; done; return 1; }
+focus() { adb shell dumpsys window | tr -d '' | grep -m1 mCurrentFocus | sed 's/^ *//'; }
 
 shot() { # shot <pkg> <name>
   local engine
-  engine="$(cdp "$1" "document.querySelector('.maplibregl-map')?'maplibre':(document.querySelector('.mapboxgl-map')?'mapbox':'none')" 2>>"$LOG")"
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1
+  engine="$(cdp_retry "$1" "document.querySelector('.maplibregl-map')?'maplibre':(document.querySelector('.mapboxgl-map')?'mapbox':'none')" 2>>"$LOG")"
   echo "$engine" > "$OUT/engine-$2.txt"
-  adb exec-out screencap -p > "$OUT/$2.png" && say "✓ لقطة $2 — المحرّك: ${engine:-؟}" || say "✗ لقطة $2"
+  adb exec-out screencap -p > "$OUT/$2.png" && say "✓ لقطة $2 — المحرّك: ${engine:-؟} — الواجهة: $(focus)" || say "✗ لقطة $2"
 }
 
 run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-key>
@@ -52,10 +60,10 @@ run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-
     local theme; [ "$mode" = no ] && theme=day || theme=night
     adb shell cmd uimode night "$mode" >>"$LOG" 2>&1
     adb shell am force-stop "$pkg"
-    adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1
-    sleep 12
+    adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '' | tail -1)" >>"$LOG" 2>&1
+    sleep 15
     # **الدخولُ برمزَي الحساب في مخزن الصفحة ثمّ إعادةُ التحميل** — كما يكتبهما الدخولُ نفسُه، بلا كتابة كلمة مرورٍ في أيِّ حقل
-    step "دخولُ $tag ($theme)" cdp "$pkg" "localStorage.setItem('$4','$access');localStorage.setItem('$5','$refresh');location.reload();'ok'"
+    step "دخولُ $tag ($theme)" cdp_retry "$pkg" "localStorage.setItem('$4','$access');localStorage.setItem('$5','$refresh');location.reload();'ok'"
     sleep 25
     adb emu geo fix "$TAJOURA_LON" "$TAJOURA_LAT" >>"$LOG" 2>&1
     sleep 10
@@ -71,4 +79,5 @@ run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-
 run_app rider ly.tajora.rider "$RIDER_SESSION" taxo.access_token taxo.refresh_token
 run_app driver ly.tajora.driver "$DRIVER_SESSION" taxo.driver.access_token taxo.driver.refresh_token
 adb logcat -d -s chromium:I Capacitor/Console:I > "$OUT/console.txt" 2>&1 || true
+adb logcat -d -b crash > "$OUT/crash.txt" 2>&1 || true
 say "انتهى"
