@@ -89,7 +89,7 @@ rec_start play-1-background-location
 sleep 3; shot walk-1-location
 # **حلقةٌ تجيب ما أمامها** كما يجيبه كبتنٌ يبدأ يومه: نافذةُ النظام أوّلاً (الموقع «أثناء الاستخدام»، الإشعارات «سماح»، «طوال الوقت»،
 # الرسمُ فوق التطبيقات)، ثمّ زرُّ الخطوة الأساسيّ، و«ليس الآن» آخراً — **فلا تتخطّى خطوةً لها زرٌّ معروف** (توفيرُ الطاقة وحدَه يُترك للكبتن)
-n=0
+n=0; skip_next=0
 for i in $(seq 1 16); do
   has_text "ابدأ الاستقبال" && { say "  ✓ الرئيسيّة بعد $n خطوة"; break; }
   n=$((n + 1))
@@ -108,7 +108,14 @@ for i in $(seq 1 16); do
       TRIES=2 ui_tap "^Permissions$" && sleep 2 && TRIES=2 ui_tap "^Location$" && sleep 2 && TRIES=2 ui_tap "allow_always_radio_button|Allow all the time"; }
     sleep 2; adb shell input keyevent KEYCODE_BACK; sleep 4; continue
   fi
-  if click_text "افتح الإعدادات"; then sleep 4; shot walk-3-overlay; continue; fi
+  # **«افتح الإعدادات» زرُّ خطوتين** (قِيس ١٨/١١، التشغيل 44324487238): توفيرُ الطاقة يفتح «معلومات التطبيق» بلا مفتاح، والرسمُ فوق التطبيقات
+  # يفتح صفحتَه — فإن لم يكن المفتاحُ في الصفحة فهي خطوةُ الطاقة: رجوعٌ، ثمّ «ليس الآن» في الدورة التالية (تُترك للكبتن كما كانت)
+  if [ "$skip_next" = 1 ]; then skip_next=0; click_text "ليس الآن" && { sleep 3; continue; }; fi
+  if click_text "افتح الإعدادات"; then
+    sleep 4; shot walk-3-settings
+    if TRIES=2 ui_tap "Allow display over other apps|Allow permission"; then sleep 2; else skip_next=1; fi
+    adb shell input keyevent KEYCODE_BACK; sleep 4; continue
+  fi
   click_text "ليس الآن" && { sleep 3; continue; }
   # لا زرَّ معروف: التطبيقُ خلف صفحة نظام — يُعاد إليه
   adb shell am start -W -n "$(comp "$PKG")" >>"$LOG" 2>&1; sleep 5

@@ -523,6 +523,12 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 }
 .t2-home-map.open { position: fixed; inset: 0; z-index: 40; height: auto; border-radius: 0; background: var(--t2-bg); }
 .t2-home-map.open::after { display: none; }
+/* **ⓘ النسبة في الزاوية الأقلّ محتوى** (أمرُ المالك ١٨/١١ السابع، المهمّة ١-٣): البطاقةُ — السفلى اليمنى لشارة «قريبون منك» فـⓘ في العليا
+   اليسرى؛ والمفتوحةُ — العليا اليسرى لزرّ الإغلاق والسفلى لزرّ «إلى أين؟» فـⓘ في العليا اليمنى تحت حافّة الأمان */
+.t2-home-map .maplibregl-ctrl-bottom-right,
+.t2-home-map .mapboxgl-ctrl-bottom-right { top: 6px; bottom: auto; left: 6px; right: auto; }
+.t2-home-map.open .maplibregl-ctrl-bottom-right,
+.t2-home-map.open .mapboxgl-ctrl-bottom-right { top: calc(16px + env(safe-area-inset-top, 0px)); left: auto; right: 10px; }
 .t2-home-near {
   position: absolute;
   right: 10px;

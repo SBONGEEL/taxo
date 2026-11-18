@@ -135,6 +135,11 @@
       html.bt-brief #boot .bt-badge { animation: bt-badge .8s var(--bt-delay, 0ms) both; }
       html.bt-final #boot .bt-badge { opacity: 1; transform: translateX(-50%); }
       @keyframes bt-badge { 0%, 56.25% { opacity: 0; transform: translate(-50%, 8px); animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+      /* **نسبةُ البدء** (أمرُ المالك ١٨/١١ السابع، المهمّة ١): الخرائطُ ⓘ مطويٌّ أبداً، والنسبةُ تُرى هنا عند بدء التطبيق — كما تجيز
+         إرشاداتُ OSMF («لا يلزم أن تُعرض كلَّ مرّة») — وكاملةً في «حول التطبيق / التراخيص» */
+      #boot .bt-credit { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); margin: 0;
+        text-align: center; font: 500 11px/1.4 system-ui, sans-serif; color: rgba(20, 22, 26, 0.55); }
+      html.dark #boot .bt-credit { color: rgba(242, 239, 232, 0.55); }
     </style>
   </head>
   <body>
@@ -149,6 +154,7 @@
           <span class="bt-badge">كبتن</span>
         </div>
       </div>
+      <p class="bt-credit" dir="ltr">© OpenStreetMap</p>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

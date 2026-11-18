@@ -412,6 +412,25 @@ jobs:
       - run: npm run test:unit --if-present
         working-directory: ${{ matrix.app }}
 
+  # **نسبةُ الخريطة لا تنفتح وحدَها** (أمرُ المالك ٢٠٢٦-١١-١٨ السابع، المهمّة ١-٥) — متصفّحٌ بـMapLibre الذي يُشحن والحارسِ نفسِه،
+  # خمسُ شاشاتٍ نهاراً وليلاً، ومقيسٌ في الاتجاهين (خريطةٌ بلا حارسٍ يجب أن تُرى مفتوحة)
+  attribution:
+    name: نسبةُ الخريطة
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: customer-app/package-lock.json
+      - run: npm ci
+        working-directory: customer-app
+      - run: npm install --no-package-lock && npx playwright install --with-deps chromium
+        working-directory: tools/check-attribution
+      - run: node tools/check-attribution/check-attribution.mjs
+
   # ═══════════════════════════════════════════════════════════════════════
   # **الحزمُ تُبنى هنا وتُنشر أثراً — لا من جهاز أحد** (قرارُ المالك 2026-08-21)
   #

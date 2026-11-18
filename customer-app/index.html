@@ -133,6 +133,11 @@
       @keyframes bt-x-o { 0%, 68.75% { opacity: 1; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 0; } }
       @keyframes bt-w-o { 0%, 56.25% { opacity: 0; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 1; } }
       @keyframes bt-w-ls { 0%, 56.25% { letter-spacing: .14em; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { letter-spacing: -.03em; } }
+      /* **نسبةُ البدء** (أمرُ المالك ١٨/١١ السابع، المهمّة ١): الخرائطُ ⓘ مطويٌّ أبداً، والنسبةُ تُرى هنا عند بدء التطبيق — كما تجيز
+         إرشاداتُ OSMF («لا يلزم أن تُعرض كلَّ مرّة») — وكاملةً في «حول التطبيق / التراخيص» */
+      #boot .bt-credit { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); margin: 0;
+        text-align: center; font: 500 11px/1.4 system-ui, sans-serif; color: rgba(20, 22, 26, 0.55); }
+      html.dark #boot .bt-credit { color: rgba(242, 239, 232, 0.55); }
     </style>
   </head>
   <body>
@@ -148,6 +153,7 @@
           <div class="bt-word" dir="ltr">TA<span class="bt-xb"><span></span><span></span></span>O</div>
         </div>
       </div>
+      <p class="bt-credit" dir="ltr">© OpenStreetMap</p>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
