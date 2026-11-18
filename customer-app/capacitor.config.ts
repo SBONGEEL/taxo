@@ -48,8 +48,11 @@ const config: CapacitorConfig = {
     // **وتُنزع إن نُزع الإذن** — `tools/check-mic-gate.mjs` يُسقط الحرّاسَ إن افترقا.
     appendUserAgent: "TAXOCalls/1",
   },
+  // **iOS (٢٠٢٦-١١-١٧) — في مزامنة iOS وحدَها**، فإعدادُ أندرويد المقيَّمُ لا يتغيّر منه حرف:
+  // العلامةُ نفسُها ومعها `NSMicrophoneUsageDescription` في البيان (`check:mic-gate`)، و`contentInset: "never"` —
+  // الشاشاتُ ترسم حوافَّها بـ`env(safe-area-inset-*)` كما في أندرويد، فلا يضيف النظامُ هامشاً ثانياً.
   ...(bundled
-    ? {}
+    ? { ios: { appendUserAgent: "TAXOCalls/1", contentInset: "never" } }
     : {
         server: {
           url: ch.shellUrl,

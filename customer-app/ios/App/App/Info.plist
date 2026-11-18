@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>ar</string>
 	<key>CFBundleDisplayName</key>
 	<string>$(TAXO_APP_NAME)</string>
 	<key>CFBundleExecutable</key>
@@ -28,13 +28,11 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -52,7 +50,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>لتسجيل الدخول السريع ببصمة الوجه بدل كتابة كلمة المرور.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>لتصوير الصورة الشخصية والوثائق عند التسجيل.</string>
+	<string>لتصوير صورتك الشخصية، ولمسح رمز QR لبطاقة TAXO عند الشحن.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>لاختيار الصورة الشخصية والوثائق من صورك.</string>
 	<!-- **زرُّ التبديل** (SPEC §23): يستقبل مخطّطَه، ويُصرِّح بمخطّط أخيه
@@ -71,6 +69,29 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>taxo-driver</string>
+	</array>
+	<!-- **إضافاتُ iOS (أمرُ المالك ٢٠٢٦-١١-١٧)** — كلُّ مفتاحٍ هنا يقابله فعلٌ في الشيفرة لا إعلانٌ بلا فعل:
+	     مراجعةُ Apple ترفض وضعَ خلفيّةٍ أو إذناً لا يُستعمل (Guideline 2.5.4 · 5.1.1). -->
+	<key>TaxoAppKind</key>
+	<string>rider</string>
+	<key>TaxoCallKit</key>
+	<true/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>fr</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>للمكالمة الصوتية مع الكبتن داخل التطبيق وللبحث بالصوت.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>لتحويل ما تقوله إلى نصٍّ حين تبحث عن وجهتك بالصوت.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

@@ -20,11 +20,16 @@
  * **يقف** بعد الثالثة، لأن بناءً لم يقع لا يُعلَن.
  */
 import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fromEnv } from "./channels.mjs";
 
 const app = process.argv[2];
 const syncOnly = process.argv.includes("--sync-only");
+// **`--dist-ready`**: الشاشاتُ بُنيت في وظيفة Linux ونزلت أثراً (`ios.yml`) — فلا يُعاد بناؤها على عدّاء macOS
+// الأثمن. **والحارسُ بعد المزامنة يقارن المرفقَ بـ`dist` نفسِه**، فأثرٌ لقناةٍ أخرى يسقط هناك لا يمرّ.
+const distReady = process.argv.includes("--dist-ready");
+const derivedArg = process.argv.find((a) => a.startsWith("--derived="))?.slice("--derived=".length);
 if (!["customer-app", "driver-app"].includes(app ?? "")) {
   console.error(
     "الاستعمال: TAXO_CHANNEL=<public|test> node tools/build-ios.mjs <customer-app|driver-app> [--sync-only]",
@@ -53,7 +58,8 @@ function step(title, command, args, cwd = ROOT) {
   }
 }
 
-step("الشاشاتُ بعنوان القناة", "node", ["tools/build-channel.mjs", app]);
+if (distReady) console.log("\n── الشاشاتُ مبنيّةٌ سلفاً (--dist-ready) — يقيسها الحارسُ بعد المزامنة");
+else step("الشاشاتُ بعنوان القناة", "node", ["tools/build-channel.mjs", app]);
 step("المزامنة — iOS مسمّاةً", "npx", ["cap", "sync", "ios"], APP_DIR);
 step("لا غلافَ في المزامَن", "node", ["tools/check-ios.mjs", "--synced", app]);
 
@@ -66,7 +72,57 @@ if (process.platform !== "darwin") {
   process.exit(3);
 }
 
-const derived = join(APP_DIR, "ios", "DerivedData");
+// **المشروعُ يُكمَل قبل التجميع** — نصوصُ الأذونات بالفرنسيّة وامتدادُ الأدوات (`tools/ios/configure-xcode.rb`)
+step("إكمالُ مشروع Xcode", "ruby", ["tools/ios/configure-xcode.rb", app]);
+
+const derived = derivedArg ?? join(APP_DIR, "ios", "DerivedData");
+
+// **`--release`: أرشيفٌ موقَّعٌ يُرفع إلى TestFlight** (يومَ حساب Apple — `ios-release.yml`). **التوقيعُ يديره Xcode بمفتاح
+// App Store Connect API** (`-allowProvisioningUpdates`): لا شهادةَ ولا ملفَّ تزويدٍ يُحفظ في المستودع أو يُنقل بيد —
+// المفتاحُ في أسرار GitHub المشفّرة وحدَها، يُكتب إلى ملفٍّ مؤقّتٍ في الوظيفة ويُمحى معها.
+if (process.argv.includes("--release")) {
+  const need = ["ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_PATH", "APPLE_TEAM_ID", "TAXO_BUILD_NUMBER"];
+  const missing = need.filter((k) => !process.env[k]);
+  if (missing.length) {
+    console.error(`
+✗ لا رفعَ — ينقص: ${missing.join(" · ")} (تُنشأ يومَ حساب Apple: design/IOS-APP-STORE.md §١)`);
+    process.exit(4);
+  }
+  const auth = [
+    "-allowProvisioningUpdates",
+    "-authenticationKeyPath", process.env.ASC_KEY_PATH,
+    "-authenticationKeyID", process.env.ASC_KEY_ID,
+    "-authenticationKeyIssuerID", process.env.ASC_ISSUER_ID,
+  ];
+  const archive = join(APP_DIR, "ios", "build", "App.xcarchive");
+  step("الأرشيفُ الموقَّع", "xcodebuild", [
+    "-workspace", "ios/App/App.xcworkspace", "-scheme", "App", "-configuration", "Release",
+    "-destination", "generic/platform=iOS", "-archivePath", archive, "-quiet", ...auth,
+    `DEVELOPMENT_TEAM=${process.env.APPLE_TEAM_ID}`, "CODE_SIGN_STYLE=Automatic",
+    `TAXO_APP_ID=${ch.appId}`, `TAXO_APP_NAME=${ch.appName}`,
+    `CURRENT_PROJECT_VERSION=${process.env.TAXO_BUILD_NUMBER}`,
+    "archive",
+  ], APP_DIR);
+  const options = join(APP_DIR, "ios", "build", "ExportOptions.plist");
+  writeFileSync(options, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>method</key><string>app-store-connect</string>
+<key>destination</key><string>upload</string>
+<key>teamID</key><string>${process.env.APPLE_TEAM_ID}</string>
+<key>signingStyle</key><string>automatic</string>
+<key>manageAppVersionAndBuildNumber</key><false/>
+</dict></plist>
+`);
+  step("الرفعُ إلى TestFlight", "xcodebuild", [
+    "-exportArchive", "-archivePath", archive, "-exportOptionsPlist", options,
+    "-exportPath", join(APP_DIR, "ios", "build", "export"), ...auth,
+  ], APP_DIR);
+  console.log(`
+✓ ${ch.channel} · ${app} · ${ch.appId} — رُفع البناءُ ${process.env.TAXO_BUILD_NUMBER} إلى TestFlight.`);
+  process.exit(0);
+}
+
 step("التجميعُ للمحاكي بلا توقيع", "xcodebuild", [
   "-workspace", "ios/App/App.xcworkspace",
   "-scheme", "App",

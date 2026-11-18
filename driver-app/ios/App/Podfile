@@ -1,6 +1,6 @@
 require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
 
-platform :ios, '14.0'
+platform :ios, '15.0'
 use_frameworks!
 
 # workaround to avoid Xcode caching of Pods that requires
@@ -17,6 +17,7 @@ def capacitor_pods
   pod 'CapacitorAppLauncher', :path => '../../node_modules/@capacitor/app-launcher'
   pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
   pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
+  pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
 end
 
 target 'App' do
@@ -24,6 +25,8 @@ target 'App' do
   # **رمزُ FCM على iOS** (٢٠٢٦-٠٩-٢٩) — `AppDelegate` يحوّل به رمزَ APNs.
   # **والخطُّ 11 بقصد**: الخطُّ 12 يرفع أدنى iOS فوق ١٤، والمشروعُ على ١٤.
   pod 'FirebaseMessaging', '~> 11.0'
+  # **ملحقاتُ iOS الأصليّة** (٢٠٢٦-١١-١٧) — مشتركةٌ بين التطبيقين، ولا يراها أندرويد
+  pod 'TaxoNative', :path => '../../../ios-native/TaxoNative'
 end
 
 post_install do |installer|

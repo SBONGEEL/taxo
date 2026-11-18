@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>ar</string>
 	<key>CFBundleDisplayName</key>
 	<string>$(TAXO_APP_NAME)</string>
 	<key>CFBundleExecutable</key>
@@ -28,13 +28,11 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -45,8 +43,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<!-- **نصوصُ الأذونات من المالك حرفاً** (٢٠٢٦-٠٩-٢٩) — ولا UIBackgroundModes
-	     قبل ملحق الموقع الخلفيّ: إعلانٌ بلا فعلٍ يُرفض في المراجعة ويكذب. -->
+	<!-- **نصوصُ الأذونات من المالك حرفاً** (٢٠٢٦-٠٩-٢٩) — وUIBackgroundModes أُعلن مع ملحق الموقع الخلفيّ
+	     (OnlineServicePlugin، ٢٠٢٦-١١-١٧) لا قبله: إعلانٌ بلا فعلٍ يُرفض في المراجعة ويكذب (`check:ios`). -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>يحتاج TAXO Driver موقعك لعرضك للركاب القريبين وتوجيهك أثناء الرحلة.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -73,6 +71,28 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>taxo-rider</string>
+	</array>
+	<!-- **إضافاتُ iOS (أمرُ المالك ٢٠٢٦-١١-١٧)** — كلُّ مفتاحٍ هنا يقابله فعلٌ في الشيفرة لا إعلانٌ بلا فعل:
+	     مراجعةُ Apple ترفض وضعَ خلفيّةٍ أو إذناً لا يُستعمل (Guideline 2.5.4 · 5.1.1). -->
+	<key>TaxoAppKind</key>
+	<string>driver</string>
+	<key>TaxoCallKit</key>
+	<true/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>fr</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>للمكالمة الصوتية مع الراكب داخل التطبيق.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

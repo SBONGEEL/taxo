@@ -190,6 +190,10 @@ export class DriverSocket {
     this.closed = false;
     if (demoActive()) {
       this.demo = demoSubscribe((event) => this.options.onEvent(event as unknown as DriverSocketEvent));
+      // **والموقعُ يُراقَب في العرض أيضاً** — وهو موضعُ المحرّك لا GPS (`demo/geolocation.ts` يُركَّب قبل أن يُرسم شيء، والدخولُ
+      // إلى العرض يعيد التحميل). بغيره بقي `position()` فارغاً فبقي الضيفُ على «متصل — بانتظار إشارة الموقع» أبداً ولا يرى
+      // «بانتظار الطلبات» (لقطاتُ 44217012385 على iPhone وأندرويد). **ولا بثَّ**: الدورةُ (`tick`) لا تعمل في العرض فلا شيءَ يُرسل.
+      this.startWatching();
       window.setTimeout(() => this.options.onOpen?.(), 0);
       return;
     }

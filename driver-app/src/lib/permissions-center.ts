@@ -115,7 +115,7 @@ const native = registerPlugin<NativePermissions>("Permissions");
 
 /** **الغلافُ يحمل الملحق؟** — الأقدمُ لا، فلا صفحةَ ولا شارةَ ولا بلاغ: التطبيقُ كما كان حرفاً */
 export function centerAvailable(): boolean {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("Permissions");
+  return Capacitor.isNativePlatform() && ["android", "ios"].includes(Capacitor.getPlatform()) && Capacitor.isPluginAvailable("Permissions");
 }
 
 export async function readPermissions(): Promise<PermissionRow[]> {

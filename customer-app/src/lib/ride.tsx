@@ -31,6 +31,7 @@ import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
 import { play, type Cue } from "@/lib/sound";
+import { useRideActivity } from "@/lib/native-ios";
 import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms";
 import { FARE_COUNTER_EVENT } from "@/screens/t2/NegotiationT2"; import { tr } from "@/lib/i18n";
 
@@ -397,6 +398,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
       current && current.id === rideId && TERMINAL_STATUSES.has(current.status) ? null : current,
     );
   }, []);
+
+  // **iOS: الرحلةُ على شاشة القفل وفي Dynamic Island** — صامتٌ على أندرويد والويب (`lib/native-ios.ts`)
+  useRideActivity(ride, "rider");
 
   const value = useMemo<RideState>(
     () => ({

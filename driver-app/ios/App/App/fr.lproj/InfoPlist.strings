@@ -1,0 +1,7 @@
+/* Textes des autorisations en français (Algérie) — l'arabe est dans Info.plist. */
+"NSLocationWhenInUseUsageDescription" = "TAXO Chauffeur utilise votre position pour vous présenter aux passagers proches et vous guider pendant la course.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Pour continuer à recevoir les demandes et partager votre position avec le passager pendant la course, même quand l'application est en arrière-plan.";
+"NSFaceIDUsageDescription" = "Pour vous connecter rapidement avec Face ID au lieu de saisir votre mot de passe.";
+"NSCameraUsageDescription" = "Pour prendre votre photo de profil et vos documents lors de l'inscription.";
+"NSPhotoLibraryUsageDescription" = "Pour choisir votre photo de profil et vos documents depuis vos photos.";
+"NSMicrophoneUsageDescription" = "Pour l'appel vocal avec le passager dans l'application.";

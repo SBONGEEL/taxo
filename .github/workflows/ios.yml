@@ -1,32 +1,41 @@
-# **iOS — الخطوةُ الأولى: الأربعُ تُجمَّع** (قرارُ المالك 2026-09-29).
+# **iOS — التطبيقان على iPhone** (قرارُ المالك 2026-09-29، ووُسِّع بأمره 2026-11-17).
 #
-# **على iOS تُجمَّع الشاشاتُ داخل الحزمة** — `dist` مرفقٌ يخاطب `apiBase`
-# مباشرةً، **لا غلافٌ يفتح عنواناً بعيداً**. وأندرويد يبقى غلافاً ولا يُمسّ:
-# هذا الملفُّ لا يبني حزمةَ أندرويد ولا يلمس `ci.yml`.
+# **على iOS تُجمَّع الشاشاتُ داخل الحزمة** — `dist` مرفقٌ يخاطب `apiBase` مباشرةً، **لا غلافٌ يفتح عنواناً بعيداً**.
+# وأندرويد يبقى غلافاً ولا يُمسّ: هذا الملفُّ لا يبني حزمةَ أندرويد ولا يلمس `ci.yml`.
 #
-# **وخُضرتُه تعني شيئاً واحداً**: «الأربعُ (تطبيقان × قناتان) تُجمَّع على
-# iOS للمحاكي بلا توقيع». **لا** أنها تعمل، **ولا** أن CORS يقبلها، **ولا**
-# أن ملحقاً يعمل، **ولا** أنها تُوقَّع أو تُرفع — فتلك بنودٌ لاحقةٌ وبعضُها
-# ينتظر حسابَ Apple.
+# **ثلاثُ مراحل، وكلٌّ على العدّاء الذي يحتاجه وحدَه** (أمرُ المالك: macOS لما يحتاج Mac فقط):
 #
-# **ولا سرَّ هنا ولا نداءَ للإنتاج**: لا توقيعَ ولا `GoogleService-Info.plist`،
-# والعنوانُ يُخبز في الحزمة ولا يُنادى.
+#   web     (Linux)  الحرّاسُ الساكنة، واختباراتُ الوحدة، وبناءُ الشاشات لكلِّ تطبيقٍ وقناة ⇐ أثرٌ `dist`
+#   build   (macOS)  المزامنة وCocoaPods وإكمالُ المشروع (الأدوات) وxcodebuild للمحاكي بلا توقيع، ثمّ المبنيُّ من داخله
+#   smoke   (macOS)  التطبيقُ يُثبَّت على المحاكي ويُشغَّل على أصغر iPhone وأكبره ويُصوَّر — **بقناة test وحدَها**
+#
+# **وحدُّ العدّائين مكتوب** (قِيس ٢٠٢٦-١١-١٧): المستودعُ عامٌّ — نحو ٢٠ وظيفةً معاً و٥ منها macOS، **وCI الوكيل الرئيسيّ ٦
+# وظائفَ Linux في كلِّ تشغيل وبوّاباتُ رفعه عليها**. فوظائفُ macOS هنا `max-parallel: 2` — يبقى للآخرين ثلاثة.
+#
+# **وخُضرتُه تعني**: يُجمَّع التطبيقان للمحاكي، ويُقلعان على iPhone SE وiPhone Pro Max بلا سقوطٍ ويرسمان شيئاً.
+# **لا** أنّ ملحقاً يعمل على هاتفٍ حقيقيّ، **ولا** أنها تُوقَّع أو تُرفع — فتلك تنتظر حساب Apple (TestFlight).
+#
+# **ولا سرَّ هنا ولا نداءَ للإنتاج**: لا توقيعَ ولا `GoogleService-Info.plist`، والمحاكي يُشغَّل بقناة `test`
+# (`dev-api`) لا `public` — فالتطبيقُ المُقلَعُ في CI لا ينادي `api.tajora.ly` أبداً.
 name: iOS
 
 on:
   push:
-    branches: ["**"]
-    # **ما يغيّر ما يُجمَّع وحدَه** — عدّاءُ macOS أثمنُ من أن يُنفَق على
-    # إيداعِ توثيق
+    branches: ["**", "!verify/**"]
+    # **ما يغيّر ما يُجمَّع وحدَه** — عدّاءُ macOS أثمنُ من أن يُنفَق على إيداعِ توثيق
     paths:
       - "customer-app/**"
       - "driver-app/**"
+      - "ios-native/**"
       - "channels.json"
       - "tools/channels.mjs"
       - "tools/build-channel.mjs"
       - "tools/build-ios.mjs"
       - "tools/check-ios.mjs"
       - "tools/check-hosts.mjs"
+      - "tools/check-mic-gate.mjs"
+      - "tools/ios/**"
+      - "tools/screens/**"
       - ".github/workflows/ios.yml"
   workflow_dispatch:
 
@@ -38,16 +47,66 @@ permissions:
   contents: read
 
 jobs:
+  # ═══════════════ Linux: كلُّ ما لا يحتاج Mac ═══════════════
+  web:
+    name: الشاشات · ${{ matrix.app }} · ${{ matrix.channel }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+        channel: [public, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+
+      # **الحارسان الساكنان مرّةً في المصفوفة** — لا أربعاً
+      - name: الحارسان — check:ios · check:mic-gate
+        if: matrix.app == 'customer-app' && matrix.channel == 'public'
+        run: |
+          # **ما يُشغَّل على macOS يُحلَّل هنا أوّلاً** — خطأُ صياغةٍ في أداة البناء أسقط أوّلَ تشغيلٍ على عدّاء Mac (قِيس ٢٠٢٦-١١-١٧)
+          node --check tools/build-ios.mjs
+          bash -n tools/ios/simulator-smoke.sh
+          ruby -c tools/ios/configure-xcode.rb
+          node tools/check-ios.mjs
+          node tools/check-mic-gate.mjs
+          node -e 'require("fs").readdirSync("ios-native/TaxoNative/Resources/sounds").forEach(f=>console.log(f))'
+
+      # **البناءُ نفسُه بحرّاسه كلِّهم** (اختباراتُ الوحدة منها: `test:unit` في الراكب، ومعها `tests/native-ios.test.ts`)
+      - name: الشاشاتُ بعنوان القناة
+        env:
+          TAXO_CHANNEL: ${{ matrix.channel }}
+        run: node tools/build-channel.mjs "${{ matrix.app }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.app }}-${{ matrix.channel }}
+          path: ${{ matrix.app }}/dist
+          retention-days: 3
+          if-no-files-found: error
+
+  # ═══════════════ macOS: التجميعُ وحدَه ═══════════════
   build:
     name: iOS · ${{ matrix.app }} · ${{ matrix.channel }}
+    needs: web
     runs-on: macos-latest
     timeout-minutes: 45
     strategy:
       # **ولا `fail-fast`**: الغرضُ أن يُعرف **أيُّ** الأربع أحمر
       fail-fast: false
+      max-parallel: 2
       matrix:
         app: [customer-app, driver-app]
         channel: [public, test]
+    env:
+      DERIVED: ${{ github.workspace }}/../dd
     steps:
       - uses: actions/checkout@v4
 
@@ -60,34 +119,67 @@ jobs:
       - run: npm ci
         working-directory: ${{ matrix.app }}
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ matrix.app }}-${{ matrix.channel }}
+          path: ${{ matrix.app }}/dist
+
       - name: الأدوات
         run: |
           sw_vers -productVersion
-          # **بلا `| head`**: يقطع الأنبوبَ فيرمي xcodebuild استثناءً في السجلّ
-          # (قِيس في التشغيل 36575316248) — ضجيجٌ يُقرأ عطباً
+          # **بلا `| head`**: يقطع الأنبوبَ فيرمي xcodebuild استثناءً في السجلّ (قِيس في 36575316248)
           xcodebuild -version
           pod --version
+          ruby -e 'require "xcodeproj"; puts "xcodeproj #{Xcodeproj::VERSION}"'
 
-      # **المعرّفُ والاسمُ متغيّران في مشروع Xcode** لا قيمٌ مخبوزة
+      # **ذاكرتان لا واحدة**: الحزمُ (CocoaPods) ومخرجاتُ التجميع (DerivedData). مفتاحُهما ما يغيّر الأصليَّ وحدَه —
+      # **فتغييرُ شاشةٍ لا يُبطلهما** (الشاشاتُ موارد تُنسخ)، وتغييرُ Swift يبطلهما.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.app }}/ios/App/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ matrix.app }}-${{ hashFiles(format('{0}/ios/App/Podfile', matrix.app), format('{0}/package-lock.json', matrix.app), 'ios-native/TaxoNative/TaxoNative.podspec') }}
+          restore-keys: pods-${{ matrix.app }}-
+
+      - name: ذاكرةُ التجميع — استعادة
+        id: dd
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.DERIVED }}
+          key: dd-${{ matrix.app }}-${{ matrix.channel }}-${{ hashFiles('ios-native/**', format('{0}/ios/App/**/*.swift', matrix.app), format('{0}/ios/App/**/*.plist', matrix.app), format('{0}/ios/App/Podfile', matrix.app), format('{0}/package-lock.json', matrix.app), 'tools/ios/**') }}
+          restore-keys: dd-${{ matrix.app }}-${{ matrix.channel }}-
+
       - name: الحارسُ الساكن
         run: node tools/check-ios.mjs
 
       # **النفيُ يُقاس لا يُفترض**: حارسٌ لم يُرَ يسقط لا يُعرف أنه يحرس
       - name: بلا قناةٍ يقف
+        if: matrix.channel == 'public'
         run: |
-          if env -u TAXO_CHANNEL node tools/build-ios.mjs "${{ matrix.app }}" --sync-only; then
+          if env -u TAXO_CHANNEL node tools/build-ios.mjs "${{ matrix.app }}" --sync-only --dist-ready; then
             echo "✗ بُني بلا TAXO_CHANNEL"; exit 1
           fi
           echo "✓ وقف بلا قناة"
 
-      - name: البناء — dist · المزامنة · التجميع · المبنيُّ من داخله
+      - name: البناء — المزامنة · إكمالُ المشروع · التجميع · المبنيُّ من داخله
         env:
           TAXO_CHANNEL: ${{ matrix.channel }}
-        run: node tools/build-ios.mjs "${{ matrix.app }}"
+        run: |
+          start=$(date +%s)
+          node tools/build-ios.mjs "${{ matrix.app }}" --dist-ready "--derived=$DERIVED"
+          echo "### ⏱ ${{ matrix.app }} · ${{ matrix.channel }}: $(( $(date +%s) - start )) ث (ذاكرةُ التجميع: ${{ steps.dd.outputs.cache-hit == 'true' && 'مطابقة' || 'جزئيّة أو لا شيء' }})" >> "$GITHUB_STEP_SUMMARY"
 
-      # **وبغلافٍ يقف** — يُحقن `server.url` في الملفِّ المزامَن الحقيقيّ،
-      # ويُطلب من الحارس أن يسقط، ثمّ يُعاد الملفّ
+      - name: ذاكرةُ التجميع — حفظ
+        if: steps.dd.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.DERIVED }}
+          key: ${{ steps.dd.outputs.cache-primary-key }}
+
+      # **وبغلافٍ يقف** — يُحقن `server.url` في الملفِّ المزامَن الحقيقيّ، ويُطلب من الحارس أن يسقط، ثمّ يُعاد الملفّ
       - name: وبغلافٍ يقف
+        if: matrix.channel == 'public'
         env:
           TAXO_CHANNEL: ${{ matrix.channel }}
         run: |
@@ -99,3 +191,219 @@ jobs:
           fi
           mv "$f.orig" "$f"
           echo "✓ وقف على server.url"
+
+      # **المبنيُّ للمحاكي أثراً** — تقرؤه وظيفةُ التشغيل فلا تُعيد التجميع (قناةُ test وحدَها: هي التي تُقلَع)
+      - name: المبنيُّ أثراً
+        if: matrix.channel == 'test'
+        run: |
+          app="$DERIVED/Build/Products/Debug-iphonesimulator/App.app"
+          test -d "$app/PlugIns/TaxoWidgets.appex" && echo "✓ امتدادُ الأدوات مضمَّن" || { echo "✗ لا TaxoWidgets.appex في App.app"; exit 1; }
+          # **كلُّ صوتٍ في المصدر داخلَ الحزمة** — ومنها ما يسمّيه الخادمُ في `aps.sound` (اسمٌ بلا ملفٍّ يُرسم صامتاً بلا خطأ)
+          n=0; for f in ios-native/TaxoNative/Resources/sounds/*.caf; do s="$(basename "$f")"; test -f "$app/$s" || { echo "✗ $s غائبٌ عن الحزمة"; exit 1; }; n=$((n+1)); done
+          echo "✓ $n صوتاً في الحزمة"
+          test -f "$app/fr.lproj/InfoPlist.strings" || { echo "✗ لا نصوصَ فرنسيّة للأذونات"; exit 1; }
+          ditto -c -k --keepParent "$app" "${{ runner.temp }}/App.app.zip"
+      - uses: actions/upload-artifact@v4
+        if: matrix.channel == 'test'
+        with:
+          name: app-${{ matrix.app }}-sim
+          path: ${{ runner.temp }}/App.app.zip
+          retention-days: 3
+
+  # ═══════════════ macOS: الإقلاعُ على أصغر iPhone وأكبره ═══════════════
+  smoke:
+    name: يُقلع · ${{ matrix.app }} · ${{ matrix.device }}
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        app: [customer-app, driver-app]
+        device: ["iPhone SE (3rd generation)", "iPhone 17 Pro Max"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-${{ matrix.app }}-sim
+          path: ${{ runner.temp }}/sim
+      - name: المحاكي — تثبيتٌ وإقلاعٌ وصورة
+        env:
+          DEVICE: ${{ matrix.device }}
+          APP: ${{ matrix.app }}
+        run: bash tools/ios/simulator-smoke.sh "${{ runner.temp }}/sim/App.app.zip" "$DEVICE" "${{ runner.temp }}/shots"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-${{ matrix.app }}-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/shots
+          retention-days: 7
+
+  # ═══════════════ لقطاتُ المقارنة: أندرويد ↔ iPhone (أمرُ المالك ٢٠٢٦-١١-١٧) ═══════════════
+  # **الشاشاتُ الحقيقيّةُ بوضع الضيف** — وخادمُ اللقطات (`tools/screens/server.mjs`) داخل الوظيفة يُجيب القراءاتِ العامّةَ وحدَها
+  # من لقطةٍ محفوظة: **لا إنتاجَ ولا تطوير**. وحزمةُ اللقطات تُبنى هنا وتُرمى — لا تُشحن (`prepare-dist.mjs`).
+  screens-web:
+    name: لقطات · حزمة · ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+      - run: node tools/screens/prepare-dist.mjs "${{ matrix.app }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ matrix.app }}/dist-screens
+          retention-days: 3
+
+  screens-ios:
+    name: لقطات · iPhone · ${{ matrix.app }} · ${{ matrix.device }}
+    # **بعد `smoke` لا معه** — فلا يزيد ما يمسكه هذا الملفُّ من عدّائي macOS على اثنين في أيِّ لحظة
+    needs: [build, screens-web, smoke]
+    if: ${{ !cancelled() }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        app: [customer-app, driver-app]
+        device: ["iPhone 17 Pro Max", "iPhone SE (3rd generation)"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-${{ matrix.app }}-sim
+          path: ${{ runner.temp }}/sim
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ runner.temp }}/dist-screens
+      - name: المحاكي — الخطوات واللقطات
+        run: |
+          col="${{ contains(matrix.device, 'SE') && 'ios-small' || 'ios-large' }}"
+          echo "COL=$col" >> "$GITHUB_ENV"
+          bash tools/screens/ios-run.sh "${{ matrix.app }}" "${{ runner.temp }}/sim/App.app.zip" "${{ runner.temp }}/dist-screens" \
+            "${{ matrix.device }}" "${{ runner.temp }}/shots/$col"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ matrix.app }}-${{ env.COL }}
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
+
+  screens-android:
+    name: لقطات · أندرويد · ${{ matrix.app }}
+    needs: screens-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-screens-${{ matrix.app }}-${{ hashFiles(format('{0}/android/**/*.gradle', matrix.app)) }}
+          restore-keys: gradle-screens-${{ matrix.app }}-
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-screens-${{ matrix.app }}
+          path: ${{ matrix.app }}/dist
+      # **غلافُ التجربة نفسُه** (`trial`، بناءُ التصحيح `.test.dev`) — وعنوانُه وحدَه يُبدَّل إلى خادم اللقطات، **في هذه الوظيفة لا في الشجرة**
+      - name: الغلاف — مزامنةٌ وعنوانُ اللقطات وبناء
+        env:
+          TAXO_CHANNEL: test
+          TAXO_ALLOW_NO_FIREBASE: "1"
+        run: |
+          cd "${{ matrix.app }}"
+          npx cap sync android
+          node -e 'const fs=require("fs");const f="android/app/src/main/assets/capacitor.config.json";const c=JSON.parse(fs.readFileSync(f));c.server={...(c.server||{}),url:"http://127.0.0.1:8787",cleartext:true,allowNavigation:["127.0.0.1"]};fs.writeFileSync(f,JSON.stringify(c,null,1));console.log(c.server)'
+          # **الوسمُ يتبعه سطرٌ جديدٌ لا مسافة** — فـ`sed` بمسافةٍ لم يطابق ومرّ صامتاً (ERR_CLEARTEXT_NOT_PERMITTED في اللقطات). فيُقاس بعده.
+          sed -i -E 's#<application([[:space:]]|$)#<application android:usesCleartextTraffic="true"\1#' android/app/src/main/AndroidManifest.xml
+          grep -q 'usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml || { echo "✗ لم يُفتح http في البيان"; exit 1; }
+          cd android && sh gradlew assembleTrialDebug --no-daemon -q
+          ls -la app/build/outputs/apk/trial/debug/
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: المحاكي — الخطوات واللقطات
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: bash tools/screens/android-run.sh "${{ matrix.app }}" "$(ls ${{ matrix.app }}/android/app/build/outputs/apk/trial/debug/*.apk | head -1)" "${{ matrix.app }}/dist" "${{ runner.temp }}/shots/android"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ matrix.app }}-android
+          path: ${{ runner.temp }}/shots
+          retention-days: 14
+
+  screens-board:
+    name: لوحاتُ المقارنة
+    needs: [screens-ios, screens-android]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          path: ${{ runner.temp }}/all
+      - name: اللوحات — HTML ثمّ صورةٌ من Chrome
+        run: |
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-ui-core >/dev/null 2>&1 || true
+          out="${{ runner.temp }}/boards"; mkdir -p "$out"
+          for app in customer-app driver-app; do
+            d="${{ runner.temp }}/b-$app"; mkdir -p "$d"
+            for col in android ios-large ios-small; do
+              [ -d "${{ runner.temp }}/all/shots-$app-$col/$col" ] && cp -R "${{ runner.temp }}/all/shots-$app-$col/$col" "$d/$col"
+            done
+            for mode in light dark; do
+              node tools/screens/board.mjs "$app" "$d" "$mode"
+              rows=$(grep -o '<section>' "$d/board-$app-$mode.html" | wc -l)
+              google-chrome --headless=new --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
+                --window-size=1400,$(( 140 + rows * 860 )) --screenshot="$out/board-$app-$mode.png" "file://$d/board-$app-$mode.html"
+            done
+          done
+          ls -la "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boards
+          path: ${{ runner.temp }}/boards
+          retention-days: 30

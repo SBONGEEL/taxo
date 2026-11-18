@@ -50,7 +50,7 @@ export function noteCompletedRide(rideId: string): void {
 /** **اللحظةُ الهادئة** — يُطلب التقييمُ إن بلغ العددُ ومضت المدّة، بعد ثانيةٍ ونصفٍ لا فوراً. */
 export function maybeAskForReview(): void {
   if (!allowed) return;
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+  if (!Capacitor.isNativePlatform() || !["android", "ios"].includes(Capacitor.getPlatform())) return;
   if (!Capacitor.isPluginAvailable("InAppReview")) return;
   if (rides().length < MIN_RIDES) return;
   const last = Number(read(ASKED_KEY) ?? "0");

@@ -1,0 +1,776 @@
+{
+ "app": "TAXO",
+ "auth": {
+  "login": "password",
+  "verification": "whatsapp_otp",
+  "otp_length": 6,
+  "channels": [
+   "whatsapp_otp"
+  ]
+ },
+ "countries": [
+  {
+   "country_code": "JO",
+   "name": "الأردن",
+   "status": "open",
+   "signup": "open",
+   "area": [
+    29.18,
+    33.38,
+    34.95,
+    39.3
+   ],
+   "currency": "JOD",
+   "currency_label": "د.أ",
+   "currency_name": "دينار أردني",
+   "currency_decimals": 3,
+   "display_decimals": 3,
+   "features": {
+    "cliq_enabled": true,
+    "card_enabled": true,
+    "wallet_enabled": true,
+    "wallet_transfer_enabled": true,
+    "otp_verification_enabled": true,
+    "pricing_writes_enabled": true,
+    "withdrawal_payout_enabled": true,
+    "women_service_enabled": true,
+    "multi_stop_enabled": true,
+    "whatsapp_otp_enabled": true,
+    "email_otp_enabled": false,
+    "tips_enabled": true,
+    "promo_codes_enabled": true,
+    "driver_referrals_enabled": true,
+    "rider_referrals_enabled": true,
+    "referred_reward_enabled": true,
+    "scheduled_rides_enabled": true,
+    "driver_map_nearby_enabled": true,
+    "voice_order_enabled": true,
+    "driver_goals_enabled": false,
+    "price_experiments_enabled": false,
+    "rider_plans_enabled": false,
+    "loyalty_enabled": false,
+    "vehicle_skins_enabled": true,
+    "ride_sharing_enabled": true,
+    "country_visible": true,
+    "subscription_offers_enabled": true,
+    "next_instruction_enabled": true,
+    "eta_enabled": true,
+    "ride_code_enabled": true,
+    "driver_advances_enabled": true,
+    "driver_levels_enabled": true,
+    "ride_for_other_enabled": true,
+    "airport_enabled": true,
+    "guaranteed_booking_enabled": true,
+    "parcel_enabled": true,
+    "parcel_fetch_enabled": true,
+    "delivery_enabled": false,
+    "hourly_enabled": true,
+    "rider_subscription_enabled": true,
+    "intercity_enabled": true,
+    "weekly_cashback_enabled": true,
+    "work_hours_enabled": true,
+    "unconfirmed_payments_enabled": true,
+    "cash_auto_confirm_enabled": false,
+    "trip_chat_enabled": true,
+    "ride_calls_enabled": true,
+    "map_places_enabled": true,
+    "payment_requests_enabled": false,
+    "nowpay_card_enabled": false,
+    "whop_card_enabled": false,
+    "whop_rider_topup_enabled": false,
+    "whop_rider_trip_enabled": false,
+    "moonpay_driver_enabled": false,
+    "moonpay_rider_enabled": false,
+    "polar_card_enabled": false,
+    "google_maps_display": false,
+    "google_places_search": false,
+    "google_routes": false,
+    "open_places_search": true,
+    "open_map_display": true,
+    "rider_order_sheet_v2": true,
+    "places_search_v2": true,
+    "icons_v2": false
+   },
+   "vehicle_categories": [
+    "economy",
+    "comfort",
+    "city_taxi"
+   ],
+   "ride_categories": [
+    {
+     "key": "economy",
+     "name": "اقتصادي",
+     "icon": "local_taxi",
+     "description": "الخيار الأوفر",
+     "seats": 4,
+     "name_fr": null,
+     "name_en": null,
+     "required_document": null
+    },
+    {
+     "key": "comfort",
+     "name": "مريح",
+     "icon": "directions_car",
+     "description": "سيارة أوسع وأحدث",
+     "seats": 4,
+     "name_fr": null,
+     "name_en": null,
+     "required_document": null
+    },
+    {
+     "key": "city_taxi",
+     "name": "تاكسي المدينة",
+     "icon": "local_taxi",
+     "description": "تاكسي مرخَّص من المدينة",
+     "seats": 4,
+     "name_fr": "Taxi de ville",
+     "name_en": "City taxi",
+     "required_document": "taxi_licence"
+    }
+   ],
+   "dial_code": "962",
+   "national_number_length": 9,
+   "quiet_hours_start": "22:00",
+   "quiet_hours_end": "08:00",
+   "quiet_hours_timezone": "Asia/Amman",
+   "cliq_alias": "SAMYAM",
+   "verification": "whatsapp_otp",
+   "verification_channels": [
+    "whatsapp_otp"
+   ],
+   "otp_length": 6,
+   "email_signup": false,
+   "rounding_enabled": true,
+   "rounding_unit": "0.500",
+   "rounding_mode": "nearest",
+   "payment_method_order": [
+    "card",
+    "wallet",
+    "cliq",
+    "cash"
+   ],
+   "crypto_first": true
+  }
+ ],
+ "signup_countries": [
+  {
+   "code": "BH",
+   "name": "البحرين",
+   "dial_code": "973",
+   "state": "stopped"
+  },
+  {
+   "code": "KM",
+   "name": "جزر القمر",
+   "dial_code": "269",
+   "state": "stopped"
+  },
+  {
+   "code": "DJ",
+   "name": "جيبوتي",
+   "dial_code": "253",
+   "state": "stopped"
+  },
+  {
+   "code": "EG",
+   "name": "مصر",
+   "dial_code": "20",
+   "state": "stopped"
+  },
+  {
+   "code": "IQ",
+   "name": "العراق",
+   "dial_code": "964",
+   "state": "stopped"
+  },
+  {
+   "code": "KW",
+   "name": "الكويت",
+   "dial_code": "965",
+   "state": "stopped"
+  },
+  {
+   "code": "LB",
+   "name": "لبنان",
+   "dial_code": "961",
+   "state": "stopped"
+  },
+  {
+   "code": "MR",
+   "name": "موريتانيا",
+   "dial_code": "222",
+   "state": "stopped"
+  },
+  {
+   "code": "MA",
+   "name": "المغرب",
+   "dial_code": "212",
+   "state": "stopped"
+  },
+  {
+   "code": "OM",
+   "name": "عُمان",
+   "dial_code": "968",
+   "state": "stopped"
+  },
+  {
+   "code": "PS",
+   "name": "فلسطين",
+   "dial_code": "970",
+   "state": "stopped"
+  },
+  {
+   "code": "QA",
+   "name": "قطر",
+   "dial_code": "974",
+   "state": "stopped"
+  },
+  {
+   "code": "SA",
+   "name": "السعودية",
+   "dial_code": "966",
+   "state": "stopped"
+  },
+  {
+   "code": "SO",
+   "name": "الصومال",
+   "dial_code": "252",
+   "state": "stopped"
+  },
+  {
+   "code": "SD",
+   "name": "السودان",
+   "dial_code": "249",
+   "state": "stopped"
+  },
+  {
+   "code": "SY",
+   "name": "سوريا",
+   "dial_code": "963",
+   "state": "stopped"
+  },
+  {
+   "code": "TN",
+   "name": "تونس",
+   "dial_code": "216",
+   "state": "stopped"
+  },
+  {
+   "code": "AE",
+   "name": "الإمارات",
+   "dial_code": "971",
+   "state": "stopped"
+  },
+  {
+   "code": "YE",
+   "name": "اليمن",
+   "dial_code": "967",
+   "state": "stopped"
+  },
+  {
+   "code": "TR",
+   "name": "تركيا",
+   "dial_code": "90",
+   "state": "stopped"
+  },
+  {
+   "code": "FR",
+   "name": "فرنسا",
+   "dial_code": "33",
+   "state": "stopped"
+  },
+  {
+   "code": "DE",
+   "name": "ألمانيا",
+   "dial_code": "49",
+   "state": "stopped"
+  },
+  {
+   "code": "GB",
+   "name": "المملكة المتحدة",
+   "dial_code": "44",
+   "state": "stopped"
+  },
+  {
+   "code": "IT",
+   "name": "إيطاليا",
+   "dial_code": "39",
+   "state": "stopped"
+  },
+  {
+   "code": "ES",
+   "name": "إسبانيا",
+   "dial_code": "34",
+   "state": "stopped"
+  },
+  {
+   "code": "BE",
+   "name": "بلجيكا",
+   "dial_code": "32",
+   "state": "stopped"
+  },
+  {
+   "code": "NL",
+   "name": "هولندا",
+   "dial_code": "31",
+   "state": "stopped"
+  },
+  {
+   "code": "CH",
+   "name": "سويسرا",
+   "dial_code": "41",
+   "state": "stopped"
+  },
+  {
+   "code": "AT",
+   "name": "النمسا",
+   "dial_code": "43",
+   "state": "stopped"
+  },
+  {
+   "code": "SE",
+   "name": "السويد",
+   "dial_code": "46",
+   "state": "stopped"
+  },
+  {
+   "code": "NO",
+   "name": "النرويج",
+   "dial_code": "47",
+   "state": "stopped"
+  },
+  {
+   "code": "DK",
+   "name": "الدنمارك",
+   "dial_code": "45",
+   "state": "stopped"
+  },
+  {
+   "code": "MT",
+   "name": "مالطا",
+   "dial_code": "356",
+   "state": "stopped"
+  },
+  {
+   "code": "CY",
+   "name": "قبرص",
+   "dial_code": "357",
+   "state": "stopped"
+  },
+  {
+   "code": "CA",
+   "name": "كندا",
+   "dial_code": "1",
+   "state": "stopped"
+  },
+  {
+   "code": "US",
+   "name": "الولايات المتحدة",
+   "dial_code": "1",
+   "state": "stopped"
+  }
+ ],
+ "providers": {
+  "mapbox": {
+   "public_token": ""
+  },
+  "google_maps": {},
+  "firebase_auth": {}
+ },
+ "default_country_code": "JO",
+ "network_country": "LY",
+ "network_region": "LY",
+ "guest_mode": {
+  "rider": false,
+  "driver": true
+ },
+ "validation": {
+  "vehicle_create": {
+   "make": {
+    "type": "text",
+    "required": true,
+    "min_length": 1,
+    "max_length": 60,
+    "label": "الشركة الصانعة",
+    "messages": {
+     "required": "الشركة الصانعة مطلوبة",
+     "min_length": "الشركة الصانعة قصيرةٌ جداً — محرفٌ واحد على الأقل",
+     "max_length": "الشركة الصانعة طويلةٌ جداً — 60 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفٌ واحد على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "60 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "model": {
+    "type": "text",
+    "required": true,
+    "min_length": 1,
+    "max_length": 60,
+    "label": "الطراز",
+    "messages": {
+     "required": "الطراز مطلوب",
+     "min_length": "الطراز قصيرٌ جداً — محرفٌ واحد على الأقل",
+     "max_length": "الطراز طويلٌ جداً — 60 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفٌ واحد على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "60 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "year": {
+    "type": "number",
+    "required": true,
+    "min": 1990,
+    "max": 2100,
+    "label": "سنة الصنع",
+    "messages": {
+     "required": "سنة الصنع مطلوبة",
+     "type": "سنة الصنع يجب أن تكون رقماً",
+     "min": "سنة الصنع يجب ألّا تقلّ عن 1990",
+     "max": "سنة الصنع يجب ألّا تزيد عن 2100"
+    },
+    "conditions": [
+     {
+      "key": "min",
+      "label": "1990 أو أكثر"
+     },
+     {
+      "key": "max",
+      "label": "2100 أو أقلّ"
+     }
+    ]
+   },
+   "color": {
+    "type": "text",
+    "required": true,
+    "min_length": 1,
+    "max_length": 40,
+    "label": "اللون",
+    "messages": {
+     "required": "اللون مطلوب",
+     "min_length": "اللون قصيرٌ جداً — محرفٌ واحد على الأقل",
+     "max_length": "اللون طويلٌ جداً — 40 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفٌ واحد على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "40 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "plate_number": {
+    "type": "text",
+    "required": true,
+    "min_length": 2,
+    "max_length": 32,
+    "label": "رقم اللوحة",
+    "messages": {
+     "required": "رقم اللوحة مطلوب",
+     "min_length": "رقم اللوحة قصيرٌ جداً — محرفان على الأقل",
+     "max_length": "رقم اللوحة طويلٌ جداً — 32 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفان على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "32 محرفاً على الأكثر"
+     }
+    ]
+   }
+  },
+  "register": {
+   "phone": {
+    "type": "text",
+    "required": true,
+    "min_length": 6,
+    "max_length": 20,
+    "label": "رقم الهاتف",
+    "messages": {
+     "required": "رقم الهاتف مطلوب",
+     "min_length": "رقم الهاتف قصيرٌ جداً — 6 محارف على الأقل",
+     "max_length": "رقم الهاتف طويلٌ جداً — 20 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "6 محارف على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "20 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "name": {
+    "type": "text",
+    "required": true,
+    "min_length": 2,
+    "max_length": 120,
+    "label": "الاسم",
+    "messages": {
+     "required": "الاسم مطلوب",
+     "min_length": "الاسم قصيرٌ جداً — محرفان على الأقل",
+     "max_length": "الاسم طويلٌ جداً — 120 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفان على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "120 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "password": {
+    "type": "text",
+    "required": true,
+    "min_length": 8,
+    "max_length": 128,
+    "label": "كلمة المرور",
+    "messages": {
+     "required": "كلمة المرور مطلوبة",
+     "min_length": "كلمة المرور قصيرةٌ جداً — 8 محارف على الأقل",
+     "max_length": "كلمة المرور طويلةٌ جداً — 128 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "8 محارف على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "128 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "country_code": {
+    "type": "choice",
+    "required": true,
+    "choices": [
+     "LY",
+     "JO",
+     "DZ"
+    ],
+    "label": "الدولة",
+    "messages": {
+     "required": "الدولة مطلوبة",
+     "choices": "الدولة ليست من القيم المسموحة"
+    }
+   },
+   "role": {
+    "type": "choice",
+    "required": false,
+    "choices": [
+     "rider",
+     "driver"
+    ],
+    "label": "نوع الحساب",
+    "messages": {
+     "choices": "نوع الحساب ليس من القيم المسموحة"
+    }
+   },
+   "verification_token": {
+    "type": "text",
+    "required": false,
+    "max_length": 4096,
+    "label": "رمز التحقق",
+    "messages": {
+     "max_length": "رمز التحقق طويلٌ جداً — 4096 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "max_length",
+      "label": "4096 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "gender": {
+    "type": "choice",
+    "required": false,
+    "choices": [
+     "male",
+     "female"
+    ],
+    "label": "الجنس",
+    "messages": {
+     "choices": "الجنس ليس من القيم المسموحة"
+    }
+   },
+   "referral_code": {
+    "type": "text",
+    "required": false,
+    "min_length": 4,
+    "max_length": 16,
+    "label": "رمز الإحالة",
+    "messages": {
+     "min_length": "رمز الإحالة قصيرٌ جداً — 4 محارف على الأقل",
+     "max_length": "رمز الإحالة طويلٌ جداً — 16 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "4 محارف على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "16 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "app": {
+    "type": "choice",
+    "required": false,
+    "choices": [
+     "rider",
+     "driver",
+     "panel"
+    ],
+    "messages": {
+     "choices": "هذه القيمة ليست من القيم المسموحة"
+    }
+   },
+   "accepted_policy_ids": {
+    "type": "text",
+    "required": false,
+    "max_length": 8,
+    "messages": {
+     "max_length": "هذه القيمة طويلةٌ جداً — 8 محارف على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "max_length",
+      "label": "8 محارف على الأكثر"
+     }
+    ]
+   }
+  },
+  "login": {
+   "phone": {
+    "type": "text",
+    "required": false,
+    "min_length": 6,
+    "max_length": 20,
+    "label": "رقم الهاتف",
+    "messages": {
+     "min_length": "رقم الهاتف قصيرٌ جداً — 6 محارف على الأقل",
+     "max_length": "رقم الهاتف طويلٌ جداً — 20 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "6 محارف على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "20 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "username": {
+    "type": "text",
+    "required": false,
+    "min_length": 3,
+    "max_length": 64,
+    "messages": {
+     "min_length": "هذه القيمة قصيرةٌ جداً — 3 محارف على الأقل",
+     "max_length": "هذه القيمة طويلةٌ جداً — 64 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "3 محارف على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "64 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "password": {
+    "type": "text",
+    "required": true,
+    "min_length": 1,
+    "max_length": 128,
+    "label": "كلمة المرور",
+    "messages": {
+     "required": "كلمة المرور مطلوبة",
+     "min_length": "كلمة المرور قصيرةٌ جداً — محرفٌ واحد على الأقل",
+     "max_length": "كلمة المرور طويلةٌ جداً — 128 محرفاً على الأكثر"
+    },
+    "conditions": [
+     {
+      "key": "min_length",
+      "label": "محرفٌ واحد على الأقل"
+     },
+     {
+      "key": "max_length",
+      "label": "128 محرفاً على الأكثر"
+     }
+    ]
+   },
+   "country_code": {
+    "type": "choice",
+    "required": false,
+    "choices": [
+     "LY",
+     "JO",
+     "DZ"
+    ],
+    "label": "الدولة",
+    "messages": {
+     "choices": "الدولة ليست من القيم المسموحة"
+    }
+   },
+   "app": {
+    "type": "choice",
+    "required": false,
+    "choices": [
+     "rider",
+     "driver",
+     "panel"
+    ],
+    "messages": {
+     "choices": "هذه القيمة ليست من القيم المسموحة"
+    }
+   }
+  }
+ },
+ "dispatch": {
+  "search_radius_km": 3.0,
+  "max_search_radius_km": 7.0,
+  "gendered_max_search_radius_km": 10.0
+ },
+ "app_links": {
+  "rider": {
+   "package": "ly.tajora.rider",
+   "download_url": "https://play.google.com/store/apps/details?id=ly.tajora.rider"
+  },
+  "driver": {
+   "package": "ly.tajora.driver",
+   "download_url": "https://taxo.tajora.ly"
+  }
+ },
+ "_screens": "لقطةٌ من GET /config العامّ (الأردن) في 2026-11-17 — بلا مفاتيح (Mapbox وFCM محذوفان)، وopen_map_display مشتعلٌ للّقطات وحدَها: الخريطةُ الجديدة. لا يُشحن — tools/screens/server.mjs"
+}

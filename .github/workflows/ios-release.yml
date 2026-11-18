@@ -1,0 +1,91 @@
+# **iOS — بناءٌ موقَّعٌ إلى TestFlight** (أمرُ المالك ٢٠٢٦-١١-١٧) — **جاهزٌ لا يعمل حتى يوجد حسابُ Apple**.
+#
+# **يدويٌّ وحدَه** (`workflow_dispatch`): لا دفعَ يُطلقه ولا وسم — **الرفعُ إلى Apple فعلٌ يُقرَّر**، كبوّابات الإنتاج.
+# **ويقف أوّلاً إن نقص سرّ** — ويُسمّيه بلا قيمته. والأسرارُ في GitHub المشفّرة وحدَها، تُكتب إلى ملفّاتٍ مؤقّتةٍ وتُمحى:
+#
+#   ASC_KEY_ID · ASC_ISSUER_ID · ASC_KEY_P8_B64   مفتاحُ App Store Connect API (دورُ App Manager) — التوقيعُ بها كلُّه
+#   APPLE_TEAM_ID                                   معرّفُ الفريق (عشرةُ أحرف)
+#   GOOGLE_SERVICE_INFO_RIDER_B64 · …_DRIVER_B64    ملفّا Firebase لـiOS — بغيرهما يُبنى بلا إشعاراتٍ ويُقال
+#
+# **ولا يرسل للمراجعة**: هذا يرفع بناءً إلى TestFlight وحدَه. والإرسالُ للمراجعة خطوةٌ في App Store Connect بعد قائمة iPhone.
+# **وقناةُ public وحدَها** — تخاطب api.tajora.ly كتطبيق أندرويد المنشور، **ولا يخاطبه هذا الملفُّ بنفسه** (لا نداءَ من CI).
+name: iOS · TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: التطبيق
+        type: choice
+        options: [customer-app, driver-app, both]
+        default: both
+      build_number:
+        description: رقمُ البناء (يزيد مع كلِّ رفع)
+        required: true
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    name: TestFlight · ${{ matrix.app }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJSON(inputs.app == 'both' && '["customer-app","driver-app"]' || format('["{0}"]', inputs.app)) }}
+    steps:
+      - name: الأسرار — موجودة؟ (بأسمائها لا بقيمها)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=""
+          for k in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_B64 APPLE_TEAM_ID; do [ -n "${!k}" ] || missing="$missing $k"; done
+          if [ -n "$missing" ]; then echo "✗ لا رفعَ — ينقص:$missing (يومَ حساب Apple: design/IOS-APP-STORE.md §١)"; exit 1; fi
+          echo "✓ الأسرارُ الأربعة موجودة"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+
+      - name: مفتاحُ API وملفُّ Firebase — إلى ملفّاتٍ مؤقّتة
+        env:
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          GS: ${{ matrix.app == 'customer-app' && secrets.GOOGLE_SERVICE_INFO_RIDER_B64 || secrets.GOOGLE_SERVICE_INFO_DRIVER_B64 }}
+        run: |
+          umask 077
+          printf '%s' "$ASC_KEY_P8_B64" | base64 -d > "$RUNNER_TEMP/asc.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/asc.p8" >> "$GITHUB_ENV"
+          if [ -n "$GS" ]; then
+            printf '%s' "$GS" | base64 -d > "${{ matrix.app }}/ios/App/App/GoogleService-Info.plist"
+            echo "✓ Firebase لـiOS"
+          else
+            echo "⚠ بلا GoogleService-Info.plist — يُبنى بلا إشعارات، ويُقال في تقرير الرفع"
+          fi
+
+      - name: البناءُ الموقَّع والرفعُ إلى TestFlight
+        env:
+          TAXO_CHANNEL: public
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAXO_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: node tools/build-ios.mjs "${{ matrix.app }}" --release
+
+      - name: محوُ المفتاح
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.p8" "${{ matrix.app }}/ios/App/App/GoogleService-Info.plist"

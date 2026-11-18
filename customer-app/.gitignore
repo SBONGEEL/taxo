@@ -16,3 +16,8 @@ android/app/google-services.json
 # حزمُ التصحيح تُنسخ إلى `public/` لتنزيلها على الهاتف عبر النفق — أثرُ
 # تشغيلٍ لا مصدر، وتُحذف بعد التثبيت (README: النفق يُغلق بعد التجربة)
 public/*.apk
+
+# حزمةُ اللقطات — لا تُشحن (tools/screens/prepare-dist.mjs)
+dist-screens
+# إعدادُ Firebase لـiOS — من أسرار GitHub عند الرفع وحدَه (ios-release.yml)، لا في git
+ios/App/App/GoogleService-Info.plist
