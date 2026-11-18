@@ -289,13 +289,26 @@ final class NativeShots: XCTestCase {
         // الأداتان تُوضعان أعلى الصفحة التي كانت ظاهرة — فيُبحث عنهما في الصفحات
         for _ in 0..<3 {
             // **الظاهرُ وحدَه يُعدّ** — عناصرُ الصفحات الأخرى في الشجرة بإطارٍ صفريّ، فعُدّت وصُوّرت صفحةٌ بلا أداة (44373448944)
-            let shown = springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "TAXO")).allElementsBoundByIndex.filter { $0.frame.width > 0 && $0.isHittable }
-            if shown.count > 1 { found = true; break }
+            // **من لقطةٍ واحدةٍ للشجرة** (`snapshot()`) لا من عناصرَ حيّة: عنصرٌ اختفى بين العدِّ والقراءة أسقط الاختبارَ كلَّه (44384601044)
+            if visibleTaxo() > 1 { found = true; break }
             springboard.swipeLeft()
             Thread.sleep(forTimeInterval: 1)
         }
         shot("widgets", "أداتا الشاشة الرئيسيّة — صغيرةٌ ومتوسّطة", ok: added == 2 && found, note: (found ? notes : notes + ["لم تُرَ الأداتان في أيِّ صفحة"]).joined(separator: " · "))
         dump("widgets")
+    }
+
+    /// عناصرُ «TAXO» الظاهرةُ في الشاشة الآن — إطارٌ غيرُ صفريٍّ داخل الشاشة، من لقطةٍ واحدةٍ للشجرة
+    private func visibleTaxo() -> Int {
+        guard let root = try? springboard.snapshot() else { return 0 }
+        let screen = root.frame
+        var count = 0
+        var stack: [XCUIElementSnapshot] = [root]
+        while let node = stack.popLast() {
+            if node.label.localizedCaseInsensitiveContains("TAXO"), node.frame.width > 0, screen.intersects(node.frame) { count += 1 }
+            stack.append(contentsOf: node.children)
+        }
+        return count
     }
 
     /// **أظهر iOS شاشةَ المكالمة؟** — زرُّ ردٍّ أو رفضٍ في SpringBoard، لا جوابُ الملحق
