@@ -14,6 +14,7 @@
  * أصلاً (`dispatch.eligible_driver_ids`).
  */
 
+import { useDisplayPrefs } from "@/lib/display";
 import { TestMarketAuto } from "@/components/t2/TestMarket";
 import { MotionConfig } from "framer-motion";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -531,6 +532,8 @@ function CaptainTour() {
 function WelcomeGate() {
   const { user, biometry } = useSession();
   const { config } = useConfig();
+  // **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — يُطبَّقان في الجذر، فيبلغان كلَّ شاشة
+  useDisplayPrefs(user?.country_code);
   // **خارج أسواقنا** (SPEC §٧٦-ن/٦): دولةُ الشبكة معروفةٌ وليست سوقاً مفتوحاً — ولا حكمَ بلا رأس
   const region = config?.network_region ?? null;
   const outside = Boolean(

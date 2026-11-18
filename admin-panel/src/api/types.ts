@@ -667,6 +667,7 @@ export type FeatureKey =
   | "in_app_update"
   | "in_app_review"
   | "rich_notifications"
+  | "display_accessibility"
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"

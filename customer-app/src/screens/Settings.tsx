@@ -36,6 +36,7 @@ import {
 } from "@/lib/sound";
 import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
 import { VolumeEmergencySetting } from "@/components/VolumeEmergencySetting";
+import { DisplaySettings } from "@/components/DisplaySettings";
 import { AuthChoice, Icon, Switch } from "@/taxo2";
 import { SubHeadT2 } from "@/screens/t2/KitT2";
 
@@ -206,6 +207,9 @@ export function SettingsScreen() {
           }}
         />
       </Group>
+
+      {/* **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — حيث يشتعل مفتاحُ السوق */}
+      <DisplaySettings country={user?.country_code} />
 
       {/* **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يظهر حيث يشتعل مفتاحُ السوق، ويشعله الراكبُ بنفسه */}
       <VolumeEmergencySetting country={user?.country_code} />

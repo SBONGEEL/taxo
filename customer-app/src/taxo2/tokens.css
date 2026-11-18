@@ -214,3 +214,18 @@ html.pink .t2.t2-night {
   --t2-accent-text: #f08cc0;
   --t2-on-accent: #0e1013;
 }
+
+/* **التباينُ العالي** (SPEC §١٠٣ C/40، `html.hc` من `lib/display.ts`) — الباهتُ يُغمَّق في الفاتح ويُفتَّح في الداكن، وما عداه كما هو */
+html.hc .t2 {
+  --t2-muted: #3f3d38;
+  --t2-faint: #5e5a52;
+  --t2-line: #8d8676;
+  --t2-divider: #cfc8ba;
+}
+html.hc.dark .t2:not(.t2-day),
+html.hc .t2.t2-night {
+  --t2-muted: #d2d6dc;
+  --t2-faint: #aeb3ba;
+  --t2-line: #5d636c;
+  --t2-divider: #3a3f47;
+}

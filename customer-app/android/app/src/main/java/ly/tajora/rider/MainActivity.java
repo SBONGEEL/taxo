@@ -22,6 +22,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ScreenSecurePlugin.class);
         // **ملءُ رمز التحقّق من الرسالة** (SPEC §١٠٣ B/23)
         registerPlugin(SmsConsentPlugin.class);
+        // **النصُّ الكبير** (SPEC §١٠٣ C/40)
+        registerPlugin(TextZoomPlugin.class);
         // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19)
         registerPlugin(RideLivePlugin.class);
         // **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يشعله الراكبُ بنفسه

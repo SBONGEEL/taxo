@@ -21,6 +21,7 @@
  * وتقاريرُ الأعطال، وإشعاراتُ العروض، والسِمةُ الوردية.
  */
 
+import { DisplaySettings } from "@/components/DisplaySettings";
 import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
 import { offerSpeechChosen, setOfferSpeech } from "@/lib/launcher";
 import { useTheme } from "@/lib/theme";
@@ -327,6 +328,8 @@ export function SettingsT2Screen() {
       </Group>
 
       <Group label={tr("التطبيق")}>
+        {/* **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — حيث يشتعل مفتاحُ السوق */}
+        <DisplaySettings country={profile?.user.country_code} />
         {/* **«شارك التطبيق» و«جولة في التطبيق»** (اقتراحُ Testers Community وأمرُ المالك ٢٠٢٦-١٠-٢٧) — أوّلَ المجموعة: فعلان يُطلبان */}
         <button
           type="button"

@@ -4,6 +4,7 @@
  * عقد FCM من الإعدادات، و`Session` قبل `Ride` لأن المقبس لا يُفتح بلا مستخدم.
  */
 
+import { useDisplayPrefs } from "@/lib/display";
 import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { navBarHidden } from "@/lib/outcome";
 import { TestMarketAuto } from "@/components/t2/TestMarket";
@@ -411,6 +412,8 @@ async function startGuestDemo(): Promise<string | null> {
 function WelcomeGate() {
   const { user, biometry } = useSession();
   const { config } = useConfig();
+  // **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — يُطبَّقان في الجذر، فيبلغان كلَّ شاشة
+  useDisplayPrefs(user?.country_code);
   // **خارج أسواقنا** (SPEC §٧٦-ن/٦): دولةُ الشبكة معروفةٌ وليست سوقاً مفتوحاً — ولا حكمَ بلا رأس
   const region = config?.network_region ?? null;
   const outside = Boolean(
