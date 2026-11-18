@@ -2299,6 +2299,8 @@ export interface AdminPermissions {
   roles: UserRole[];
   permissions: string[];
   explicit: boolean;
+  /** **موقوفٌ بيد المالك** — لا يدخل اللوحة، وصلاحيّاتُه محفوظةٌ لإعادته. */
+  blocked: boolean;
 }
 
 // ------------------------------------------------------- سجلُّ الإصدارات

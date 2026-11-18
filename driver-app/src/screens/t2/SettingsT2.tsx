@@ -43,6 +43,7 @@ import { WomenModeRowT2 } from "./WomenModeT2";
 import "@/taxo2";
 import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/lib/i18n";
 import { updateMyLanguage } from "@/api/endpoints";
+import { useShellAllows } from "@/lib/shell-features";
 import { Icon } from "@/taxo2";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */
@@ -162,11 +163,14 @@ export function SettingsT2Screen() {
   // **شريطُ الإرشاد مفتاحُ السوق** — مطفأً لا تعليمةَ ولا نغمة، فلا مفتاح
   const guidanceReady = country?.features.next_instruction_enabled === true;
   // **«نغمة الإشعارات»** (ج/١) — مفتاحُ السوق
-  const tonesOn = country?.features[TONES_FLAG] === true;
+  const tonesShell = useShellAllows(TONES_FLAG);
+  const tonesOn = country?.features[TONES_FLAG] === true && tonesShell;
   // **«انطق الطلب»** (§١٠٣ B/14) — مفتاحُ السوق يُظهره، واختيارُ الكبتن يشعله
-  const speechReady = country?.features.offer_tts === true;
+  const speechShell = useShellAllows("offer_tts");
+  const speechReady = country?.features.offer_tts === true && speechShell;
   // **«تلقائي» في المظهر** (§١٠٣ B/16)
-  const autoNight = country?.features.auto_night_keep_awake === true;
+  const autoShell = useShellAllows("auto_night_keep_awake");
+  const autoNight = country?.features.auto_night_keep_awake === true && autoShell;
   const theme = useTheme();
   const [speech, setSpeechState] = useState(offerSpeechChosen);
 

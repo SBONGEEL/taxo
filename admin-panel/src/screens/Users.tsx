@@ -24,6 +24,8 @@ import {
   listAdminPermissions,
   listUsers,
   setAdminPermissions,
+  suspendStaff,
+  unsuspendStaff,
 } from "@/api/endpoints";
 import type { AdminPermissions, User, UserRole } from "@/api/types";
 import { ReviewersCard } from "@/components/ReviewersCard";
@@ -158,7 +160,7 @@ export function UsersScreen() {
         )}
       />
 
-      <PermissionsMatrix onError={setError} onDone={setDone} />
+      <PermissionsMatrix onError={setError} onDone={setDone} owner={owner} />
       {/* **حسابُ المراجع ينشئه المالكُ بيده** (SPEC §٨٢-ب/٥) — والخادمُ يحرسه (`OwnerUser`) */}
       {owner ? <ReviewersCard onDone={setDone} /> : null}
     </Shell>
@@ -179,9 +181,12 @@ export function UsersScreen() {
 function PermissionsMatrix({
   onError,
   onDone,
+  owner,
 }: {
   onError: (message: string) => void;
   onDone: (message: string) => void;
+  /** **زرُّ الإيقاف للمالك وحدَه** — والخادمُ يحرسه (`OwnerUser`)، فإخفاؤه عن غيره راحةٌ لا حماية */
+  owner: boolean;
 }) {
   const [rows, setRows] = useState<AdminPermissions[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -216,6 +221,25 @@ function PermissionsMatrix({
     }
   }
 
+  /** **إيقافُ موظّفٍ أو إعادتُه** — بسببٍ مكتوبٍ يُسأل عنه قبل النداء، ولا يُرسل بلا سبب */
+  async function suspend(row: AdminPermissions) {
+    const next = !row.blocked;
+    const reason = window.prompt(
+      next ? `سببُ إيقاف ${row.name} (يُكتب في سجلّ التدقيق):` : `سببُ إعادة ${row.name}:`,
+    );
+    if (!reason || reason.trim().length < 3) return;
+    setBusy(row.user_id);
+    try {
+      await (next ? suspendStaff : unsuspendStaff)(row.user_id, reason.trim());
+      onDone(next ? `أُوقف ${row.name} — لا يدخل اللوحة من الآن` : `أُعيد ${row.name} بصلاحيّاته كما كانت`);
+      await load();
+    } catch (caught) {
+      onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const keys = Object.keys(PERMISSION_LABEL);
 
   return (
@@ -241,6 +265,17 @@ function PermissionsMatrix({
                     <span className="block text-10.5">
                       {row.explicit ? "صفوفٌ ممنوحة" : "افتراضُ الدور"}
                     </span>
+                    {row.blocked ? <span className="block text-10.5 font-bold text-danger">موقوف</span> : null}
+                    {owner && !row.roles.includes("owner") ? (
+                      <button
+                        type="button"
+                        disabled={busy === row.user_id}
+                        onClick={() => void suspend(row)}
+                        className="mt-6 rounded-8 border border-line px-8 py-2 text-10.5 font-semibold text-ink disabled:opacity-60"
+                      >
+                        {row.blocked ? "إعادة" : "إيقاف"}
+                      </button>
+                    ) : null}
                   </th>
                 ))}
               </tr>

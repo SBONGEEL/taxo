@@ -26,6 +26,7 @@ import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
 import { flushCrashReports, reportNetworkFailure } from "@/lib/crash-reports";
+import { useShellAllows } from "@/lib/shell-features";
 import type { FirebaseWebConfig } from "@/lib/firebase"; import { tr } from "@/lib/i18n";
 
 interface ConfigState {
@@ -197,7 +198,9 @@ export function useFeature(
   country: CountryCode | undefined,
   key: string,
 ): boolean {
-  return useCountryConfig(country)?.features[key] === true;
+  // **ميزاتُ A وB وC على أندرويد لغلاف 1367 فما فوق** (`shell-features.ts`) — والخطّافُ يُنادى دائماً لا بعد `&&`
+  const shellAllowed = useShellAllows(key);
+  return useCountryConfig(country)?.features[key] === true && shellAllowed;
 }
 
 /** إعدادُ تطبيق الويب لدى Firebase من عقدٍ بعينه — `null` بغير عقد مكتمل. */

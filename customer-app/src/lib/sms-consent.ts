@@ -6,6 +6,8 @@
 import { useEffect, useRef } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
+import { shellAllows } from "@/lib/shell-features";
+
 const native = registerPlugin<{
   listen(options: { length: number }): Promise<{ code: string | null }>;
   stop(): Promise<void>;
@@ -18,7 +20,7 @@ export function smsAutofillFor(
 ): boolean {
   const digits = e164.replace(/^\+/, "");
   const country = (countries ?? []).find((entry) => digits.startsWith(entry.dial_code.replace(/^\+/, "")));
-  return country?.features.sms_autofill === true;
+  return country?.features.sms_autofill === true && shellAllows("sms_autofill");
 }
 
 export function useSmsConsent(on: boolean, length: number, onCode: (code: string) => void): void {

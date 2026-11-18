@@ -386,6 +386,14 @@ class AdminPermissionsOut(BaseModel):
     #: **أصفوفٌ ممنوحةٌ أم افتراضُ الدور؟** — والغيابُ ليس «لا يملك شيئاً»،
     #: **وبغير هذا الحقل يظنّ القارئُ أن مشرفاً بلا صفوفٍ بلا صلاحيات**.
     explicit: bool
+    #: **موقوفٌ بيد المالك** (`is_blocked`) — لا يدخل اللوحةَ ولا يمرّ له طلب، وصلاحيّاتُه محفوظةٌ كما هي لإعادته
+    blocked: bool = False
+
+
+class StaffSuspendIn(BaseModel):
+    """**سببُ إيقاف موظّف أو إعادته** — يدخل سجلَّ التدقيق ولا يصل صاحبَ الحساب."""
+
+    reason: str = Field(min_length=3, max_length=300)
 
 
 class AdminPermissionsIn(BaseModel):

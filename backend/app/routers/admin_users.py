@@ -26,6 +26,7 @@ from sqlalchemy import func, or_, select
 from app.core.deps import (
     DbSession,
     ListReader,
+    OwnerUser,
     PermissionsManager,
     RedisDep,
     StaffUser,
@@ -55,6 +56,7 @@ from app.routers.drivers import document_response
 from app.schemas.auth import (
     AdminPermissionsIn,
     AdminPermissionsOut,
+    StaffSuspendIn,
     UserBlockUpdate,
     UserMessageIn,
     UserOut,
@@ -1197,6 +1199,7 @@ async def list_admin_permissions(
                     p.value for p in await permissions_service.for_user(session, member)
                 ),
                 explicit=bool(explicit),
+                blocked=member.is_blocked,
             )
         )
     return rows
@@ -1247,4 +1250,67 @@ async def set_admin_permissions(
         roles=list(target.roles),
         permissions=sorted(p.value for p in after),
         explicit=True,
+        blocked=target.is_blocked,
     )
+
+
+# ═══════════════ إيقافُ موظّف — للمالك وحدَه (جردُ اللوحة البند ٤، `design/PANEL-ITEM4-INVENTORY.md`، أمرُ المالك ١٨/١١ السادس)
+
+
+async def _set_staff_blocked(
+    session, *, user_id: uuid.UUID, blocked: bool, owner: User, reason: str
+) -> AdminPermissionsOut:
+    """**البابُ الثاني لـ`is_blocked` — للموظّفين وحدَهم، وبيد المالك وحدَه**.
+
+    `_set_blocked` يرفض الإداريَّ بعلّته («بابٌ يُغلق به مشرفٌ على زملائه»)، **فبقي موظّفٌ يترك العمل يدخل اللوحة**. وهذا البابُ يسدّه
+    والعلّةُ قائمة: **المالكُ وحدَه** (`OwnerUser`)، **لا على نفسه ولا على مالكٍ آخر** — فلا يُقفل البيتُ على صاحبه.
+    **والصفُّ يُقفل قبل الفحص** كأيِّ تغيير حال. **والأثرُ فوريّ**: `core/deps` يقرأ `is_blocked` في كلِّ طلب، فلا رمزٌ قائمٌ يعيش بعده.
+    **والصلاحيّاتُ لا تُمسّ** — الإعادةُ تُرجعه كما كان.
+    """
+    if user_id == owner.id:
+        raise InvalidInput("لا يوقف المالكُ حسابَه")
+    target = await session.get(User, user_id, with_for_update=True)
+    if target is None:
+        raise NotFound("الحساب غير موجود")
+    if target.has_role(UserRole.OWNER):
+        raise InvalidInput("لا يُوقف حسابُ مالك")
+    if not target.has_role(UserRole.ADMIN, UserRole.SUPPORT):
+        raise InvalidInput("هذا ليس حسابَ موظّف — يُحظر من ملفّه")
+    target.is_blocked = blocked
+    await audit.record(
+        session,
+        actor=owner,
+        action=AuditAction.UPDATE,
+        entity_type="staff",
+        entity_id=target.id,
+        details={"blocked": blocked, "reason": reason},
+    )
+    await session.commit()
+    await session.refresh(target)
+    granted = await session.scalar(
+        select(func.count()).select_from(AdminPermissionGrant).where(AdminPermissionGrant.user_id == target.id)
+    )
+    return AdminPermissionsOut(
+        user_id=target.id,
+        name=target.name,
+        roles=list(target.roles),
+        permissions=sorted(p.value for p in await permissions_service.for_user(session, target)),
+        explicit=bool(granted),
+        blocked=target.is_blocked,
+    )
+
+
+@router.post("/staff/{user_id}/suspend", response_model=AdminPermissionsOut)
+async def suspend_staff(
+    user_id: uuid.UUID, payload: StaffSuspendIn, owner: OwnerUser, session: DbSession
+) -> AdminPermissionsOut:
+    """يوقف موظّفاً — **فلا يدخل اللوحةَ ولا يمرّ له طلب** من لحظتها، وصلاحيّاتُه محفوظة."""
+    return await _set_staff_blocked(session, user_id=user_id, blocked=True, owner=owner, reason=payload.reason)
+
+
+@router.post("/staff/{user_id}/unsuspend", response_model=AdminPermissionsOut)
+async def unsuspend_staff(
+    user_id: uuid.UUID, payload: StaffSuspendIn, owner: OwnerUser, session: DbSession
+) -> AdminPermissionsOut:
+    """يعيد موظّفاً موقوفاً كما كان — **بسببٍ مكتوبٍ كالإيقاف**."""
+    return await _set_staff_blocked(session, user_id=user_id, blocked=False, owner=owner, reason=payload.reason)

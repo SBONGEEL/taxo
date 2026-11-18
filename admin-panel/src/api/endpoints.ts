@@ -948,6 +948,13 @@ export const listAdminPermissions = () =>
 export const setAdminPermissions = (userId: string, permissions: string[]) =>
   api.put<AdminPermissions>(`/admin/permissions/${userId}`, { permissions });
 
+/** **إيقافُ موظّفٍ أو إعادتُه — للمالك وحدَه** (جردُ اللوحة البند ٤)، **بسببٍ إلزاميٍّ** يدخل التدقيق. */
+export const suspendStaff = (userId: string, reason: string) =>
+  api.post<AdminPermissions>(`/admin/staff/${userId}/suspend`, { reason });
+
+export const unsuspendStaff = (userId: string, reason: string) =>
+  api.post<AdminPermissions>(`/admin/staff/${userId}/unsuspend`, { reason });
+
 /** الحظرُ **بسببٍ إلزامي** يدخل سجل التدقيق ولا يصل صاحب الحساب. */
 /** تعديلُ اسمِ حسابٍ وبريدِه من ملفّه — **البند ١١**.
  *
