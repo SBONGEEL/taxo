@@ -38,7 +38,20 @@ cdp() { # cdp <pkg> <js> — يقيّم تعبيراً في صفحة الغلا�
   node scripts/cdp-eval.mjs 9222 "$2"
 }
 cdp_retry() { local i; for i in 1 2 3 4; do cdp "$@" && return 0; sleep 5; done; return 1; }
-focus() { adb shell dumpsys window | tr -d '' | grep -m1 mCurrentFocus | sed 's/^ *//'; }
+focus() { adb shell dumpsys window | tr -d '
+' | grep -m1 mCurrentFocus | sed 's/^ *//'; }
+
+# **شاشاتُ أوّلِ تشغيلٍ تغطّي الرئيسية** (قِيس في 44289821374: شرحُ الراكب «تخطٍّ»، و«استثناء من توفير الطاقة» للكبتن «لاحقاً»)
+# — تُتخطّى بأزرارها كما يتخطّاها الإنسان، زرّاً في كلِّ نداء، والصفحةُ تُعيد الرسمَ بينها
+DISMISS='(()=>{const b=[...document.querySelectorAll("button,a,[role=button]")].find(e=>/^(تخط|لاحق|ليس الآن|إغلاق)/.test((e.textContent||"").trim()));if(!b)return "none";const t=(b.textContent||"").trim().slice(0,20);b.click();return t})()'
+dismiss_all() { # dismiss_all <pkg>
+  local i r
+  for i in 1 2 3 4 5 6 7 8; do
+    r="$(cdp "$1" "$DISMISS" 2>>"$LOG")"
+    if [ -z "$r" ] || [ "$r" = none ]; then break; fi
+    say "  · تُخطّي: $r"; sleep 2
+  done
+}
 
 shot() { # shot <pkg> <name>
   local engine
@@ -56,17 +69,21 @@ run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-
     adb shell pm grant "$pkg" "$perm" >>"$LOG" 2>&1 || true
   done
   access="$(sed -n 1p "$3")"; refresh="$(sed -n 2p "$3")"
+  # **إقلاعُ تحميةٍ قبل الدخول الأوّل** (قِيس: أوّلُ إقلاعٍ بعد التثبيت لم يُبلغ WebView بعد ٣٥ ث فسقط دخولُ النهار)
+  adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1; sleep 30; adb shell am force-stop "$pkg"
   for mode in no yes; do
     local theme; [ "$mode" = no ] && theme=day || theme=night
     adb shell cmd uimode night "$mode" >>"$LOG" 2>&1
     adb shell am force-stop "$pkg"
-    adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '' | tail -1)" >>"$LOG" 2>&1
+    adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '
+' | tail -1)" >>"$LOG" 2>&1
     sleep 15
     # **الدخولُ برمزَي الحساب في مخزن الصفحة ثمّ إعادةُ التحميل** — كما يكتبهما الدخولُ نفسُه، بلا كتابة كلمة مرورٍ في أيِّ حقل
     step "دخولُ $tag ($theme)" cdp_retry "$pkg" "localStorage.setItem('$4','$access');localStorage.setItem('$5','$refresh');location.reload();'ok'"
     sleep 25
     adb emu geo fix "$TAJOURA_LON" "$TAJOURA_LAT" >>"$LOG" 2>&1
     sleep 10
+    dismiss_all "$pkg"; sleep 4
     shot "$pkg" "$tag-$theme-home"
     # **قربُ تاجوراء بتكبيرٍ يُظهر المباني والأماكن** — نقرتان مزدوجتان وسطَ الخريطة
     adb shell input tap 540 1000; sleep 0.2; adb shell input tap 540 1000; sleep 3

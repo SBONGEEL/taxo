@@ -11,6 +11,10 @@ for (const scheme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport: { width: 412, height: 915 }, colorScheme: scheme, locale: "ar" });
   // **«load» لا «networkidle»**: الصفحةُ تُبقي اتصالاً حيّاً فلا تهدأ الشبكةُ أبداً (قِيس: مهلةُ ٣٠ث على الإنتاج)
   await page.goto(`${base}/register`, { waitUntil: "load" });
+  // **شاشةُ البداية «المس الشاشة للتخطي» تغطّي الصفحة** (قِيس في 44289821374: صورتا الإنتاج شعارٌ وحده) — تُلمس وتُنتظر
+  await page.waitForTimeout(2500);
+  await page.mouse.click(206, 450);
+  await page.waitForTimeout(2500);
   const trigger = page.locator(".t2-auth-country").first();
   // **وصفحةُ الترحيب قبل الحقل** («أهلاً وسهلاً» ثمّ «حساب جديد») — تُعبر إن ظهرت
   if (!(await trigger.waitFor({ state: "visible", timeout: 8000 }).then(() => true, () => false))) {
@@ -40,7 +44,7 @@ for (const scheme of ["light", "dark"]) {
         log.push({ scheme, missing: name });
         continue;
       }
-      await row.click();
+      await row.evaluate((el) => el.click()); // **والصفُّ كالزرّ: موجودٌ ولا يصير «ظاهراً» لـPlaywright** (قِيس في 44289821374)
       await page.waitForTimeout(1500);
       await page.screenshot({ path: `${out}/picker-${file}-${scheme}.png` });
       log.push({ scheme, tapped: name, notice: await page.locator(".t2-country-notice").textContent().catch(() => null) });
