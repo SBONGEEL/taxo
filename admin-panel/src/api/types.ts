@@ -681,6 +681,7 @@ export type FeatureKey =
   | "weak_network_retry"
   | "sms_autofill"
   | "voice_ride_phrase"
+  | "last_ride_mode"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

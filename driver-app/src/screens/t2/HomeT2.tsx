@@ -261,21 +261,8 @@ export function HomeT2Screen() {
     if (mode !== "home" && root.current) root.current.scrollTop = 0;
   }, [mode]);
 
-  // **التحصيلُ يسبق كلَّ شيء** كما في الشاشة القائمة — **والتقييمُ فيه** (C08)، فلا شاشةَ تقييمٍ بعده
-  if (settling) {
-    return (
-      <CollectT2Screen
-        ride={settling}
-        currencyLabel={currency}
-        onDone={() => {
-          // **تقييمُ المتجر** (البند ٦) — تُعدّ الرحلةُ هنا، ويُسأل حين يتوقّف عن الاستقبال لا فوق عرضٍ قادم
-          if (settling.status === "completed") noteCompletedRide(settling.id);
-          setSettling(null);
-        }}
-      />
-    );
-  }
-
+  // **كلُّ هوكٍ فوق `if (settling) return`** (عطبٌ مقيسٌ ٢٠٢٦-١١-١٨): هوكاتُ §١٠٣ وُضعت تحته فكان كلُّ إنهاءِ رحلةٍ يُنقص عددَها —
+  // و«Rendered fewer hooks than expected» يُسقط الرئيسيّةَ لحظةَ التحصيل. `useTheme` وحده كان هناك قبلها ولا يحجز خانةً فلم يظهر
   const riding = tracking && (ride.status === "in_progress" || ride.status === "at_stop");
   // **زرُّ الاستقبال نفسُه** — سطرُ `onToggleOnline` في الشاشة القائمة بحرفه
   const toggleOnline = () => {
@@ -298,6 +285,22 @@ export function HomeT2Screen() {
   useKeepAwake(useFeature(user?.country_code, "auto_night_keep_awake") && tracking);
   // **«في رحلة» للخدمة الأصليّة** (SPEC §١٠٣ B/15) — لا تقليلَ للإرسال أثناءها
   useEffect(() => setRideActive(tracking), [tracking]);
+  // **«آخر رحلة»** (SPEC §١٠٣ C/30، خلف `last_ride_mode`) — تنتهي الجاريةُ (إنهاءً أو إلغاءً) ⇐ خروجٌ من الاستقبال بالباب نفسِه
+  // (`goOffline`)، فلا يصله عرضٌ بعدها. **ولا يمسّ الرحلةَ ولا التحصيل**: التحصيلُ نداءاتُ REST لا تحتاج الاستقبال
+  const lastRideOn = useFeature(user?.country_code, "last_ride_mode");
+  const [lastRide, setLastRide] = useState(false);
+  const hadRide = useRef(false);
+  useEffect(() => {
+    if (ride) {
+      hadRide.current = true;
+      return;
+    }
+    if (hadRide.current && lastRide && online) {
+      goOffline();
+      setLastRide(false);
+    }
+    hadRide.current = false;
+  }, [ride, lastRide, online, goOffline]);
   // **سطرُ الرحلة في إشعار «متّصل»** (SPEC §١٠٣ B/18) — بحالها، ويُمحى حين تنتهي
   const rideStatus = tracking ? ride.status : null;
   useEffect(() => setRideLine(rideNoticeLine(rideStatus)), [rideStatus]);
@@ -317,6 +320,22 @@ export function HomeT2Screen() {
   // **CW2 — الوضعُ النسائيّ** (§٦٢-ج/٢٣): كبتنةٌ اختارت «الراكبات فقط» حيث الخدمةُ مشتعلة
   const womenMode = isWomenMode(womenService, preference, user?.gender);
   const theme = useTheme();
+
+  // **التحصيلُ يسبق كلَّ شيء** كما في الشاشة القائمة — **والتقييمُ فيه** (C08)، فلا شاشةَ تقييمٍ بعده
+  if (settling) {
+    return (
+      <CollectT2Screen
+        ride={settling}
+        currencyLabel={currency}
+        onDone={() => {
+          // **تقييمُ المتجر** (البند ٦) — تُعدّ الرحلةُ هنا، ويُسأل حين يتوقّف عن الاستقبال لا فوق عرضٍ قادم
+          if (settling.status === "completed") noteCompletedRide(settling.id);
+          setSettling(null);
+        }}
+      />
+    );
+  }
+
 
   return (
     <div
@@ -655,6 +674,7 @@ export function HomeT2Screen() {
           onCancel={(reason) => void run(async () => setRide(await cancelRide(ride.id, reason.label, reason.code)))}
           // **«ارفض الطرد»** (§٦٣-ج/٤) — بابُه وحدَه، والرحلةُ تعود ملغاةً كما يعيدها الإلغاء
           onRefuseParcel={() => void run(async () => setRide(await refuseParcel(ride.id)))}
+          lastRide={lastRideOn && online ? { on: lastRide, toggle: () => setLastRide((value) => !value) } : null}
         />
       ) : null}
 

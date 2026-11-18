@@ -76,6 +76,8 @@ interface Props {
   onResumeStop: (stopId: string) => void;
   /** **«ارفض الطرد»** (§٦٣-ج/٤) — نداءُ `parcel-refuse` بعد تأكيده؛ وفي طور «وصل» على رحلة طردٍ وحدَه. */
   onRefuseParcel: () => void;
+  /** **«آخر رحلة»** (SPEC §١٠٣ C/30) — مفعّلٌ ⇐ يخرج الكبتنُ من الاستقبال حين تنتهي هذه؛ و`null` حين يكون المفتاحُ مطفأً. */
+  lastRide?: { on: boolean; toggle: () => void } | null;
 }
 
 export function RideT2({
@@ -100,6 +102,7 @@ export function RideT2({
   onArriveStop,
   onResumeStop,
   onRefuseParcel,
+  lastRide = null,
 }: Props) {
   const { phase, riding, waiting, stopAction, picking, setPicking, reason, setReason, reasons, mapTarget } =
     useActiveRide(ride, genderPreference);
@@ -306,6 +309,18 @@ export function RideT2({
             disabled={busy}
           >
             {ride.open_pause ? tr("استئناف") : tr("نقطة توقف")}
+          </button>
+        ) : null}
+
+        {/* **«آخر رحلة»** (§١٠٣ C/30) — لا يمسّ الرحلةَ الجارية؛ يطفئ الاستقبالَ بعدها فلا يصله عرضٌ جديد */}
+        {lastRide ? (
+          <button
+            type="button"
+            className={`t2-rd-btn ghost${lastRide.on ? " ok" : ""}`}
+            onClick={lastRide.toggle}
+            aria-pressed={lastRide.on}
+          >
+            {lastRide.on ? tr("آخر رحلة ✓ — سأخرج من الاستقبال بعدها") : tr("هذه آخر رحلة")}
           </button>
         ) : null}
 

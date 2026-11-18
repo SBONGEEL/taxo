@@ -1048,6 +1048,8 @@ class FeatureKey(StrEnum):
     SMS_AUTOFILL = "sms_autofill"
     # **«اطلب رحلة إلى سيتي مول» تُقرأ وجهةً** (SPEC §١٠٣/36) — فوق الطلب بالصوت القائم
     VOICE_RIDE_PHRASE = "voice_ride_phrase"
+    # **«آخر رحلة»** (SPEC §١٠٣/30) — تنتهي الجاريةُ ثمّ يخرج الكبتنُ من الاستقبال وحدَه
+    LAST_RIDE_MODE = "last_ride_mode"
 
 
 class MapPlaceCategory(StrEnum):

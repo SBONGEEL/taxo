@@ -65,6 +65,8 @@ run "check:ios"             node tools/check-ios.mjs
 run "check:arabic-frozen"  node tools/check-arabic-frozen.mjs
 # **ووعدُ إضافةٍ أصليّةٍ لا يطفو بلا ماسك** (بلاغُ الإصدار 496، 2026-10-11): غلافٌ أقدمُ بلا الإضافة يرفضه فيصل تقاريرَ الأعطال
 run "check:native-calls"   node tools/check-native-calls.mjs
+# **ولا هوكَ بعد return مبكّر** (٢٠٢٦-١١-١٨): هوكاتُ §١٠٣ تحت «if (settling) return» أسقطت رئيسيّةَ الكبتن لحظةَ كلِّ تحصيل
+run "check:hooks-order"    node tools/check-hooks-order.mjs
 # **وبوّابةُ الفرع تُقاس هنا لا تُتذكَّر** (٢٠٢٦-١٠-٠٤): شجرةُ إعادة التصميم
 # تعيش أسابيعَ بجانب `master`، **وتعديلٌ في `deploy.sh` يُزيح البوّابةَ تحت
 # أوّلِ نداءٍ للخادم لا يشكو حتى يُرفع**. مستودعاتٌ مؤقّتةٌ وشواهدُ للشبكة —
