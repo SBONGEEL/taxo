@@ -678,6 +678,7 @@ export type FeatureKey =
   | "root_report"
   | "volume_emergency"
   | "ride_widget"
+  | "weak_network_retry"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`

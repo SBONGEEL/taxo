@@ -29,7 +29,7 @@
  * إلى تطبيقٍ ليس تطبيقه.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -56,7 +56,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, cn, formatAmount,
-  DISPLAY_LOCALE,
+  DISPLAY_LOCALE, newIdempotencyKey,
 } from "@/lib/utils";
 import { useGoBack } from "@/lib/back"; import { tr } from "@/lib/i18n";
 
@@ -149,6 +149,9 @@ export function useSubscriptionScreen() {
   const [history, setHistory] = useState<DriverSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  // **مفتاحٌ لكلِّ خطّةٍ يعيش حتى ينجح الشراء** (§١٠٣ B/24): كان يُولَّد من الساعة مع كلِّ ضغطة، **فإعادةٌ بعد ردٍّ ضاع في شبكةٍ ضعيفة
+  // كانت شراءً ثانياً من المحفظة** — والخادمُ يقفل صفَّ الكبتن فيصنع فترتين متتاليتين لا واحدة
+  const buyKeys = useRef(new Map<string, string>());
   // خطوةُ تأكيدٍ قبل الخصم: ضغطةٌ واحدة تُخرج ثمانين ديناراً من محفظته،
   // و«خصمتم مني بالخطأ» تذكرةُ دعمٍ لا تُغلق بغير قيدٍ مضاد
   const [confirming, setConfirming] = useState<SubscriptionPlan | null>(null);
@@ -179,8 +182,11 @@ export function useSubscriptionScreen() {
     setError(null);
     setDone(null);
     try {
-      // مفتاحُ عدم التكرار من العميل (القسم 14): ضغطتان لا تشتريان شهرين
-      await buySubscription(planId, `sub-${planId}-${Date.now()}`);
+      // مفتاحُ عدم التكرار من العميل (القسم 14): ضغطتان لا تشتريان شهرين — **ولا إعادةٌ بعد انقطاع**
+      const key = buyKeys.current.get(planId) ?? newIdempotencyKey(`sub-${planId.slice(0, 8)}`);
+      buyKeys.current.set(planId, key);
+      await buySubscription(planId, key);
+      buyKeys.current.delete(planId);
       await load();
       setDone(tr("تم التجديد — اشتراكك ساري ✓"));
     } catch (caught) {

@@ -79,6 +79,7 @@ import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { OfferSheet } from "@/components/OfferSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig, useFeature, useMapboxToken } from "@/lib/config";
+import { untilSent } from "@/lib/until-sent";
 import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { isActive, useRide } from "@/lib/ride";
@@ -96,6 +97,8 @@ export function useHomeScreen() {
   const [params, setParams] = useSearchParams();
   const { user } = useSession();
   const womenService = useFeature(user?.country_code, "women_service_enabled");
+  // **وضعُ الإنترنت الضعيف لأفعال الرحلة** (SPEC §١٠٣ B/24)
+  const weakRetry = useFeature(user?.country_code, "weak_network_retry");
   const { config } = useConfig();
   const { profile } = useDriver();
   const { activeSkin } = useGarage();
@@ -411,15 +414,24 @@ export function useHomeScreen() {
   /** **و`code` رمزُ الرحلة** لرحلةٍ تطلبه (§٦٢-ج/٥، CW4) — يُرسل مع البدء وحدَه. */
   async function advance(code?: string) {
     if (!ride) return;
+    // **وضعُ الإنترنت الضعيف** (§١٠٣ B/24): الفعلُ ينتظر الشبكةَ ويُعاد، والإعادةُ لا تُطبَّق مرّتين (`lib/until-sent.ts`)
+    const send = (call: () => Promise<Ride>, reached: (now: Ride) => boolean) =>
+      untilSent(call, {
+        enabled: weakRetry,
+        rideId: ride.id,
+        reached,
+        onWaiting: (waiting) => setActionError(waiting ? tr("بانتظار الشبكة — سيُرسل حين تعود") : null),
+      });
     await run(async () => {
-      if (ride.status === "accepted") setRide(await arriveRide(ride.id));
-      else if (ride.status === "arrived") setRide(await startRide(ride.id, code));
+      if (ride.status === "accepted") setRide(await send(() => arriveRide(ride.id), (now) => ["arrived", "in_progress", "at_stop"].includes(now.status)));
+      else if (ride.status === "arrived")
+        setRide(await send(() => startRide(ride.id, code), (now) => now.status === "in_progress" || now.status === "at_stop"));
       else if (ride.status === "in_progress" || ride.status === "at_stop") {
         // **الإنهاءُ من `at_stop` مسموحٌ عمداً**: مخرجُ السقف حين يطول
         // انتظارُ الراكب (SPEC القسم 5.10) — والخلفيةُ هي من يجيزه
         // **وآخرُ نقاط الرحلة تُرسل أوّلاً** (§٧٥-ج): الأجرةُ تُقاس بما وصل الخادمَ لحظةَ الإنهاء
         await flushTrip();
-        const finished = await completeRide(ride.id);
+        const finished = await send(() => completeRide(ride.id), (now) => now.status === "completed");
         setRide(null);
         setSettling(finished);
       }

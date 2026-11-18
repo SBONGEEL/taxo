@@ -172,3 +172,12 @@ export function toLatinDigits(value: string): string {
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/[^0-9]/g, "");
 }
+
+/** مفتاحُ عدم تكرارٍ للمال (SPEC القسم 14، §١٠٣ B/24) — **يُولَّد مرّةً ويُعاد في كلِّ محاولةٍ للعملية نفسِها**، فإعادةٌ بعد ردٍّ ضاع
+ *  في شبكةٍ ضعيفة لا تشتري مرّتين. نسخةُ `customer-app/src/lib/utils.ts` حرفاً. */
+export function newIdempotencyKey(prefix: string) {
+  const random =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`.slice(0, 64);
+}

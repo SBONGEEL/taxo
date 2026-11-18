@@ -1042,6 +1042,8 @@ class FeatureKey(StrEnum):
     VOLUME_EMERGENCY = "volume_emergency"
     # **أداةُ «اطلب رحلة»** (SPEC §١٠٣/20) — زرّا «البيت» و«العمل» على الشاشة الرئيسيّة للراكب
     RIDE_WIDGET = "ride_widget"
+    # **وضعُ الإنترنت الضعيف لأفعال الرحلة** (SPEC §١٠٣/24) — «وصلت/ابدأ/أنهِ» تُعاد حين تعود الشبكة ولا تُطبَّق مرّتين
+    WEAK_NETWORK_RETRY = "weak_network_retry"
 
 
 class MapPlaceCategory(StrEnum):
