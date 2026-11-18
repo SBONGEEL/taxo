@@ -99,7 +99,7 @@ const DRIVER = [
   // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
   // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
   // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض" }, { kind: "show", selector: ".t2-hm-go" }], settle: 500, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
@@ -134,7 +134,7 @@ async function pass(theme) {
       if (body.kind === "reset" && process.env.LOCATION_CMD) execSync(process.env.LOCATION_CMD, { stdio: "inherit", shell: "/bin/bash" });
       const ack = await command(body);
       notes.push(`${action.kind}: ${ack.ok ? "✓" : "✗"} ${ack.note ?? ""}`.trim());
-      await wait(body.kind === "reset" ? 2500 : 900);
+      await wait(action.after ?? (body.kind === "reset" ? 2500 : 900));
     }
     await wait(step.settle);
     if (step.expect) {
@@ -143,6 +143,12 @@ async function pass(theme) {
     }
     const file = join(out, `${theme}-${step.name}.png`);
     execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
+    // **والعلامةُ بعد اللقطة أيضاً** — صُوِّر «متّصل» وعليه بطاقةُ الطلب التالي والعلامةُ ✓ قبلها بثانية (Pro Max · 44232290580):
+    // الشاشةُ تتغيّر بين العلامة واللقطة. فلا يُقرأ الصفُّ «بلغ» إلا إن ثبتت العلامةُ على جانبي اللقطة
+    if (step.expect) {
+      const after = await command({ kind: "expect", any: step.expect, timeout: 600 });
+      if (!after.ok) notes.push(`بعد اللقطة: ✗ تغيّرت الشاشة — ${after.note ?? ""}`.trim());
+    }
     const reached = notes.every((n) => !n.includes("✗"));
     rows.push({ theme, name: step.name, label: step.label, file: `${theme}-${step.name}.png`, reached, notes });
     console.log(`${reached ? "✓" : "✗"} ${theme} · ${step.label} — ${notes.join(" · ")}`);
