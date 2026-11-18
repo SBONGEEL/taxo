@@ -24,11 +24,24 @@ const SERVER = "http://127.0.0.1:8787";
 mkdirSync(out, { recursive: true });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// **قطعُ اتّصالٍ عابرٌ بالخادم المحلّيّ لا يُسقط العمود** — `ECONNRESET` واحدٌ أسقط عمودَ Pro Max كلَّه وفيه صفوفٌ سليمة (44208851709)
+async function getJson(url, init) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await (await fetch(url, init)).json();
+    } catch (error) {
+      if (attempt >= 5) throw error;
+      console.log(`  ↻ ${url} — ${error.cause?.code ?? error.message} (محاولة ${attempt})`);
+      await wait(1000 * attempt);
+    }
+  }
+}
+
 async function command(body) {
-  const sent = await (await fetch(`${SERVER}/__shot`, { method: "POST", body: JSON.stringify(body) })).json();
+  const sent = await getJson(`${SERVER}/__shot`, { method: "POST", body: JSON.stringify(body) });
   for (let i = 0; i < 60; i++) {
     await wait(500);
-    const ack = await (await fetch(`${SERVER}/__shot/ack`)).json();
+    const ack = await getJson(`${SERVER}/__shot/ack`);
     if (ack.id === sent.id) return ack;
   }
   return { id: sent.id, ok: false, note: "لا جوابَ من الصفحة خلال ٣٠ ث" };
