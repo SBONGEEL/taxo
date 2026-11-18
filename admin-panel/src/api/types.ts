@@ -672,6 +672,7 @@ export type FeatureKey =
   | "bubble_demand_heat"
   | "pickup_wait_timer"
   | "smart_destination"
+  | "native_call_ui"
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"

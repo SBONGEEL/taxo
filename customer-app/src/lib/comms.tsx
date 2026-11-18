@@ -38,6 +38,7 @@ import type { CallStart, ChatMessage, ChatReportReason, ChatThread, CommsSide, I
 import { CallSession, speakerOutput } from "@/lib/call-session";
 import { useFeature } from "@/lib/config";
 import { useCallsSupported } from "@/lib/mic-gate";
+import { useNativeCallBridge } from "@/lib/native-call";
 import { ringsNatively } from "@/lib/push";
 import { loop, play } from "@/lib/sound";
 import { onTripComms, setCommsPushRoute, type TripCommsEvent } from "@/lib/trip-comms"; import { tr } from "@/lib/i18n";
@@ -1050,6 +1051,9 @@ export function CommsProvider({
       messageInstead,
     ],
   );
+
+  // **مكالمةُ الرحلة يعرفها النظام** (SPEC §١٠٣ B/27، خلف `native_call_ui`) — البلوتوثُ والسيّارةُ وأزرارُ السمّاعة صدىً للحال هنا
+  useNativeCallBridge(ride?.country_code, call, { answer: () => void answer(), decline, hangUp }, peer?.name ?? peerRole);
 
   return <CommsContext.Provider value={value}>{children}</CommsContext.Provider>;
 }

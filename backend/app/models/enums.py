@@ -1030,6 +1030,8 @@ class FeatureKey(StrEnum):
     PICKUP_WAIT_TIMER = "pickup_wait_timer"
     # **اقتراحُ الوجهة الذكيّ** (SPEC §١٠٣/35) — يُحسب في هاتف الراكب من وجهاته وحدَها، بلا نداء
     SMART_DESTINATION = "smart_destination"
+    # **مكالمةُ الرحلة يعرفها أندرويد** (SPEC §١٠٣/27) — البلوتوث والسيّارة وأزرار السمّاعة، التطبيقان
+    NATIVE_CALL_UI = "native_call_ui"
     # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
     BUBBLE_OFFER_CARD = "bubble_offer_card"
     # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره
