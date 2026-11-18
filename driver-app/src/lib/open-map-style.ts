@@ -150,6 +150,23 @@ export function buildOpenStyle(c: OpenMapColors, labels: boolean): Record<string
         },
       },
       {
+        // **حدودُ الأحياء والبلديّات خفيفةً** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني §٣/٣: «الأحياءُ بحدٍّ خفيف») — خطٌّ متقطّعٌ بلون الأسماء
+        // الثانويّة وشفافيّةٍ عالية، من المستوى الإداريّ ٦ فما دونه، **ولا حدودَ بحريّة**. يظهر من ١١: بعيداً لا معنى له ويزحم
+        id: "district-boundary",
+        type: "line",
+        source: "openmaptiles",
+        "source-layer": "boundary",
+        minzoom: 11,
+        filter: ["all", [">=", ["get", "admin_level"], 6], ["!=", ["get", "maritime"], 1]],
+        layout: { "line-join": "round" },
+        paint: {
+          "line-color": c.labelMinor,
+          "line-opacity": 0.35,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.6, 16, 1.4],
+          "line-dasharray": [3, 2],
+        },
+      },
+      {
         id: "road-minor",
         type: "line",
         source: "openmaptiles",
