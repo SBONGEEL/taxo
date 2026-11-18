@@ -76,7 +76,9 @@ const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
   // **والترحيبُ يظهر عند الخروج في كلِّ جهاز، فـ«تخطَّ» إلزاميّةٌ هنا** — اختياريّةً لم تنتظره في أوّل إقلاعٍ بارد (iPhone، التشغيل 44039966678)
   // **وأوراقُ الأذونات الأولى (توفيرُ الطاقة…) تسبق الرئيسيّة في أندرويد** — «لاحقاً» اختياريّةٌ لأنها لا تظهر في كلِّ جهاز
-  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }, { kind: "click", text: "دخول" }], settle: 4000, expect: [sel("#password")] },
+  { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "click", text: "تخط" }, { kind: "click", text: "دخول", optional: true }], settle: 4000, expect: [sel("#password")] },
+  // ↑ **«دخول» اختياريّ** — بعد «تخطَّ» قد تكون شاشةُ الدخول نفسُها، وزرُّها «دخول» معطَّلٌ حتى تُملأ الخانات؛ فكان يُنقر بلا أثر،
+  //   وصار الضغطُ ينتظر الزرَّ المعطَّل فسقط الصفُّ والعلامةُ ✓ (44245895915). العلامةُ `#password` هي الحَكَم
   {
     name: "home-offline",
     label: "الرئيسيّة — غيرُ متّصل",
@@ -101,7 +103,8 @@ const DRIVER = [
   // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
   // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
   // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300, expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300,
+    again: [{ kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
   { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
@@ -134,24 +137,44 @@ async function pass(theme) {
       }
       // **والموقعُ يُضبط من جديد قبل كلِّ إعادة** — ضبطُه مرّةً قبل الإقلاع لم يصل الكبتنَ على Pro Max («بانتظار إشارة الموقع»)
       if (body.kind === "reset" && process.env.LOCATION_CMD) execSync(process.env.LOCATION_CMD, { stdio: "inherit", shell: "/bin/bash" });
-      const ack = await command(body);
+      let ack = await command(body);
+      // **أمرٌ بلا جوابٍ يُعاد مرّةً** — الصفحةُ قد تكون في منتصف تحميلٍ من عمودٍ سابق فيضيع أمرُها: «reset» بلا جوابٍ خلال ٣٠ ث والعلامةُ بعده ✓
+      // (الراكب على أندرويد · 44245895915). وجوابٌ بـ✗ من الصفحة نفسِها لا يُعاد — ذاك حكمٌ لا ضياع
+      if (!ack.ok && (ack.note ?? "").startsWith("لا جوابَ")) ack = await command(body);
       notes.push(`${action.kind}: ${ack.ok ? "✓" : "✗"} ${ack.note ?? ""}`.trim());
       await wait(action.after ?? (body.kind === "reset" ? 2500 : 900));
     }
     await wait(step.settle);
-    if (step.expect) {
-      const seenAck = await command({ kind: "expect", any: step.expect, timeout: step.expectWithin ?? 12000 });
-      notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
-    }
     const file = join(out, `${theme}-${step.name}.png`);
-    execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
-    // **والعلامةُ بعد اللقطة أيضاً** — صُوِّر «متّصل» وعليه بطاقةُ الطلب التالي والعلامةُ ✓ قبلها بثانية (Pro Max · 44232290580):
-    // الشاشةُ تتغيّر بين العلامة واللقطة. فلا يُقرأ الصفُّ «بلغ» إلا إن ثبتت العلامةُ على جانبي اللقطة
-    if (step.expect) {
-      const after = await command({ kind: "expect", any: step.expect, timeout: 600 });
-      if (!after.ok) notes.push(`بعد اللقطة: ✗ تغيّرت الشاشة — ${after.note ?? ""}`.trim());
+    // **«again»: فرصٌ أخرى للحال نفسِها** — «متّصل» نافذتُه ٦ ث بين رفض الطلب ووصول التالي، ولقطةُ iPhone تأكل منها فوصل الطلبُ
+    // في أثنائها (Pro Max الداكن · 44245895915). فإن سقطت العلامةُ قبل اللقطة أو بعدها تُعاد أفعالُ `again` (رفضُ الطلب الجديد) ثمّ اللقطة
+    const tries = 1 + (step.again ? step.againTimes ?? 2 : 0);
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      const before = notes.length;
+      if (attempt > 1) {
+        for (const action of step.again) {
+          const ack = await command({ ...action });
+          notes.push(`↻ ${attempt}: ${action.kind}: ${ack.ok ? "✓" : "✗"} ${ack.note ?? ""}`.trim());
+          await wait(action.after ?? 900);
+        }
+      }
+      if (step.expect) {
+        const seenAck = await command({ kind: "expect", any: step.expect, timeout: step.expectWithin ?? 12000 });
+        notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
+      }
+      execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
+      // **والعلامةُ بعد اللقطة أيضاً** — صُوِّر «متّصل» وعليه بطاقةُ الطلب التالي والعلامةُ ✓ قبلها بثانية (Pro Max · 44232290580):
+      // الشاشةُ تتغيّر بين العلامة واللقطة. فلا يُقرأ الصفُّ «بلغ» إلا إن ثبتت العلامةُ على جانبي اللقطة
+      if (step.expect) {
+        const after = await command({ kind: "expect", any: step.expect, timeout: 600 });
+        if (!after.ok) notes.push(`بعد اللقطة: ✗ تغيّرت الشاشة — ${after.note ?? ""}`.trim());
+      }
+      const failed = notes.slice(before).some((n) => n.includes("✗"));
+      if (!failed || attempt === tries) break;
+      // **المحاولةُ السابقة تبقى في الملاحظات** لكن لا تُحسب على الصفّ إن نجحت التالية — تُعلَّم «سابقة»
+      for (let i = before; i < notes.length; i++) notes[i] = notes[i].replace(/✗/g, "✗(سابقة)");
     }
-    const reached = notes.every((n) => !n.includes("✗"));
+    const reached = notes.every((n) => !n.replace(/✗\(سابقة\)/g, "").includes("✗"));
     rows.push({ theme, name: step.name, label: step.label, file: `${theme}-${step.name}.png`, reached, notes });
     console.log(`${reached ? "✓" : "✗"} ${theme} · ${step.label} — ${notes.join(" · ")}`);
   }
