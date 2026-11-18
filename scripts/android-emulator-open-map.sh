@@ -54,6 +54,10 @@ dismiss_all() { # dismiss_all <pkg>
   done
 }
 
+# **النشاطُ هو السطرُ الذي فيه «/»** — صورةُ AOSP تطبع بعده «priority=0» فكان `tail -1` يقرؤه اسماً (قِيس في 44304929909:
+# «Bad component name: priority=0» فلم يُشغَّل التطبيقُ قطّ)
+comp() { adb shell cmd package resolve-activity --brief "$1" | tr -d '' | grep -E '^[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+$' | tail -1; }
+
 shot() { # shot <pkg> <name>
   local engine
   adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1
@@ -71,14 +75,12 @@ run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-
   done
   access="$(sed -n 1p "$3")"; refresh="$(sed -n 2p "$3")"
   # **إقلاعُ تحميةٍ قبل الدخول الأوّل** (قِيس: أوّلُ إقلاعٍ بعد التثبيت لم يُبلغ WebView بعد ٣٥ ث فسقط دخولُ النهار)
-  adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '
-' | tail -1)" >>"$LOG" 2>&1; sleep 30; adb shell am force-stop "$pkg"
+  adb shell am start -W -n "$(comp "$pkg")" >>"$LOG" 2>&1; sleep 30; adb shell am force-stop "$pkg"
   for mode in no yes; do
     local theme; [ "$mode" = no ] && theme=day || theme=night
     adb shell cmd uimode night "$mode" >>"$LOG" 2>&1
     adb shell am force-stop "$pkg"
-    adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '
-' | tail -1)" >>"$LOG" 2>&1
+    adb shell am start -W -n "$(comp "$pkg")" >>"$LOG" 2>&1
     sleep 15
     # **الدخولُ برمزَي الحساب في مخزن الصفحة ثمّ إعادةُ التحميل** — كما يكتبهما الدخولُ نفسُه، بلا كتابة كلمة مرورٍ في أيِّ حقل
     step "دخولُ $tag ($theme)" cdp_retry "$pkg" "localStorage.setItem('$4','$access');localStorage.setItem('$5','$refresh');location.reload();'ok'"
