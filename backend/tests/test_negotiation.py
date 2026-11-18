@@ -317,10 +317,15 @@ async def test_negotiation_refuses_promo_and_share(client: AsyncClient, negotiat
 
 
 async def test_admin_turns_it_on_and_unknown_categories_are_refused(
-    client: AsyncClient, jordan_settings: None, admin_headers: dict
+    client: AsyncClient, jordan_settings: None, admin_headers: dict, session_factory
 ) -> None:
-    """**الغيابُ مطفأ** ولا يُخترع صفّ، والتشغيلُ يكتب صفّاً، **والفئةُ بمفتاحها في السوق** لا قائمةٌ ثانية (§٩٢-ب)."""
-    assert (await client.get("/admin/settings/negotiation", headers=admin_headers)).json() == []
+    """**الغيابُ مطفأ** ولا يُخترع صفّ، والتشغيلُ يكتب صفّاً، **والفئةُ بمفتاحها في السوق** لا قائمةٌ ثانية (§٩٢-ب).
+
+    **والقائمةُ تعرض كلَّ دولةٍ مطفأةً بلا صفّ** (قرارُ المالك ٢٠٢٦-١١-١٨) — ما يسري فيها، لا قائمةٌ فارغةٌ تُخفي الدولة."""
+    before = (await client.get("/admin/settings/negotiation", headers=admin_headers)).json()
+    assert before and all(row["enabled"] is False and row.get("id") is None for row in before), before
+    async with session_factory() as session:
+        assert (await session.scalars(select(NegotiationSetting))).all() == []
     on = await client.patch(
         "/admin/settings/negotiation/JO", json={"enabled": True, "min_percent": 80, "categories": ["economy"]},
         headers=admin_headers,
