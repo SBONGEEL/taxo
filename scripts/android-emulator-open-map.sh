@@ -22,9 +22,7 @@ for apk in "$APK_DIR"/*.apk; do step "تثبيت $(basename "$apk")" adb install
 # **المحاكي يُترك يهدأ بعد الإقلاع، ونوافذُ «لا يستجيب» تُخفى** (قِيس في التشغيل 44278177440: مُطلِقُ النظام علق تحت الحمل
 # فغطّت نافذتُه الشاشةَ في اللقطات الثماني كلِّها، والتطبيقُ خلفها)
 adb shell settings put global hide_error_dialogs 1 >>"$LOG" 2>&1
-# **ومُطلِقُ Pixel يُعطَّل** (قِيس: علق ANR في أربعةٍ من خمسة تشغيلاتٍ فأخذ التركيزَ من التطبيق — 44293160597 لم يُدخَل فيه تطبيق)
-# — والتطبيقان يُشغَّلان بنشاطهما مباشرةً فلا حاجةَ للمُطلِق
-adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher >>"$LOG" 2>&1 || true
+# **ولا يُعطَّل مُطلِقٌ**: تعطيلُ مُطلِق Pixel أسقط واجهةَ النظام (NPE عند PACKAGE_CHANGED في 44299559867) — فالصورةُ صارت AOSP بلا مُطلِق Pixel
 sleep 45
 adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >>"$LOG" 2>&1
 adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard
@@ -73,7 +71,8 @@ run_app() { # run_app <prefix> <pkg-prefix> <tokens-file> <access-key> <refresh-
   done
   access="$(sed -n 1p "$3")"; refresh="$(sed -n 2p "$3")"
   # **إقلاعُ تحميةٍ قبل الدخول الأوّل** (قِيس: أوّلُ إقلاعٍ بعد التثبيت لم يُبلغ WebView بعد ٣٥ ث فسقط دخولُ النهار)
-  adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '' | tail -1)" >>"$LOG" 2>&1; sleep 30; adb shell am force-stop "$pkg"
+  adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief "$pkg" | tr -d '
+' | tail -1)" >>"$LOG" 2>&1; sleep 30; adb shell am force-stop "$pkg"
   for mode in no yes; do
     local theme; [ "$mode" = no ] && theme=day || theme=night
     adb shell cmd uimode night "$mode" >>"$LOG" 2>&1
