@@ -69,10 +69,12 @@ const RIDER = [
   { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("اطلب"), t("اختر الفئة")] },
   { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
-  { name: "ride-status", label: "حالةُ الرحلة — الكبتن قادمٌ أو وصل", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }], settle: 2000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")], expectWithin: 25000, movesOn: true },
+  // ↓ **تُمسك مؤقّتاتُ الاقتراب بعد «اطلب»** — القبولُ (٤ ث) مضبوطٌ قبل الإمساك فيقع، وخطواتُ الاقتراب تُضبط عند القبول فتقف في منتصفها؛
+  //   وصورةُ SE كانت «بدأت الرحلة» والعلامةُ قُرئت قبلها باثنتي عشرة ثانية (44277158308)
+  { name: "ride-status", label: "حالةُ الرحلة — الكبتن قادمٌ أو وصل", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }, { kind: "freeze", on: true }], settle: 2000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")], expectWithin: 25000, movesOn: true },
   // ↑ **يُصوَّر حين تظهر العلامة لا بعد مهلةٍ ثابتة** — رحلةُ العرض تمضي بمؤقّتاتها، فبعد ١٥ ث ثابتةٍ صُوِّرت «في الطريق إلى المطار» على Pro Max
   //   والعلامةُ ✓ قبلها بلحظة (أمسكها فحصُ ما بعد اللقطة · 44238489964)
-  { name: "wallet", label: "المحفظة", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
+  { name: "wallet", label: "المحفظة", do: [{ kind: "freeze", on: false }, { kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
 ];
 const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
