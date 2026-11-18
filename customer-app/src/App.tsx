@@ -5,6 +5,7 @@
  */
 
 import { useDisplayPrefs } from "@/lib/display";
+import { useNativeCrashReports } from "@/lib/native-crash";
 import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { navBarHidden } from "@/lib/outcome";
 import { TestMarketAuto } from "@/components/t2/TestMarket";
@@ -414,6 +415,8 @@ function WelcomeGate() {
   const { config } = useConfig();
   // **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — يُطبَّقان في الجذر، فيبلغان كلَّ شاشة
   useDisplayPrefs(user?.country_code);
+  // **تعطّلُ أندرويد الأصليّ** (SPEC §١٠٣ C/41) — ما حُفظ عند تعطّلٍ سابقٍ يُرسل بباب التقارير القائم
+  useNativeCrashReports(user?.country_code);
   // **خارج أسواقنا** (SPEC §٧٦-ن/٦): دولةُ الشبكة معروفةٌ وليست سوقاً مفتوحاً — ولا حكمَ بلا رأس
   const region = config?.network_region ?? null;
   const outside = Boolean(

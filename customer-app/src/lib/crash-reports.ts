@@ -291,6 +291,15 @@ function capture(
   })();
 }
 
+/** **تعطّلُ أندرويد الأصليّ** (SPEC §١٠٣ C/41) — من `lib/native-crash.ts`: اسمُ الاستثناء وإطاراتُه وحدَها، **ورسالةٌ ثابتةٌ لا نصُّ
+ *  الاستثناء**. يمرّ بالباب نفسِه: السقفُ ومفتاحُ الإطفاء وجمعُ المتكرِّر. */
+export function reportNativeCrash(name: string, stack: string, at: number | null): void {
+  const error = new Error(at ? `تعطّلٌ أصليّ في أندرويد — ${new Date(at).toISOString()}` : "تعطّلٌ أصليّ في أندرويد");
+  error.name = `NativeCrash: ${name}`.slice(0, 200);
+  error.stack = stack.slice(0, 8_000);
+  capture("error", error, null);
+}
+
 /** حدُّ الخطأ ينادي هذه حين تسقط شجرةُ React. */
 export function reportBoundary(
   error: unknown,

@@ -24,6 +24,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SmsConsentPlugin.class);
         // **النصُّ الكبير** (SPEC §١٠٣ C/40)
         registerPlugin(TextZoomPlugin.class);
+        // **تعطّلُ أندرويد الأصليّ يصل اللوحة** (SPEC §١٠٣ C/41) — الماسكُ أوّلاً، ثمّ الملحقُ الذي يسلّمه للويب
+        NativeCrashPlugin.install(this);
+        registerPlugin(NativeCrashPlugin.class);
         // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19)
         registerPlugin(RideLivePlugin.class);
         // **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يشعله الراكبُ بنفسه

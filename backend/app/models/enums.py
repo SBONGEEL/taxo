@@ -1022,6 +1022,8 @@ class FeatureKey(StrEnum):
     RICH_NOTIFICATIONS = "rich_notifications"
     # **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣/40) — اختيارٌ على الجهاز في الإعدادات، التطبيقان
     DISPLAY_ACCESSIBILITY = "display_accessibility"
+    # **تعطّلُ أندرويد الأصليّ يصل اللوحة** (SPEC §١٠٣/41) — اسمُ الاستثناء وإطاراتُه بلا نصِّ رسالة، التطبيقان
+    NATIVE_CRASH_REPORTS = "native_crash_reports"
     # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
     BUBBLE_OFFER_CARD = "bubble_offer_card"
     # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره

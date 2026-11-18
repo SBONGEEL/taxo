@@ -27,6 +27,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SmsConsentPlugin.class);
         // **النصُّ الكبير** (SPEC §١٠٣ C/40)
         registerPlugin(TextZoomPlugin.class);
+        // **تعطّلُ أندرويد الأصليّ يصل اللوحة** (SPEC §١٠٣ C/41) — الماسكُ أوّلاً، ثمّ الملحقُ الذي يسلّمه للويب
+        NativeCrashPlugin.install(this);
+        registerPlugin(NativeCrashPlugin.class);
         // **«يوجد تحديث» من Google Play** (SPEC §١٠٣ A/8) — الحكمُ من لوحة الإصدارات، والتنفيذُ من Play إن قدر
         registerPlugin(AppUpdatePlugin.class);
         // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن
