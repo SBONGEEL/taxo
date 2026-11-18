@@ -79,6 +79,25 @@ adb shell cmd statusbar click-tile "$PKG/ly.tajora.driver.OnlineTileService" >>"
 adb shell cmd statusbar collapse
 pull 04-quick-tile
 
+# ٥) حرارةُ الطلب في الفقاعة (SPEC §١٠٣ C/29) — `bubble_demand` كما يكتبه الويبُ من جواب الطلب؛ تُكتب والتطبيقُ مغلق
+#    (التفضيلاتُ تُقرأ عند الإقلاع)، ثمّ «الرئيسيّة» فتظهر الفقاعةُ ممتلئةً بالجمر
+adb shell am force-stop "$PKG"
+HOT="${PREFS/<\/map>/<boolean name=\"bubble_demand\" value=\"true\" /><\/map>}"
+adb shell "echo '$HOT' > /data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+adb shell chown "$OWNER:$OWNER" "/data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+rec 05-bubble-heat 16
+adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1
+sleep 6; adb shell input keyevent KEYCODE_HOME; sleep 7
+pull 05-bubble-heat
+adb shell uiautomator dump /sdcard/heat.xml >>"$LOG" 2>&1 && adb shell cat /sdcard/heat.xml | grep -o 'منطقة طلب عالٍ[^"]*' | head -1 | sed 's/^/وصفُ الفقاعة: /' >> "$LOG"
+
+# ٦) تعطّلُ أندرويد الأصليّ (SPEC §١٠٣ C/41) — `am crash` يُسقط العمليّةَ بتعطّلٍ حقيقيّ، ثمّ يُقرأ ما حفظه الماسك:
+#    **الاسمُ والإطاراتُ، ولا نصَّ رسالة** — والإقلاعُ التالي يأخذه الويبُ إن اشتعل المفتاح
+adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1; sleep 5
+adb shell am crash "$PKG" >>"$LOG" 2>&1; sleep 3
+adb shell cat "/data/data/$PKG/shared_prefs/taxo_native_crash.xml" > "$OUT/native-crash.xml" 2>&1
+if grep -q 'name="name"' "$OUT/native-crash.xml"; then say "✓ حُفظ التعطّلُ الأصليّ: $(grep -o 'name="name">[^<]*' "$OUT/native-crash.xml" | head -1)"; else say "✗ لم يُحفظ التعطّلُ الأصليّ"; fi
+
 adb logcat -d -t 2000 > "$OUT/logcat.txt" 2>&1
 grep -nE "FATAL|AndroidRuntime" "$OUT/logcat.txt" | head -20 >> "$LOG" || true
 say "انتهى — $(ls "$OUT"/*.mp4 2>/dev/null | wc -l) فيديو"
