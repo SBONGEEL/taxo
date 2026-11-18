@@ -9,8 +9,14 @@ const browser = await chromium.launch();
 const log = [];
 for (const scheme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport: { width: 412, height: 915 }, colorScheme: scheme, locale: "ar" });
-  await page.goto(`${base}/register`, { waitUntil: "networkidle" });
-  await page.locator(".t2-auth-country").first().click();
+  // **«load» لا «networkidle»**: الصفحةُ تُبقي اتصالاً حيّاً فلا تهدأ الشبكةُ أبداً (قِيس: مهلةُ ٣٠ث على الإنتاج)
+  await page.goto(`${base}/register`, { waitUntil: "load" });
+  const trigger = page.locator(".t2-auth-country").first();
+  // **وصفحةُ الترحيب قبل الحقل** («أهلاً وسهلاً» ثمّ «حساب جديد») — تُعبر إن ظهرت
+  if (!(await trigger.waitFor({ state: "visible", timeout: 8000 }).then(() => true, () => false))) {
+    await page.getByRole("button", { name: /جديد/ }).first().click({ timeout: 15000 });
+  }
+  await trigger.click({ timeout: 20000 });
   await page.locator(".t2-country-sheet").waitFor();
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${out}/picker-${mode}-${scheme}.png` });
