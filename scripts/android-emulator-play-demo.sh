@@ -44,7 +44,7 @@ click_text() {
 # **نقرُ عنصرٍ في واجهة النظام** (نافذةُ الإذن، صفحةُ الإعدادات) — من شجرة uiautomator بالنصِّ أو المعرّف
 ui_tap() {
   local xy i
-  for i in 1 2 3; do
+  for i in $(seq 1 "${TRIES:-3}"); do
     adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
     xy="$(python3 - "$1" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
@@ -63,7 +63,11 @@ PY
     if [ -n "$xy" ]; then adb shell input tap $xy; say "  · نظام: «$1» ($xy)"; return 0; fi
     sleep 2
   done
-  say "  ✗ نظام: لا «$1»"; return 1
+  [ "${TRIES:-3}" = 1 ] || say "  ✗ نظام: لا «$1»"; return 1
+}
+# **أفي الواجهة زرٌّ يبدأ بهذا النصّ؟** — سؤالٌ بلا نقر
+has_text() {
+  [ "$(cdp_retry "(()=>[...document.querySelectorAll('button,a,[role=button]')].some(e=>(e.textContent||'').trim().startsWith('$1'))?'ok':'none')()" 2>>"$LOG")" = ok ]
 }
 REC=""
 rec_start() { REC="$1"; adb shell screenrecord --time-limit 180 --size 720x1600 "/sdcard/$1.mp4" >/dev/null 2>&1 & sleep 1; say "● تسجيل $1"; }
@@ -83,22 +87,32 @@ sleep 25
 # ── ١) الموقعُ في الخلفيّة والخدمةُ الأماميّة: من الإفصاح إلى الاستعمال
 rec_start play-1-background-location
 sleep 3; shot walk-1-location
-click_text "اسمح بالموقع"; sleep 3
-ui_tap "permission_allow_foreground_only_button|While using the app"; sleep 3
-shot walk-2-notifications
-click_text "اسمح بالإشعارات"; sleep 3
-ui_tap "permission_allow_button|^Allow$"; sleep 3
-click_text "ليس الآن"; sleep 3                     # استثناءُ توفير الطاقة — يُترك للكبتن
-shot walk-3-overlay
-click_text "افتح الإعدادات"; sleep 4               # الرسمُ فوق التطبيقات ⇐ صفحةُ النظام
-ui_tap "Allow display over other apps|switch_widget"; sleep 2
-adb shell input keyevent KEYCODE_BACK; sleep 4
-shot walk-4-background
-click_text "افتح الإعدادات واختر"; sleep 4         # الإفصاحُ البارزُ للموقع في الخلفيّة ⇐ صفحةُ النظام
-if ! ui_tap "allow_always_radio_button|Allow all the time"; then
-  ui_tap "^Permissions$" && sleep 2 && ui_tap "^Location$" && sleep 2 && ui_tap "allow_always_radio_button|Allow all the time"
-fi
-sleep 2; adb shell input keyevent KEYCODE_BACK; sleep 2
+# **حلقةٌ تجيب ما أمامها** كما يجيبه كبتنٌ يبدأ يومه: نافذةُ النظام أوّلاً (الموقع «أثناء الاستخدام»، الإشعارات «سماح»، «طوال الوقت»،
+# الرسمُ فوق التطبيقات)، ثمّ زرُّ الخطوة الأساسيّ، و«ليس الآن» آخراً — **فلا تتخطّى خطوةً لها زرٌّ معروف** (توفيرُ الطاقة وحدَه يُترك للكبتن)
+n=0
+for i in $(seq 1 16); do
+  has_text "ابدأ الاستقبال" && { say "  ✓ الرئيسيّة بعد $n خطوة"; break; }
+  n=$((n + 1))
+  TRIES=1 ui_tap "permission_allow_foreground_only_button" && { sleep 3; continue; }
+  TRIES=1 ui_tap "permission_allow_button" && { sleep 3; continue; }
+  if TRIES=1 ui_tap "allow_always_radio_button|Allow all the time"; then sleep 2; adb shell input keyevent KEYCODE_BACK; sleep 4; continue; fi
+  if TRIES=1 ui_tap "Allow display over other apps|Allow permission"; then
+    sleep 2; adb shell input keyevent KEYCODE_BACK; sleep 4; continue
+  fi
+  [ "$i" = 3 ] && shot walk-2-steps
+  click_text "اسمح بالموقع" && { sleep 4; continue; }
+  click_text "اسمح بالإشعارات" && { sleep 4; continue; }
+  if click_text "افتح الإعدادات واختر"; then
+    sleep 4; shot walk-4-background
+    TRIES=2 ui_tap "allow_always_radio_button|Allow all the time" || {
+      TRIES=2 ui_tap "^Permissions$" && sleep 2 && TRIES=2 ui_tap "^Location$" && sleep 2 && TRIES=2 ui_tap "allow_always_radio_button|Allow all the time"; }
+    sleep 2; adb shell input keyevent KEYCODE_BACK; sleep 4; continue
+  fi
+  if click_text "افتح الإعدادات"; then sleep 4; shot walk-3-overlay; continue; fi
+  click_text "ليس الآن" && { sleep 3; continue; }
+  # لا زرَّ معروف: التطبيقُ خلف صفحة نظام — يُعاد إليه
+  adb shell am start -W -n "$(comp "$PKG")" >>"$LOG" 2>&1; sleep 5
+done
 adb shell am start -W -n "$(comp "$PKG")" >>"$LOG" 2>&1; sleep 6
 for b in "تخط" "لاحق" "ليس الآن" "إغلاق"; do click_text "$b" >/dev/null 2>&1 && sleep 2; done
 adb shell input tap 540 300; sleep 2                # ورقةُ الترحيب تُغلق بلمسةٍ خارجها
@@ -118,10 +132,13 @@ adb shell dumpsys appops --package "$PKG" > "$OUT/appops.txt" 2>&1
 adb shell dumpsys package "$PKG" | grep -E "ACCESS_BACKGROUND_LOCATION|ACCESS_FINE_LOCATION|POST_NOTIFICATIONS" > "$OUT/permissions.txt" 2>&1
 
 # ── ٢) النيّةُ بملء الشاشة: طلبٌ والهاتفُ مقفل
-adb shell input keyevent KEYCODE_SLEEP; sleep 2
+# (قِيس ١٨/١١: تسجيلٌ بدأ والشاشةُ مطفأةٌ خرج صفرَ بايت) — **فرمزُ قفلٍ على محاكي CI وحدَه**، يُمحى بعد اللقطة
+adb shell locksettings set-pin 1357 >>"$LOG" 2>&1
+adb shell input keyevent KEYCODE_SLEEP; sleep 3; adb shell input keyevent KEYCODE_WAKEUP; sleep 3
 rec_start play-2-full-screen-intent
-probe --es force locked --ei timeout 12; sleep 12
+sleep 3; probe --es force locked --ei timeout 15; sleep 16
 rec_stop
+adb shell locksettings clear --old 1357 >>"$LOG" 2>&1
 adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; probe --es mode hide; sleep 2
 
 # ── ٣) العرضُ فوق التطبيقات: الطلبُ يظهر فوق تطبيقٍ آخر (الإعدادات)
