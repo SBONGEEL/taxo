@@ -42,7 +42,8 @@ final class NativeShots: XCTestCase {
 
     private func request(_ method: String, _ path: String, _ body: [String: Any]?) -> [String: Any]? {
         guard let url = URL(string: server + path) else { return nil }
-        var req = URLRequest(url: url, timeoutInterval: 5)
+        // **١٥ ث لا ٥**: أوّلُ أمرٍ بعد صفحة القياس وصل الصفحةَ ونُفّذ (`↩ 102 ✓ Launcher.setShortcuts`) وجوابُه تأخّر فقُرئ «لا خادم» (44353687380)
+        var req = URLRequest(url: url, timeoutInterval: 15)
         req.httpMethod = method
         if let body = body { req.httpBody = try? JSONSerialization.data(withJSONObject: body) }
         var result: [String: Any]?
@@ -51,7 +52,7 @@ final class NativeShots: XCTestCase {
             if let data = data { result = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] }
             done.signal()
         }.resume()
-        _ = done.wait(timeout: .now() + 6)
+        _ = done.wait(timeout: .now() + 16)
         return result
     }
 
@@ -95,7 +96,8 @@ final class NativeShots: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             for label in labels {
-                let predicate = NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", label, label)
+                // **وتسميةُ SpringBoard قد تبدأ بمسافة** (« Add Widget» — 44353687380)، فتُقبل منتهيةً بالاسم
+                let predicate = NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@ OR label ENDSWITH[c] %@", label, label, " " + label)
                 for query in [springboard.buttons, springboard.descendants(matching: .any)] {
                     let match = query.matching(predicate).firstMatch
                     if match.exists && match.isHittable { return match }
@@ -203,6 +205,11 @@ final class NativeShots: XCTestCase {
         // **الإيقاظُ يُظهر شاشةَ القفل** ولا يفتحها
         XCUIDevice.shared.press(.home)
         Thread.sleep(forTimeInterval: 2.5)
+        // **سؤالُ iOS الأوّل «Allow Live Activities…?»** يغطّي نصفَ البطاقة — يُجاب كما يجيبه صاحبُ الهاتف، ثمّ اللقطة
+        if let allow = element(["Allow"], timeout: 2) {
+            allow.tap()
+            Thread.sleep(forTimeInterval: 1.5)
+        }
         shot("lock-live-activity", "النشاطُ الحيُّ على شاشة القفل", ok: live.ok, note: live.note)
         dump("lock")
         home()
@@ -287,13 +294,22 @@ final class NativeShots: XCTestCase {
         dump("widgets")
     }
 
+    /// **أظهر iOS شاشةَ المكالمة؟** — زرُّ ردٍّ أو رفضٍ في SpringBoard، لا جوابُ الملحق
+    private func callVisible() -> Bool {
+        let predicate = NSPredicate(format: "label CONTAINS[c] 'Decline' OR label CONTAINS[c] 'Accept' OR label CONTAINS[c] 'slide to answer' OR label CONTAINS[c] 'رفض' OR label CONTAINS[c] 'رد'")
+        return springboard.buttons.matching(predicate).count > 0 || springboard.sliders.count > 0
+    }
+
+    private let noCallUI = "محاكي iOS لا يرسم شاشةَ مكالمة CallKit (لا زرَّ ردٍّ ولا رفض في SpringBoard) — تُصوَّر على iPhone حقيقيّ"
+
     /// **المكالمةُ الواردة** — والتطبيقُ ظاهر (شريطُ iOS في الأعلى)، ثمّ والجهازُ مقفل (شاشةُ المكالمة كاملة)
     private func callShots(app: XCUIApplication) {
         app.activate()
         Thread.sleep(forTimeInterval: 3)
         let banner = native("CallKit", "reportIncoming", ["callId": "shots-call-1", "name": caller])
         Thread.sleep(forTimeInterval: 2.5)
-        shot("call-banner", "مكالمةٌ واردة والتطبيقُ مفتوح", ok: banner.ok, note: banner.note)
+        let bannerSeen = callVisible()
+        shot("call-banner", "مكالمةٌ واردة والتطبيقُ مفتوح", ok: banner.ok && bannerSeen, note: bannerSeen ? banner.note : noCallUI)
         dump("call-banner")
         _ = native("CallKit", "end", ["callId": "shots-call-1"])
         Thread.sleep(forTimeInterval: 2)
@@ -305,7 +321,8 @@ final class NativeShots: XCTestCase {
             return
         }
         Thread.sleep(forTimeInterval: 6)
-        shot("call-lock", "مكالمةٌ واردة والجهازُ مقفل", ok: later.ok, note: later.note)
+        let lockSeen = callVisible()
+        shot("call-lock", "مكالمةٌ واردة والجهازُ مقفل", ok: later.ok && lockSeen, note: lockSeen ? later.note : noCallUI)
         dump("call-lock")
         // الرفضُ بزرِّ القفل مرّتين كما يرفضها صاحبُ الهاتف
         _ = lock(); Thread.sleep(forTimeInterval: 0.5); _ = lock()
