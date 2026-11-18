@@ -54,12 +54,22 @@ jobs:
               if "usesCleartextTraffic" not in x:
                   x = re.sub(r"<application\b", '<application android:usesCleartextTraffic="true"', x, count=1)
               m.write_text(x, encoding="utf-8")
-          print("✓ رقعتا التجربة")
+              # **إعدادُ Firebase وهميٌّ لحزمة التجربة وحدَها** (قِيس في 44280442083: بلا إعدادٍ يسقط التطبيقُ عند تسجيل الإشعارات بعد الدخول
+              # — «Default FirebaseApp is not initialized»). مشروعٌ مختلَقٌ بلا مفتاحٍ حقيقيّ: يقوم Firebase، ويفشل التسجيلُ بهدوءٍ بلا انهيار
+              base = {"customer-app": "ly.tajora.rider", "driver-app": "ly.tajora.driver"}[app]
+              clients = [{"client_info": {"mobilesdk_app_id": f"1:100000000000:android:{i:016x}", "android_client_info": {"package_name": base + sfx}},
+                          "oauth_client": [], "api_key": [{"current_key": "ci-proof-placeholder"}],
+                          "services": {"appinvite_service": {"other_platform_oauth_client": []}}}
+                         for i, sfx in enumerate(("", ".test", ".test.dev", ".dev"), start=1)]
+              pathlib.Path(app, "android/app/google-services.json").write_text(json.dumps({
+                  "project_info": {"project_number": "100000000000", "project_id": "taxo-ci-proof", "storage_bucket": "taxo-ci-proof.appspot.com"},
+                  "client": clients, "configuration_version": "1"}), encoding="utf-8")
+          print("✓ رقعتا التجربة وإعدادُ Firebase الوهميّ")
           PY
           mkdir -p ../apk
           for app in customer-app driver-app; do
             (cd "$app" && npm ci --silent && mkdir -p dist && printf '<!doctype html><title>shell</title>\n' > dist/index.html \
-              && TAXO_CHANNEL=test npx cap sync android && cd android && TAXO_ALLOW_NO_FIREBASE=1 ./gradlew --no-daemon -q assembleTrialDebug)
+              && TAXO_CHANNEL=test npx cap sync android && cd android && ./gradlew --no-daemon -q assembleTrialDebug)
             cp "$app"/android/app/build/outputs/apk/trial/debug/*.apk "../apk/$app.apk"
           done
           ls -la ../apk
