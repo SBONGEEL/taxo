@@ -37,6 +37,13 @@ sleep 12
 LOCATION_CMD="xcrun simctl location $udid set 31.9539,35.9106 || true" \
 APPEARANCE_CMD="xcrun simctl ui $udid appearance" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- xcrun simctl io "$udid" screenshot '"$SHOT"'
+# **قياسُ ملحق العربيّة على الخريطة** (أمرُ المالك ٢٠٢٦-١١-١٨): صفحةُ القياس في WebView التطبيق نفسِه، أسماءٌ طويلةٌ وشوارعُ وعربيّةٌ بأرقام
+node -e 'fetch("http://127.0.0.1:8787/__shot",{method:"POST",body:JSON.stringify({kind:"reset",storage:{},path:"/__rtl/index.html"})}).then(r=>r.json()).then(c=>console.log("· rtl:",c.id))' || true
+sleep 28
+mkdir -p "$out/rtl"; xcrun simctl io "$udid" screenshot "$out/rtl/rtl-$(basename "$out").png" || true
+grep '^NOTE' "$out/server.log" | tail -2 > "$out/rtl/rtl-notes.txt" || true
+cat "$out/rtl/rtl-notes.txt" || true
+sleep 15   # الصفحةُ تعود إلى التطبيق بعد ٤٠ ث
 # **ثمّ ما يرسمه iOS نفسُه** (أمرُ المالك ٢٠٢٦-١١-١٨): Dynamic Island والقفلُ والاختصاراتُ والأدواتُ والمكالمة — بالتطبيق والخادم نفسَيهما
 bash "$root/tools/screens/native-run.sh" "$app" "$udid" "$bundle" "$device" "$out/native" || true
 # **أثرُ خروج التطبيق يُحفظ** — مقيسٌ: الكبتنُ صار في الخلفيّة بعد ورقة الموقع بلا سطرٍ يقول لماذا (التشغيل 44026434831)

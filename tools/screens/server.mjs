@@ -68,6 +68,11 @@ createServer(async (req, res) => {
     return send(res, 200, {});
   }
   if (path === "/__shot/ack") return send(res, 200, ack);
+  // **ملاحظاتُ صفحات القياس** (`rtl-test.html`) — سطرٌ في السجلّ يبدأ بـ`NOTE` فيُستخرج
+  if (path === "/__note" && req.method === "POST") {
+    console.log(`NOTE ${JSON.stringify(await readBody(req))}`);
+    return send(res, 200, {});
+  }
 
   if (path === "/api/v1/config") return send(res, 200, config);
   if (path === "/api/v1/public/app-version") {

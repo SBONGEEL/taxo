@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>قياسُ ملحق العربيّة على الخريطة</title>
+<!--
+  **قياسُ ملحق العربيّة (`mapbox-gl-rtl-text.js`) داخل التطبيق على iPhone** — أمرُ المالك ٢٠٢٦-١١-١٨.
+  يُنسخ إلى حزمة اللقطات وحدَها (`prepare-dist.mjs` ⇐ `/__rtl/`) ويُفتح في WebView التطبيق نفسِه (مخطّطُ `capacitor://`)،
+  بـMapLibre من حزمة التطبيق نفسِها والملحقِ من `/vendor/` كما يحمّله `lib/map-rtl.ts` حرفاً، وبلاطاتِ OpenFreeMap وخطوطها.
+  **النصُّ نفسُه مرّتين**: مرسوماً في لوحة الخريطة (الملحق) ومكتوباً تحته في الصفحة (مُشكِّلُ المتصفّح) — فيُقارن بالعين،
+  وحالُ الملحق وأخطاؤه تُرسل إلى خادم اللقطات (`/__note`) فتُقرأ في السجلّ.
+-->
+<link rel="stylesheet" href="./maplibre-gl.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #F4F1EA; color: #14161A; font-family: -apple-system, "Noto Sans Arabic", sans-serif; }
+  #map { position: absolute; top: 0; left: 0; right: 0; height: 58%; }
+  #panel { position: absolute; top: 58%; left: 0; right: 0; bottom: 0; padding: 10px 14px; font-size: 13px; overflow: hidden; }
+  #status { font-weight: 700; margin-bottom: 6px; }
+  .ref { margin: 2px 0; }
+  .ok { color: #1B7F3B; } .bad { color: #C0261B; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <div id="status">…</div>
+  <div style="opacity:.7">المرجع — النصُّ نفسُه بمُشكِّل المتصفّح:</div>
+  <div id="refs"></div>
+</div>
+<script src="./maplibre-gl.js"></script>
+<script>
+  var LABELS = [
+    { t: "شارع الملكة رانيا العبدالله", at: [35.8735, 31.9935] },
+    { t: "مستشفى الجامعة الأردنية التعليمي — مدخل الطوارئ", at: [35.8720, 32.0000] },
+    { t: "الدوار 7", at: [35.8380, 31.9550] },
+    { t: "شارع 25 أيار", at: [35.8560, 31.9700] },
+    { t: "مجمع رقم 12 - الطابق 3", at: [35.8650, 31.9620] },
+    { t: "دوار عبدون (الدوار الخامس) 5", at: [35.8800, 31.9480] },
+    { t: "طريق المطار — كم 17", at: [35.9000, 31.9400] }
+  ];
+  var notes = [];
+  var errors = [];
+  function note(s) { notes.push(s); }
+  function send() {
+    var x = new XMLHttpRequest();
+    x.open("POST", "http://127.0.0.1:8787/__note");
+    x.send(JSON.stringify({ kind: "rtl", ua: navigator.userAgent, origin: location.origin, status: maplibregl.getRTLTextPluginStatus(), notes: notes, errors: errors }));
+  }
+  window.addEventListener("error", function (e) { errors.push(String(e.message)); });
+  var refs = document.getElementById("refs");
+  LABELS.forEach(function (l) { var d = document.createElement("div"); d.className = "ref"; d.textContent = "• " + l.t; refs.appendChild(d); });
+
+  // **كما في `lib/map-rtl.ts` حرفاً**: المسارُ نفسُه، وبلا كسل
+  maplibregl.setRTLTextPlugin("/vendor/mapbox-gl-rtl-text.js", false).then(
+    function () { note("setRTLTextPlugin: ✓"); },
+    function (e) { errors.push("setRTLTextPlugin: " + String(e && e.message || e)); }
+  );
+
+  var NAME = ["coalesce", ["get", "name:ar"], ["get", "name"]];
+  var map = new maplibregl.Map({
+    container: "map",
+    center: [35.866, 31.968],
+    zoom: 13.4,
+    attributionControl: false,
+    style: {
+      version: 8,
+      glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+      sources: {
+        omt: { type: "vector", url: "https://tiles.openfreemap.org/planet" },
+        test: { type: "geojson", data: { type: "FeatureCollection", features: LABELS.map(function (l) {
+          return { type: "Feature", properties: { t: l.t }, geometry: { type: "Point", coordinates: l.at } };
+        }) } }
+      },
+      layers: [
+        { id: "bg", type: "background", paint: { "background-color": "#F4F1EA" } },
+        { id: "roads", type: "line", source: "omt", "source-layer": "transportation", paint: { "line-color": "#FFFFFF", "line-width": 2 } },
+        { id: "road-names", type: "symbol", source: "omt", "source-layer": "transportation_name",
+          layout: { "symbol-placement": "line", "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": 12 },
+          paint: { "text-color": "#555", "text-halo-color": "#fff", "text-halo-width": 1 } },
+        { id: "places", type: "symbol", source: "omt", "source-layer": "place",
+          layout: { "text-field": NAME, "text-font": ["Noto Sans Bold"], "text-size": 13 }, paint: { "text-color": "#14161A" } },
+        { id: "test", type: "symbol", source: "test",
+          layout: { "text-field": ["get", "t"], "text-font": ["Noto Sans Bold"], "text-size": 15, "text-allow-overlap": true, "text-max-width": 30 },
+          paint: { "text-color": "#C0261B", "text-halo-color": "#fff", "text-halo-width": 2 } }
+      ]
+    }
+  });
+  map.on("error", function (e) { errors.push("map: " + String(e && e.error && e.error.message || e)); });
+  map.once("idle", function () {
+    var status = maplibregl.getRTLTextPluginStatus();
+    note("idle; plugin=" + status);
+    var el = document.getElementById("status");
+    el.className = status === "loaded" && !errors.length ? "ok" : "bad";
+    el.textContent = "حالُ الملحق: " + status + (errors.length ? " — أخطاء: " + errors.join(" ‖ ") : " — بلا أخطاء");
+    send();
+  });
+  setTimeout(function () { note("timeout 25s"); send(); }, 25000);
+  // **ويعود التطبيقُ إلى نفسه** — فيجد مُشغِّلُ ما يرسمه iOS الصفحةَ والجسرَ بعدها
+  setTimeout(function () { location.replace("/"); }, 40000);
+</script>
+</body>
+</html>

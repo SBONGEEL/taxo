@@ -7,6 +7,8 @@
  *   type {text}       — يكتب في الحقل المركَّز، أو أوّلِ حقلٍ ظاهر، كما يكتب المستخدم (حدثُ `input`)
  *   back              — `history.back()`
  *   show {selector}   — يمرّر إلى العنصر بلا ضغط
+ *   tiles {timeout}   — **ينتظر بلاطاتِ الخريطة** حتى يسكن عاملُها: لا طلبَ معلّقٌ ولا جديدٌ ١٫٥ ث (أمرُ المالك ٢٠٢٦-١١-١٨ —
+ *                       خريطةٌ فارغةٌ خلف ورقة المسار في لوحات 44287823952)
  *   native {plugin, method, options, after}
  *                     — **ينادي ملحقاً أصليّاً بالجسر نفسِه** الذي ينادي به التطبيق (`Capacitor.nativePromise`) ببياناتِ تجربة:
  *                       النشاطُ الحيُّ والمكالمةُ واختصاراتُ الأيقونة تُرسم من شيفرتها الحقيقيّة (`tools/screens/native/`). و`after` يؤجّله
@@ -17,6 +19,30 @@
 (function () {
   var SERVER = "http://127.0.0.1:8787";
   var DONE = "taxo.shot.done";
+
+  // **شبكةُ عامل الخريطة تُعدّ** — MapLibre يجلب البلاطاتِ والخطوطَ داخل عاملٍ من `blob:` لا تراه الصفحة. فيُلفّ العاملُ بمقدّمةٍ
+  // تعدّ طلباته وتبثّها على قناةٍ (`BroadcastChannel`) لا على رسائله — فلا يُمسّ بروتوكولُه. **وفي حزمة اللقطات وحدَها.**
+  var net = { pending: 0, last: 0, seen: 0 };
+  try {
+    var channel = new BroadcastChannel("shots-net");
+    channel.onmessage = function (e) {
+      net.last = Date.now();
+      if (e.data === "s") { net.pending++; net.seen++; }
+      else if (e.data === "e") net.pending = Math.max(0, net.pending - 1);
+    };
+    var RealWorker = window.Worker;
+    var Wrapped = function (url, options) {
+      if (typeof url === "string" && url.indexOf("blob:") === 0 && !(options && options.type === "module")) {
+        var prelude = "(function(){var c=new BroadcastChannel('shots-net');var f=self.fetch;if(f){self.fetch=function(){c.postMessage('s');" +
+          "return f.apply(this,arguments).then(function(r){c.postMessage('e');return r;},function(x){c.postMessage('e');throw x;});};}})();" +
+          "importScripts(" + JSON.stringify(url) + ");";
+        url = URL.createObjectURL(new Blob([prelude], { type: "text/javascript" }));
+      }
+      return new RealWorker(url, options);
+    };
+    Wrapped.prototype = RealWorker.prototype;
+    window.Worker = Wrapped;
+  } catch (e) {}
 
   // **إذنُ الإشعارات يُجاب «مرفوضاً» قبل أن يبلغ الطبقةَ الأصليّة** — في حزمة اللقطات وحدَها.
   // مقيسٌ في أوّل تشغيلين: نافذةُ iOS الأصليّة غطّت كلَّ لقطة (و`simctl` لا يمنح هذا الإذن)، وعلى أندرويد أغلق التسجيلُ التطبيقَ
@@ -287,6 +313,26 @@
             setTimeout(function () { reply(cmd.id, true, "رُسم"); }, cmd.ms || 1200);
           });
         });
+      }
+      if (cmd.kind === "tiles") {
+        var tilesFrom = Date.now();
+        var tilesWait = function () {
+          var quiet = net.pending === 0 && Date.now() - net.last > 1500;
+          var waited = Date.now() - tilesFrom;
+          if (quiet && (net.seen > 0 || waited > 4000)) {
+            // ثمّ إطاران ونصفُ ثانية — ليُرسم ما وصل
+            return requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                setTimeout(function () {
+                  reply(cmd.id, true, "بلاطات: " + net.seen + " طلباً، ساكنةٌ بعد " + waited + " ms");
+                }, 500);
+              });
+            });
+          }
+          if (waited > (cmd.timeout || 20000)) return reply(cmd.id, false, "البلاطاتُ لم تسكن في " + waited + " ms (معلّق " + net.pending + ")");
+          setTimeout(tilesWait, 250);
+        };
+        return tilesWait();
       }
       if (cmd.kind === "native") {
         var bridge = window.Capacitor;

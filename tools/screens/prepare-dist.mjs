@@ -10,7 +10,7 @@
  * في وظيفة `web` من التشغيل نفسِه.
  */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,4 +32,9 @@ const index = join(out, "index.html");
 const html = readFileSync(index, "utf8");
 if (!html.includes("<head>")) throw new Error("لا <head> في index.html");
 writeFileSync(index, html.replace("<head>", '<head><script src="/__harness.js"></script>'));
+// **صفحةُ قياس ملحق العربيّة** (أمرُ المالك ٢٠٢٦-١١-١٨) — MapLibre من حزمة التطبيق المثبَّتة نفسِها، والملحقُ من `/vendor/` كما في `lib/map-rtl.ts`
+const rtl = join(out, "__rtl");
+mkdirSync(rtl, { recursive: true });
+copyFileSync(join(root, "tools", "screens", "rtl-test.html"), join(rtl, "index.html"));
+for (const f of ["maplibre-gl.js", "maplibre-gl.css"]) copyFileSync(join(dir, "node_modules", "maplibre-gl", "dist", f), join(rtl, f));
 console.log(`✓ ${app}/dist-screens — يخاطب 127.0.0.1:8787، والمُشغِّلُ محقون`);

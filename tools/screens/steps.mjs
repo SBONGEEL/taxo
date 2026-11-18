@@ -63,15 +63,15 @@ const RIDER = [
   { name: "login", label: "الدخول", do: [{ kind: "reset", storage: "out" }, { kind: "nav", path: "/login" }, { kind: "click", text: "لديّ حساب", optional: true }], settle: 4000, expect: [sel("#password"), t("أهلاً من جديد")] },
   // ↑ **ورقةُ الترحيب قد تبقى فوق `/login`** («TAXO غيرُ متاحٍ في منطقتك بعد» وزرُّها «لديّ حساب — دخول») — والعلامةُ قُرئت ✓ من خانةٍ تحتها
   //   (لوحاتُ 44255793642)؛ فيُضغط زرُّها إن ظهر، والعلامةُ صارت تُشترط فوقَ غيرها
-  { name: "home", label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000, expect: [t("إلى أين")] },
+  { name: "home", map: true, label: "الرئيسيّة «إلى أين؟»", do: [{ kind: "reset", storage: "in" }], settle: 9000, expect: [t("إلى أين")] },
   { name: "search-empty", label: "البحث قبل الكتابة", do: [{ kind: "click", text: "إلى أين" }, { kind: "click", text: "ابحث عن الوجهة بالاسم" }], settle: 3000, expect: [sel(".t2-ps input")] },
   { name: "search-typing", label: "البحث أثناء الكتابة", do: [{ kind: "type", text: "مطار" }], settle: 5000, expect: [sel(".t2-ps-pick")] },
-  { name: "order-sheet", label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("اطلب"), t("اختر الفئة")] },
-  { name: "options", label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
+  { name: "order-sheet", map: true, label: "ورقةُ الطلب والمسار", do: [{ kind: "click", selector: ".t2-ps-pick" }], settle: 8000, expect: [t("اطلب"), t("اختر الفئة")] },
+  { name: "options", map: true, label: "الفئات و«خيارات»", do: [{ kind: "click", text: "خيارات" }], settle: 3000, expect: [sel(".t2-v2-options-title")] },
   // **الورقةُ تُغلق بزرّها «تمّ» كما تُغلقها اليد** — `back` غادر الصفحةَ كلَّها على iPhone في الداكن فعادت الرئيسيّة (التشغيل 44060665439)
   // ↓ **تُمسك مؤقّتاتُ الاقتراب بعد «اطلب»** — القبولُ (٤ ث) مضبوطٌ قبل الإمساك فيقع، وخطواتُ الاقتراب تُضبط عند القبول فتقف في منتصفها؛
   //   وصورةُ SE كانت «بدأت الرحلة» والعلامةُ قُرئت قبلها باثنتي عشرة ثانية (44277158308)
-  { name: "ride-status", label: "حالةُ الرحلة — الكبتن قادمٌ أو وصل", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }, { kind: "freeze", on: true }], settle: 2000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")], expectWithin: 25000, movesOn: true },
+  { name: "ride-status", map: true, label: "حالةُ الرحلة — الكبتن قادمٌ أو وصل", do: [{ kind: "click", text: "تم", optional: true }, { kind: "click", text: "اطلب" }, { kind: "freeze", on: true }], settle: 2000, expect: [t("الكبتن في الطريق إليك"), t("الكبتن ينتظرك")], expectWithin: 25000, movesOn: true },
   // ↑ **يُصوَّر حين تظهر العلامة لا بعد مهلةٍ ثابتة** — رحلةُ العرض تمضي بمؤقّتاتها، فبعد ١٥ ث ثابتةٍ صُوِّرت «في الطريق إلى المطار» على Pro Max
   //   والعلامةُ ✓ قبلها بلحظة (أمسكها فحصُ ما بعد اللقطة · 44238489964)
   { name: "wallet", label: "المحفظة", do: [{ kind: "freeze", on: false }, { kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
@@ -87,7 +87,7 @@ const DRIVER = [
   // ↑ **«دخول» اختياريّ** — بعد «تخطَّ» قد تكون شاشةُ الدخول نفسُها، وزرُّها «دخول» معطَّلٌ حتى تُملأ الخانات؛ فكان يُنقر بلا أثر،
   //   وصار الضغطُ ينتظر الزرَّ المعطَّل فسقط الصفُّ والعلامةُ ✓ (44245895915). العلامةُ `#password` هي الحَكَم
   {
-    name: "home-offline",
+    name: "home-offline", map: true,
     label: "الرئيسيّة — غيرُ متّصل",
     do: [
       { kind: "reset", storage: "in" },
@@ -110,11 +110,11 @@ const DRIVER = [
   // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
   // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
   // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "freeze", on: true }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300,
+  { name: "home-online", map: true, label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "freeze", on: true }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300,
     again: [{ kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
-  { name: "offer", label: "طلبُ رحلة", do: [{ kind: "freeze", on: false }], settle: 4000, expect: [t("قبول")] },
-  { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
+  { name: "offer", map: true, label: "طلبُ رحلة", do: [{ kind: "freeze", on: false }], settle: 4000, expect: [t("قبول")] },
+  { name: "ride", map: true, label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
   { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-wal-title")] },
   { name: "rides", label: "سجلُّ الرحلات", do: [{ kind: "nav", path: "/rides" }], settle: 3000, expect: [t("سجل الرحلات")] },
   { name: "subscription", label: "الاشتراك", do: [{ kind: "nav", path: "/subscription" }], settle: 3000, expect: [sel(".t2-sub-now"), t("الاشتراك")] },
@@ -174,6 +174,11 @@ async function pass(theme) {
         const seenAck = await command({ kind: "expect", any: step.expect, timeout: step.expectWithin ?? 12000 });
         marked = seenAck.ok;
         notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
+      }
+      // **شاشاتُ الخريطة تنتظر بلاطاتِها** (`map: true`) — لا خريطةَ فارغةً خلف الورقة (أمرُ المالك ٢٠٢٦-١١-١٨)
+      if (step.map) {
+        const tiles = await command({ kind: "tiles", timeout: 20000 });
+        notes.push(`tiles: ${tiles.ok ? "✓" : "✗"} ${tiles.note ?? ""}`.trim());
       }
       if (marked) await command({ kind: "paint" });
       execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
