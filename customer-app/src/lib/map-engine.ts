@@ -46,6 +46,21 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+let webgl: boolean | null = null;
+
+/** **أيقدر هذا الجهازُ على MapLibre؟** — سياقُ WebGL يُطلب مرّةً في الجلسة. **والرجوعُ الآليُّ لا يمسك هذا**: المكتبةُ ترمي عند
+ *  الإنشاء قبل أن يُسجَّل أيُّ مستمع، فتسقط الشاشة؛ **فيُسأل قبل الاختيار**، ومن لا يقدر يبقى على Mapbox كما كان حرفاً. */
+function canDrawOpenMap(): boolean {
+  if (webgl !== null) return webgl;
+  try {
+    const canvas = document.createElement("canvas");
+    webgl = Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+  } catch {
+    webgl = false;
+  }
+  return webgl;
+}
+
 /** **أتُرسم هذه الخريطةُ بالبيانات المفتوحة؟** — المفتاحُ لسوق المستخدم، **والغلافُ عند حدِّ لوحة الإصدارات أو فوقه**
  *  (SPEC §١٠٥/٥: الغلافُ القديمُ يبقى على Mapbox حرفاً ولو اشتعل المفتاح)، وما لم تسقط في هذه الجلسة. */
 export function useOpenMap(): boolean {
@@ -53,5 +68,5 @@ export function useOpenMap(): boolean {
   const on = useFeature(user?.country_code, OPEN_MAP_FLAG);
   const down = useSyncExternalStore(subscribe, () => failed);
   const shell = useShellOpenMap();
-  return on && shell && !down;
+  return on && shell && !down && canDrawOpenMap();
 }
