@@ -75,6 +75,9 @@ const RIDER = [
   // ↑ **يُصوَّر حين تظهر العلامة لا بعد مهلةٍ ثابتة** — رحلةُ العرض تمضي بمؤقّتاتها، فبعد ١٥ ث ثابتةٍ صُوِّرت «في الطريق إلى المطار» على Pro Max
   //   والعلامةُ ✓ قبلها بلحظة (أمسكها فحصُ ما بعد اللقطة · 44238489964)
   { name: "wallet", label: "المحفظة", do: [{ kind: "freeze", on: false }, { kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-balance")] },
+  // **بقيّةُ الشاشات الرئيسيّة** (أمرُ المالك ٢٠٢٦-١١-١٨: «كلُّ الشاشات الرئيسيّة») — بمساراتها، وعلامةُ كلٍّ عنوانُها أو رأسُها
+  { name: "rides", label: "رحلاتي", do: [{ kind: "nav", path: "/rides" }], settle: 3000, expect: [t("رحلاتي")] },
+  { name: "account", label: "الحساب", do: [{ kind: "nav", path: "/account" }], settle: 3000, expect: [sel(".t2-prof")] },
 ];
 const DRIVER = [
   // **ترحيبُ الكبتن يُفتح في كلِّ إقلاعٍ لا في الأوّل وحدَه** (`App.tsx › WelcomeGate`) — فيُتخطّى بعد كلِّ reset
@@ -113,6 +116,10 @@ const DRIVER = [
   { name: "offer", label: "طلبُ رحلة", do: [{ kind: "freeze", on: false }], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
   { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-wal-title")] },
+  { name: "rides", label: "سجلُّ الرحلات", do: [{ kind: "nav", path: "/rides" }], settle: 3000, expect: [t("سجل الرحلات")] },
+  { name: "subscription", label: "الاشتراك", do: [{ kind: "nav", path: "/subscription" }], settle: 3000, expect: [sel(".t2-sub-now"), t("الاشتراك")] },
+  { name: "notifications", label: "الإشعارات", do: [{ kind: "nav", path: "/notifications" }], settle: 3000, expect: [t("الإشعارات")] },
+  { name: "account", label: "الحساب", do: [{ kind: "nav", path: "/account" }], settle: 3000, expect: [sel(".t2-acc-prof")] },
 ];
 const steps = app === "driver-app" ? DRIVER : RIDER;
 const log = [];

@@ -7,6 +7,10 @@
  *   type {text}       — يكتب في الحقل المركَّز، أو أوّلِ حقلٍ ظاهر، كما يكتب المستخدم (حدثُ `input`)
  *   back              — `history.back()`
  *   show {selector}   — يمرّر إلى العنصر بلا ضغط
+ *   native {plugin, method, options, after}
+ *                     — **ينادي ملحقاً أصليّاً بالجسر نفسِه** الذي ينادي به التطبيق (`Capacitor.nativePromise`) ببياناتِ تجربة:
+ *                       النشاطُ الحيُّ والمكالمةُ واختصاراتُ الأيقونة تُرسم من شيفرتها الحقيقيّة (`tools/screens/native/`). و`after` يؤجّله
+ *                       بالمللي ثانية — لمكالمةٍ تصل والجهازُ مقفل
  *   expect {any}      — **يقيس الشاشةَ المقصودة**: ينتظر حتى `timeout` عنصراً منها (نصّاً أو `selector`) **داخل الشاشة**، ويردّ بما وجد
  *                       أو بما يُرى بدلَه. **فالصفُّ «بلغ» بعلامةٍ من شاشته لا بنجاح ضغطة** (أمرُ المالك ٢٠٢٦-١١-١٨).
  * **ولا يقرأ شيئاً ولا يرسل شيئاً غيرَ جوابه** — يضغط ويكتب كما تضغط اليدُ وتكتب. */
@@ -283,6 +287,27 @@
             setTimeout(function () { reply(cmd.id, true, "رُسم"); }, cmd.ms || 1200);
           });
         });
+      }
+      if (cmd.kind === "native") {
+        var bridge = window.Capacitor;
+        if (!bridge || typeof bridge.nativePromise !== "function") return reply(cmd.id, false, "لا جسرَ أصليّ");
+        var callNative = function () {
+          return bridge.nativePromise(cmd.plugin, cmd.method, cmd.options || {});
+        };
+        if (cmd.after) {
+          setTimeout(function () {
+            callNative().catch(function () {});
+          }, cmd.after);
+          return reply(cmd.id, true, cmd.plugin + "." + cmd.method + " بعد " + cmd.after + " ms");
+        }
+        return callNative().then(
+          function (result) {
+            reply(cmd.id, true, cmd.plugin + "." + cmd.method + " " + JSON.stringify(result || {}).slice(0, 160));
+          },
+          function (error) {
+            reply(cmd.id, false, cmd.plugin + "." + cmd.method + " ✗ " + String((error && error.message) || error));
+          }
+        );
       }
       if (cmd.kind === "lost") return reply(cmd.id, true, String(lostAt === null ? -1 : Date.now() - lostAt));
       if (cmd.kind === "expect") {

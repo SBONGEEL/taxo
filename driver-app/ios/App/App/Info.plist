@@ -46,7 +46,7 @@
 	<!-- **نصوصُ الأذونات من المالك حرفاً** (٢٠٢٦-٠٩-٢٩) — وUIBackgroundModes أُعلن مع ملحق الموقع الخلفيّ
 	     (OnlineServicePlugin، ٢٠٢٦-١١-١٧) لا قبله: إعلانٌ بلا فعلٍ يُرفض في المراجعة ويكذب (`check:ios`). -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>يحتاج TAXO Driver موقعك لعرضك للركاب القريبين وتوجيهك أثناء الرحلة.</string>
+	<string>يحتاج TAXO كبتن موقعك لعرضك للركاب القريبين وتوجيهك أثناء الرحلة.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>ليستمرّ استقبال الطلبات ومشاركة موقعك مع الراكب أثناء الرحلة حتى حين يكون التطبيق في الخلفية.</string>
 	<key>NSFaceIDUsageDescription</key>

@@ -21,6 +21,10 @@ const logs = Object.fromEntries(
     return [c.key, existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : []];
   }),
 );
+if (mode === "iphone") {
+  iphoneBoard();
+  process.exit(0);
+}
 const order = (logs["ios-large"].length ? logs["ios-large"] : logs.android).filter((s) => s.theme === mode);
 const dark = mode === "dark";
 const title = `${app === "driver-app" ? "تطبيقُ الكبتن" : "تطبيقُ الراكب"} — ${dark ? "الوضعُ الليليّ" : "الوضعُ النهاريّ"}`;
@@ -52,3 +56,66 @@ img{height:720px;border-radius:22px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
 <p style="opacity:.7;font-size:16px">لقطاتٌ حقيقيّةٌ من محاكي iPhone ومحاكي أندرويد بالحزمة نفسِها ووضع الضيف (بياناتُ العرض) — لا رسم.</p></body></html>`,
 );
 console.log(`✓ board-${app}-${mode}.html — ${order.length} شاشة`);
+
+/**
+ * **لوحةُ iPhone — واحدةٌ لكلِّ تطبيق** (أمرُ المالك ٢٠٢٦-١١-١٨): `node tools/screens/board.mjs <app> <dir> iphone`
+ *
+ * شاشاتُ التطبيق صفّاً صفّاً: **Pro Max نهاراً وليلاً · SE نهاراً وليلاً**، ثمّ **ما يرسمه iOS نفسُه** (`native-run.sh`):
+ * Dynamic Island والقفلُ والاختصاراتُ والأدواتُ والمكالمة — على الجهازين. وما لم يُلتقط يُقال لماذا تحته، لا يُخفى.
+ */
+function iphoneBoard() {
+  const read = (f) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : []);
+  const large = read(join(dir, "ios-large", "steps.json"));
+  const small = read(join(dir, "ios-small", "steps.json"));
+  const cell = (col, title, s) => {
+    const img = s && s.file && existsSync(join(dir, col, s.file)) ? `<img src="${col}/${s.file}">` : `<div class="miss">لا لقطة</div>`;
+    const notes = (s && s.notes) || [];
+    const bad = notes.filter((n) => n.includes("✗"));
+    const why = s && !s.reached ? `<div class="warn">${s.file ? "لم يُبلغ: " : ""}${(bad.length ? bad : notes).join(" · ")}</div>` : "";
+    return `<figure><figcaption class="col">${title}</figcaption>${img}${why}</figure>`;
+  };
+  const names = [...new Set([...large, ...small].filter((s) => s.theme === "light").map((s) => s.name))];
+  const appRows = names
+    .map((name) => {
+      const pick = (log, theme) => log.find((x) => x.theme === theme && x.name === name);
+      const label = (pick(large, "light") || pick(small, "light")).label;
+      const cells = [
+        cell("ios-large", "Pro Max · نهاريّ", pick(large, "light")),
+        cell("ios-large", "Pro Max · ليليّ", pick(large, "dark")),
+        cell("ios-small", "SE · نهاريّ", pick(small, "light")),
+        cell("ios-small", "SE · ليليّ", pick(small, "dark")),
+      ].join("");
+      return `<section><div class="row">${cells}</div><h2>${label}</h2></section>`;
+    })
+    .join("");
+  const nl = read(join(dir, "ios-large", "native", "native.json"));
+  const ns = read(join(dir, "ios-small", "native", "native.json"));
+  const nativeNames = [...new Set([...nl, ...ns].map((s) => s.name))];
+  const nativeRows = nativeNames
+    .map((name) => {
+      const a = nl.find((x) => x.name === name);
+      const b = ns.find((x) => x.name === name);
+      const fix = (s) => (s && s.file ? { ...s, file: `native/${s.file}` } : s);
+      const cells = [cell("ios-large", "iPhone 17 Pro Max", fix(a)), cell("ios-small", "iPhone SE", fix(b))].join("");
+      return `<section><div class="row">${cells}</div><h2>${(a || b).label}</h2></section>`;
+    })
+    .join("");
+  const title = app === "driver-app" ? "تطبيقُ الكبتن على iPhone" : "تطبيقُ الراكب على iPhone";
+  writeFileSync(
+    join(dir, `board-${app}-iphone.html`),
+    `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+body{margin:0;padding:32px;background:#F4F5F7;color:#171B20;font-family:"Noto Sans Arabic","Noto Naskh Arabic",sans-serif}
+h1{font-size:36px;margin:0 0 8px}h3{font-size:30px;margin:40px 0 20px;border-top:3px solid #D81B73;padding-top:16px}
+h2{font-size:24px;margin:8px 0 30px;text-align:center}
+.row{display:flex;gap:22px;justify-content:center;align-items:flex-start;direction:ltr}
+figure{margin:0;display:flex;flex-direction:column;align-items:center}
+.col{font-size:17px;opacity:.75;margin-bottom:6px}
+img{height:600px;border-radius:20px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.miss{height:600px;width:280px;display:grid;place-items:center;border:2px dashed #888;border-radius:20px}
+.warn{max-width:300px;color:#D81B73;font-size:14px;margin-top:6px;direction:rtl}
+</style></head><body><h1>${title}</h1>
+<p style="opacity:.75;font-size:17px;margin:0">لقطاتٌ حقيقيّةٌ من محاكي iPhone على أجهزة GitHub — بياناتُ تجربةٍ ووضعُ الضيف، لا مستخدمَ حقيقيّ ولا رسم.</p>
+<h3>شاشاتُ التطبيق</h3>${appRows}<h3>ما يرسمه iOS: الأداةُ والقفلُ وDynamic Island والاختصاراتُ والمكالمة</h3>${nativeRows}</body></html>`,
+  );
+  console.log(`✓ board-${app}-iphone.html — ${names.length} شاشة و${nativeNames.length} من النظام`);
+}

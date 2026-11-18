@@ -1,0 +1,42 @@
+# **مُشغِّلُ لقطات النظام** — مشروعٌ صغيرٌ يُولَّد في وظيفة اللقطات وحدَها (`xcodegen`) ولا يُشحن ولا يُوقَّع.
+# تطبيقٌ مضيفٌ فارغٌ يشترطه Xcode لاختبار الواجهة، واختبارٌ يقود **لوحةَ iPhone نفسَها** (SpringBoard) وتطبيقَ TAXO المثبَّت:
+# شاشةُ القفل والنشاطُ الحيّ وDynamic Island واختصاراتُ الأيقونة وأدواتُ الشاشة الرئيسيّة والمكالمة (`native-run.sh`).
+name: NativeShots
+options:
+  bundleIdPrefix: ly.tajora.shots
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "5.0"
+targets:
+  ShotsHost:
+    type: application
+    platform: iOS
+    sources: [Host]
+    info:
+      path: Host/Info.plist
+      properties:
+        UILaunchScreen: {}
+  ShotsUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    info:
+      path: UITests/Info.plist
+    dependencies:
+      - target: ShotsHost
+    settings:
+      base:
+        TEST_TARGET_NAME: ShotsHost
+schemes:
+  NativeShots:
+    build:
+      targets:
+        ShotsHost: all
+        ShotsUITests: [test]
+    test:
+      targets: [ShotsUITests]

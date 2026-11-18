@@ -14,10 +14,12 @@ struct TaxoWidgetsBundle: WidgetBundle {
     }
 }
 
+/// **ألوانُ هويّة TAXO 2.0** (`design/taxo2-icons` — أيقونةُ الكبتن): الإسفلتُ والورقُ والجمرُ الليليّ — الأداةُ والنشاطُ داكنان أبداً،
+/// فيُقرأ الجمرُ على الإسفلت كما في الأيقونة.
 enum Brand {
-    static let ink = Color(red: 0x17 / 255, green: 0x1B / 255, blue: 0x20 / 255)
-    static let paper = Color.white
-    static let pink = Color(red: 0xD8 / 255, green: 0x1B / 255, blue: 0x73 / 255)
+    static let ink = Color(red: 0x0E / 255, green: 0x10 / 255, blue: 0x13 / 255)
+    static let paper = Color(red: 0xF2 / 255, green: 0xEF / 255, blue: 0xE8 / 255)
+    static let ember = Color(red: 0xFF / 255, green: 0x6A / 255, blue: 0x33 / 255)
 
     static var kind: String {
         (Bundle.main.object(forInfoDictionaryKey: "TaxoAppKind") as? String) ?? "rider"
@@ -55,7 +57,7 @@ struct TaxoQuickWidget: Widget {
         }
         .configurationDisplayName(Brand.kind == "driver" ? "TAXO كبتن" : "TAXO")
         .description(Brand.kind == "driver" ? "افتح الاستقبال بلمسة." : "اطلب رحلةً بلمسة.")
-        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
     }
 }
 
@@ -79,6 +81,8 @@ struct QuickView: View {
                     Image(systemName: symbol)
                     Text(title).font(.headline)
                 }
+            case .systemMedium:
+                MediumQuickView(title: title, symbol: symbol)
             default:
                 VStack(alignment: .leading, spacing: 8) {
                     Text("TAXO").font(.system(size: 15, weight: .black)).foregroundColor(Brand.paper.opacity(0.7))
@@ -94,6 +98,60 @@ struct QuickView: View {
         .environment(\.layoutDirection, .rightToLeft)
         .widgetURL(target)
         .widgetBackground(Brand.ink)
+    }
+}
+
+/// **الحجمُ المتوسّط** (أمرُ المالك ٢٠٢٦-١١-١٨) — الزرُّ الرئيسيُّ نفسُه ومعه رابطان: كلُّ رابطٍ مسارٌ من قائمة `TaxoDeepLink.allowed`.
+/// **ولا رقمَ فيه** كالصغير: الرصيدُ والأرباحُ تحتاج «مجموعةَ تطبيقات» من حساب Apple، ورقمٌ لا يُحدَّث يكذب.
+struct MediumQuickView: View {
+    let title: String
+    let symbol: String
+
+    private struct Shortcut: Identifiable {
+        let id: String
+        let label: String
+        let symbol: String
+    }
+
+    private var shortcuts: [Shortcut] {
+        Brand.kind == "driver"
+            ? [Shortcut(id: "/wallet", label: "أرباحي", symbol: "wallet.pass.fill"),
+               Shortcut(id: "/rides", label: "سجلّ الرحلات", symbol: "list.bullet")]
+            : [Shortcut(id: "/wallet", label: "محفظتي", symbol: "wallet.pass.fill"),
+               Shortcut(id: "/rides", label: "رحلاتي", symbol: "clock.arrow.circlepath")]
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Link(destination: Brand.link("/")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TAXO").font(.system(size: 15, weight: .black)).foregroundColor(Brand.paper.opacity(0.7))
+                    Spacer()
+                    Image(systemName: symbol).font(.system(size: 26, weight: .semibold)).foregroundColor(Brand.paper)
+                    Text(title).font(.system(size: 17, weight: .bold)).foregroundColor(Brand.paper)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
+            VStack(spacing: 8) {
+                ForEach(shortcuts) { item in
+                    Link(destination: Brand.link(item.id)) {
+                        HStack(spacing: 8) {
+                            Image(systemName: item.symbol).font(.system(size: 15, weight: .semibold)).foregroundColor(Brand.ember)
+                            Text(item.label).font(.system(size: 14, weight: .bold)).foregroundColor(Brand.paper)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Brand.paper.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(14)
     }
 }
 
@@ -121,7 +179,7 @@ struct TaxoRideLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: "car.fill").foregroundColor(Brand.pink).font(.title2)
+                    Image(systemName: "car.fill").foregroundColor(Brand.ember).font(.title2)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if !context.state.plate.isEmpty {
@@ -139,11 +197,11 @@ struct TaxoRideLiveActivity: Widget {
                     .environment(\.layoutDirection, .rightToLeft)
                 }
             } compactLeading: {
-                Image(systemName: "car.fill").foregroundColor(Brand.pink)
+                Image(systemName: "car.fill").foregroundColor(Brand.ember)
             } compactTrailing: {
                 Text(context.state.detail).font(.caption2).lineLimit(1).frame(maxWidth: 64)
             } minimal: {
-                Image(systemName: "car.fill").foregroundColor(Brand.pink)
+                Image(systemName: "car.fill").foregroundColor(Brand.ember)
             }
             .widgetURL(Brand.link("/"))
         }
@@ -184,7 +242,7 @@ struct StepBar: View {
         HStack(spacing: 4) {
             ForEach(0..<4, id: \.self) { index in
                 Capsule()
-                    .fill(index < max(1, step) ? Brand.pink : Brand.paper.opacity(0.25))
+                    .fill(index < max(1, step) ? Brand.ember : Brand.paper.opacity(0.25))
                     .frame(height: 4)
             }
         }

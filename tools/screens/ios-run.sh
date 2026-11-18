@@ -37,6 +37,8 @@ sleep 12
 LOCATION_CMD="xcrun simctl location $udid set 31.9539,35.9106 || true" \
 APPEARANCE_CMD="xcrun simctl ui $udid appearance" \
   node "$root/tools/screens/steps.mjs" "$app" "$out" -- xcrun simctl io "$udid" screenshot '"$SHOT"'
+# **ثمّ ما يرسمه iOS نفسُه** (أمرُ المالك ٢٠٢٦-١١-١٨): Dynamic Island والقفلُ والاختصاراتُ والأدواتُ والمكالمة — بالتطبيق والخادم نفسَيهما
+bash "$root/tools/screens/native-run.sh" "$app" "$udid" "$bundle" "$device" "$out/native" || true
 # **أثرُ خروج التطبيق يُحفظ** — مقيسٌ: الكبتنُ صار في الخلفيّة بعد ورقة الموقع بلا سطرٍ يقول لماذا (التشغيل 44026434831)
 xcrun simctl spawn "$udid" log show --last 30m --style compact   --predicate 'process == "App" OR (process == "SpringBoard" AND eventMessage CONTAINS[c] "'"$bundle"'") OR eventMessage CONTAINS[c] "terminat"'   > "$out/ios-app.log" 2>&1 || true
 crashes="$HOME/Library/Logs/DiagnosticReports"

@@ -74,6 +74,8 @@ jobs:
           # **ما يُشغَّل على macOS يُحلَّل هنا أوّلاً** — خطأُ صياغةٍ في أداة البناء أسقط أوّلَ تشغيلٍ على عدّاء Mac (قِيس ٢٠٢٦-١١-١٧)
           node --check tools/build-ios.mjs
           bash -n tools/ios/simulator-smoke.sh
+          bash -n tools/screens/ios-run.sh
+          bash -n tools/screens/native-run.sh
           ruby -c tools/ios/configure-xcode.rb
           node tools/check-ios.mjs
           node tools/check-mic-gate.mjs
@@ -273,8 +275,9 @@ jobs:
     needs: [build, screens-web, smoke]
     if: ${{ !cancelled() }}
     runs-on: macos-latest
-    # **٤٥ لا ٣٠** — العمودُ الذي تغيب علامتُه يُعاد كلُّه، فعمودُ الراكب على SE (١٦ صفّاً) تجاوز ٣٠ دقيقةً وأُلغي (44238489964)
-    timeout-minutes: 45
+    # **٤٥ لا ٣٠** — العمودُ الذي تغيب علامتُه يُعاد كلُّه، فعمودُ الراكب على SE (١٦ صفّاً) تجاوز ٣٠ دقيقةً وأُلغي (44238489964)؛
+    # **و٧٠ لا ٤٥** منذ زادت الشاشاتُ وصار بعدها ما يرسمه iOS (`native-run.sh` — أمرُ المالك ٢٠٢٦-١١-١٨)
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -401,6 +404,11 @@ jobs:
               google-chrome --headless=new --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
                 --window-size=1400,$(( 140 + rows * 860 )) --screenshot="$out/board-$app-$mode.png" "file://$d/board-$app-$mode.html"
             done
+            # **ولوحةُ iPhone الواحدةُ للتطبيق** (أمرُ المالك ٢٠٢٦-١١-١٨): شاشاتُه على الجهازين نهاراً وليلاً، ثمّ ما يرسمه iOS
+            node tools/screens/board.mjs "$app" "$d" iphone
+            rows=$(grep -o '<section>' "$d/board-$app-iphone.html" | wc -l)
+            google-chrome --headless=new --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
+              --window-size=1400,$(( 360 + rows * 740 )) --screenshot="$out/board-$app-iphone.png" "file://$d/board-$app-iphone.html"
           done
           ls -la "$out"
       - uses: actions/upload-artifact@v4
