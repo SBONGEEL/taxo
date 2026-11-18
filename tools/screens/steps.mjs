@@ -105,10 +105,10 @@ const DRIVER = [
   // إعادة (`LOCATION_CMD`). **واللقطةُ بلا طلب**: العرضُ يرسل طلبَه بعد ٥ ث من الاتصال (`demo/engine.ts › scheduleOffer(5000)`)، فصُوِّرت ورقةُ
   // الطلب في صفِّ «متّصل» مرّتين (44195002007 · 44199806732) ولو صُوِّر بعد ثانيةٍ ونصف. **فيُرفض الطلبُ الأوّل كما يرفضه الكبتن** — والتالي
   // بعد ٦ ث (`decline → scheduleOffer(6000)`) — ثمّ يُصوَّر «متّصل — بانتظار الطلبات» في تلك الفسحة. وهو وضعُ العرض وحدَه: لا خادمَ ولا راكب.
-  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300,
+  { name: "home-online", label: "متّصل", do: [{ kind: "click", selector: ".t2-hm-go" }, { kind: "freeze", on: true }, { kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], settle: 300,
     again: [{ kind: "click", text: "رفض", after: 300 }, { kind: "show", selector: ".t2-hm-go", after: 200 }], expect: [t("متصل — بانتظار الطلبات")], expectWithin: 4000 },
   // **ومهلةُ الطلب ثوانٍ** — انتظارٌ أطولُ تركه ينتهي قبل «قبول» فذهب التطبيقُ إلى الخلفيّة (مقيس)
-  { name: "offer", label: "طلبُ رحلة", do: [], settle: 4000, expect: [t("قبول")] },
+  { name: "offer", label: "طلبُ رحلة", do: [{ kind: "freeze", on: false }], settle: 4000, expect: [t("قبول")] },
   { name: "ride", label: "شاشةُ الرحلة", do: [{ kind: "click", text: "قبول" }], settle: 8000, expect: [t("في الطريق إلى الراكب"), t("وصلتُ إلى الراكب")] },
   { name: "earnings", label: "الأرباح", do: [{ kind: "nav", path: "/wallet" }], settle: 4000, expect: [sel(".t2-wal-title")] },
 ];
@@ -160,18 +160,30 @@ async function pass(theme) {
           await wait(action.after ?? 900);
         }
       }
+      let marked = false;
       if (step.expect) {
         const seenAck = await command({ kind: "expect", any: step.expect, timeout: step.expectWithin ?? 12000 });
+        marked = seenAck.ok;
         notes.push(`expect: ${seenAck.ok ? "✓" : "✗"} ${seenAck.note ?? ""}`.trim());
       }
+      if (marked) await command({ kind: "paint" });
       execSync(shotCmd, { stdio: "inherit", env: { ...process.env, SHOT: file }, shell: "/bin/bash" });
+      const shotDone = Date.now();
       // **والعلامةُ بعد اللقطة أيضاً** — صُوِّر «متّصل» وعليه بطاقةُ الطلب التالي والعلامةُ ✓ قبلها بثانية (Pro Max · 44232290580):
       // الشاشةُ تتغيّر بين العلامة واللقطة. فلا يُقرأ الصفُّ «بلغ» إلا إن ثبتت العلامةُ على جانبي اللقطة
-      if (step.expect) {
-        const after = await command({ kind: "expect", any: step.expect, timeout: 600 });
-        // **حالٌ تمضي وحدَها** (`movesOn`) — رحلةُ العرض تنتقل بمؤقّتاتها ولا تُعاد، فتغيّرُها بعد اللقطة خبرٌ لا سقوط؛ والحَكَمُ علامةُ ما قبل
-        // اللقطة، **والصورةُ تُفحص بالعين قبل الإرسال** (صُوِّرت «الكبتن في الطريق إليك» صحيحةً وسقط الصفُّ بفحص ما بعدها · 44255793642)
-        if (!after.ok) notes.push(`بعد اللقطة: ${step.movesOn ? "مضت الحالُ (خبر)" : "✗ تغيّرت الشاشة"} — ${after.note ?? ""}`.trim());
+      // **حالٌ تمضي وحدَها** (`movesOn`، «حالةُ الرحلة») — رحلةُ العرض تنتقل بمؤقّتاتها ولا تُعاد، فغيابُ علامتها خبرٌ لا سقوط، **والصورةُ
+      // تُفحص بالعين قبل الإرسال** (صُوِّرت «الكبتن في الطريق إليك» صحيحةً وسقط الصفُّ بفحص ما بعدها · 44255793642).
+      // **متى غابت العلامة لا هل غابت** — الصفحةُ تراقبها منذ قُبلت؛ فإن غابت بعد تمام اللقطة (بهامش ٧٠٠ ms لتأخّر الجواب) فالصورةُ صحيحة
+      // وإن غابت قبله فالصورةُ قد تكون الشاشةَ التالية. وتوقيتُ الصفحة يُقرأ مدّةً لا ساعةً، فلا تُقارن ساعتا جهازين
+      if (marked) {
+        const q = await command({ kind: "lost" });
+        const agoMs = Number(q.note);
+        const lostNoLaterThan = Date.now() - agoMs;
+        if (agoMs >= 0 && lostNoLaterThan - 700 <= shotDone) {
+          notes.push(`بعد اللقطة: ${step.movesOn ? "مضت الحالُ (خبر)" : "✗ غابت العلامةُ قبل تمام اللقطة"} — منذ ${agoMs} ms`);
+        } else if (agoMs >= 0) {
+          notes.push(`بعد اللقطة: غابت العلامةُ بعد تمامها (منذ ${agoMs} ms) — الصورةُ صحيحة`);
+        }
       }
       const failed = notes.slice(before).some((n) => n.includes("✗"));
       if (!failed || attempt === tries) break;

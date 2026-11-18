@@ -102,6 +102,46 @@
   function lastErrors() {
     return errors.length ? " — أخطاءُ الصفحة: " + errors.slice(-2).join(" ‖ ") : "";
   }
+  /** **مراقبةُ العلامة بعد قبولها** — كلَّ ١٠٠ ms، ويُحفظ أوّلُ غياب. «متّصل» على Pro Max: كان فحصُ ما بعد اللقطة يجد الطلبَ التالي ثلاثَ
+   *  مرّاتٍ فلا يُعرف أوصل أثناء اللقطة (صورةٌ خاطئة) أم بعدها (صورةٌ صحيحة) — 44265505208. فيُسأل عن **وقت** الغياب لا عن الغياب */
+  var frozen = false, held = [], heldSeq = 0;
+  var realSet = window.setTimeout.bind(window), realClear = window.clearTimeout.bind(window);
+  window.setTimeout = function (fn, ms) {
+    if (frozen && typeof fn === "function" && (ms || 0) >= 4000) {
+      var id = -(++heldSeq);
+      held.push({ id: id, fn: fn, ms: ms, args: Array.prototype.slice.call(arguments, 2) });
+      return id;
+    }
+    return realSet.apply(null, arguments);
+  };
+  window.clearTimeout = function (id) {
+    if (typeof id === "number" && id < 0) { held = held.filter(function (h) { return h.id !== id; }); return; }
+    return realClear(id);
+  };
+  function thaw() {
+    frozen = false;
+    var list = held; held = [];
+    list.forEach(function (h) { realSet.apply(null, [h.fn, h.ms].concat(h.args)); });
+  }
+  var watchTimer = null, lostAt = null;
+  function present(any) {
+    for (var i = 0; i < any.length; i++) {
+      var el = find(any[i]);
+      if (el && inView(el) && onTop(el)) return true;
+    }
+    return false;
+  }
+  function stopWatch() {
+    if (watchTimer !== null) clearInterval(watchTimer);
+    watchTimer = null;
+    lostAt = null;
+  }
+  function watchMarker(any) {
+    stopWatch();
+    watchTimer = setInterval(function () {
+      if (lostAt === null && !present(any)) lostAt = Date.now();
+    }, 100);
+  }
   /** **ما يُرى بدلَ العلامة** — عنوانٌ أو أوّلُ نصٍّ ظاهر، ليُكتب تحت الصفّ الأحمر فيُعرف أين وقف التطبيق. */
   function seen() {
     var heads = Array.prototype.filter.call(document.querySelectorAll("h1,h2,[role=heading],[role=status],button"), function (el) {
@@ -227,7 +267,25 @@
         shown.scrollIntoView({ block: "center" });
         return reply(cmd.id, true, "show " + (cmd.text || cmd.selector));
       }
+      // **متى غابت العلامة؟** — بالمللي ثانية منذ غيابها، أو -1 إن بقيت. يُسأل بعد اللقطة فيُعرف أغابت أثناءها أم بعدها
+      // **إيقافُ مؤقّتات العرض الطويلة** — طلبٌ محاكى كلَّ ٦ ث يسبق لقطةَ Pro Max البطيئة: صورةُ «متّصل» حملت الطلبَ المرفوض، وصورةُ «طلب رحلة»
+      // حملت ما قبل الطلب (44265505208)، أي أن الإطارَ يتأخّر عن الصفحة. فيُمسك كلُّ مؤقّتٍ ≥ ٤ ث حتى يُفرج عنه، ولا تتغيّر الحالُ تحت اللقطة
+      if (cmd.kind === "freeze") {
+        if (cmd.on) frozen = true;
+        else thaw();
+        return reply(cmd.id, true, cmd.on ? "أُمسكت المؤقّتات" : "أُفرج عن " + held.length + " مؤقّت");
+      }
+      // **انتظارُ الرسم** — إطاران ثم مهلة، فيلحق إطارُ المحاكي بالصفحة قبل اللقطة
+      if (cmd.kind === "paint") {
+        return requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            setTimeout(function () { reply(cmd.id, true, "رُسم"); }, cmd.ms || 1200);
+          });
+        });
+      }
+      if (cmd.kind === "lost") return reply(cmd.id, true, String(lostAt === null ? -1 : Date.now() - lostAt));
       if (cmd.kind === "expect") {
+        stopWatch();
         var since = Date.now();
         var offView = null;
         var lastHit = null, lastKey = null;
@@ -244,7 +302,10 @@
               // فلا تُقبل حتى تقرأ في الموضع نفسِه مرّتين بينهما ٣٠٠ ms
               var r = hit.getBoundingClientRect();
               var key = Math.round(r.top) + ":" + Math.round(r.left) + ":" + Math.round(r.height);
-              if (lastHit === hit && lastKey === key) return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+              if (lastHit === hit && lastKey === key) {
+                watchMarker(cmd.any);
+                return reply(cmd.id, true, "علامة: " + (cmd.any[i].text || cmd.any[i].selector));
+              }
               lastHit = hit; lastKey = key;
               if (Date.now() - since < (cmd.timeout || 10000) + 600) return setTimeout(look, 300);
               // **وما لم يسكن في المهلة يُقبل ويُقال** — عنصرٌ يتحرّك أبداً (نبضٌ أو عدّاد) لا يُعلِّق الخطوة
