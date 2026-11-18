@@ -49,6 +49,11 @@ export function setRideActive(on: boolean): void {
   if (launcherAvailable()) void native.setPrefs({ ride_active: on }).catch(() => undefined);
 }
 
+/** **حرارةُ الطلب في الفقاعة** (§١٠٣ C/29) — `null` حين يُطفأ المفتاح فتعود الفقاعةُ كما كانت. */
+export function setBubbleDemand(high: boolean | null): void {
+  if (launcherAvailable()) void native.setPrefs({ bubble_demand: high }).catch(() => undefined);
+}
+
 /** **سطرُ الرحلة في إشعار «متّصل»** (§١٠٣ B/18) — `null` يمحوه فيعود الإشعارُ كما كان. */
 export function setRideLine(line: string | null): void {
   if (launcherAvailable()) void native.setPrefs({ ride_line: line }).catch(() => undefined);

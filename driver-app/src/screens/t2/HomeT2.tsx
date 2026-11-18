@@ -60,7 +60,7 @@ import {
   useDocumentsAttention,
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
-import { useDriverLauncher, setRideActive, setRideLine } from "@/lib/launcher";
+import { useDriverLauncher, setRideActive, setRideLine, setBubbleDemand } from "@/lib/launcher";
 import { rideNoticeLine } from "@/lib/ride-notice";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
@@ -244,6 +244,9 @@ export function HomeT2Screen() {
   // **ما يحتاج انتباهَه** (§٦٢-ج/٤٣): نقطةُ «الوثائق»، و«الطلب مرتفع» ما دام متصلاً في الرئيسية وحدَها
   const documentsAttention = useDocumentsAttention();
   const demandHigh = useDemandHigh(online && mode === "home");
+  // **حرارةُ الطلب في الفقاعة العائمة** (SPEC §١٠٣ C/29، خلف `bubble_demand_heat`) — من جواب الطلب نفسِه الذي يلوّن زرَّ الاستقبال
+  const bubbleHeat = useFeature(user?.country_code, "bubble_demand_heat");
+  useEffect(() => setBubbleDemand(bubbleHeat ? demandHigh : null), [bubbleHeat, demandHigh]);
   // **الحجوزُ المضمونة** (§٦٣-ج/٣) — تُقرأ في الرئيسية وحدَها، وتُعاد كلَّما عاد إليها من رحلةٍ أو طلب
   const guarantee = useGuaranteeEntry(mode === "home");
   // **والمشاويرُ الثابتة** (§٦٣-ج/٦) بالحكم نفسِه — **وما اعتمده يُقرأ ولو أُطفئت الخدمة**

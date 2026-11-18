@@ -36,8 +36,14 @@ public final class StatusBubble {
     /** «أخفاها بالسحب» — يُمحى عند كلِّ اتّصالٍ جديد ({@link #resetDismissed}). */
     static final String DISMISSED = "status_bubble_dismissed";
 
+    /** <b>«منطقةُ طلبٍ عالٍ»</b> (SPEC §١٠٣ C/29) — يكتبه الويبُ من جواب {@code /drivers/me/demand} القائم وحدَه، و{@code null} حين يُطفأ المفتاح. */
+    static final String DEMAND = "bubble_demand";
+
     private static View view;
     private static TextView dot;
+    private static TextView label;
+    private static GradientDrawable circle;
+    private static SharedPreferences.OnSharedPreferenceChangeListener listener;
 
     private StatusBubble() {}
 
@@ -52,6 +58,11 @@ public final class StatusBubble {
                 && p.getBoolean("online", false)
                 && !p.getBoolean(DISMISSED, false)
                 && Settings.canDrawOverlays(c);
+    }
+
+    /** خالصة: <b>أتُرسم حرارةُ الطلب؟</b> — متّصلٌ وفي منطقة طلبٍ عالٍ معاً. */
+    static boolean showsHeat(boolean online, boolean demand) {
+        return online && demand;
     }
 
     /** يُنادى حين يخرج الكبتنُ من التطبيق. */
@@ -94,14 +105,14 @@ public final class StatusBubble {
 
         FrameLayout root = new FrameLayout(c);
         int size = OfferUi.dp(c, 58);
-        GradientDrawable circle = new GradientDrawable();
+        circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
         circle.setColor(p.sur);
         circle.setStroke(OfferUi.dp(c, 3), online ? p.acc : p.mut);
         root.setBackground(circle);
         root.setContentDescription(online ? "متصل — المس لفتح التطبيق" : "غير متصل — المس لفتح التطبيق");
 
-        TextView label = OfferUi.text(c, "TAXO", 11f, p.tx, true);
+        label = OfferUi.text(c, "TAXO", 11f, p.tx, true);
         label.setGravity(Gravity.CENTER);
         root.addView(label, new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
 
@@ -128,6 +139,12 @@ public final class StatusBubble {
         try {
             manager.addView(root, params);
             view = root;
+            // **حرارةُ الطلب** (§١٠٣ C/29) — تُرسم الآن، وتتبع كلَّ تغيّرٍ ما دامت الفقاعةُ ظاهرة
+            restyle(c);
+            listener = (shared, key) -> {
+                if (DEMAND.equals(key) || "online".equals(key)) new Handler(Looper.getMainLooper()).post(() -> restyle(c));
+            };
+            prefs(c).registerOnSharedPreferenceChangeListener(listener);
         } catch (Exception ignored) {
             // إذنٌ سُحب بين السؤال والرسم — لا فقاعة، ولا شيءَ ينكسر
             view = null;
@@ -205,7 +222,25 @@ public final class StatusBubble {
         }
     }
 
+    /** الجمرُ يملأ الدائرةَ في منطقة الطلب العالي، وما فوق الجمر نصُّها — **أدوارُ الهوية لا لونٌ جديد**. */
+    private static void restyle(Context c) {
+        if (view == null || circle == null || label == null) return;
+        OfferPalette p = OfferPalette.of(c);
+        SharedPreferences shared = prefs(c);
+        boolean online = shared.getBoolean("online", false);
+        boolean hot = showsHeat(online, shared.getBoolean(DEMAND, false));
+        circle.setColor(hot ? p.acc : p.sur);
+        label.setTextColor(hot ? p.inv : p.tx);
+        view.setContentDescription(hot
+                ? "متصل — منطقة طلب عالٍ — المس لفتح التطبيق"
+                : online ? "متصل — المس لفتح التطبيق" : "غير متصل — المس لفتح التطبيق");
+    }
+
     private static void detach(Context c) {
+        if (listener != null) {
+            prefs(c).unregisterOnSharedPreferenceChangeListener(listener);
+            listener = null;
+        }
         if (view == null) return;
         WindowManager manager = c.getSystemService(WindowManager.class);
         try {
@@ -215,5 +250,7 @@ public final class StatusBubble {
         }
         view = null;
         dot = null;
+        label = null;
+        circle = null;
     }
 }

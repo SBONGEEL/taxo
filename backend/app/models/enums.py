@@ -1024,6 +1024,8 @@ class FeatureKey(StrEnum):
     DISPLAY_ACCESSIBILITY = "display_accessibility"
     # **تعطّلُ أندرويد الأصليّ يصل اللوحة** (SPEC §١٠٣/41) — اسمُ الاستثناء وإطاراتُه بلا نصِّ رسالة، التطبيقان
     NATIVE_CRASH_REPORTS = "native_crash_reports"
+    # **حرارةُ الطلب في الفقاعة العائمة** (SPEC §١٠٣/29) — من جواب الطلب القائم، الكبتن
+    BUBBLE_DEMAND_HEAT = "bubble_demand_heat"
     # **«رفض» في بطاقة الفقاعة الموسّعة** (SPEC §١٠٣/13) — بمسار الرفض القائم
     BUBBLE_OFFER_CARD = "bubble_offer_card"
     # **الطلبُ منطوقاً بالعربيّة** (SPEC §١٠٣/14) — يُظهر مفتاحاً للكبتن في «الإعدادات»، والنطقُ باختياره

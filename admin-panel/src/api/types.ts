@@ -669,6 +669,7 @@ export type FeatureKey =
   | "rich_notifications"
   | "display_accessibility"
   | "native_crash_reports"
+  | "bubble_demand_heat"
   | "bubble_offer_card"
   | "offer_tts"
   | "screen_secure"
