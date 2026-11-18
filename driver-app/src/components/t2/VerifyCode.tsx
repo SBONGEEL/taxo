@@ -19,6 +19,7 @@ import { ApiError } from "@/api/client";
 import type { ChallengeResponse, OtpChannel, VerificationMethod } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { startPhoneVerification, type PhoneChallenge } from "@/lib/firebase";
+import { smsAutofillFor, useSmsConsent } from "@/lib/sms-consent";
 import { AuthCode, AuthError, AuthTitle, Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
@@ -88,6 +89,12 @@ export function VerifyCode({
   const challenge = useRef<PhoneChallenge | null>(null);
 
   const length = otpLength ?? 6;
+  // **ملءُ الرمز من الرسالة القصيرة** (SPEC §١٠٣ B/23) — حين يصل برسالةٍ نصّيّة (منّا أو من Firebase) ومفتاحُ دولة الرقم مشتعل
+  useSmsConsent(
+    smsAutofillFor(phone, config?.countries) && !sending && (channel === "sms_otp" || method === "firebase"),
+    length,
+    setCode,
+  );
 
   const send = useCallback(
     async (pick?: OtpChannel) => {

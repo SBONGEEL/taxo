@@ -23,6 +23,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(InAppReviewPlugin.class);
         // **منعُ اللقطات في المحفظة** (SPEC §١٠٣ B/26)
         registerPlugin(ScreenSecurePlugin.class);
+        // **ملءُ رمز التحقّق من الرسالة** (SPEC §١٠٣ B/23)
+        registerPlugin(SmsConsentPlugin.class);
         // **«يوجد تحديث» من Google Play** (SPEC §١٠٣ A/8) — الحكمُ من لوحة الإصدارات، والتنفيذُ من Play إن قدر
         registerPlugin(AppUpdatePlugin.class);
         // **مركزُ الأذونات** (SPEC §١٠٣ المرحلة A/28) — الحالُ الحيّ وصفحةُ النظام الدقيقة لكلِّ إذن

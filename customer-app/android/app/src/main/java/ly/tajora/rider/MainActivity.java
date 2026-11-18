@@ -20,6 +20,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(InAppReviewPlugin.class);
         // **منعُ اللقطات في المحفظة** (SPEC §١٠٣ B/26)
         registerPlugin(ScreenSecurePlugin.class);
+        // **ملءُ رمز التحقّق من الرسالة** (SPEC §١٠٣ B/23)
+        registerPlugin(SmsConsentPlugin.class);
         // **إشعارُ التتبّع الحيّ** (SPEC §١٠٣ B/19)
         registerPlugin(RideLivePlugin.class);
         // **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣ B/22) — يشعله الراكبُ بنفسه

@@ -162,6 +162,8 @@ dependencies {
     implementation "com.google.android.play:review:2.0.2"
     // **«يوجد تحديث» من Play داخل التطبيق** (`AppUpdatePlugin`، SPEC §١٠٣ A/8)
     implementation "com.google.android.play:app-update:2.1.0"
+    // **ملءُ رمز التحقّق من الرسالة** (SPEC §١٠٣ B/23) — «SMS User Consent»: بلا إذن، والنظامُ يسأل صاحبَ الهاتف
+    implementation "com.google.android.gms:play-services-auth-api-phone:18.1.0"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

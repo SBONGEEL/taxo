@@ -1044,6 +1044,8 @@ class FeatureKey(StrEnum):
     RIDE_WIDGET = "ride_widget"
     # **وضعُ الإنترنت الضعيف لأفعال الرحلة** (SPEC §١٠٣/24) — «وصلت/ابدأ/أنهِ» تُعاد حين تعود الشبكة ولا تُطبَّق مرّتين
     WEAK_NETWORK_RETRY = "weak_network_retry"
+    # **ملءُ رمز التحقّق من الرسالة القصيرة** (SPEC §١٠٣/23) — «SMS User Consent» بلا إذن، التطبيقان
+    SMS_AUTOFILL = "sms_autofill"
 
 
 class MapPlaceCategory(StrEnum):

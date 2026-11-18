@@ -14,6 +14,7 @@ import type { ChallengeResponse, OtpChannel, VerificationMethod } from "@/api/ty
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { startPhoneVerification, type PhoneChallenge } from "@/lib/firebase";
 import { toE164 } from "@/lib/phone";
+import { smsAutofillFor, useSmsConsent } from "@/lib/sms-consent";
 import { AuthCode, AuthError, AuthPage, AuthTitle, AuthTop, Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
@@ -85,6 +86,12 @@ export function VerifyCode({
   // **ولا رقمَ بلا مفتاحٍ منشور** — كما في `PhoneVerification`: الفراغُ يُعطّل الإرسالَ ويُقال سببُه
   const e164 = dialCode === null ? "" : toE164(phone, dialCode);
   const digits = otpLength ?? 6;
+  // **ملءُ الرمز من الرسالة القصيرة** (SPEC §١٠٣ B/23) — حين يصل برسالةٍ نصّيّة (منّا أو من Firebase) ومفتاحُ دولة الرقم مشتعل
+  useSmsConsent(
+    smsAutofillFor(e164, config?.countries) && !sending && (channel === "sms_otp" || method === "firebase"),
+    digits,
+    setCode,
+  );
 
   const send = useCallback(
     async (pick?: OtpChannel) => {
