@@ -70,6 +70,21 @@
 
 ---
 
+### سياسةُ الخصوصيّة — التطبيقان (`privacy_policy`) — «أعلمني فور الإطلاق» (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني)
+
+**بالعربيّة:**
+
+> **«أعلمني فور الإطلاق».** في دولةٍ لم نبدأ فيها بعد، يمكنك أن تترك رقمَ هاتفك بيدك لنُعلمك حين نبدأ. **نحفظ الرقمَ والدولةَ وحدَهما** —
+> بلا حسابٍ ولا جهازٍ ولا موقع — ولا نستعمله إلا لإعلامك بالإطلاق، ولا نشاركه مع أحد. **ويُحذف بعد رسالة الإطلاق أو بعد ١٢ شهراً**،
+> أيُّهما أقرب، ولك أن تطلب حذفَه قبل ذلك من «تواصل معنا».
+
+**In English:**
+
+> **"Notify me at launch".** In a country where we have not started yet, you may leave your phone number yourself so we can tell you when
+> we start. **We keep only the number and the country** — no account, device or location — use it only to tell you about the launch, and
+> share it with no one. **It is deleted after the launch message or after 12 months**, whichever comes first, and you can ask us to delete
+> it sooner through "Contact us".
+
 ## ٣) «أمانُ البيانات» في Play Console — ما يتغيّر
 
 | التطبيق | الفئة | التغيير |

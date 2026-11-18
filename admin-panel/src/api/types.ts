@@ -15,7 +15,7 @@ export type CountryCode = "JO" | "LY" | "DZ";
 /** **حالُ السوق** (SPEC §٧٤-أ/٢) — مرآةُ `MarketStatus` في الخلفية (`check:enums`). */
 export type MarketStatus = "open" | "closed";
 /** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
-export type SignupState = "open" | "soon" | "hidden" | "stopped";
+export type SignupState = "open" | "soon" | "hidden" | "stopped" | "visible";
 export type Currency = "JOD" | "LYD" | "DZD";
 export type UserRole = "rider" | "driver" | "admin" | "support" | "owner" | "payment_reviewer" | "card_seller";
 
@@ -716,12 +716,13 @@ export interface CountryFeatureFlags {
 export type CommissionAppliesTo = "all_rides" | "cashless_rides";
 
 export interface CommissionSetting {
-  id: string;
+  /** `null` لدولةٍ بلا صفٍّ بعد — تُعرض بافتراضها وتُكتب أوّلَ حفظ */
+  id: string | null;
   country_code: CountryCode;
   commission_enabled: boolean;
   commission_percent: string;
   applies_to: CommissionAppliesTo;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 export interface WalletSetting {
@@ -1979,7 +1980,7 @@ export type MapSetting = {
   nearby_max_count: number;
   /** **اقتراحُ نقطة الالتقاط** (§٩٧/١١) */
   pickup_suggest_enabled: boolean;
-  updated_at: string;
+  updated_at: string | null;
 };
 
 
@@ -3267,7 +3268,7 @@ export interface TaxoCardLimits {
 // ════════════════════════════════════════ «الدول» والحدود (SPEC §٧٤-أ/٢–٣)
 
 /** **ظهورُ المغلقة في التسجيل** — مرآةُ `SignupDisplay` (`check:enums`): «قريباً» · «متوقفة» (البند ٥) · «مخفية» لا تُعرض. */
-export type SignupDisplay = "soon" | "hidden" | "stopped";
+export type SignupDisplay = "soon" | "hidden" | "stopped" | "visible";
 
 /** **صفُّ مُنتقي الدول في اللوحة** (البند ٥) — مرآةُ `SignupCountryRow`: كلُّ دولةٍ بحالها ومحاولاتِ ٣٠ يوماً. */
 export interface SignupCountryRow {
@@ -3277,6 +3278,10 @@ export interface SignupCountryRow {
   state: SignupState;
   market: boolean;
   attempts_30d: number;
+  /** **نصُّ «ظاهرة»** كما كتبه المشرف — `null` يُقال الافتراضيّ */
+  visible_message: string | null;
+  /** **«أعلمني فور الإطلاق»** — عددُ الأرقام المتروكة */
+  interests: number;
 }
 
 export interface MarketRow {
@@ -3284,6 +3289,8 @@ export interface MarketRow {
   name: string;
   status: MarketStatus;
   signup_display: SignupDisplay;
+  /** نصُّ «ظاهرة» كما كتبه المشرف */
+  visible_message?: string | null;
   /** **ما ينقص للفتح** — فارغةٌ = جاهزة، وتُحسب عند كلِّ قراءة */
   readiness: string[];
   /** رحلاتٌ جاريةٌ الآن — تكتمل إن أُغلق السوق */

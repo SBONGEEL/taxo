@@ -985,6 +985,10 @@ export const receiptLink = (requestId: string) =>
   api.post<{ url: string; expires_in: number }>(`/payment-requests/${requestId}/receipt-link`, {});
 
 /** **متابعةٌ في دولةٍ غيرِ نشطة** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥) — تُعدّ ويُجاب نصُّ حالها. **الدولةُ وحدَها، لا رقم.** */
+/** **«أعلمني فور الإطلاق»** في دولةٍ «ظاهرة» (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — الرقمُ الوطنيُّ لاتينيّاً، ورمزُ الدولة من القائمة في الخادم. */
+export const launchInterest = (country: string, phone: string) =>
+  api.post<void>("/auth/launch-interest", { country, phone });
+
 export const signupAttempt = (country: string) =>
   api.post<{ state: string; message: string | null }>("/auth/signup-attempts", { country }, { anonymous: true });
 

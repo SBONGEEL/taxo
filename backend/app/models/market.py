@@ -47,6 +47,8 @@ class CountryMarket(TimestampMixin, Base):
         default=SignupDisplay.SOON,
         server_default=SignupDisplay.SOON.value,
     )
+    #: **نصُّ «ظاهرة»** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — يحرّره المشرفُ لكلِّ دولة؛ وفارغاً يُقال النصُّ الافتراضيّ
+    visible_message: Mapped[str | None] = mapped_column(String(300), nullable=True)
     #: **خاناتُ عرض المبالغ** (SPEC §٧٣-ج/٧، الترحيلة `0136`) — **للعرض والإدخال وحدَهما**: لا تمسّ مبلغاً محفوظاً ولا تقريباً.
     #: و`NULL` = خاناتُ العملة نفسُها، **ولا تنزل عنها** (`markets.set_display_decimals`): مبلغٌ يُعرض بخاناتٍ أقلَّ ممّا يحمله
     #: يُقرأ غيرَ ما يُخصم (1.235 يُرى 1.24)

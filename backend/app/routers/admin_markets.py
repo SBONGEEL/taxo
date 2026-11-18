@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app.core.currency import COUNTRY_NAME, CURRENCY_LABEL, currency_for_country
@@ -58,6 +58,7 @@ async def _row(session, country: CountryCode) -> MarketRow:
         name=COUNTRY_NAME[country],
         status=await markets.status_of(session, country),
         signup_display=await markets.signup_display(session, country),
+        visible_message=await markets.visible_message(session, country),
         readiness=await markets.readiness(session, country),
         active_rides=int(running or 0),
         currency=currency.value,
@@ -111,7 +112,9 @@ async def set_market_status(
 async def set_signup_display(
     country_code: CountryCode, payload: SignupDisplayIn, session: DbSession, admin: MarketsManager
 ) -> MarketsOut:
-    await markets.set_signup_display(session, country=country_code, display=payload.display, actor=admin)
+    await markets.set_signup_display(
+        session, country=country_code, display=payload.display, actor=admin, message=payload.message
+    )
     await session.commit()
     return await _out(session)
 
@@ -160,10 +163,15 @@ class SignupCountryRow(BaseModel):
     state: str
     market: bool
     attempts_30d: int
+    #: **نصُّ «ظاهرة»** كما كتبه المشرف
+    visible_message: str | None = None
+    #: **«أعلمني فور الإطلاق»** — عددُ الأرقام المتروكة (لا الأرقام نفسُها هنا)
+    interests: int = 0
 
 
 class SignupCountryDisplayIn(BaseModel):
     display: SignupDisplay
+    message: str | None = Field(default=None, max_length=300)
 
 
 @router.get("/signup-countries", response_model=list[SignupCountryRow])
@@ -172,6 +180,7 @@ async def list_signup_countries(session: DbSession, _: StaffUser) -> list[Signup
     from app.services import signup_countries
 
     tried = dict(await signup_countries.attempts(session, days=30))
+    interested = await signup_countries.interest_counts(session)
     return [
         SignupCountryRow(
             code=e.country.code,
@@ -180,6 +189,8 @@ async def list_signup_countries(session: DbSession, _: StaffUser) -> list[Signup
             state=e.state.value,
             market=e.market,
             attempts_30d=tried.get(e.country.code, 0),
+            visible_message=await signup_countries.custom_message(session, e.country.code),
+            interests=interested.get(e.country.code, 0),
         )
         for e in await signup_countries.catalogue(session)
     ]
@@ -191,6 +202,8 @@ async def set_signup_country(
 ) -> list[SignupCountryRow]:
     from app.services import signup_countries
 
-    await signup_countries.set_display(session, code=code.upper(), display=payload.display, actor=admin)
+    await signup_countries.set_display(
+        session, code=code.upper(), display=payload.display, actor=admin, message=payload.message
+    )
     await session.commit()
     return await list_signup_countries(session, admin)

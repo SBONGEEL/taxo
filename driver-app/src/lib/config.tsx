@@ -296,7 +296,7 @@ export function useAuthCountry(mode: AuthMode = "login"): {
   /** **ما يُختار** — في الدخول كلُّ دولة، وفي التسجيل المفتوحةُ وحدَها */
   countries: CountryCode[];
   /** **ما ترسمه ورقةُ الدول** — النشطةُ أوّلاً، ثمّ «قريباً» ثمّ «متوقفة» (والأسواقُ المغلقةُ بحالها في التسجيل، وغيرُ الأسواق في الشاشتين) */
-  options: Array<{ code: string; name: string; dial: string; state?: "soon" | "stopped" }>;
+  options: Array<{ code: string; name: string; dial: string; state?: "soon" | "stopped" | "visible" }>;
   /** اسمُ الدولة المختارة بلغة الطلب — من `/config` */
   name: string;
   setCountry: (value: CountryCode) => void;
@@ -348,9 +348,11 @@ export function useAuthCountry(mode: AuthMode = "login"): {
     setChosen(value);
   }, []);
 
-  const blocked = (signup: string): "soon" | "stopped" | undefined =>
-    signup === "open" ? undefined : signup === "stopped" ? "stopped" : "soon";
-  const rank = (state?: "soon" | "stopped") => (state === undefined ? 0 : state === "soon" ? 1 : 2);
+  // **«ظاهرة» تُرتَّب مع العاملة** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — شكلُها شكلُها، والفرقُ رسالةٌ عند الاختيار
+  const blocked = (signup: string): "soon" | "stopped" | "visible" | undefined =>
+    signup === "open" ? undefined : signup === "stopped" ? "stopped" : signup === "visible" ? "visible" : "soon";
+  const rank = (state?: "soon" | "stopped" | "visible") =>
+    state === undefined || state === "visible" ? 0 : state === "soon" ? 1 : 2;
   const options = [
     ...shown.map((entry) => ({
       code: entry.country_code as string,

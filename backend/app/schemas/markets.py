@@ -16,6 +16,8 @@ class MarketRow(BaseModel):
     status: MarketStatus
     #: **ظهورُ المغلقة في التسجيل** كما اختاره المالك — والمفتوحةُ تحمله أيضاً لأنه يحكم يومَ تُغلق
     signup_display: SignupDisplay
+    #: **نصُّ «ظاهرة»** كما كتبه المشرف — `None` يُقال الافتراضيّ
+    visible_message: str | None = None
     #: **ما ينقص للفتح** — فارغةٌ = جاهزة. تُحسب عند كلِّ قراءةٍ ولا تُخزَّن
     readiness: list[str]
     #: **رحلاتٌ جارية الآن** — تكتمل إن أُغلق السوق؛ والعددُ يُرى قبل الضغط
@@ -52,6 +54,8 @@ class MarketStatusIn(BaseModel):
 
 class SignupDisplayIn(BaseModel):
     display: SignupDisplay
+    #: نصُّ «ظاهرة» — `None` لا يغيّره، وفارغٌ يمحوه فيُقال الافتراضيّ
+    message: str | None = Field(default=None, max_length=300)
 
 
 class BordersIn(BaseModel):

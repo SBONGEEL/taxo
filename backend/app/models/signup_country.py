@@ -9,13 +9,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Integer, String, text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, pg_enum
+from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import SignupDisplay
 
 
@@ -29,6 +29,24 @@ class SignupCountry(TimestampMixin, Base):
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    #: **نصُّ «ظاهرة»** — يحرّره المشرف؛ وفارغاً يُقال النصُّ الافتراضيّ
+    visible_message: Mapped[str | None] = mapped_column(String(300), nullable=True)
+
+
+class LaunchInterest(UUIDMixin, Base):
+    """**«أعلمني فور الإطلاق»** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — رقمٌ تركه صاحبُه بيده في دولةٍ «ظاهرة» غيرِ عاملة.
+
+    **الرقمُ وحدَه والدولة** — لا حسابَ ولا جهازَ ولا عنوان. **ويُحذف بعد رسالة الإطلاق أو بعد ١٢ شهراً** (`PRIVACY-103-NATIVE.md`)،
+    والرقمُ نفسُه في الدولة نفسها صفٌّ واحد.
+    """
+
+    __tablename__ = "launch_interests"
+    __table_args__ = (UniqueConstraint("country", "phone", name="uq_launch_interests_country_phone"),)
+
+    country: Mapped[str] = mapped_column(String(2), nullable=False)
+    #: `+` ورمزُ الدولة والرقمُ الوطنيّ — لاتينيٌّ أبداً
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class SignupAttemptDaily(Base):

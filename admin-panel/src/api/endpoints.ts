@@ -2581,14 +2581,14 @@ export const getMarkets = () => api.get<Markets>("/admin/markets");
 export const setMarketStatus = (country: CountryCode, body: { open: boolean; force?: boolean; reason?: string }) =>
   api.put<Markets>(`/admin/markets/${country}/status`, body);
 
-export const setSignupDisplay = (country: CountryCode, display: SignupDisplay) =>
-  api.put<Markets>(`/admin/markets/${country}/signup-display`, { display });
+export const setSignupDisplay = (country: CountryCode, display: SignupDisplay, message?: string) =>
+  api.put<Markets>(`/admin/markets/${country}/signup-display`, { display, message });
 
 /** **دولُ مُنتقي الهاتف** (البند ٥) — كلُّها بحالها ومحاولاتها؛ **وغيرُ السوق وحدَه يُضبط من هنا** (السوقُ من بطاقته أعلاه). */
 export const listSignupCountries = () => api.get<SignupCountryRow[]>("/admin/markets/signup-countries");
 
-export const setSignupCountry = (code: string, display: SignupDisplay) =>
-  api.put<SignupCountryRow[]>(`/admin/markets/signup-countries/${code}`, { display });
+export const setSignupCountry = (code: string, display: SignupDisplay, message?: string) =>
+  api.put<SignupCountryRow[]>(`/admin/markets/signup-countries/${code}`, { display, message });
 
 /** **رفعُ الحدود يشترط سبباً مكتوباً** (٨ أحرف) — والإعادةُ بلا شرط. */
 export const setBorders = (body: { enforced: boolean; reason?: string }) => api.put<Markets>("/admin/markets/borders", body);

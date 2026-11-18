@@ -103,9 +103,16 @@ async def open_countries(session: AsyncSession) -> list[CountryCode]:
 
 
 async def signup_display(session: AsyncSession, country: CountryCode) -> SignupDisplay:
-    """ظهورُ المغلقة في التسجيل — **وغيابُ الصفِّ «قريباً»** (افتراضُ المالك بلفظه)."""
+    """ظهورُ المغلقة في التسجيل — **وغيابُ الصفِّ «مخفية»** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني: الدولةُ الجديدةُ لا تظهر حتى يختار؛
+    والترحيلةُ `0173` كتبت صفَّ كلِّ سوقٍ قائمٍ فلم يتغيّر ما يُرى)."""
     row = await session.get(CountryMarket, country)
-    return row.signup_display if row is not None else SignupDisplay.SOON
+    return row.signup_display if row is not None else SignupDisplay.HIDDEN
+
+
+async def visible_message(session: AsyncSession, country: CountryCode) -> str | None:
+    """نصُّ «ظاهرة» كما كتبه المشرف — `None` يُقال بدله الافتراضيّ."""
+    row = await session.get(CountryMarket, country)
+    return row.visible_message if row is not None else None
 
 
 async def signup_state(session: AsyncSession, country: CountryCode) -> SignupState:
@@ -113,7 +120,11 @@ async def signup_state(session: AsyncSession, country: CountryCode) -> SignupSta
     if await is_open(session, country):
         return SignupState.OPEN
     display = await signup_display(session, country)
-    return {SignupDisplay.HIDDEN: SignupState.HIDDEN, SignupDisplay.STOPPED: SignupState.STOPPED}.get(display, SignupState.SOON)
+    return {
+        SignupDisplay.HIDDEN: SignupState.HIDDEN,
+        SignupDisplay.STOPPED: SignupState.STOPPED,
+        SignupDisplay.VISIBLE: SignupState.VISIBLE,
+    }.get(display, SignupState.SOON)
 
 
 async def require_signup_open(session: AsyncSession, country: CountryCode) -> None:
@@ -253,23 +264,37 @@ async def set_status(
 
 
 async def set_signup_display(
-    session: AsyncSession, *, country: CountryCode, display: SignupDisplay, actor: User
+    session: AsyncSession,
+    *,
+    country: CountryCode,
+    display: SignupDisplay,
+    actor: User,
+    message: str | None = None,
 ) -> SignupDisplay:
     row = await session.get(CountryMarket, country)
-    before = row.signup_display if row is not None else SignupDisplay.SOON
+    before = row.signup_display if row is not None else SignupDisplay.HIDDEN
+    before_message = row.visible_message if row is not None else None
+    text_ = (message or "").strip() or None
     if row is None:
-        row = CountryMarket(country_code=country, signup_display=display, updated_by=actor.id)
+        row = CountryMarket(country_code=country, signup_display=display, updated_by=actor.id, visible_message=text_)
         session.add(row)
     else:
         row.signup_display = display
         row.updated_by = actor.id
+        if message is not None:
+            row.visible_message = text_
+    changes: dict = {}
     if before is not display:
+        changes["signup_display"] = {"from": before.value, "to": display.value}
+    if message is not None and before_message != text_:
+        changes["visible_message"] = {"from": before_message, "to": text_}
+    if changes:
         await audit.record(
             session,
             actor=actor,
             action=AuditAction.UPDATE,
             entity_type="market_signup_display",
-            details={"country_code": country.value, "changes": {"signup_display": {"from": before.value, "to": display.value}}},
+            details={"country_code": country.value, "changes": changes},
         )
     await session.flush()
     return display

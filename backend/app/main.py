@@ -22,6 +22,11 @@ from app.ws import hub
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_redis_client()
+    # **إعداداتُ كلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — تحذيرٌ بما ينقص، بلا كتابة
+    from app.core.db import SessionLocal
+    from app.services import country_settings
+
+    await country_settings.warn_on_startup(SessionLocal)
     yield
     # مهام الخلفية تُلغى قبل إغلاق Redis والقاعدة اللتين تقرأ منهما
     await dispatch.shutdown()

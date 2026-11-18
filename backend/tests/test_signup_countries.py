@@ -24,6 +24,22 @@ from tests.test_markets import _set_open, markets_owner
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.fixture(autouse=True)
+async def _rows_as_production(session_factory) -> None:
+    """**حالُ الإنتاج بعد `0173`**: كلُّ دولةٍ غيرِ سوقٍ صفُّها «متوقفة» صريحاً — والتفريغُ بين الاختبارات يمحو ما كتبته الترحيلة.
+    **وغيابُ الصفِّ صار «مخفية»** (الدولةُ الجديدة)، ويقيسه `test_a_country_without_a_row_is_hidden_until_the_owner_chooses`."""
+    from app.core.countries import CATALOGUE
+    from app.models.enums import SignupDisplay
+    from app.models.signup_country import SignupCountry
+
+    markets = {code.value for code in CountryCode}
+    async with session_factory() as session:
+        for country in CATALOGUE:
+            if country.code not in markets and country.code != "KM":
+                session.add(SignupCountry(code=country.code, display=SignupDisplay.STOPPED))
+        await session.commit()
+
+
 def _others(body: dict) -> dict[str, dict]:
     return {entry["code"]: entry for entry in body["signup_countries"]}
 
@@ -129,3 +145,75 @@ async def test_the_panel_list_carries_every_country_with_its_attempts(client: As
     by = {row["code"]: row for row in rows}
     assert by["SA"]["attempts_30d"] == 1 and by["SA"]["state"] == "stopped" and not by["SA"]["market"]
     assert by["JO"]["market"] and len(rows) >= 39
+
+
+# ── أمرُ المالك ٢٠٢٦-١١-١٨ الثاني: «ظاهرة» ونصُّها و«أعلمني»، والدولةُ الجديدةُ مخفيّة ─────────────────────────────────
+
+
+async def test_a_country_without_a_row_is_hidden_until_the_owner_chooses(client: AsyncClient) -> None:
+    """**جزرُ القمر بلا صفّ** (التجهيزُ يتركها) — كدولةٍ أُضيفت إلى القائمة اليوم: **لا تُنشر**، والباقيةُ «متوقفة» كما كانت."""
+    others = _others((await client.get("/config")).json())
+    assert "KM" not in others
+    assert others["EG"]["state"] == "stopped"
+
+
+async def test_a_visible_country_is_published_first_and_answers_with_the_owner_text(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    owner = await markets_owner(client, admin_headers)
+    put = await client.put(
+        "/admin/markets/signup-countries/SA", json={"display": "visible"}, headers=owner["headers"]
+    )
+    assert put.status_code == 200, put.text
+    others = _others((await client.get("/config")).json())
+    assert others["SA"]["state"] == "visible" and list(others)[0] == "SA", "«ظاهرة» أوّلاً كالعاملة"
+    answer = await client.post("/auth/signup-attempts", json={"country": "SA"})
+    assert answer.json() == {"state": "visible", "message": "TAXO سيبدأ قريباً في السعودية. سنُعلمك فور الإطلاق."}
+
+    custom = await client.put(
+        "/admin/markets/signup-countries/SA",
+        json={"display": "visible", "message": "نصلكم قريباً في الرياض"},
+        headers=owner["headers"],
+    )
+    row = next(item for item in custom.json() if item["code"] == "SA")
+    assert row["visible_message"] == "نصلكم قريباً في الرياض"
+    assert (await client.post("/auth/signup-attempts", json={"country": "SA"})).json()["message"] == "نصلكم قريباً في الرياض"
+    async with session_factory() as session:
+        logs = (
+            await session.scalars(select(AdminAuditLog).where(AdminAuditLog.entity_type == "signup_country_display"))
+        ).all()
+    assert any("visible_message" in log.details["changes"] for log in logs), "تغييرُ النصِّ مدقَّقٌ بمن غيّره"
+
+
+async def test_launch_interest_is_kept_once_and_only_for_a_visible_country(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    from app.models.signup_country import LaunchInterest
+
+    refused = await client.post("/auth/launch-interest", json={"country": "EG", "phone": "1001234567"})
+    assert refused.status_code == 422, "«متوقفة» لا تأخذ رقماً"
+    owner = await markets_owner(client, admin_headers)
+    await client.put("/admin/markets/signup-countries/EG", json={"display": "visible"}, headers=owner["headers"])
+    for _ in range(2):
+        # **والأرقامُ العربيّةُ تُقرأ لاتينيّة** — والرقمُ نفسُه مرّتين صفٌّ واحد
+        ok = await client.post("/auth/launch-interest", json={"country": "EG", "phone": "٠١٠٠١٢٣٤٥٦٧"})
+        assert ok.status_code == 204, ok.text
+    async with session_factory() as session:
+        rows = (await session.scalars(select(LaunchInterest))).all()
+    assert [(row.country, row.phone) for row in rows] == [("EG", "+201001234567")]
+    listed = (await client.get("/admin/markets/signup-countries", headers=owner["headers"])).json()
+    assert next(item for item in listed if item["code"] == "EG")["interests"] == 1
+
+
+async def test_a_visible_closed_market_never_creates_an_account(client: AsyncClient, admin_headers: dict, session_factory) -> None:
+    """**«ظاهرة» شكلٌ لا فتح** — سوقٌ مغلقٌ ظاهرٌ يردّ التسجيلَ قبل أيِّ صفٍّ كما تردّه «قريباً»."""
+    await _set_open(session_factory, CountryCode.LY, False)
+    owner = await markets_owner(client, admin_headers)
+    put = await client.put("/admin/markets/LY/signup-display", json={"display": "visible"}, headers=owner["headers"])
+    assert put.status_code == 200, put.text
+    entry = {e["country_code"]: e for e in (await client.get("/config")).json()["countries"]}["LY"]
+    assert entry["signup"] == "visible"
+    answer = await client.post("/auth/register", json=_signup("0917654322", "كبتن", "LY", "driver"))
+    assert answer.status_code == 403
+    async with session_factory() as session:
+        assert (await session.scalar(select(User).where(User.phone == "+218917654322"))) is None

@@ -174,12 +174,14 @@ class CommissionSettingUpdate(BaseModel):
 class CommissionSettingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: uuid.UUID
+    #: `None` لدولةٍ بلا صفٍّ بعد — تُعرض بافتراضها (`country_settings`)
+    id: uuid.UUID | None = None
     country_code: CountryCode
     commission_enabled: bool
     commission_percent: Decimal
     applies_to: CommissionAppliesTo
-    updated_at: datetime
+    #: `None` لدولةٍ بلا صفٍّ بعد
+    updated_at: datetime | None = None
 
 
 # ------------------------------------------------------------ خطط الاشتراك
@@ -359,7 +361,8 @@ class OtpSettingOut(BaseModel):
     lockout_minutes: int
     resend_base_seconds: int
     resend_max_seconds: int
-    updated_at: datetime
+    #: `None` لدولةٍ بلا صفٍّ بعد
+    updated_at: datetime | None = None
 
 
 class OtpSettingUpdate(BaseModel):
@@ -414,7 +417,8 @@ class MapSettingOut(BaseModel):
     nearby_radius_km: Decimal
     nearby_max_count: int
     pickup_suggest_enabled: bool
-    updated_at: datetime
+    #: `None` لدولةٍ بلا صفٍّ بعد
+    updated_at: datetime | None = None
 
 
 class MapSettingUpdate(BaseModel):

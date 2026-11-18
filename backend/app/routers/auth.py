@@ -1221,4 +1221,30 @@ async def signup_attempt(payload: SignupAttemptIn, session: DbSession, redis: Re
     if state.value == "open":
         return SignupAttemptOut(state="open")
     name = BY_CODE[code].name("ar")
-    return SignupAttemptOut(state=state.value, message=translate(signup_countries.message_for(state, name), current_language()))
+    custom = await signup_countries.custom_message(session, code) if state.value == "visible" else None
+    # **نصُّ المشرف يُقال كما كتبه** — والافتراضيُّ يُترجم بلغة الطلب
+    message = custom if custom else translate(signup_countries.message_for(state, name), current_language())
+    return SignupAttemptOut(state=state.value, message=message)
+
+
+class LaunchInterestIn(BaseModel):
+    """**«أعلمني فور الإطلاق»** — الدولةُ والرقمُ الوطنيّ؛ رمزُ الدولة من القائمة لا من الطالب."""
+
+    country: str
+    phone: str
+
+
+@router.post("/launch-interest", status_code=status.HTTP_204_NO_CONTENT)
+async def launch_interest(payload: LaunchInterestIn, session: DbSession, redis: RedisDep, ip: ClientIP) -> None:
+    """**رقمٌ يُترك للإشعار في دولةٍ «ظاهرة»** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) — **لا حسابَ ولا رمزَ ولا دفع**.
+
+    ويُحدّ لكلِّ عنوانٍ في الساعة كأخيه `signup-attempts`.
+    """
+    from app.services import signup_countries
+
+    limit = await rate_limit.hit(redis, f"launch-interest:{ip}", limit=10, window_seconds=3600)
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+    code = (payload.country or "").strip().upper()[:2]
+    await signup_countries.register_interest(session, code=code, national=payload.phone[:30])
+    await session.commit()

@@ -117,7 +117,7 @@ async def get_public_config(
             )
             for entry in sorted(
                 await signup_countries.catalogue(session),
-                key=lambda e: 0 if e.state is SignupState.SOON else 1,
+                key=lambda e: {SignupState.VISIBLE: 0, SignupState.SOON: 1}.get(e.state, 2),
             )
             if not entry.market and entry.state is not SignupState.HIDDEN
         ],

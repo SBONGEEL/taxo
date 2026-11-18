@@ -23,7 +23,7 @@ export interface TestMarket {
   current: boolean;
 }
 /** **ما يراه التسجيلُ من الدولة** — مرآةُ `SignupState`: `open` تُختار · `soon` «قريباً» · `stopped` «متوقفة» · `hidden` لا تُرسم. */
-export type SignupState = "open" | "soon" | "hidden" | "stopped";
+export type SignupState = "open" | "soon" | "hidden" | "stopped" | "visible";
 export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;

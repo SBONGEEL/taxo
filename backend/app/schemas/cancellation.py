@@ -31,7 +31,8 @@ class CancellationSettingOut(BaseModel):
     carrier_grace_hours: int
     unpaid_after_days: int
     unpaid_outcome: UnpaidCancellationOutcome
-    updated_at: datetime
+    #: `None` لدولةٍ بلا صفٍّ بعد
+    updated_at: datetime | None = None
 
 
 class CancellationSettingUpdate(BaseModel):

@@ -1747,5 +1747,10 @@
   "اهتزاز فقط": "Vibreur uniquement",
   "تعذّر حفظ النغمة — حاول مرّةً أخرى.": "Impossible d’enregistrer la sonnerie — réessayez.",
   "استمع إلى {0}": "Écouter {0}",
-  "طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.": "Les demandes de course sonnent toujours quand vous êtes en ligne, avec la sonnerie choisie — « Vibreur uniquement » s’applique aux autres notifications."
+  "طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.": "Les demandes de course sonnent toujours quand vous êtes en ligne, avec la sonnerie choisie — « Vibreur uniquement » s’applique aux autres notifications.",
+  "TAXO سيبدأ قريباً في {0}. سنُعلمك فور الإطلاق.": "TAXO arrive bientôt en {0}. Nous vous préviendrons dès le lancement.",
+  "سجّلنا رقمك، وسنُعلمك فور الإطلاق.": "Votre numéro est enregistré, nous vous préviendrons dès le lancement.",
+  "رقم هاتفك": "Votre numéro de téléphone",
+  "أعلمني فور الإطلاق": "Prévenez-moi au lancement",
+  "تعذّر الحفظ — حاول مجدّداً": "Échec de l’enregistrement — réessayez"
 }

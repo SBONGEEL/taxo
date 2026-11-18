@@ -62,8 +62,63 @@ function messageOf(caught: unknown, fallback: string): string {
 }
 
 /** **أسماءُ الحالات بلفظ المالك** (البند ٥) — مفتاحٌ لكلِّ عضوٍ في `SignupDisplay`، فعضوٌ جديدٌ لا يُرسم إنجليزيّاً */
-const DISPLAY_LABEL: Record<SignupDisplay, string> = { soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
-const STATE_LABEL: Record<SignupState, string> = { open: "نشطة", soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
+const DISPLAY_LABEL: Record<SignupDisplay, string> = { visible: "ظاهرة", soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
+const STATE_LABEL: Record<SignupState, string> = { open: "عاملة", visible: "ظاهرة", soon: "قريباً", stopped: "متوقفة", hidden: "مخفية" };
+/** **الخياراتُ بترتيب المالك** (أمرُ ١٨/١١ الثاني): ظاهرة · قريباً · متوقفة · مخفية — و«عاملة» من مفتاح السوق لا من هنا */
+const DISPLAY_OPTIONS: Array<{ key: SignupDisplay; label: string }> = [
+  { key: "visible", label: "ظاهرة" },
+  { key: "soon", label: "قريباً" },
+  { key: "stopped", label: "متوقفة" },
+  { key: "hidden", label: "مخفية" },
+];
+const DEFAULT_VISIBLE = (name: string) => `TAXO سيبدأ قريباً في ${name}. سنُعلمك فور الإطلاق.`;
+
+/** **معاينةٌ حيّةٌ للعلم كما يراه المستخدم** — ملوّنٌ للعاملة والظاهرة وقريباً، رماديٌّ للمتوقفة، و«لا تظهر» للمخفية */
+function FlagPreview({ code, name, state }: { code: string; name: string; state: SignupState }) {
+  if (state === "hidden") {
+    return <span className="rounded-md border border-dashed border-line px-8 py-4 text-11.5 text-muted">لا تظهر</span>;
+  }
+  const badge = state === "soon" ? "قريباً" : state === "stopped" ? "متوقفة" : null;
+  return (
+    <span className="inline-flex items-center gap-6" aria-label={`معاينة ${name}: ${STATE_LABEL[state]}`}>
+      <span style={state === "stopped" ? { filter: "grayscale(1)", opacity: 0.45 } : undefined}>
+        <Flag code={code} label={name} size={26} muted={state === "stopped"} />
+      </span>
+      {badge ? <span className="rounded-full bg-sunk px-6 py-2 text-11 font-semibold text-muted">{badge}</span> : null}
+    </span>
+  );
+}
+
+/** **نصُّ «ظاهرة»** — يُحفظ بزرّ، وفارغاً يُقال الافتراضيّ */
+function VisibleMessage({
+  name,
+  value,
+  disabled,
+  onSave,
+}: {
+  name: string;
+  value: string | null | undefined;
+  disabled: boolean;
+  onSave: (text: string) => void;
+}) {
+  const [draft, setDraft] = useState(value ?? "");
+  useEffect(() => setDraft(value ?? ""), [value]);
+  return (
+    <div className="flex w-full flex-wrap items-center gap-8">
+      <input
+        className="fld min-w-[16rem] flex-1"
+        aria-label={`رسالة ${name} الظاهرة`}
+        maxLength={300}
+        placeholder={DEFAULT_VISIBLE(name)}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <Button size="sm" variant="secondary" disabled={disabled || draft === (value ?? "")} onClick={() => onSave(draft)}>
+        حفظ الرسالة
+      </Button>
+    </div>
+  );
+}
 
 export function MarketsScreen() {
   const held = useMyPermissions();
@@ -198,21 +253,30 @@ export function MarketsScreen() {
                   </div>
 
                   <div className="flex flex-col gap-8">
-                    <span className="text-12.5 font-semibold text-ink">في التسجيل وهي مغلقة</span>
+                    <span className="flex items-center gap-8 text-12.5 font-semibold text-ink">
+                      في المنتقي وهي مغلقة
+                      <FlagPreview code={row.country_code} name={row.name} state={row.signup_display} />
+                    </span>
                     <Segmented<SignupDisplay>
                       label={`ظهورُ ${row.name} في التسجيل`}
                       value={row.signup_display}
-                      options={[
-                        { key: "soon", label: "قريباً" },
-                        { key: "stopped", label: "متوقفة" },
-                        { key: "hidden", label: "مخفية" },
-                      ]}
+                      options={DISPLAY_OPTIONS}
                       onPick={(display) =>
                         canManage && !busy && display !== row.signup_display
                           ? void run(() => setSignupDisplay(row.country_code, display), `ظهورُ ${row.name} في التسجيل: ${DISPLAY_LABEL[display]}`)
                           : undefined
                       }
                     />
+                    {row.signup_display === "visible" ? (
+                      <VisibleMessage
+                        name={row.name}
+                        value={row.visible_message}
+                        disabled={!canManage || Boolean(busy)}
+                        onSave={(text) =>
+                          void run(() => setSignupDisplay(row.country_code, "visible", text), `رسالةُ ${row.name} الظاهرة`)
+                        }
+                      />
+                    ) : null}
                   </div>
 
                   <nav aria-label={`اختصارات ${row.name}`} className="flex flex-wrap gap-6">
@@ -540,11 +604,11 @@ function SignupCountriesSection({ canManage }: { canManage: boolean }) {
       .catch((caught) => setError(messageOf(caught, "تعذّر قراءة دول المُنتقي")));
   }, []);
 
-  async function pick(code: string, display: SignupDisplay) {
+  async function pick(code: string, display: SignupDisplay, message?: string) {
     setBusy(code);
     setError(null);
     try {
-      setRows(await setSignupCountry(code, display));
+      setRows(await setSignupCountry(code, display, message));
     } catch (caught) {
       setError(messageOf(caught, "تعذّر الحفظ"));
     } finally {
@@ -560,10 +624,12 @@ function SignupCountriesSection({ canManage }: { canManage: boolean }) {
         دولُ مُنتقي الهاتف
       </h2>
       <p className="text-12.5 leading-relaxed text-muted">
-        يرى المستخدمُ في الدخول والتسجيل علمَ كلِّ دولةٍ واسمَها ورمزَها. <b>نشطة</b>: تعمل كالمعتاد (تُفتح من بطاقة السوق أعلاه).{" "}
-        <b>قريباً</b>: شارةٌ، وعند المتابعة «قريباً في [الدولة]» بلا رمز تحقّق. <b>متوقفة</b>: عند المتابعة «خادم الدولة متوقف حالياً» بلا
-        رمز — وهي افتراضُ كلِّ دولةٍ جديدة. <b>مخفية</b>: لا تظهر. التغييرُ يصل التطبيقين فوراً بلا تحديث، والمحاولاتُ عددٌ لكلِّ دولةٍ في
-        آخر 30 يوماً — لا يُحفظ أيُّ رقم هاتف.
+        يرى المستخدمُ في الدخول والتسجيل علمَ كلِّ دولةٍ واسمَها ورمزَها. <b>عاملة</b>: تعمل كالمعتاد (تُفتح من بطاقة السوق أعلاه).{" "}
+        <b>ظاهرة</b>: علمٌ ملوّنٌ بلا شارةٍ كالعاملة، وعند اختيارها رسالتُها (تُحرَّر هنا) وزرُّ «أعلمني فور الإطلاق» — <b>بلا حسابٍ ولا
+        دفع</b>. <b>قريباً</b>: علمٌ ملوّنٌ وشارة، وعند المتابعة «قريباً في [الدولة]». <b>متوقفة</b>: علمٌ رماديٌّ وشارة، وعند المتابعة
+        «خادم الدولة متوقف حالياً». <b>مخفية</b>: لا تظهر ولا يجدها البحث — <b>وهي افتراضُ كلِّ دولةٍ جديدة</b>. التغييرُ يصل التطبيقين
+        فوراً بلا تحديث، ومدقَّقٌ بمن غيّره. والمحاولاتُ عددٌ لكلِّ دولةٍ في آخر 30 يوماً بلا رقم؛ و«أعلمني» يحفظ الرقمَ الذي تركه صاحبُه
+        بيده وحدَه.
       </p>
       <input
         className="fld"
@@ -584,22 +650,32 @@ function SignupCountriesSection({ canManage }: { canManage: boolean }) {
             <span className="text-12 text-muted">
               محاولات: <span className="num font-semibold text-ink">{row.attempts_30d}</span>
             </span>
+            {row.interests > 0 ? (
+              <span className="text-12 text-muted">
+                ينتظرون الإطلاق: <span className="num font-semibold text-ink">{row.interests}</span>
+              </span>
+            ) : null}
+            <FlagPreview code={row.code} name={row.name} state={row.state} />
             {row.market ? (
               <span className="text-12 text-muted">سوق — {STATE_LABEL[row.state]} (من بطاقته أعلاه)</span>
             ) : (
               <Segmented<SignupDisplay>
                 label={`حالُ ${row.name}`}
                 value={row.state === "open" ? "soon" : (row.state as SignupDisplay)}
-                options={[
-                  { key: "soon", label: "قريباً" },
-                  { key: "stopped", label: "متوقفة" },
-                  { key: "hidden", label: "مخفية" },
-                ]}
+                options={DISPLAY_OPTIONS}
                 onPick={(display) =>
                   canManage && busy === null && display !== row.state ? void pick(row.code, display) : undefined
                 }
               />
             )}
+            {!row.market && row.state === "visible" ? (
+              <VisibleMessage
+                name={row.name}
+                value={row.visible_message}
+                disabled={!canManage || busy !== null}
+                onSave={(text) => void pick(row.code, "visible", text)}
+              />
+            ) : null}
           </li>
         ))}
       </ul>

@@ -603,3 +603,8 @@ html.dark .t2:not(.t2-day),
 /* **وضعُ النساء**: المختارةُ بالبرقوق (لوحةُ «تسجيل — وضعُ النساء») */
 html.pink .t2-country-list button[aria-pressed="true"] { border-color: var(--t2-women); background: var(--t2-women-soft); }
 html.pink .t2-country-on { color: var(--t2-women); }
+
+/* **«أعلمني فور الإطلاق»** تحت رسالة «ظاهرة» (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني) */
+.t2-country-notify { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.t2-country-notify .t2-country-search { flex: 1 1 140px; margin: 0; }
+.t2-country-notify .t2-button { flex: 1 1 100%; }

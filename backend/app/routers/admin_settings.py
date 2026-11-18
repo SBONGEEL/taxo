@@ -17,6 +17,7 @@ from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
+from app.services import country_settings
 from app.models.map_setting import MapSetting
 from app.models.otp_setting import OtpSetting
 from app.models.enums import AuditAction, CountryCode, FeatureKey, ProviderKey, RoundingMode
@@ -423,11 +424,7 @@ async def upsert_feature_flag(
 async def list_commission_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[CommissionSettingOut]:
-    settings_rows = (
-        await session.scalars(
-            select(CommissionSetting).order_by(CommissionSetting.country_code)
-        )
-    ).all()
+    settings_rows = await country_settings.for_every_country(session, "commission_settings")
     return [CommissionSettingOut.model_validate(row) for row in settings_rows]
 
 
@@ -608,11 +605,7 @@ async def update_wallet_settings(
 async def list_advance_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[AdvanceSettingOut]:
-    rows = (
-        await session.scalars(
-            select(AdvanceSetting).order_by(AdvanceSetting.country_code)
-        )
-    ).all()
+    rows = await country_settings.for_every_country(session, "advance_settings")
     return [AdvanceSettingOut.model_validate(row) for row in rows]
 
 
@@ -658,11 +651,7 @@ async def update_advance_settings(
 async def list_cancellation_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[CancellationSettingOut]:
-    rows = (
-        await session.scalars(
-            select(CancellationSetting).order_by(CancellationSetting.country_code)
-        )
-    ).all()
+    rows = await country_settings.for_every_country(session, "cancellation_settings")
     return [CancellationSettingOut.model_validate(row) for row in rows]
 
 
@@ -848,9 +837,7 @@ async def list_map_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[MapSettingOut]:
     """حدودُ خريطةِ الراكب لكلِّ سوق — **لا حدودُ التوزيع**."""
-    rows = (
-        await session.scalars(select(MapSetting).order_by(MapSetting.country_code))
-    ).all()
+    rows = await country_settings.for_every_country(session, "map_settings")
     return [MapSettingOut.model_validate(row) for row in rows]
 
 
@@ -893,9 +880,7 @@ async def update_map_settings(
 async def list_otp_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[OtpSettingOut]:
-    rows = (
-        await session.scalars(select(OtpSetting).order_by(OtpSetting.country_code))
-    ).all()
+    rows = await country_settings.for_every_country(session, "otp_settings")
     return [OtpSettingOut.model_validate(row) for row in rows]
 
 
@@ -1063,11 +1048,7 @@ async def list_dispatch_settings(
     _staff: StaffUser, session: DbSession
 ) -> list[DispatchSettingOut]:
     """صفوفُ الأسواق المضبوطة — **والغائبُ يعمل بالافتراضيّ ولا يُخترع له صفّ**."""
-    rows = (
-        await session.scalars(
-            select(DispatchSetting).order_by(DispatchSetting.country_code)
-        )
-    ).all()
+    rows = await country_settings.for_every_country(session, "dispatch_settings")
     return [DispatchSettingOut.model_validate(row) for row in rows]
 
 
@@ -1114,7 +1095,7 @@ async def update_dispatch_settings(
 @router.get("/negotiation", response_model=list[NegotiationSettingOut])
 async def list_negotiation_settings(_staff: StaffUser, session: DbSession) -> list[NegotiationSettingOut]:
     """صفوفُ الأسواق المضبوطة — **والغائبُ مطفأ** ولا يُخترع له صفّ."""
-    rows = (await session.scalars(select(NegotiationSetting).order_by(NegotiationSetting.country_code))).all()
+    rows = await country_settings.for_every_country(session, "negotiation_settings")
     return [NegotiationSettingOut.model_validate(row) for row in rows]
 
 

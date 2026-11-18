@@ -143,9 +143,10 @@ export function AuthPhone({
   );
 }
 
-/** دولةٌ في ورقة المُختار — **`state` «قريباً» أو «متوقفة»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ٥): تُرى بشارتها، **والضغطُ عليها لا يختارها**
- *  بل يقول نصَّها (`notice`) بلا رمز تحقّق. والمخفيّةُ لا تصل هنا أصلاً (يصفّيها المُنادي). */
-export type AuthCountryOption = { code: string; name: string; dial: string; state?: "soon" | "stopped" };
+/** دولةٌ في ورقة المُختار — **`state`** (أمرُ المالك ٢٠٢٦-١١-١٠ البند ٥، و١٨/١١ الثاني): «قريباً» **علمٌ ملوّنٌ** بشارته · «متوقفة» **علمٌ
+ *  رماديّ** بشارته — والضغطُ عليهما لا يختارهما بل يقول نصَّها (`notice`) بلا رمز · **«ظاهرة» كالعاملة شكلاً**: علمٌ ملوّنٌ بلا شارة،
+ *  والضغطُ يقول رسالتَها ويعرض «أعلمني» (`notify`) — **ولا حساب**. والمخفيّةُ لا تصل هنا أصلاً (يصفّيها المُنادي، فلا يجدها البحث). */
+export type AuthCountryOption = { code: string; name: string; dial: string; state?: "soon" | "stopped" | "visible" };
 
 /** **ورقةُ الدول** (لوحاتُ «تسجيل — ورقة الدول» · «دخول — كلُّ دولة» · «وضعُ النساء» · الفرنسيّة): العلمُ والاسمُ والمفتاح، والمختارةُ
  * بحافّةٍ مزدوجةٍ وعلامة، والمغلقةُ في التسجيل «قريباً» بحافّةٍ متقطّعة. **تُغلق بالظلّ وبـEscape، واختيارٌ يغلقها.**
@@ -160,7 +161,10 @@ export function AuthCountrySheet({
   onPick,
   onClose,
   notice,
+  notify = null,
 }: {
+  /** **«أعلمني فور الإطلاق»** تحت رسالة «ظاهرة» — `send` يُرجع `true` حين يُحفظ الرقم */
+  notify?: { dial: string; send: (phone: string) => Promise<boolean> } | null;
   open: boolean;
   title: string;
   sub?: string;
@@ -211,27 +215,29 @@ export function AuthCountrySheet({
             {notice}
           </p>
         ) : null}
+        {notice && notify ? <CountryNotifyForm key={notify.dial} notify={notify} /> : null}
         <div className="t2-country-list">
           {shown.map((option) => {
             const on = option.code === value;
-            const soon = Boolean(option.state);
+            // **«ظاهرة» تُرسم كالعاملة** — لا حافّةَ متقطّعةً ولا شارة؛ و«قريباً» علمُها ملوّنٌ، و«متوقفة» وحدَها رماديّة
+            const soon = option.state === "soon" || option.state === "stopped";
             return (
               <button
                 key={option.code}
                 type="button"
                 className={soon ? "soon" : undefined}
-                aria-pressed={on && !soon}
+                aria-pressed={on && !option.state}
                 onClick={() => onPick(option.code)}
               >
-                <Flag code={option.code} label={option.name} size={30} muted={soon} />
+                <Flag code={option.code} label={option.name} size={30} muted={option.state === "stopped"} />
                 <span className="t2-country-name">{option.name}</span>
                 <span className="t2-country-dial" dir="ltr">
                   +{option.dial}
                 </span>
-                {option.state ? (
+                {soon ? (
                   <span className="t2-country-soon">{option.state === "stopped" ? tr("متوقفة") : tr("قريباً")}</span>
                 ) : null}
-                {on && !soon ? <Icon name="check_circle" fill className="t2-country-on" /> : null}
+                {on && !option.state ? <Icon name="check_circle" fill className="t2-country-on" /> : null}
               </button>
             );
           })}
@@ -239,6 +245,49 @@ export function AuthCountrySheet({
         {note ? <p className="t2-country-note">{note}</p> : null}
       </div>
     </div>
+  );
+}
+
+/** **«أعلمني فور الإطلاق»** — رقمٌ يُترك بيد صاحبه في دولةٍ «ظاهرة»؛ **والأرقامُ تُكتب لاتينيّة** أيّاً كانت لوحةُ المفاتيح. */
+function CountryNotifyForm({ notify }: { notify: { dial: string; send: (phone: string) => Promise<boolean> } }) {
+  const [phone, setPhone] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const digits = phone.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660)).replace(/\D/g, "");
+  if (state === "done") {
+    return (
+      <p className="t2-country-notice" role="status">
+        {tr("سجّلنا رقمك، وسنُعلمك فور الإطلاق.")}
+      </p>
+    );
+  }
+  return (
+    <form
+      className="t2-country-notify"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (digits.length < 6 || state === "busy") return;
+        setState("busy");
+        void notify.send(digits).then((ok) => setState(ok ? "done" : "error"));
+      }}
+    >
+      <span className="t2-country-dial" dir="ltr">
+        +{notify.dial}
+      </span>
+      <input
+        className="t2-country-search"
+        type="tel"
+        inputMode="numeric"
+        dir="ltr"
+        value={digits}
+        placeholder={tr("رقم هاتفك")}
+        aria-label={tr("رقم هاتفك")}
+        onChange={(event) => setPhone(event.target.value)}
+      />
+      <button type="submit" className="t2-button action" disabled={digits.length < 6 || state === "busy"}>
+        {tr("أعلمني فور الإطلاق")}
+      </button>
+      {state === "error" ? <span className="t2-country-soon">{tr("تعذّر الحفظ — حاول مجدّداً")}</span> : null}
+    </form>
   );
 }
 

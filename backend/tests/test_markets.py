@@ -74,8 +74,9 @@ async def test_a_closed_country_is_published_for_login_with_its_state(client: As
     entries = _by_code(body)
     assert set(entries) == {c.value for c in CountryCode}, "كلُّ دولةٍ في الدخول — فالحساباتُ القائمةُ تدخل دائماً"
     assert entries["LY"]["status"] == "closed" and entries["JO"]["status"] == "open"
-    # **وافتراضُ المغلقة «قريباً»** بنصّ المالك
-    assert entries["LY"]["signup"] == "soon" and entries["JO"]["signup"] == "open"
+    # **وغيابُ صفِّ المغلقة «مخفية»** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني: الدولةُ الجديدةُ لا تظهر في التسجيل حتى يختار) — **والدخولُ يراها
+    # مع ذلك** (السطرُ أعلاه). وأسواقُ الإنتاج الثلاثةُ لها صفوفٌ صريحةٌ من `0173`، فلم يتغيّر ما يُرى
+    assert entries["LY"]["signup"] == "hidden" and entries["JO"]["signup"] == "open"
     assert entries["LY"]["name"] == "ليبيا" and entries["LY"]["dial_code"] == "218"
     # **والمفتوحةُ أوّلاً**، والافتراضيّةُ منها
     codes = [entry["country_code"] for entry in body["countries"]]
