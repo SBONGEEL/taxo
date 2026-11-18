@@ -273,7 +273,8 @@ jobs:
     needs: [build, screens-web, smoke]
     if: ${{ !cancelled() }}
     runs-on: macos-latest
-    timeout-minutes: 30
+    # **٤٥ لا ٣٠** — العمودُ الذي تغيب علامتُه يُعاد كلُّه، فعمودُ الراكب على SE (١٦ صفّاً) تجاوز ٣٠ دقيقةً وأُلغي (44238489964)
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 2

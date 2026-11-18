@@ -179,6 +179,9 @@
         var started = Date.now();
         var attempt = function () {
           var el = find(cmd);
+          // **زرٌّ معطَّلٌ لم يجهز بعد** — «رفض» `disabled={busy}`، فنُقر وهو مشغولٌ فلم يحدث شيءٌ والجوابُ ✓ وبقيت بطاقةُ الطلب (Pro Max · 44238489964).
+          // فيُنتظر كما تنتظر الإصبعُ زرّاً باهتاً
+          if (el && (el.disabled || el.getAttribute("aria-disabled") === "true")) el = null;
           if (!el) {
             // **الاختياريُّ ينتظر أقلّ ولا يُسقط الخطوة** — ورقةٌ تظهر في جهازٍ ولا تظهر في آخر (أذوناتُ أندرويد الأولى)
             if (Date.now() - started < (cmd.optional ? 2500 : 6000)) return setTimeout(attempt, 250);
