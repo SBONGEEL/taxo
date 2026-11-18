@@ -133,6 +133,17 @@
         </service>
 
         <!-- **«رفض» على إشعار الرنين** — يطويه على الجهاز وحدَه (`CallDeclineReceiver`)، ولا يفتح شيئاً. -->
+        <!-- أداةُ «اطلب رحلة» (SPEC §١٠٣ B/20) -->
+        <receiver
+            android:name=".RideWidget"
+            android:exported="false"
+            android:label="اطلب رحلة">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ride_info" />
+        </receiver>
         <receiver
             android:name=".CallDeclineReceiver"
             android:exported="false" />

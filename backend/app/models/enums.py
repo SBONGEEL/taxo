@@ -1040,6 +1040,8 @@ class FeatureKey(StrEnum):
     ROOT_REPORT = "root_report"
     # **زرُّ الصوت ثلاثاً للطوارئ** (SPEC §١٠٣/22) — يشعله الراكبُ بنفسه. ⚠ تحديثُ سياسة الخصوصية يُنشر قبل إشعاله
     VOLUME_EMERGENCY = "volume_emergency"
+    # **أداةُ «اطلب رحلة»** (SPEC §١٠٣/20) — زرّا «البيت» و«العمل» على الشاشة الرئيسيّة للراكب
+    RIDE_WIDGET = "ride_widget"
 
 
 class MapPlaceCategory(StrEnum):

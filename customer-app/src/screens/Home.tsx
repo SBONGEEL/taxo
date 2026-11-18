@@ -894,13 +894,15 @@ export function HomeScreen() {
   useVolumeEmergency(user?.country_code, tracking ? ride : null);
   useRiderLauncher(user?.country_code, (action) => {
     if (action === "wallet") return navigate("/wallet");
-    const home = places.find((saved) => saved.icon === "home");
-    if (!home) return navigate("/account/places");
+    // **«البيت» أو «العمل»** (§١٠٣/10 و B/20) — المكانُ المحفوظ، وبلاه «أماكني» ليضيفه
+    const icon = action === "ride_work" ? "work" : "home";
+    const place = places.find((saved) => saved.icon === icon);
+    if (!place) return navigate("/account/places");
     pickPlace({
-      id: `place:${home.id}`,
-      name: home.label,
-      address: home.address ?? "",
-      coordinates: { lat: home.lat, lng: home.lng },
+      id: `place:${place.id}`,
+      name: place.label,
+      address: place.address ?? "",
+      coordinates: { lat: place.lat, lng: place.lng },
     });
   });
 

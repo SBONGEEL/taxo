@@ -12,11 +12,12 @@ import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
 import { routeCommsPush } from "@/lib/trip-comms";
 
-export type RiderAction = "ride_home" | "wallet";
+export type RiderAction = "ride_home" | "ride_work" | "wallet";
 
 interface NativeLauncher {
   consume(): Promise<{ action?: string | null }>;
   setShortcuts(options: { items: { id: string; label: string; action: RiderAction }[] }): Promise<void>;
+  setPrefs(options: Record<string, boolean | string | null>): Promise<void>;
   addListener(event: "action", handler: (data: { action: string }) => void): Promise<PluginListenerHandle>;
 }
 
@@ -36,11 +37,13 @@ export function rideCommsAction(raw: string | null | undefined): { type: string;
 }
 
 export function riderAction(raw: string | null | undefined): RiderAction | null {
-  return raw === "ride_home" || raw === "wallet" ? raw : null;
+  return raw === "ride_home" || raw === "ride_work" || raw === "wallet" ? raw : null;
 }
 
 export function useRiderLauncher(country: CountryCode | undefined, onAction: (action: RiderAction) => void): void {
   const shortcuts = useFeature(country, "app_shortcuts");
+  // **أداةُ «اطلب رحلة»** (§١٠٣ B/20) — تقرأ مفتاحَها من التفضيلات، ومطفأةً تقول «افتح التطبيق»
+  const rideWidget = useFeature(country, "ride_widget");
   const latest = useRef(onAction);
   latest.current = onAction;
 
@@ -72,4 +75,9 @@ export function useRiderLauncher(country: CountryCode | undefined, onAction: (ac
       : [];
     void native.setShortcuts({ items }).catch(() => undefined);
   }, [shortcuts]);
+
+  useEffect(() => {
+    if (!launcherAvailable()) return;
+    void native.setPrefs({ ride_widget: rideWidget }).catch(() => undefined);
+  }, [rideWidget]);
 }
