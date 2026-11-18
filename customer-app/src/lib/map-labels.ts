@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 
 import { mapPlaces } from "@/api/endpoints";
 import type { MapPlaceSpot } from "@/api/types";
+import { addPinImages, NO_PIN, PIN_PREFIX } from "@/lib/map-pin-icons";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
@@ -32,6 +33,7 @@ const MINOR = /^(road-label|waterway-label|natural-line|water-line)/;
 const SOURCE = "taxo-places";
 const DOT = "taxo-places-dot";
 const LABEL = "taxo-places-label";
+const ICON = "taxo-places-icon";
 /** **خطُّ المسار والزحامُ فوق الأماكن** — أوّلُ ما يوجد منها يُدرج قبله. */
 const ABOVE = ["taxo-traffic", "taxo-route-line-done", "taxo-route-line-casing", "taxo-route-line", "taxo-trip-line-casing", "taxo-trip-line"];
 
@@ -98,13 +100,15 @@ export function drawOwnPlaces(instance: MapboxMap, host: HTMLElement, places: Ma
     type: "FeatureCollection" as const,
     features: places.map((place) => ({
       type: "Feature" as const,
-      properties: { name: place.name_ar },
+      properties: { name: place.name_ar, category: place.category, pin: !NO_PIN.includes(place.category) },
       geometry: { type: "Point" as const, coordinates: [place.lng, place.lat] },
     })),
   };
   const source = instance.getSource(SOURCE) as GeoJSONSource | undefined;
   if (source) {
     source.setData(data);
+    const live = palette(host);
+    if (live) void addPinImages(instance as never, places.map((place) => place.category), live.own, live.halo, live.halo);
     return;
   }
   if (!places.length) return;
@@ -112,6 +116,7 @@ export function drawOwnPlaces(instance: MapboxMap, host: HTMLElement, places: Ma
   if (!colors) return;
   instance.addSource(SOURCE, { type: "geojson", data });
   const before = ABOVE.find((id) => instance.getLayer(id));
+  // **الحيُّ والشارعُ اسمٌ بلا نقطة** — ودبّوسُ الأيقونة يُضاف فوق النقطة حين تُرسم صورُه (أدناه)
   // **خطُّ المزوّد نفسُه** — فالعربيّةُ تُرسم بحروف الخريطة لا بخطٍّ لا يحمل الحروف
   const font = (instance.getLayer("poi-label") && instance.getLayoutProperty("poi-label", "text-font")) as string[] | undefined;
   instance.addLayer(
@@ -120,6 +125,7 @@ export function drawOwnPlaces(instance: MapboxMap, host: HTMLElement, places: Ma
       type: "circle",
       source: SOURCE,
       minzoom: 11,
+      filter: ["==", ["get", "pin"], true],
       paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.5, 16, 4.5],
         "circle-color": colors.own,
@@ -140,7 +146,7 @@ export function drawOwnPlaces(instance: MapboxMap, host: HTMLElement, places: Ma
         ...(font ? { "text-font": font } : {}),
         "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 16, 14],
         "text-anchor": "top",
-        "text-offset": [0, 0.6],
+        "text-offset": ["case", ["==", ["get", "pin"], true], ["literal", [0, 1.1]], ["literal", [0, 0]]],
         "text-max-width": 9,
       },
       paint: {
@@ -151,6 +157,25 @@ export function drawOwnPlaces(instance: MapboxMap, host: HTMLElement, places: Ma
     },
     before,
   );
+  // **الأيقونةُ من ١٤ فما فوق** — بعيداً تكفي النقطة، وقريباً تُعرف الفئةُ بلا قراءة
+  void addPinImages(instance as never, places.map((place) => place.category), colors.own, colors.halo, colors.halo).then(() => {
+    if (!instance.getSource(SOURCE) || instance.getLayer(ICON)) return;
+    instance.addLayer(
+      {
+        id: ICON,
+        type: "symbol",
+        source: SOURCE,
+        minzoom: 14,
+        filter: ["==", ["get", "pin"], true],
+        layout: {
+          "icon-image": ["concat", PIN_PREFIX, ["get", "category"]],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.75, 17, 1],
+          "icon-allow-overlap": true,
+        },
+      },
+      instance.getLayer(LABEL) ? LABEL : before,
+    );
+  });
 }
 
 /** **عمرُ ما قُرئ من الأماكن** — مكانٌ يضيفه المالكُ يصل الخرائطَ المفتوحةَ بعد هذا، لا بعد إعادة تشغيل التطبيق. */
