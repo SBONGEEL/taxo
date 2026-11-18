@@ -577,13 +577,17 @@ jobs:
             for channel in public test; do
               flavor="$(node -e "import('./tools/channels.mjs').then(m=>process.stdout.write(m.TABLE.channels['$channel'].gradleFlavor))")"
               task="assemble$(printf '%s' "$flavor" | sed 's/^./\U&/')Release"
+              # **وحزمةُ Play (AAB) للعامّة تُبنى هنا لا على جهاز المالك** (أمرُ المالك ١٨/١١ السادس: «البناءُ على GitHub») —
+              # في نداء gradle نفسِه بعد مزامنة القناة العامّة، فلا تُبنى من مزامنة التجريبيّة
+              [ "$channel" = public ] && task="$task bundle$(printf '%s' "$flavor" | sed 's/^./\U&/')Release"
               echo "---- $app | channel=$channel | flavor=$flavor | $task ----"
               # **بابٌ واحدٌ يشتقّ العنوانَ من الجدول** — لا عنوانَ مكتوباً هنا
               TAXO_CHANNEL="$channel" node tools/build-channel.mjs "$app"
               ( cd "$app" && TAXO_CHANNEL="$channel" npx cap sync android )
               # **`sh gradlew` لا `./gradlew`** — وقع مقيساً (خروج ١٢٦):
               # صلاحيةُ التنفيذ لا يحفظها ويندوز، فالملفُّ يُدفع بلا `+x`.
-              ( cd "$app/android" && TAXO_CHANNEL="$channel" sh gradlew "$task" --no-daemon -q )
+              # shellcheck disable=SC2086 — مهمّتان في نداءٍ واحدٍ للعامّة
+              ( cd "$app/android" && TAXO_CHANNEL="$channel" sh gradlew $task --no-daemon -q )
             done
           done
 
@@ -607,6 +611,27 @@ jobs:
           done
           # **العددُ يُقاس** — ثلاثةٌ من أربعٍ تمرّ صامتةً لولا هذا السطر
           [ "$seen" -eq 4 ] || { echo "SIGNED_COUNT $seen of 4"; exit 1; }
+          # **وحزمتا Play (AAB) تُقرأ شهادتُهما من الملفّ** — `keytool -printcert -jarfile`، ومعهما ملفُّ R8 لكلٍّ
+          for app in customer-app driver-app; do
+            f="$app/android/app/build/outputs/bundle/publicRelease/app-public-release.aab"
+            [ -f "$f" ] || { echo "AAB_MISSING $f"; exit 1; }
+            echo "---- $f ($(stat -c%s "$f") بايت) ----"
+            keytool -printcert -jarfile "$f" | grep -E 'Owner:|SHA256:' | head -2
+            [ -f "$app/android/app/build/outputs/mapping/publicRelease/mapping.txt" ] || echo "  · لا ملفَّ R8"
+          done
+
+      # **حزمتا Play أثرُ تشغيلٍ لا مرفقُ إصدار** — تُنزَّلان وتُرفعان بـ`scripts/play_api.py upload`، والبنيةُ محفوظةٌ ليجد الرافعُ
+      # ملفَّ R8 بجانب الحزمة (`outputs/mapping/publicRelease/`)
+      - name: حزمتا Play
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-bundles
+          path: |
+            customer-app/android/app/build/outputs/bundle/publicRelease/
+            customer-app/android/app/build/outputs/mapping/publicRelease/mapping.txt
+            driver-app/android/app/build/outputs/bundle/publicRelease/
+            driver-app/android/app/build/outputs/mapping/publicRelease/mapping.txt
+          retention-days: 30
 
       # **والعامّتان لا تُرفقان — تُبنيان وتُقاس شهادتُهما أعلاه وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٨، SPEC §٧٩).
       #

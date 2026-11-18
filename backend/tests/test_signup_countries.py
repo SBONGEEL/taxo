@@ -217,3 +217,24 @@ async def test_a_visible_closed_market_never_creates_an_account(client: AsyncCli
     assert answer.status_code == 403
     async with session_factory() as session:
         assert (await session.scalar(select(User).where(User.phone == "+218917654322"))) is None
+
+
+async def test_a_launch_interest_is_deleted_after_twelve_months_and_a_fresh_one_stays(session_factory) -> None:
+    """**«ويُحذف بعد ١٢ شهراً»** بنصِّ السياسة المنشورة (١٨/١١) — يسقط إن حُذف الكنسُ أو طالت العتبة."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.models.signup_country import LaunchInterest
+    from app.services import signup_countries
+    from app.tasks.celery_app import celery_app
+
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        session.add(LaunchInterest(country="EG", phone="+201000000001", created_at=now - timedelta(days=366)))
+        session.add(LaunchInterest(country="EG", phone="+201000000002", created_at=now - timedelta(days=300)))
+        await session.commit()
+    async with session_factory() as session:
+        assert await signup_countries.sweep_interests(session) == 1
+    async with session_factory() as session:
+        left = [row.phone for row in (await session.scalars(select(LaunchInterest))).all()]
+    assert left == ["+201000000002"]
+    assert "sweep-launch-interests" in celery_app.conf.beat_schedule

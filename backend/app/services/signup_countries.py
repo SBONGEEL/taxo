@@ -172,6 +172,23 @@ async def register_interest(session: AsyncSession, *, code: str, national: str) 
     await session.execute(stmt.on_conflict_do_nothing(constraint="uq_launch_interests_country_phone"))
 
 
+#: **«ويُحذف بعد ١٢ شهراً»** — نصُّ سياسة الخصوصيّة المنشور (`PRIVACY-103-NATIVE.md`، ١٨/١١). **والحذفُ بعد رسالة الإطلاق لم يُبنَ**
+#: لأن الرسالةَ نفسَها لم تُبنَ؛ **ومن يبنيها يحذف ما أرسل إليه في المعاملة نفسِها**، وإلا كذب النصُّ المنشور.
+INTEREST_RETENTION_DAYS = 365
+
+
+async def sweep_interests(session: AsyncSession) -> int:
+    """يحذف أرقامَ «أعلمني» التي بلغت ١٢ شهراً — **وعدُّ ما حُذف** لسطر السجلّ."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import delete
+
+    cutoff = datetime.now(UTC) - timedelta(days=INTEREST_RETENTION_DAYS)
+    result = await session.execute(delete(LaunchInterest).where(LaunchInterest.created_at < cutoff))
+    await session.commit()
+    return int(result.rowcount or 0)
+
+
 async def interest_counts(session: AsyncSession) -> dict[str, int]:
     rows = await session.execute(select(LaunchInterest.country, func.count()).group_by(LaunchInterest.country))
     return {country: int(total) for country, total in rows.all()}

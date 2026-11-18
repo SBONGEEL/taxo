@@ -121,6 +121,7 @@ celery_app = Celery(
         "app.tasks.admin_alerts",
         "app.tasks.facebook",
         "app.tasks.site_stats",
+        "app.tasks.signup_countries",
     ],
 )
 
@@ -250,6 +251,11 @@ celery_app.conf.update(
         "sweep-error-reports": {
             "task": "app.tasks.error_reports.sweep_error_reports",
             "schedule": crontab(hour=1, minute=5),
+        },
+        # **أرقامُ «أعلمني» بعد ١٢ شهراً** — وعدُ سياسة الخصوصيّة المنشور (١٨/١١)، يوميّاً بساعةٍ ثابتة
+        "sweep-launch-interests": {
+            "task": "app.tasks.signup_countries.sweep_launch_interests",
+            "schedule": crontab(hour=1, minute=15),
         },
         "run-due-backup": {
             "task": "app.tasks.backups.run_due_backup",
