@@ -96,8 +96,9 @@ final class NativeShots: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             for label in labels {
-                // **وتسميةُ SpringBoard قد تبدأ بمسافة** (« Add Widget» — 44353687380)، فتُقبل منتهيةً بالاسم
-                let predicate = NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@ OR label ENDSWITH[c] %@", label, label, " " + label)
+                // **وتسميةُ SpringBoard قد تبدأ بمسافة** (« Add Widget» — 44353687380)، فتُقبل بها **مطابقةً لا منتهيةً بالاسم**:
+                // «ينتهي بـ Allow» أمسك «Don’t Allow» فرُفض النشاطُ الحيُّ وغاب عن القفل (44373448944)
+                let predicate = NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@ OR label ==[c] %@", label, label, " " + label)
                 for query in [springboard.buttons, springboard.descendants(matching: .any)] {
                     let match = query.matching(predicate).firstMatch
                     if match.exists && match.isHittable { return match }
@@ -284,13 +285,16 @@ final class NativeShots: XCTestCase {
             added += 1
         }
         home()
+        var found = false
         // الأداتان تُوضعان أعلى الصفحة التي كانت ظاهرة — فيُبحث عنهما في الصفحات
         for _ in 0..<3 {
-            if springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "TAXO")).count > 1 { break }
+            // **الظاهرُ وحدَه يُعدّ** — عناصرُ الصفحات الأخرى في الشجرة بإطارٍ صفريّ، فعُدّت وصُوّرت صفحةٌ بلا أداة (44373448944)
+            let shown = springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "TAXO")).allElementsBoundByIndex.filter { $0.frame.width > 0 && $0.isHittable }
+            if shown.count > 1 { found = true; break }
             springboard.swipeLeft()
             Thread.sleep(forTimeInterval: 1)
         }
-        shot("widgets", "أداتا الشاشة الرئيسيّة — صغيرةٌ ومتوسّطة", ok: added == 2, note: notes.joined(separator: " · "))
+        shot("widgets", "أداتا الشاشة الرئيسيّة — صغيرةٌ ومتوسّطة", ok: added == 2 && found, note: (found ? notes : notes + ["لم تُرَ الأداتان في أيِّ صفحة"]).joined(separator: " · "))
         dump("widgets")
     }
 
