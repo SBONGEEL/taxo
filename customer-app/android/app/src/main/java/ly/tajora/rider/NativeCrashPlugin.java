@@ -18,7 +18,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class NativeCrashPlugin extends Plugin {
 
     private static final String PREFS = "taxo_native_crash";
-    private static final int MAX_FRAMES = 40;
+    private static final int MAX_FRAMES = 20;
+    private static final int MAX_CAUSES = 4;
 
     /** يُنادى أوّلَ {@code onCreate}، مرّةً واحدة. */
     public static void install(Context context) {
@@ -62,16 +63,20 @@ public class NativeCrashPlugin extends Plugin {
         return outer.equals(inner) ? outer : outer + " ← " + inner;
     }
 
-    /** خالصة: «الصنف.الدالّة(الملف:السطر)» سطراً سطراً — بلا نصِّ رسالة. */
+    /** خالصة: «الصنف.الدالّة(الملف:السطر)» سطراً سطراً — بلا نصِّ رسالة. <b>والسقفُ لكلِّ استثناءٍ لا للمكدَّس كلِّه</b> (قِيس في CI
+     *  ٢٠٢٦-١١-١٨): سقفٌ واحدٌ يستنفده المكدَّسُ الخارجيّ — إطاراتُ النظام — <b>فلا يبلغ «Caused by»، وهو العلّة</b>. */
     static String framesOf(Throwable error) {
         StringBuilder out = new StringBuilder();
         Throwable current = error;
-        int frames = 0;
         int guard = 0;
-        while (current != null && guard++ < 10 && frames < MAX_FRAMES) {
+        while (current != null && guard++ < MAX_CAUSES) {
             if (current != error) out.append("Caused by ").append(current.getClass().getName()).append('\n');
+            int frames = 0;
             for (StackTraceElement frame : current.getStackTrace()) {
-                if (frames++ >= MAX_FRAMES) break;
+                if (frames++ >= MAX_FRAMES) {
+                    out.append("    ...\n");
+                    break;
+                }
                 out.append("    at ").append(frame.toString()).append('\n');
             }
             current = current.getCause() == current ? null : current.getCause();
