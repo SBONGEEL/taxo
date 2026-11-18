@@ -37,6 +37,7 @@ import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
 import { buildOpenStyle, openMapColors, openTransformRequest } from "@/lib/open-map-style";
 import { foldedAttribution } from "@/lib/map-attribution";
 import { applyLabels, bindPlaceTap, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
+import { bindOpenTap, drawOpenPlaces, drawReports, drawTraffic, useOpenLayers } from "@/lib/open-layers";
 
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
@@ -199,7 +200,9 @@ interface MapViewProps {
   searching?: boolean;
   onMoveEnd?: (center: Coordinates) => void;
   /** **لمسُ مكانٍ من أماكننا** — اسمُه وموضعُه، والشاشةُ تعرض «انطلاق» أو «وجهة» (§٣/٣ من أمر ١٨/١١ الثاني) */
-  onPlaceTap?: (place: { name: string; lat: number; lng: number }) => void;
+  onPlaceTap?: (place: { name: string; lat: number; lng: number; kind?: string }) => void;
+  /** **طبقةُ الازدحام** (أمرُ المالك ١٨/١١ السابع ٣-٢) — يشعلها الراكبُ من الخريطة؛ ولا تُرسم إلا والمفتاحُ مشتعلٌ لسوقه */
+  liveTraffic?: boolean;
   className?: string;
   /** **ما يغطّي أسفلَ الخريطة بالبكسل** — ورقةُ «R06» الملتصقة. **شعارُ Mapbox ونسبتُه شرطُ الرخصة** فيرتفعان فوقها
    *  ولا يُرسمان عليها. وبلا قيمةٍ لا يُكتب على الحاوية شيء. */
@@ -418,6 +421,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     interactive = true,
     onMoveEnd,
     onPlaceTap,
+    liveTraffic = false,
     className,
     controlsInset = 0,
     openMap,
@@ -450,6 +454,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
   darkRef.current = dark;
   // **أسماءُ الأماكن وأماكنُ المالك** (§٧١-د) — والمفتاحُ يُقرأ في معالج `style.load` من المرجع
   const { labels, places } = useMapPlaces();
+  const open = useOpenLayers(liveTraffic);
   const labelsRef = useRef(labels);
   labelsRef.current = labels;
   const t2 = true;
@@ -562,6 +567,16 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     drawOwnPlaces(instance, container.current, labels ? places : []);
     bindPlaceTap(instance, (place) => placeTap.current?.(place));
   }, [labels, places, styleVersion]);
+
+  // **الخريطةُ المفتوحة** (أمرُ المالك ١٨/١١ السابع): الأماكنُ والمباني والصيانة، والازدحامُ، وبلاغاتُ الطريق — بعد الأسماء فتُخفي محلّاتِ المزوّد
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !container.current || styleVersion === 0 || !styleReady.current) return;
+    drawOpenPlaces(instance, container.current, open.places);
+    drawTraffic(instance, open.traffic);
+    drawReports(instance, container.current, open.reports);
+    bindOpenTap(instance, (place) => placeTap.current?.(place));
+  }, [open.places, open.traffic, open.reports, labels, places, styleVersion]);
 
   // تبديل الستايل مع الوضع الليلي
   //

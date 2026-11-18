@@ -18,7 +18,7 @@ permissions:
 jobs:
   proof:
     name: المحاكي · الخريطة المفتوحة والمنتقي
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright لا يدعم 26.04 (ubuntu-latest) — قِيس ١٨/١١
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4

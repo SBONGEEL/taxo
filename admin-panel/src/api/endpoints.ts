@@ -16,6 +16,7 @@ import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
 import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
 import type { CardPayLimits, CardPayLive, CardPayOverview, WhopLive, WhopMethod, WhopOverview } from "@/api/types";
+import type { MapSuggestion, RoadReportRow } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -2945,3 +2946,22 @@ export const getInvoiceSettings = (country: CountryCode) =>
 
 export const saveInvoiceSettings = (country: CountryCode, body: InvoiceSettings) =>
   api.put<InvoiceSettings>("/admin/taxo-cards/invoice-settings", { country_code: country, ...body });
+
+
+// ------------------------------------------------------------------ مراجعةُ الخريطة (أمرُ المالك ١٨/١١ السابع)
+
+export const listMapSuggestions = (country: CountryCode, status: "pending" | "approved" | "rejected" = "pending") =>
+  api.get<MapSuggestion[]>("/admin/map/suggestions", { query: { country, status } });
+
+export const approveMapSuggestion = (id: string, body: { name_ar?: string; category?: string } = {}) =>
+  api.post<MapSuggestion>(`/admin/map/suggestions/${id}/approve`, body);
+
+export const rejectMapSuggestion = (id: string, reason: string) =>
+  api.post<MapSuggestion>(`/admin/map/suggestions/${id}/reject`, { reason });
+
+export const listRoadReports = (country: CountryCode) =>
+  api.get<RoadReportRow[]>("/admin/map/road-reports", { query: { country } });
+
+export const approveRoadReport = (id: string) => api.post<RoadReportRow>(`/admin/map/road-reports/${id}/approve`);
+
+export const removeRoadReport = (id: string) => api.post<RoadReportRow>(`/admin/map/road-reports/${id}/remove`);

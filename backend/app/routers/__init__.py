@@ -52,6 +52,7 @@ from app.routers import (
     rider_plans,
     admin_loyalty,
     loyalty,
+    admin_map_community,
     admin_map_places,
     airports,
     guarantees,
@@ -83,6 +84,7 @@ from app.routers import (
     drivers,
     notifications,
     payments,
+    map_community,
     map_places,
     place_search,
     pickup_spots,
@@ -119,6 +121,7 @@ api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)
 api_router.include_router(map_places.router)
+api_router.include_router(map_community.router)
 api_router.include_router(place_search.router)
 api_router.include_router(pickup_spots.router)
 api_router.include_router(airports.router)
@@ -142,6 +145,7 @@ api_router.include_router(admin_settings.router)
 api_router.include_router(admin_categories.router)
 api_router.include_router(admin_facilities.router)
 api_router.include_router(admin_map_places.router)
+api_router.include_router(admin_map_community.router)
 api_router.include_router(admin_driver_goals.router)
 api_router.include_router(admin_price_experiments.router)
 api_router.include_router(admin_rider_plans.router)

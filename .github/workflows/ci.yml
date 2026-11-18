@@ -416,7 +416,8 @@ jobs:
   # خمسُ شاشاتٍ نهاراً وليلاً، ومقيسٌ في الاتجاهين (خريطةٌ بلا حارسٍ يجب أن تُرى مفتوحة)
   attribution:
     name: نسبةُ الخريطة
-    runs-on: ubuntu-latest
+    # **24.04 مثبَّتاً** (قِيس ٢٠٢٦-١١-١٨، التشغيل 44333959166): ubuntu-latest صار 26.04 وPlaywright 1.56 لا يدعمه فيسقط التنصيب
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

@@ -96,6 +96,7 @@ import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { useRide } from "@/lib/ride";
 import { Icon, Wordmark } from "@/taxo2";
+import { RoadReportButton } from "@/components/map/RoadReportButton";
 
 import { countBookings, countCommutes, countRides, hoursClock } from "./count";
 
@@ -484,11 +485,13 @@ export function HomeT2Screen() {
           etaMinutes={eta}
           t2
           routeTraveled={riding}
-          traffic={traffic}
+          // **والكبتنُ يرى الازدحامَ أثناء الرحلة** (أمرُ المالك ١٨/١١ السابع ٣-٢) — وفي الرئيسيّة بزرّه كما كان
+          traffic={traffic || mode === "ride"}
           heat={mode === "home" && open ? heat : null}
           onTap={mode === "home" && open ? tapAt : null}
           tapPin={mode === "home" && open ? (tapped?.at ?? null) : null}
         />
+        {(mode === "home" && open) || mode === "ride" ? <RoadReportButton position={position} /> : null}
         {mode === "home" ? (
           <>
             <div className="t2-hm-shade" />

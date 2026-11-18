@@ -40,6 +40,7 @@ import { engine, markOpenMapFailed, useOpenMap } from "@/lib/map-engine";
 import { buildOpenStyle, openMapColors, openTransformRequest } from "@/lib/open-map-style";
 import { foldedAttribution } from "@/lib/map-attribution";
 import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
+import { drawOpenPlaces, drawReports, drawTraffic, useOpenLayers } from "@/lib/open-layers";
 
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
@@ -320,6 +321,17 @@ function MapViewEngine({
   labelsRef.current = labels;
   const placesRef = useRef(places);
   placesRef.current = places;
+  // **الخريطةُ المفتوحة** (أمرُ المالك ١٨/١١ السابع): أماكنُ ومبانٍ وصيانة، وبلاغاتُ الطريق، **والازدحامُ أثناء الرحلة** (`traffic`)
+  const open = useOpenLayers(traffic);
+  const openRef = useRef(open);
+  openRef.current = open;
+  const drawOpen = (instance: mapboxgl.Map, element: HTMLElement) => {
+    const state = openRef.current;
+    drawOpenPlaces(instance, element, state.places);
+    // **على Mapbox زحامُه هو** (`addTraffic`) — وزحامُنا على الخريطة المفتوحة وحدَها، فلا يُرسم الطريقُ بلونين
+    drawTraffic(instance, openMap ? state.traffic : null);
+    drawReports(instance, element, state.reports);
+  };
 
   // **طورُ المتابعة** (البند ١٧-٢) — و`ref` بجانب الحالة لأن مُعالِج السحب
   // يُسجَّل مرةً واحدةً عند بناء الخريطة، فقراءتُه للحالة تُجمّد أوّلَ قيمة
@@ -382,6 +394,7 @@ function MapViewEngine({
           // **والنمطُ المفتوحُ مبنيٌّ بألوان الهوية أصلاً** — فلا صبغَ عليه (صبغُ Mapbox يُخفي المباني ويقرأ أصنافَ طرقه هو)
           if (!openColors) calmLook(instance, host.current, labelsRef.current);
           drawOwnPlaces(instance, host.current, labelsRef.current ? placesRef.current : []);
+          drawOpen(instance, host.current);
         }
         // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ. **ولا زحامَ على الخريطة المفتوحة**: بلاطاتُه
         // من Mapbox (`mapbox://`) ولا بديلَ مفتوحاً له، وطلبُه هناك خطأٌ يُسقط الخريطةَ إلى Mapbox
@@ -700,10 +713,12 @@ function MapViewEngine({
     const run = () => {
       applyLabels(instance, element, labels);
       drawOwnPlaces(instance, element, labels ? places : []);
+      drawOpen(instance, element);
     };
     if (instance.isStyleLoaded()) run();
     else instance.once("idle", run);
-  }, [labels, places, t2]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labels, places, t2, open.places, open.traffic, open.reports]);
 
   // **خطُّ المسار** (البند ٨) — يُضاف حين يصل ويُحدَّث حين يتقدّم الكبتن.
   // و`styleVersion` ليست هنا كما في تطبيق الراكب لأن هذا المكوّن لا يعيد بناء

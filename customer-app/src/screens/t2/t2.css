@@ -1605,3 +1605,14 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 
 /* **مؤشّرُ «نبحث لك عن كبتن»** — يظهر مع الأيقونات الجديدة وحدَها (SPEC §١٠٥/٣-ب)، وحركتُه في `taxo2/glyphs.css` (`.t2-glyph-idle`) */
 .t2-trk-head .t2-trk-radar { font-size: 22px; color: var(--t2-accent-text); }
+
+/* **الخريطةُ المفتوحة** (أمرُ المالك ١٨/١١ السابع): «أضف مكاناً / اقترح تصحيحاً» وأزرارُ الخريطة («الازدحام» · «أضف مكاناً») */
+.t2-sheet-note { margin: 6px 0 10px; font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+.t2-suggest-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.t2-sg-chip { padding: 6px 12px; border: 1px solid var(--t2-line); border-radius: 999px; background: var(--t2-surface); color: var(--t2-text); font-size: 13px; }
+.t2-sg-chip.on { border-color: var(--t2-accent); background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-place-kind { margin: -4px 0 12px; font-size: 13px; color: var(--t2-muted); }
+.t2-map-tools { position: absolute; top: calc(64px + env(safe-area-inset-top, 0px)); right: 10px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+.t2-map-tool { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 999px; background: var(--t2-surface);
+  color: var(--t2-text); font-size: 13px; box-shadow: var(--t2-float-btn-shadow, 0 2px 8px rgba(0, 0, 0, 0.15)); }
+.t2-map-tool.on { background: var(--t2-accent); color: var(--t2-on-accent); }

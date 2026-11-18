@@ -1153,3 +1153,9 @@ export const getMyGoals = () => api.get<MyGoals>("/drivers/me/goals");
 /** **خريطةُ البيانات المفتوحة لم تُحمَّل** — بلاغٌ واحدٌ في الجلسة (`lib/map-engine`)، فيصل المالكَ إشعارٌ والتطبيقُ عاد إلى Mapbox. */
 export const reportMapDisplayFailure = (reason: string) =>
   api.post<void>("/places/health", { feature: "display", reason });
+
+
+// ------------------------------------------------------------------ الخريطةُ المفتوحة (أمرُ المالك ١٨/١١ السابع)
+
+/** **قالبُ مربّعات الأماكن المفتوحة** — يطلبه المحرّكُ نفسُه بلا رأس دخول (`routers/map_community.py`) */
+export const openPlacesTiles = () => `${API_URL}/map/tiles/places/{z}/{x}/{y}.pbf`;

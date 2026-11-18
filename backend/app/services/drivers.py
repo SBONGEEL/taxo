@@ -30,7 +30,7 @@ from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services import approach, broadcast
-from app.services import geo, route
+from app.services import geo, route, traffic
 from app.services import presence_token
 from app.ws import events
 
@@ -132,6 +132,8 @@ async def report_location(
     **وعمرُ الحضور من سياسة البثّ** (§٧٥-ج) لا ثابتٍ هنا — والتطبيقُ الأقدمُ الذي يبثّ كلَّ ثلاث ثوانٍ يمرّ من هنا كما كان.
     """
     policy = await broadcast.current_policy(redis)
+    # **الازدحامُ المجهول** (أمرُ المالك ١٨/١١ السابع ٣-٢): الموقعُ السابقُ يُقرأ قبل أن يُكتب فوقه — ولا شيءَ والمفتاحُ مطفأ
+    before = await traffic.previous(redis, driver_id=context.driver_id, country_code=context.country_code)
     await geo.update_location(
         redis,
         driver_id=context.driver_id,
@@ -142,6 +144,9 @@ async def report_location(
         vehicle_category=context.vehicle_category,
         skin=context.skin,
         ttl=policy.presence_ttl,
+    )
+    await traffic.sample(
+        redis, driver_id=context.driver_id, country_code=context.country_code, previous=before, lat=lat, lng=lng, heading=heading
     )
     await route.capture(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading

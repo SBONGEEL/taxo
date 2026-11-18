@@ -488,6 +488,89 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
     return items
 
 
+# ───────────────────────── الخريطةُ المفتوحة (أمرُ المالك ٢٠٢٦-١١-١٨ السابع) — مربّعاتٌ ومطابقةُ مقاطع، من القرص وحدَه
+DATA_DIR = os.path.dirname(os.environ.get("PLACES_INDEX", "/data/places.sqlite"))
+ROADS = os.environ.get("ROADS_INDEX", os.path.join(DATA_DIR, "roads.sqlite"))
+MATCH_M = 30.0
+MATCH_HEADING = 50.0
+
+
+def _ro(path: str) -> sqlite3.Connection | None:
+    """اتّصالٌ للقراءة لكلِّ طلب — رخيصٌ على ملفٍّ ثابت، ولا يتشارك خيطان اتّصالاً."""
+    if not os.path.exists(path):
+        return None
+    return sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
+
+
+def tile(layer: str, z: int, x: int, y: int) -> bytes | None:
+    db = _ro(os.path.join(DATA_DIR, f"{layer}.mbtiles"))
+    if db is None:
+        return None
+    try:
+        row = db.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?",
+                         (z, x, (1 << z) - 1 - y)).fetchone()
+        return row[0] if row else None
+    finally:
+        db.close()
+
+
+def _seg_metres(lat: float, lng: float, coords: list) -> float:
+    """أقصرُ مسافةٍ من نقطةٍ إلى خطِّ المقطع (مستوٍ محلّيّ — يكفي لثلاثين متراً)."""
+    kx, ky = 111_320 * math.cos(math.radians(lat)), 110_540
+    best = float("inf")
+    for (x1, y1), (x2, y2) in zip(coords, coords[1:]):
+        ax, ay = (x1 - lng) * kx, (y1 - lat) * ky
+        bx, by = (x2 - lng) * kx, (y2 - lat) * ky
+        dx, dy = bx - ax, by - ay
+        t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(ax + t * dx, ay + t * dy))
+    return best
+
+
+def match(points: list) -> list:
+    """**أقربُ مقطعِ طريقٍ رئيسيٍّ** لكلِّ نقطة (≤ ٣٠ م، والاتجاهُ يوافق إن عُرف) — أو `None`. **ولا هويّةَ في المدخل ولا في السجلّ.**"""
+    db = _ro(ROADS)
+    if db is None:
+        return [None] * len(points)
+    out = []
+    try:
+        dlat = MATCH_M / 110_540
+        for lat, lng, heading in points[:5000]:
+            dlng = MATCH_M / (111_320 * max(math.cos(math.radians(lat)), 0.2))
+            rows = db.execute(
+                "SELECT s.id, s.b0, s.oneway, s.coords FROM seg_box b JOIN segments s ON s.id = b.id "
+                "WHERE b.x0 <= ? AND b.x1 >= ? AND b.y0 <= ? AND b.y1 >= ?",
+                (lng + dlng, lng - dlng, lat + dlat, lat - dlat)).fetchall()
+            best, best_d = None, MATCH_M
+            for seg_id, b0, oneway, coords in rows:
+                if heading is not None:
+                    diff = abs((heading - b0 + 180) % 360 - 180)
+                    if diff > MATCH_HEADING and (oneway or abs(diff - 180) > MATCH_HEADING):
+                        continue
+                d = _seg_metres(lat, lng, json.loads(coords))
+                if d < best_d:
+                    best, best_d = seg_id, d
+            out.append(best)
+    finally:
+        db.close()
+    return out
+
+
+def segments(ids: list) -> dict:
+    db = _ro(ROADS)
+    if db is None:
+        return {}
+    try:
+        found = {}
+        for seg_id in ids[:2000]:
+            row = db.execute("SELECT free, coords FROM segments WHERE id=?", (int(seg_id),)).fetchone()
+            if row:
+                found[str(seg_id)] = {"free": row[0], "coords": json.loads(row[1])}
+        return found
+    finally:
+        db.close()
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, status: int, body: dict) -> None:
         data = json.dumps(body, ensure_ascii=False).encode()
@@ -509,6 +592,24 @@ class Handler(BaseHTTPRequestHandler):
                 with _Lease() as db:
                     count = db.execute("SELECT count(*) FROM places").fetchone()[0]
                 return self._send(200, {"ok": True, "places": count, "warm": warm_stats})
+            if url.path.startswith("/tiles/"):
+                parts = url.path.split("/")
+                if len(parts) != 6 or parts[2] != "places" or not parts[5].endswith(".pbf"):
+                    return self._send(404, {"detail": "not found"})
+                data = tile(parts[2], int(parts[3]), int(parts[4]), int(parts[5][:-4]))
+                if data is None:
+                    self.send_response(204)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-protobuf")
+                # **رأسٌ خاصٌّ لا `Content-Encoding`** — فلا يفكّه عميلُ الخلفيّة؛ والخلفيّةُ تُعلنه للهاتف كما هو
+                if data[:2] == bytes((0x1F, 0x8B)):
+                    self.send_header("X-Tile-Encoding", "gzip")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if url.path == "/search":
                 near = None
                 if args.get("lat") and args.get("lng"):
@@ -519,6 +620,20 @@ class Handler(BaseHTTPRequestHandler):
         except Busy:
             return self._send(503, {"detail": "busy"})
         except (ValueError, sqlite3.Error) as exc:
+            return self._send(400, {"detail": str(exc)[:120]})
+
+    def do_POST(self) -> None:  # noqa: N802
+        url = urlparse(self.path)
+        try:
+            length = min(int(self.headers.get("Content-Length") or 0), 2_000_000)
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if url.path == "/match":
+                return self._send(200, {"segs": match([(float(p[0]), float(p[1]), None if p[2] is None else float(p[2]))
+                                                         for p in body.get("points", [])])})
+            if url.path == "/segments":
+                return self._send(200, {"segments": segments(body.get("ids", []))})
+            return self._send(404, {"detail": "not found"})
+        except (ValueError, TypeError, IndexError, sqlite3.Error) as exc:
             return self._send(400, {"detail": str(exc)[:120]})
 
     def log_message(self, *_args) -> None:  # **لا نصَّ بحثٍ في السجلّ** — ما يكتبه الراكبُ ليس للسجلّات

@@ -122,6 +122,7 @@ celery_app = Celery(
         "app.tasks.facebook",
         "app.tasks.site_stats",
         "app.tasks.signup_countries",
+        "app.tasks.traffic",
     ],
 )
 
@@ -133,6 +134,11 @@ celery_app.conf.update(
     task_time_limit=300,
     task_soft_time_limit=240,
     beat_schedule={
+        # **الازدحامُ المجهول** (أمرُ المالك ١٨/١١ السابع ٣-٢) — يجمع ويمحو العيّنات كلَّ خمس دقائق
+        "aggregate-traffic": {
+            "task": "app.tasks.traffic.aggregate_traffic",
+            "schedule": 300.0,
+        },
         # **الوصولُ من الخارج كلَّ دقيقة** (`services/uptime.py`) — والإشعارُ بعد دقيقتين من السقوط
         "uptime-probe": {
             "task": "app.tasks.uptime.probe_public_urls",

@@ -5,8 +5,8 @@
  * **والرسمُ عبر React نفسِه** (`flushSync` في عقدةٍ منفصلة) — فلا مكتبةَ رسمٍ ثانيةٌ ولا `react-dom/server` في الحزمة.
  */
 import {
-  BedDouble, Building2, Church, GraduationCap, Hospital, Landmark, MapPin, Moon, Plane, School, ShoppingBag, ShoppingCart,
-  Stethoscope, Store, TrainFront, Utensils, type LucideIcon,
+  Banknote, BedDouble, Building2, Bus, Car, Church, Coffee, Construction, Fuel, GraduationCap, Hospital, Landmark, MapPin, Moon,
+  OctagonX, Pill, Plane, School, ShoppingBag, ShoppingCart, Stethoscope, Store, TrainFront, TriangleAlert, Utensils, type LucideIcon,
 } from "lucide-react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -30,6 +30,18 @@ export const PIN_ICONS: Record<string, LucideIcon> = {
   airport: Plane,
   pickup: MapPin,
   other: MapPin,
+  // **فئاتُ الطبقة المفتوحة** (أمرُ المالك ١٨/١١ السابع ٢-٤) — `lib/open-layers.ts`
+  pharmacy: Pill,
+  bank: Banknote,
+  fuel: Fuel,
+  cafe: Coffee,
+  transport: Bus,
+  place: MapPin,
+  // **بلاغاتُ الطريق والصيانة** (٣-٣)
+  works: Construction,
+  closed: OctagonX,
+  accident: TriangleAlert,
+  jam: Car,
 };
 
 /** فئاتٌ تُرسم اسماً وحدَه — **الحيُّ مساحةٌ والشارعُ خطّ**، ودبّوسٌ عليهما يكذب في موضعه. */
@@ -74,10 +86,17 @@ type ImageHost = {
 };
 
 /** **يسجّل أيقوناتِ الفئات الحاضرة** — ما سُجّل لا يُعاد، وفشلُ صورةٍ يترك الدائرةَ والاسمَ كما كانا (لا خطأَ يُعرض). */
-export async function addPinImages(map: ImageHost, categories: Iterable<string>, fill: string, ring: string, iconColor: string) {
+export async function addPinImages(
+  map: ImageHost,
+  categories: Iterable<string>,
+  fill: string,
+  ring: string,
+  iconColor: string,
+  prefix: string = PIN_PREFIX,
+) {
   const ratio = Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1)));
   for (const category of new Set(categories)) {
-    const id = PIN_PREFIX + category;
+    const id = prefix + category;
     const Icon = PIN_ICONS[category];
     if (!Icon || map.hasImage(id)) continue;
     try {

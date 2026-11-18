@@ -688,6 +688,10 @@ export type FeatureKey =
   | "sms_autofill"
   | "voice_ride_phrase"
   | "last_ride_mode"
+  | "map_open_places"
+  | "map_place_suggestions"
+  | "map_live_traffic"
+  | "map_road_reports"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -4006,4 +4010,36 @@ export interface CardKindReport {
 export interface InvoiceSettings {
   invoice_seller_name: string | null;
   invoice_seller_tax_number: string | null;
+}
+
+/** **مراجعةُ الخريطة** (أمرُ المالك ١٨/١١ السابع) — `backend/app/schemas/map_community.py` */
+export interface MapSuggestion {
+  id: string;
+  country_code: string;
+  kind: "add" | "fix";
+  name_ar: string;
+  name_en: string | null;
+  category: string;
+  lat: number;
+  lng: number;
+  current_name: string | null;
+  note: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  reviewed_at: string | null;
+  review_note: string | null;
+  map_place_id: string | null;
+}
+
+export interface RoadReportRow {
+  id: string;
+  kind: "works" | "closed" | "accident" | "jam";
+  lat: number;
+  lng: number;
+  confirmations: number;
+  expires_at: string;
+  country_code: string;
+  approved: boolean;
+  status: "active" | "removed";
+  created_at: string;
 }

@@ -24,6 +24,8 @@ MAP_PLACE_CATEGORIES: tuple[str, ...] = tuple(category.value for category in Map
 
 SOURCE_OWNER = "owner"
 SOURCE_OSM = "osm"
+#: **اقتراحٌ من مستخدمٍ وافق عليه المشرف** (أمرُ المالك ١٨/١١ السابع ٢-٣) — يُرسم ويُبحث كأماكن المالك
+SOURCE_COMMUNITY = "community"
 
 
 def _categories_check() -> str:
@@ -36,7 +38,7 @@ class MapPlace(UUIDMixin, TimestampMixin, Base):
         CheckConstraint(_categories_check(), name="map_place_category_valid"),
         CheckConstraint("lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180", name="map_place_point_valid"),
         CheckConstraint("char_length(btrim(name_ar)) >= 2", name="map_place_name_ar_present"),
-        CheckConstraint("source IN ('owner', 'osm')", name="map_place_source_valid"),
+        CheckConstraint("source IN ('owner', 'osm', 'community')", name="map_place_source_valid"),
         CheckConstraint("(source = 'osm') = (osm_ref IS NOT NULL)", name="map_place_osm_ref_with_source"),
         UniqueConstraint("osm_ref", name="uq_map_places_osm_ref"),
     )
@@ -55,7 +57,8 @@ class MapPlace(UUIDMixin, TimestampMixin, Base):
     )
     #: **من أين جاء** (§٧١-ح/٤): `owner` أضافه المالكُ بيده — يُرسم ويتقدّم البحث؛ `osm` مستوردٌ من OpenStreetMap — **للبحث**،
     #: ويراجعه المالكُ ويعدّله ويخفيه. **والخريطةُ لا ترسم المستورد**: أسماءُ OSM نفسُها في خريطة المزوّد أصلاً.
-    source: Mapped[str] = mapped_column(String(8), nullable=False, default=SOURCE_OWNER, server_default=text("'owner'"))
+    # **١٦ لا ٨** (`0175`): «community» تسعةُ أحرف — قاسه أوّلُ تشغيلٍ لاختبار الاقتراحات
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default=SOURCE_OWNER, server_default=text("'owner'"))
     #: «node/123» — **أصلُه في OSM**؛ فريدٌ فلا يتكرّر مكانٌ باستيرادٍ ثانٍ
     osm_ref: Mapped[str | None] = mapped_column(String(32), nullable=True)
     #: **أسماءٌ أخرى يُكتب بها المكان** (قرارُ المالك ٢٠٢٦-١١-١٥: «ستي مول» = «سيتي مول») — للبحث وحدَه، لا تُرسم

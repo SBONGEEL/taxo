@@ -175,6 +175,44 @@ code, body = _get(_port, "/search?q=%D9%85%D9%83%D8%A9%20%D9%85%D9%88%D9%84&cc=J
 check("بعد التسخين: البحثُ يجيب", code == 200 and any(i["name"] == "مكة مول" for i in body["items"]))
 code, body = _get(_port, "/health")
 check("وبعده: الصحّةُ تجيب بأرقام التسخين", code == 200 and "queries_s" in body.get("warm", {}))
+
+# ── الخريطةُ المفتوحة (أمرُ المالك ١٨/١١ السابع): مقاطعُ الطرق للمطابقة، والمربّعاتُ من mbtiles
+import gzip as _gzip
+import json as _j
+
+_roads = sqlite3.connect(srv.ROADS)
+_roads.executescript("""
+CREATE TABLE segments(id INTEGER PRIMARY KEY, cc TEXT, way INTEGER, cls TEXT, name TEXT, free INTEGER, oneway INTEGER, b0 REAL, b1 REAL, coords TEXT);
+CREATE VIRTUAL TABLE seg_box USING rtree(id, x0, x1, y0, y1);
+""")
+# طريقٌ شرقيٌّ باتجاهٍ واحد (٩٠°) على خطِّ عرض 32.0، وطريقٌ شماليٌّ باتجاهين بعده بمئتي متر
+_roads.execute("INSERT INTO segments VALUES (1,'LY',10,'primary','الشط',60,1,90,0,?)", (_j.dumps([[13.000, 32.0], [13.001, 32.0]]),))
+_roads.execute("INSERT INTO seg_box VALUES (1, 13.000, 13.001, 32.0, 32.0)")
+_roads.execute("INSERT INTO segments VALUES (2,'LY',11,'secondary','',50,0,0,0,?)", (_j.dumps([[13.003, 31.999], [13.003, 32.001]]),))
+_roads.execute("INSERT INTO seg_box VALUES (2, 13.003, 13.003, 31.999, 32.001)")
+_roads.commit()
+_roads.close()
+got = srv.match([(32.0001, 13.0005, 92.0), (32.0001, 13.0005, 270.0), (32.0, 13.0031, 180.0), (32.01, 13.0, None)])
+check("المطابقةُ: نقطةٌ على الطريق باتجاهه ⇐ مقطعُه", got[0] == 1)
+check("ونقطةٌ عكسَ طريقٍ باتجاهٍ واحد ⇐ لا مقطع", got[1] is None)
+check("وطريقٌ باتجاهين يُطابَق عكسَ رسمه", got[2] == 2)
+check("وما بعُد أكثرَ من ثلاثين متراً ⇐ لا مقطع", got[3] is None)
+check("والمقاطعُ تعود بهندستها وسرعتها الحرّة", srv.segments([1, 99]) == {"1": {"free": 60, "coords": [[13.0, 32.0], [13.001, 32.0]]}})
+
+_mb = sqlite3.connect(os.path.join(srv.DATA_DIR, "places.mbtiles"))
+_mb.execute("CREATE TABLE tiles(zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_data BLOB)")
+_mb.execute("INSERT INTO tiles VALUES (14, 8780, ?, ?)", ((1 << 14) - 1 - 6512, _gzip.compress(b"pbf")))
+_mb.commit()
+_mb.close()
+check("المربّعُ يُقرأ بعكس الصفّ (TMS)", _gzip.decompress(srv.tile("places", 14, 8780, 6512)) == b"pbf")
+check("ومربّعٌ غائبٌ ⇐ لا شيء", srv.tile("places", 14, 8780, 6513) is None)
+with _ureq.urlopen(f"http://127.0.0.1:{_port}/tiles/places/14/8780/6512.pbf", timeout=5) as r:
+    check("وعبر HTTP: مضغوطاً كما بُني، برأس X-Tile-Encoding لا Content-Encoding",
+          r.headers.get("X-Tile-Encoding") == "gzip" and r.headers.get("Content-Encoding") is None and _gzip.decompress(r.read()) == b"pbf")
+_req = _ureq.Request(f"http://127.0.0.1:{_port}/match", data=_j.dumps({"points": [[32.0001, 13.0005, 92]]}).encode(), method="POST")
+with _ureq.urlopen(_req, timeout=5) as r:
+    check("و/match عبر HTTP", _j.loads(r.read()) == {"segs": [1]})
+
 _httpd.shutdown()
 
 sys.exit(1 if failures else 0)

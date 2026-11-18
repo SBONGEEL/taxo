@@ -85,6 +85,8 @@ import {
 import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
 import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 import { SheetModalT2 } from "@/screens/t2/MoneyT2"; import { language, tr } from "@/lib/i18n";
+import { useOpenFlags } from "@/lib/open-layers";
+import { PlaceSuggestSheet, type SuggestTarget } from "@/components/map/PlaceSuggestSheet";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -241,7 +243,27 @@ export function HomeScreen() {
   // تبقى `null` هنا** (فلا يُرسم دبوسُها) **وتُرسل نقطةُ الانطلاق مكانَها** بعقد الخلفية (`target` أدناه)
   const [hourlyMode, setHourlyMode] = useState(false);
   // **مكانٌ لُمس على الخريطة** (أمرُ المالك ١٨/١١ الثاني §٣/٣) — يُعرض اسمُه وخياران، ولا يُختار شيءٌ قبل أن يضغط
-  const [tappedPlace, setTappedPlace] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [tappedPlace, setTappedPlace] = useState<{ name: string; lat: number; lng: number; kind?: string } | null>(null);
+  // **الخريطةُ المفتوحة** (أمرُ المالك ١٨/١١ السابع): مفاتيحُ السوق، وطبقةُ الازدحام باختيار الراكب (تُحفظ في جهازه)، وورقةُ الاقتراح
+  const openFlags = useOpenFlags();
+  const [liveTraffic, setLiveTraffic] = useState(() => {
+    try {
+      return localStorage.getItem("taxo.map.traffic") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [suggestTarget, setSuggestTarget] = useState<SuggestTarget | null>(null);
+  function toggleTraffic() {
+    setLiveTraffic((on) => {
+      try {
+        localStorage.setItem("taxo.map.traffic", on ? "0" : "1");
+      } catch {
+        // تخزينٌ محجوب — يبقى الاختيارُ لهذه الجلسة
+      }
+      return !on;
+    });
+  }
   const [hourlyDraft, setHourlyDraft] = useState<RideHourly>(HOURLY_START);
   const endHourly = () => {
     setHourlyMode(false);
@@ -884,6 +906,7 @@ export function HomeScreen() {
         // **شعارُ Mapbox ونسبتُه فوق الورقة الملتصقة لا عليها** — شرطُ الرخصة يبقى مرئيّاً على الخريطة
         controlsInset={sheetInset}
         onPlaceTap={tracking || picking ? undefined : setTappedPlace}
+        liveTraffic={openFlags.traffic && liveTraffic}
         onMoveEnd={(point) => {
           setCenter(point);
           // بلا رمزٍ لا نداء — كما في `describe` بالضبط
@@ -1012,6 +1035,21 @@ export function HomeScreen() {
     onOpenRides: () => navigate("/rides"),
     onRepeat: repeatRide,
     map: mapNode,
+    mapTools:
+      openFlags.traffic || openFlags.suggestions ? (
+        <>
+          {openFlags.traffic ? (
+            <button type="button" className={liveTraffic ? "t2-map-tool on" : "t2-map-tool"} aria-pressed={liveTraffic} onClick={toggleTraffic}>
+              {tr("الازدحام")}
+            </button>
+          ) : null}
+          {openFlags.suggestions && center ? (
+            <button type="button" className="t2-map-tool" onClick={() => setSuggestTarget({ kind: "add", lat: center.lat, lng: center.lng })}>
+              {tr("أضف مكاناً")}
+            </button>
+          ) : null}
+        </>
+      ) : null,
     area,
     onChangePickup: () => (searchV2 ? openSearch("pickup") : setPhase("pick-pickup")),
     onWomenRide: () => {
@@ -1258,15 +1296,29 @@ export function HomeScreen() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
+      {suggestTarget ? <PlaceSuggestSheet target={suggestTarget} onClose={() => setSuggestTarget(null)} /> : null}
       {tappedPlace ? (
         <SheetModalT2 onClose={() => setTappedPlace(null)}>
           <div className="t2-picker-title">{tappedPlace.name}</div>
+          {tappedPlace.kind ? <div className="t2-place-kind">{tr(tappedPlace.kind)}</div> : null}
           <button type="button" className="t2-button primary" onClick={() => choosePlaceAs("dropoff")}>
             {tr("اذهب إلى هنا")}
           </button>
           <button type="button" className="t2-button secondary" onClick={() => choosePlaceAs("pickup")}>
             {tr("انطلق من هنا")}
           </button>
+          {openFlags.suggestions ? (
+            <button
+              type="button"
+              className="t2-button secondary"
+              onClick={() => {
+                setSuggestTarget({ kind: "fix", lat: tappedPlace.lat, lng: tappedPlace.lng, currentName: tappedPlace.name });
+                setTappedPlace(null);
+              }}
+            >
+              {tr("اقترح تصحيحاً")}
+            </button>
+          ) : null}
         </SheetModalT2>
       ) : null}
       {browsing ? (

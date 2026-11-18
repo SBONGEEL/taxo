@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.enums import CountryCode, FeatureKey
-from app.models.map_place import SOURCE_OWNER, MapPlace
+from app.models.map_place import SOURCE_COMMUNITY, SOURCE_OWNER, MapPlace
 from app.services import facilities, settings_service
 
 #: سقفُ نتائج البحث — ما يتّسع له رأسُ القائمة فوق نتائج المزوّد
@@ -70,7 +70,7 @@ async def visible(session: AsyncSession, country: CountryCode, *, for_map: bool 
         .order_by(MapPlace.name_ar)
     )
     if for_map:
-        query = query.where(MapPlace.source == SOURCE_OWNER)
+        query = query.where(MapPlace.source.in_((SOURCE_OWNER, SOURCE_COMMUNITY)))
     rows = await session.scalars(query)
     spots = [
         Spot(row.id, row.name_ar, row.name_en, row.category, row.lat, row.lng, "place", tuple(row.aliases or ()))

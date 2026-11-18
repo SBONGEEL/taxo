@@ -91,6 +91,8 @@ export interface RiderHomeProps {
   onRepeat: (ride: Ride) => void;
   /** الخريطةُ بطاقةً — تُمرَّر كما هي فلا تُبنى مرّتين. */
   map: ReactNode;
+  /** **أزرارُ الخريطة المفتوحة** (أمرُ المالك ١٨/١١ السابع): «الازدحام» و«أضف مكاناً» — تظهر والخريطةُ مفتوحةٌ وحدَها */
+  mapTools?: ReactNode;
   /** اسمُ منطقة نقطة الانطلاق لشارة الرأس (`null` = لا شارة)، وفتحُ دبوس الانطلاق من الشارة، وبدءُ الطلب بـ«كبتنة فقط» (§٦١-د). */
   area?: string | null;
   onChangePickup?: () => void;
@@ -122,10 +124,12 @@ function MapCardT2({
   map,
   nearby,
   onAskDestination,
+  tools,
 }: {
   map: RiderHomeProps["map"];
   nearby: number;
   onAskDestination: () => void;
+  tools?: ReactNode;
 }) {
   const [open, setOpen] = useExpandable();
   return (
@@ -143,6 +147,7 @@ function MapCardT2({
         </>
       ) : (
         <>
+          {tools ? <div className="t2-map-tools">{tools}</div> : null}
           <button type="button" className="t2-home-close" onClick={() => setOpen(false)} aria-label={tr("إغلاق الخريطة")}>
             <Icon name="close" />
           </button>
@@ -238,6 +243,7 @@ export function RiderHomeT2({
   onPickOnMap,
   banners,
   map,
+  mapTools,
   area = null,
   onChangePickup,
   onWomenRide,
@@ -372,7 +378,7 @@ export function RiderHomeT2({
       ) : null}
 
       <div className="t2-home-grid">
-        <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} />
+        <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} tools={mapTools} />
         <button
           type="button"
           className="t2-home-ride"
