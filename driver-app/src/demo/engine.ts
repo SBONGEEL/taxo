@@ -620,7 +620,10 @@ export function demoRequest(
   if (is("GET", /^\/rides\/([^/]+)\/(offer-route|approach)$/)) {
     const ride = findRide(m![1]);
     const target = ride ? (m![2] === "approach" && ride.status !== "in_progress" ? ride.pickup : ride.dropoff) : position;
-    return ok({ points: [[position.lng, position.lat], [target.lng, target.lat]], duration_min: 3, distance_km: 1.1 });
+    // **`steps` في العقد** (`ApproachRoute`) — غابت فقرأت الرحلةُ `undefined.length` وسقطت إلى «حدث خطأ في هذه الشاشة» حين صار للعرض
+    // موقع (لقطاتُ 44226293775). وكان غيابُ الموقع في العرض يستر غيابَها: الشرطُ `!position` يخرج قبل أن تُقرأ. **وفارغةٌ لا مخترعة**:
+    // خطٌّ مستقيمٌ بين نقطتين لا منعطفاتِ فيه يُعلَن عنها
+    return ok({ points: [[position.lng, position.lat], [target.lng, target.lat]], steps: [], duration_min: 3, distance_km: 1.1 });
   }
   if (is("GET", /^\/rides\/([^/]+)\/route$/)) {
     const ride = findRide(m![1]);
