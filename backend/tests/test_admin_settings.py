@@ -195,7 +195,9 @@ async def test_commission_is_enabled_per_country(
     listed = await client.get("/admin/settings/commission", headers=admin_headers)
     by_country = {row["country_code"]: row for row in listed.json()}
     assert by_country["JO"]["commission_enabled"] is True
-    assert "LY" not in by_country  # لم تُنشأ لدولة لم تُعدَّل
+    # **ودولةٌ لم تُعدَّل تُعرض بما يسري فيها، بلا صفٍّ يُخترع** (قرارُ المالك ٢٠٢٦-١١-١٨: صفٌّ غائبٌ أخفى عمولةَ الجزائر)
+    assert by_country["LY"]["commission_enabled"] is False and by_country["LY"]["id"] is None
+    assert by_country["LY"]["commission_percent"] == "0.00"
 
 
 async def test_commission_has_no_feature_flag_counterpart(
