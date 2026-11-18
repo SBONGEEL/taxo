@@ -69,6 +69,27 @@
     var h = window.visualViewport ? window.visualViewport.height : innerHeight;
     return r.bottom > 4 && r.top < h - 4 && r.right > 4 && r.left < innerWidth - 4;
   }
+  /** **أخطاءُ الصفحة تُحفظ لتُكتب تحت الصفّ الأحمر** — شاشةُ «حدث خطأ في هذه الشاشة» بعد «قبول» لم يكن لها أثرٌ في logcat ولا في
+   *  سجلّ iPhone (44223334154)، فلا يُعرف سببُها إلا من الصفحة نفسِها. حدُّ الخطأ في React يكتب الخطأ بـ`console.error`. */
+  var errors = [];
+  function keepError(text) {
+    errors.push(String(text).replace(/\s+/g, " ").slice(0, 220));
+    if (errors.length > 4) errors.shift();
+  }
+  var consoleError = console.error;
+  console.error = function () {
+    try {
+      keepError(Array.prototype.map.call(arguments, function (a) {
+        return a && a.stack ? a.message + " @ " + String(a.stack).split("\n").slice(1, 3).join(" ") : String(a);
+      }).join(" "));
+    } catch (e) { /* لا يُسقط التسجيلُ الصفحة */ }
+    return consoleError.apply(console, arguments);
+  };
+  window.addEventListener("error", function (event) { keepError("onerror: " + event.message + " @ " + (event.filename || "") + ":" + event.lineno); });
+  window.addEventListener("unhandledrejection", function (event) { keepError("rejection: " + (event.reason && event.reason.message || event.reason)); });
+  function lastErrors() {
+    return errors.length ? " — أخطاءُ الصفحة: " + errors.slice(-2).join(" ‖ ") : "";
+  }
   /** **ما يُرى بدلَ العلامة** — عنوانٌ أو أوّلُ نصٍّ ظاهر، ليُكتب تحت الصفّ الأحمر فيُعرف أين وقف التطبيق. */
   function seen() {
     var heads = Array.prototype.filter.call(document.querySelectorAll("h1,h2,[role=heading],[role=status],button"), function (el) {
@@ -207,7 +228,7 @@
           var goNow = goText();
           reply(cmd.id, false, "لا علامةَ لـ«" + cmd.any.map(function (m) { return m.text || m.selector; }).join("» أو «") + "»" +
             (offView ? " (وُجد «" + offView + "» خارج الشاشة)" : "") +
-            (goAtStart !== null || goNow !== null ? " — الزرّ أوّلاً: «" + goAtStart + "» وآخراً: «" + goNow + "»" : "") + " — يُرى: " + seen());
+            (goAtStart !== null || goNow !== null ? " — الزرّ أوّلاً: «" + goAtStart + "» وآخراً: «" + goNow + "»" : "") + " — يُرى: " + seen() + lastErrors());
         };
         return look();
       }
