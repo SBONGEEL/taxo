@@ -63,10 +63,10 @@ async def test_signed_photo_door_matches_the_app_door_and_nothing_else(
     await bring_online(client, driver)
     rider = await rider_session(client)
     ride = await accepted_ride(client, rider["headers"], driver)
-    token = create_push_photo_token(ride["id"], driver["driver_id"])
+    signed = create_push_photo_token(ride["id"], driver["driver_id"])
 
     via_app = await client.get(f"/rides/{ride['id']}/driver/photo", headers=rider["headers"])
-    via_push = await client.get(f"/rides/{ride['id']}/driver/photo/push", params={"t": token})
+    via_push = await client.get(f"/rides/{ride['id']}/driver/photo/push", params={"t": signed})
     assert via_push.status_code == 200
     assert via_push.content == via_app.content
     assert via_push.headers["cache-control"] == "private, no-store"
@@ -80,4 +80,4 @@ async def test_signed_photo_door_matches_the_app_door_and_nothing_else(
     assert (await client.get(f"/rides/{ride['id']}/driver/photo/push", params={"t": access})).status_code == 404
 
     # ورمزُ الصورة لا يصلح رمزَ دخول
-    assert (await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})).status_code == 401
+    assert (await client.get("/auth/me", headers={"Authorization": f"Bearer {signed}"})).status_code == 401

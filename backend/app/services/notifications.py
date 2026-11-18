@@ -310,10 +310,10 @@ async def _rich_driver_data(session: AsyncSession, ride: Ride) -> dict[str, str]
     except Exception:  # pragma: no cover - يعتمد على عطل قاعدة
         logger.exception("تعذّر جمعُ بطاقة الكبتن للإشعار الغنيّ %s", ride.id)
         return {}
-    token = create_push_photo_token(str(ride.id), str(ride.driver_id))
+    signed = create_push_photo_token(str(ride.id), str(ride.driver_id))
     data = {
         "driver_name": name or "",
-        "photo_url": f"{settings.public_api_base_url.rstrip('/')}/rides/{ride.id}/driver/photo/push?t={token}",
+        "photo_url": f"{settings.public_api_base_url.rstrip('/')}/rides/{ride.id}/driver/photo/push?t={signed}",
     }
     if vehicle is not None:
         data["plate"] = vehicle.plate_number
