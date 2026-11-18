@@ -15,7 +15,7 @@ import { createPlace, deletePlace, placeSearch, searchMapPlaces } from "@/api/en
 import { mergeSearch, searchPlaces, type Place } from "@/lib/geocode";
 import { useMapPlaces } from "@/lib/map-labels";
 import { useFeature } from "@/lib/config";
-import { listen, VOICE_FLAG, voiceAvailable } from "@/lib/voice-input";
+import { listen, VOICE_FLAG, VOICE_PHRASE_FLAG, voiceAvailable } from "@/lib/voice-input";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import {
@@ -130,11 +130,13 @@ export function PlaceSearchV2({
   const viewport = useVisibleViewport(open);
 
   const voiceOn = useFeature(country, VOICE_FLAG) && voiceAvailable();
+  // **«اطلب رحلة إلى …» تُقرأ وجهةً** (§١٠٣ C/36) — والراكبُ يختار ويؤكّد كما اليوم
+  const voicePhrase = useFeature(country, VOICE_PHRASE_FLAG);
   const [listening, setListening] = useState(false);
   const speak = async () => {
     setListening(true);
     try {
-      const text = await listen(country, title);
+      const text = await listen(country, title, voicePhrase);
       if (text) setQuery(text);
     } catch {
       // لا خدمةَ تعرّفٍ في الهاتف — الكتابةُ باقية

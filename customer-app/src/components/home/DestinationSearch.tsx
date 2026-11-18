@@ -19,7 +19,7 @@ import { placeSearch, searchMapPlaces } from "@/api/endpoints";
 import { mergeSearch, searchPlaces, type Place } from "@/lib/geocode";
 import { useMapPlaces } from "@/lib/map-labels";
 import { useFeature } from "@/lib/config";
-import { listen, VOICE_FLAG, voiceAvailable } from "@/lib/voice-input";
+import { listen, VOICE_FLAG, VOICE_PHRASE_FLAG, voiceAvailable } from "@/lib/voice-input";
 import { usePlaces } from "@/lib/places";
 import { DrawerT2 } from "@/screens/t2/DrawerT2";
 import { PlaceSearchV2, type PlaceSearchProps } from "@/components/home/PlaceSearchV2";
@@ -80,12 +80,14 @@ function DestinationSearchClassic({
   const typing = query.trim().length >= 2;
   // **الطلبُ بالصوت** (البند ١٠) — مفتاحُ السوق وغلافٌ يحمل الملحق
   const voiceOn = useFeature(country, VOICE_FLAG) && voiceAvailable();
+  // **«اطلب رحلة إلى …» تُقرأ وجهةً** (§١٠٣ C/36) — والراكبُ يختار ويؤكّد كما اليوم
+  const voicePhrase = useFeature(country, VOICE_PHRASE_FLAG);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState<string | null>(null);
   const speak = async () => {
     setListening(true);
     try {
-      const text = await listen(country, tr("إلى أين؟"));
+      const text = await listen(country, tr("إلى أين؟"), voicePhrase);
       if (text) {
         setQuery(text);
         setHeard(text);

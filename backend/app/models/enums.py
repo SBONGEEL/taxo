@@ -1046,6 +1046,8 @@ class FeatureKey(StrEnum):
     WEAK_NETWORK_RETRY = "weak_network_retry"
     # **ملءُ رمز التحقّق من الرسالة القصيرة** (SPEC §١٠٣/23) — «SMS User Consent» بلا إذن، التطبيقان
     SMS_AUTOFILL = "sms_autofill"
+    # **«اطلب رحلة إلى سيتي مول» تُقرأ وجهةً** (SPEC §١٠٣/36) — فوق الطلب بالصوت القائم
+    VOICE_RIDE_PHRASE = "voice_ride_phrase"
 
 
 class MapPlaceCategory(StrEnum):
