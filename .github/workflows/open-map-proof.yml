@@ -1,0 +1,156 @@
+# **إثباتُ الخريطة المفتوحة داخل غلاف أندرويد، ومنتقي الدول** (أمرُ المالك ٢٠٢٦-١١-١٨ الثالث، البندان ١ و٣).
+#
+# **لا يخاطب الإنتاجَ بحساب**: الخلفيةُ والقاعدةُ تُقامان هنا، والحسابان حسابا تجربةٍ من `provision_test_accounts` في هذه القاعدة
+# (رمزاهما في ملفّين لا يُطبعان ولا يُرفعان). **والإنتاجُ يُقرأ مرّةً واحدةً بلا حساب**: صفحةُ التسجيل العامّة تُفتح ورقةُ دولها
+# وتُصوَّر — **ولا تُنقر فيها دولة**، فالنقرةُ محاولةُ تسجيلٍ تُعدّ هناك.
+#
+# **الغلافُ من وسم `v2.0.1118`** — الشيفرةُ الأصليّةُ التي يحملها الناسُ اليوم — **والواجهتان من هذا الإيداع**، كما يجتمعان على
+# هواتفهم. **وفي الغلاف رقعتان للتجربة وحدَها**: عنوانُه `http://localhost:517x` (عبر `adb reverse`) والنصُّ الصريحُ مسموحٌ
+# لأجله. **ولا تمسّان الرسم**: المحرّكُ في WebView النظام، والرقعتان في عنوان التحميل وحده.
+name: إثباتُ الخريطة المفتوحة
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    name: المحاكي · الخريطة المفتوحة والمنتقي
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: الغلافان من v2.0.1118
+        run: |
+          set -euo pipefail
+          git worktree add shell1118 v2.0.1118
+          cd shell1118
+          python3 - <<'PY'
+          import json, pathlib, re
+          p = pathlib.Path("channels.json"); t = json.loads(p.read_text(encoding="utf-8"))
+          t["channels"]["test"]["apps"]["customer-app"]["shellUrl"] = "http://localhost:5173"
+          t["channels"]["test"]["apps"]["driver-app"]["shellUrl"] = "http://localhost:5174"
+          p.write_text(json.dumps(t, ensure_ascii=False, indent=2), encoding="utf-8")
+          for app in ("customer-app", "driver-app"):
+              c = pathlib.Path(app, "capacitor.config.ts"); s = c.read_text(encoding="utf-8")
+              assert "cleartext: false" in s, app
+              c.write_text(s.replace("cleartext: false", "cleartext: true"), encoding="utf-8")
+              m = pathlib.Path(app, "android/app/src/main/AndroidManifest.xml"); x = m.read_text(encoding="utf-8")
+              if "usesCleartextTraffic" not in x:
+                  x = re.sub(r"<application\b", '<application android:usesCleartextTraffic="true"', x, count=1)
+              m.write_text(x, encoding="utf-8")
+          print("✓ رقعتا التجربة")
+          PY
+          mkdir -p ../apk
+          for app in customer-app driver-app; do
+            (cd "$app" && npm ci --silent && mkdir -p dist && printf '<!doctype html><title>shell</title>\n' > dist/index.html \
+              && TAXO_CHANNEL=test npx cap sync android && cd android && ./gradlew --no-daemon -q assembleTrialDebug)
+            cp "$app"/android/app/build/outputs/apk/trial/debug/*.apk "../apk/$app.apk"
+          done
+          ls -la ../apk
+
+      - name: الواجهتان من هذا الإيداع
+        run: |
+          set -euo pipefail
+          for app in customer-app driver-app; do
+            (cd "$app" && npm ci --silent && VITE_API_BASE_URL=http://localhost:8001 npx vite build --logLevel warn)
+          done
+
+      - uses: docker/setup-buildx-action@v3
+      - name: صورةُ الخلفية
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: taxo-backend:latest
+          cache-from: type=gha,scope=backend-image
+
+      - name: الخلفيةُ والقاعدةُ والحسابان
+        env:
+          TAXO_ENV_FILE: .env
+        run: |
+          set -euo pipefail
+          bash scripts/ci_env.sh
+          bash scripts/ci_db_up.sh
+          RUN="docker compose --env-file .env run --rm --no-deps backend"
+          $RUN alembic upgrade head | tail -1
+          $RUN python -m scripts.seed | tail -3 || echo "· البذرُ أخرج غيرَ صفر — يُكمَل ويُقاس ما بعده"
+          mkdir -p ci-secrets && chmod 777 ci-secrets
+          docker compose --env-file .env run --rm --no-deps --user "$(id -u):$(id -g)" -v "$PWD/ci-secrets:/out" backend \
+            python -m scripts.provision_test_accounts --secrets-file /out/test-accounts.env
+          $RUN python -m scripts.ci_open_map_setup
+          docker compose --env-file .env up -d --no-deps backend
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1 && break; sleep 2; done
+          curl -fsS http://127.0.0.1:8001/health
+          set +x
+          . ci-secrets/test-accounts.env
+          login() { # login <phone> <secret> <app> <file>
+            curl -fsS -X POST http://127.0.0.1:8001/api/v1/auth/login -H 'Content-Type: application/json' \
+              -d "$(jq -n --arg p "$1" --arg w "$2" --arg a "$3" '{phone:$p,password:$w,app:$a,country_code:"JO"}')" \
+              | jq -r '.tokens.access_token, .tokens.refresh_token' > "$4"
+            [ "$(grep -c . "$4")" = 2 ] && [ "$(head -1 "$4")" != null ] && echo "✓ دخولُ $3"
+          }
+          login "$TAXO_TEST_RIDER_PHONE" "$TAXO_TEST_RIDER_PASSWORD" rider ci-secrets/rider.session
+          login "$TAXO_TEST_CAPTAIN_PHONE" "$TAXO_TEST_CAPTAIN_PASSWORD" driver ci-secrets/driver.session
+
+      - name: خدمةُ الواجهتين
+        run: |
+          (cd customer-app && nohup npx vite preview --host 127.0.0.1 --port 5173 --strictPort > ../preview-rider.log 2>&1 &)
+          (cd driver-app && nohup npx vite preview --host 127.0.0.1 --port 5174 --strictPort > ../preview-driver.log 2>&1 &)
+          for p in 5173 5174; do for i in $(seq 1 30); do curl -fsS "http://127.0.0.1:$p/" >/dev/null && break; sleep 1; done; done
+          echo "✓ الواجهتان تُخدمان"
+
+      - name: صورُ المنتقي (قاعدةُ CI بالنقر، والإنتاجُ بالنظر)
+        run: |
+          set -euo pipefail
+          mkdir -p proof /tmp/pw && cp scripts/picker-shots.mjs /tmp/pw/
+          cd /tmp/pw && npm init -y >/dev/null && npm i --silent playwright@1.49.1 && npx playwright install --with-deps chromium >/dev/null
+          node picker-shots.mjs http://127.0.0.1:5173 "$GITHUB_WORKSPACE/proof" click > "$GITHUB_WORKSPACE/proof/picker-ci.json" || echo "✗ منتقي CI"
+          node picker-shots.mjs https://app.tajora.ly "$GITHUB_WORKSPACE/proof" look > "$GITHUB_WORKSPACE/proof/picker-prod.json" || echo "✗ منتقي الإنتاج"
+          ls "$GITHUB_WORKSPACE/proof"
+
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: المحاكي — نهاراً وليلاً، للتطبيقين
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/android-emulator-open-map.sh apk proof ci-secrets/rider.session ci-secrets/driver.session
+
+      - name: سجلُّ الخلفية
+        if: always()
+        run: docker compose --env-file .env logs --no-color backend 2>/dev/null | grep -E '" (4|5)[0-9]{2} |Traceback' | tail -40 > proof/backend-errors.txt || true
+
+      - name: الصورُ والسجلّات
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-map-proof
+          path: |
+            proof/
+            preview-*.log
+          retention-days: 14
