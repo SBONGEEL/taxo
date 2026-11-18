@@ -60,6 +60,13 @@ class Handler(osmium.SimpleHandler):
         ar, en, alt = names(tags)
         if not alt:
             return
+        # **المستشفى حكوميٌّ أم خاصّ** (أمرُ المالك ١٨/١١ السابع ٢-٢) — من `operator:type` وحدَه، وما لا وسمَ له لا يُوصف
+        if extra_kind in ("amenity=hospital", "healthcare=hospital"):
+            op = (tags.get("operator:type") or "").lower()
+            if op in ("government", "public", "state", "military"):
+                extra_kind += " op=public"
+            elif op in ("private", "private_non_profit", "charitable", "ngo", "religious"):
+                extra_kind += " op=private"
         self.rows.append((self.cc, kind, extra_kind, ar, en, alt, lat, lng, rank))
 
     def _classify(self, tags):

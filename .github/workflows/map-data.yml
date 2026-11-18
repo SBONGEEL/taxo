@@ -1,0 +1,79 @@
+# **طبقاتُ الخريطة المفتوحة تُبنى هنا** (أمرُ المالك ٢٠٢٦-١١-١٨ السابع، المهمّتان ٢ و٣؛ `design/MAP-OPEN-DATA-TRAFFIC.md`)
+#
+# شهريّاً وعند الطلب: OSM (Geofabrik) + Overture (أماكنُ ومبانٍ) ⇐ `places.sqlite` (البحث) و`places.mbtiles` (الخريطة) و`roads.sqlite`
+# (مطابقةُ الازدحام) و`stats.json` (أرقامُ كلِّ مدينة). **والأثرُ يُنزَّل ويُنقل إلى الخادم خطوةً في الرفع** — لا تلقائيّاً، فلا يتغيّر
+# الإنتاجُ بلا بوّابة. **ولا سرَّ هنا ولا خطابَ للإنتاج.**
+name: map-data
+
+on:
+  workflow_dispatch:
+    inputs:
+      overture_release:
+        description: "إصدار Overture (فارغٌ = الأحدث)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "17 3 3 * *"   # الثالثُ من كلِّ شهر — بعد إصدار Overture الشهريّ
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: بناءُ طبقات الخريطة
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: الأدوات
+        run: |
+          python -m pip install --quiet "duckdb==1.3.2" "osmium==4.0.2"
+          sudo apt-get update -qq && sudo apt-get install -y -qq tippecanoe sqlite3 || {
+            git clone --depth 1 --branch 2.79.0 https://github.com/felt/tippecanoe.git /tmp/tc && make -C /tmp/tc -j4 && sudo make -C /tmp/tc install; }
+          tippecanoe --version
+      - name: مستخرجاتُ OSM (Geofabrik)
+        run: |
+          mkdir -p work/pbf
+          curl -fsSL -o work/pbf/jordan.osm.pbf  https://download.geofabrik.de/asia/jordan-latest.osm.pbf
+          curl -fsSL -o work/pbf/algeria.osm.pbf https://download.geofabrik.de/africa/algeria-latest.osm.pbf
+          curl -fsSL -o work/pbf/libya.osm.pbf   https://download.geofabrik.de/africa/libya-latest.osm.pbf
+          ls -la work/pbf
+      - name: Overture (أماكنُ الدول الثلاث ومباني المدن الثماني)
+        run: python -I places-search/fetch_overture.py work ${{ inputs.overture_release }}
+      - name: فهرسُ البحث
+        run: |
+          python -I places-search/build_index.py work
+          python -I places-search/postprocess.py work/places.sqlite places-search
+      - name: طبقاتُ الخريطة ومقاطعُ الطرق
+        run: python -I places-search/build_map_data.py work
+      - name: المربّعات (tippecanoe)
+        run: |
+          tippecanoe -o work/places.mbtiles -Z11 -z16 --force --no-tile-size-limit --drop-densest-as-needed \
+            --extend-zooms-if-still-dropping -n "TAXO open places" \
+            -L places:work/places.geojsonl -L works:work/works.geojsonl -L buildings:work/buildings.geojsonl
+          ls -la work/*.mbtiles work/*.sqlite
+      - name: الأرقام
+        run: |
+          cat work/stats.json
+          echo "release=$(cat work/overture_release.txt)" >> "$GITHUB_STEP_SUMMARY"
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s = json.load(open("work/stats.json"))
+          print("| المدينة | أماكن | شوارع مسمّاة | مبانٍ |\n|---|---:|---:|---:|")
+          for c, v in s["cities"].items():
+              print(f"| {c} | {sum(v['places'].values())} | {v['streets_named']} | {v['buildings']} |")
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: map-data
+          retention-days: 40
+          compression-level: 6
+          path: |
+            work/places.sqlite
+            work/places.mbtiles
+            work/roads.sqlite
+            work/stats.json
+            work/overture_release.txt
