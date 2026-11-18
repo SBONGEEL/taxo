@@ -1,0 +1,142 @@
+# **فيديوهاتُ إقرارات Google Play لإصدار الكبتن** (أمرُ المالك ٢٠٢٦-١١-١٨ السادس، البند ٤: «تُسجَّل من المحاكي»).
+#
+# **ما يشترطه Play ويُرى هنا**: الإفصاحُ البارزُ **قبل** نافذة النظام، ثمّ منحُ الإذن بالنقر، ثمّ الميزةُ تعمل (الإشعارُ المستمرّ والفقاعة
+# والطلبُ فوق القفل). **فالأذوناتُ لا تُمنح بأمر** (بخلاف أفلام «أندرويد»)، والواجهةُ تخاطب خلفيّةً حقيقيّةً في المشغّل بكبتن تجربة.
+#
+# **لا يخاطب الإنتاجَ بشيء**: القاعدةُ والخلفيةُ هنا، والحسابُ من `provision_test_accounts` (رمزاه في ملفٍّ لا يُطبع ولا يُرفع).
+# **والغلافُ من هذا الإيداع** (نكهةُ `trial` بمسبار الطلب)، برقعتين للتجربة وحدَها: عنوانُه `localhost` والنصُّ الصريحُ مسموح.
+name: فيديوهاتُ Play
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  films:
+    name: المحاكي · فيديوهاتُ الإقرارات
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: الواجهةُ والغلاف
+        run: |
+          set -euo pipefail
+          cd driver-app && npm ci --silent && VITE_API_BASE_URL=http://localhost:8001 npx vite build --logLevel warn && cd ..
+          git worktree add shell HEAD
+          cd shell
+          python3 - <<'PY'
+          import json, pathlib, re
+          p = pathlib.Path("channels.json"); t = json.loads(p.read_text(encoding="utf-8"))
+          t["channels"]["test"]["apps"]["driver-app"]["shellUrl"] = "http://localhost:5174"
+          p.write_text(json.dumps(t, ensure_ascii=False, indent=2), encoding="utf-8")
+          app = "driver-app"
+          c = pathlib.Path(app, "capacitor.config.ts"); s = c.read_text(encoding="utf-8")
+          assert "cleartext: false" in s
+          c.write_text(s.replace("cleartext: false", "cleartext: true"), encoding="utf-8")
+          m = pathlib.Path(app, "android/app/src/main/AndroidManifest.xml"); x = m.read_text(encoding="utf-8")
+          if "usesCleartextTraffic" not in x:
+              x = re.sub(r"<application\b", '<application android:usesCleartextTraffic="true"', x, count=1)
+          m.write_text(x, encoding="utf-8")
+          g = pathlib.Path(app, "android/app/build.gradle"); gs = g.read_text(encoding="utf-8")
+          assert gs.count("task.enabled = false") == 1
+          g.write_text(gs.replace("task.enabled = false", "task.enabled = true"), encoding="utf-8")
+          clients = [{"client_info": {"mobilesdk_app_id": f"1:100000000000:android:{i:016x}", "android_client_info": {"package_name": "ly.tajora.driver" + sfx}},
+                      "oauth_client": [], "api_key": [{"current_key": "ci-demo-placeholder"}],
+                      "services": {"appinvite_service": {"other_platform_oauth_client": []}}}
+                     for i, sfx in enumerate(("", ".test", ".test.dev", ".dev"), start=1)]
+          pathlib.Path(app, "android/app/google-services.json").write_text(json.dumps({
+              "project_info": {"project_number": "100000000000", "project_id": "taxo-ci-demo", "storage_bucket": "taxo-ci-demo.appspot.com"},
+              "client": clients, "configuration_version": "1"}), encoding="utf-8")
+          print("✓ رقعتا التجربة وإعدادُ Firebase الوهميّ")
+          PY
+          cd driver-app && npm ci --silent && mkdir -p dist && printf '<!doctype html><title>shell</title>\n' > dist/index.html \
+            && TAXO_CHANNEL=test npx cap sync android && cd android && sh gradlew --no-daemon -q assembleTrialDebug
+          cp app/build/outputs/apk/trial/debug/*.apk "$GITHUB_WORKSPACE/driver.apk"
+          ls -la "$GITHUB_WORKSPACE/driver.apk"
+
+      - uses: docker/setup-buildx-action@v3
+      - name: صورةُ الخلفية
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: taxo-backend:latest
+          cache-from: type=gha,scope=backend-image
+
+      - name: الخلفيةُ والقاعدةُ والحساب
+        env:
+          TAXO_ENV_FILE: .env
+        run: |
+          set -euo pipefail
+          bash scripts/ci_env.sh
+          bash scripts/ci_db_up.sh
+          RUN="docker compose --env-file .env run --rm --no-deps backend"
+          $RUN alembic upgrade head | tail -1
+          $RUN python -m scripts.seed | tail -3 || echo "· البذرُ أخرج غيرَ صفر — يُكمَل ويُقاس ما بعده"
+          mkdir -p ci-secrets && chmod 777 ci-secrets
+          docker compose --env-file .env run --rm --no-deps --user "$(id -u):$(id -g)" -v "$PWD/ci-secrets:/out" backend \
+            python -m scripts.provision_test_accounts --secrets-file /out/test-accounts.env
+          $RUN python -m scripts.ci_play_demo_setup
+          docker compose --env-file .env up -d --no-deps backend
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1 && break; sleep 2; done
+          curl -fsS http://127.0.0.1:8001/health
+          set +x
+          . ci-secrets/test-accounts.env
+          curl -fsS -X POST http://127.0.0.1:8001/api/v1/auth/login -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg p "$TAXO_TEST_CAPTAIN_PHONE" --arg w "$TAXO_TEST_CAPTAIN_PASSWORD" '{phone:$p,password:$w,app:"driver",country_code:"JO"}')" \
+            | jq -r '.tokens.access_token, .tokens.refresh_token' > ci-secrets/driver.session
+          [ "$(grep -c . ci-secrets/driver.session)" = 2 ] && [ "$(head -1 ci-secrets/driver.session)" != null ] && echo "✓ دخولُ الكبتن"
+
+      - name: خدمةُ الواجهة
+        run: |
+          (cd driver-app && nohup npx vite preview --host 127.0.0.1 --port 5174 --strictPort > ../preview-driver.log 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS "http://127.0.0.1:5174/" >/dev/null && break; sleep 1; done
+          echo "✓ الواجهةُ تُخدم"
+
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: المحاكي — الإفصاحُ والأذوناتُ والميزات
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          cores: 4
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
+          script: bash scripts/android-emulator-play-demo.sh driver.apk play-demo ci-secrets/driver.session
+
+      - name: سجلُّ الخلفية
+        if: always()
+        run: docker compose --env-file .env logs --no-color backend 2>/dev/null | grep -E '" (4|5)[0-9]{2} |Traceback' | tail -40 > play-demo/backend-errors.txt || true
+
+      - name: الفيديوهاتُ والسجلّات
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-demo
+          path: |
+            play-demo/
+            preview-driver.log
+          retention-days: 30
