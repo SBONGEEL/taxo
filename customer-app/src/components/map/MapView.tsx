@@ -353,7 +353,7 @@ function cssColor(token: string, fallback: string): string {
   return value || fallback;
 }
 
-/** **«أنت هنا» بلغة الهوية** — نقطةُ الجمر بحافّةٍ بيضاء في هالتها (TaxoMap)، **ساكنةٌ كما رُسمت**. */
+/** **«أنت هنا» بلغة الهوية** — نقطةُ الجمر بحافّةٍ بيضاء، **ساكنةٌ كما رُسمت**؛ وهالتُها طبقةٌ تحت الأسماء (`t2-me-halo`) لا هنا. */
 function t2MeElement(label: string): HTMLElement {
   const element = document.createElement("div");
   element.setAttribute("aria-label", label);
@@ -893,6 +893,44 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     }
     searchPulse.current.setLngLat([pickup.lng, pickup.lat]);
   }, [searching, pickup, t2, dark]);
+
+  // **هالةُ «أنت هنا» تحت الأسماء لا فوقها** (أمرُ المالك ٢٠٢٦-١١-١٩): كانت دائرةً بـ٥٦ بكسلاً في علامة HTML — والعلامةُ تُرسم فوق
+  // اللوحة كلِّها، **فغطّت «مصحة ابن النفيس»** على هاتفه. فالهالةُ طبقةُ دائرةٍ في الخريطة **قبل أوّل طبقة أسماء**، والنقطةُ الصغيرةُ
+  // وحدَها تبقى علامةً. وتُعاد مع كلِّ ستايلٍ يُحمَّل (`styleVersion`) — الليليُّ والنهاريُّ يمحوان الطبقاتِ المضافة
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !t2 || styleVersion === 0 || !styleReady.current) return;
+    const id = "t2-me-halo";
+    const point = showMyLocation ?? (searching ? pickup : null);
+    const data = {
+      type: "FeatureCollection" as const,
+      features: point
+        ? [{ type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: [point.lng, point.lat] } }]
+        : [],
+    };
+    const source = instance.getSource(id) as mapboxgl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    if (!point) return;
+    const before = instance.getStyle()?.layers?.find((layer) => layer.type === "symbol")?.id;
+    instance.addSource(id, { type: "geojson", data });
+    instance.addLayer(
+      {
+        id,
+        type: "circle",
+        source: id,
+        paint: {
+          "circle-radius": 28,
+          "circle-color": cssColor("--t2-accent", "#f05a28"),
+          "circle-opacity": 0.18,
+          "circle-pitch-alignment": "map",
+        },
+      },
+      before,
+    );
+  }, [showMyLocation, searching, pickup, t2, dark, styleVersion]);
 
   // ----------------------------------------------------- الدبابيس والخط
   useEffect(() => {

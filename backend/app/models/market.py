@@ -53,6 +53,9 @@ class CountryMarket(TimestampMixin, Base):
     #: و`NULL` = خاناتُ العملة نفسُها، **ولا تنزل عنها** (`markets.set_display_decimals`): مبلغٌ يُعرض بخاناتٍ أقلَّ ممّا يحمله
     #: يُقرأ غيرَ ما يُخصم (1.235 يُرى 1.24)
     display_decimals: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    #: **المبلغُ الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩، الترحيلة `0177`): «8 د.ل» لا «8.000»، وبكسرٍ يُرسم بـ`display_decimals`
+    #: («8.50»). **عرضٌ وحدَه** — ولا تُخفى خانةٌ غيرُ صفريّة أبداً
+    display_trim_whole: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

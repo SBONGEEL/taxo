@@ -311,11 +311,18 @@ async def display_decimals(session: AsyncSession, country: CountryCode) -> int:
     return decimals_of(currency_for_country(country))
 
 
+async def display_trim_whole(session: AsyncSession, country: CountryCode) -> bool:
+    """**أيُرسم المبلغُ الصحيحُ بلا كسور؟** (أمرُ المالك ٢٠٢٦-١١-١٩) — «8 د.ل» لا «8.000 د.ل»؛ وسكوتُه لا."""
+    row = await session.get(CountryMarket, country)
+    return bool(row is not None and row.display_trim_whole)
+
+
 _UNSET = object()
 
 
 async def set_display_decimals(
-    session: AsyncSession, *, country: CountryCode, decimals: int, actor: User, fare_step: object = _UNSET
+    session: AsyncSession, *, country: CountryCode, decimals: int, actor: User, fare_step: object = _UNSET,
+    trim_whole: bool | None = None,
 ) -> int:
     """يضبط خاناتِ العرض — **بين ما تحتاجه خطوةُ تقريب الأجرة ودقّة التخزين** (أمرُ المالك ٢٠٢٦-١١-١٩ ٢-أ/و).
 
@@ -335,24 +342,32 @@ async def set_display_decimals(
         fare_step = await session.scalar(
             select(PaymentSetting.fare_step).where(PaymentSetting.country_code == country)
         )
-    message = rounding.fit_message(decimals, fare_step, currency_for_country(country))  # type: ignore[arg-type]
+    trim_before = await display_trim_whole(session, country)
+    trim = trim_before if trim_whole is None else trim_whole
+    message = rounding.fit_message(decimals, fare_step, currency_for_country(country), trim_whole=trim)  # type: ignore[arg-type]
     if message:
         raise InvalidInput(message, field="decimals")
     row = await session.get(CountryMarket, country)
     before = await display_decimals(session, country)
     if row is None:
-        row = CountryMarket(country_code=country, display_decimals=decimals, updated_by=actor.id)
+        row = CountryMarket(country_code=country, display_decimals=decimals, display_trim_whole=trim, updated_by=actor.id)
         session.add(row)
     else:
         row.display_decimals = decimals
+        row.display_trim_whole = trim
         row.updated_by = actor.id
+    changes: dict = {}
     if before != decimals:
+        changes["display_decimals"] = {"from": before, "to": decimals}
+    if trim_before != trim:
+        changes["display_trim_whole"] = {"from": trim_before, "to": trim}
+    if changes:
         await audit.record(
             session,
             actor=actor,
             action=AuditAction.UPDATE,
             entity_type="market_display_decimals",
-            details={"country_code": country.value, "changes": {"display_decimals": {"from": before, "to": decimals}}},
+            details={"country_code": country.value, "changes": changes},
         )
     await session.flush()
     return decimals

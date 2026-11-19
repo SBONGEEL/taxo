@@ -12,6 +12,8 @@
 import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types";
 import { DEMO_CENTER } from "@/demo/engine";
 import { demoActive } from "@/demo/mode"; import { tr } from "@/lib/i18n";
+import { api } from "@/api/client";
+import { isGenericPlace } from "@/lib/place-name";
 
 const FORWARD = "https://api.mapbox.com/search/geocode/v6/forward";
 const REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse";
@@ -115,12 +117,30 @@ export function mergeSearch(own: MapPlaceSpot[], provider: Place[], near: Coordi
   return [...mine, ...ordered];
 }
 
-/** عنوانٌ نصّي لدبوسٍ على الخريطة — يُعرض ويُرسل اختيارياً مع الرحلة. */
+/** **«أين أنا؟» بالعربيّة من الخلفيّة** (أمرُ المالك ٢٠٢٦-١١-١٩) — المنطقةُ وأقربُ معلمٍ أو شارعٍ من بياناتنا المفتوحة («تاجوراء، قرب
+ *  مصحة ابن النفيس»)، ثمّ مزوّدُ البلد؛ **و`null` لعنوانٍ لا يزيد على المدينة** — فيُسأل Mapbox بعده كما كان. ولا نداءَ في وضع الضيف. */
+export async function ownReverse(point: Coordinates, signal?: AbortSignal): Promise<string | null> {
+  if (demoActive()) return null;
+  try {
+    const answer = await api.get<{ address: string | null }>("/places/reverse", {
+      query: { lat: point.lat.toFixed(6), lng: point.lng.toFixed(6) },
+      signal,
+    });
+    const address = tidyAddress(answer.address);
+    return address && !isGenericPlace(address) ? address : null;
+  } catch {
+    return null;
+  }
+}
+
+/** عنوانٌ نصّي لدبوسٍ على الخريطة — يُعرض ويُرسل اختيارياً مع الرحلة. **بياناتُنا أوّلاً** (`ownReverse`)، وMapbox بعدها. */
 export async function reverseGeocode(
   token: string,
   point: Coordinates,
   signal?: AbortSignal,
 ): Promise<string | null> {
+  const own = await ownReverse(point, signal);
+  if (own) return own;
   if (!token) return null;
 
   const url = new URL(REVERSE);
@@ -157,8 +177,9 @@ export async function reverseArea(
   point: Coordinates,
   signal?: AbortSignal,
 ): Promise<AreaReading> {
-  const none: AreaReading = { area: null, address: null };
-  if (!token) return none;
+  // **سطرُ «من» من بياناتنا أوّلاً** — والشارةُ (المنطقة) من Mapbox كما كانت؛ النداءان معاً لا واحداً بعد الآخر
+  const own = ownReverse(point, signal);
+  if (!token) return { area: null, address: await own };
 
   const url = new URL(REVERSE);
   url.searchParams.set("longitude", String(point.lng));
@@ -169,21 +190,22 @@ export async function reverseArea(
 
   try {
     const response = await fetch(url, { signal });
-    if (!response.ok) return none;
+    if (!response.ok) return { area: null, address: await own };
     const body = (await response.json()) as { features?: AreaFeature[] };
     const first = body.features?.[0]?.properties;
     // **أدقُّ ما في سياق العنوان** — الحيُّ قبل البلدة قبل المدينة — من نداءٍ واحد
     const context = first?.context;
     const area =
       context?.neighborhood?.name ?? context?.locality?.name ?? context?.place?.name ?? null;
+    const mine = await own;
     return {
       area: area ?? first?.name ?? null,
       // **«الشارع، المنطقة» كما رُسم** («شارع الرينبو، جبل عمّان») — من اسم النتيجة وسياقها في النداء نفسِه، **لا
       // `full_address`**: ذاك يحمل الدولةَ وفاصلةً فارغةً حيث يغيب مستوى («…رياض 7، ، عمّان، الأردن» — مقيس)
-      address: first?.name ? (area && area !== first.name ? tr("{0}، {1}", { 0: first.name, 1: area }) : first.name) : null,
+      address: mine ?? (first?.name ? (area && area !== first.name ? tr("{0}، {1}", { 0: first.name, 1: area }) : first.name) : null),
     };
   } catch {
-    return none;
+    return { area: null, address: await own.catch(() => null) };
   }
 }
 

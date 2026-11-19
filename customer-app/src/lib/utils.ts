@@ -26,6 +26,8 @@ interface CurrencyFace {
   decimals: number;
   /** **خاناتُ العرض** (SPEC §٧٣-ج/٧) — ما يُرسم بعد الفاصلة، **ولا تنزل عن `decimals`** (الخلفيةُ تردّه) */
   display: number;
+  /** **الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩): «8 د.ل» لا «8.000 د.ل»، وبكسرٍ بخانات العرض («8.50») — للرسم وحدَه */
+  trim: boolean;
 }
 const CURRENCY_FACES = new Map<string, CurrencyFace>();
 
@@ -36,6 +38,7 @@ export function registerCurrencies(
     currency_name: string;
     currency_decimals: number;
     display_decimals?: number;
+    display_trim_whole?: boolean;
   }>,
 ): void {
   for (const country of countries) {
@@ -44,6 +47,7 @@ export function registerCurrencies(
       name: country.currency_name,
       decimals: country.currency_decimals,
       display: country.display_decimals ?? country.currency_decimals,
+      trim: country.display_trim_whole ?? false,
     });
   }
 }
@@ -59,9 +63,14 @@ export function displayDecimals(currency: string | null | undefined): number {
   return (currency ? CURRENCY_FACES.get(currency)?.display : undefined) ?? currencyDecimals(currency);
 }
 
+/** **أيُرسم المبلغُ الصحيحُ بلا كسور؟** (أمرُ المالك ٢٠٢٦-١١-١٩، ليبيا) — من `/config` (`display_trim_whole`)، وسكوتُه لا. */
+export function trimsWhole(currency: string | null | undefined): boolean {
+  return Boolean(currency && CURRENCY_FACES.get(currency)?.trim);
+}
+
 /** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
 export function zeroAmount(currency: string | null | undefined): string {
-  const places = displayDecimals(currency);
+  const places = trimsWhole(currency) ? 0 : displayDecimals(currency);
   return places > 0 ? `0.${"0".repeat(places)}` : "0";
 }
 
@@ -144,6 +153,8 @@ export function formatAmount(amount: string | null | undefined, currency: string
   const negative = amount.trimStart().startsWith("-");
   const [whole = "0", fraction = ""] = amount.replace("-", "").split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // **الصحيحُ بلا كسور** حيث اختاره المشرف («8 د.ل») — والكسرُ بخانات العرض («8.50»)، ولا تُخفى خانةٌ غيرُ صفريّة
+  if (trimsWhole(currency) && !/[1-9]/.test(fraction)) return `${negative ? "−" : ""}${grouped}`;
   const places = displayDecimals(currency);
   const padded = (fraction + "000").slice(0, places);
   const shown = places < 3 && /[1-9]/.test(fraction.slice(places)) ? fraction : padded;

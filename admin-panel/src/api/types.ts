@@ -131,6 +131,8 @@ export interface CountryConfig {
   currency_decimals: number;
   /** خاناتُ العرض (SPEC §٧٣-ج/٧) — للرسم وحدَه، ولا تنزل عن `currency_decimals` */
   display_decimals: number;
+  /** الصحيحُ بلا كسور (أمرُ المالك ٢٠٢٦-١١-١٩) — «8 د.ل» لا «8.000» */
+  display_trim_whole?: boolean;
   features: Record<string, boolean>;
   vehicle_categories: string[];
   /** **وجوهُ ما يُطلب في السوق** (SPEC §٦٧) — ما يراه التطبيقان؛ واللوحةُ تقرأ الفئاتِ كاملةً من «فئات الرحلة». */
@@ -1504,6 +1506,8 @@ export interface FareRoundingInput {
   on_final: boolean;
   on_negotiation: boolean;
   on_cancellation: boolean;
+  /** **الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩): «8 د.ل» لا «8.000 د.ل» — عرضٌ وحدَه */
+  trim_whole: boolean;
 }
 
 export interface FareRounding extends FareRoundingInput {

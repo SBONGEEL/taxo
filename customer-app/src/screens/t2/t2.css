@@ -1120,15 +1120,16 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-map-car-front, .t2-map-car-back { position: absolute; display: block; background: var(--t2-accent); }
 .t2-map-car-front { left: 2px; right: 2px; top: 6px; height: 7px; border-radius: 3px 3px 2px 2px; }
 .t2-map-car-back { left: 3px; right: 3px; bottom: 4px; height: 4px; border-radius: 2px 2px 3px 3px; opacity: 0.55; }
+/* **النقطةُ وحدَها علامة** — والهالةُ طبقةُ دائرةٍ في الخريطة تحت أسماء الأماكن (`t2-me-halo` في `MapView`، أمرُ المالك ٢٠٢٦-١١-١٩):
+   كانت هنا بـ٥٦ بكسلاً فوق كلِّ شيءٍ فغطّت «مصحة ابن النفيس» */
 .t2-map-me {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--t2-map-me-halo);
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
 }
 /* **رادارُ البحث** (R07 · `txring` في اللوحة): ثلاثُ حلقاتٍ ٢٤٠ بكسلاً بالجمر، تتّسع من ٠٫٢٥ إلى ١٫٥ وتخبو في ٢٫٧ ثانية بفارق ٠٫٩ —
    والنقطةُ فوقها (`.t2-map-me` مُموضَعةٌ بعدها). **ومع «تقليل الحركة» تقف على ثلاثة أطوارٍ كما رُسمت** */
@@ -1142,7 +1143,8 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   box-sizing: border-box;
   border: 2px solid var(--t2-accent);
   border-radius: 50%;
-  background: var(--t2-map-radar-fill);
+  /* **حلقةٌ بلا جوف** — الجوفُ الملوَّنُ كان يغبّش الأسماءَ تحته؛ والحافّةُ وحدَها تقول «نبحث» */
+  background: none;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.25);
   animation: t2-radar 2.7s ease-out infinite;
@@ -1603,8 +1605,143 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-v2-wallet-top:disabled { opacity: .5; }
 
 
-/* **مؤشّرُ «نبحث لك عن كبتن»** — يظهر مع الأيقونات الجديدة وحدَها (SPEC §١٠٥/٣-ب)، وحركتُه في `taxo2/glyphs.css` (`.t2-glyph-idle`) */
-.t2-trk-head .t2-trk-radar { font-size: 22px; color: var(--t2-accent-text); }
+/* ── «نبحث لك عن كبتن» (R07) — أُعيد رسمُها بأمر المالك ٢٠٢٦-١١-١٩ ─────────────────────────────────────────────────────────
+   كان المؤشّرُ أيقونةً اسمُها خارجَ خطِّ الراكب فرُسم اسمُها «LOCATION_🔍ING» بعرض الشاشة. **والآن نبضةٌ بالـCSS** كرادار الخريطة
+   (`.t2-map-radar`): حلقتان تتّسعان وتخبوان، **تحويلٌ وشفافيّةٌ وحدَهما** فيرسمهما المُركِّبُ بلا إعادة تخطيط — خفيفةٌ على Note 20 —
+   **وتقفان على طورٍ واحدٍ** مع «تقليل الحركة» وعلى الجهاز الضعيف (`html.t2-calm`) وفي الخلفيّة (`html.is-hidden`).
+   والمقاساتُ لقراءةٍ مريحة: عنوانٌ ٢٢، وأسماءٌ ١٥، وسعرٌ ٢٢، وأزرارٌ ٥٦ بكسلاً لإبهامٍ واحد. */
+.t2-phase { animation: t2-phase-in 220ms var(--t2-ease) both; }
+@keyframes t2-phase-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.t2-srch-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.t2-srch-titles { flex: 1; min-width: 0; }
+.t2-srch-title { margin: 0; font-size: 22px; line-height: 1.35; font-weight: 700; text-wrap: balance; }
+.t2-srch-sub { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--t2-muted); }
+.t2-srch-pulse { position: relative; flex: none; display: block; width: 48px; height: 48px; }
+.t2-srch-pulse > i {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--t2-accent);
+  border-radius: 50%;
+  background: var(--t2-map-radar-fill);
+  opacity: 0;
+  transform: scale(0.35);
+  animation: t2-srch-ring 2.4s ease-out infinite;
+}
+.t2-srch-pulse > i:nth-child(2) { animation-delay: 1.2s; }
+.t2-srch-pulse > b {
+  position: absolute;
+  inset: 16px;
+  border: 3px solid var(--t2-surface);
+  border-radius: 50%;
+  background: var(--t2-accent);
+  box-shadow: var(--t2-map-me-shadow);
+}
+@keyframes t2-srch-ring {
+  0% { opacity: 0.75; transform: scale(0.35); }
+  100% { opacity: 0; transform: scale(1); }
+}
+html.is-hidden .t2-srch-pulse > i { animation-play-state: paused; }
+html.t2-calm .t2-srch-pulse > i { animation: none; opacity: 0.45; transform: scale(0.8); }
+html.t2-calm .t2-srch-pulse > i:nth-child(2) { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .t2-srch-pulse > i { animation: none; opacity: 0.45; transform: scale(0.8); }
+  .t2-srch-pulse > i:nth-child(2) { opacity: 0; }
+  .t2-phase { animation: none; }
+}
+.t2-srch-live { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+.t2-srch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.t2-srch-chip .t2-icon, .t2-srch-chip .ixc { width: 18px; height: 18px; font-size: 18px; }
+.t2-srch-trip {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--t2-line);
+  border-radius: 20px;
+  background: var(--t2-surface);
+}
+.t2-srch-stops { position: relative; display: grid; gap: 4px; padding-inline-start: 26px; }
+/* **الخطُّ الرفيع بين النقطتين** — دائرةٌ بالحبر ومربّعٌ بالجمر كما على الخريطة، والخطُّ بينهما متقطّعٌ بلون الحافّة */
+.t2-srch-rail { position: absolute; inset-block: 16px; inset-inline-start: 4px; display: flex; flex-direction: column; align-items: center; width: 12px; }
+.t2-srch-rail > i { flex: none; width: 10px; height: 10px; background: var(--t2-text); }
+.t2-srch-rail > i.from { border-radius: 50%; }
+.t2-srch-rail > i.to { border-radius: 3px; background: var(--t2-accent); }
+.t2-srch-rail > b { flex: 1; width: 0; margin: 3px 0; border-inline-start: 2px dotted var(--t2-line); }
+.t2-srch-stop {
+  display: grid;
+  gap: 1px;
+  min-height: 48px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-srch-stop-label { font-size: 12px; color: var(--t2-muted); }
+.t2-srch-stop-name { overflow: hidden; font-size: 15px; font-weight: 600; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.t2-srch-stop.open .t2-srch-stop-name { white-space: normal; }
+.t2-srch-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t2-line);
+}
+.t2-srch-cat { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; font-weight: 600; }
+.t2-srch-cat .t2-car { flex: none; width: 46px; height: auto; }
+.t2-srch-fare { display: grid; justify-items: end; flex: none; text-align: end; }
+.t2-srch-price { font-size: 16px; font-weight: 700; white-space: nowrap; }
+.t2-srch-price .t2-num { font-size: 22px; }
+.t2-srch-pay { font-size: 12.5px; color: var(--t2-muted); }
+.t2-srch-actions { display: grid; gap: 10px; }
+.t2-srch-share,
+.t2-srch-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-srch-share { border: 0; background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-srch-share .t2-icon, .t2-srch-share .ixc { width: 20px; height: 20px; font-size: 20px; }
+/* **إلغاءٌ واضحٌ هادئ** — حافّةٌ وحبرٌ لا أحمرُ ينذر (أمرُ المالك)؛ والتأكيدُ بعده بلون الخطر لأنه الفعلُ نفسُه */
+.t2-srch-cancel { border: 1.5px solid var(--t2-line); background: var(--t2-surface); color: var(--t2-text); }
+.t2-srch-cancel:disabled { opacity: 0.55; }
+.t2-srch-actions .t2-trk-free { margin: 0; }
+/* **«تم العثور على كبتن»** — سطرُ نجاحٍ قصيرٌ فوق بطاقة الكبتن، بلون النجاح لا الجمر */
+.t2-found {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t2-success);
+}
+.t2-found .t2-icon, .t2-found .ixc { width: 22px; height: 22px; font-size: 22px; }
 
 /* **الخريطةُ المفتوحة** (أمرُ المالك ١٨/١١ السابع): «أضف مكاناً / اقترح تصحيحاً» وأزرارُ الخريطة («الازدحام» · «أضف مكاناً») */
 .t2-sheet-note { margin: 6px 0 10px; font-size: 12px; line-height: 1.5; color: var(--t2-muted); }

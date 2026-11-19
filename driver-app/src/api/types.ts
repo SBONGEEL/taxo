@@ -206,6 +206,8 @@ export interface CountryConfig {
   currency_decimals: number;
   /** خاناتُ العرض (SPEC §٧٣-ج/٧) — للرسم وحدَه، ولا تنزل عن `currency_decimals` */
   display_decimals: number;
+  /** **الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩) — «8 د.ل» لا «8.000»؛ يقرؤه `registerCurrencies` */
+  display_trim_whole?: boolean;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
   /** **وجوهُ ما يُطلب** بترتيبه (SPEC §٦٧) — منها تُسمّى الفئاتُ الجديدة. */

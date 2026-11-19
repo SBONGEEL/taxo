@@ -12,7 +12,8 @@
  * **وثالثاً للوحة** (أُضيف حين صارت النسخةُ الثالثة): **كلُّ أيقونةٍ تسمّيها شيفرتُها في مقتطَع خطّها** (`icon_names=` في
  * `admin-panel/index.html`) **ومقتطَعُها مرتَّبٌ أبجدياً بلا تكرار** — وإلا رُسم اسمُ الأيقونة نصّاً، أو ردّ المُقدِّمُ الطلبَ كلَّه.
  * ويقرأ الأسماءَ **بمُحلِّل TypeScript لا بالنصّ**: `<Icon name=…>` بفروعه، و`icon="…"`/`icon: "…"`، ومتغيّراتُ `…icon` وجداولُ `…_ICON`، ونصُّ
- * عنصرٍ صنفُه `t2-icon`. **وحدُّه مكتوب**: اسمٌ يُبنى من متغيّرٍ لا يُرى (`name={x}` بلا حرفيٍّ يصل إليه) — وصفرُ اسمٍ مقروءٍ سقوط.
+ * عنصرٍ صنفُه `t2-icon`، **والثابتُ المسمّى بأحرفٍ كبيرة يُحلّ إلى حرفيّه** (`name={IDLE_GLYPH}`، ٢٠٢٦-١١-١٩). **وحدُّه مكتوب**: اسمٌ
+ * يُبنى من متغيّرٍ لا يُرى (`name={x}` بلا حرفيٍّ يصل إليه) — وصفرُ اسمٍ مقروءٍ سقوط.
  *
  * **وحدُّه مكتوب**: يقيس **التطابق** لا **الصحّة** — من عدّل النسخَ بالخطأ نفسِه يمرّ؛ وما يضمنه أن **الافتراقَ لا يمرّ صامتاً**.
  */
@@ -122,6 +123,16 @@ const usedCounts = [];
 for (const ADMIN of ICON_APPS) {
 const used = new Map(); // الاسم ← أوّلُ موضعٍ سُمّي فيه
 let usesBridge = false;
+/** **الثوابتُ المسمّاةُ بأحرفٍ كبيرة** (`const IDLE_GLYPH = "location_searching"`) في كلِّ ملفّات الواجهة — **ثغرةٌ مقيسة ٢٠٢٦-١١-١٩**:
+ *  `<Icon name={IDLE_GLYPH} />` كان معرِّفاً لا حرفيّاً فسكت الحارس، **فرسمت ورقةُ «نبحث لك عن كبتن» «LOCATION_🔍ING»** بعرض الشاشة
+ *  على هاتف المالك — الاسمُ ليس في مقتطَع خطِّ الراكب ولا في رسوم نمط C. فيُحلّ المعرِّفُ إلى حرفيّه أينما عُرّف في الشجرة. */
+const constants = new Map();
+for (const file of walk(join(ROOT, ADMIN, "src"))) {
+  if (!/\.tsx?$/.test(file)) continue;
+  const text = readFileSync(file, "utf8");
+  for (const match of text.matchAll(/(?:^|\n)\s*(?:export\s+)?const\s+([A-Z][A-Z0-9_]*)\s*(?::\s*string\s*)?=\s*"([a-z][a-z0-9_]*)"\s*;/g))
+    constants.set(match[1], match[2]);
+}
 
 function note(name, where) {
   if (/^[a-z][a-z0-9_]*$/.test(name) && !used.has(name)) used.set(name, where);
@@ -131,6 +142,7 @@ function note(name, where) {
 function literals(node, where) {
   if (!node) return;
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return note(node.text, where);
+  if (ts.isIdentifier(node) && constants.has(node.text)) return note(constants.get(node.text), where);
   if (ts.isConditionalExpression(node)) {
     literals(node.whenTrue, where);
     literals(node.whenFalse, where);

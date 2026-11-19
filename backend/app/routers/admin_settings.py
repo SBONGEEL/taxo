@@ -1558,6 +1558,7 @@ def _fare_value(payload: FareRoundingIn) -> fare_rounding.FareRounding:
         on_final=payload.on_final,
         on_negotiation=payload.on_negotiation,
         on_cancellation=payload.on_cancellation,
+        trim_whole=payload.trim_whole,
     )
 
 
@@ -1573,6 +1574,7 @@ def _fare_out(country_code: CountryCode, value: fare_rounding.FareRounding) -> F
         on_final=value.on_final,
         on_negotiation=value.on_negotiation,
         on_cancellation=value.on_cancellation,
+        trim_whole=value.trim_whole,
     )
 
 

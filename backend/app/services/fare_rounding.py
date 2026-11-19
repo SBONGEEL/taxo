@@ -52,6 +52,8 @@ class FareRounding:
     on_final: bool
     on_negotiation: bool
     on_cancellation: bool
+    #: **الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩) — «8 د.ل» لا «8.000»؛ عرضٌ وحدَه
+    trim_whole: bool = False
 
     def policy(self) -> rounding.RoundingPolicy:
         """سياسةُ الأجرة النهائيّة بهذه القيم — للمعاينة."""
@@ -60,11 +62,13 @@ class FareRounding:
         return rounding.RoundingPolicy(enabled=True, unit=self.step, mode=self.mode)
 
 
-def shown(amount: Decimal, decimals: int) -> str:
+def shown(amount: Decimal, decimals: int, trim_whole: bool = False) -> str:
     """**المبلغُ كما يُرسم بهذه الخانات** — القاعدةُ نفسُها في `formatAmount` بالتطبيقين ولوحة `money()`: تُكمَل الأصفارُ أو تُحذف،
     **ولا تُحذف خانةٌ غيرُ صفريّة** (1.725 بخانتين ⇐ «1.725»)."""
     text = f"{amount.quantize(Decimal(1).scaleb(-STORAGE_DECIMALS)):f}"
     whole, _, fraction = text.partition(".")
+    if trim_whole and not fraction.strip("0"):
+        return whole
     if fraction[decimals:].strip("0"):
         return text
     return f"{whole}.{fraction[:decimals]}" if decimals > 0 else whole
@@ -73,8 +77,9 @@ def shown(amount: Decimal, decimals: int) -> str:
 async def current(session: AsyncSession, country: CountryCode) -> FareRounding:
     setting = await session.scalar(select(PaymentSetting).where(PaymentSetting.country_code == country))
     decimals = await markets.display_decimals(session, country)
+    trim = await markets.display_trim_whole(session, country)
     if setting is None:
-        return FareRounding(decimals, None, RoundingMode.NEAREST, False, False, False, False)
+        return FareRounding(decimals, None, RoundingMode.NEAREST, False, False, False, False, trim)
     return FareRounding(
         decimals=decimals,
         step=setting.fare_step,
@@ -83,12 +88,13 @@ async def current(session: AsyncSession, country: CountryCode) -> FareRounding:
         on_final=setting.fare_on_final,
         on_negotiation=setting.fare_on_negotiation,
         on_cancellation=setting.fare_on_cancellation,
+        trim_whole=trim,
     )
 
 
 def require_fit(country: CountryCode, value: FareRounding) -> None:
     """**الخاناتُ تلائم الخطوة وإلّا لا حفظ** (٢-و) — بالجملة العربيّة نفسِها التي تُريها المعاينة."""
-    message = rounding.fit_message(value.decimals, value.step, currency_for_country(country))
+    message = rounding.fit_message(value.decimals, value.step, currency_for_country(country), trim_whole=value.trim_whole)
     if message:
         raise InvalidInput(message, field="decimals")
 
@@ -123,15 +129,17 @@ async def preview(
                 "precise": precise,
                 "before": old,
                 "after": new,
-                "before_text": shown(old, before.decimals),
-                "after_text": shown(new, proposed.decimals),
+                "before_text": shown(old, before.decimals, before.trim_whole),
+                "after_text": shown(new, proposed.decimals, proposed.trim_whole),
             })
     result = None
     if amount is not None:
         after = rounding.rounded(amount, proposed.policy())
-        result = {"amount": amount, "after": after, "after_text": shown(after, proposed.decimals)}
+        result = {"amount": amount, "after": after, "after_text": shown(after, proposed.decimals, proposed.trim_whole)}
     return {
-        "fit_error": rounding.fit_message(proposed.decimals, proposed.step, currency_for_country(country)),
+        "fit_error": rounding.fit_message(
+            proposed.decimals, proposed.step, currency_for_country(country), trim_whole=proposed.trim_whole
+        ),
         "vehicle_category": rule.vehicle_category if rule is not None else None,
         "amount": result,
         "samples": samples,
@@ -159,8 +167,10 @@ async def save(session: AsyncSession, country: CountryCode, value: FareRounding,
     setting.fare_mode = value.mode.value
     for name in SURFACES:
         setting.__setattr__(f"fare_{name}", getattr(value, name))
-    if value.decimals != before.decimals:
-        await markets.set_display_decimals(session, country=country, decimals=value.decimals, actor=actor, fare_step=value.step)
+    if value.decimals != before.decimals or value.trim_whole != before.trim_whole:
+        await markets.set_display_decimals(
+            session, country=country, decimals=value.decimals, actor=actor, fare_step=value.step, trim_whole=value.trim_whole
+        )
     old, new = _as_audit(before), _as_audit(value)
     changes = {key: {"from": old[key], "to": new[key]} for key in new if old[key] != new[key]}
     if changes:

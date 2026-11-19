@@ -2,6 +2,7 @@
 يُقرأ للقراءة وحدَها، بلا مكتبةٍ خارجيّة؛ والذاكرةُ ذاكرةُ بايثون وذاكرةُ SQLite المؤقّتة (٣٢ MB لكلِّ اتصال، واتصالان) لا الفهرس.
 
 GET /search?q=&cc=JO&lat=&lng=&limit=10 → {"items":[{id,name,name_en,kind,context,lat,lng,distance_m,src}]}
+GET /nearby?lat=&lng=&cc=LY → {"area","landmark","street","label"}   (اسمٌ عربيٌّ مفيدٌ لنقطة، أمرُ المالك ٢٠٢٦-١١-١٩)
 GET /health → {"ok":true,"places":N}   (و503 {"detail":"warming"} حتى ينتهي التسخين — وكذا /search)
 """
 
@@ -218,7 +219,7 @@ def _duplicate(row: sqlite3.Row, name: str, context: str, kept: list) -> bool:
 #: **صنفُ الأيقونة** (§١٠٤/١١) — من نوع الصفّ ثمّ من كلماتِ اسمه؛ والفهرسُ لا يحمل صنفَ المعلم، فالاسمُ هو الدليل
 CAT_WORDS = (
     ("airport", {"مطار", "airport", "aeroport"}), ("mall", {"مول", "mall"}),
-    ("hospital", {"مستشفي", "hospital", "hopital", "chu", "clinique"}), ("university", {"جامعه", "university", "universite"}),
+    ("hospital", {"مستشفي", "مصحه", "مستوصف", "عياده", "hospital", "hopital", "chu", "clinique", "clinic"}), ("university", {"جامعه", "university", "universite"}),
     ("mosque", {"مسجد", "جامع", "mosque", "mosquee"}), ("restaurant", {"مطعم", "restaurant", "مقهي", "cafe", "كافيه", "coffee"}),
     ("hotel", {"فندق", "hotel"}), ("school", {"مدرسه", "school", "ecole", "lycee"}), ("pharmacy", {"صيدليه", "pharmacy", "pharmacie"}),
     ("bank", {"بنك", "bank", "banque"}), ("fuel", {"وقود", "بنزين", "fuel", "petrol", "naftal"}),
@@ -571,6 +572,99 @@ def segments(ids: list) -> dict:
         db.close()
 
 
+# ───────────────────────── «أين أنا؟» بالعربيّة (أمرُ المالك ٢٠٢٦-١١-١٩): المنطقةُ وأقربُ معلمٍ أو شارع — لا اسمُ المدينة وحدَه
+#: **نصفُ قطر المعلم** — ما أبعدُ منه لا يُقال «قرب»؛ **والشارعُ** لا يُسمّى إلا لمن هو عليه تقريباً
+NEAR_LANDMARK_M = 250.0
+NEAR_STREET_M = 35.0
+#: **المعالمُ التي يعرفها الناسُ ويدلّ بها الكبتن** — تُقدَّم على محلٍّ أقرب؛ والصيدليّةُ والبنكُ والوقودُ دونها
+LANDMARK_BONUS_M = {"hospital": 90, "mosque": 90, "university": 90, "school": 70, "mall": 90, "airport": 120, "hotel": 70,
+                    "park": 60, "pharmacy": 30, "bank": 30, "fuel": 30}
+ARABIC = re.compile(r"[؀-ۿ]")
+_near_cache: "OrderedDict[tuple, dict]" = OrderedDict()
+
+
+def _arabic(row: sqlite3.Row) -> str | None:
+    name = _display_name(row)
+    return name if name and ARABIC.search(name) else None
+
+
+def nearby(lat: float, lng: float, cc: str) -> dict:
+    """**اسمٌ عربيٌّ مفيدٌ لنقطة** — `{area, landmark, street, label}` وكلُّها `None` إن لم يُعرف شيء.
+
+    المنطقةُ سياقُ أقربِ صفٍّ (الحيّ قبل المدينة)، والمعلمُ أقربُ مكانٍ عربيِّ الاسم ≤ ٢٥٠ م **ومعالمُ الناس مقدَّمة**، والشارعُ مقطعُ
+    طريقٍ مسمّى ≤ ٣٥ م. **والنصُّ**: «المنطقة، قرب المعلم» ثمّ «الشارع، المنطقة» ثمّ المنطقةُ وحدَها. ولا إحداثيّاتٍ في السجلّ."""
+    empty = {"area": None, "landmark": None, "street": None, "label": None}
+    if cc not in COUNTRIES:
+        return empty
+    key = (round(lat, 4), round(lng, 4), cc)
+    with _cache_lock:
+        if key in _near_cache:
+            _near_cache.move_to_end(key)
+            return dict(_near_cache[key])
+    dlat = 2.0 / 111.0
+    dlng = 2.0 / (111.0 * max(math.cos(math.radians(lat)), 0.2))
+    if _pool.qsize() == 0 and not _started:
+        _fill()
+    with _Lease() as db:
+        rows = db.execute(
+            "SELECT * FROM places WHERE cc=? AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?",
+            (cc, lat - dlat, lat + dlat, lng - dlng, lng + dlng)).fetchall()
+    landmark, landmark_score, area_row, area_d = None, float("inf"), None, float("inf")
+    for row in rows:
+        d = _km(lat, lng, row["lat"], row["lng"]) * 1000
+        if (row["ctx_local"] or row["ctx_city"]) and d < area_d:
+            area_row, area_d = row, d
+        if row["kind"] not in ("poi", "building") or d > NEAR_LANDMARK_M:
+            continue
+        name = _arabic(row)
+        if not name:
+            continue
+        score = d - LANDMARK_BONUS_M.get(_category_of(row), 0) - 10 * max(0, (row["rank"] or 4) - 4)
+        if score < landmark_score:
+            landmark, landmark_score = (name, row), score
+    # **المنطقةُ أدقُّ ما يُعرف**: حيُّ المعلم (أو أقربِ صفّ) ⇐ أقربُ حيٍّ أو بلدةٍ ≤ ٢ كم باسمها ⇐ مدينتُه — فلا «طرابلس» لمن في تاجوراء
+    source = landmark[1] if landmark else area_row
+    towns = [r for r in rows if r["kind"] in ("district", "neighbourhood", "town", "village") and _arabic(r)
+             and _km(lat, lng, r["lat"], r["lng"]) <= 2.0]
+    candidates = [
+        source["ctx_local"] if source is not None else None,
+        _arabic(min(towns, key=lambda r: _km(lat, lng, r["lat"], r["lng"]))) if towns else None,
+        source["ctx_city"] if source is not None else None,
+    ]
+    area = next((p for p in candidates if p and ARABIC.search(p)), None)
+    street = None
+    roads = _ro(ROADS)
+    if roads is not None:
+        try:
+            m_lat = NEAR_STREET_M / 110_540
+            m_lng = NEAR_STREET_M / (111_320 * max(math.cos(math.radians(lat)), 0.2))
+            best = NEAR_STREET_M
+            for name, coords in roads.execute(
+                "SELECT s.name, s.coords FROM seg_box b JOIN segments s ON s.id = b.id "
+                "WHERE b.x0 <= ? AND b.x1 >= ? AND b.y0 <= ? AND b.y1 >= ? AND s.name != ''",
+                (lng + m_lng, lng - m_lng, lat + m_lat, lat - m_lat)):
+                if not ARABIC.search(name or ""):
+                    continue
+                d = _seg_metres(lat, lng, json.loads(coords))
+                if d <= best:
+                    street, best = name, d
+        finally:
+            roads.close()
+    landmark_name = landmark[0] if landmark else None
+    if landmark_name:
+        label = f"{area}، قرب {landmark_name}" if area and norm(area) not in norm(landmark_name) else f"قرب {landmark_name}"
+    elif street:
+        label = f"{street}، {area}" if area and norm(area) != norm(street) else street
+    else:
+        label = area
+    out = {"area": area, "landmark": landmark_name, "street": street, "label": label}
+    with _cache_lock:
+        _near_cache[key] = out
+        if len(_near_cache) > CACHE_SIZE:
+            _near_cache.popitem(last=False)
+    return dict(out)
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, status: int, body: dict) -> None:
         data = json.dumps(body, ensure_ascii=False).encode()
@@ -584,7 +678,7 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         args = {k: v[0] for k, v in parse_qs(url.query).items()}
         try:
-            if url.path in ("/health", "/search") and not _ready.is_set():
+            if url.path in ("/health", "/search", "/nearby") and not _ready.is_set():
                 return self._send(503, {"detail": "warming"})
             if url.path == "/health":
                 if not _started:
@@ -616,6 +710,8 @@ class Handler(BaseHTTPRequestHandler):
                     near = (float(args["lat"]), float(args["lng"]))
                 limit = max(1, min(int(args.get("limit", 10)), 20))
                 return self._send(200, {"items": search(args.get("q", "")[:80], args.get("cc", "").upper(), near, limit)})
+            if url.path == "/nearby":
+                return self._send(200, nearby(float(args.get("lat", "")), float(args.get("lng", "")), args.get("cc", "").upper()))
             return self._send(404, {"detail": "not found"})
         except Busy:
             return self._send(503, {"detail": "busy"})

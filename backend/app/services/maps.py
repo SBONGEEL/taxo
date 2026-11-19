@@ -253,6 +253,38 @@ async def _open_search(country: CountryCode, query: str, near: tuple[float, floa
     return out
 
 
+#: **أجزاءٌ إداريّةٌ لا تدلّ أحداً** — «شعبية طرابلس»، «محافظة العاصمة»، «ولاية الجزائر»، واسمُ البلد
+ADMIN_PREFIXES = ("شعبية ", "شعبيه ", "محافظة ", "محافظه ", "ولاية ", "ولايه ", "بلدية ", "بلديه ", "لواء ", "قضاء ", "دائرة ")
+COUNTRY_NAMES = {"ليبيا", "الأردن", "الاردن", "الجزائر", "Libya", "Jordan", "Algeria"}
+
+
+def is_generic_address(address: str | None) -> bool:
+    """**عنوانٌ لا يزيد على اسم مدينةٍ وإداريّاتها** — «طرابلس» أو «طرابلس، شعبية طرابلس، ليبيا»: لا يدلّ كبتناً على رصيف."""
+    if not address:
+        return True
+    parts = [p.strip() for p in address.replace(",", "،").split("،") if p.strip()]
+    useful = [p for p in parts if p not in COUNTRY_NAMES and not p.startswith(ADMIN_PREFIXES)]
+    return len(dict.fromkeys(useful)) <= 1
+
+
+async def _open_nearby(country: CountryCode, lat: float, lng: float) -> dict | None:
+    """**المنطقةُ وأقربُ معلمٍ أو شارعٍ من الخدمة المحلّيّة** — `None` إن لم تُجب؛ ولا علامةَ سقوطٍ منها: البحثُ وحدَه يحكم بذلك."""
+    from app.core.config import settings
+
+    base = settings.places_search_url.rstrip("/")
+    if not base or await is_down("open"):
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=OPEN_TIMEOUT, transport=open_transport) as client:
+            response = await client.get(f"{base}/nearby", params={"lat": str(lat), "lng": str(lng), "cc": country.value})
+        if response.status_code != 200:
+            return None
+        body = response.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    return body if isinstance(body, dict) else None
+
+
 async def _recent(session: AsyncSession, user_id: uuid.UUID, needle: str) -> list[Result]:
     """**وجهاتُ الراكب الأخيرة** (ثلاثون يوماً، رحلاتٌ مكتملة) — ما طابق منها يتقدّم بعد المحفوظة."""
     from app.models.enums import RideStatus
@@ -411,17 +443,28 @@ async def reverse(session: AsyncSession, country: CountryCode | None, lat: float
         return data.get("address"), data.get("provider", "google")
     address: str | None = None
     provider = "mapbox"
-    values = await use_google(session, country, "search", "geocode")
-    if values is not None:
-        try:
-            address = await google_maps.reverse(values["server_key"], lat, lng)
-            provider = "google"
-            await note("search", up=True)
-        except google_maps.GoogleFailed as exc:
-            await note("search", up=False, reason=exc.reason, country=country)
-            values = None
-    if values is None:
-        address = await _mapbox_reverse(session, country, lat, lng)
+    # **«أين أنا؟» بالعربيّة من بياناتنا أوّلاً** (أمرُ المالك ٢٠٢٦-١١-١٩): «تاجوراء، قرب مصحة ابن النفيس» لا «طرابلس» — معلمٌ أو شارعٌ
+    # يُقال في الحال؛ والمنطقةُ وحدَها تُحفظ لمن يجيب بعدها باسم المدينة وحدَها
+    opened = None
+    if country is not None and await settings_service.is_feature_enabled(session, country, FeatureKey.OPEN_PLACES_SEARCH):
+        opened = await _open_nearby(country, lat, lng)
+    if opened and opened.get("label") and (opened.get("landmark") or opened.get("street")):
+        address, provider = opened["label"], "open"
+    else:
+        values = await use_google(session, country, "search", "geocode")
+        if values is not None:
+            try:
+                address = await google_maps.reverse(values["server_key"], lat, lng)
+                provider = "google"
+                await note("search", up=True)
+            except google_maps.GoogleFailed as exc:
+                await note("search", up=False, reason=exc.reason, country=country)
+                values = None
+        if values is None:
+            address = await _mapbox_reverse(session, country, lat, lng)
+    area = (opened or {}).get("area")
+    if area and provider != "open" and is_generic_address(address):
+        address, provider = area, "open"
     try:
         await _redis().set(cache_key, json.dumps({"address": address, "provider": provider}), ex=3600)
     except Exception:  # pragma: no cover

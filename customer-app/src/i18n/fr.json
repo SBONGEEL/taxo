@@ -1797,5 +1797,12 @@
   "محطة": "Station",
   "ملاحظة (اختياري)": "Note (facultatif)",
   "تعذّر الإرسال، حاول ثانيةً": "Échec de l’envoi, réessayez",
-  "لا يظهر شيءٌ على الخريطة قبل موافقة فريق TAXO، ولا يظهر اسمُك.": "Rien n’apparaît sur la carte avant l’approbation de l’équipe TAXO, et votre nom n’est pas affiché."
+  "لا يظهر شيءٌ على الخريطة قبل موافقة فريق TAXO، ولا يظهر اسمُك.": "Rien n’apparaît sur la carte avant l’approbation de l’équipe TAXO, et votre nom n’est pas affiché.",
+  "تم العثور على كبتن": "Chauffeur trouvé",
+  "مشاركة الرحلة": "Partager le trajet",
+  "الإلغاء الآن مجاني": "L’annulation est gratuite pour le moment",
+  "نعرض طلبك على أقرب الكباتن": "Nous proposons votre demande aux chauffeurs les plus proches",
+  "{0}{1} الآن": "{0}{1} en ce moment",
+  "أقرب كبتن على بُعد {0} د تقريباً": "Chauffeur le plus proche à environ {0} min",
+  "قد يستغرق دقيقتين": "Cela peut prendre deux minutes"
 }

@@ -130,7 +130,7 @@ def step_decimals(step: Decimal) -> int:
     return max(0, -exponent) if isinstance(exponent, int) else STORAGE_DECIMALS
 
 
-def fit_message(decimals: int, step: Decimal | None, currency: Currency | str) -> str | None:
+def fit_message(decimals: int, step: Decimal | None, currency: Currency | str, *, trim_whole: bool = False) -> str | None:
     """**أتلائم الخاناتُ الخطوة؟** (٢-و) — `None` إن لاءمت، وإلّا الجملةُ العربيّةُ التي يُمنع بها الحفظ.
 
     بخطوةٍ: الخاناتُ ≥ خاناتِ الخطوة (0.05 تحتاج خانتين). **وبلا خطوة (دقيق)**: الخاناتُ ≥ خاناتِ العملة — وإلّا رُسمت الأجرةُ
@@ -139,7 +139,9 @@ def fit_message(decimals: int, step: Decimal | None, currency: Currency | str) -
     if not 0 <= decimals <= STORAGE_DECIMALS:
         return f"الخاناتُ المعروضة بين 0 و{STORAGE_DECIMALS}"
     if step is None:
-        if decimals < floor:
+        # **والصحيحُ بلا كسورٍ** (أمرُ المالك ٢٠٢٦-١١-١٩، ليبيا «8 د.ل» و«8.50 د.ل»): خاناتُ الكسر للعرض وحدَه، **ولا تُخفى خانةٌ غيرُ
+        # صفريّةٍ أبداً** — أجرةٌ دقيقةٌ 8.125 تُرسم «8.125»؛ فلا حدَّ أدنى هنا يمنع ما أمر به
+        if decimals < floor and not trim_whole:
             return f"بلا خطوة تقريبٍ تبقى الأجرةُ دقيقةً بـ{floor} خانات — فلا تُعرض بأقلَّ من {floor}، أو اختر خطوةً"
         return None
     if step <= 0:

@@ -48,6 +48,11 @@ ROWS = [
     ("DZ", "district", "الأبيار", "El Biar", "الجزائر", 36.7680, 3.0300, 8, "osm"),
     ("DZ", "district", None, "El Biar", "الجزائر", 36.7700, 3.0330, 5, "overture"),
     ("DZ", "town", "الجزائر", "Alger", "الجزائر", 36.7538, 3.0588, 10, "osm"),
+    # «أين أنا؟» (أمرُ المالك ٢٠٢٦-١١-١٩): مصحّةٌ يعرفها الناسُ أبعدُ قليلاً من محلٍّ بلا شأن، ومكانٌ أقربُ منهما باسمٍ لاتينيٍّ وحدَه
+    ("LY", "town", "تاجوراء", "Tajoura", "طرابلس", 32.0100, 13.0100, 8, "osm"),
+    ("LY", "poi", "مصحة ابن النفيس", None, "تاجوراء", 32.0010, 13.0005, 5, "overture"),
+    ("LY", "poi", "محل الأمانة للهواتف", None, "تاجوراء", 32.0006, 13.0005, 4, "overture"),
+    ("LY", "poi", None, "Tech Corner", "تاجوراء", 32.0003, 13.0005, 4, "overture"),
 ]
 
 db = sqlite3.connect(INDEX)
@@ -212,6 +217,20 @@ with _ureq.urlopen(f"http://127.0.0.1:{_port}/tiles/places/14/8780/6512.pbf", ti
 _req = _ureq.Request(f"http://127.0.0.1:{_port}/match", data=_j.dumps({"points": [[32.0001, 13.0005, 92]]}).encode(), method="POST")
 with _ureq.urlopen(_req, timeout=5) as r:
     check("و/match عبر HTTP", _j.loads(r.read()) == {"segs": [1]})
+
+near = srv.nearby(32.0002, 13.0005, "LY")
+check("«أين أنا؟»: المنطقةُ وقربُ المعلم الذي يعرفه الناس — لا المحلُّ الأقرب ولا الاسمُ اللاتينيّ",
+      near["label"] == "تاجوراء، قرب مصحة ابن النفيس" and near["landmark"] == "مصحة ابن النفيس")
+check("والشارعُ المسمّى تحت النقطة يُقرأ معها", near["street"] == "الشط")
+check("وبعيداً عن كلِّ معلمٍ وشارع ⇐ المنطقةُ وحدَها لا «طرابلس» العامّة", srv.nearby(32.0080, 13.0130, "LY")["label"] == "تاجوراء")
+check("ودولةٌ ليست من الثلاث ⇐ لا شيء", srv.nearby(32.0, 13.0, "EG")["label"] is None)
+with _ureq.urlopen(f"http://127.0.0.1:{_port}/nearby?lat=32.0002&lng=13.0005&cc=ly", timeout=5) as r:
+    check("و/nearby عبر HTTP", _j.loads(r.read())["label"] == "تاجوراء، قرب مصحة ابن النفيس")
+try:
+    _ureq.urlopen(f"http://127.0.0.1:{_port}/nearby?cc=LY", timeout=5)
+    check("ونداءٌ بلا إحداثيّات ⇐ 400 لا انهيار", False)
+except _ureq.HTTPError as exc:
+    check("ونداءٌ بلا إحداثيّات ⇐ 400 لا انهيار", exc.code == 400)
 
 _httpd.shutdown()
 

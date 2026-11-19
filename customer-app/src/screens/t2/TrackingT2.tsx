@@ -49,7 +49,10 @@ import { ErrorNote } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
 import { clockText, hoursLabel, noDestination, useHourlyClock } from "@/lib/hourly";
-import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
+import { useNearestEta } from "@/lib/arrival";
+import { ownReverse } from "@/lib/geocode";
+import { CATEGORY_ICON, PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
+import { isGenericPlace, shortPlace } from "@/lib/place-name";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
 import { currencyLabel, DISPLAY_LOCALE, formatAmount, formatDistance, ratedAverage } from "@/lib/utils";
@@ -64,7 +67,7 @@ import { SheetT2 } from "./SheetT2";
 import { isWomenRide, RideCodeCardT2, WomenApproachChipT2, womenApproachTitle, WomenCaptainCardT2 } from "./WomenRideT2";
 import "@/taxo2";
 import "./t2.css";
-import { IDLE_GLYPH, Icon, useIconSetV2 } from "@/taxo2";
+import { Icon } from "@/taxo2";
 import "./tracking-count.css"; import { tr } from "@/lib/i18n";
 
 export interface TrackingT2Props {
@@ -112,6 +115,42 @@ function useDriverRides(ride: Ride): number | null {
   return count;
 }
 
+/** **أقُبل الطلبُ للتوّ أمام الراكب؟** — `true` خمسَ ثوانٍ بعد انتقاله من البحث إلى القبول في هذه الشاشة، وإلّا `false`. */
+function useJustFound(status: Ride["status"]): boolean {
+  const [previous, setPrevious] = useState(status);
+  const [found, setFound] = useState(false);
+  if (status !== previous) {
+    setPrevious(status);
+    setFound((previous === "searching" || previous === "requested") && status === "accepted");
+  }
+  useEffect(() => {
+    if (!found) return;
+    const timer = window.setTimeout(() => setFound(false), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [found]);
+  return found;
+}
+
+/** **اسمُ النقطة مختصراً وكاملاً** (أمرُ المالك ٢٠٢٦-١١-١٩) — المحفوظُ على الرحلة، **وإن لم يزد على اسم المدينة** («طرابلس»،
+ *  «طرابلس، شعبية طرابلس، ليبيا») يُسأل عن النقطة بإحداثيّتيها من بياناتنا مرّةً («تاجوراء، قرب مصحة ابن النفيس»). **ولا يُخترع
+ *  اسم**: بلا جوابٍ يبقى المحفوظُ كما هو. */
+function usePlaceName(saved: string | null, point: { lat: number; lng: number }, active: boolean) {
+  const [better, setBetter] = useState<string | null>(null);
+  const generic = isGenericPlace(saved);
+  useEffect(() => {
+    if (!active || !generic) return;
+    const controller = new AbortController();
+    void ownReverse(point, controller.signal).then((name) => {
+      if (!controller.signal.aborted && name) setBetter(name);
+    });
+    return () => controller.abort();
+    // النقطةُ بإحداثيّتيها لا بهويّة الكائن — كلُّ إطارٍ يحمل رحلةً بكائنٍ جديد
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, generic, point.lat, point.lng]);
+  const full = (generic && better) || saved;
+  return { full, short: shortPlace(full) };
+}
+
 /** ما بقي من الطريق وما مضى منه — **من المسار المجمَّد وموضع الكبتن عليه**، و`null` بلا أحدهما: لا رقمَ يُخمَّن. */
 export function tripProgress(routePoints: number[][] | null, driverPing: LatLng | null) {
   if (!routePoints || routePoints.length < 2 || !driverPing) return null;
@@ -145,7 +184,6 @@ function useHourlyPrepaySwitch(ride: Ride, onChanged: () => void) {
 
 export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine, nearby = null }: TrackingT2Props) {
   const t = useTrackingSheet({ ride, onChanged });
-  const iconsV2 = useIconSetV2();
   const driverRides = useDriverRides(ride);
   const countryConfig = useCountryConfig(ride.country_code);
   // **طريقةُ الدفع تفضيلٌ محلّي** كما في ورقة الطلب — تُعرض هنا وتُبدَّل، **ولا تُرسل مع الرحلة** (`lib/payment`).
@@ -160,6 +198,13 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   // **المشوارُ الثابت** (§٦٣-ج/٦) — مدفوعةٌ من الاشتراك: **لا قناةَ تُعرض ولا تُبدَّل**، بل «مدفوعة من اشتراكك». ومن الصفّ
   const commute = ride.commute;
   const [pickingPay, setPickingPay] = useState(false);
+  // **ورقةُ البحث** (أمرُ المالك ٢٠٢٦-١١-١٩): أيُّ النقطتين مفتوحةٌ باسمها الكامل، ودقائقُ أقرب كبتنٍ ما دام البحثُ جارياً، واسمٌ
+  // عربيٌّ مفيدٌ لنقطةٍ حُفظت باسم المدينة وحدَها («طرابلس») — يُسأل عنها بإحداثيّتيها مرّة
+  const [openStop, setOpenStop] = useState<"from" | "to" | null>(null);
+  const found = useJustFound(ride.status);
+  const searchEta = useNearestEta(t.searching ? ride.pickup : null, t.searching);
+  const pickupName = usePlaceName(ride.pickup_address ?? pickupLine ?? null, ride.pickup, t.searching);
+  const dropoffName = usePlaceName(ride.dropoff_address ?? null, ride.dropoff, t.searching && !(hourly && noDestination(ride)));
 
   const share = async () => {
     // **رابطٌ حيٌّ لا نصٌّ ساكن** (البند ٧، ٢٠٢٦-١١-١٠) — من يفتحه يرى السيارةَ تتحرّك واسمَ الكبتن الأوّلَ ولوحتَه، ويتوقّف بانتهاء
@@ -259,84 +304,129 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
     ) : null;
 
   // ── R07: البحث ─────────────────────────────────────────────────────────────────────────────────────
+  // **أُعيد رسمُها** (أمرُ المالك ٢٠٢٦-١١-١٩): كان في رأسها اسمُ أيقونةٍ خامٌ («LOCATION_🔍ING») يأخذ العرضَ كلَّه — رمزٌ لا يحمله
+  // خطُّ التطبيق فيُرسم نصُّه. **والآن نبضةُ رادارٍ بالـCSS** كنبضة الخريطة، والعنوانُ بعرضه، وبطاقةُ رحلةٍ بخطٍّ رفيعٍ بين النقطتين،
+  // **وما يُقال حيّاً من بياناتٍ أو لا يُقال**: عددُ ما ترسمه الخريطةُ من سيارات، ودقائقُ أقرب كبتنٍ من `/rides/eta` حين تُحسب
   if (t.searching) {
+    const nearestMinutes = searchEta.minutes?.[ride.vehicle_category] ?? null;
+    const price = ride.negotiation_offer ?? ride.rider_estimate;
+    const fromFull = pickupName.full ?? tr("نقطة الانطلاق");
+    const toFull = hourly && noDestination(ride) ? tr("بلا وجهة — تقولها للكبتن") : (dropoffName.full ?? tr("الوجهة"));
+    const stop = (which: "from" | "to", label: string, full: string, short: string | null) => (
+      <button
+        type="button"
+        className={openStop === which ? "t2-srch-stop open" : "t2-srch-stop"}
+        aria-expanded={openStop === which}
+        // **الاسمُ الكاملُ باللمس** — والمختصرُ أوّلُ ما يدلّ منه
+        onClick={() => setOpenStop(openStop === which ? null : which)}
+      >
+        <span className="t2-srch-stop-label">{label}</span>
+        <span className="t2-srch-stop-name">{openStop === which ? full : (short ?? full)}</span>
+      </button>
+    );
     return (
       <SheetT2
         footer={
           confirm ?? (
-            <>
-              <button type="button" className="t2-trk-cancel" disabled={t.busy} onClick={() => t.setConfirming(true)}>
+            <div className="t2-srch-actions t2-phase">
+              {/* **«مشاركة الرحلة» قائمةٌ من البحث** — رابطُ التتبّع يُفتح لكلِّ رحلةٍ نشطة (`ride_for_other.TRACKABLE`). **و«تعديل
+                  الوجهة» لا يُرسم**: لا بابَ لتغيير وجهة طلبٍ قائم في الخلفيّة، وزرٌّ بلا بابٍ وعدٌ كاذب */}
+              <button type="button" className="t2-srch-share" onClick={() => void share()}>
+                <Icon name="share" />
+                <span>{t.copied ? tr("نُسخت التفاصيل") : tr("مشاركة الرحلة")}</span>
+              </button>
+              {/* **إلغاءٌ واضحٌ هادئ** — حافّةٌ وحبرٌ لا أحمرُ ينذر؛ والتأكيدُ بعده يقول ما سيقع */}
+              <button type="button" className="t2-srch-cancel" disabled={t.busy} onClick={() => t.setConfirming(true)}>
                 {tr("إلغاء الطلب")}
               </button>
               {/* **صدقٌ لا وعد**: الإلغاءُ مجانيٌّ قبل القبول (القسم 5) — ورسمُه بعده يُقال هناك */}
-              <p className="t2-trk-free">{tr("الإلغاء الآن مجاني.")}</p>
-            </>
+              <p className="t2-trk-free">{tr("الإلغاء الآن مجاني")}</p>
+            </div>
           )
         }
       >
-        <div className="t2-trk-head">
-          {iconsV2 ? <Icon name={IDLE_GLYPH} className="t2-glyph-idle t2-trk-radar" /> : null}
-          <h3 className="t2-trk-title">{tr("نبحث لك عن كبتن قريب")}</h3>
+        <div className="t2-phase">
+          <div className="t2-srch-head">
+            {/* **نبضةُ الرادار** — حلقتان بالـCSS كرادار الخريطة، وتقفان على طورٍ واحدٍ مع «تقليل الحركة» أو على جهازٍ ضعيف */}
+            <span className="t2-srch-pulse" aria-hidden="true">
+              <i />
+              <i />
+              <b />
+            </span>
+            <div className="t2-srch-titles">
+              <h3 className="t2-srch-title">{tr("نبحث لك عن كبتن قريب")}</h3>
+              {/* **«انتظري، نوسّع البحث» اختارته هي** (§٦٤-ج/٤-٣) — بلا عددٍ ولا نصفِ قطر؛ **والتفاوضُ يُعرض على واحدٍ في كلِّ مرّة** */}
+              <p className="t2-srch-sub">
+                {ride.search_widened
+                  ? tr("نوسّع البحث بين الكبتنات…")
+                  : ride.negotiation_offer
+                    ? tr("نعرض عرضك على كبتنٍ واحدٍ في كلِّ مرّة")
+                    : tr("نعرض طلبك على أقرب الكباتن")}
+              </p>
+            </div>
+          </div>
           {badges}
-        </div>
-        {/* **سطرُ التطبيق القائم لا سطرُ اللوحة**: «عادةً أقل من دقيقة» وعدٌ بلا مصدر (§٦١-د/د). **و«6 كباتن حولك الآن» من اللوحة**
-            (§٦٢-ج/٢٧) — عددُ ما ترسمه الخريطةُ نفسُه، **ولا يُقال صفرٌ ولا عددٌ لا يُرسم** */}
-        {/* **«انتظري، نوسّع البحث» اختارته هي** (§٦٤-ج/٤-٣، `search_widened`) — فالسطرُ يقول ما يقع الآن **بلا عددٍ ولا نصفِ قطر**:
-            عددُ الكبتنات القريبات لم يُقَل (`APPROVALS-62` §٦-٢)، **ولا يُلحق به عددُ السيارات** ولو وصل */}
-        <p className="t2-trk-sub">
-          {ride.search_widened
-            ? tr("نوسّع البحث بين الكبتنات…")
-            : ride.negotiation_offer
-              ? tr("نعرض عرضك على كبتنٍ واحدٍ في كلِّ مرّة")
-              : tr("نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين")}
-          {/* **والعددُ لا ينفصل عن معدوده** آخرَ السطر (` `) — قِيس: «6» وحدَها آخرَ سطرٍ و«كباتن» أوّلَ تاليه */}
-          {nearby && !ride.search_widened ? tr(". {0}{1} الآن.", { 0: nearby > 2 ? `${nearby} ` : "", 1: nearbyLabel(nearby) }) : ""}
-        </p>
-        {/* **شريطٌ يتحرّك ولا يتقدّم** — «لا نعرف كم يبقى، وشريطٌ يتقدّم يَعِد بما لا نملكه» (الورقة القائمة) */}
-        <div className="t2-trk-bar" role="progressbar" aria-label={tr("نبحث عن كبتن")} aria-busy="true">
-          <span />
-        </div>
-        <div className="t2-trk-route">
-          <div className="t2-trk-route-points">
-            <span className="t2-trk-dot from" aria-hidden="true" />
-            <span className="t2-trk-route-text">{ride.pickup_address ?? pickupLine ?? tr("نقطة الانطلاق")}</span>
-            <span className="t2-trk-dot to" aria-hidden="true" />
-            {/* **ساعاتٌ بلا وجهةٍ تقول ذلك** (§٦٣-ج/٥) — لا «الوجهة» عن نقطة الانطلاق نفسِها */}
-            <span className="t2-trk-route-text">
-              {hourly && noDestination(ride) ? tr("بلا وجهة — تقولها للكبتن") : (ride.dropoff_address ?? tr("الوجهة"))}
+          {/* **ما يُقال حيّاً — من بياناتٍ أو لا يُقال** (§٦١-د/د): عددُ السيارات التي ترسمها الخريطةُ نفسُها، ودقائقُ أقرب كبتنٍ من فئتك
+              حين يحسبها `/rides/eta`؛ وبلاهما «قد يستغرق دقيقتين» كما كانت الورقة تقول */}
+          <div className="t2-srch-live" aria-live="polite">
+            {nearby && !ride.search_widened ? (
+              <span className="t2-srch-chip">
+                <Icon name="local_taxi" />
+                {tr("{0}{1} الآن", { 0: nearby > 2 ? `${nearby} ` : "", 1: nearbyLabel(nearby) })}
+              </span>
+            ) : null}
+            <span className="t2-srch-chip">
+              <Icon name="schedule" />
+              {nearestMinutes !== null
+                ? tr("أقرب كبتن على بُعد {0} د تقريباً", { 0: Math.max(1, Math.round(nearestMinutes)) })
+                : tr("قد يستغرق دقيقتين")}
             </span>
           </div>
-          <div className="t2-trk-route-fare">
-            <div className="t2-trk-route-kind">
-              {VEHICLE_LABEL[ride.vehicle_category]}
-              {commute ? tr(" · مدفوعة من اشتراكك") : payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
+
+          <div className="t2-srch-trip">
+            <div className="t2-srch-stops">
+              {/* **النقطتان بخطٍّ رفيع** — دائرةُ الانطلاق بالحبر ومربّعُ الوجهة بالجمر، لغةُ الخريطة نفسُها */}
+              <span className="t2-srch-rail" aria-hidden="true">
+                <i className="from" />
+                <b />
+                <i className="to" />
+              </span>
+              {stop("from", tr("من"), fromFull, pickupName.short)}
+              {stop("to", tr("إلى"), toFull, hourly && noDestination(ride) ? null : dropoffName.short)}
             </div>
-            <div className="t2-trk-route-price">
-              {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
-                  ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤). والمشوارُ الثابتُ بسعره المجمَّد في الحالين */}
-              <span dir="ltr" className="t2-num">
-                {formatAmount(ride.negotiation_offer ?? ride.rider_estimate, ride.currency)}
-              </span>{" "}
-              {currencyLabel(ride.currency)}
+            <div className="t2-srch-meta">
+              <span className="t2-srch-cat">
+                <Icon name={CATEGORY_ICON[ride.vehicle_category] ?? "local_taxi"} art />
+                <span>{VEHICLE_LABEL[ride.vehicle_category]}</span>
+              </span>
+              <span className="t2-srch-fare">
+                {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — والمشوارُ الثابتُ بسعره المجمَّد */}
+                <span className="t2-srch-price">
+                  <span dir="ltr" className="t2-num">{formatAmount(price, ride.currency)}</span> {currencyLabel(ride.currency)}
+                </span>
+                <span className="t2-srch-pay">
+                  {commute ? tr("مدفوعة من اشتراكك") : payMethod ? PAYMENT_METHOD_LABEL[payMethod.method] : ""}
+                </span>
+              </span>
             </div>
           </div>
+          {/* **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الدافعُ ورابطُ التتبّع من أوّل البحث — والاسمُ لا يُنشر قبل القبول */}
+          {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
+          {/* **والطرد** (§٦٣-ج/٤): دافعُه من أوّل البحث، والمستلمُ بعد القبول */}
+          {parcel ? <ParcelTrackT2 ride={ride} /> : null}
+          {/* **والساعات** (§٦٣-ج/٥): عددُها وكيلومتراتُها، ومن أين يُدفع محجوزُها بزرِّ تبديله — من أوّل البحث */}
+          {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
+          {/* **«تفاوض»** (§٩٢): العرضُ المقابلُ بقبوله ورفضه، وتغييرُ السعر */}
+          {ride.negotiation_offer ? <NegotiationTrackT2 ride={ride} onChanged={onChanged} /> : null}
+          {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
+          {t.women ? (
+            <p className="t2-note">
+              <Icon name="schedule" />
+              {tr("نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
+            </p>
+          ) : null}
+          <ErrorNote message={t.error} className="t2-error" />
         </div>
-        {/* **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الدافعُ ورابطُ التتبّع من أوّل البحث — والاسمُ لا يُنشر قبل القبول */}
-        {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
-        {/* **والطرد** (§٦٣-ج/٤): دافعُه من أوّل البحث، والمستلمُ بعد القبول */}
-        {parcel ? <ParcelTrackT2 ride={ride} /> : null}
-        {/* **والساعات** (§٦٣-ج/٥): عددُها وكيلومتراتُها، ومن أين يُدفع محجوزُها بزرِّ تبديله — من أوّل البحث */}
-        {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
-        {/* **«تفاوض»** (§٩٢): العرضُ المقابلُ بقبوله ورفضه، وتغييرُ السعر */}
-        {ride.negotiation_offer ? <NegotiationTrackT2 ride={ride} onChanged={onChanged} /> : null}
-        {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
-        {t.women ? (
-          <p className="t2-note">
-            <Icon name="schedule" />
-            {tr("نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
-          </p>
-        ) : null}
-        <ErrorNote message={t.error} className="t2-error" />
       </SheetT2>
     );
   }
@@ -502,7 +592,15 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           : null
       }
     >
-      <div className="t2-trk-head2">
+      {/* **«تم العثور على كبتن»** (أمرُ المالك ٢٠٢٦-١١-١٩) — لحظةَ ينتقل الطلبُ من البحث إلى القبول أمام عينه، ثوانيَ ثمّ يخفت؛
+          ورحلةٌ فُتحت مقبولةً لا يُقال لها «وجدنا» عن قبولٍ قديم */}
+      {found ? (
+        <p className="t2-found t2-phase" role="status">
+          <Icon name="check_circle" fill />
+          {tr("تم العثور على كبتن")}
+        </p>
+      ) : null}
+      <div className="t2-trk-head2 t2-phase">
         <div className="t2-trk-head2-main">
           <div className="t2-trk-title2">
             {womenRide ? womenApproachTitle(arrived) : arrived ? tr("الكبتن ينتظرك في نقطة الانطلاق") : tr("الكبتن في الطريق إليك")}

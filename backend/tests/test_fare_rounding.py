@@ -104,6 +104,37 @@ def test_the_display_never_hides_a_non_zero_digit() -> None:
     assert fare_rounding.shown(D("7.000"), 3) == "7.000"
 
 
+def test_libya_shows_a_whole_fare_without_decimals_and_a_fraction_with_two() -> None:
+    """**«8 د.ل» لا «8.000 د.ل»، و«8.50 د.ل» بكسر** (أمرُ المالك ٢٠٢٦-١١-١٩) — عرضٌ وحدَه، ولا تُخفى خانةٌ غيرُ صفريّة."""
+    assert fare_rounding.shown(D("8.000"), 2, trim_whole=True) == "8"
+    assert fare_rounding.shown(D("8.500"), 2, trim_whole=True) == "8.50"
+    assert fare_rounding.shown(D("8.125"), 2, trim_whole=True) == "8.125"
+    assert fare_rounding.shown(D("8.000"), 2) == "8.00", "بلا المفتاح لا يتغيّر شيء"
+    assert rounding.fit_message(2, None, Currency.LYD, trim_whole=True) is None
+    assert rounding.fit_message(2, None, Currency.LYD) is not None, "والقاعدةُ القديمةُ باقيةٌ لمن لم يختره"
+
+
+async def test_the_trim_switch_is_saved_audited_and_served_in_config(
+    client: AsyncClient, admin_headers: dict, jordan_settings: None, session_factory
+) -> None:
+    saved = await client.put(
+        "/admin/settings/fare-rounding/JO", json={**JORDAN, "trim_whole": True}, headers=admin_headers
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["trim_whole"] is True
+    async with session_factory() as session:
+        row = await session.scalar(
+            select(AdminAuditLog)
+            .where(AdminAuditLog.entity_type == "market_display_decimals")
+            .order_by(AdminAuditLog.created_at.desc())
+        )
+    assert row is not None and row.details["changes"]["display_trim_whole"] == {"from": False, "to": True}
+    config = (await client.get("/config", params={"country": "JO"})).json()
+    face = config.get("country") or config
+    found = [face] if "display_trim_whole" in face else [c for c in config.get("countries", []) if c.get("country_code") == "JO"]
+    assert found and found[0]["display_trim_whole"] is True, config
+
+
 # ------------------------------------------------------------------ ٤) الجزائرُ وليبيا كما كانتا
 
 

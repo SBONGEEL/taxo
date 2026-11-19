@@ -58,6 +58,7 @@ function toInput(value: FareRounding): FareRoundingInput {
     on_final: value.on_final,
     on_negotiation: value.on_negotiation,
     on_cancellation: value.on_cancellation,
+    trim_whole: value.trim_whole ?? false,
   };
 }
 
@@ -151,6 +152,19 @@ export function FareRoundingScreen() {
               options={(["0", "1", "2", "3"] as const).map((key) => ({ key, label: digits(key) }))}
               onPick={(key) => setDraft({ ...draft, decimals: Number(key) })}
             />
+            <label className="flex items-center justify-between gap-4">
+              <span>
+                <span className="block font-bold">المبلغُ الصحيحُ بلا كسور</span>
+                <span className="ad-tone-muted text-12">
+                  {digits("8")} {currency} لا {digits("8.000")} — وبكسرٍ يُرسم بالخانات المختارة ({digits("8.50")}). للعرض وحدَه
+                </span>
+              </span>
+              <Switch
+                label="المبلغ الصحيح بلا كسور"
+                checked={draft.trim_whole}
+                onChange={(next) => setDraft({ ...draft, trim_whole: next })}
+              />
+            </label>
             <p className="ad-tone-muted text-12">
               العرضُ لا يُخفي خانةً غيرَ صفريّةٍ أبداً: مبلغٌ قديمٌ مثل {digits("1.725")} يبقى {digits("1.725")} — لا يُقرَّب صامتاً.
             </p>

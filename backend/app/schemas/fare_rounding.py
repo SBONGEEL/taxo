@@ -20,6 +20,8 @@ class FareRoundingIn(BaseModel):
     on_final: bool
     on_negotiation: bool
     on_cancellation: bool
+    #: **الصحيحُ بلا كسور** (أمرُ المالك ٢٠٢٦-١١-١٩): «8 د.ل» لا «8.000 د.ل» — عرضٌ وحدَه
+    trim_whole: bool = False
 
 
 class FareRoundingOut(FareRoundingIn):

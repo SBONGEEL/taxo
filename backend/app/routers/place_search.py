@@ -51,7 +51,7 @@ class ResolvedOut(BaseModel):
 
 class ReverseOut(BaseModel):
     address: str | None
-    provider: Literal["google", "mapbox"]
+    provider: Literal["google", "mapbox", "open"]
 
 
 class MapsProvidersOut(BaseModel):

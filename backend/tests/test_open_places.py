@@ -31,8 +31,11 @@ class OpenFake:
         self.calls: list[dict] = []
         self.status = 200
         self.items = [OPEN_ITEM]
+        self.near: dict = {"area": None, "landmark": None, "street": None, "label": None}
 
     def handler(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/nearby":
+            return httpx.Response(200, json=self.near)
         self.calls.append(dict(request.url.params))
         if self.status == 0:
             raise httpx.ReadTimeout("slow", request=request)
@@ -210,3 +213,51 @@ async def test_a_saved_place_hides_the_same_provider_result_and_gets_a_distance(
     other = (await rider_session(client, OTHER_RIDER))["headers"]
     theirs = (await client.get("/places/search", params={"q": "سيتي مول", "lat": 31.95, "lng": 35.91}, headers=other)).json()
     assert [i["source"] for i in theirs["items"]] == ["open"]
+
+
+async def _reverse(client: AsyncClient, lat: float = 31.95, lng: float = 35.91) -> dict:
+    headers = getattr(client, "_open_rider", None)
+    if headers is None:
+        headers = (await rider_session(client, RIDER))["headers"]
+        client._open_rider = headers  # type: ignore[attr-defined]
+    return (await client.get("/places/reverse", params={"lat": lat, "lng": lng}, headers=headers)).json()
+
+
+async def test_reverse_names_the_landmark_from_open_data(
+    client: AsyncClient, open_fake: OpenFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**«أين أنا؟» بالعربيّة** (أمرُ المالك ٢٠٢٦-١١-١٩): معلمٌ قريبٌ من بياناتنا يُقال ولا يُسأل Mapbox — لا «طرابلس» وحدَها."""
+    asked: list = []
+
+    async def fake_mapbox(session, country, lat, lng):
+        asked.append((lat, lng))
+        return "طرابلس"
+
+    monkeypatch.setattr(maps, "_mapbox_reverse", fake_mapbox)
+    open_fake.near = {"area": "تاجوراء", "landmark": "مصحة ابن النفيس", "street": None, "label": "تاجوراء، قرب مصحة ابن النفيس"}
+    got = await _reverse(client, 31.9501, 35.9101)
+    assert got == {"address": "تاجوراء، قرب مصحة ابن النفيس", "provider": "open"}
+    assert asked == []
+
+
+async def test_reverse_keeps_a_useful_provider_address_and_replaces_a_bare_city(
+    client: AsyncClient, open_fake: OpenFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """المنطقةُ وحدَها لا تغلب عنواناً فيه شارع؛ **وتغلب «طرابلس، شعبية طرابلس، ليبيا»** التي لا تدلّ على رصيف."""
+    answer = {"text": "شارع الجمهورية، عمّان، الأردن"}
+
+    async def fake_mapbox(session, country, lat, lng):
+        return answer["text"]
+
+    monkeypatch.setattr(maps, "_mapbox_reverse", fake_mapbox)
+    open_fake.near = {"area": "جبل عمّان", "landmark": None, "street": None, "label": "جبل عمّان"}
+    assert (await _reverse(client, 31.9502, 35.9102))["address"] == "شارع الجمهورية، عمّان، الأردن"
+    answer["text"] = "طرابلس، شعبية طرابلس، ليبيا"
+    assert await _reverse(client, 31.9503, 35.9103) == {"address": "جبل عمّان", "provider": "open"}
+
+
+async def test_generic_address_is_only_a_city_and_its_admin_parts() -> None:
+    assert maps.is_generic_address("طرابلس")
+    assert maps.is_generic_address("طرابلس، شعبية طرابلس، ليبيا")
+    assert maps.is_generic_address(None)
+    assert not maps.is_generic_address("شارع الشط، تاجوراء، طرابلس")
