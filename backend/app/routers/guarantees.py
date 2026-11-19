@@ -36,7 +36,7 @@ async def _offer(session, row: RideBooking) -> GuaranteeOfferOut:
         dropoff_address=row.dropoff_address,
         # **التقديرُ معروضاً كما سيُدفع** (SPEC §٧٠-ج/٤، مراجعةُ المال البند ١٣) — المحفوظُ بدقّته، والمعروضُ مقرَّباً بإعداد السوق
         # الآن كما يراه الراكبُ في حجزه. ومطفأً كما كان حرفاً
-        estimated_fare_at_booking=await rounding.shown_in(session, row.country_code, row.estimated_fare_at_booking),
+        estimated_fare_at_booking=await rounding.fare_shown_in(session, row.country_code, row.estimated_fare_at_booking),
         guarantee_fee=row.guarantee_fee_at_booking,
         currency=currency_for_country(row.country_code),
         accepted=row.driver_id is not None,

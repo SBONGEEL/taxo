@@ -141,7 +141,7 @@ async def prepay_on_start(session: AsyncSession, ride: Ride) -> None:
     # **والسياسةُ تُجمَّد على الرحلة الآن** (`rounding_*_at_ride`، مراجعةُ المال البند ٢): الإنهاءُ يقرّب الباقي **بها لا بإعداد
     # لحظته** — فإطفاءٌ أو اتجاهٌ آخرُ أو وحدةٌ أخرى في أثناء الرحلة لا تفصل المقدَّمَ عن باقيه، ولا يبقى فرقُه بلا سطر. والعدّادُ
     # يقرؤها من هنا أيضاً، فيعرض ما سيُحسب
-    policy = await rounding.policy_for(session, ride.country_code)
+    policy = await rounding.fare_policy_for(session, ride.country_code, rounding.FareSurface.FINAL)
     rounding.freeze_on(ride, policy)
     amount, _ = rounding.round_amount(
         booked(ride.hourly_hours or 0, ride.hourly_rate_at_ride or Decimal(0)), policy

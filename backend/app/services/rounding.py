@@ -18,6 +18,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, replace
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -79,6 +80,76 @@ async def policy_for(session: AsyncSession, country: CountryCode) -> RoundingPol
         select(PaymentSetting).where(PaymentSetting.country_code == country)
     )
     return policy_of(setting)
+
+
+class FareSurface(StrEnum):
+    """**أين يسري تقريبُ الأجرة — ولكلٍّ مفتاحُه** (أمرُ المالك ٢٠٢٦-١١-١٩ ٢-د)."""
+
+    ESTIMATE = "estimate"
+    """تقديرُ الأجرة قبل الطلب (ومعاينةُ القسيمة والحجزُ المجدول)"""
+    FINAL = "final"
+    """الأجرةُ النهائيّة — **تُجمَّد على الرحلة عند طلبها** ومنها العدّادُ الحيّ"""
+    NEGOTIATION = "negotiation"
+    """أسعارُ التفاوض: عرضُ الراكب، وعرضُ الكبتن المقابل، والحدُّ الأدنى والخطوة"""
+    CANCELLATION = "cancellation"
+    """رسمُ الإلغاء"""
+
+
+_SURFACE_COLUMN = {
+    FareSurface.ESTIMATE: "fare_on_estimate",
+    FareSurface.FINAL: "fare_on_final",
+    FareSurface.NEGOTIATION: "fare_on_negotiation",
+    FareSurface.CANCELLATION: "fare_on_cancellation",
+}
+
+
+def fare_policy_of(setting: PaymentSetting | None, surface: FareSurface) -> RoundingPolicy:
+    """**تقريبُ الأجرة لموضعٍ واحد** (أمرُ المالك ٢٠٢٦-١١-١٩) — **منفصلٌ عن `policy_of`**: ذاك للاشتراكات والإكراميّات والشحن
+    والسحب والتحويل والسلف، وهذا للأجرة وحدَها. **بلا خطوةٍ (`fare_step` NULL) أو بمفتاح الموضع مطفأً ⇐ هويّة** — الأجرةُ دقيقة."""
+    if setting is None or setting.fare_step is None or not getattr(setting, _SURFACE_COLUMN[surface]):
+        return DISABLED
+    return RoundingPolicy(enabled=True, unit=setting.fare_step, mode=RoundingMode(setting.fare_mode))
+
+
+async def fare_policy_for(session: AsyncSession, country: CountryCode, surface: FareSurface) -> RoundingPolicy:
+    """تقريبُ الأجرة للموضع الآن — قراءةٌ لا تُنشئ صفّاً. **والرحلةُ القائمةُ لا تقرأ هذا**: سياستُها مجمَّدةٌ عليها (`frozen_policy`)."""
+    setting = await session.scalar(select(PaymentSetting).where(PaymentSetting.country_code == country))
+    return fare_policy_of(setting, surface)
+
+
+async def fare_shown_in(session: AsyncSession, country: CountryCode, amount: Decimal | None) -> Decimal | None:
+    """**تقديرُ أجرةٍ يُعرض قبل الطلب مقرَّباً بتقريب الأجرة** (`ESTIMATE`) — الحجزُ المجدولُ وضمانُه. المحفوظُ لا يُمسّ."""
+    if amount is None:
+        return None
+    return rounded(amount, await fare_policy_for(session, country, FareSurface.ESTIMATE))
+
+
+def step_decimals(step: Decimal) -> int:
+    """**أقلُّ خاناتٍ تُظهر مضاعفاتِ الخطوة** — 0.05 ⇐ 2 · 0.5 ⇐ 1 · 1 و10 ⇐ 0 · 0.125 ⇐ 3."""
+    exponent = step.normalize().as_tuple().exponent
+    return max(0, -exponent) if isinstance(exponent, int) else STORAGE_DECIMALS
+
+
+def fit_message(decimals: int, step: Decimal | None, currency: Currency | str) -> str | None:
+    """**أتلائم الخاناتُ الخطوة؟** (٢-و) — `None` إن لاءمت، وإلّا الجملةُ العربيّةُ التي يُمنع بها الحفظ.
+
+    بخطوةٍ: الخاناتُ ≥ خاناتِ الخطوة (0.05 تحتاج خانتين). **وبلا خطوة (دقيق)**: الخاناتُ ≥ خاناتِ العملة — وإلّا رُسمت الأجرةُ
+    الدقيقةُ بخاناتٍ لا تحملها. **والخطوةُ نفسُها بخانات العملة** (لا 0.0005، ولا 0.5 للدينار الجزائريّ)."""
+    floor = decimals_of(currency)
+    if not 0 <= decimals <= STORAGE_DECIMALS:
+        return f"الخاناتُ المعروضة بين 0 و{STORAGE_DECIMALS}"
+    if step is None:
+        if decimals < floor:
+            return f"بلا خطوة تقريبٍ تبقى الأجرةُ دقيقةً بـ{floor} خانات — فلا تُعرض بأقلَّ من {floor}، أو اختر خطوةً"
+        return None
+    if step <= 0:
+        return "خطوةُ التقريب أكبرُ من صفر"
+    need = step_decimals(step)
+    if need > floor:
+        return f"خطوةُ التقريب {step.normalize():f} أدقُّ ممّا تحمله العملة ({floor} خانات)"
+    if decimals < need:
+        return f"الخطوةُ {step.normalize():f} تحتاج {need} خانات على الأقلّ — والمختار {decimals}"
+    return None
 
 
 def frozen_policy(ride: Ride) -> RoundingPolicy:
@@ -236,6 +307,17 @@ async def require_multiple_in(
     currency = currency_for_country(country)
     require_precise(amount, currency, field=field)
     policy = await policy_for(session, country)
+    require_multiple(amount, policy, field=field, currency=currency)
+    return policy
+
+
+async def require_fare_multiple(
+    session: AsyncSession, country: CountryCode, amount: Decimal, *, field: str | None = "amount"
+) -> RoundingPolicy:
+    """`require_multiple` **بتقريب أسعار التفاوض** (`NEGOTIATION`) — عرضُ الراكب وعرضُ الكبتن المقابل. وخاناتُ العملة أوّلاً."""
+    currency = currency_for_country(country)
+    require_precise(amount, currency, field=field)
+    policy = await fare_policy_for(session, country, FareSurface.NEGOTIATION)
     require_multiple(amount, policy, field=field, currency=currency)
     return policy
 
@@ -400,7 +482,9 @@ async def apply_to_ride(session: AsyncSession, ride: Ride) -> MoneyRounding | No
     """
     if ride.final_fare is None or ride.commute_id is not None:
         return None
-    policy = frozen_policy(ride) if ride.ride_type == "hourly" else await policy_for(session, ride.country_code)
+    # **المجمَّدُ عند الطلب لكلِّ رحلة** (أمرُ المالك ٢٠٢٦-١١-١٩ ٤: «التغييرُ يسري على الرحلات الجديدة وحدَها») — كان إعدادَ لحظة
+    # الإنهاء لغير رحلة الساعة، فتغييرٌ في اللوحة أثناء رحلةٍ جاريةٍ كان يبلغها. **ورحلةٌ بلا سياسةٍ مجمَّدة** لا تُقرَّب.
+    policy = frozen_policy(ride)
     if not policy.enabled:
         return None
 

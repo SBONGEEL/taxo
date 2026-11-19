@@ -101,7 +101,7 @@ async def floor_for(session: AsyncSession, country: CountryCode, rules: Negotiat
 
     والخطوةُ وحدةُ التقريب إن كان مشتعلاً، وإلا لا خطوة (خاناتُ العملة وحدَها تحكم، `rounding.require_precise`).
     """
-    policy = await rounding.policy_for(session, country)
+    policy = await rounding.fare_policy_for(session, country, rounding.FareSurface.NEGOTIATION)
     step = policy.unit if policy.enabled else None
     # **النسبةُ من التقدير المقرَّب في كلِّ باب** (٢٠٢٦-١١-٠٦): التقديرُ يمرّر المقرَّبَ والطلبُ وتعديلُ السعر يمرّران
     # `ride.estimated_fare` الخامَ — **فقِيس على مكدّس التطوير** حدٌّ يُعرض ٢٤٠ دج ويردّه الطلبُ مطالباً بـ٢٥٠ (٣٤٤ خاماً، ٣٤٠
@@ -127,7 +127,7 @@ async def validate_offer(
         raise InvalidInput("التفاوضُ غيرُ متاحٍ في بلدك الآن", field="negotiation")
     if not rules.allows(category):
         raise InvalidInput("التفاوضُ غيرُ متاحٍ في هذه الفئة", field="negotiation")
-    await rounding.require_multiple_in(session, country, amount, field="negotiation")
+    await rounding.require_fare_multiple(session, country, amount, field="negotiation")
     floor = await floor_for(session, country, rules, estimate)
     if amount < floor.minimum:
         shown = money_text(floor.minimum, currency_for_country(country))
@@ -172,7 +172,7 @@ async def counter(
     if await redis.exists(counter_key(ride.id)):
         raise InvalidInput("أرسلتَ عرضك — ينتظر جوابَ الراكب", field="amount")
     rules = await rules_for(session, ride.country_code)
-    await rounding.require_multiple_in(session, ride.country_code, amount, field="amount")
+    await rounding.require_fare_multiple(session, ride.country_code, amount, field="amount")
     if amount <= ride.negotiation_offer:
         raise InvalidInput("عرضُك يساوي عرضَ الراكب أو أقلّ — اضغط «قبول بسعره»", field="amount")
     if rules.max_counter_percent is not None:

@@ -105,6 +105,11 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
             "rounding_unit > 0 AND rounding_mode IN ('nearest', 'up', 'down')",
             name="payment_rounding_valid",
         ),
+        # **تقريبُ الأجرة** (أمرُ المالك ٢٠٢٦-١١-١٩، الترحيلة `0176`): خطوةٌ موجبةٌ أو لا خطوة (دقيق)، واتجاهٌ من ثلاثة
+        CheckConstraint(
+            "(fare_step IS NULL OR fare_step > 0) AND fare_mode IN ('nearest', 'up', 'down')",
+            name="payment_fare_rounding_valid",
+        ),
         # **ترتيبُ الطرق قائمةٌ** (أمرُ المالك ٢٠٢٦-١١-١٣، الترحيلة `0161`) — والمفاتيحُ وتكرارُها يحرسها المخطَّطُ في اللوحة
         CheckConstraint(
             "jsonb_typeof(payment_method_order) = 'array'",
@@ -256,6 +261,20 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     rounding_enabled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+    # ------------------------------------- تقريبُ الأجرة (أمرُ المالك ٢٠٢٦-١١-١٩، الترحيلة `0176`)
+    # **منفصلٌ عن التقريب العامّ أعلاه** — ذاك للاشتراكات والإكراميّات والشحن والسحب والتحويل والسلف ولا يُمسّ هنا.
+    # **ويُقرأ من بيتٍ واحد** (`services/rounding.fare_policy_for`)، **ويُجمَّد على الرحلة عند طلبها** فلا يمسّ تغييرُه رحلةً جارية.
+
+    #: **خطوةُ تقريب الأجرة** — `NULL` = دقيقٌ بلا تقريب
+    fare_step: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    #: **اتجاهُه** — `nearest` (نصفُه للأعلى) · `up` · `down`
+    fare_mode: Mapped[str] = mapped_column(String(8), nullable=False, default="nearest", server_default=text("'nearest'"))
+    #: **أين يسري — ولكلٍّ مفتاحُه**: تقديرُ الأجرة قبل الطلب · الأجرةُ النهائيّة (وعدّادُ الرحلة) · أسعارُ التفاوض · رسمُ الإلغاء
+    fare_on_estimate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    fare_on_final: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    fare_on_negotiation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    fare_on_cancellation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     #: **ترتيبُ طرق الدفع في التطبيقين** (أمرُ المالك ٢٠٢٦-١١-١٣) — قائمةٌ من `PaymentOrderKey`، **وأوّلُها هو المقترحُ مسبقاً**.
     #: **وفارغةٌ تعني «كما كان»**: لا يتغيّر في السوق حرف (الجزائرُ وليبيا). **ترتيبُ عرضٍ لا إذن** — ولا تُجبر أحداً على طريقة

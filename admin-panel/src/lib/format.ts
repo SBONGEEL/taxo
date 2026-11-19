@@ -92,12 +92,18 @@ export function currencyLabel(currency: Currency | string | null | undefined) {
   return currency ? (CURRENCY_FACES.get(currency)?.label ?? currency) : "";
 }
 
-/** **يُكمل الكسرَ بأصفارٍ إلى خانات العرض** (SPEC §٧٣-ج/٧) — نصّيّاً، **ولا يحذف خانةً أبداً**: ما وصل بخاناتٍ أكثرَ يُرسم كما وصل. */
+/** **يُكمل الكسرَ بأصفارٍ إلى خانات العرض أو يحذف أصفارَه الزائدة** (SPEC §٧٣-ج/٧) — نصّيّاً، **ولا يحذف خانةً غيرَ صفريّةٍ أبداً**:
+ *  «1.750» بخانتين ⇐ «1.75»، و«1.725» يبقى «1.725». **والحذفُ أُضيف ٢٠٢٦-١١-١٩** (تقريبُ الأسعار وعرضُها): كانت اللوحةُ تُكمل ولا تحذف،
+ *  فترسم «1.750» والتطبيقان «1.75» — شكلان لمبلغٍ واحد؛ والقاعدةُ الآن هي قاعدةُ `formatAmount` في التطبيقين حرفاً. */
 function padToDisplay(value: string, currency: Currency | string): string {
   const places = displayDecimals(currency);
   if (!/^-?\d+(\.\d*)?$/.test(value.trim())) return value;
   const [whole, fraction = ""] = value.trim().split(".");
-  if (fraction.length >= places) return value;
+  if (fraction.length > places) {
+    if (/[1-9]/.test(fraction.slice(places))) return value;
+    return places > 0 ? `${whole}.${fraction.slice(0, places)}` : whole;
+  }
+  if (fraction.length === places) return value;
   return `${whole}.${fraction.padEnd(places, "0")}`;
 }
 

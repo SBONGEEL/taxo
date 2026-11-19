@@ -62,7 +62,7 @@ async def _out(session, booking: RideBooking) -> BookingOut:
         estimated_fare_at_booking=(
             booking.estimated_fare_at_booking
             if booking.commute_id is not None
-            else await rounding.shown_in(session, booking.country_code, booking.estimated_fare_at_booking)
+            else await rounding.fare_shown_in(session, booking.country_code, booking.estimated_fare_at_booking)
         ),
         awaiting_choice=bookings_service.awaiting_choice(
             booking,

@@ -55,6 +55,7 @@ from tests import test_subscription_offers as offer_tests
 from tests import test_vehicle_skins as skin_tests
 from tests import test_weekly_cashback as cashback_tests
 from tests.helpers import (
+    enable_fare_rounding,
     DRIVER,
     NEAR_PICKUP,
     OTHER_RIDER,
@@ -99,6 +100,8 @@ async def _enable_rounding(
         headers=admin_headers,
     )
     assert response.status_code == 200, response.text
+    # **والأجرةُ بتقريبها المنفصل** (أمرُ المالك ٢٠٢٦-١١-١٩) — بالوحدة والاتجاه نفسِهما
+    await enable_fare_rounding(client, admin_headers, unit=unit, mode=mode)
 
 
 async def _journal(session_factory, kind: str) -> list[MoneyRounding]:

@@ -172,7 +172,7 @@ async def charge_for(
     # `cancel_ride` يحسب دقائقها ويمرّرها هنا. ومطفأً الرسمُ كما كان حرفاً
     from app.services import rounding
 
-    unit_policy = await rounding.policy_for(session, ride.country_code)
+    unit_policy = await rounding.fare_policy_for(session, ride.country_code, rounding.FareSurface.CANCELLATION)
     precise = round_money(fee, ride.currency)
     amount, difference = rounding.round_amount(precise, unit_policy)
     if difference != 0:

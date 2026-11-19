@@ -42,6 +42,7 @@ from tests.helpers import (
     PICKUP,
     approved_driver,
     bring_online,
+    enable_fare_rounding,
     enable_features,
     pay_ride,
     payments_of,
@@ -149,6 +150,8 @@ async def _enable(
         headers=admin_headers,
     )
     assert response.status_code == 200, response.text
+    # **والأجرةُ بتقريبها المنفصل** (أمرُ المالك ٢٠٢٦-١١-١٩) — بالوحدة والاتجاه نفسِهما، كما كانت تُقرَّب قبل الفصل
+    await enable_fare_rounding(client, admin_headers, unit=unit, mode=mode)
     return response.json()
 
 
@@ -485,10 +488,13 @@ async def test_rounding_down_writes_a_negative_line_and_the_commission_stays_on_
 # ------------------------------------------------------------------ قبل الإشعال وبعده
 
 
-async def test_a_ride_requested_before_ignition_is_rounded_when_it_completes_after(
+async def test_a_ride_requested_before_ignition_keeps_the_rounding_it_was_requested_with(
     client: AsyncClient, admin_headers: dict, jordan_settings: None, session_factory, monkeypatch
 ) -> None:
-    """**«الإنهاءُ هو المعاملة»** (§٧٠-ج/٧): عرضُها قبل الإشعال بلا تقريب (سياسةُ لحظة الطلب)، **والمحفوظُ بإعداد لحظة الإنهاء**."""
+    """**التغييرُ للرحلات الجديدة وحدَها** (أمرُ المالك ٢٠٢٦-١١-١٩، SPEC §١٠٧/٤ — **نسخَ §٧٠-ج/٧ للأجرة**): رحلةٌ طُلبت قبل الإشعال
+    تُنهى بلا تقريب كما عُرضت، **فما رآه الراكبُ والكبتنُ هو ما يُحصَّل**؛ والتي تُطلب بعده تُقرَّب.
+
+    **وكان هذا الاختبارُ يقول العكس** («الإنهاءُ هو المعاملة»: تُقرَّب عند إنهائها بعد الإشعال) — وهو ما نسخه الأمر."""
     _route(monkeypatch, "3.328", "7.00")
     driver = await approved_driver(client, session_factory, DRIVER)
     await bring_online(client, driver)
@@ -499,8 +505,12 @@ async def test_a_ride_requested_before_ignition_is_rounded_when_it_completes_aft
     await _drive(client, ride, driver)
     await _enable(client, admin_headers)
     done = await _complete(client, ride, driver)
-    assert done["final_fare"] == "3.500"
-    assert _lines(done)["rounding"] == "0.136"
+    assert done["final_fare"] == "3.364", "بتقريبها المجمَّد عند الطلب — لا شيء"
+    assert "rounding" not in _lines(done)
+    assert await _journal(session_factory, ride["id"]) == []
+
+    later = await _requested(client, rider["headers"])
+    assert later["current_fare"] == "3.500", "والجديدةُ بالإعداد الجديد"
 
 
 async def test_switched_off_nothing_changes(

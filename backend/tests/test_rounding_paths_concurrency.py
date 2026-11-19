@@ -43,6 +43,7 @@ from app.services import rides as rides_service
 from tests import test_advances as advances_tests
 from tests import test_rounding as rounding_tests
 from tests.helpers import (
+    enable_fare_rounding,
     DRIVER,
     NEAR_PICKUP,
     approved_driver,
@@ -67,6 +68,8 @@ async def _enable_rounding(client: AsyncClient, admin_headers: dict) -> None:
         headers=admin_headers,
     )
     assert response.status_code == 200, response.text
+    # **والأجرةُ بتقريبها المنفصل** (أمرُ المالك ٢٠٢٦-١١-١٩) — بالوحدة والاتجاه نفسِهما
+    await enable_fare_rounding(client, admin_headers)
 
 
 async def _rounding_entries(session_factory, user_id) -> list[WalletTransaction]:

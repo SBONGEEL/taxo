@@ -122,6 +122,9 @@ const PlacesScreen = lazy(() =>
 const MapReviewScreen = lazy(() =>
   import("@/screens/MapReview").then((m) => ({ default: m.MapReviewScreen })),
 );
+const FareRoundingScreen = lazy(() =>
+  import("@/screens/FareRounding").then((m) => ({ default: m.FareRoundingScreen })),
+);
 // **مساراتُ بين المدن** (§٦٣-ج/٧) — حزمةٌ كسولةٌ كأختها
 const IntercityScreen = lazy(() =>
   import("@/screens/Intercity").then((m) => ({ default: m.IntercityScreen })),
@@ -714,6 +717,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <MapReviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/fare-rounding"
+                    element={
+                      <Guarded>
+                        <FareRoundingScreen />
                       </Guarded>
                     }
                   />

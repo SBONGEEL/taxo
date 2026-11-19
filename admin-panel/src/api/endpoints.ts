@@ -171,6 +171,9 @@ import type {
   PricingRule,
   PricingExample,
   DisplayDecimals,
+  FareRounding,
+  FareRoundingInput,
+  FareRoundingPreview,
   PromoCode,
   ProviderCatalog,
   ProviderCredential,
@@ -1165,6 +1168,17 @@ export const getDisplayDecimals = (country: CountryCode) =>
 
 export const setDisplayDecimals = (country: CountryCode, decimals: number) =>
   api.put<DisplayDecimals>(`/admin/settings/display-decimals/${country}`, { decimals });
+
+// ------------------------------------------------------------ تقريبُ الأسعار وعرضُها (أمرُ المالك ٢٠٢٦-١١-١٩)
+
+export const getFareRounding = (country: CountryCode) =>
+  api.get<FareRounding>(`/admin/settings/fare-rounding/${country}`);
+
+export const previewFareRounding = (country: CountryCode, payload: FareRoundingInput & { amount: string | null }) =>
+  api.post<FareRoundingPreview>(`/admin/settings/fare-rounding/${country}/preview`, payload);
+
+export const saveFareRounding = (country: CountryCode, payload: FareRoundingInput) =>
+  api.put<FareRounding>(`/admin/settings/fare-rounding/${country}`, payload);
 
 // ------------------------------------------------------------ سجل التدقيق
 

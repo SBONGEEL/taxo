@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import service_area
-from app.core.currency import COUNTRY_NAME, STORAGE_DECIMALS, currency_for_country, decimals_of
+from app.core.currency import COUNTRY_NAME, currency_for_country, decimals_of
 from app.core.exceptions import (
     Conflict,
     CountryStopped,
@@ -311,21 +311,33 @@ async def display_decimals(session: AsyncSession, country: CountryCode) -> int:
     return decimals_of(currency_for_country(country))
 
 
+_UNSET = object()
+
+
 async def set_display_decimals(
-    session: AsyncSession, *, country: CountryCode, decimals: int, actor: User
+    session: AsyncSession, *, country: CountryCode, decimals: int, actor: User, fare_step: object = _UNSET
 ) -> int:
-    """يضبط خاناتِ العرض — **بين خانات العملة ودقّة التخزين** (`CURRENCY_DECIMALS` … `3`).
+    """يضبط خاناتِ العرض — **بين ما تحتاجه خطوةُ تقريب الأجرة ودقّة التخزين** (أمرُ المالك ٢٠٢٦-١١-١٩ ٢-أ/و).
+
+    **وأُرخي حدُّه الأدنى ٢٠٢٦-١١-١٩** من خانات العملة إلى ما تلائمه خطوةُ الأجرة (`rounding.fit_message`): الأردنُّ بخطوة 0.05 يُرسم
+    بخانتين. **والعلّةُ التي وُضع لها الحدُّ القديمُ لا تقع بعد اليوم**: `formatAmount` في التطبيقين و`money()` في اللوحة **لا تُخفي خانةً
+    غيرَ صفريّةٍ أبداً** — «1.235» يُرسم «1.235» بخانتين، فلا تقول شاشةٌ غيرَ ما يُخصم. و`fare_step` يُمرَّر من صفحة التقريب قبل حفظه.
+
+    النصُّ القديمُ (للتاريخ): بين خانات العملة ودقّة التخزين (`CURRENCY_DECIMALS` … `3`).
 
     **ولا تنزل عن خانات العملة** — والعلّةُ مالٌ لا ذوق: الأردنيُّ يُحسب بثلاث خانات، فعرضُه بخانتين يُري الراكبَ «1.24» ويُخصم
     منه «1.235»، **وشاشةٌ تقول غيرَ ما يُخصم أسوأُ من شاشةٍ بخانةٍ زائدة**. **ولا تعلو على ثلاث**: لا مبلغَ في القاعدة يحمل رابعة.
     """
-    floor = decimals_of(currency_for_country(country))
-    if not floor <= decimals <= STORAGE_DECIMALS:
-        raise InvalidInput(
-            f"خاناتُ العرض بين {floor} و{STORAGE_DECIMALS}: أقلُّ من {floor} يُري مبلغاً غيرَ الذي يُخصم، "
-            f"وأكثرُ من {STORAGE_DECIMALS} لا يحمله مبلغٌ في القاعدة",
-            field="decimals",
+    from app.models.payment_setting import PaymentSetting
+    from app.services import rounding
+
+    if fare_step is _UNSET:
+        fare_step = await session.scalar(
+            select(PaymentSetting.fare_step).where(PaymentSetting.country_code == country)
         )
+    message = rounding.fit_message(decimals, fare_step, currency_for_country(country))  # type: ignore[arg-type]
+    if message:
+        raise InvalidInput(message, field="decimals")
     row = await session.get(CountryMarket, country)
     before = await display_decimals(session, country)
     if row is None:

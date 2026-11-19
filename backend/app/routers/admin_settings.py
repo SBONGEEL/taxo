@@ -78,6 +78,8 @@ from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
 from app.services import admin_search, audit, markets, money_guards, otp_limits, rounding, settings_service, trip_chat
+from app.services import fare_rounding
+from app.schemas.fare_rounding import FareRoundingIn, FareRoundingOut, FareRoundingPreviewIn, FareRoundingPreviewOut
 from app.services import pricing_example as pricing_example_service
 from app.schemas.ride import FareLineOut
 from app.services import broadcast as broadcast_service
@@ -271,7 +273,7 @@ async def pricing_example(
         wait_minutes_per_stop=payload.wait_minutes_per_stop,
         pause_minutes=payload.pause_minutes,
         arrival_wait_minutes=payload.arrival_wait_minutes,
-        policy=await rounding.policy_for(session, payload.country_code),
+        policy=await rounding.fare_policy_for(session, payload.country_code, rounding.FareSurface.FINAL),
     )
     return PricingExampleOut(
         currency=result.currency,
@@ -1542,3 +1544,60 @@ async def list_service_destinations(_staff: StaffUser) -> dict[str, list[str]]:
         destination: [role.value for role in roles]
         for destination, roles in storefront.SERVICE_DESTINATIONS.items()
     }
+
+
+# ------------------------------------------------- تقريبُ الأسعار وعرضُها (أمرُ المالك ٢٠٢٦-١١-١٩)
+
+
+def _fare_value(payload: FareRoundingIn) -> fare_rounding.FareRounding:
+    return fare_rounding.FareRounding(
+        decimals=payload.decimals,
+        step=payload.step,
+        mode=payload.mode,
+        on_estimate=payload.on_estimate,
+        on_final=payload.on_final,
+        on_negotiation=payload.on_negotiation,
+        on_cancellation=payload.on_cancellation,
+    )
+
+
+def _fare_out(country_code: CountryCode, value: fare_rounding.FareRounding) -> FareRoundingOut:
+    return FareRoundingOut(
+        country_code=country_code,
+        currency=currency_for_country(country_code).value,
+        currency_decimals=fare_rounding.currency_decimals(country_code),
+        decimals=value.decimals,
+        step=value.step,
+        mode=value.mode,
+        on_estimate=value.on_estimate,
+        on_final=value.on_final,
+        on_negotiation=value.on_negotiation,
+        on_cancellation=value.on_cancellation,
+    )
+
+
+@router.get("/fare-rounding/{country_code}", response_model=FareRoundingOut)
+async def get_fare_rounding(country_code: CountryCode, _staff: StaffUser, session: DbSession) -> FareRoundingOut:
+    """**ما يسري الآن** — الخاناتُ والخطوةُ والاتجاهُ ومفاتيحُ المواضع الأربعة."""
+    return _fare_out(country_code, await fare_rounding.current(session, country_code))
+
+
+@router.post("/fare-rounding/{country_code}/preview", response_model=FareRoundingPreviewOut)
+async def preview_fare_rounding(
+    country_code: CountryCode, payload: FareRoundingPreviewIn, _staff: StaffUser, session: DbSession
+) -> FareRoundingPreviewOut:
+    """**المعاينةُ قبل الحفظ من الخلفية** (§14) — لا يُكتب شيء."""
+    return FareRoundingPreviewOut(
+        **await fare_rounding.preview(session, country_code, _fare_value(payload), payload.amount)
+    )
+
+
+@router.put("/fare-rounding/{country_code}", response_model=FareRoundingOut)
+async def update_fare_rounding(
+    country_code: CountryCode, payload: FareRoundingIn, admin: SettingsWriter, session: DbSession
+) -> FareRoundingOut:
+    """**يحفظ للرحلات الجديدة وحدَها** ويكتب في سجلّ التدقيق — بصلاحيّة كتابة الإعدادات وقفلِ الأسعار."""
+    value = await fare_rounding.save(session, country_code, _fare_value(payload), admin)
+    await session.commit()
+    return _fare_out(country_code, value)
+

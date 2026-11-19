@@ -1492,6 +1492,43 @@ export interface PricingExample {
 }
 
 /** **خاناتُ العرض وخاناتُ المال معاً** (SPEC §٧٣-ج/٧) — الأولى تُضبط، والثانيةُ حدُّها الأدنى. */
+/** **تقريبُ الأسعار وعرضُها** (أمرُ المالك ٢٠٢٦-١١-١٩) — `GET/PUT /admin/settings/fare-rounding/{country}` */
+export type RoundingModeKey = "nearest" | "up" | "down";
+
+export interface FareRoundingInput {
+  decimals: number;
+  /** `null` = بلا تقريب */
+  step: string | null;
+  mode: RoundingModeKey;
+  on_estimate: boolean;
+  on_final: boolean;
+  on_negotiation: boolean;
+  on_cancellation: boolean;
+}
+
+export interface FareRounding extends FareRoundingInput {
+  country_code: CountryCode;
+  currency: string;
+  currency_decimals: number;
+}
+
+export interface FareRoundingSample {
+  distance_km: string;
+  duration_min: string;
+  precise: string;
+  before: string;
+  after: string;
+  before_text: string;
+  after_text: string;
+}
+
+export interface FareRoundingPreview {
+  fit_error: string | null;
+  vehicle_category: string | null;
+  amount: { amount: string; after: string; after_text: string } | null;
+  samples: FareRoundingSample[];
+}
+
 export interface DisplayDecimals {
   country_code: CountryCode;
   display_decimals: number;

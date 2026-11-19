@@ -194,7 +194,7 @@ async def estimate_ride(
     )
     # **والسعران المعروضان مقرَّبان بقاعدة السوق** (SPEC §٧٠-ج/٤): النسبةُ أوّلاً على الدقيقة ثمّ يُقرَّب ما سيدفعه الراكب مرّةً.
     # **والدقيقةُ تُنشر معهما** (`priced_fare`) فتُحسب منها معاينةُ القسيمة. ومطفأً الثلاثةُ كما كانت حرفاً
-    policy = await rounding.policy_for(session, rider.country_code)
+    policy = await rounding.fare_policy_for(session, rider.country_code, rounding.FareSurface.ESTIMATE)
     if shared:
         shared = (
             shared[0],
@@ -1266,7 +1266,7 @@ async def validate_promo(
     # **ما سيدفعه بعد الخصم مقرَّباً مرّةً** (SPEC §٧٠-أ/١٠): الخصمُ على الأجرة الدقيقة ثمّ يُقرَّب الباقي. **والمرسَلةُ من النسخ
     # الجديدة `priced_fare`**، **ومن القديمة `estimated_fare` المقرَّب** — فتُستردّ دقيقتُه ممّا نشره التقديرُ (`_priced_for_preview`)
     # ولا يُقرَّب مرّتين. ومطفأً كما كان حرفاً
-    policy = await rounding.policy_for(session, payload.country_code)
+    policy = await rounding.fare_policy_for(session, payload.country_code, rounding.FareSurface.ESTIMATE)
     fare = await _priced_for_preview(redis, rider.id, payload.fare, policy)
     promo, discount = await promo_service.preview(
         session,

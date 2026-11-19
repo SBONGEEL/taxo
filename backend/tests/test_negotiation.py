@@ -129,6 +129,8 @@ async def test_the_floor_is_the_same_from_the_rounded_or_the_raw_estimate(
             row = PaymentSetting(country_code=CountryCode.JO)
             session.add(row)
         row.rounding_enabled, row.rounding_unit, row.rounding_mode = True, Decimal("10"), "nearest"
+        # **وأسعارُ التفاوض بتقريب الأجرة المنفصل** (أمرُ المالك ٢٠٢٦-١١-١٩)
+        row.fare_step, row.fare_mode, row.fare_on_negotiation, row.fare_on_estimate = Decimal("10"), "nearest", True, True
         await session.commit()
         rules = negotiation.NegotiationRules(
             enabled=True, min_percent=70, min_amount=None, driver_timeout_seconds=20, rider_timeout_seconds=20,

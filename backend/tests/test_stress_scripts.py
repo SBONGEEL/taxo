@@ -34,6 +34,9 @@ async def _round_jordan(session_factory) -> None:
         row.rounding_unit = Decimal("3.000")  # **الأجرةُ 8.000 ⇒ 9.000**: فرقٌ يكتب صفّاً في السجلّ
         row.rounding_mode = "nearest"
         row.rounding_enabled_at = datetime.now(UTC)
+        # **والأجرةُ بتقريبها المنفصل** (أمرُ المالك ٢٠٢٦-١١-١٩) — الوحدةُ نفسُها
+        row.fare_step, row.fare_mode = Decimal("3.000"), "nearest"
+        row.fare_on_estimate = row.fare_on_final = row.fare_on_negotiation = row.fare_on_cancellation = True
         await session.commit()
 
 

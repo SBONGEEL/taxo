@@ -203,6 +203,12 @@ async def apply(session: AsyncSession, out: Callable[[str], None] = print) -> Pl
             touched += ["rounding_enabled", "rounding_unit", "rounding_mode", "rounding_enabled_at"]
             plan.written += 1
             out(f"  ✎ payment_settings · التقريب: مطفأ ← مشتعلٌ إلى أقرب {unit} ({mode})")
+        # **وتقريبُ الأجرة مثلُه إن لم يُضبط بعد** (أمرُ المالك ٢٠٢٦-١١-١٩، الترحيلة `0176`) — سوقٌ جديدٌ يُقرّب أجرتَه كما كان
+        if payment.fare_step is None:
+            payment.fare_step, payment.fare_mode = unit, mode
+            payment.fare_on_estimate = payment.fare_on_final = True
+            payment.fare_on_negotiation = payment.fare_on_cancellation = True
+            touched += ["fare_step", "fare_mode", "fare_on_estimate", "fare_on_final", "fare_on_negotiation", "fare_on_cancellation"]
         elif (payment.rounding_unit, payment.rounding_mode) != (unit, mode):
             plan.kept += 1
             out(f"  = payment_settings · التقريب: {payment.rounding_unit} {payment.rounding_mode} قائمٌ — لم يُمسّ")

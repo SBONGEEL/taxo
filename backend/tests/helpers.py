@@ -1040,3 +1040,28 @@ async def email_code_of(address: str) -> str:
     found = re.search(r"\d{6}", body)
     assert found is not None, f"لا رمزَ في الرسالة: {body!r}"
     return found.group(0)
+
+
+async def enable_fare_rounding(
+    client, admin_headers: dict, *, unit: str = "0.500", mode: str = "nearest", country: str = "JO", decimals: int = 3
+) -> dict:
+    """**تقريبُ الأجرة من بابه** (أمرُ المالك ٢٠٢٦-١١-١٩) — `PUT /admin/settings/fare-rounding` بمواضعه الأربعة مشتعلة.
+
+    **منفصلٌ عن التقريب العامّ** (`PATCH /admin/settings/payments`): ذاك للإكراميّات والشحن والسحب والاشتراكات، وهذا للأجرة —
+    فاختبارٌ يقرّب الأجرةَ يُشعل هذا أيضاً، كما يفعل المشرفُ في صفحة «تقريب الأسعار وعرضها»."""
+    response = await client.put(
+        f"/admin/settings/fare-rounding/{country}",
+        json={
+            "decimals": decimals,
+            "step": unit,
+            "mode": mode,
+            "on_estimate": True,
+            "on_final": True,
+            "on_negotiation": True,
+            "on_cancellation": True,
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+

@@ -520,7 +520,8 @@ async def _pay_from_wallet(
         wallet_amount = outstanding
     else:
         wallet_amount = rounding_service.floor_to_unit(
-            balance, await rounding_service.policy_for(session, ride.country_code)
+            # **بتقريب الرحلة المجمَّد** (أمرُ المالك ١٩/١١): الأجرةُ مضاعفُ خطوتها، فالمحفظةُ بالخطوة نفسِها والباقي نقداً مضاعفٌ أيضاً
+            balance, rounding_service.frozen_policy(ride)
         )
     if wallet_amount <= 0:
         raise InsufficientBalance("رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك — اختر قناة أخرى")

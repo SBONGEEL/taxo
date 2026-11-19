@@ -646,7 +646,7 @@ async def request_ride(
     # **والتقريبُ المحفوظُ لا يقرؤها**: يُحسب بإعداد لحظة الإنهاء (`rounding.apply_to_ride`). ومطفأً `NULL` — الرحلةُ كما كانت
     from app.services import rounding
 
-    rounding.freeze_on(ride, await rounding.policy_for(session, rider.country_code))
+    rounding.freeze_on(ride, await rounding.fare_policy_for(session, rider.country_code, rounding.FareSurface.FINAL))
     # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): يُفحص مفتاحُها ويُطبَّع رقمُ راكبها **قبل** أن تُضاف — طلبٌ مرفوضٌ لا يترك صفّاً
     if passenger is not None:
         prepared = await ride_for_other.prepare(session, rider=rider, passenger=passenger)
