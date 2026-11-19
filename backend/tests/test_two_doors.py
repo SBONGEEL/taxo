@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — تقريبُ الأسعار وعرضُها (أمرُ المالك ٢٠٢٦-١١-١٩)
+    "FareRoundingOut": (
+        "بانٍ واحد: `GET` و`PUT /admin/settings/fare-rounding/{country}` كلاهما يردّ `admin_settings._fare_out` من `fare_rounding.current` "
+        "أو القيمة المحفوظة نفسِها. **و`step` فارغٌ بقصد** = «بلا تقريب» (دقيق)، لا حقلٌ نسيه بانٍ."
+    ),
     # ✅ مصدرٌ واحد — إعداداتُ كلِّ دولة (قرارُ المالك ٢٠٢٦-١١-١٨: صفٌّ غائبٌ أخفى عمولةَ الجزائر)
     "CommissionSettingOut": (
         "مصدرٌ واحد: `country_settings.for_every_country` يقرأ الصفَّ كلَّه في القائمة، والتعديلُ يردّ الصفَّ المكتوب نفسَه. **و`id` و`updated_at` فارغٌ حال** (قرارُ المالك ٢٠٢٦-١١-١٨): دولةٌ بلا صفٍّ تُعرض بما يسري فيها فعلاً، ولا صفَّ يُخترع بالقراءة"
