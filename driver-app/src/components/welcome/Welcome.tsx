@@ -188,6 +188,42 @@ function markSeen(): void {
   }
 }
 
+/** **النصُّ لا ينزل على الأزرار** (S21 ٢٠٢٦-١١-١٩، لقطةٌ مقيسة): النصُّ في المسرح بموضعٍ ثابت (`top: 470px`) والأزرارُ مثبَّتةٌ في أسفل
+ *  الشاشة — **وتكبيرُ خطّ النظام في WebView يكبّر الحروفَ لا المسرح**، فوقع سطرُ «ونحن رفيقك…» ونقاطُ الصفحات على «تجربة كضيف».
+ *  فيُقاس النصُّ النشطُ وأعلى زرٍّ في الأسفل بعد الرسم، ويُرفع النصُّ بالفرق وحدَه (بوحدة المسرح) — **صفرٌ حيث لا تداخل**، فالشاشةُ
+ *  كما صُمّمت على كلِّ جهازٍ بخطّه الافتراضيّ. */
+const BOTTOM_CONTROLS = ".cw-actions, .cw-join, .cw-login, .cw-guest-row";
+function useCopyLift(root: React.RefObject<HTMLDivElement | null>, page: number, scale: number, active: boolean): number {
+  const [lift, setLift] = useState(0);
+  const liftRef = useRef(0);
+  useLayoutEffect(() => {
+    if (!active) {
+      liftRef.current = 0;
+      setLift(0);
+      return;
+    }
+    const measure = () => {
+      const node = root.current;
+      const copy = node?.querySelectorAll<HTMLElement>(".cw-copy")[page];
+      const controls = node ? [...node.querySelectorAll<HTMLElement>(BOTTOM_CONTROLS)] : [];
+      if (!copy || controls.length === 0) return;
+      const top = Math.min(...controls.map((el) => el.getBoundingClientRect().top));
+      // **يُقاس بلا الرفع القائم**: موضعُ النصّ الآن يحمله
+      const bottom = copy.getBoundingClientRect().bottom + liftRef.current * scale;
+      const next = Math.max(0, Math.ceil((bottom - top + 12) / scale));
+      if (next !== liftRef.current) {
+        liftRef.current = next;
+        setLift(next);
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    void document.fonts?.ready.then(measure).catch(() => undefined);
+    return () => window.removeEventListener("resize", measure);
+  }, [root, page, scale, active]);
+  return lift;
+}
+
 function useStageScale(): number {
   const [scale, setScale] = useState(() => Math.max(window.innerWidth / 390, window.innerHeight / 844));
   useEffect(() => {
@@ -243,6 +279,7 @@ export function Welcome({
   };
   const outside = Boolean(guest?.outside);
   const scale = useStageScale();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const { dark } = useTheme();
   const boot = useRef(bootBrief()).current;
   const startedAt = useRef(boot?.start ?? performance.now()).current;
@@ -322,8 +359,10 @@ export function Welcome({
   const waiting = phase === "hold" && held && !booted && splash.status;
   const mapSrc = dark ? "/welcome/map-night.svg" : "/welcome/map-day.svg";
 
+  const copyLift = useCopyLift(rootRef, page, scale, Boolean(onPages));
   return (
     <div
+      ref={rootRef}
       className={["t2", "cw", onPages ? `page-${page}` : "", phase === "leaving" ? "is-leaving" : ""].filter(Boolean).join(" ")}
       onClick={phase === "intro" ? skipIntro : undefined}
       // **السحبُ لليسار ينقل إلى الشاشة التالية** (اللوحة) — واليمينُ يرجع
@@ -340,7 +379,7 @@ export function Welcome({
       role="presentation"
     >
       <style>{phase === "intro" ? intro.css : phase === "brief" ? BRIEF_CSS : ""}</style>
-      <div className="cw-stage" style={{ ["--cw-scale" as string]: String(scale) }}>
+      <div className="cw-stage" style={{ ["--cw-scale" as string]: String(scale), ["--cw-lift" as string]: `${copyLift}px` }}>
         {phase === "intro" ? (
           <div className="cw-cam" style={{ animation: intro.anim.cam }}>
             <img src={mapSrc} alt="" />

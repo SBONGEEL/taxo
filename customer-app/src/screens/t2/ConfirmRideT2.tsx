@@ -591,6 +591,25 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </>
       }
     >
+      {/* **سطرُ الانطلاق — تأكيدٌ لطيفٌ بلا نافذة** (أمرُ المالك ٢٠٢٦-١١-١٩/٣): يُبرَز مرّةً ثمّ يهدأ، و«تغيير» يفتح الدبّوسَ أو البحث،
+          **و«اطلب» بلا تغييرٍ هو التأكيد** — لا يُسأل ثانيةً */}
+      {props.pickupConfirm ? (
+        <div
+          className={[
+            "t2-pickup-confirm",
+            props.pickupConfirm.line.pulse ? "pulse" : "",
+            props.pickupConfirm.line.kind === "approx" ? "approx" : "",
+          ].join(" ").trim()}
+          role="status"
+        >
+          <Icon name="my_location" className="t2-pickup-confirm-icon" />
+          <span className="t2-pickup-confirm-text">{props.pickupConfirm.line.text}</span>
+          <button type="button" className="t2-chip t2-pickup-confirm-change" onClick={props.pickupConfirm.onChange}>
+            {props.pickupConfirm.line.adjust ? tr("اضبط الدبّوس") : tr("تغيير")}
+          </button>
+        </div>
+      ) : null}
+
       {/* **RW2: الشارةُ والمسافةُ فوق المسار** — والمسافةُ في رأس الفئات في غيره */}
       {women ? <WomenRequestHeadT2 meta={meta} /> : null}
 

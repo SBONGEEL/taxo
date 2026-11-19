@@ -138,6 +138,9 @@ export interface ConfirmRideProps {
   onRoutePreview?: (points: number[][] | null) => void;
   /** **نقطةُ التقاطٍ مقترحة** (البند ١١) — بطاقةٌ تحت «من» بزرّين: «استعملها» تنقل الانطلاقَ إليها، و«أبقِ دبّوسي» تُسكتها. */
   pickupSuggestion?: { name: string | null; distance_m: number; onUse: () => void; onKeep: () => void } | null;
+  /** **سطرُ الانطلاق في رأس الورقة** (أمرُ المالك ٢٠٢٦-١١-١٩): «الانطلاق من موقعك الحالي: …» وزرُّ «تغيير» — **بلا نافذة**؛
+   *  و«اطلب» بلا تغييرٍ تأكيد. */
+  pickupConfirm?: { line: import("@/lib/pickup-confirm").PickupLine; onChange: () => void } | null;
   requesting: boolean;
   requestError: string | null;
   /** **٤٠٢ `unconfirmed_payment_blocked`** — دفعُ رحلةٍ سابقةٍ يمنع الطلب (§٧): رسالةُ الخلفية وزرٌّ إلى «رحلةٌ لم يكتمل دفعها». */

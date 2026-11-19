@@ -1616,3 +1616,46 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-map-tool { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 999px; background: var(--t2-surface);
   color: var(--t2-text); font-size: 13px; box-shadow: var(--t2-float-btn-shadow, 0 2px 8px rgba(0, 0, 0, 0.15)); }
 .t2-map-tool.on { background: var(--t2-accent); color: var(--t2-on-accent); }
+
+/* **سطرُ الانطلاق في رأس ورقة الطلب** (أمرُ المالك ٢٠٢٦-١١-١٩) — وهجٌ قصيرٌ مرّةً ثمّ هدوء؛ والتقريبيُّ بلون التنبيه. **لا نافذة** */
+.t2-pickup-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--t2-surface-2, rgba(127, 127, 127, 0.08));
+  border: 1px solid transparent;
+}
+.t2-pickup-confirm-icon { color: var(--t2-ember, #ff6a2b); flex: none; }
+.t2-pickup-confirm-text { flex: 1; min-width: 0; font-weight: 700; line-height: 1.4; }
+.t2-pickup-confirm-change { flex: none; }
+.t2-pickup-confirm.approx { border-color: color-mix(in srgb, var(--t2-ember, #ff6a2b) 45%, transparent); }
+.t2-pickup-confirm.pulse { animation: t2-pickup-glow 1.6s ease-out 1; }
+@keyframes t2-pickup-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--t2-ember, #ff6a2b) 55%, transparent); border-color: var(--t2-ember, #ff6a2b); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; border-color: transparent; }
+}
+.t2-pickup-confirm.approx.pulse { animation-name: t2-pickup-glow-approx; }
+@keyframes t2-pickup-glow-approx {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--t2-ember, #ff6a2b) 55%, transparent); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .t2-pickup-confirm.pulse { animation: none; } }
+
+/* **الموقعُ مطفأ أو غيرُ مسموح** — رسالةٌ قصيرةٌ فوق «إلى أين؟» بزرّين، لا نافذة */
+.t2-location-off {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--t2-surface-2, rgba(127, 127, 127, 0.08));
+}
+.t2-location-off-text { flex: 1 1 100%; font-weight: 700; line-height: 1.4; }
+

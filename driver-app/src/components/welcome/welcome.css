@@ -228,6 +228,8 @@ html.pink:not(.dark) .cw { --cw-car-halo: rgba(156, 44, 110, 0.14); --cw-car-rin
   transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .cw-copy.centered { text-align: center; }
+/* **يُرفع فوق الأزرار حين يكبر الخطّ** (`useCopyLift`) — `translate` لا `transform`: ذاك يحمل انزلاقَ الصفحات */
+.cw-copy { translate: 0 calc(-1 * var(--cw-lift, 0px)); }
 .cw-copy.off-next { opacity: 0; transform: translateX(-40px); pointer-events: none; }
 .cw-copy.off-prev { opacity: 0; transform: translateX(40px); pointer-events: none; }
 .cw-copy h1 { margin: 0; font-weight: 700; line-height: 1.3; text-wrap: pretty; }

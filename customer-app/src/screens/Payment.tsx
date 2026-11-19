@@ -59,6 +59,7 @@ import {
   currencyLabel,
   currencyName,
   formatDistance,
+  formatAmount,
   formatMoney,
   newIdempotencyKey,
 } from "@/lib/utils";
@@ -405,7 +406,8 @@ export function PaymentScreen() {
             </div>
             <div className="t2-m-amount">
               <span dir="ltr" className="t2-m-num xl">
-                {formatMoney(nothingToStart || commute ? (state?.final_fare ?? null) : (state?.outstanding ?? null))}
+                {/* **بخانات العملة** (اختبارُ طلب الرحلة ٢٠٢٦-١١-١٩): `formatMoney` بلا عملةٍ أكمل ثلاثاً — «1.800» فوق «الأجرة النهائية 1.80» */}
+                {formatAmount(nothingToStart || commute ? (state?.final_fare ?? null) : (state?.outstanding ?? null), state?.currency)}
               </span>
               <span className="t2-m-cur">{currencyLabel(state?.currency)}</span>
             </div>

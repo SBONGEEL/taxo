@@ -60,6 +60,9 @@ import "./cashback.css"; import { tr } from "@/lib/i18n";
 
 /** خصائصُ الرئيسية (R05) — **كانت في الوجه القديم** (`components/home/RiderHome.tsx`) ونُزع (§٦٢/٣). */
 export interface RiderHomeProps {
+  /** **الموقعُ مرفوضٌ أو GPS مطفأ** (أمرُ المالك ٢٠٢٦-١١-١٩/٥) — رسالةٌ قصيرةٌ بزرٍّ يفتح إعدادَ الموقع (`null` في المتصفّح: لا صفحةَ
+   *  إعدادٍ يفتحها) وزرِّ الاختيار على الخريطة. و`null` كلُّه حين الموقعُ معروف. */
+  locationOff?: { onSettings: (() => void) | null; onPickOnMap: () => void } | null;
   name: string;
   /** عنوانُ موقعه إن عُرف — **ولا مدينةَ تُخمَّن**. */
   place: string | null;
@@ -254,6 +257,7 @@ export function RiderHomeT2({
   unconfirmed = null,
   onOpenUnconfirmed,
   suggestion = null,
+  locationOff = null,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
@@ -347,6 +351,22 @@ export function RiderHomeT2({
       {/* **«تأكيدٌ ينتظرك» في أعلى الرئيسية** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — يفتح الصفحةَ التي أخفاها «لاحقاً»، **والحدُّ
           يُقال هنا بسببه المكتوب** (§٧: «السببُ مكتوبٌ في الرئيسية»). ولا شيءَ يُرسم بلا شيءٍ ينتظر أو والمفتاحُ مطفأ */}
       {onOpenUnconfirmed ? <UnconfirmedStripT2 data={unconfirmed} onOpen={onOpenUnconfirmed} /> : null}
+
+      {locationOff ? (
+        <div className="t2-location-off" role="status">
+          <span className="t2-location-off-text">
+            {tr("الموقع مطفأ أو غير مسموح — فعّله لنحدّد نقطة انطلاقك، أو اخترها على الخريطة")}
+          </span>
+          {locationOff.onSettings ? (
+            <button type="button" className="t2-chip" onClick={locationOff.onSettings}>
+              {tr("افتح إعداد الموقع")}
+            </button>
+          ) : null}
+          <button type="button" className="t2-chip" onClick={locationOff.onPickOnMap}>
+            {tr("اختر على الخريطة")}
+          </button>
+        </div>
+      ) : null}
 
       <button type="button" className="t2-home-hero" onClick={whereTo}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />

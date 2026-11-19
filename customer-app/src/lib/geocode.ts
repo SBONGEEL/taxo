@@ -34,15 +34,25 @@ interface MapboxFeature {
   };
 }
 
+/** **بلا فاصلةٍ فارغة** — `full_address` يترك مقطعاً فارغاً حيث يغيب مستوى («…9، ، عمّان»)؛ والمقاطعُ تبقى بترتيبها. */
+export function tidyAddress(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const parts = text
+    .split(/[،,]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return parts.length > 0 ? parts.join(tr("، ")) : null;
+}
+
 function toPlace(feature: MapboxFeature, index: number): Place | null {
   const properties = feature.properties;
   const point = properties?.coordinates;
   if (!point) return null;
   return {
     id: properties?.mapbox_id ?? feature.id ?? `place-${index}`,
-    name: properties?.name ?? properties?.full_address ?? tr("موقع"),
+    name: properties?.name ?? tidyAddress(properties?.full_address) ?? tr("موقع"),
     address:
-      properties?.full_address ?? properties?.place_formatted ?? properties?.name ?? "",
+      tidyAddress(properties?.full_address) ?? tidyAddress(properties?.place_formatted) ?? properties?.name ?? "",
     coordinates: { lat: point.latitude, lng: point.longitude },
   };
 }
@@ -125,7 +135,7 @@ export async function reverseGeocode(
     if (!response.ok) return null;
     const body = (await response.json()) as { features?: MapboxFeature[] };
     const first = body.features?.[0]?.properties;
-    return first?.full_address ?? first?.name ?? null;
+    return tidyAddress(first?.full_address) ?? first?.name ?? null;
   } catch {
     return null;
   }
@@ -195,6 +205,31 @@ export function currentPosition(): Promise<Coordinates | null> {
       (position) =>
         resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
       () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8_000, maximumAge: 30_000 },
+    );
+  });
+}
+
+/** **موقعُ الجهاز بدقّته، أو سببُ غيابه** (أمرُ المالك ٢٠٢٦-١١-١٩، نقطةُ الانطلاق) — `denied` للإذن المرفوض أو GPS المطفأ أو غياب
+ *  الواجهة، و`unavailable` لمهلةٍ انقضت بلا جواب (لا يُقال للراكب «مطفأ» وهو ليس كذلك). والدقّةُ بالأمتار كما يعطيها الجهاز. */
+export type PositionFix =
+  | { kind: "fix"; point: Coordinates; accuracy_m: number | null }
+  | { kind: "denied" }
+  | { kind: "unavailable" };
+
+export function currentFix(): Promise<PositionFix> {
+  if (demoActive()) return Promise.resolve({ kind: "fix", point: DEMO_CENTER, accuracy_m: null });
+  if (!("geolocation" in navigator)) return Promise.resolve({ kind: "denied" });
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        resolve({
+          kind: "fix",
+          point: { lat: position.coords.latitude, lng: position.coords.longitude },
+          accuracy_m: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+        }),
+      // 1 = PERMISSION_DENIED · 2 = POSITION_UNAVAILABLE (GPS مطفأ غالباً) · 3 = TIMEOUT
+      (error) => resolve(error.code === 3 ? { kind: "unavailable" } : { kind: "denied" }),
       { enableHighAccuracy: true, timeout: 8_000, maximumAge: 30_000 },
     );
   });

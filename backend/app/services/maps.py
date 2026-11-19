@@ -432,6 +432,17 @@ async def reverse(session: AsyncSession, country: CountryCode | None, lat: float
 # ═════════════════════════ Mapbox — الاحتياط، من الخلفية بتوكنها السرّيّ
 
 
+def tidy_address(text: str | None) -> str | None:
+    """**عنوانٌ بلا فاصلةٍ فارغة** (اختبارُ طلب الرحلة ٢٠٢٦-١١-١٩): `full_address` من Mapbox يترك مقطعاً فارغاً حيث يغيب مستوى —
+    «شارع بهجت الحمصي 9، ، عمّان، الأردن» مقيساً في ورقة الدبّوس وفي كلِّ نتيجة بحث. **والمقاطعُ تبقى كما هي وبترتيبها**؛ يُحذف الفارغُ
+    وحدَه — كما يفعل `tidy` في تطبيق الكبتن منذ بُني."""
+    if not text:
+        return None
+    parts = [part.strip() for part in text.replace(",", "،").split("،")]
+    parts = [part for part in parts if part]
+    return "، ".join(parts) if parts else None
+
+
 async def _mapbox_token(session: AsyncSession, country: CountryCode | None) -> str | None:
     values = await credentials_service.get_values(session, ProviderKey.MAPBOX, country)
     return (values or {}).get("secret_token") or (values or {}).get("public_token")
@@ -467,8 +478,8 @@ async def _mapbox_forward(
             continue
         out.append(Result(
             id=f"m-{props.get('mapbox_id') or index}", source="mapbox",
-            name=props.get("name") or props.get("full_address") or "موقع",
-            address=props.get("full_address") or props.get("place_formatted") or "",
+            name=props.get("name") or tidy_address(props.get("full_address")) or "موقع",
+            address=tidy_address(props.get("full_address")) or tidy_address(props.get("place_formatted")) or "",
             lat=float(point["latitude"]), lng=float(point["longitude"]),
         ))
     return out
@@ -481,7 +492,7 @@ async def _mapbox_reverse(session: AsyncSession, country: CountryCode | None, la
     body = await _mapbox_get(MAPBOX_REVERSE, {"longitude": str(lng), "latitude": str(lat), "access_token": token,
                                                "language": "ar", "limit": "1"})
     first = (((body or {}).get("features") or [{}])[0] or {}).get("properties") or {}
-    return first.get("full_address") or first.get("name") or None
+    return tidy_address(first.get("full_address")) or first.get("name") or None
 
 
 def recent_cutoff(now: datetime | None = None) -> datetime:

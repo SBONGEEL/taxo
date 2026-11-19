@@ -64,7 +64,9 @@ import { usePickupSuggestion } from "@/lib/pickup-suggestion";
 import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 import { useBackLayer } from "@/lib/back-layers";
 import { SEARCH_V2_FLAG } from "@/lib/place-search";
-import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
+import { DEFAULT_CENTER, currentFix, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
+import { movedEnough, pickupLine as pickupConfirmLine, refreshOnResume, snapToRoad, type LocationState, type PickupSource } from "@/lib/pickup-confirm";
+import { centerAvailable as permissionsCenterAvailable, openPermission } from "@/lib/permissions-center";
 import { noDestination } from "@/lib/hourly";
 import { clearPendingRide, readPendingRide, savePendingRide } from "@/lib/ride-topup";
 import { isActive, useRide } from "@/lib/ride";
@@ -136,6 +138,13 @@ export function HomeScreen() {
   const [airportPicks, setAirportPicks] = useState<Place[] | undefined>(undefined);
   const [pickup, setPickup] = useState<Coordinates | null>(null);
   const [pickupAddress, setPickupAddress] = useState<string | null>(null);
+  // **نقطةُ الانطلاق = الموقعُ الحاليّ** (أمرُ المالك ٢٠٢٦-١١-١٩): آخرُ نقطةٍ وضعها التطبيقُ نفسُه من GPS (أو ألصقها بالطريق) ودقّتُها.
+  // **ومصدرُ الانطلاق مشتقٌّ لا مخزَّن**: يساويها ⇐ «gps»، وإلا فقد وضعه الراكبُ بيده (دبّوس، بحث، محفوظ، أخير، اقتراح) — فلا
+  // يحتاج كلُّ بابٍ يضع الانطلاقَ أن يتذكّر وسمَه، وما لم يُوسَم لا يُقرأ «موقعك الحالي» خطأً.
+  const [autoPickup, setAutoPickup] = useState<{ point: Coordinates; accuracy_m: number | null } | null>(null);
+  const [locationState, setLocationState] = useState<LocationState>("unknown");
+  const pickupSource: PickupSource =
+    pickup && autoPickup && pickup.lat === autoPickup.point.lat && pickup.lng === autoPickup.point.lng ? "gps" : "manual";
   const [dropoff, setDropoff] = useState<Coordinates | null>(null);
   const [dropoffAddress, setDropoffAddress] = useState<string | null>(null);
   // المحطاتُ الوسيطة **بترتيبها** — تُرتَّب وتُحذف هنا قبل التأكيد، فلا
@@ -320,18 +329,55 @@ export function HomeScreen() {
   // **الورقةُ تغطّي الشريطَ ما دامت مفتوحة**، وتكشفه حين تُطوى — لا «ما دامت رحلةٌ معروضة» (`navBarHidden`)
   useCoverNav(outcome !== null);
 
-  // أول رسمة: موقع الجهاز إن سُمح، وإلا مركزُ الدولة (SPEC القسم 11.3)
+  // أول رسمة: موقع الجهاز إن سُمح، وإلا مركزُ الدولة (SPEC القسم 11.3) — **والانطلاقُ هو الموقعُ الحاليّ تلقائيّاً** (أمرُ المالك
+  // ٢٠٢٦-١١-١٩/١): لا شيءَ يسأل عنه قبل الوجهة. **وما وُضع قبله بيدٍ أو بـ«أعد الطلب» يبقى** (`current ?? …`).
   useEffect(() => {
     let cancelled = false;
-    currentPosition().then((position) => {
-      if (cancelled || !position) return;
-      setCenter(position);
-      setPickup((current) => current ?? position);
-      map.current?.flyTo(position, 15);
+    currentFix().then((fix) => {
+      if (cancelled) return;
+      if (fix.kind !== "fix") {
+        // **مهلةٌ بلا جوابٍ ليست رفضاً** — لا يُقال للراكب «مطفأ» وهو ليس كذلك
+        if (fix.kind === "denied") setLocationState("denied");
+        return;
+      }
+      setLocationState("granted");
+      setCenter(fix.point);
+      setPickup((current) => current ?? fix.point);
+      setAutoPickup((current) => current ?? { point: fix.point, accuracy_m: fix.accuracy_m });
+      map.current?.flyTo(fix.point, 15);
     });
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // **يُحدَّث الموقعُ الحاليّ عند العودة من الخلفيّة** (٥/الأخير) — **إلا إن غيّر الراكبُ الانطلاقَ بيده**، ولا وسطَ رحلة. والقيمُ من
+  // مرجعٍ يُحدَّث كلَّ رسمة: المستمعُ يُسجَّل مرّةً ويقرأ آخرَ حال
+  const resumeState = useRef({ pickupSource, tracking, auto: autoPickup });
+  resumeState.current = { pickupSource, tracking, auto: autoPickup };
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const { pickupSource: source, tracking: busy, auto } = resumeState.current;
+      if (!refreshOnResume(source, busy)) return;
+      void currentFix().then((fix) => {
+        if (fix.kind === "denied") setLocationState("denied");
+        if (fix.kind !== "fix") return;
+        setLocationState("granted");
+        const latest = resumeState.current;
+        if (!refreshOnResume(latest.pickupSource, latest.tracking)) return;
+        if (!movedEnough(auto?.point ?? null, fix.point)) {
+          // **لم يتحرّك**: الدقّةُ وحدَها تُحدَّث (قد تتحسّن بعد العودة) والنقطةُ كما هي
+          setAutoPickup((current) => (current ? { ...current, accuracy_m: fix.accuracy_m } : current));
+          return;
+        }
+        setPickup(fix.point);
+        setPickupAddress(null);
+        setAutoPickup({ point: fix.point, accuracy_m: fix.accuracy_m });
+      });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   // **«أعد الطلب»**: يصل بنقطتَي رحلةٍ مضت في حالة التنقّل، فتُفتح شاشةُ
@@ -429,6 +475,9 @@ export function HomeScreen() {
       }
       setCenter(position);
       setPickup(position);
+      // **«موقعي الحالي» يعيد الانطلاقَ إلى GPS** — فيُقال «موقعك الحالي» ويُحدَّث عند العودة كما في أوّل فتح
+      setAutoPickup({ point: position, accuracy_m: null });
+      setLocationState("granted");
       void describe(position, "pickup");
       setPhase(dropoff || hourlyMode ? "confirm" : "idle");
       map.current?.flyTo(position, 15);
@@ -458,7 +507,9 @@ export function HomeScreen() {
     }
     setDropoff(place.coordinates);
     setDropoffAddress(place.address || place.name);
-    setPhase("confirm");
+    // **بلا انطلاقٍ معروفٍ يُختار بالدبّوس أوّلاً** (اختبارُ طلب الرحلة ٢٠٢٦-١١-١٩، الإذنُ مرفوض): كانت الورقةُ تُطلب ولا تُبنى بلا انطلاق،
+    // فعادت قائمةُ البحث تقول «موقعي الحالي» عن موقعٍ لا يُعرف — و`confirmPin` يفتح الورقةَ بعده لأن الوجهةَ قائمة
+    setPhase(pickup ? "confirm" : "pick-pickup");
     if (pickup) map.current?.fitBounds(pickup, place.coordinates);
   }
 
@@ -479,6 +530,13 @@ export function HomeScreen() {
       address: past.dropoff_address ?? "",
       coordinates: past.dropoff,
     });
+  }
+
+  /** **ضبطُ الانطلاق بالدبّوس يبدأ من الانطلاق نفسِه** — قِيس في اختبار طلب الرحلة ٢٠٢٦-١١-١٩: «تغيير» من الورقة فتح الدبّوسَ حيث وقفت
+   *  الخريطةُ آخرَ مرّة (على الوجهة)، **فمن ضغط «تأكيد» بلا تحريكٍ جعل الوجهةَ انطلاقاً**. */
+  function adjustPickup() {
+    if (pickup) map.current?.flyTo(pickup, 17);
+    setPhase("pick-pickup");
   }
 
   function confirmPin() {
@@ -512,7 +570,8 @@ export function HomeScreen() {
     }
     setDropoff(point);
     void describe(point, "dropoff");
-    setPhase("confirm");
+    // **وبالدبّوس كذلك** — بلا انطلاقٍ معروفٍ يُختار هو قبل الورقة
+    setPhase(pickup ? "confirm" : "pick-pickup");
     if (pickup) map.current?.fitBounds(pickup, point);
   }
 
@@ -541,7 +600,9 @@ export function HomeScreen() {
         pickup,
         dropoff,
         vehicle_category: category,
-        pickup_address: pickupAddress,
+        // **الانطلاقُ الآليُّ يُرسل باسمه المعروض** (اختبارُ طلب الرحلة ٢٠٢٦-١١-١٩: رحلةٌ من موقع GPS أُنشئت بلا `pickup_address`، فقرأ الراكبُ
+        // «نقطة الانطلاق» مكانَ الاسم وقرأ الكبتنُ ما يحسبه جهازُه) — `pickupLine` يُسأل لإحداثيّتي الانطلاق نفسِهما
+        pickup_address: pickupAddress ?? pickupLine,
         dropoff_address: dropoffAddress,
         gender_preference: preference,
         // **بمنطقةٍ زمنية**: `datetime-local` يعطي وقتاً محلياً بلا منطقة،
@@ -585,7 +646,9 @@ export function HomeScreen() {
       pickup,
       dropoff: target,
       vehicle_category: category,
-      pickup_address: pickupAddress,
+      // **الانطلاقُ الآليُّ يُرسل باسمه المعروض** (اختبارُ طلب الرحلة ٢٠٢٦-١١-١٩: رحلةٌ من موقع GPS أُنشئت بلا `pickup_address`، فقرأ الراكبُ
+      // «نقطة الانطلاق» مكانَ الاسم وقرأ الكبتنُ ما يحسبه جهازُه) — `pickupLine` يُسأل لإحداثيّتي الانطلاق نفسِهما
+      pickup_address: pickupAddress ?? pickupLine,
       dropoff_address: dropoffAddress,
       gender_preference: preference,
       // **الرمزُ يُرسل مع الطلب** (12-ز): الخلفيةُ تُجمّد قاعدتَه على الرحلة،
@@ -1051,7 +1114,15 @@ export function HomeScreen() {
         </>
       ) : null,
     area,
-    onChangePickup: () => (searchV2 ? openSearch("pickup") : setPhase("pick-pickup")),
+    // **الإذنُ مرفوضٌ أو GPS مطفأ** (٥): رسالةٌ قصيرةٌ بزرٍّ يفتح إعدادَ الموقع (في الغلاف)، والانطلاقُ على الخريطة في الأثناء
+    locationOff:
+      locationState === "denied" && !pickup
+        ? {
+            onSettings: permissionsCenterAvailable() ? () => void openPermission("location") : null,
+            onPickOnMap: () => setPhase("pick-pickup"),
+          }
+        : null,
+    onChangePickup: () => (searchV2 ? openSearch("pickup") : adjustPickup()),
     onWomenRide: () => {
       setPresetPreference("female");
       setAirportPicks(undefined);
@@ -1144,6 +1215,21 @@ export function HomeScreen() {
   const target = dropoff ?? (hourlyMode ? pickup : null);
   // **نقطةُ التقاطٍ مقترحة** (البند ١١) — في ورقة التأكيد وحدَها
   const pickupHint = usePickupSuggestion(pickup, phase === "confirm");
+  // **الدبّوسُ على الطريق لا داخل مبنى** (٥): أوّلُ نقطةٍ في مسار التقدير هي حيث يقف الكبتن — والانطلاقُ الآليُّ وحدَه يُنقل إليها
+  useEffect(() => {
+    if (phase !== "confirm" || !pickup) return;
+    const snapped = snapToRoad(pickupSource, pickup, previewLine);
+    if (!snapped) return;
+    setPickup(snapped);
+    setAutoPickup((current) => ({ point: snapped, accuracy_m: current?.accuracy_m ?? null }));
+    // المسارُ وحدَه يحرّكه — والنقطةُ تُقرأ داخله
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLine, phase]);
+  // **سطرُ الانطلاق في رأس ورقة الطلب** (٣) — والورقةُ لا تُبنى إلا بوجهة، فلا يظهر قبلها
+  const confirmLine = pickupConfirmLine(
+    { source: pickupSource, accuracy_m: autoPickup?.accuracy_m ?? null, address: pickupAddress ?? pickupLine },
+    tr,
+  );
   const confirmProps: ConfirmRideProps | null =
     pickup && target
       ? {
@@ -1175,6 +1261,12 @@ export function HomeScreen() {
           initialScheduling: presetSchedule !== null,
           initialOffer: presetOffer ?? undefined,
           pickupLine,
+          pickupConfirm: {
+            line: confirmLine,
+            // **«تغيير»**: البحثُ بمحفوظه وأخيره و«على الخريطة» — **والتقريبيُّ يفتح الدبّوسَ للضبط مباشرةً**؛ والتسعيرُ والمسارُ يُعادان
+            // لأيِّ انطلاقٍ جديد (`useConfirmRide`)
+            onChange: () => (confirmLine.adjust || !searchV2 ? adjustPickup() : openSearch("pickup")),
+          },
           pickupSuggestion: pickupHint.suggestion
             ? {
                 name: (language === "fr" ? pickupHint.suggestion.name_en : null) ?? pickupHint.suggestion.name_ar,
@@ -1440,7 +1532,7 @@ export function HomeScreen() {
             ) : (
               <WhereToSheetT2
                 places={places}
-                pickupLabel={pickupAddress ?? (pickup ? tr("الموقع المحدد") : tr("موقعي الحالي"))}
+                pickupLabel={pickupAddress ?? (pickup ? (pickupLine ?? tr("الموقع المحدد")) : locationState === "denied" ? tr("حدّد نقطة الانطلاق") : tr("موقعي الحالي"))}
                 onSearch={() => openSearch("dropoff")}
                 onPickPlace={(place) =>
                   pickPlace({
@@ -1450,7 +1542,7 @@ export function HomeScreen() {
                     coordinates: { lat: place.lat, lng: place.lng },
                   })
                 }
-                onChangePickup={() => (searchV2 ? openSearch("pickup") : setPhase("pick-pickup"))}
+                onChangePickup={() => (searchV2 ? openSearch("pickup") : adjustPickup())}
               />
             )}
           </motion.div>
@@ -1467,7 +1559,7 @@ export function HomeScreen() {
         country={user?.country_code ?? "JO"}
         near={pickup ?? center}
         onPick={searchFor === "pickup" ? pickPickup : searchFor === "stop" ? pickStop : pickPlace}
-        onPickOnMap={() => setPhase(searchFor === "pickup" ? "pick-pickup" : searchFor === "stop" ? "pick-stop" : "pick-dropoff")}
+        onPickOnMap={() => (searchFor === "pickup" ? adjustPickup() : setPhase(searchFor === "stop" ? "pick-stop" : "pick-dropoff"))}
         // **«بلا وجهة» للساعات وحدَها** (§٦٣-ج/٥) — وكلُّ طلبٍ غيرِها بلا صفِّه كما كان
         onSkip={hourlyMode && searchFor === "dropoff" ? skipDestination : undefined}
         onHere={searchFor === "pickup" ? pickHere : undefined}
