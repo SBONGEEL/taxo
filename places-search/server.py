@@ -580,12 +580,26 @@ NEAR_STREET_M = 35.0
 LANDMARK_BONUS_M = {"hospital": 90, "mosque": 90, "university": 90, "school": 70, "mall": 90, "airport": 120, "hotel": 70,
                     "park": 60, "pharmacy": 30, "bank": 30, "fuel": 30}
 ARABIC = re.compile(r"[؀-ۿ]")
+LATIN = re.compile(r"[A-Za-z]")
+#: فواصلُ الأسماء المزدوجة في OSM («Sharia Amr Bin al-A'ss - شارع الوادي») — شَرطةٌ أو خطٌّ مائلٌ بين فراغين، أو فاصلةٌ منقوطة
+NAME_SPLIT = re.compile(r"\s+[-–—/|]\s+|\s*;\s*")
 _near_cache: "OrderedDict[tuple, dict]" = OrderedDict()
 
 
+def _arabic_part(name: str | None) -> str | None:
+    """**الجزءُ العربيُّ وحدَه من اسمٍ مزدوج** — مقيسٌ على الإنتاج ٢٠٢٦-١١-١٩: شارعٌ اسمُه «Sharia Amr Bin al-A'ss - شارع الوادي» كان
+    سيُطبع كاملاً في ورقةٍ عربيّة. فالاسمُ بلا لاتينيٍّ يبقى كما هو، والمزدوجُ يُقسم ويؤخذ أوّلُ جزءٍ عربيٍّ خالص، **وما لا جزءَ
+    عربيّاً خالصاً فيه لا يُستعمل** — لا يُقصّ اسمٌ من وسطه فيُخترع اسمٌ لم يكتبه أحد."""
+    if not name or not ARABIC.search(name):
+        return None
+    if not LATIN.search(name):
+        return name.strip()
+    pure = [part.strip() for part in NAME_SPLIT.split(name) if ARABIC.search(part) and not LATIN.search(part)]
+    return pure[0] if pure else None
+
+
 def _arabic(row: sqlite3.Row) -> str | None:
-    name = _display_name(row)
-    return name if name and ARABIC.search(name) else None
+    return _arabic_part(_display_name(row))
 
 
 def nearby(lat: float, lng: float, cc: str) -> dict:
@@ -631,7 +645,7 @@ def nearby(lat: float, lng: float, cc: str) -> dict:
         _arabic(min(towns, key=lambda r: _km(lat, lng, r["lat"], r["lng"]))) if towns else None,
         source["ctx_city"] if source is not None else None,
     ]
-    area = next((p for p in candidates if p and ARABIC.search(p)), None)
+    area = next((a for a in map(_arabic_part, candidates) if a), None)
     street = None
     roads = _ro(ROADS)
     if roads is not None:
@@ -643,7 +657,8 @@ def nearby(lat: float, lng: float, cc: str) -> dict:
                 "SELECT s.name, s.coords FROM seg_box b JOIN segments s ON s.id = b.id "
                 "WHERE b.x0 <= ? AND b.x1 >= ? AND b.y0 <= ? AND b.y1 >= ? AND s.name != ''",
                 (lng + m_lng, lng - m_lng, lat + m_lat, lat - m_lat)):
-                if not ARABIC.search(name or ""):
+                name = _arabic_part(name)
+                if not name:
                     continue
                 d = _seg_metres(lat, lng, json.loads(coords))
                 if d <= best:

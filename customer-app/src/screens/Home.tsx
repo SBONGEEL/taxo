@@ -84,7 +84,7 @@ import {
   PinT2,
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
-import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
+import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2, useJustFound } from "@/screens/t2/TrackingT2";
 import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 import { SheetModalT2 } from "@/screens/t2/MoneyT2"; import { language, tr } from "@/lib/i18n";
 import { useOpenFlags } from "@/lib/open-layers";
@@ -410,6 +410,8 @@ export function HomeScreen() {
    *  الخلفيةُ ترشّح القائمةَ بتفضيل الملفّ لا الرحلة (`drivers.nearby_available`)، **وعدُّ الكبتنات المتاحات بندٌ غيرُه** (§٦٢-ج/٢٨،
    *  مطفأٌ يتبع الخدمةَ النسائية) — فطلبُ «كبتنة فقط» يبقى بالرادار وحده كما كان. **و`null` = لا شيءَ يُرسم ولا يُعدّ**. */
   const searchingNow = ride?.status === "searching" || ride?.status === "requested";
+  // **«تم العثور على كبتن» يُحسب هنا لا في الورقة** — الورقةُ تُركَّب من جديدٍ مع كلِّ حال (`key` أدناه) فلا تعرف ما قبلها
+  const justFound = useJustFound(ride ?? null);
   const carsWhileSearching =
     ride && searchingNow && ride.gender_preference === "any" && (user?.ride_gender_preference ?? "any") === "any"
       ? drivers.filter((driver) => driver.vehicle_category === ride.vehicle_category)
@@ -1475,6 +1477,7 @@ export function HomeScreen() {
                 driverPing={driverPing}
                 routePoints={routeLine}
                 nearby={carsWhileSearching === null ? null : carsWhileSearching.length}
+                justFound={justFound}
                 pickupLine={
                   pickup && pickup.lat === ride!.pickup.lat && pickup.lng === ride!.pickup.lng ? pickupLine : null
                 }

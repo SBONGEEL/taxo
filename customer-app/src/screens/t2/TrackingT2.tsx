@@ -50,6 +50,7 @@ import { useCountryConfig } from "@/lib/config";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
 import { clockText, hoursLabel, noDestination, useHourlyClock } from "@/lib/hourly";
 import { useNearestEta } from "@/lib/arrival";
+import { FOUND_MS, foundNow, type RideMoment } from "@/lib/ride-found";
 import { ownReverse } from "@/lib/geocode";
 import { CATEGORY_ICON, PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { isGenericPlace, shortPlace } from "@/lib/place-name";
@@ -83,6 +84,8 @@ export interface TrackingT2Props {
   /** **كم سيارةً ترسمها الخريطةُ حولك أثناء البحث** (R07، §٦٢-ج/٢٧) — العددُ نفسُه لا عدٌّ ثانٍ، و`null` حين لا تُرسم سيارة
    *  (تفضيلُ الرحلة غيرُ تفضيل الملفّ) فلا يُقال عددٌ لا تراه. */
   nearby?: number | null;
+  /** **«تم العثور على كبتن»** — من `useJustFound` في `Home`: الورقةُ وحدَها لا تعرف الحالَ التي قبلها. */
+  justFound?: boolean;
 }
 
 /** «2,140 رحلة» كما رُسمت في R08 — **والتمييزُ بآخر خانتين**: «3 رحلات» و«103 رحلات»، و«11 رحلة» و«2,140 رحلة»؛ والخاناتُ
@@ -115,17 +118,19 @@ function useDriverRides(ride: Ride): number | null {
   return count;
 }
 
-/** **أقُبل الطلبُ للتوّ أمام الراكب؟** — `true` خمسَ ثوانٍ بعد انتقاله من البحث إلى القبول في هذه الشاشة، وإلّا `false`. */
-function useJustFound(status: Ride["status"]): boolean {
-  const [previous, setPrevious] = useState(status);
+/** **أقُبل الطلبُ للتوّ أمام الراكب؟** — `true` خمسَ ثوانٍ بعد انتقاله من البحث إلى القبول (`foundNow`)، وإلّا `false`.
+ *  **يُنادى من `Home` لا من الورقة**: الورقةُ تُركَّب من جديدٍ مع كلِّ حال، فلا ترى الحالَ التي قبلها (قِيس على الإنتاج ٢٠٢٦-١١-١٩). */
+export function useJustFound(ride: RideMoment | null): boolean {
+  const moment = ride ? { id: ride.id, status: ride.status } : null;
+  const [previous, setPrevious] = useState<RideMoment | null>(moment);
   const [found, setFound] = useState(false);
-  if (status !== previous) {
-    setPrevious(status);
-    setFound((previous === "searching" || previous === "requested") && status === "accepted");
+  if (moment?.id !== previous?.id || moment?.status !== previous?.status) {
+    setPrevious(moment);
+    setFound(foundNow(previous, moment));
   }
   useEffect(() => {
     if (!found) return;
-    const timer = window.setTimeout(() => setFound(false), 5_000);
+    const timer = window.setTimeout(() => setFound(false), FOUND_MS);
     return () => window.clearTimeout(timer);
   }, [found]);
   return found;
@@ -182,7 +187,15 @@ function useHourlyPrepaySwitch(ride: Ride, onChanged: () => void) {
   return { busy, error, toggle: () => void toggle() };
 }
 
-export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine, nearby = null }: TrackingT2Props) {
+export function TrackingSheetT2({
+  ride,
+  onChanged,
+  driverPing,
+  routePoints,
+  pickupLine,
+  nearby = null,
+  justFound: found = false,
+}: TrackingT2Props) {
   const t = useTrackingSheet({ ride, onChanged });
   const driverRides = useDriverRides(ride);
   const countryConfig = useCountryConfig(ride.country_code);
@@ -201,7 +214,6 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   // **ورقةُ البحث** (أمرُ المالك ٢٠٢٦-١١-١٩): أيُّ النقطتين مفتوحةٌ باسمها الكامل، ودقائقُ أقرب كبتنٍ ما دام البحثُ جارياً، واسمٌ
   // عربيٌّ مفيدٌ لنقطةٍ حُفظت باسم المدينة وحدَها («طرابلس») — يُسأل عنها بإحداثيّتيها مرّة
   const [openStop, setOpenStop] = useState<"from" | "to" | null>(null);
-  const found = useJustFound(ride.status);
   const searchEta = useNearestEta(t.searching ? ride.pickup : null, t.searching);
   const pickupName = usePlaceName(ride.pickup_address ?? pickupLine ?? null, ride.pickup, t.searching);
   const dropoffName = usePlaceName(ride.dropoff_address ?? null, ride.dropoff, t.searching && !(hourly && noDestination(ride)));

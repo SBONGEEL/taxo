@@ -224,6 +224,22 @@ check("«أين أنا؟»: المنطقةُ وقربُ المعلم الذي ي
 check("والشارعُ المسمّى تحت النقطة يُقرأ معها", near["street"] == "الشط")
 check("وبعيداً عن كلِّ معلمٍ وشارع ⇐ المنطقةُ وحدَها لا «طرابلس» العامّة", srv.nearby(32.0080, 13.0130, "LY")["label"] == "تاجوراء")
 check("ودولةٌ ليست من الثلاث ⇐ لا شيء", srv.nearby(32.0, 13.0, "EG")["label"] is None)
+check("والاسمُ المزدوجُ يُقرأ عربيُّه وحدَه — مقيسٌ على الإنتاج",
+      srv._arabic_part("Sharia Amr Bin al-A'ss - شارع الوادي") == "شارع الوادي"
+      and srv._arabic_part("شارع عمر المختار") == "شارع عمر المختار"
+      and srv._arabic_part("Tech Corner") is None
+      and srv._arabic_part("مطعم Pizza Hut") is None)
+_r2 = sqlite3.connect(srv.ROADS)
+_r2.execute("INSERT INTO segments VALUES (3,'LY',12,'tertiary','Sharia Amr Bin al-A''ss - شارع الوادي',40,0,0,0,?)",
+            (_j.dumps([[13.0125, 32.0080], [13.0135, 32.0080]]),))
+_r2.execute("INSERT INTO seg_box VALUES (3, 13.0125, 13.0135, 32.0080, 32.0080)")
+_r2.commit()
+_r2.close()
+srv._near_cache.clear()
+_mixed = srv.nearby(32.0080, 13.0130, "LY")
+check("وشارعٌ اسمُه مزدوجٌ يظهر بعربيّه في الاسم — لا «Sharia» في ورقةٍ عربيّة",
+      _mixed["street"] == "شارع الوادي" and _mixed["label"] == "شارع الوادي، تاجوراء")
+print("     ", _mixed)
 with _ureq.urlopen(f"http://127.0.0.1:{_port}/nearby?lat=32.0002&lng=13.0005&cc=ly", timeout=5) as r:
     check("و/nearby عبر HTTP", _j.loads(r.read())["label"] == "تاجوراء، قرب مصحة ابن النفيس")
 try:
