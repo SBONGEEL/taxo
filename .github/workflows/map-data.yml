@@ -79,16 +79,11 @@ jobs:
           for c, v in s["cities"].items():
               print(f"| {c} | {sum(v['places'].values())} | {v['streets_named']} | {v['buildings']} |")
           a = json.load(open("work/arabic_stats.json"))
-          print("
-**الأسماءُ العربيّة (SPEC §١٠٩-ب)**
-
-| المدينة | أماكن | بالعربيّة | OSM | Overture | Wikidata | GeoNames | علامةٌ كما هي | بلا اسم |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+          print("\n**الأسماءُ العربيّة (SPEC §١٠٩-ب)**\n\n| المدينة | أماكن | بالعربيّة | OSM | Overture | Wikidata | GeoNames | علامةٌ كما هي | بلا اسم |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|")
           for c, v in a["cities"].items():
               print(f"| {c} | {v['places']} | {v['arabic']} | {v['osm']} | {v['overture']} | {v['wikidata']} | {v['geonames']} | {v['brand_as_written']} | {v['missing']} |")
           for e in a["errors"]:
-              print(f"
-⚠ {e}")
+              print(f"\n⚠ {e}")
           EOF
       - uses: actions/upload-artifact@v4
         with:
