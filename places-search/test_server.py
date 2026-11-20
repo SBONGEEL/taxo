@@ -241,6 +241,10 @@ check("وفاصلٌ داخلَ الاسم لا يقصّه — مقاسٌ بعد 
       srv._arabic_part("كاجوال للملابس : (2 / 3XL)") is None
       and srv._arabic_part("مسجد أبو بكر الصديق - Abu Bakr Al Sedeeq Mosque") == "مسجد أبو بكر الصديق"
       and srv._arabic_part("Salle OMS - قاعة متعددة الرياضات") == "قاعة متعددة الرياضات")
+check("والتيفيناغُ بجوار العربيّ يُسقط — «ⴱⴰⴱ ⵇⵔⵇⴰⵔⵛ باب قرقارش» (مقيسٌ على الإنتاج ٢٠/١١)",
+      srv._arabic_part("ⴱⴰⴱ ⵇⵔⵇⴰⵔⵛ باب قرقارش") == "باب قرقارش"
+      and srv._arabic_part("Ruine du Hammam - بقايا حمام بنت السلطان -ⴰⵙⴻⴷⵍⵉ ⵏ ⵃⴰⵎⴰⵎ") == "بقايا حمام بنت السلطان"
+      and srv._arabic_part("ⴰⵙⴻⴷⵍⵉ") is None)
 _r2 = sqlite3.connect(srv.ROADS)
 _r2.execute("INSERT INTO segments VALUES (3,'LY',12,'tertiary','Sharia Amr Bin al-A''ss - شارع الوادي',40,0,0,0,?)",
             (_j.dumps([[13.0125, 32.0080], [13.0135, 32.0080]]),))

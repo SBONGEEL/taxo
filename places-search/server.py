@@ -478,6 +478,8 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
         # كاملاً. **وما لا جزءَ عربيّاً خالصاً فيه يبقى كما هو** — الفرنسيُّ في الجزائر، ولا يُقصّ اسمٌ من وسطه
         name = _arabic_part(_display_name(row)) or _display_name(row)
         context = [_arabic_part(c) or c for c in (row["ctx_local"], row["ctx_city"]) if c]
+        if cc != "DZ" and any(ARABIC.search(c) for c in context):  # «Gurji، باب قرقارش» ⇐ «باب قرقارش» (الفرنسيُّ محلّيٌّ في الجزائر وحدَها)
+            context = [c for c in context if ARABIC.search(c)]
         context = [c for c in context if c != name]
         if _duplicate(row, name, "، ".join(dict.fromkeys(context)), kept):
             continue
@@ -596,10 +598,22 @@ def _arabic_part(name: str | None) -> str | None:
     عربيّاً خالصاً فيه لا يُستعمل** — لا يُقصّ اسمٌ من وسطه فيُخترع اسمٌ لم يكتبه أحد."""
     if not name or not ARABIC.search(name):
         return None
+    name = _drop_tifinagh(name)
     if not LATIN.search(name):
         return name.strip()
     text = _split_arabic(name)
     return text if not LATIN.search(text) else None
+
+
+#: **التيفيناغ بجوار العربيّ يُسقط** (قِيس على الإنتاج ٢٠/١١: «ⴱⴰⴱ ⵇⵔⵇⴰⵔⵛ باب قرقارش» في سياق نتيجة بحث) — الكلمةُ التيفيناغيّةُ الخالصة
+#: تُحذف حين في الاسم عربيّ، فلا يُقصّ حرفٌ من كلمة ولا يُكتب ما لم يكن فيه.
+TIFINAGH_WORD = re.compile(r"(?:^|\s)[-–]?[ⴰ-⵿]+(?=\s|$)")
+
+
+def _drop_tifinagh(name: str) -> str:
+    if not ARABIC.search(name):
+        return name
+    return re.sub(r"\s{2,}", " ", TIFINAGH_WORD.sub(" ", name)).strip(" -–—|/")
 
 
 #: **الفواصلُ بترتيبها، وقاعدةُ القصّ واحدةٌ في ثلاثة مواضع** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): هنا، و`build_map_data.py`، و`arabic-name.ts`

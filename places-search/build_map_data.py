@@ -48,12 +48,16 @@ SEPARATORS = (" - ", " – ", " — ", " / ", " | ", "; ")
 ARABIC_START = re.compile(r"^[؀-ۿ]")
 LATIN_START = re.compile(r"^[A-Za-zÀ-ɏ]")
 LATIN = re.compile(r"[A-Za-z]")
+TIFINAGH_WORD = re.compile(r"(?:^|\s)[-–]?[ⴰ-⵿]+(?=\s|$)")
 
 
 def arabic_part(name):
     """**الجزءُ العربيُّ وحدَه من اسمٍ مزدوج** — قاعدةُ `server.py` ‏`_arabic_part` نفسُها على المربّعات (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١):
     «Alamina Hospital - مشفى الآمنة» ⇐ «مشفى الآمنة». **وما لا جزءَ عربيّاً خالصاً فيه يُعاد كما هو** — لا يُقصّ ولا يُخترع."""
-    if not name or not ARABIC.search(name) or not LATIN.search(name):
+    if not name or not ARABIC.search(name):
+        return name
+    name = re.sub(r"\s{2,}", " ", TIFINAGH_WORD.sub(" ", name)).strip(" -–—|/")  # التيفيناغُ بجوار العربيّ (server.py ‏`_drop_tifinagh`)
+    if not LATIN.search(name):
         return name
     text = name.strip()
     for sep in SEPARATORS:  # **القاعدةُ نفسُها التي في `server.py` ‏`_split_arabic`** — طرفٌ عربيُّ البدء والآخرُ لاتينيُّه
