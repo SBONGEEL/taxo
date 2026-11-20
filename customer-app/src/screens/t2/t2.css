@@ -426,7 +426,25 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-home-place .t2-icon { font-size: 17px; }
 .t2-home-place { color: var(--t2-text); font-family: inherit; cursor: pointer; }
 .t2-home-place-more { color: var(--t2-muted); }
-.t2-home-place-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* **لا تنضغط الشارةُ إلى حرفٍ واحد** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): رآها على S21 ‏«ط» بدل «طرابلس» — رأسٌ بعرض ٣٦٠ يترك للنصّ
+   ١٦ بكسلاً بعد العلامة والسهم والحشوة. فللنصّ حدٌّ أدنى بعرض «طرابلس»، والفاصلُ (`spacer`) هو الذي ينضغط أوّلاً */
+.t2-home-place-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 3.4em; }
+/* **والاسمُ من كلمتين لا يُقصّ من وسط كلمة** («سوق الـ…»): يُكسر عند الفراغ سطرين قصيرين داخل الشارة نفسِها («سوق / الجمعة») */
+.t2-home-place-text.two-words {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  font-size: 12px;
+  line-height: 1.12;
+}
+@media (max-width: 400px) {
+  /* والمساحةُ تُسترجع من الزينة لا من الاسم: السهمُ يُخفى (الشارةُ كلُّها زرّ)، والحشواتُ والفراغاتُ أضيق */
+  .t2-home-head { gap: 6px; }
+  .t2-home-brand { padding: 0 10px; }
+  .t2-home-place { padding: 0 9px; }
+  .t2-home-place-more { display: none; }
+}
 .t2-home-spacer { flex: 1; }
 .t2-home-bell {
   position: relative;

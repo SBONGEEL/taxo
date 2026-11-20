@@ -15,6 +15,8 @@
  */
 
 /** بلاطاتُ OpenFreeMap (TileJSON) وخطوطُها — وفيها نطاقُ العربيّة (U+0600–06FF) في «Noto Sans». */
+import { arabicOnlyExpression } from "./arabic-name";
+
 export const OPEN_TILES_URL = "https://tiles.openfreemap.org/planet";
 export const OPEN_GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
@@ -64,8 +66,8 @@ export function openMapColors(host: HTMLElement): OpenMapColors | null {
 }
 
 /** **الاسمُ بالعربيّة، ثمّ المحلّيّ، ثمّ الإنجليزيّ** — فلا تخرج خريطةٌ نصفُها إنجليزيّ (قرارُ المالك 2026-08-27، `MAP_LANGUAGE`)،
- *  **ولا يبقى مكانٌ بلا اسم** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني §٣). */
-const NAME = ["coalesce", ["get", "name:ar"], ["get", "name"], ["get", "name:en"], ["get", "name_en"]];
+ *  **ولا يبقى مكانٌ بلا اسم** (أمرُ المالك ٢٠٢٦-١١-١٨ الثاني §٣)، **والمزدوجُ يُعرض عربيُّه وحدَه** (`arabic-name.ts`، أمرُ ٢٠/١١ الثالث §١). */
+const NAME = arabicOnlyExpression(["coalesce", ["get", "name:ar"], ["get", "name"], ["get", "name:en"], ["get", "name_en"]]);
 const FONT = ["Noto Sans Regular"];
 const FONT_BOLD = ["Noto Sans Bold"];
 

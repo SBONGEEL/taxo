@@ -40,6 +40,7 @@ import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
 import { cashbackDaysText, useIntercityService, useScheduledRides, useWeeklyCashback } from "@/lib/bookings";
+import { arabicPart } from "@/lib/arabic-name";
 import { useFeature } from "@/lib/config";
 import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
@@ -123,6 +124,16 @@ export interface RiderHomeProps {
 
 
 /** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة**. **وبيتُها هنا لـR05 وR07 معاً** («6 كباتن حولك الآن» أثناء البحث). */
+/** **اختصارٌ ذكيٌّ لاسم المنطقة لا حرفٌ واحد** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): الكلمةُ الإداريّةُ في أوّله تُحذف لأن الشارةَ تقول
+ *  «أين» لا «أيُّ تقسيم» («شعبية طرابلس» ⇐ «طرابلس»، «ولاية وهران» ⇐ «وهران»)، والمزدوجُ يُعرض عربيُّه، ولا يُكتب حرفٌ لم يكن في
+ *  الاسم. **والاسمُ كاملاً في `title` و`aria-label`** — قارئُ الشاشة يقرؤه بلا اختصار. */
+const AREA_PREFIX = /^(?:شعبية|شعبيّة|بلدية|بلديّة|ولاية|محافظة|لواء|قضاء|دائرة)\s+/;
+export function shortArea(area: string): string {
+  const name = arabicPart(area).trim();
+  const bare = name.replace(AREA_PREFIX, "").trim();
+  return bare || name;
+}
+
 export function nearbyLabel(count: number): string {
   if (count === 1) return tr("كبتن حولك");
   if (count === 2) return tr("كبتنان حولك");
@@ -324,9 +335,9 @@ export function RiderHomeT2({
         </span>
         {/* **اسمُ منطقة نقطة الانطلاق** — ولمستُه تفتح دبوسَ الانطلاق؛ وبلا اسمٍ معروفٍ لا شارة */}
         {area ? (
-          <button type="button" className="t2-home-place" onClick={onChangePickup}>
+          <button type="button" className="t2-home-place" onClick={onChangePickup} title={area} aria-label={area}>
             <Icon name="location_on" fill />
-            <span className="t2-home-place-text">{area}</span>
+            <span className={shortArea(area).includes(" ") ? "t2-home-place-text two-words" : "t2-home-place-text"}>{shortArea(area)}</span>
             <Icon name="expand_more" className="t2-home-place-more" />
           </button>
         ) : null}

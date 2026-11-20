@@ -53,6 +53,9 @@ ROWS = [
     ("LY", "poi", "مصحة ابن النفيس", None, "تاجوراء", 32.0010, 13.0005, 5, "overture"),
     ("LY", "poi", "محل الأمانة للهواتف", None, "تاجوراء", 32.0006, 13.0005, 4, "overture"),
     ("LY", "poi", None, "Tech Corner", "تاجوراء", 32.0003, 13.0005, 4, "overture"),
+    # **اسمٌ مزدوجٌ في حقلٍ واحد** كما رآه المالكُ على S21 (٢٠٢٦-١١-٢٠ الثالث §١)، وعربيٌّ من طرفين لا يُقصّ
+    ("LY", "poi", "Alamina Hospital - مشفى الآمنة", None, "طرابلس", 32.8900, 13.1800, 6, "osm"),
+    ("LY", "poi", "مصحة المتوسط - تاجوراء", None, "تاجوراء", 32.8800, 13.3500, 5, "osm"),
 ]
 
 db = sqlite3.connect(INDEX)
@@ -85,6 +88,11 @@ check("مطارُ الجزائر أوّلاً لا البلدة", bool(top) and 
 for q in ("مطار هواري بو مدين", "مطار هوارى بو مدين", "مطار هواري بومدين"):
     top = srv.search(q, "DZ", None, 5)
     check(f"«{q}»: المطارُ أوّلاً لا المحطّة", bool(top) and top[0]["name"].startswith("مطار الجزائر"))
+_mixed_hit = srv.search("مشفى الآمنة", "LY", None, 5)
+check("البحثُ يعيد عربيَّ الاسم المزدوج وحدَه — لا «Alamina Hospital» في ورقةٍ عربيّة",
+      bool(_mixed_hit) and _mixed_hit[0]["name"] == "مشفى الآمنة")
+_both_ar = srv.search("مصحة المتوسط", "LY", None, 5)
+check("والعربيُّ من الطرفين يبقى كاملاً", bool(_both_ar) and _both_ar[0]["name"] == "مصحة المتوسط - تاجوراء")
 check("الوصلُ لا يمسّ ما لا كلمةَ قصيرةً فيه", srv._join_particles("مطار هواري بومدين") == "مطار هواري بومدين")
 check("ولا يصل رقماً", srv._join_particles("جامعة الجزائر 1") == "جامعة الجزائر 1")
 
@@ -229,6 +237,10 @@ check("والاسمُ المزدوجُ يُقرأ عربيُّه وحدَه — 
       and srv._arabic_part("شارع عمر المختار") == "شارع عمر المختار"
       and srv._arabic_part("Tech Corner") is None
       and srv._arabic_part("مطعم Pizza Hut") is None)
+check("وفاصلٌ داخلَ الاسم لا يقصّه — مقاسٌ بعد «/» ليس اسماً لاتينيّاً (وُجد بعدِّ الدول الثلاث ٢٠/١١)",
+      srv._arabic_part("كاجوال للملابس : (2 / 3XL)") is None
+      and srv._arabic_part("مسجد أبو بكر الصديق - Abu Bakr Al Sedeeq Mosque") == "مسجد أبو بكر الصديق"
+      and srv._arabic_part("Salle OMS - قاعة متعددة الرياضات") == "قاعة متعددة الرياضات")
 _r2 = sqlite3.connect(srv.ROADS)
 _r2.execute("INSERT INTO segments VALUES (3,'LY',12,'tertiary','Sharia Amr Bin al-A''ss - شارع الوادي',40,0,0,0,?)",
             (_j.dumps([[13.0125, 32.0080], [13.0135, 32.0080]]),))

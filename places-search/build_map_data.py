@@ -44,7 +44,35 @@ MAIN_ROADS = {"motorway": 100, "trunk": 80, "primary": 60, "secondary": 50, "ter
 SEG_M = 120.0
 
 
+SEPARATORS = (" - ", " – ", " — ", " / ", " | ", "; ")
+ARABIC_START = re.compile(r"^[؀-ۿ]")
+LATIN_START = re.compile(r"^[A-Za-zÀ-ɏ]")
+LATIN = re.compile(r"[A-Za-z]")
+
+
+def arabic_part(name):
+    """**الجزءُ العربيُّ وحدَه من اسمٍ مزدوج** — قاعدةُ `server.py` ‏`_arabic_part` نفسُها على المربّعات (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١):
+    «Alamina Hospital - مشفى الآمنة» ⇐ «مشفى الآمنة». **وما لا جزءَ عربيّاً خالصاً فيه يُعاد كما هو** — لا يُقصّ ولا يُخترع."""
+    if not name or not ARABIC.search(name) or not LATIN.search(name):
+        return name
+    text = name.strip()
+    for sep in SEPARATORS:  # **القاعدةُ نفسُها التي في `server.py` ‏`_split_arabic`** — طرفٌ عربيُّ البدء والآخرُ لاتينيُّه
+        at = text.find(sep)
+        if at < 0:
+            continue
+        left, right = text[:at].strip(), text[at + len(sep):].strip()
+        if ARABIC_START.match(left) and LATIN_START.match(right):
+            text = left
+        elif ARABIC_START.match(right) and LATIN_START.match(left):
+            text = right
+    return text
+
+
 def display_name(name_ar, name_en, alt, name_fr=None, cc=None):
+    return arabic_part(_display_name(name_ar, name_en, alt, name_fr, cc))
+
+
+def _display_name(name_ar, name_en, alt, name_fr=None, cc=None):
     """**العربيُّ أوّلاً، ثمّ المحلّيّ، ثمّ الفرنسيّ/الإنجليزيّ** — وما لا اسمَ له يعود فارغاً فلا يُرسم.
 
     **وفي الجزائر الفرنسيُّ قبل غيره حين لا عربيّ** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): الفرنسيّةُ لغةٌ محلّيّةٌ هناك. ويُقرأ من
@@ -150,7 +178,7 @@ class Roads(osmium.SimpleHandler):
         if work:
             mid = pts[len(pts) // 2]
             self.works.write(json.dumps({"type": "Feature",  # تكبيرُ البدء ١٣ من `-Z13` في `map-data.yml` لا من مفتاحٍ هنا
-                                         "properties": {"k": work, "n": (tags.get("name:ar") or tags.get("name") or "")[:60]},
+                                         "properties": {"k": work, "n": (arabic_part(tags.get("name:ar") or tags.get("name")) or "")[:60]},
                                          "geometry": {"type": "Point", "coordinates": [round(mid[0], 6), round(mid[1], 6)]}},
                                         ensure_ascii=False) + "\n")
             self.stats["works"][work] = self.stats["works"].get(work, 0) + 1
@@ -158,7 +186,7 @@ class Roads(osmium.SimpleHandler):
         if hw not in MAIN_ROADS:
             return
         free = speed_of(tags, hw)
-        name = (tags.get("name:ar") or tags.get("name") or "")[:60]
+        name = (arabic_part(tags.get("name:ar") or tags.get("name")) or "")[:60]
         oneway = 1 if tags.get("oneway") in ("yes", "1", "true") or hw.startswith("motorway") else 0
         seg, length = [pts[0]], 0.0
         for p in pts[1:]:

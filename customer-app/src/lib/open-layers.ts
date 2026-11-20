@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/api/client";
 import { openPlacesTiles } from "@/api/endpoints";
+import { arabicOnlyExpression } from "@/lib/arabic-name";
 import { addPinImages } from "@/lib/map-pin-icons";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
@@ -89,7 +90,8 @@ function loadNameFixes(): Promise<void> {
 
 /** اسمُ المكان: اسمُ المشرف بمفتاحه، وإلا اسمُ المربّع */
 function placeName(): unknown {
-  return ["coalesce", ["get", ["to-string", ["get", "k"]], ["literal", nameFixes]], ["get", "n"]];
+  // اسمُ المشرف كما كتبه؛ واسمُ المربّع **عربيُّه وحدَه إن كان مزدوجاً** (`arabic-name.ts`، أمرُ ٢٠/١١ الثالث §١)
+  return ["coalesce", ["get", ["to-string", ["get", "k"]], ["literal", nameFixes]], arabicOnlyExpression(["get", "n"])];
 }
 
 function placeLabel(): unknown {

@@ -474,8 +474,11 @@ def _search(db: sqlite3.Connection, query: str, q: str, cc: str, near: tuple[flo
 
     items, kept = [], []
     for score, dist, row in scored:
-        name = _display_name(row)
-        context = [c for c in (row["ctx_local"], row["ctx_city"]) if c and c != name]
+        # **العربيُّ وحدَه من المزدوج** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): «Alamina Hospital - مشفى الآمنة» كان يصل البحثَ وورقةَ الطلب
+        # كاملاً. **وما لا جزءَ عربيّاً خالصاً فيه يبقى كما هو** — الفرنسيُّ في الجزائر، ولا يُقصّ اسمٌ من وسطه
+        name = _arabic_part(_display_name(row)) or _display_name(row)
+        context = [_arabic_part(c) or c for c in (row["ctx_local"], row["ctx_city"]) if c]
+        context = [c for c in context if c != name]
         if _duplicate(row, name, "، ".join(dict.fromkeys(context)), kept):
             continue
         kept.append((row, _name_set(row, name), norm(name), "، ".join(dict.fromkeys(context))))
@@ -584,7 +587,6 @@ LANDMARK_BONUS_M = {"hospital": 90, "mosque": 90, "university": 90, "school": 70
 ARABIC = re.compile(r"[؀-ۿ]")
 LATIN = re.compile(r"[A-Za-z]")
 #: فواصلُ الأسماء المزدوجة في OSM («Sharia Amr Bin al-A'ss - شارع الوادي») — شَرطةٌ أو خطٌّ مائلٌ بين فراغين، أو فاصلةٌ منقوطة
-NAME_SPLIT = re.compile(r"\s+[-–—/|]\s+|\s*;\s*")
 _near_cache: "OrderedDict[tuple, dict]" = OrderedDict()
 
 
@@ -596,8 +598,30 @@ def _arabic_part(name: str | None) -> str | None:
         return None
     if not LATIN.search(name):
         return name.strip()
-    pure = [part.strip() for part in NAME_SPLIT.split(name) if ARABIC.search(part) and not LATIN.search(part)]
-    return pure[0] if pure else None
+    text = _split_arabic(name)
+    return text if not LATIN.search(text) else None
+
+
+#: **الفواصلُ بترتيبها، وقاعدةُ القصّ واحدةٌ في ثلاثة مواضع** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): هنا، و`build_map_data.py`، و`arabic-name.ts`
+#: في التطبيقين (تعبيرُ MapLibre نفسُه). **يُقصّ عند فاصلٍ بدأ أحدُ طرفيه بحرفٍ عربيٍّ والآخرُ بحرفٍ لاتينيّ** — فـ«مصحة المتوسط -
+#: تاجوراء» يبقى كاملاً، و«كاجوال للملابس : (2 / 3XL)» لا يُقصّ عند المقاس (وُجد بعدِّ الدول الثلاث قبل الرفع).
+SEPARATORS = (" - ", " – ", " — ", " / ", " | ", "; ")
+ARABIC_START = re.compile(r"^[؀-ۿ]")
+LATIN_START = re.compile(r"^[A-Za-zÀ-ɏ]")
+
+
+def _split_arabic(name: str) -> str:
+    text = name.strip()
+    for sep in SEPARATORS:
+        at = text.find(sep)
+        if at < 0:
+            continue
+        left, right = text[:at].strip(), text[at + len(sep):].strip()
+        if ARABIC_START.match(left) and LATIN_START.match(right):
+            text = left
+        elif ARABIC_START.match(right) and LATIN_START.match(left):
+            text = right
+    return text
 
 
 def _arabic(row: sqlite3.Row) -> str | None:
