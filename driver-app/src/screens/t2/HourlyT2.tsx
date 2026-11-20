@@ -14,7 +14,7 @@ import { ApiError } from "@/api/client";
 import { confirmPayment, getRidePayments } from "@/api/endpoints";
 import type { Payment, Ride } from "@/api/types";
 import { refreshAfterConfirm } from "@/lib/attention";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
 
 /** «ساعة واحدة · ساعتان · 3 ساعات · 11 ساعة» — **العربيةُ تعدّ بالمثنّى والجمع**، والخاناتُ لاتينية (§20). */
@@ -162,7 +162,7 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
         <Icon name="payments" />
         {/* **الرقمُ وحدَه يسارياً** — والعلامةُ بعده في سياق السطر العربيّ: «16.000 د.أ» لا «د.أ 16.000» */}
         <span>
-          {tr("استلم")}{" "}<b dir="ltr">{digits(pending.amount)}</b> {currencyLabel}{" "}{tr("نقداً — الساعاتُ المحجوزة")}
+          {tr("استلم")}{" "}<b dir="ltr">{formatAmount(pending.amount, pending.currency)}</b> {currencyLabel}{" "}{tr("نقداً — الساعاتُ المحجوزة")}
         </span>
       </div>
       <p className="t2-hr-cash-note">{tr("يبقى معك ولا يمرّ بمحفظتك، وتأكيدُك هو ما يُثبّته. وما زاد يُحصَّل عند الإنهاء.")}</p>
@@ -173,7 +173,7 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
         </p>
       ) : null}
       <button type="button" className="t2-rd-btn t2-hr-cash-btn" disabled={busy} onClick={() => void confirm()}>
-        {tr("استلمتُ")}{" "}{digits(pending.amount)} {currencyLabel}
+        {tr("استلمتُ")}{" "}{formatAmount(pending.amount, pending.currency)} {currencyLabel}
       </button>
     </div>
   );

@@ -26,7 +26,7 @@ import { useGoBack } from "@/lib/back";
 import { useGarage } from "@/lib/garage";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { RARITY_CHIP, RARITY_LABEL, RARITY_NOTE } from "@/lib/skins";
-import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { cn, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const PAGE = 48;
 
@@ -116,9 +116,7 @@ export function useSkinStoreScreen() {
       setOpen(null);
       // **الرصيدُ بعده من الدفتر** — لا مطروحاً في الشاشة (§14)
       setDone(
-        tr("صارت «{0}» في كراجك — رصيدك {1} {2}", { 0: result.skin.name, 1: digits(
-          result.balance_after,
-        ), 2: CURRENCY_LABEL[result.currency] }),
+        tr("صارت «{0}» في كراجك — رصيدك {1} {2}", { 0: result.skin.name, 1: formatAmount(result.balance_after, result.currency), 2: CURRENCY_LABEL[result.currency] }),
       );
       setBought(result.skin);
       setActivateError(null);
@@ -228,7 +226,7 @@ export function SkinStoreScreen() {
           <div className="mb-14 flex items-baseline justify-between rounded-14 border border-line bg-surface px-14 py-12">
             <span className="text-12 text-muted">{tr("رصيد محفظتك")}</span>
             <span className="text-15 font-bold text-ink">
-              {digits(store.balance)}{" "}
+              {formatAmount(store.balance, store.currency)}{" "}
               <span className="text-10.5 font-medium text-muted">
                 {CURRENCY_LABEL[store.currency]}
               </span>

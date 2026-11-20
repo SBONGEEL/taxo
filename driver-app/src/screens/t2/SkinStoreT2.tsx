@@ -30,7 +30,7 @@ import { SkinMapPreview } from "@/components/skins/SkinMapPreview";
 import { Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { BLOCKED_LABEL, RARITY_LABEL, RARITY_NOTE } from "@/lib/skins";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { useSkinStoreScreen } from "@/screens/SkinStore";
 
 import "@/taxo2";
@@ -116,7 +116,7 @@ export function SkinStoreT2Screen() {
             <span className="t2-store-wallet" aria-label={tr("رصيد محفظتك")}>
               <Icon name="account_balance_wallet" />
               <span className="t2-store-wallet-num" dir="ltr">
-                {digits(s.store.balance)}
+                {formatAmount(s.store.balance, s.store.currency)}
               </span>
               <span className="t2-store-wallet-cur">
                 {CURRENCY_LABEL[s.store.currency]}
@@ -245,7 +245,7 @@ export function SkinStoreT2Screen() {
                 ) : skin.price && skin.currency ? (
                   <span className="t2-store-price">
                     <span className="t2-store-price-num" dir="ltr">
-                      {digits(skin.price)}
+                      {formatAmount(skin.price, skin.currency)}
                     </span>
                     <span className="t2-store-price-cur">
                       {CURRENCY_LABEL[skin.currency]}
@@ -290,7 +290,7 @@ export function SkinStoreT2Screen() {
             {selected.price && selected.currency && !selected.owned ? (
               <div className="t2-store-bar-price">
                 <span className="t2-store-bar-num" dir="ltr">
-                  {digits(selected.price)}
+                  {formatAmount(selected.price, selected.currency)}
                 </span>
                 <span className="t2-store-bar-cur">
                   {CURRENCY_LABEL[selected.currency]}

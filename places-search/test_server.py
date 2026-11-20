@@ -249,7 +249,7 @@ except _ureq.HTTPError as exc:
     check("ونداءٌ بلا إحداثيّات ⇐ 400 لا انهيار", exc.code == 400)
 
 # ── «أماكن بلا اسم عربي» (SPEC §١٠٩-ب): فهرسٌ أقدمُ يقول «لم يُبنَ»، والجدولُ يُقرأ الأهمُّ أوّلاً وبمدينته
-check("فهرسٌ بلا جدول القائمة ⇐ built=false لا انهيار", srv.missing_arabic("JO", "", 0, 50) == {"built": False, "cities": [], "total": 0, "items": []})
+check("فهرسٌ بلا جدول القائمة ⇐ built=false لا انهيار", srv.missing_arabic("JO", "", 0, 50) == {"built": False, "cities": [], "cats": [], "total": 0, "items": []})
 _m = sqlite3.connect(INDEX)
 _m.execute("CREATE TABLE missing_ar(okey TEXT PRIMARY KEY, cc TEXT, city TEXT, name TEXT, tag TEXT, rank INTEGER, lat REAL, lng REAL)")
 _m.executemany("INSERT INTO missing_ar VALUES (?,?,?,?,?,?,?,?)", [
@@ -277,6 +277,42 @@ try:
     check("ودولةٌ ليست من الثلاث ⇐ 400", False)
 except _ureq.HTTPError as exc:
     check("ودولةٌ ليست من الثلاث ⇐ 400", exc.code == 400)
+
+# ── **والترتيبُ بالأهمّيّة وأعدادُ الفئات ومرشِّحُها** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): بنكٌ برتبةٍ أعلى يبقى بعد المستشفى
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # `python -I` لا يضيف مجلّدَ السكربت، و`categories.py` جارُه
+from categories import category as _cat, priority as _prio  # noqa: E402
+check("فئةُ الوسم من بيتها الواحد", (_cat("amenity=courthouse"), _cat("overture=pharmacy"), _cat("shop=bakery")) == ("government", "pharmacy", "cafe"))
+check("وترتيبُ المالك حرفاً",
+      sorted(["fuel", "hospital", "cafe", "mosque", "clinic", "pharmacy"], key=_prio) == ["hospital", "clinic", "pharmacy", "mosque", "fuel", "cafe"])
+_m = sqlite3.connect(INDEX)
+_m.execute("DROP TABLE missing_ar")
+_m.execute("CREATE TABLE missing_ar(okey TEXT PRIMARY KEY, cc TEXT, city TEXT, name TEXT, tag TEXT, rank INTEGER, lat REAL, lng REAL, cat TEXT, prio INTEGER)")
+_rows = [
+    ("n1", "JO", "عمّان", "Abdali Hospital", "amenity=hospital", 5, 31.96, 35.91),
+    ("n2", "JO", "عمّان", "Blom Bank", "amenity=bank", 9, 31.95, 35.90),
+    ("w3", "JO", "إربد", "Courthouse", "amenity=courthouse", 6, 32.55, 35.85),
+    ("n5", "JO", "إربد", "Caffe Uno", "amenity=cafe", 9, 32.55, 35.85),
+    ("n6", "JO", "إربد", "Irbid Clinic", "amenity=clinic", 2, 32.55, 35.85),
+]
+_m.executemany("INSERT INTO missing_ar VALUES (?,?,?,?,?,?,?,?,?,?)", [(*r, _cat(r[4]), _prio(_cat(r[4]))) for r in _rows])
+_m.commit()
+_m.close()
+while not srv._pool.empty():
+    srv._pool.get_nowait().close()
+srv._fill()
+_got = srv.missing_arabic("JO", "", 0, 50)
+check("الأهمُّ أوّلاً بالفئة لا بالرتبة", [i["okey"] for i in _got["items"]] == ["n1", "n6", "w3", "n2", "n5"])
+check("والفئةُ في كلِّ عنصر", _got["items"][0]["cat"] == "hospital")
+check("وأعدادُ الفئات بترتيبها", [(c["cat"], c["count"]) for c in _got["cats"]] ==
+      [("hospital", 1), ("clinic", 1), ("government", 1), ("bank", 1), ("cafe", 1)])
+_irbid = srv.missing_arabic("JO", "إربد", 0, 50)
+check("وفئاتُ المدينة المختارة وحدَها", [c["cat"] for c in _irbid["cats"]] == ["clinic", "government", "cafe"])
+_clinic = srv.missing_arabic("JO", "", 0, 50, "clinic")
+check("ومرشِّحُ الفئة", [i["okey"] for i in _clinic["items"]] == ["n6"] and _clinic["total"] == 1)
+check("ومدنُ الفئة المختارة وحدَها", {c["city"]: c["count"] for c in _clinic["cities"]} == {"إربد": 1})
+check("والمرشِّحان معاً", srv.missing_arabic("JO", "عمّان", 0, 50, "clinic")["total"] == 0)
+with _ureq.urlopen(f"http://127.0.0.1:{_port}/missing-ar?cc=jo&cat=bank", timeout=5) as r:
+    check("و?cat= عبر HTTP", [i["okey"] for i in _j.loads(r.read())["items"]] == ["n2"])
 
 _httpd.shutdown()
 

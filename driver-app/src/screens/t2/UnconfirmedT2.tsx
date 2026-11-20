@@ -32,7 +32,7 @@ import {
 } from "@/lib/attention";
 import { CURRENCY_LABEL, METHOD_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { CLIQ_DISPUTE_REASONS } from "@/screens/Dispute";
 import { Icon } from "@/taxo2";
 
@@ -272,7 +272,7 @@ function ItemCard({
       {/* **المبلغُ كبيراً** (§٦) كبطاقة حوالة كليك — كما أرسلته الخلفية، والعملةُ من رمزها */}
       <p className="t2-cts-amount">
         <span className="t2-cts-num t2-ucd-num" dir="ltr">
-          {digits(item.amount)}
+          {formatAmount(item.amount, item.currency)}
         </span>
         <span className="t2-cts-cur">
           {CURRENCY_LABEL[item.currency]} {METHOD_LABEL[item.method]}

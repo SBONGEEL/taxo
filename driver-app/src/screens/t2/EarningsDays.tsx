@@ -10,7 +10,7 @@
  */
 
 import type { EarningsDay } from "@/api/types";
-import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** `getDay()`: الأحدُ صفر — **والحرفُ كما رُسم** (س ح ن ث ر خ ج). */
 const WEEKDAY_LETTER = [tr("ح"), tr("ن"), tr("ث"), tr("ر"), tr("خ"), tr("ج"), tr("س")];
@@ -28,9 +28,12 @@ function calendarDay(day: string): Date {
 export function EarningsDays({
   days,
   currency,
+  code,
 }: {
   days: EarningsDay[];
   currency: string;
+  /** رمزُ العملة (`JOD`) — لخانات العرض؛ و`currency` علامتُها المرسومة */
+  code: string;
 }) {
   const month = days.length > 7;
   // **مقياسٌ واحدٌ للصاعد والنازل**: حصّتان بإشارتيهما من أكبر يومٍ — فيتقاسمان ارتفاعَ الرسم بنسبتهما
@@ -58,12 +61,12 @@ export function EarningsDays({
             <li
               key={day.day}
               className={today ? "t2-days-col today" : "t2-days-col"}
-              aria-label={`${WEEKDAY_NAME[date.getDay()]} ${date.getDate()}/${date.getMonth() + 1}: ${digits(day.net)} ${currency}`}
+              aria-label={`${WEEKDAY_NAME[date.getDay()]} ${date.getDate()}/${date.getMonth() + 1}: ${formatAmount(day.net, code)} ${currency}`}
             >
               <span className="t2-days-up" aria-hidden="true">
                 {today && !month ? (
                   <span className="t2-days-val" dir="ltr">
-                    {digits(day.net)}
+                    {formatAmount(day.net, code)}
                   </span>
                 ) : null}
                 {share > 0 ? (

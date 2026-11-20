@@ -28,6 +28,9 @@ import unicodedata
 import urllib.request
 import zipfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # `python -I` لا يضيف مجلّدَ السكربت، و`categories.py` جارُه
+from categories import category, priority
+
 ARABIC = re.compile(r"[؀-ۿ]")
 LETTERS_ONLY = re.compile(r"[^0-9a-z؀-ۿ ]+")
 COUNTRIES = ("JO", "DZ", "LY")
@@ -220,37 +223,51 @@ def main() -> None:
     # ٣) ما بقي بلا اسمٍ عربيّ ⇐ القائمة (ما يُرسم على الخريطة وحدَه، والعلاماتُ خارجها)
     db.executescript("""
     DROP TABLE IF EXISTS missing_ar;
-    CREATE TABLE missing_ar(okey TEXT PRIMARY KEY, cc TEXT, city TEXT, name TEXT, tag TEXT, rank INTEGER, lat REAL, lng REAL);
+    CREATE TABLE missing_ar(okey TEXT PRIMARY KEY, cc TEXT, city TEXT, name TEXT, tag TEXT, rank INTEGER, lat REAL, lng REAL,
+                            cat TEXT, prio INTEGER);
     """)
+    # **وفي الجزائر ما له اسمٌ فرنسيٌّ ليس «بلا اسم»** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): الفرنسيّةُ لغةٌ محلّيّةٌ هناك فتُعدّ
+    # الاسمَ المحلّيّ ويُرسم بها. **والفرنسيُّ وسمٌ صريحٌ وحدَه** (`name:fr` / `names.common.fr`) — لا تخمينَ لغة `name` اللاتينيّ
+    has_fr = "name_fr" in {r[1] for r in db.execute("PRAGMA table_info(places)")}
+    fr_col = "name_fr" if has_fr else "NULL"
+    french_ok = "NOT (cc = 'DZ' AND COALESCE(TRIM(name_fr), '') <> '')" if has_fr else "1"
     missing = []
     for okey, cc, tag, alt, ctx_city, lat, lng, rank in db.execute(
         f"SELECT okey, cc, tag, alt, ctx_city, lat, lng, rank FROM places "
-        f"WHERE name_ar IS NULL AND COALESCE(brand, 0) = 0 AND okey IS NOT NULL AND kind IN {MAP_KINDS}"
+        f"WHERE name_ar IS NULL AND COALESCE(brand, 0) = 0 AND okey IS NOT NULL AND kind IN {MAP_KINDS} AND {french_ok}"
     ):
         city = city_of(lat, lng) or ctx_city or "—"
         name = next((a for a in (alt or "").split(" | ") if a), "")
-        missing.append((okey, cc, city, name[:120], (tag or "").split(" ")[0], int(rank or 0), lat, lng))
-    db.executemany("INSERT OR IGNORE INTO missing_ar VALUES (?,?,?,?,?,?,?,?)", missing)
-    db.execute("CREATE INDEX ix_missing_cc_city ON missing_ar(cc, city, rank DESC)")
+        # **الفئةُ وترتيبُها** — المستشفى قبل المقهى في قائمة المشرف (البند ٤)
+        cat = category(tag or "")
+        missing.append((okey, cc, city, name[:120], (tag or "").split(" ")[0], int(rank or 0), lat, lng, cat, priority(cat)))
+    db.executemany("INSERT OR IGNORE INTO missing_ar VALUES (?,?,?,?,?,?,?,?,?,?)", missing)
+    db.execute("CREATE INDEX ix_missing_cc_city ON missing_ar(cc, city, prio, rank DESC)")
 
     # ٤) الأرقامُ لكلِّ مدينة — على ما يُرسم
     for kind_filter in (MAP_KINDS,):
-        for lat, lng, src_ar, brand, has_ar in db.execute(
-            f"SELECT lat, lng, src_ar, COALESCE(brand, 0), name_ar IS NOT NULL FROM places WHERE kind IN {kind_filter}"
+        for lat, lng, src_ar, brand, has_ar, cc, name_fr, alt in db.execute(
+            f"SELECT lat, lng, src_ar, COALESCE(brand, 0), name_ar IS NOT NULL, cc, {fr_col}, alt FROM places WHERE kind IN {kind_filter}"
         ):
             city = city_of(lat, lng)
             if not city:
                 continue
             bucket = stats["cities"].setdefault(city, {"cc": CITY_OF_CC[city], "places": 0, "arabic": 0, "osm": 0, "overture": 0,
-                                                       "wikidata": 0, "geonames": 0, "brand_as_written": 0, "missing": 0})
+                                                       "wikidata": 0, "geonames": 0, "brand_as_written": 0, "french": 0,
+                                                       "missing": 0, "missing_latin_only": 0})
             bucket["places"] += 1
             if has_ar:
                 bucket["arabic"] += 1
                 bucket[src_ar if src_ar in ("osm", "overture", "wikidata", "geonames") else "osm"] += 1
             elif brand:
                 bucket["brand_as_written"] += 1
+            elif cc == "DZ" and (name_fr or "").strip():
+                bucket["french"] += 1
             else:
                 bucket["missing"] += 1
+                # **ما بقي واسمُه لاتينيٌّ بلا وسم لغة** — رقمٌ يُعرض لا يُحذف من القائمة: لغتُه لا تُخمَّن
+                if not ARABIC.search(alt or ""):
+                    bucket["missing_latin_only"] += 1
     db.commit()
     db.close()
     with open(os.path.join(work, "arabic_stats.json"), "w", encoding="utf-8") as out:

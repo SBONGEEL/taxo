@@ -64,11 +64,11 @@ for cc, (x0, y0, x1, y1) in COUNTRY_BOX.items():
         if not name:
             continue
         rows.append((cc, name, common(names_common, "ar"), common(names_common, "en"), category, conf or 0.0, lat, lng, locality, street,
-                     oid, brand_wd, brand_name))
+                     oid, brand_wd, brand_name, common(names_common, "fr")))
     print(cc, "places", len(got), flush=True)
 
-con.execute("CREATE TABLE ov(cc VARCHAR, name VARCHAR, name_ar VARCHAR, name_en VARCHAR, cat VARCHAR, confidence DOUBLE, lat DOUBLE, lng DOUBLE, locality VARCHAR, street VARCHAR, oid VARCHAR, brand_wd VARCHAR, brand_name VARCHAR)")
-con.executemany("INSERT INTO ov VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+con.execute("CREATE TABLE ov(cc VARCHAR, name VARCHAR, name_ar VARCHAR, name_en VARCHAR, cat VARCHAR, confidence DOUBLE, lat DOUBLE, lng DOUBLE, locality VARCHAR, street VARCHAR, oid VARCHAR, brand_wd VARCHAR, brand_name VARCHAR, name_fr VARCHAR)")
+con.executemany("INSERT INTO ov VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
 con.execute(f"COPY ov TO '{os.path.join(WORK, 'overture_places.parquet')}' (FORMAT PARQUET)")
 
 n = 0

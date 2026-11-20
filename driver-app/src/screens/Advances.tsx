@@ -30,8 +30,7 @@ import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import type { Currency } from "@/api/types";
 import { digits,
-  DISPLAY_LOCALE,
-} from "@/lib/utils";
+  DISPLAY_LOCALE, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
@@ -71,11 +70,11 @@ function Requirement({ item }: { item: AdvanceRequirement }) {
 }
 
 /** المبلغُ بخطّ الأرقام وعملتُه — كما يصل من الخلفية، بلا حساب. */
-function Money({ value, currency }: { value: string; currency: string }) {
+function Money({ value, currency, code }: { value: string; currency: string; code: string }) {
   return (
     <div className="t2-ax-money">
       <span className="t2-ax-money-num" dir="ltr">
-        {digits(value)}
+        {formatAmount(value, code)}
       </span>
       <span className="t2-ax-money-cur">{currency}</span>
     </div>
@@ -183,7 +182,7 @@ export function AdvancesScreen() {
             <p className={debt.overdue ? "t2-adv-k danger" : "t2-adv-k"}>
               {debt.overdue ? tr("سلفةٌ تجاوزت مهلتها") : tr("سلفتُك القائمة")}
             </p>
-            <Money value={debt.remaining} currency={currency} />
+            <Money value={debt.remaining} currency={currency} code={state.currency} />
             {debt.overdue ? (
               <p className="t2-adv-stop">
                 <Icon name="error" fill />
@@ -220,7 +219,7 @@ export function AdvancesScreen() {
 
             <section className="t2-ax-card t2-adv-cap">
               <p className="t2-adv-k">{tr("سقفُك الحالي")}</p>
-              <Money value={state.cap} currency={currency} />
+              <Money value={state.cap} currency={currency} code={state.currency} />
               <p className="t2-ax-hint">
                 {tr("يكبر بعد كلِّ سلفةٍ تسدّدها في مهلتها. وما فوقه يحتاج موافقة الإدارة.")}
 
@@ -286,7 +285,7 @@ export function AdvancesScreen() {
             <div className="t2-adv-box">
               <div className="t2-adv-box-row">
                 <span>{tr("المبلغ")}</span>
-                <Money value={amount} currency={currency} />
+                <Money value={amount} currency={currency} code={state.currency} />
               </div>
               <div className="t2-adv-box-rule" />
               <p className="t2-adv-box-title">{tr("شرطُ السداد")}</p>
@@ -298,9 +297,7 @@ export function AdvancesScreen() {
                 {tr("يُقتطع")}{" "}{digits(String(state.deduction_percent))}{tr("٪ من كل رحلةٍ يدخل مالُها محفظتَك")}
 
                 {Number(state.min_kept_amount) > 0
-                  ? tr("، ويبقى لك منها {0} {1} على الأقل.", { 0: digits(
-                      state.min_kept_amount,
-                    ), 1: currency })
+                  ? tr("، ويبقى لك منها {0} {1} على الأقل.", { 0: formatAmount(state.min_kept_amount, state.currency), 1: currency })
                   : "."}
                 {state.term_days
                   ? tr(" والمهلةُ {0} يوماً.", { 0: digits(String(state.term_days)) })

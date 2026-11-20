@@ -29,7 +29,7 @@ import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { useCountryConfig } from "@/lib/config";
 import { useSession } from "@/lib/session";
-import { currencyLabel, digits } from "@/lib/utils";
+import { currencyLabel, digits, formatAmount } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -71,7 +71,8 @@ export function ReferralsScreen() {
   const goBack = useGoBack();
   const { user } = useSession();
   // العملةُ من دولة الحساب — والخلفيةُ ترسلها على المكافأة المدفوعة وحدها
-  const currency = currencyLabel(useCountryConfig(user?.country_code)?.currency);
+  const code = useCountryConfig(user?.country_code)?.currency;
+  const currency = currencyLabel(code);
   const [data, setData] = useState<MyReferrals | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -132,7 +133,7 @@ export function ReferralsScreen() {
     return (
       <span className="t2-ref-amount">
         <span className="t2-ref-amount-num" dir="ltr">
-          {digits(program.reward_amount)}
+          {formatAmount(program.reward_amount, code)}
         </span>
         <span className="t2-ref-amount-cur">{currency}</span>
       </span>
@@ -222,7 +223,7 @@ export function ReferralsScreen() {
                           {isDriver && Number(program.female_bonus_amount) > 0 ? (
                             <p className="t2-ref-program-bonus">
                               {tr("وإن كانت سائقةً موثَّقة:")}{" "}
-                              {digits(program.female_total_amount)} {currency}{" "}
+                              {formatAmount(program.female_total_amount, code)} {currency}{" "}
                               {tr("— الأساسُ وعلاوتُه معاً")}
                             </p>
                           ) : null}
@@ -242,7 +243,7 @@ export function ReferralsScreen() {
                   ) : null}
 
                   <p className="t2-ref-note">
-                    {tr("مجموع ما وصلك:")}{" "}{digits(data.total_rewarded)} {currency}
+                    {tr("مجموع ما وصلك:")}{" "}{formatAmount(data.total_rewarded, code)} {currency}
                   </p>
                 </section>
               </>
@@ -283,7 +284,7 @@ export function ReferralsScreen() {
                         {row.rewarded && row.reward_amount ? (
                           <span className="t2-ref-amount">
                             <span className="t2-ref-amount-num sm" dir="ltr">
-                              {digits(row.reward_amount)}
+                              {formatAmount(row.reward_amount, code)}
                             </span>
                             <span className="t2-ref-amount-cur">
                               {row.reward_currency

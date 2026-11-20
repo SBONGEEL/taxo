@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { goToCheckout } from "@/lib/pay-return";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { Icon, Wordmark } from "@/taxo2";
 
 import "./fields.css";
@@ -149,7 +149,7 @@ export function CardPayT2Screen() {
             </span>
             <span className="t2-cardpay-amount">
               <span className="t2-cardpay-num" dir="ltr">
-                {digits(handoff.amount)}
+                {formatAmount(handoff.amount, currency)}
               </span>
               <span className="t2-cardpay-cur">{label}</span>
             </span>
@@ -248,7 +248,7 @@ export function CardPayT2Screen() {
           )}
 
           {belowFloor && floor !== null ? (
-            <p className="t2-note">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(floor), 1: label })}</p>
+            <p className="t2-note">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: formatAmount(floor, currency), 1: label })}</p>
           ) : (
             <button type="button" className="t2-debt-cta" disabled={busy || method.down === true} onClick={() => void pay()}>
               {busy ? tr("جارٍ…") : handoff.crypto ? tr("تابع إلى صفحة الدفع") : tr("تابع إلى صفحة البطاقة")}

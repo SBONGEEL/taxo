@@ -31,7 +31,7 @@ import { refreshAfterConfirm } from "@/lib/attention";
 import { useCoverNav } from "@/lib/navCover";
 import { METHOD_LABEL, roundingLine, trimDistance } from "@/lib/rideFormat";
 import { play } from "@/lib/sound";
-import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, formatAmount } from "@/lib/utils";
 import { collectView, useCollectScreen } from "@/screens/Collect";
 import { useRateRider } from "@/screens/RateRider";
 import { Celebrate, Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
@@ -117,8 +117,8 @@ export function CollectT2Screen({
   const split =
     mixed && creditedFirst && rest
       ? creditedFirst.method === "wallet"
-        ? tr("دفع الراكب {0} {1} من محفظته، وقُيّدت في محفظتك. والباقي {2}.", { 0: digits(creditedFirst.amount), 1: currencyLabel, 2: METHOD_LABEL[rest.method] })
-        : tr("دُفع {0} {1} ({2}) وقُيّد في محفظتك. والباقي {3}.", { 0: digits(creditedFirst.amount), 1: currencyLabel, 2: METHOD_LABEL[creditedFirst.method], 3: METHOD_LABEL[rest.method] })
+        ? tr("دفع الراكب {0} {1} من محفظته، وقُيّدت في محفظتك. والباقي {2}.", { 0: formatAmount(creditedFirst.amount, creditedFirst.currency), 1: currencyLabel, 2: METHOD_LABEL[rest.method] })
+        : tr("دُفع {0} {1} ({2}) وقُيّد في محفظتك. والباقي {3}.", { 0: formatAmount(creditedFirst.amount, creditedFirst.currency), 1: currencyLabel, 2: METHOD_LABEL[creditedFirst.method], 3: METHOD_LABEL[rest.method] })
       : null;
 
   // **رحلةٌ لغيره يدفعها صاحبُ الطلب** (§٦٣-ج/١) — من تطبيقه بمحفظةٍ أو بطاقة، **فلا مالَ يُقبض هنا أبداً**: ما دامت دفعتُه لم
@@ -163,7 +163,7 @@ export function CollectT2Screen({
         <div className="t2-co-caption">{caption}</div>
         <div className="t2-co-amount">
           <span className="t2-co-amount-num" dir="ltr">
-            {digits(headline.amount)}
+            {formatAmount(headline.amount, ride.currency)}
           </span>
           <span className="t2-co-amount-cur">{currencyLabel}</span>
         </div>
@@ -176,7 +176,7 @@ export function CollectT2Screen({
           <>
             <span className="t2-co-k">{tr("السعر المقدّر")}</span>
             <span className="t2-co-v" dir="ltr">
-              {digits(ride.estimated_fare)}
+              {formatAmount(ride.estimated_fare, ride.currency)}
             </span>
           </>
         ) : null}
@@ -190,23 +190,23 @@ export function CollectT2Screen({
         ) : null}
         <span className="t2-co-k">{tr("الأجرة النهائية")}</span>
         <span className="t2-co-v" dir="ltr">
-          {digits(final)}
+          {formatAmount(final, ride.currency)}
         </span>
         {mixed
           ? credited.map((payment) => (
               <Row
                 key={payment.id}
                 label={payment.method === "wallet" ? tr("من محفظة الراكب") : METHOD_LABEL[payment.method]}
-                value={`−${digits(payment.amount)}`}
+                value={`−${formatAmount(payment.amount, payment.currency)}`}
               />
             ))
           : null}
         {mixed && rest ? (
-          <Row label={tr("المتبقي {0}", { 0: METHOD_LABEL[rest.method] })} value={digits(rest.amount)} strong />
+          <Row label={tr("المتبقي {0}", { 0: METHOD_LABEL[rest.method] })} value={formatAmount(rest.amount, rest.currency)} strong />
         ) : null}
         {/* **ما قُيّد له ولا شيءَ بيده** — سطرُ الشاشة القائمة بنبرته («قُيّد في محفظتك») */}
         {!mixed && creditedFirst ? (
-          <Row label={tr("قُيّد في محفظتك")} value={digits(creditedFirst.amount)} ok />
+          <Row label={tr("قُيّد في محفظتك")} value={formatAmount(creditedFirst.amount, creditedFirst.currency)} ok />
         ) : null}
         {/* **«عمولة أقل بكثير من السوق» — بلا نسبةٍ ولا رقم** (التصحيحات §١) */}
         <span className="t2-co-k">
@@ -252,7 +252,7 @@ export function CollectT2Screen({
         {pending && pending.id !== confirmedId
           ? pending.method === "cliq"
             ? tr("وصلتني الحوالة")
-            : tr("استلمتُ {0} {1}", { 0: digits(pending.amount), 1: currencyLabel })
+            : tr("استلمتُ {0} {1}", { 0: formatAmount(pending.amount, pending.currency), 1: currencyLabel })
           : rate.stars > 0
             ? tr("إرسال التقييم")
             : tr("إنهاء")}

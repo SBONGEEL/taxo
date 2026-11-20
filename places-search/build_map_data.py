@@ -26,39 +26,9 @@ WORK = sys.argv[1]
 COUNTRIES = {"jordan": "JO", "algeria": "DZ", "libya": "LY"}
 ARABIC = re.compile(r"[؀-ۿ]")
 
-# ── فئةُ المكان ⇐ أيقونته (الأسماءُ نفسُها في `customer-app/src/lib/open-places.ts`)
-OSM_CATEGORY = [
-    ("hospital", {"amenity=hospital", "healthcare=hospital"}),
-    ("clinic", {"amenity=clinic", "amenity=doctors", "healthcare=clinic", "healthcare=doctor", "healthcare=centre", "amenity=dentist", "healthcare=dentist"}),
-    ("pharmacy", {"amenity=pharmacy", "healthcare=pharmacy", "shop=chemist"}),
-    ("university", {"amenity=university", "amenity=college"}),
-    ("school", {"amenity=school", "amenity=kindergarten"}),
-    ("mosque", {"amenity=place_of_worship"}),
-    ("bank", {"amenity=bank", "amenity=atm", "amenity=bureau_de_change"}),
-    ("government", {"office=government", "amenity=townhall", "amenity=courthouse", "amenity=police", "amenity=post_office", "amenity=embassy", "office=diplomatic", "amenity=fire_station"}),
-    ("fuel", {"amenity=fuel", "amenity=charging_station"}),
-    ("restaurant", {"amenity=restaurant", "amenity=fast_food", "amenity=food_court"}),
-    ("cafe", {"amenity=cafe", "amenity=ice_cream", "shop=bakery", "shop=pastry"}),
-    ("hotel", {"tourism=hotel", "tourism=motel", "tourism=guest_house", "tourism=hostel", "tourism=apartment"}),
-    ("mall", {"shop=mall", "shop=department_store", "amenity=marketplace", "shop=supermarket"}),
-    ("landmark", {"tourism=attraction", "tourism=museum", "historic=monument", "historic=memorial", "historic=castle", "historic=archaeological_site", "historic=ruins", "tourism=viewpoint", "leisure=stadium", "leisure=park", "aeroway=aerodrome", "aeroway=terminal"}),
-    ("transport", {"amenity=bus_station", "public_transport=station", "railway=station", "amenity=taxi", "amenity=parking"}),
-]
-OSM_LOOKUP = {tag: cat for cat, tags in OSM_CATEGORY for tag in tags}
-# Overture `categories.primary` ⇐ الفئة (كلماتٌ في الاسم الإنجليزيّ للفئة)
-OVERTURE_WORDS = [
-    ("hospital", ("hospital",)), ("pharmacy", ("pharmacy", "drugstore")),
-    ("clinic", ("clinic", "doctor", "dentist", "medical", "health", "laboratory")),
-    ("university", ("university", "college")), ("school", ("school", "kindergarten", "academy")),
-    ("mosque", ("mosque", "religious", "church", "place_of_worship")), ("bank", ("bank", "atm", "currency")),
-    ("government", ("government", "embassy", "police", "post_office", "court", "town_hall", "public_service", "municipal")),
-    ("fuel", ("gas_station", "fuel", "ev_charging")), ("cafe", ("cafe", "coffee", "bakery", "dessert", "juice", "tea_room")),
-    ("restaurant", ("restaurant", "food", "pizza", "burger", "grill", "shawarma", "sandwich")),
-    ("hotel", ("hotel", "motel", "resort", "hostel", "guest_house", "lodging")),
-    ("mall", ("shopping_center", "mall", "supermarket", "department_store", "grocery", "hypermarket")),
-    ("landmark", ("landmark", "museum", "monument", "park", "stadium", "historic", "tourist", "airport")),
-    ("transport", ("bus_station", "train_station", "transportation", "parking", "taxi")),
-]
+# ── فئةُ المكان ⇐ أيقونته — في `categories.py` (بيتُها الواحد، يقرؤه `arabic_names.py` أيضاً)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # `python -I` لا يضيف مجلّدَ السكربت، و`categories.py` جارُه
+from categories import OSM_CATEGORY, OSM_LOOKUP, OVERTURE_WORDS, category  # noqa: E402,F401
 MIN_ZOOM = {"hospital": 12, "university": 12, "mall": 13, "landmark": 13, "government": 14, "mosque": 14, "school": 14,
             "fuel": 14, "hotel": 14, "bank": 15, "pharmacy": 15, "clinic": 15, "restaurant": 15, "cafe": 16, "transport": 15,
             "shop": 16, "place": 16}
@@ -74,42 +44,35 @@ MAIN_ROADS = {"motorway": 100, "trunk": 80, "primary": 60, "secondary": 50, "ter
 SEG_M = 120.0
 
 
-def category(tag: str) -> str:
-    base = tag.split(" ")[0]
-    if base.startswith("overture="):
-        words = base[len("overture="):].lower()
-        for cat, marks in OVERTURE_WORDS:
-            if any(m in words for m in marks):
-                return cat
-        return "place"
-    if base in OSM_LOOKUP:
-        return OSM_LOOKUP[base]
-    if base.startswith("shop="):
-        return "shop"
-    return "place"
+def display_name(name_ar, name_en, alt, name_fr=None, cc=None):
+    """**العربيُّ أوّلاً، ثمّ المحلّيّ، ثمّ الفرنسيّ/الإنجليزيّ** — وما لا اسمَ له يعود فارغاً فلا يُرسم.
 
-
-def display_name(name_ar, name_en, alt):
-    """**العربيُّ أوّلاً، ثمّ المحلّيّ، ثمّ الفرنسيّ/الإنجليزيّ** — وما لا اسمَ له يعود فارغاً فلا يُرسم."""
+    **وفي الجزائر الفرنسيُّ قبل غيره حين لا عربيّ** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): الفرنسيّةُ لغةٌ محلّيّةٌ هناك. ويُقرأ من
+    الوسم الصريح وحدَه (`name:fr` / `names.common.fr`) — **لا ترجمةَ ولا تخمينَ لغة**."""
     if name_ar:
         return name_ar.strip()
     alts = [a.strip() for a in (alt or "").split(" | ") if a.strip()]
     arabic = next((a for a in alts if ARABIC.search(a)), None)
-    return arabic or (alts[0] if alts else None) or (name_en or "").strip() or None
+    if arabic:
+        return arabic
+    if cc == "DZ" and (name_fr or "").strip():
+        return name_fr.strip()
+    return (alts[0] if alts else None) or (name_en or "").strip() or None
 
 
 def export_places(stats):
     db = sqlite3.connect(f"file:{os.path.join(WORK, 'places.sqlite')}?mode=ro", uri=True)
     cols = {r[1] for r in db.execute("PRAGMA table_info(places)")}
     okey = "okey" if "okey" in cols else "NULL"
-    rows = db.execute(f"SELECT cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, {okey} FROM places WHERE kind IN ('poi', 'building')")
+    fr = "name_fr" if "name_fr" in cols else "NULL"
+    rows = db.execute(f"SELECT cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, {okey}, {fr} FROM places WHERE kind IN ('poi', 'building')")
     n = 0
     # **ملفٌّ لكلِّ تكبيرِ بدءٍ لا مفتاحُ `tippecanoe.minzoom`** (قِيس ١٨/١١): tippecanoe 2.49 أسقط مع ذلك المفتاح ٩٨٪ من نقاط عيّنةٍ
     # في عمّان عند z16 (٦٬٤٥٩ ⇐ ١٠٧)، وبدونه بقيت كلُّها — فالمجموعةُ تُبنى وحدَها بـ`-Z<N>` في `map-data.yml` ثمّ تُدمج بـ`tile-join`.
     files = {}
     try:
-        for cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, key in rows:
-            name = display_name(name_ar, name_en, alt)
+        for cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, key, name_fr in rows:
+            name = display_name(name_ar, name_en, alt, name_fr, cc)
             if not name:
                 continue
             cat = category(tag or "") if kind == "poi" else "place"

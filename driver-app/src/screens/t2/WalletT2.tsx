@@ -212,7 +212,7 @@ export function WalletT2Screen() {
             {/* **الرقمُ الكبيرُ صافي ما دخل المحفظة** — والكاشُ وكليك خارجه، فيُقال اسمُه تحته */}
             <div className={negative ? "t2-wal-net negative" : "t2-wal-net"}>
               <span className="t2-wal-net-num" dir="ltr">
-                {digits(data.net)}
+                {formatAmount(data.net, data.currency)}
               </span>
               <span className="t2-wal-net-cur">
                 {CURRENCY_LABEL[data.currency]}
@@ -233,35 +233,35 @@ export function WalletT2Screen() {
 
             {/* ── أيّامُ النافذة كما رُسمت — و«اليوم» يومٌ واحدٌ هو الرقمُ فوقه فلا رسمَ له ── */}
             {data.days.length > 1 ? (
-              <EarningsDays days={data.days} currency={CURRENCY_LABEL[data.currency]} />
+              <EarningsDays days={data.days} currency={CURRENCY_LABEL[data.currency]} code={data.currency} />
             ) : null}
 
             {/* ── تفصيلُ الصافي تحت الرسم: أرقامُ «أرباحي» كما تصل ── */}
             <div className="t2-wal-break">
               <div className="t2-wal-line">
                 <span>{tr("أرباح الرحلات")}</span>
-                <span dir="ltr">{digits(data.wallet_earnings)}</span>
+                <span dir="ltr">{formatAmount(data.wallet_earnings, data.currency)}</span>
               </div>
               <div className="t2-wal-line">
                 <span>{tr("عمولة")}</span>
-                <span dir="ltr">{digits(data.commission)}</span>
+                <span dir="ltr">{formatAmount(data.commission, data.currency)}</span>
               </div>
               {Number(data.tips) > 0 ? (
                 <div className="t2-wal-line ok">
                   <span>{tr("بقشيش — كاملاً بلا عمولة")}</span>
-                  <span dir="ltr">{digits(data.tips)}</span>
+                  <span dir="ltr">{formatAmount(data.tips, data.currency)}</span>
                 </div>
               ) : null}
               {Number(data.advance_repaid) > 0 ? (
                 <div className="t2-wal-line">
                   <span>{tr("سدادُ سلفة")}</span>
-                  <span dir="ltr">{digits(data.advance_repaid)}</span>
+                  <span dir="ltr">{formatAmount(data.advance_repaid, data.currency)}</span>
                 </div>
               ) : null}
               <div className="t2-wal-line">
                 <span>{tr("مُحصَّل مباشرة")}</span>
                 <span>
-                  {digits(data.directly_collected)}{" "}
+                  {formatAmount(data.directly_collected, data.currency)}{" "}
                   {CURRENCY_LABEL[data.currency]}
                 </span>
               </div>
@@ -291,7 +291,7 @@ export function WalletT2Screen() {
               </div>
               <div className="t2-wal-cash-amount">
                 <span className="t2-wal-cash-num" dir="ltr">
-                  {digits(wallet.available_for_withdrawal)}
+                  {formatAmount(wallet.available_for_withdrawal, wallet.currency)}
                 </span>
                 <span className="t2-wal-cash-cur">{currency}</span>
               </div>
@@ -321,7 +321,7 @@ export function WalletT2Screen() {
               <p className="t2-wal-note">
                 <Icon name="hourglass_top" />
                 <span>
-                  {tr("قيد التحويل:")}{" "}{digits(wallet.in_transit ?? "0")} {currency}{" "}
+                  {tr("قيد التحويل:")}{" "}{formatAmount(wallet.in_transit ?? "0", wallet.currency)} {currency}{" "}
                   {tr("— أجرةُ رحلاتٍ دُفعت من المحفظة. تراها في رصيدك الآن، وتُسحب بعد {0} أيّام من كلِّ رحلة.", {
                     0: digits(String(wallet.earnings_hold_days ?? 0)),
                   })}
@@ -330,7 +330,7 @@ export function WalletT2Screen() {
               {(wallet.in_transit_releases ?? []).slice(0, 6).map((release) => (
                 <div className="t2-wal-line" key={release.available_at}>
                   <span>{tr("قيد التحويل — يصبح متاحاً في {0}", { 0: formatWhen(release.available_at) })}</span>
-                  <span dir="ltr">{digits(release.amount)}</span>
+                  <span dir="ltr">{formatAmount(release.amount, wallet.currency)}</span>
                 </div>
               ))}
             </div>
@@ -341,8 +341,8 @@ export function WalletT2Screen() {
             <p className="t2-wal-note">
               <Icon name="schedule" />
               <span>
-                {tr("محجوز لطلب سحب معلّق:")}{" "}{digits(w.holds[0].amount)} {currency}{" "}{tr("— من أصل")}{" "}
-{digits(wallet.balance)} {currency}
+                {tr("محجوز لطلب سحب معلّق:")}{" "}{formatAmount(w.holds[0].amount, wallet.currency)} {currency}{" "}{tr("— من أصل")}{" "}
+{formatAmount(wallet.balance, wallet.currency)} {currency}
               </span>
             </p>
           ) : w.holds.length > 1 ? (
@@ -370,7 +370,7 @@ export function WalletT2Screen() {
             <p className="t2-wal-note">
               <Icon name="info" />
               <span>
-                {tr("مستحقاتٌ معلّقة:")}{" "}{digits(wallet.pending_compensation)}{" "}
+                {tr("مستحقاتٌ معلّقة:")}{" "}{formatAmount(wallet.pending_compensation, wallet.currency)}{" "}
                 {currency}{" "}{tr("— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.")}
 
               </span>
@@ -381,7 +381,7 @@ export function WalletT2Screen() {
             <p className="t2-wal-note">
               <Icon name="info" />
               <span>
-                {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{digits(wallet.carrier_dues)}{" "}
+                {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
                 {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
 
               </span>
@@ -401,7 +401,7 @@ export function WalletT2Screen() {
           {/* **«عمولة TAXO» بنصّ الشاشة القائمة وشرطِه** (§25.11) — والنسبةُ تُقرأ من بابها لا تُكتب هنا */}
           {Number(wallet.commission_this_month) > 0 ? (
             <p className="t2-wal-fine">
-              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(wallet.commission_this_month)}{" "}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{formatAmount(wallet.commission_this_month, wallet.currency)}{" "}
               {currency}
             </p>
           ) : Number(w.profile?.commission_percent ?? 0) === 0 ? (
@@ -567,10 +567,10 @@ export function WalletT2Screen() {
                       dir="ltr"
                     >
                       {debit ? "−" : "+"}
-                      {digits(unsigned(entry.amount))}
+                      {formatAmount(unsigned(entry.amount), wallet.currency)}
                     </span>
                     <span className="t2-wal-txafter">
-                      {tr("الرصيد")}{" "}{digits(entry.balance_after)}
+                      {tr("الرصيد")}{" "}{formatAmount(entry.balance_after, wallet.currency)}
                     </span>
                   </span>
                 </div>

@@ -13,7 +13,7 @@ import { redeemTaxoCard } from "@/api/endpoints";
 import type { TaxoCardRedeemed } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./fields.css";
@@ -102,7 +102,7 @@ export function CardRedeemT2Screen() {
           <Icon name="check_circle" />
           <h2 className="t2-pr-done-title">{tr("شُحن رصيدك")}</h2>
           <p className="t2-pr-done-text">
-            {tr("أُضيف")}{" "}{digits(done.amount)} {CURRENCY_LABEL[done.currency]}{" "}{tr("من البطاقة")}{" "}<span dir="ltr">{done.serial}</span>.
+            {tr("أُضيف")}{" "}{formatAmount(done.amount, done.currency)} {CURRENCY_LABEL[done.currency]}{" "}{tr("من البطاقة")}{" "}<span dir="ltr">{done.serial}</span>.
           </p>
           <button type="button" className="t2-clq-cta t2-pr-gap" onClick={() => navigate("/wallet")}>
             {tr("إلى المحفظة")}

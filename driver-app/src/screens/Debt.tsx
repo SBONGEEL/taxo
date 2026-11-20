@@ -27,7 +27,7 @@ import { cardFirst } from "@/lib/pay-order";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
-import { digits, isZeroAmount } from "@/lib/utils";
+import { digits, isZeroAmount, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./t2/fields.css";
@@ -177,7 +177,7 @@ export function DebtScreen() {
             <span className="t2-debt-k">{tr("مجموع ما عليك")}</span>
             <span className="t2-debt-amount">
               <span className="t2-debt-num" dir="ltr">
-                {digits(state.total)}
+                {formatAmount(state.total, state.currency)}
               </span>
               <span className="t2-debt-cur">{currency}</span>
             </span>
@@ -192,7 +192,7 @@ export function DebtScreen() {
             {state.ceiling !== null && !state.blocked ? (
               <p className="t2-debt-ceiling">
                 {tr("سقفُ ما يُسمح أن يتراكم عليك:")}{" "}
-                <span dir="ltr">{digits(state.ceiling)}</span> {currency}
+                <span dir="ltr">{formatAmount(state.ceiling, state.currency)}</span> {currency}
                 {tr(" — إن تجاوزه توقّف استقبال الطلبات حتى تسدّده كاملاً.")}
               </p>
             ) : null}
@@ -208,7 +208,7 @@ export function DebtScreen() {
                 <h2 className="t2-debt-alarm-title">{tr("استقبال الطلبات موقوف")}</h2>
               </div>
               <p className="t2-debt-alarm-body">
-                {tr("عليك")}{" "}{digits(state.total)} {currency}{" "}{tr("من عمولة رحلات قبضتَ أجرتها نقداً.")}
+                {tr("عليك")}{" "}{formatAmount(state.total, state.currency)} {currency}{" "}{tr("من عمولة رحلات قبضتَ أجرتها نقداً.")}
 
                 {state.pay_via === "topup" ? (
                   <>
@@ -255,7 +255,7 @@ export function DebtScreen() {
                     <span className="t2-wds-tile-k">{tr("سدّد كلَّه")}</span>
                     <span className="t2-wds-tile-v">
                       <span className="t2-wds-tile-num" dir="ltr">
-                        {digits(state.pay_all_amount)}
+                        {formatAmount(state.pay_all_amount, state.currency)}
                       </span>{" "}
                       <span className="t2-wds-tile-cur">{currency}</span>
                     </span>
@@ -300,7 +300,7 @@ export function DebtScreen() {
                 <>
               {state.pay_via !== "topup" && bankCard && belowCardFloor(amount, bankCard) ? (
                 // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا زرَّ بطاقة، ويُقال لماذا
-                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount ?? ""), 1: currency })}</p>
+                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: formatAmount(bankCard.min_amount ?? "", state?.currency), 1: currency })}</p>
               ) : state.pay_via !== "topup" && bankCard ? (
                 <>
                   <button
@@ -332,7 +332,7 @@ export function DebtScreen() {
                 <>
               {state.pay_via !== "topup" && bankCard && belowCardFloor(amount, bankCard) ? (
                 // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا زرَّ بطاقة، ويُقال لماذا
-                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount ?? ""), 1: currency })}</p>
+                <p className="t2-fld-hint">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: formatAmount(bankCard.min_amount ?? "", state?.currency), 1: currency })}</p>
               ) : state.pay_via !== "topup" && bankCard ? (
                 <>
                   <button
@@ -376,7 +376,7 @@ export function DebtScreen() {
                       <Icon name="schedule" />
                     </span>
                     <span className="t2-debt-claim-amount">
-                      <span dir="ltr">{digits(claim.amount)}</span>{" "}
+                      <span dir="ltr">{formatAmount(claim.amount, claim.currency)}</span>{" "}
                       {CURRENCY_LABEL[claim.currency]}
                     </span>
                     <span className="t2-debt-claim-open">{tr("افتح التفاصيل")}</span>
@@ -395,7 +395,7 @@ export function DebtScreen() {
                   <div key={row.id} className="t2-debt-row">
                     <span className="t2-debt-row-k">{SOURCE_TEXT[row.source]}</span>
                     <span dir="ltr" className="t2-debt-row-v">
-                      {digits(row.amount)}
+                      {formatAmount(row.amount, row.currency)}
                     </span>
                   </div>
                 ))}

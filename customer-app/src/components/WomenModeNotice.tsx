@@ -17,6 +17,8 @@
  * في الداكن، **فظهر القديمُ فوق كلِّ شاشةٍ جديدة** حتى تُغلقه (قِيس على S21، ٢٠٢٦-١٠-٠٥).
  */
 
+import { useEffect, useState } from "react";
+
 import { useBrand } from "@/lib/brand";
 import { Icon } from "@/taxo2";
 
@@ -24,7 +26,10 @@ import "@/taxo2"; import { tr } from "@/lib/i18n";
 
 export function WomenModeNotice() {
   const { showNotice, dismissNotice } = useBrand();
-  if (!showNotice) return null;
+  const covered = useModalOpen(showNotice);
+  // **لا يغطّي زرّاً أبداً** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٢): كان يظهر فوق ورقة «صورة الملف» عند السائقة فيخفي «التقاط صورة»
+  // حتى يُغلق. **ما دامت ورقةٌ أو نافذةٌ مشروطةٌ مفتوحةً يتوارى، ويعود بعد إغلاقها** — لا يُحذف ولا يُعدّ مُغلَقاً، فالتعريفُ بالمفتاح باقٍ
+  if (!showNotice || covered) return null;
 
   return (
     <div role="status" className="t2 t2-snack">
@@ -35,4 +40,19 @@ export function WomenModeNotice() {
       </button>
     </div>
   );
+}
+
+/** **أثمّة ورقةٌ مشروطةٌ مفتوحة؟** — كلُّ أوراق التطبيق تُعلن نفسها `aria-modal="true"` (أو `<dialog open>`). المراقبُ يعمل ما دام
+ *  البلاغُ قائماً وحدَه (مرّةً في عمر الجهاز)، ولا يقرأ إلا وجودَ العنصر */
+function useModalOpen(active: boolean): boolean {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const read = () => setOpen(document.querySelector('[aria-modal="true"], dialog[open]') !== null);
+    read();
+    const watcher = new MutationObserver(read);
+    watcher.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-modal", "open"] });
+    return () => watcher.disconnect();
+  }, [active]);
+  return open;
 }

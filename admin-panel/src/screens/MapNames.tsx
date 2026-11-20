@@ -37,6 +37,7 @@ export function MapNamesScreen() {
   const { country } = useCountry();
   const { isAdmin } = useSession();
   const [city, setCity] = useState("");
+  const [cat, setCat] = useState("");
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<MissingArabicPage | null>(null);
   const [fixes, setFixes] = useState<MapNameFix[] | null>(null);
@@ -50,15 +51,15 @@ export function MapNamesScreen() {
    *  ولا يُبقي الجدولَ هيكلَ تحميلٍ إلى الأبد (قِيس على مكدّس التطوير ٢٠٢٦-١١-٢٠) */
   const load = useCallback(async () => {
     const [missing, written] = await Promise.allSettled([
-      listMissingArabicPlaces(country, city, offset, PAGE),
+      listMissingArabicPlaces(country, city, offset, PAGE, cat),
       listMapNameFixes(country),
     ]);
-    setPage(missing.status === "fulfilled" ? missing.value : { built: true, total: 0, cities: [], items: [] });
+    setPage(missing.status === "fulfilled" ? missing.value : { built: true, total: 0, cities: [], cats: [], items: [] });
     setUnreachable(missing.status === "rejected");
     setFixes(written.status === "fulfilled" ? written.value : []);
     const failed = [missing, written].find((r): r is PromiseRejectedResult => r.status === "rejected");
     if (failed) throw failed.reason;
-  }, [country, city, offset]);
+  }, [country, city, offset, cat]);
 
   useEffect(() => {
     setPage(null);
@@ -69,6 +70,7 @@ export function MapNamesScreen() {
 
   useEffect(() => {
     setCity("");
+    setCat("");
     setOffset(0);
   }, [country]);
 
@@ -112,6 +114,12 @@ export function MapNamesScreen() {
     { value: "", label: `كلُّ المدن (${digits(String(page?.cities.reduce((sum, c) => sum + c.count, 0) ?? 0))})` },
     ...(page?.cities ?? []).map((c) => ({ value: c.city, label: `${c.city} (${digits(String(c.count))})` })),
   ];
+  // **الفئاتُ بترتيب الأهمّيّة كما تعيدها الخدمة** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤) — وأعدادُها داخل المدينة المختارة
+  const cats = page?.cats ?? [];
+  const catOptions = [
+    { value: "", label: `كلُّ الفئات (${digits(String(cats.reduce((sum, c) => sum + c.count, 0)))})` },
+    ...cats.map((c) => ({ value: c.cat, label: `${catLabel(c.cat)} (${digits(String(c.count))})` })),
+  ];
 
   return (
     <Shell title="أماكن بلا اسم عربي" subtitle="أماكنُ على خرائط التطبيقين لا اسمَ عربيّاً لها في أيِّ مصدرٍ مفتوح — اكتب اسمها كما يعرفه الناس">
@@ -140,8 +148,27 @@ export function MapNamesScreen() {
             ))}
           </Select>
         </div>
+        {cats.length ? (
+          <div className="w-full max-w-[300px]">
+            <Select
+              label="الفئة"
+              name="map_names_cat"
+              value={cat}
+              onChange={(event) => {
+                setCat(event.target.value);
+                setOffset(0);
+              }}
+            >
+              {catOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
         <span className="ad-tone-muted">
-          {digits(String(total))} مكاناً — الأهمُّ أوّلاً · لا ترجمةَ آليّة، والعلاماتُ التجاريّةُ تبقى كما تكتبها
+          {digits(String(total))} مكاناً — المستشفياتُ فالعياداتُ فالصيدليّات… أوّلاً · لا ترجمةَ آليّة، والعلاماتُ التجاريّةُ تبقى كما تكتبها
         </span>
       </div>
 
@@ -168,8 +195,8 @@ export function MapNamesScreen() {
               {row.name}
             </a>
             <span className="ad-tone-muted">{row.city}</span>
-            <span className="ad-tone-muted" dir="ltr">
-              {row.tag}
+            <span className="ad-tone-muted" title={row.tag}>
+              {row.cat ? catLabel(row.cat) : <span dir="ltr">{row.tag}</span>}
             </span>
             {isAdmin ? (
               <Field
@@ -238,4 +265,16 @@ export function MapNamesScreen() {
       />
     </Shell>
   );
+}
+
+/** **أسماءُ الفئات بالعربيّة** — المفاتيحُ نفسُها في `places-search/categories.py`، وما لا يُعرف يُكتب «أخرى» */
+const CAT_LABEL: Record<string, string> = {
+  hospital: "مستشفيات", clinic: "عيادات", pharmacy: "صيدليّات", school: "مدارس", university: "جامعات",
+  government: "دوائر حكوميّة", mall: "مولات وأسواق", mosque: "مساجد ودورُ عبادة", bank: "بنوك", fuel: "محطّات وقود",
+  restaurant: "مطاعم", cafe: "مقاهٍ ومخابز", hotel: "فنادق", landmark: "معالم", transport: "نقلٌ ومواقف", shop: "متاجر",
+  place: "أخرى",
+};
+
+function catLabel(cat: string): string {
+  return CAT_LABEL[cat] ?? "أخرى";
 }

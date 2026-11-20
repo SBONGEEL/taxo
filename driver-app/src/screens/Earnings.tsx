@@ -19,7 +19,7 @@ import { getEarnings } from "@/api/endpoints";
 import type { Earnings } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -120,7 +120,7 @@ export function EarningsScreen() {
         <>
           <div className={negative ? "t2-wal-net negative" : "t2-wal-net"}>
             <span className="t2-wal-net-num" dir="ltr">
-              {digits(data.net)}
+              {formatAmount(data.net, data.currency)}
             </span>
             <span className="t2-wal-net-cur">
               {CURRENCY_LABEL[data.currency]}
@@ -134,31 +134,31 @@ export function EarningsScreen() {
           <div className="t2-wal-break">
             <div className="t2-wal-line">
               <span>{tr("أرباح الرحلات")}</span>
-              <span dir="ltr">{digits(data.wallet_earnings)}</span>
+              <span dir="ltr">{formatAmount(data.wallet_earnings, data.currency)}</span>
             </div>
             <div className="t2-wal-line">
               <span>{tr("عمولة")}</span>
-              <span dir="ltr">{digits(data.commission)}</span>
+              <span dir="ltr">{formatAmount(data.commission, data.currency)}</span>
             </div>
             {/* **سطرٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ عليه** وهو الوحيد كذلك — فبغير سطرِه لا يتّسق «أرباح
                 الرحلات» مع «عمولة» لمن يجمعهما بيده. ويظهر حين يوجد فقط */}
             {Number(data.tips) > 0 ? (
               <div className="t2-wal-line ok">
                 <span>{tr("بقشيش — كاملاً بلا عمولة")}</span>
-                <span dir="ltr">{digits(data.tips)}</span>
+                <span dir="ltr">{formatAmount(data.tips, data.currency)}</span>
               </div>
             ) : null}
             {/* **ما اقتُطع سداداً للسلفة** (البند ١٥) — رقمٌ ينقص من الأرباح بلا سببٍ مكتوبٍ يُقرأ عطباً. ولا يظهر لمن لا سلفةَ له */}
             {Number(data.advance_repaid) > 0 ? (
               <div className="t2-wal-line">
                 <span>{tr("سدادُ سلفة")}</span>
-                <span dir="ltr">{digits(data.advance_repaid)}</span>
+                <span dir="ltr">{formatAmount(data.advance_repaid, data.currency)}</span>
               </div>
             ) : null}
             <div className="t2-wal-line">
               <span>{tr("مُحصَّل مباشرة")}</span>
               <span>
-                <span dir="ltr">{digits(data.directly_collected)}</span>{" "}
+                <span dir="ltr">{formatAmount(data.directly_collected, data.currency)}</span>{" "}
                 {CURRENCY_LABEL[data.currency]}
               </span>
             </div>

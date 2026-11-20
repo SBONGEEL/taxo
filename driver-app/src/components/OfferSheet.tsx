@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 import type { Offer } from "@/lib/ride";
 import { bookedTime } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const DASH = 163;
 
@@ -166,12 +166,12 @@ export function OfferSheet({
                 يقرّر. ومكانُها فوق السعر لأن السعرَ وحده لا يقول كم سيقبض */}
             {Number(offer.ride.carried_cancellation_fee ?? 0) > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-warn">
-                {tr("تحمل")}{" "}{digits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
+                {tr("تحمل")}{" "}{formatAmount(offer.ride.carried_cancellation_fee ?? "0", offer.ride.currency)}{" "}
                 {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
               </span>
             ) : null}
             <div className="text-23 font-bold text-ink">
-              {digits(offer.ride.estimated_fare)}{" "}
+              {formatAmount(offer.ride.estimated_fare, offer.ride.currency)}{" "}
               <span className="text-12 font-medium text-muted">
                 {currencyLabel}
               </span>

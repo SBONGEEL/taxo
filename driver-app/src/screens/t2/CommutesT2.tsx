@@ -15,7 +15,7 @@ import type { CommuteOffer } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCommuteBoard } from "@/lib/guarantees";
-import { currencyLabel, digits, DISPLAY_LOCALE } from "@/lib/utils";
+import { currencyLabel, digits, DISPLAY_LOCALE, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import { countRides } from "./count";
@@ -190,7 +190,7 @@ function CommuteCard({
           ) : null}
         </span>
         <span className="t2-gu-fee">
-          <b dir="ltr">{digits(row.price_per_ride)}</b> {cur}{" "}{tr("للرحلة ·")}{" "}{countRides(row.rides_total)}
+          <b dir="ltr">{formatAmount(row.price_per_ride, row.currency)}</b> {cur}{" "}{tr("للرحلة ·")}{" "}{countRides(row.rides_total)}
         </span>
       </div>
       {children}

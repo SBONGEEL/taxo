@@ -427,7 +427,7 @@ export function HomeT2Screen() {
                 <Icon name="payments" />
                 {tr("مُحصَّل مباشرة")}{" "}
                 <span className="t2-hm-chip-num" dir="ltr">
-                  {digits(earnings.directly_collected)}
+                  {formatAmount(earnings.directly_collected, earnings.currency)}
                 </span>
               </span>
             ) : null}

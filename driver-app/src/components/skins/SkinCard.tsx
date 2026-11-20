@@ -13,7 +13,7 @@ import type { VehicleSkin } from "@/api/types";
 import { SkinArt } from "@/components/skins/SkinArt";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { BLOCKED_LABEL, RARITY_CHIP, RARITY_LABEL } from "@/lib/skins";
-import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, cn, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function SkinCard({
   skin,
@@ -63,7 +63,7 @@ export function SkinCard({
         </span>
       ) : skin.price && skin.currency ? (
         <span className="block text-13 font-bold text-ink">
-          {digits(skin.price)}{" "}
+          {formatAmount(skin.price, skin.currency)}{" "}
           <span className="text-10 font-medium text-muted">
             {CURRENCY_LABEL[skin.currency]}
           </span>

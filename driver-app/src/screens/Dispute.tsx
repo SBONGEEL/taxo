@@ -21,7 +21,7 @@ import { disputePayment, getRide, getRidePayments } from "@/api/endpoints";
 import type { Payment, Ride } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -140,7 +140,7 @@ export function DisputeScreen() {
           </span>
           <span className="t2-dsp-sum">
             <span className="t2-dsp-num" dir="ltr">
-              {digits(payment?.amount ?? ride.final_fare ?? ride.current_fare)}
+              {formatAmount(payment?.amount ?? ride.final_fare ?? ride.current_fare, payment?.currency)}
             </span>{" "}
             <span className="t2-dsp-cur">{currency}</span>
           </span>

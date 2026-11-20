@@ -41,7 +41,7 @@ import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 interface Props {
   name: string;
@@ -204,7 +204,7 @@ export function CaptainHome({
           label={tr("رحلات اليوم")}
         />
         <Stat
-          value={earnings ? digits(earnings.net) : "—"}
+          value={earnings ? formatAmount(earnings.net, earnings.currency) : "—"}
           label={currency ? tr("صافي ({0})", { 0: currency }) : tr("صافي")}
         />
         {/* **نسبةٌ مقروءةٌ لا مبلغٌ ولا رقمٌ مرسوم** — §14 */}

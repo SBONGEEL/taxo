@@ -25,7 +25,7 @@ import {
   RARITY_LABEL,
   visibilityNote,
 } from "@/lib/skins";
-import { digits, cn, DISPLAY_LOCALE } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, cn, DISPLAY_LOCALE, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function SkinDetailSheet({
   skin,
@@ -122,7 +122,7 @@ export function SkinDetailSheet({
           </Button>
         ) : onBuy && skin.price && skin.currency ? (
           <Button size="md" disabled={busy} onClick={onBuy}>
-            {tr("شراء بـ")}{" "}{digits(skin.price)} {CURRENCY_LABEL[skin.currency]}
+            {tr("شراء بـ")}{" "}{formatAmount(skin.price, skin.currency)} {CURRENCY_LABEL[skin.currency]}
           </Button>
         ) : (
           <p className="rounded-16 border border-line bg-surface-2 p-14 text-center text-12.5 font-semibold text-muted">

@@ -11,7 +11,7 @@
 
 import type { Currency, UserNotification } from "@/api/types";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 /** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
 export function composeBody(entry: UserNotification): string | null {
@@ -20,7 +20,7 @@ export function composeBody(entry: UserNotification): string | null {
 
   const money =
     data.amount && data.currency
-      ? `${digits(data.amount)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
+      ? `${formatAmount(data.amount, data.currency as string | undefined)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
       : null;
 
   switch (entry.kind) {

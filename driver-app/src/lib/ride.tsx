@@ -31,7 +31,7 @@ import {
   showOfferAlert,
 } from "@/lib/offer-alert";
 import { onlineService } from "@/lib/online-service";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { CATEGORY_LABEL, CURRENCY_LABEL } from "@/lib/rideFormat";
 import { offerLoopToken, play, startOfferLoop, stopOfferLoop } from "@/lib/sound";
 import { heardFromSystem } from "@/lib/push";
@@ -153,7 +153,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
           const since = offerLoopToken();
           void showOfferAlert({
             rideId: event.ride.id,
-            fare: digits(event.ride.current_fare),
+            fare: formatAmount(event.ride.current_fare, event.ride.currency),
             currency: CURRENCY_LABEL[event.ride.currency],
             // **فارغةٌ اليومَ عن قصد**: طريقةُ الدفع يختارها الراكبُ في شاشة
             // الدفع بعد الرحلة (§6)، **فلا تُعرف لحظةَ العرض** — والتصميمُ

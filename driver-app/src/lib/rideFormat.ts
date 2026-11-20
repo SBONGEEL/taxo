@@ -12,8 +12,7 @@ import type {
   RideStatus,
   VehicleCategory, RideCategoryFace } from "@/api/types";
 import { currencyLabel, currencyName, digits,
-  DISPLAY_LOCALE,
-} from "@/lib/utils"; import { language, tr } from "@/lib/i18n";
+  DISPLAY_LOCALE, formatAmount } from "@/lib/utils"; import { language, tr } from "@/lib/i18n";
 
 /** **يُقرأ من `currencyLabel` ولا يُكتب هنا** (2026-09-07): البيتُ نزل إلى
  *  `@/lib/utils` كي يقرأه صندوقُ اللافتات المتطابقُ بايتاً في التطبيقين،
@@ -115,12 +114,12 @@ export function formatWhen(iso: string): string {
 /** **سطرُ «تقريب» في تفصيل الأجرة** (SPEC §٧٠-ج/٤) — مبلغُه **كما كتبته الخلفية** (`fare_lines`)، و`null` حين لا سطر: سوقٌ مطفأ،
  *  أو فرقٌ صفريّ، أو رحلةٌ لم تنتهِ. **وهو للكبتن أو عليه** (قرارُ المالك ٢٠٢٦-١٠-٠٩): موجبٌ زاد ما قبضه، وسالبٌ نقصه — فالإشارةُ
  *  تُرسم محرفَ طرحٍ (`−`) كما يرسمها تطبيقُ الراكب، **ولا حسابَ هنا**: تبديلُ خاناتٍ ومحرفٍ لا غير. */
-export function roundingLine(ride: Pick<Ride, "fare_lines">): string | null {
+export function roundingLine(ride: Pick<Ride, "fare_lines" | "currency">): string | null {
   // **و`?.` لرحلةٍ محفوظةٍ من نسخةٍ أقدم** — تمثيلٌ بلا الحقل لا يُسقط شاشةَ المال، يُقرأ «لا سطر»
   const line = ride.fare_lines?.find((entry) => entry.kind === "rounding");
   if (!line) return null;
   const negative = line.amount.trimStart().startsWith("-");
-  return `${negative ? "−" : ""}${digits(line.amount.replace("-", "").trim())}`;
+  return `${negative ? "−" : ""}${formatAmount(line.amount.replace("-", "").trim(), ride.currency)}`;
 }
 
 /** المسافة بمنزلةٍ واحدة: `5.700` تُقرأ مبلغاً و`5.7` تُقرأ مسافة.

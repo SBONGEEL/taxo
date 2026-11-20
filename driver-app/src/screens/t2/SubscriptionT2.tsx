@@ -447,8 +447,8 @@ export function SubscriptionT2Screen() {
               bankCard?.min_amount != null &&
               Number(s.confirming.price_to_pay ?? s.confirming.price) < Number(bankCard.min_amount)
                 ? s.cliqAlias
-                  ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
-                  : tr("أقلُّ دفعٍ بالبطاقة {0} {1}.", { 0: digits(bankCard.min_amount), 1: CURRENCY_LABEL[s.confirming.currency] })
+                  ? tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: formatAmount(bankCard.min_amount, s.confirming.currency), 1: CURRENCY_LABEL[s.confirming.currency] })
+                  : tr("أقلُّ دفعٍ بالبطاقة {0} {1}.", { 0: formatAmount(bankCard.min_amount, s.confirming.currency), 1: CURRENCY_LABEL[s.confirming.currency] })
                 : null
             }
             cardFirst={cardFirst(bankCardFeatures ? countryOrder : null)}

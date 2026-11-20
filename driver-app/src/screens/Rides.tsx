@@ -31,7 +31,7 @@ import {
   trimDistance,
 } from "@/lib/rideFormat";
 import { useGoBack } from "@/lib/back";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import { byMonth, startOfToday, whenParts } from "./t2/when";
@@ -225,7 +225,7 @@ function RideCard({
           <span className="t2-log-fare">
             {ride.final_fare ? (
               <>
-                <span dir="ltr">{digits(ride.final_fare)}</span>{" "}
+                <span dir="ltr">{formatAmount(ride.final_fare, ride.currency)}</span>{" "}
                 {CURRENCY_LABEL[ride.currency]}
               </>
             ) : (

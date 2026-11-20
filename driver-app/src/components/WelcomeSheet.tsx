@@ -23,7 +23,7 @@ import { getMySubscription } from "@/api/endpoints";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 import {
   pickWelcomeOffer,
@@ -113,7 +113,7 @@ export function WelcomeSheet() {
             <strong>
               {offer.free
                 ? tr("{0} مجاناً", { 0: offer.planName })
-                : tr("{0} بـ{1} {2}", { 0: offer.planName, 1: digits(offer.priceAfter), 2: CURRENCY_LABEL[offer.currency] })}
+                : tr("{0} بـ{1} {2}", { 0: offer.planName, 1: formatAmount(offer.priceAfter, offer.currency), 2: CURRENCY_LABEL[offer.currency] })}
             </strong>
             <p>
               {offer.name}
@@ -121,7 +121,7 @@ export function WelcomeSheet() {
                 <>
                   {" — "}
                   <s>
-                    {digits(offer.price)} {CURRENCY_LABEL[offer.currency]}
+                    {formatAmount(offer.price, offer.currency)} {CURRENCY_LABEL[offer.currency]}
                   </s>
                 </>
               )}

@@ -3,7 +3,7 @@
 
 GET /search?q=&cc=JO&lat=&lng=&limit=10 → {"items":[{id,name,name_en,kind,context,lat,lng,distance_m,src}]}
 GET /nearby?lat=&lng=&cc=LY → {"area","landmark","street","label"}   (اسمٌ عربيٌّ مفيدٌ لنقطة، أمرُ المالك ٢٠٢٦-١١-١٩)
-GET /missing-ar?cc=JO&city=&offset=0&limit=50 → {"built":bool,"cities":[{city,count}],"total","items":[{okey,city,name,tag,lat,lng}]}
+GET /missing-ar?cc=JO&city=&cat=&offset=0&limit=50 → {"built":bool,"cities":[{city,count}],"cats":[{cat,count}],"total","items":[{okey,city,name,tag,cat,lat,lng}]}
     (أماكنُ بلا اسمٍ عربيّ على الخريطة، الأهمُّ أوّلاً — تعرضها اللوحة، SPEC §١٠٩-ب)
 GET /health → {"ok":true,"places":N}   (و503 {"detail":"warming"} حتى ينتهي التسخين — وكذا /search)
 """
@@ -730,7 +730,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/missing-ar":
                 return self._send(200, missing_arabic(
                     args.get("cc", "").upper(), args.get("city", "")[:120],
-                    max(0, int(args.get("offset", 0))), max(1, min(int(args.get("limit", 50)), 200))))
+                    max(0, int(args.get("offset", 0))), max(1, min(int(args.get("limit", 50)), 200)), args.get("cat", "")[:40]))
             if url.path == "/nearby":
                 return self._send(200, nearby(float(args.get("lat", "")), float(args.get("lng", "")), args.get("cc", "").upper()))
             return self._send(404, {"detail": "not found"})
@@ -757,21 +757,34 @@ class Handler(BaseHTTPRequestHandler):
         return
 
 
-def missing_arabic(cc: str, city: str, offset: int, limit: int) -> dict:
-    """**أماكنُ بلا اسمٍ عربيّ** (SPEC §١٠٩-ب) — من جدول `missing_ar` الذي يكتبه `arabic_names.py`؛ وفهرسٌ أقدمُ منه يقول «لم يُبنَ»."""
+def missing_arabic(cc: str, city: str, offset: int, limit: int, cat: str = "") -> dict:
+    """**أماكنُ بلا اسمٍ عربيّ** (SPEC §١٠٩-ب) — من جدول `missing_ar` الذي يكتبه `arabic_names.py`؛ وفهرسٌ أقدمُ منه يقول «لم يُبنَ».
+
+    **مرتّبةٌ بالأهمّيّة** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): المستشفياتُ فالعياداتُ فالصيدليّات… (`prio`) ثمّ الباقي، **وأعدادٌ لكلِّ
+    مدينةٍ ولكلِّ فئة** — والمرشِّحان يتقاطعان: أعدادُ الفئات داخل المدينة المختارة، وأعدادُ المدن داخل الفئة المختارة. وجدولٌ أقدمُ
+    بلا `cat`/`prio` يُقرأ بترتيبه القديم ولا يسقط."""
     if cc not in COUNTRIES:
         raise ValueError("cc")
     with _Lease() as db:
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='missing_ar'").fetchone():
-            return {"built": False, "cities": [], "total": 0, "items": []}
+            return {"built": False, "cities": [], "cats": [], "total": 0, "items": []}
+        has_cat = "cat" in {r[1] for r in db.execute("PRAGMA table_info(missing_ar)")}
+        cat = cat if has_cat else ""
+        by_cat = ("cc=? AND cat=?", (cc, cat)) if cat else ("cc=?", (cc,))
         cities = [{"city": c, "count": n} for c, n in db.execute(
-            "SELECT city, count(*) FROM missing_ar WHERE cc=? GROUP BY city ORDER BY 2 DESC", (cc,))]
-        where, params = ("cc=? AND city=?", (cc, city)) if city else ("cc=?", (cc,))
+            f"SELECT city, count(*) FROM missing_ar WHERE {by_cat[0]} GROUP BY city ORDER BY 2 DESC", by_cat[1])]
+        by_city = ("cc=? AND city=?", (cc, city)) if city else ("cc=?", (cc,))
+        cats = [{"cat": c, "count": n} for c, n in db.execute(
+            f"SELECT cat, count(*) FROM missing_ar WHERE {by_city[0]} GROUP BY cat ORDER BY min(prio), 2 DESC", by_city[1])] if has_cat else []
+        where, params = by_city
+        if cat:
+            where, params = f"{where} AND cat=?", (*params, cat)
         total = db.execute(f"SELECT count(*) FROM missing_ar WHERE {where}", params).fetchone()[0]
-        items = [{"okey": k, "city": c, "name": n, "tag": t, "lat": la, "lng": ln} for k, c, n, t, la, ln in db.execute(
-            f"SELECT okey, city, name, tag, lat, lng FROM missing_ar WHERE {where} ORDER BY rank DESC, name LIMIT ? OFFSET ?",
+        cols, order = ("cat", "prio, rank DESC, name") if has_cat else ("NULL", "rank DESC, name")
+        items = [{"okey": k, "city": c, "name": n, "tag": t, "cat": ct, "lat": la, "lng": ln} for k, c, n, t, ct, la, ln in db.execute(
+            f"SELECT okey, city, name, tag, {cols}, lat, lng FROM missing_ar WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
             (*params, limit, offset))]
-    return {"built": True, "cities": cities, "total": total, "items": items}
+    return {"built": True, "cities": cities, "cats": cats, "total": total, "items": items}
 
 
 def main() -> None:

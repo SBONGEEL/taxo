@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 from sqlalchemy import select
@@ -51,9 +51,13 @@ class MissingPage:
     cities: list[dict]
     total: int
     items: list[dict]
+    #: أعدادُ الفئات بترتيب الأهمّيّة (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤) — فارغةٌ من خدمةٍ أقدم
+    cats: list[dict] = field(default_factory=list)
 
 
-async def missing(session: AsyncSession, country: CountryCode, city: str, offset: int, limit: int) -> MissingPage | None:
+async def missing(
+    session: AsyncSession, country: CountryCode, city: str, offset: int, limit: int, cat: str = ""
+) -> MissingPage | None:
     """القائمةُ من الخدمة، **وما له اسمٌ مكتوبٌ يُطوى منها**. `None` ⇐ الخدمةُ لا تجيب."""
     from app.core.config import settings
 
@@ -63,7 +67,7 @@ async def missing(session: AsyncSession, country: CountryCode, city: str, offset
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT, transport=transport) as client:
             response = await client.get(
-                f"{base}/missing-ar", params={"cc": country.value, "city": city, "offset": offset, "limit": limit}
+                f"{base}/missing-ar", params={"cc": country.value, "city": city, "cat": cat, "offset": offset, "limit": limit}
             )
         response.raise_for_status()
         body = response.json()
@@ -71,7 +75,9 @@ async def missing(session: AsyncSession, country: CountryCode, city: str, offset
         return None
     fixed = set((await session.scalars(select(MapNameFix.okey).where(MapNameFix.country_code == country))).all())
     items = [item for item in body.get("items") or [] if item.get("okey") not in fixed]
-    return MissingPage(bool(body.get("built")), list(body.get("cities") or []), int(body.get("total") or 0), items)
+    return MissingPage(
+        bool(body.get("built")), list(body.get("cities") or []), int(body.get("total") or 0), items, list(body.get("cats") or [])
+    )
 
 
 async def fixes(session: AsyncSession, country: CountryCode) -> list[MapNameFix]:

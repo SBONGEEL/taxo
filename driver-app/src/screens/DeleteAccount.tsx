@@ -21,7 +21,7 @@ import type { DeletionState } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { DELETION_TEXT as T, GRACE_DAYS, normalizeAmount } from "@/lib/deletion-text";
 import { useSession } from "@/lib/session";
-import { DISPLAY_LOCALE, currencyLabel, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, currencyLabel, digits, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
@@ -35,7 +35,7 @@ export function formatDue(iso: string): string {
 }
 
 export function moneyText(amount: string, currency: string): string {
-  return `${digits(amount)} ${currencyLabel(currency)}`;
+  return `${formatAmount(amount, currency)} ${currencyLabel(currency)}`;
 }
 
 /** نقاطُ القسم — **نقطةٌ صغيرةٌ بلون الخافت** قبل كلِّ سطر (`::before`). */

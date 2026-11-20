@@ -25,6 +25,8 @@ class MissingPlaceOut(BaseModel):
     city: str
     name: str
     tag: str
+    #: فئةُ المكان (`hospital`، `clinic`…) — `None` من خدمةٍ أقدم
+    cat: str | None = None
     lat: float
     lng: float
 
@@ -34,10 +36,17 @@ class MissingCityOut(BaseModel):
     count: int
 
 
+class MissingCatOut(BaseModel):
+    cat: str
+    count: int
+
+
 class MissingPageOut(BaseModel):
     #: `false` ⇐ فهرسُ الخادم أقدمُ من القائمة — تظهر بعد رفع بناء الخريطة القادم
     built: bool
     cities: list[MissingCityOut]
+    #: **أعدادُ الفئات بترتيب الأهمّيّة** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤) — داخل المدينة المختارة
+    cats: list[MissingCatOut] = []
     total: int
     items: list[MissingPlaceOut]
 
@@ -73,15 +82,17 @@ async def missing_places(
     city: str = Query(default="", max_length=120),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
+    cat: str = Query(default="", max_length=40),
 ) -> MissingPageOut:
-    page = await map_names.missing(session, country, city, offset, limit)
+    page = await map_names.missing(session, country, city, offset, limit, cat)
     if page is None:
         raise PlacesServiceUnavailable()
     return MissingPageOut(
         built=page.built,
         cities=[MissingCityOut(city=str(c.get("city") or "—"), count=int(c.get("count") or 0)) for c in page.cities],
+        cats=[MissingCatOut(cat=str(c.get("cat") or "place"), count=int(c.get("count") or 0)) for c in page.cats],
         total=page.total,
-        items=[MissingPlaceOut(**{key: item[key] for key in MissingPlaceOut.model_fields}) for item in page.items],
+        items=[MissingPlaceOut(**{key: item[key] for key in MissingPlaceOut.model_fields if key in item}) for item in page.items],
     )
 
 

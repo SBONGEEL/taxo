@@ -31,7 +31,7 @@ import type { CountryCode, DriverWallet, WithdrawalMethod } from "@/api/types";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
-import { currencyDecimals, digits, zeroAmount } from "@/lib/utils";
+import { currencyDecimals, zeroAmount, formatAmount } from "@/lib/utils";
 import { WITHDRAWAL_METHOD_LABEL } from "@/lib/walletFormat";
 import { Icon } from "@/taxo2";
 
@@ -171,10 +171,10 @@ export function WithdrawSheet({
             <Icon name="info" />
             <span>
               {tr("لا يمكن السحب الآن: الحدُّ الأدنى")}{" "}
-              {digits(wallet.min_withdrawal_amount)} {currencyLabel}{tr("، والمتاح لديك")}{" "}
-{digits(wallet.available_for_withdrawal)} {currencyLabel}
+              {formatAmount(wallet.min_withdrawal_amount, wallet.currency)} {currencyLabel}{tr("، والمتاح لديك")}{" "}
+{formatAmount(wallet.available_for_withdrawal, wallet.currency)} {currencyLabel}
               {Number(wallet.withdrawal_reserve_amount) > 0
-                ? tr(" — ومنها {0} محتجَزةٌ لا تُسحب", { 0: digits(wallet.withdrawal_reserve_amount) })
+                ? tr(" — ومنها {0} محتجَزةٌ لا تُسحب", { 0: formatAmount(wallet.withdrawal_reserve_amount, wallet.currency) })
                 : ""}
               .
             </span>
@@ -186,6 +186,7 @@ export function WithdrawSheet({
             label={tr("الحد الأدنى")}
             value={wallet.min_withdrawal_amount}
             currencyLabel={currencyLabel}
+            code={wallet.currency}
             active={amount === wallet.min_withdrawal_amount}
             onPick={setAmount}
           />
@@ -193,6 +194,7 @@ export function WithdrawSheet({
             label={tr("كل المتاح")}
             value={wallet.available_for_withdrawal}
             currencyLabel={currencyLabel}
+            code={wallet.currency}
             active={amount === wallet.available_for_withdrawal}
             onPick={setAmount}
           />
@@ -328,12 +330,15 @@ function Quick({
   label,
   value,
   currencyLabel,
+  code,
   active,
   onPick,
 }: {
   label: string;
   value: string;
   currencyLabel: string;
+  /** رمزُ العملة لخانات العرض — والقيمةُ تُختار كما وصلت */
+  code: string;
   active: boolean;
   onPick: (value: string) => void;
 }) {
@@ -347,7 +352,7 @@ function Quick({
       <span className="t2-wds-tile-k">{label}</span>
       <span className="t2-wds-tile-v">
         <span className="t2-wds-tile-num" dir="ltr">
-          {digits(value)}
+          {formatAmount(value, code)}
         </span>{" "}
         <span className="t2-wds-tile-cur">{currencyLabel}</span>
       </span>

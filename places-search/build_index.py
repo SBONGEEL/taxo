@@ -47,7 +47,10 @@ def names(tags):
             alt.extend(part.strip() for part in v.split(";") if part.strip())
     ar = tags.get("name:ar") or next((n for n in alt if ARABIC.search(n)), None)
     en = tags.get("name:en") or tags.get("name:fr") or next((n for n in alt if not ARABIC.search(n)), None)
-    return ar, en, list(dict.fromkeys(alt))
+    # **الاسمُ الفرنسيّ وسماً صريحاً** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤): في الجزائر هو الاسمُ المحلّيّ حين لا عربيّ —
+    # ويُقرأ من `name:fr` وحدَه، فلا تُخمَّن لغةُ `name` اللاتينيّ
+    fr = (tags.get("name:fr") or "").strip() or None
+    return ar, en, fr, list(dict.fromkeys(alt))
 
 
 class Handler(osmium.SimpleHandler):
@@ -57,7 +60,7 @@ class Handler(osmium.SimpleHandler):
         self.rows = []
 
     def _add(self, kind, rank, tags, lat, lng, extra_kind="", key=""):
-        ar, en, alt = names(tags)
+        ar, en, fr, alt = names(tags)
         if not alt:
             return
         # **المستشفى حكوميٌّ أم خاصّ** (أمرُ المالك ١٨/١١ السابع ٢-٢) — من `operator:type` وحدَه، وما لا وسمَ له لا يُوصف
@@ -71,7 +74,7 @@ class Handler(osmium.SimpleHandler):
         # الاسم العربيّ الثالث، **والعلامةُ تبقى كما تكتبها** فلا تُدرج في «بلا اسم عربي»
         wd = tags.get("wikidata") or tags.get("brand:wikidata") or ""
         brand = 1 if (tags.get("brand") or tags.get("brand:wikidata")) else 0
-        self.rows.append((self.cc, kind, extra_kind, ar, en, alt, lat, lng, rank, key, wd, brand))
+        self.rows.append((self.cc, kind, extra_kind, ar, en, alt, lat, lng, rank, key, wd, brand, fr))
 
     def _classify(self, tags):
         place = tags.get("place")
@@ -183,11 +186,16 @@ def main():
     for r in rows:
         for n in r[5]:
             osm_keys.add((norm(n),) + cell(r[6], r[7], 0.0015))
-    ov = duckdb.connect().execute(
-        "SELECT cc, name, name_ar, name_en, cat, confidence, lat, lng, locality, street, oid, brand_wd, brand_name FROM read_parquet(?) "
-        "WHERE name IS NOT NULL AND confidence >= 0.5", [os.path.join(WORK, "overture_places.parquet")]).fetchall()
+    parquet = os.path.join(WORK, "overture_places.parquet")
+    con = duckdb.connect()
+    # **و`name_fr` إن حمله الملفّ** — ملفٌّ أقدمُ منه يُقرأ بلا فرنسيّ ولا يُسقط البناء
+    has_fr = "name_fr" in {r[0] for r in con.execute("DESCRIBE SELECT * FROM read_parquet(?)", [parquet]).fetchall()}
+    ov = con.execute(
+        "SELECT cc, name, name_ar, name_en, cat, confidence, lat, lng, locality, street, oid, brand_wd, brand_name, "
+        f"{'name_fr' if has_fr else 'NULL'} FROM read_parquet(?) "
+        "WHERE name IS NOT NULL AND confidence >= 0.5", [parquet]).fetchall()
     added = 0
-    for cc, name, n_ar, n_en, cat, conf, lat, lng, locality, street, oid, brand_wd, brand_name in ov:
+    for cc, name, n_ar, n_en, cat, conf, lat, lng, locality, street, oid, brand_wd, brand_name, n_fr in ov:
         alts = [x for x in (name, n_ar, n_en) if x]
         k = norm(name)
         c = cell(lat, lng, 0.0015)
@@ -196,7 +204,8 @@ def main():
         ar = n_ar or (name if ARABIC.search(name) else None)
         en = n_en or (None if ARABIC.search(name) else name)
         rows.append((cc, "poi", f"overture={cat or ''}", ar, en, list(dict.fromkeys(alts)), lat, lng,
-                     4 + (1 if conf >= 0.8 else 0), f"o{oid}" if oid else "", brand_wd or "", 1 if (brand_wd or brand_name) else 0))
+                     4 + (1 if conf >= 0.8 else 0), f"o{oid}" if oid else "", brand_wd or "", 1 if (brand_wd or brand_name) else 0,
+                     (n_fr or "").strip() or None))
         added += 1
     print("overture added", added, "of", len(ov), flush=True)
 
@@ -207,7 +216,7 @@ def main():
     PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA page_size=4096;
     CREATE TABLE places(id INTEGER PRIMARY KEY, cc TEXT, kind TEXT, tag TEXT, name_ar TEXT, name_en TEXT,
                         alt TEXT, ctx_local TEXT, ctx_city TEXT, lat REAL, lng REAL, rank INTEGER, src TEXT,
-                        okey TEXT, wd TEXT, brand INTEGER);
+                        okey TEXT, wd TEXT, brand INTEGER, name_fr TEXT);
     CREATE VIRTUAL TABLE fts USING fts5(n, content='', tokenize='trigram');
     """)
     batch, fts = [], []
@@ -216,13 +225,13 @@ def main():
         city = nearest("city", r, 0.5, 25)
         src = "overture" if r[2].startswith("overture=") else "osm"
         batch.append((i, r[0], r[1], r[2], r[3], r[4], " | ".join(r[5]), label(loc) if loc else None,
-                      label(city) if city else None, r[6], r[7], r[8], src, r[9] or None, r[10] or None, r[11]))
+                      label(city) if city else None, r[6], r[7], r[8], src, r[9] or None, r[10] or None, r[11], r[12]))
         fts.append((i, " ".join(dict.fromkeys(norm(n) for n in r[5]))))
         if len(batch) >= 50000:
-            db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+            db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
             db.executemany("INSERT INTO fts(rowid, n) VALUES (?,?)", fts)
             batch, fts = [], []
-    db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+    db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
     db.executemany("INSERT INTO fts(rowid, n) VALUES (?,?)", fts)
     db.execute("CREATE INDEX ix_places_cc ON places(cc)")
     db.execute("INSERT INTO fts(fts) VALUES ('optimize')")

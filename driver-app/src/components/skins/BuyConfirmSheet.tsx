@@ -18,7 +18,7 @@ import type { Currency, VehicleSkin } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export function BuyConfirmSheet({
   skin,
@@ -60,14 +60,14 @@ export function BuyConfirmSheet({
           <div className="flex items-baseline justify-between">
             <span className="text-12.5 text-muted">{tr("السعر")}</span>
             <span className="text-17 font-bold text-ink">
-              {digits(skin.price ?? "")}{" "}
+              {formatAmount(skin.price ?? "", skin.currency)}{" "}
               <span className="text-11 font-medium text-muted">{label}</span>
             </span>
           </div>
           <div className="mt-8 flex items-baseline justify-between">
             <span className="text-11.5 text-muted">{tr("رصيدك الآن")}</span>
             <span className="text-12.5 font-semibold text-ink">
-              {digits(balance)}{" "}
+              {formatAmount(balance, currency)}{" "}
               <span className="text-10 font-medium text-muted">{label}</span>
             </span>
           </div>

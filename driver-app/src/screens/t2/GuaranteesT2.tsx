@@ -28,7 +28,7 @@ import { useGoBack } from "@/lib/back";
 import { useGuarantees } from "@/lib/guarantees";
 import { useRide } from "@/lib/ride";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
-import { currencyLabel, digits, DISPLAY_LOCALE } from "@/lib/utils";
+import { currencyLabel, digits, DISPLAY_LOCALE, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./t2.css";
@@ -250,14 +250,14 @@ function GuaranteeCard({
           {booking.estimated_fare_at_booking ? (
             <>
               {tr("أجرةٌ تقديراً")}{" "}
-              <b dir="ltr">{digits(booking.estimated_fare_at_booking)}</b> {cur}
+              <b dir="ltr">{formatAmount(booking.estimated_fare_at_booking, booking.currency)}</b> {cur}
             </>
           ) : (
             tr("الأجرةُ تُحسب عند التنفيذ")
           )}
         </span>
         <span className="t2-gu-fee">
-          {tr("+ ضمان")}{" "}<b dir="ltr">{digits(booking.guarantee_fee)}</b> {cur}{" "}{tr("لك كاملاً")}
+          {tr("+ ضمان")}{" "}<b dir="ltr">{formatAmount(booking.guarantee_fee, booking.currency)}</b> {cur}{" "}{tr("لك كاملاً")}
         </span>
       </div>
       {children}

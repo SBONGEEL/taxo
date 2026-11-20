@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useDriver } from "@/lib/driver";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 
 import { planSubLine } from "./SubscriptionT2";
 
@@ -108,9 +108,9 @@ export function PlansPreviewT2Screen() {
                       <span className="t2-sub-price">
                         {/* **المشطوبُ بجانب المخفَّض** — والمخفَّضُ من الخلفية، فلا طرحَ هنا (§14). **ولا شطبَ بلا عرض**،
                             والمرسومُ ما يُخصم (`price_to_pay`، SPEC §٧٠-ج/٥) */}
-                        {row.price_after_discount ? <span className="t2-sub-was">{digits(row.price)}</span> : null}
+                        {row.price_after_discount ? <span className="t2-sub-was">{formatAmount(row.price, row.currency)}</span> : null}
                         <span className="t2-sub-num" dir="ltr">
-                          {digits(row.price_to_pay ?? row.price)}
+                          {formatAmount(row.price_to_pay ?? row.price, row.currency)}
                         </span>{" "}
                         <span className="t2-sub-cur">{CURRENCY_LABEL[row.currency]}</span>
                       </span>

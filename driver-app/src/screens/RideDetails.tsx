@@ -47,7 +47,7 @@ import {
   roundingLine,
   trimDistance,
 } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { chipTone } from "@/screens/Rides";
 import { Icon } from "@/taxo2";
@@ -224,7 +224,7 @@ export function RideDetailsScreen() {
           </div>
           <div className="t2-rdt-fare">
             <span className="t2-rdt-fare-num" dir="ltr">
-              {digits(ride.final_fare ?? ride.current_fare)}
+              {formatAmount(ride.final_fare ?? ride.current_fare, ride.currency)}
             </span>
             <span className="t2-rdt-fare-cur">{currency}</span>
           </div>
@@ -244,7 +244,7 @@ export function RideDetailsScreen() {
 
           <h2 className="t2-section">{tr("تفصيل السعر")}</h2>
           <div className="t2-rdt-grid">
-            <Row label={tr("السعر المقدّر")} value={digits(ride.estimated_fare)} />
+            <Row label={tr("السعر المقدّر")} value={formatAmount(ride.estimated_fare, ride.currency)} />
             {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
             <Row
               label={
@@ -261,19 +261,19 @@ export function RideDetailsScreen() {
             {Number(ride.stops_charge) > 0 ? (
               <Row
                 label={tr("رسم المحطات ({0})", { 0: digits(String(ride.stops.length)) })}
-                value={digits(ride.stops_charge)}
+                value={formatAmount(ride.stops_charge, ride.currency)}
               />
             ) : null}
             {Number(ride.waiting_charge) > 0 ? (
               <Row
                 label={tr("رسم الانتظار عند المحطات")}
-                value={digits(ride.waiting_charge)}
+                value={formatAmount(ride.waiting_charge, ride.currency)}
               />
             ) : null}
             {Number(ride.pause_charge) > 0 ? (
               <Row
                 label={tr("رسم الوقفات أثناء الرحلة")}
-                value={digits(ride.pause_charge)}
+                value={formatAmount(ride.pause_charge, ride.currency)}
               />
             ) : null}
             {/* **وفرقُ التقريب سطرٌ بذاته** (SPEC §٧٠-ج/٤): ما قبضه مقرَّباً إلى وحدة السوق، **والفرقُ له أو عليه** — يقرأ هنا لماذا
@@ -291,7 +291,7 @@ export function RideDetailsScreen() {
             />
             <Row
               label={tr("السعر النهائي")}
-              value={digits(ride.final_fare ?? ride.current_fare)}
+              value={formatAmount(ride.final_fare ?? ride.current_fare, ride.currency)}
               strong
             />
           </div>
@@ -302,7 +302,7 @@ export function RideDetailsScreen() {
                 <Row
                   key={payment.id}
                   label={`${METHOD_LABEL[payment.method]} · ${paymentStatusLabel(payment)}`}
-                  value={digits(payment.amount)}
+                  value={formatAmount(payment.amount, payment.currency)}
                   tone={payment.status === "confirmed" ? undefined : "warn"}
                 />
               ))}

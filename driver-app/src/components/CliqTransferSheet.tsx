@@ -21,7 +21,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { confirmPayment } from "@/api/endpoints";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
@@ -109,7 +109,7 @@ export function CliqTransferSheet({
             </p>
             <p className="t2-cts-amount">
               <span className="t2-cts-num" dir="ltr">
-                {digits(transfer.amount)}
+                {formatAmount(transfer.amount, transfer.currency)}
               </span>
               <span className="t2-cts-cur">{currencyLabel}</span>
             </p>

@@ -27,7 +27,7 @@ import { ApiError } from "@/api/client";
 import { declareCliqPaid } from "@/api/endpoints";
 import type { Currency } from "@/api/types";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
@@ -115,7 +115,7 @@ export function CliqClaimView({
         <span className="t2-clq-k">{tr("المبلغ المطلوب")}</span>
         <span className="t2-clq-amount">
           <span className="t2-clq-num" dir="ltr">
-            {digits(claim.amount)}
+            {formatAmount(claim.amount, claim.currency)}
           </span>
           <span className="t2-clq-cur">{CURRENCY_LABEL[claim.currency]}</span>
         </span>

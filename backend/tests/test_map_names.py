@@ -110,3 +110,29 @@ async def test_the_apps_read_names_only_when_open_places_are_on(
     await enable_features(session_factory, "map_open_places")
     on = await client.get("/map/name-fixes", headers=rider["headers"])
     assert on.json() == {"n1": "مستشفى العبدلي"}
+
+
+async def test_the_category_filter_and_counts_pass_through(
+    client: AsyncClient, admin_headers: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**الفئةُ تمرّ إلى الخدمة، وأعدادُها وفئةُ كلِّ مكانٍ تعود بترتيبها** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤)."""
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={
+            "built": True, "cities": [{"city": "عمّان", "count": 1}],
+            "cats": [{"cat": "hospital", "count": 1}, {"cat": "bank", "count": 4}], "total": 1,
+            "items": [{**ITEMS[0], "cat": "hospital"}],
+        })
+
+    monkeypatch.setattr(settings, "places_search_url", "http://places-search:8090")
+    monkeypatch.setattr(map_names, "transport", httpx.MockTransport(handler))
+    response = await client.get(
+        "/admin/map-names/missing", params={"country": "JO", "city": "عمّان", "cat": "hospital"}, headers=admin_headers
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert seen[0].url.params["cat"] == "hospital" and seen[0].url.params["city"] == "عمّان"
+    assert [(c["cat"], c["count"]) for c in body["cats"]] == [("hospital", 1), ("bank", 4)]
+    assert body["items"][0]["cat"] == "hospital"

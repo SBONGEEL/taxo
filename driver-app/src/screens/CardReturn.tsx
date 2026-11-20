@@ -22,7 +22,7 @@ import { ApiError } from "@/api/client";
 import { getCardOrder } from "@/api/endpoints";
 import type { CardOrder } from "@/api/types";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/account.css"; import { tr } from "@/lib/i18n";
@@ -116,7 +116,7 @@ export function CardReturnScreen() {
             {order ? (
               <div className="t2-ax-money t2-cret-amount">
                 <span className="t2-ax-money-num" dir="ltr">
-                  {digits(order.amount)}
+                  {formatAmount(order.amount, order.currency)}
                 </span>
                 <span className="t2-ax-money-cur">{CURRENCY_LABEL[order.currency]}</span>
               </div>

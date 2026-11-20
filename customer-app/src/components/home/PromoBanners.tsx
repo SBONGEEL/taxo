@@ -43,7 +43,7 @@ import { useNavigate } from "react-router-dom";
 
 import { api } from "@/api/client";
 import type { PromoBanner, StorefrontOffer } from "@/api/types";
-import { currencyLabel, digits } from "@/lib/utils";
+import { currencyLabel, formatAmount } from "@/lib/utils";
 import * as icons from "lucide-react"; import { tr } from "@/lib/i18n";
 
 /** **أيقونةٌ زخرفيّةٌ كبيرةٌ في الطرف** — كما يرسمها التصميم (`heart` خلف
@@ -124,13 +124,13 @@ export function OfferCard({ offer }: { offer: StorefrontOffer }) {
             <span>{tr("اشتراك «")}{offer.plan_name}»</span>
             <span className="whitespace-nowrap font-bold text-ink">
               <span className="me-6 font-medium text-muted line-through">
-                {digits(offer.price)}
+                {formatAmount(offer.price, offer.currency)}
               </span>
               {offer.free ? (
                 tr("مجاناً")
               ) : (
                 <>
-                  {digits(offer.price_after)}{" "}
+                  {formatAmount(offer.price_after, offer.currency)}{" "}
                   <span className="text-11 font-medium text-muted">
                     {currencyLabel(offer.currency)}
                   </span>

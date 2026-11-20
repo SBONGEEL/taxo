@@ -21,7 +21,7 @@ import type { GenderPreference, Ride } from "@/api/types";
 import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { openIn, targetFor } from "@/lib/external-maps";
 import type { NextInstruction } from "@/lib/next-instruction";
-import { digits, cn } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, cn, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 export interface CancelReason {
   label: string;
@@ -177,7 +177,7 @@ export function ActiveRide({
           <div className="flex-1">
             <div className="text-14 font-bold text-ink">{tr("راكب TAXO")}</div>
             <div className="text-11 text-muted">
-              {digits(ride.estimated_fare)} {currencyLabel}
+              {formatAmount(ride.estimated_fare, ride.currency)} {currencyLabel}
             </div>
             {/* حالُ المشاركة (12-ي) — **حالتان لا واحدة**: «مجموعةٌ تكوّنت»
                 غيرُ «قد ينضم أحد». والفرقُ عمليٌّ لا لفظي: الأولى تعني راكباً
@@ -495,7 +495,7 @@ function PauseStrip({
             لا بعدها: كبتنٌ يرى «٠٫٠٠٠» ولا يعرف لماذا يظنّ العدّادَ معطوباً */}
         <span className="ms-auto text-12.5 font-bold text-ink">
           {billing
-            ? `${digits(ride.pause_charge)} ${currencyLabel}`
+            ? `${formatAmount(ride.pause_charge, ride.currency)} ${currencyLabel}`
             : tr("مهلة {0} دقائق", { 0: digits(String(free)) })}
         </span>
       </div>
@@ -560,7 +560,7 @@ function StopStrip({
             {tr("انتظارٌ")}{" "}{digits(String(waitedMinutes))}{" "}{tr("دقيقة")}
           </span>
           <span className="font-semibold text-ink">
-            {digits(ride.waiting_charge)} {currencyLabel}
+            {formatAmount(ride.waiting_charge, ride.currency)} {currencyLabel}
           </span>
         </div>
       ) : null}

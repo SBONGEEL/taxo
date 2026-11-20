@@ -37,7 +37,7 @@ import {
   isDebit,
   unsigned,
 } from "@/lib/walletFormat";
-import { digits, cn, zeroAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
+import { digits, cn, zeroAmount, formatAmount } from "@/lib/utils"; import { tr } from "@/lib/i18n";
 
 const PAGE_SIZE = 20;
 
@@ -183,7 +183,7 @@ export function WalletScreen() {
         <section className="mb-12 rounded-20 border border-line bg-surface p-20">
           <div className="text-12 text-muted">{tr("الرصيد المتاح")}</div>
           <div className="mb-4 mt-2 text-34 font-bold leading-hero text-ink">
-            {digits(wallet.available_for_withdrawal)}{" "}
+            {formatAmount(wallet.available_for_withdrawal, wallet.currency)}{" "}
             <span className="text-14 font-medium text-muted">{currency}</span>
           </div>
 
@@ -192,8 +192,8 @@ export function WalletScreen() {
               أن شيئاً ضاع، والرقمان كلاهما من الخلفية */}
           {holds.length === 1 ? (
             <p className="text-11.5 text-warn">
-              {tr("محجوز لطلب سحب معلّق:")}{" "}{digits(holds[0].amount)} {currency}{" "}{tr("— من أصل")}{" "}
-{digits(wallet.balance)} {currency}
+              {tr("محجوز لطلب سحب معلّق:")}{" "}{formatAmount(holds[0].amount, wallet.currency)} {currency}{" "}{tr("— من أصل")}{" "}
+{formatAmount(wallet.balance, wallet.currency)} {currency}
             </p>
           ) : holds.length > 1 ? (
             <p className="text-11.5 text-warn">
@@ -220,7 +220,7 @@ export function WalletScreen() {
               معلّقاً بلا سبب يظن العطبَ في المنصّة فيسأل الدعم */}
           {Number(wallet.pending_compensation) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              {tr("مستحقاتٌ معلّقة:")}{" "}{digits(wallet.pending_compensation)} {currency}
+              {tr("مستحقاتٌ معلّقة:")}{" "}{formatAmount(wallet.pending_compensation, wallet.currency)} {currency}
               {" "}{tr("— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.")}
             </p>
           ) : null}
@@ -232,7 +232,7 @@ export function WalletScreen() {
               «اشحن» فعلٌ يفعله، و«معلّق» خبرٌ يقرؤه ولا يفعل به شيئاً */}
           {Number(wallet.carrier_dues) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{digits(wallet.carrier_dues)}{" "}
+              {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
               {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
 
             </p>
@@ -245,7 +245,7 @@ export function WalletScreen() {
               يقرأ صفراً بلا شرطٍ يظنّه دائماً */}
           {Number(wallet.commission_this_month) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
-              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(wallet.commission_this_month)}{" "}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{formatAmount(wallet.commission_this_month, wallet.currency)}{" "}
               {currency}
             </p>
           ) : Number(profile?.commission_percent ?? 0) === 0 ? (
@@ -347,10 +347,10 @@ export function WalletScreen() {
                     )}
                   >
                     {debit ? "−" : "+"}
-                    {digits(unsigned(entry.amount))}
+                    {formatAmount(unsigned(entry.amount), wallet.currency)}
                   </div>
                   <div className="text-10 text-muted">
-                    {tr("الرصيد")}{" "}{digits(entry.balance_after)}
+                    {tr("الرصيد")}{" "}{formatAmount(entry.balance_after, wallet.currency)}
                   </div>
                 </div>
               </StaggerItem>

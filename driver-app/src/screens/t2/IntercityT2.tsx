@@ -19,7 +19,7 @@ import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { useIntercityBoard } from "@/lib/guarantees";
 import { useSession } from "@/lib/session";
-import { currencyLabel, digits, DISPLAY_LOCALE } from "@/lib/utils";
+import { currencyLabel, digits, DISPLAY_LOCALE, formatAmount } from "@/lib/utils";
 import { DateField, Icon } from "@/taxo2";
 
 import { countSeats } from "./count";
@@ -194,7 +194,8 @@ function PostForm({
   const ready = routeId !== null && at !== "";
   // **عملةُ سوقه من الإعدادات** — المسارُ لا يحمل عملتَه، ومساراتُه كلُّها في سوقه
   const { user } = useSession();
-  const cur = currencyLabel(useCountryConfig(user?.country_code)?.currency);
+  const code = useCountryConfig(user?.country_code)?.currency;
+  const cur = currencyLabel(code);
 
   if (routes.length === 0) {
     return <p className="t2-empty">{tr("لا مساراتٍ مفعّلةً في سوقك بعد — يضيفها TAXO بين المدن بسعري المقعد والسيارة.")}</p>;
@@ -220,7 +221,7 @@ function PostForm({
               </span>
               <span className="t2-ict-route-meta">{route.from_point}</span>
               <span className="t2-ict-route-meta">
-                <b dir="ltr">{digits(route.price_seat)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{digits(route.price_car)}</b> {cur}{" "}{tr("للسيارة")}
+                <b dir="ltr">{formatAmount(route.price_seat, code)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{formatAmount(route.price_car, code)}</b> {cur}{" "}{tr("للسيارة")}
               </span>
             </button>
           );
@@ -396,7 +397,7 @@ function TripCard({
           <b dir="ltr">{digits(String(trip.min_seats))}</b>
         </span>
         <span className="t2-gu-fee">
-          <b dir="ltr">{digits(trip.price_seat)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{digits(trip.price_car)}</b> {cur}{" "}{tr("للسيارة")}
+          <b dir="ltr">{formatAmount(trip.price_seat, trip.currency)}</b> {cur}{" "}{tr("للمقعد ·")}{" "}<b dir="ltr">{formatAmount(trip.price_car, trip.currency)}</b> {cur}{" "}{tr("للسيارة")}
         </span>
       </div>
 

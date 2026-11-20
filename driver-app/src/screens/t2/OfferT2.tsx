@@ -35,7 +35,7 @@
 import type { Offer } from "@/lib/ride";
 import { useOfferCountdown } from "@/components/OfferSheet";
 import { METHOD_LABEL, bookedTime, trimDistance } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { hoursLabel, noDestination } from "@/screens/t2/HourlyT2";
 import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
@@ -140,7 +140,7 @@ export function OfferT2({
                 {/* **ما سيقبضه مقرَّباً كما يُعرض على الراكب** (`current_fare`، SPEC §٧٠-ج/٤) — لا `estimated_fare` الدقيقة؛
                     ومطفأً هما سواء. وإشعارُ العرض في الخلفية يقول الرقمَ نفسَه */}
                 <span className="t2-of-fare-num" dir="ltr">
-                  {digits(offer.countered ?? bargain ?? ride.current_fare)}
+                  {formatAmount(offer.countered ?? bargain ?? ride.current_fare, ride.currency)}
                 </span>
                 <span className="t2-of-fare-cur">{currencyLabel}</span>
               </div>
@@ -154,7 +154,7 @@ export function OfferT2({
                 {offer.countered
                   ? tr("عرضك في التفاوض — بانتظار جواب الراكب على")
                   : tr("عرض الراكب في التفاوض — المقدَّر")}{" "}
-                {digits(offer.countered ? bargain : ride.current_fare)} {currencyLabel}
+                {formatAmount(offer.countered ? bargain : ride.current_fare, ride.currency)} {currencyLabel}
               </span>
             </div>
           ) : null}
@@ -282,7 +282,7 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
       ) : null}
       {carried ? (
         <span className="t2-of-tag warn">
-          {tr("تحمل")}{" "}{digits(ride.carried_cancellation_fee ?? "0")} {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
+          {tr("تحمل")}{" "}{formatAmount(ride.carried_cancellation_fee ?? "0", ride.currency)} {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
         </span>
       ) : null}
     </div>

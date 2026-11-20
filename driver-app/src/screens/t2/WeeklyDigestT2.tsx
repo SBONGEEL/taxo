@@ -11,7 +11,7 @@ import { getWeeklyDigest } from "@/api/endpoints";
 import type { WeeklyDigest } from "@/api/types";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { tr } from "@/lib/i18n";
-import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, formatAmount } from "@/lib/utils";
 
 import { countRides, hoursClock } from "./count";
 
@@ -44,7 +44,7 @@ export function WeeklyDigestT2() {
       <div className="t2-wal-line">
         <span>{tr("ما كسبته فعلاً")}</span>
         <span>
-          <span dir="ltr">{digits(data.earned)}</span> {CURRENCY_LABEL[data.currency]}
+          <span dir="ltr">{formatAmount(data.earned, data.currency)}</span> {CURRENCY_LABEL[data.currency]}
         </span>
       </div>
       {change !== null ? (

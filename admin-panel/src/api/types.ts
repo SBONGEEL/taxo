@@ -2673,6 +2673,8 @@ export interface MissingArabicPlace {
   city: string;
   name: string;
   tag: string;
+  /** فئةُ المكان (`hospital`…) — `null` من خدمةٍ أقدم */
+  cat?: string | null;
   lat: number;
   lng: number;
 }
@@ -2681,6 +2683,8 @@ export interface MissingArabicPage {
   /** `false` ⇐ فهرسُ الخادم أقدمُ من القائمة */
   built: boolean;
   cities: { city: string; count: number }[];
+  /** **أعدادُ الفئات بترتيب الأهمّيّة** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثاني، البند ٤) — داخل المدينة المختارة */
+  cats?: { cat: string; count: number }[];
   total: number;
   items: MissingArabicPlace[];
 }

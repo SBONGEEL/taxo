@@ -30,7 +30,7 @@ import {
   WITHDRAWAL_STATUS_LABEL,
   withdrawalTone,
 } from "@/lib/walletFormat";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -129,7 +129,7 @@ export function WithdrawalsScreen() {
                   </span>
                   <span className="t2-wdl-main">
                     <span className="t2-wdl-amount">
-                      <span dir="ltr">{digits(request.amount)}</span> {currency}
+                      <span dir="ltr">{formatAmount(request.amount, country?.currency)}</span> {currency}
                     </span>
                     <span className="t2-wdl-sub">
                       {digits(when.day)} ·{" "}

@@ -1879,8 +1879,8 @@ export const updateMapPlace = (
 
 // ── «أماكن بلا اسم عربي» (SPEC §١٠٩-ب) — القائمةُ من بناء الخريطة، والاسمُ يكتبه المشرف ويُختم في التدقيق
 
-export const listMissingArabicPlaces = (country: CountryCode, city: string, offset: number, limit: number) =>
-  api.get<MissingArabicPage>("/admin/map-names/missing", { query: { country, city, offset, limit } });
+export const listMissingArabicPlaces = (country: CountryCode, city: string, offset: number, limit: number, cat = "") =>
+  api.get<MissingArabicPage>("/admin/map-names/missing", { query: { country, city, cat, offset, limit } });
 
 export const listMapNameFixes = (country: CountryCode) =>
   api.get<MapNameFix[]>("/admin/map-names/fixes", { query: { country } });

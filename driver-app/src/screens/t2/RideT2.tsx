@@ -40,7 +40,7 @@ import { openIn } from "@/lib/external-maps";
 import { useGuaranteeCancelCost } from "@/lib/guarantees";
 import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
-import { digits } from "@/lib/utils";
+import { digits, formatAmount } from "@/lib/utils";
 import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { HourlyCashCardT2, HourlyMeterT2, HourlyPlanT2, noDestination } from "@/screens/t2/HourlyT2";
 import { RecipientRowT2, RefuseParcelButtonT2, RefuseParcelSheetT2 } from "@/screens/t2/ParcelT2";
@@ -241,7 +241,7 @@ export function RideT2({
               {/* **«تفاوض»** (SPEC §٩٢-ج) — السعرُ الذي اتّفقتما عليه، والانتظارُ والوقفاتُ فوقه */}
               {ride.negotiated_fare ? (
                 <div className="t2-rd-rider-share">
-                  {tr("سعر متفاوض عليه")}{" "}{digits(ride.negotiated_fare)} {currencyLabel}
+                  {tr("سعر متفاوض عليه")}{" "}{formatAmount(ride.negotiated_fare, ride.currency)} {currencyLabel}
                 </div>
               ) : null}
             </div>
@@ -249,7 +249,7 @@ export function RideT2({
                 (`current_fare`، SPEC §٧٠-ج/٤) — قبل البدء لا انتظارَ ولا وقفةَ فيها، فهي المقدَّرةُ بقاعدة السوق */}
             <div className="t2-rd-rider-fare">
               <span className="t2-rd-rider-fare-num" dir="ltr">
-                {digits(ride.current_fare)}
+                {formatAmount(ride.current_fare, ride.currency)}
               </span>{" "}
               <span className="t2-rd-fare-cur">{currencyLabel}</span>
             </div>
@@ -392,7 +392,7 @@ export function RideT2({
             {cancelCost?.cancel_penalty ? (
               <p className="t2-rd-cx-note warn">
                 {tr("رحلةٌ مضمونةٌ أكّدتَها — إلغاؤها يأخذ من محفظتك حتى")}{" "}
-                <b dir="ltr">{digits(cancelCost.cancel_penalty)}</b> {currencyLabel}{" "}{tr("للراكب، ويُنقص تقييمَك ويُسجَّل عليك إنذار. وبلوغُ")}{" "}
+                <b dir="ltr">{formatAmount(cancelCost.cancel_penalty, cancelCost.currency)}</b> {currencyLabel}{" "}{tr("للراكب، ويُنقص تقييمَك ويُسجَّل عليك إنذار. وبلوغُ")}{" "}
 {digits(String(cancelCost.ban_threshold))}{" "}{tr("من الاعتذارات خلال")}{" "}{digits(String(cancelCost.ban_days))}{" "}{tr("يوماً يحجبك عن الحجوزات المضمونة.")}
 
               </p>
@@ -515,7 +515,7 @@ function TripHead({
       <div className="t2-rd-fare">
         <div className="t2-rd-fare-row">
           <span className="t2-rd-fare-num" dir="ltr">
-            {digits(ride.current_fare)}
+            {formatAmount(ride.current_fare, ride.currency)}
           </span>
           <span className="t2-rd-fare-cur">{currencyLabel}</span>
         </div>
@@ -585,7 +585,7 @@ function StopsT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
         <div className="t2-rd-wait">
           <span>{tr("انتظارٌ")}{" "}{digits(String(waitedMinutes))}{" "}{tr("دقيقة")}</span>
           <span>
-            {digits(ride.waiting_charge)} {currencyLabel}
+            {formatAmount(ride.waiting_charge, ride.currency)} {currencyLabel}
           </span>
         </div>
       ) : null}

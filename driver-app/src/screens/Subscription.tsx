@@ -455,13 +455,13 @@ export function SubscriptionScreen() {
                 ) : plan.price_after_discount ? (
                   <>
                     <span className="me-6 text-12 font-medium text-muted line-through">
-                      {digits(plan.price)}
+                      {formatAmount(plan.price, plan.currency)}
                     </span>
-                    {digits(plan.price_to_pay ?? plan.price_after_discount)}
+                    {formatAmount(plan.price_to_pay ?? plan.price_after_discount, plan.currency)}
                   </>
                 ) : (
                   // **بلا عرضٍ يُرسم ما يُخصم بلا شطب** — مقرَّباً إن اشتعل التقريب (SPEC §٧٠-ج/٥)، و`price` حرفاً مطفأً
-                  digits(plan.price_to_pay ?? plan.price)
+                  formatAmount(plan.price_to_pay ?? plan.price, plan.currency)
                 )}{" "}
                 <span className="text-11 font-medium text-muted">
                   {CURRENCY_LABEL[plan.currency]}
@@ -501,14 +501,14 @@ export function SubscriptionScreen() {
                         لم يَنَله. ولا طرحَ هنا — الرقمُ يصل محسوباً */}
                     {Number(item.discount_amount) > 0 ? (
                       <span className="mt-3 block text-10.5 font-semibold text-ok">
-                        {tr("وفّرتَ")}{" "}{digits(item.discount_amount)}{" "}
+                        {tr("وفّرتَ")}{" "}{formatAmount(item.discount_amount, item.currency)}{" "}
                         {CURRENCY_LABEL[item.currency]}
                       </span>
                     ) : null}
                   </span>
                   <span className="text-end">
                     <span className="block text-13 font-bold text-ink">
-                      {digits(item.amount_paid)}{" "}
+                      {formatAmount(item.amount_paid, item.currency)}{" "}
                       {CURRENCY_LABEL[item.currency]}
                     </span>
                     <span
