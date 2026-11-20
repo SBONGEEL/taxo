@@ -24,7 +24,7 @@ from app.core.deps import (
     RedisDep,
     RiderUser,
 )
-from app.core.exceptions import Conflict, InvalidInput, PermissionDenied, PointsNotSaved, RateLimited
+from app.core.exceptions import Conflict, InvalidInput, NotFound, PermissionDenied, PointsNotSaved, RateLimited
 from app.models.user import User
 from app.models.driver import DriverDocument
 from app.models.enums import DocumentType, FeatureKey
@@ -537,6 +537,30 @@ async def download_my_document(
         session, driver_id=driver.id, document_id=document_id
     )
     return document_response(document)
+
+
+@router.get("/me/photo")
+async def my_live_photo(driver: CurrentDriver, session: DbSession) -> FileResponse:
+    """**الصورةُ التي يراها الركّابُ الآن** (§١٠٩-هـ/٢) — لصاحبها وحدَه: المعتمَدة، أو السابقةُ ما دامت الجديدةُ تنتظر.
+    و٤٠٤ حين لا شيء (يرسم التطبيقُ الحرف) — **والجوابُ لصاحبه لا لغيره**، فلا وشايةَ فيه (`avatar.py`)."""
+    path = await documents_service.visible_photo_path(session, driver.id)
+    if path is None:
+        raise NotFound("لا صورةَ ظاهرةً للركّاب بعد")
+    return FileResponse(
+        storage.resolve(path),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@router.delete("/me/photo", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_photo(driver: CurrentDriver, session: DbSession) -> Response:
+    """**يحذف الكبتنُ صورتَه** حيث ليست مطلوبةً منه (المُعفاةُ بختم الإدارة) — والمطلوبةُ ٤٠٩ بسببها (§١٠٩-هـ/٢)."""
+    paths = await documents_service.delete_photo(session, driver=driver)
+    await session.commit()
+    for path in paths:
+        await storage.delete(path)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def document_response(document: DriverDocument) -> FileResponse:

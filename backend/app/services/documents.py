@@ -52,7 +52,7 @@ from app.models.enums import (
 )
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
-from app.services import audit
+from app.services import audit, photo_clean
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,12 +225,31 @@ async def missing_required(
         await session.scalars(
             select(DriverDocument.doc_type).where(
                 DriverDocument.driver_id == driver_id,
-                DriverDocument.review_status == DocumentReviewStatus.APPROVED,
+                # **وصورةٌ معتمَدةٌ سابقةٌ تنتظر بديلتُها** (§١٠٩-هـ/٢) قائمةٌ فعلاً — رآها مشرفٌ ويراها الركّاب
+                (DriverDocument.review_status == DocumentReviewStatus.APPROVED)
+                | DriverDocument.live_file_path.is_not(None),
             )
         )
     )
     required = await required_for(session, driver_id)
     return [doc_type for doc_type in required if doc_type not in approved]
+
+
+async def visible_photo_path(session: AsyncSession, driver_id: uuid.UUID) -> str | None:
+    """**ما يراه الراكبُ من صورة الكبتن** (§١٠٩-هـ/٢): المعتمَدةُ، **أو السابقةُ المعتمَدة ما دامت الجديدةُ تنتظر أو رُفضت** —
+    ولا يُنشر ما لم يره مشرفٌ أبداً. و`None` ⇐ الحرف."""
+    row = (
+        await session.execute(
+            select(DriverDocument.file_path, DriverDocument.review_status, DriverDocument.live_file_path).where(
+                DriverDocument.driver_id == driver_id,
+                DriverDocument.doc_type == DocumentType.PROFILE_PHOTO,
+            )
+        )
+    ).first()
+    if row is None:
+        return None
+    file_path, review_status, live = row
+    return file_path if review_status is DocumentReviewStatus.APPROVED else live
 
 
 async def approved_photo(
@@ -298,15 +317,26 @@ async def upload(
     # يُعتمد بعدها، فصار في السوق **معتمَدون بلا صورة** — ولولا هذا الشرطُ
     # لأسقط أوّلُ امتثالٍ منهم اعتمادَهم، أي **لعاقبناهم على أنهم فعلوا ما طُلب**.
     required_now = await required_for(session, driver.id)
-    already_uploaded = await session.scalar(
-        select(DriverDocument.id).where(
-            DriverDocument.driver_id == driver.id,
-            DriverDocument.doc_type == doc_type,
+    previous = (
+        await session.execute(
+            select(DriverDocument.id, DriverDocument.review_status, DriverDocument.live_file_path).where(
+                DriverDocument.driver_id == driver.id,
+                DriverDocument.doc_type == doc_type,
+            )
         )
+    ).first()
+    already_uploaded = previous[0] if previous is not None else None
+    # **تغييرُ الصورة الشخصيّة لا يُسقط الاعتماد** (أمرُ المالك ٢٠٢٦-١١-٢٠، §١٠٩-هـ/٢): الجديدةُ تنتظر والمعتمَدةُ السابقةُ باقيةٌ
+    # للركّاب — فالكبتنُ لا يعمل «على ما لم يره أحد» (علّةُ قاعدة 9-ب)، بل على صورةٍ رآها مشرف
+    keeps_live_photo = (
+        doc_type is DocumentType.PROFILE_PHOTO
+        and previous is not None
+        and (previous[1] is DocumentReviewStatus.APPROVED or previous[2] is not None)
     )
     reverts_approval = (
         doc_type in required_now
         and already_uploaded is not None
+        and not keeps_live_photo
         and driver.status is DriverStatus.APPROVED
         # **«معتمد دون وثائق» يبقى يعمل وهو يرفع** (أمرُ المالك ٢٠٢٦-١١-١٠): وثائقُه تدخل المراجعةَ العاديّة، والاعتمادُ
         # العاديُّ يزيل الوسم — **ولو أسقط الرفعُ اعتمادَه لصار طلبُ الوثائق عقوبةً على من يلبّيه**
@@ -319,6 +349,9 @@ async def upload(
         # على من لم ينقطع. والانتظارُ إلى نهاية الرحلة نافذةٌ واحدة قصيرة
         raise Conflict("أنهِ رحلتك الجارية قبل استبدال مستنداتك")
 
+    if doc_type is DocumentType.PROFILE_PHOTO:
+        # **بلا EXIF** (§١٠٩-هـ/٤) — إحداثيّاتُ مكان الالتقاط لا تُخزَّن
+        reader = await photo_clean.cleaned(reader)
     stored = await storage.save(reader, folder=str(driver.id))
 
     try:
@@ -337,6 +370,11 @@ async def upload(
         superseded: str | None = None
         if existing is not None:
             superseded = existing.file_path
+            if existing.doc_type is DocumentType.PROFILE_PHOTO and existing.review_status is DocumentReviewStatus.APPROVED:
+                # **المعتمَدةُ تبقى للركّاب** حتى تُعتمد الجديدة (§١٠٩-هـ/٢) — فلا يُحذف ملفُّها؛ وما كان قائماً قبلها (صورةٌ
+                # معتمَدةٌ أقدمُ تنتظر بديلةً سابقة) لا يقع هنا: الصفُّ «معتمَد» يعني أن لا بديلةَ معلَّقة
+                existing.live_file_path = existing.file_path
+                superseded = None
             existing.file_path = stored.relative_path
             existing.content_type = stored.content_type
             existing.size_bytes = stored.size_bytes
@@ -399,6 +437,28 @@ async def upload(
         raise
 
 
+async def delete_photo(session: AsyncSession, *, driver: Driver) -> list[str]:
+    """**الكبتنُ يحذف صورتَه الشخصيّة** (§١٠٩-هـ/٢) — **حيث ليست مطلوبةً منه وحدَه**: المُعفاةُ (جنسُها أنثى بختم الإدارة).
+
+    والمطلوبةُ منه (الذكرُ ومن لم يُختم جنسُها) **لا تُحذف** — تُغيَّر فقط: حذفُها يُسقط شرطاً بُني عليه اعتمادُه. ويعيد مساراتِ
+    الملفّات ليحذفها المستدعي **بعد** الـcommit (ملفٌّ يتيمٌ نفاية، وصفٌّ بلا ملفٍّ عطلٌ يُرى).
+    """
+    if DocumentType.PROFILE_PHOTO in await required_for(session, driver.id):
+        raise Conflict("صورتُك الشخصيّةُ مطلوبةٌ للعمل فلا تُحذف — يمكنك تغييرُها")
+    document = await session.scalar(
+        select(DriverDocument)
+        .where(DriverDocument.driver_id == driver.id, DriverDocument.doc_type == DocumentType.PROFILE_PHOTO)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if document is None:
+        raise NotFound("لا صورةَ شخصيّةً لك")
+    paths = [path for path in (document.file_path, document.live_file_path) if path]
+    await session.delete(document)
+    await session.flush()
+    return paths
+
+
 # ---------------------------------------------------------------- المراجعة
 
 
@@ -445,6 +505,9 @@ async def review(
         document.expiry_source = "admin"
     document.reviewed_by = actor.id
     document.reviewed_at = datetime.now(UTC)
+    if approved and document.live_file_path is not None:
+        # **اعتُمدت الجديدة ⇐ تتقاعد السابقة** (§١٠٩-هـ/٢) — ملفُّها يحذفه الراوترُ بعد الـcommit؛ والرفضُ يُبقيها للركّاب
+        document.live_file_path = None
 
     await audit.record(
         session,

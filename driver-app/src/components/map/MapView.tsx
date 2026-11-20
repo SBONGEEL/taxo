@@ -851,7 +851,7 @@ function MapViewEngine({
           className,
         )}
       >
-        {missing ?? tr("الخريطة غير مهيأة — راجع عقد Mapbox")}
+        {missing ?? tr("الخريطة غير متاحة الآن — حاول بعد قليل")}
       </div>
     );
   }

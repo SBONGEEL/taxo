@@ -220,6 +220,8 @@ export const setMyPhoto = (file: File, options: UploadOptions = {}) =>
   upload<User>("/auth/me/photo", file, options);
 
 export const clearMyPhoto = () => api.del<User>("/auth/me/photo");
+/** **صورتي كما رفعتُها** (§١٠٩-هـ/١) — لصاحبها وحدَه؛ ٤٠٤ بلا صورة */
+export const getMyPhoto = () => api.blob("/auth/me/photo");
 
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });

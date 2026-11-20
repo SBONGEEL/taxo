@@ -144,10 +144,10 @@ async def _price(session: AsyncSession, redis: Redis, ride: Ride, target: Coordi
         # **تطبيقٌ صامتٌ لا يُصفَّر مقطوعُه** — طريقُ الانطلاق إلى موضعه الآن، لا صفرٌ يُهبط السعر ولا رقمٌ يُخترع
         traveled = (await directions.route_between(session, pickup, here, ride.country_code)).distance_km
     started = ride.started_at or _now()
-    elapsed = Decimal(max(0.0, (_now() - started).total_seconds()) / 60).quantize(Decimal("0.01"))
+    elapsed = Decimal(max(0.0, (_now() - started).total_seconds()) / 60).quantize(directions.MIN_STEP)
     combined = Route(
-        distance_km=(traveled + remaining.distance_km).quantize(Decimal("0.001")),
-        duration_min=(elapsed + remaining.duration_min).quantize(Decimal("0.01")),
+        distance_km=(traveled + remaining.distance_km).quantize(directions.KM_STEP),
+        duration_min=(elapsed + remaining.duration_min).quantize(directions.MIN_STEP),
     )
     estimate = await pricing.estimate(
         session,

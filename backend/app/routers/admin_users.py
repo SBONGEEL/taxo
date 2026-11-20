@@ -32,6 +32,7 @@ from app.core.deps import (
     StaffUser,
     UsersManager,
 )
+from app.core import storage
 from app.core.email import normalize_email
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.deactivation import DeactivationRequest
@@ -715,6 +716,12 @@ async def review_driver_document(
     الكبتنَ إشعاران متناقضان عن وثيقةٍ واحدة.
     """
     driver = await _driver(session, driver_id)
+    # **الصورةُ السابقةُ المعتمَدة** (§١٠٩-هـ/٢) — تُقرأ قبل القرار، ويُحذف ملفُّها بعد الـcommit إن تقاعدت باعتماد الجديدة
+    retiring = await session.scalar(
+        select(DriverDocument.live_file_path).where(
+            DriverDocument.id == document_id, DriverDocument.driver_id == driver_id
+        )
+    )
     document = await documents_service.review(
         session,
         driver_id=driver_id,
@@ -726,6 +733,8 @@ async def review_driver_document(
     )
     await session.commit()
     await session.refresh(document)
+    if retiring is not None and document.live_file_path is None:
+        await storage.delete(retiring)
 
     # بعد الـ commit كما تفرض قاعدة البثّ: حالةٌ تُعلن ثم تُلغى أسوأ من
     # حالةٍ تتأخر لحظة

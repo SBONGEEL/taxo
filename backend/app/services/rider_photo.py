@@ -29,6 +29,7 @@ from app.core import storage
 from app.core.exceptions import Conflict, NotFound
 from app.models.photo_report import UserPhotoReport
 from app.models.user import User
+from app.services import photo_clean
 
 async def set_photo(session: AsyncSession, *, user: User, reader) -> User:
     """يرفع صورةً أو يستبدلها — **بالبابِ نفسِه الذي تمرّ به المستندات**.
@@ -40,7 +41,8 @@ async def set_photo(session: AsyncSession, *, user: User, reader) -> User:
     نفاية، وصفٌّ يشير إلى ملفٍ محذوفٍ عطلٌ يراه المستخدم.
     """
     previous = user.photo_path
-    stored = await storage.save(reader, folder=str(user.id))
+    # **بلا EXIF** (§١٠٩-هـ/٤) — إحداثيّاتُ مكان الالتقاط لا تُخزَّن
+    stored = await storage.save(await photo_clean.cleaned(reader), folder=str(user.id))
     user.photo_path = stored.relative_path
     # **ورفعُ صورةٍ جديدةٍ يرفع الحجب**: الحجبُ وقع على صورةٍ بعينها، وإبقاؤه
     # على غيرها عقوبةٌ على الشخص لا على الصورة — **والقرارُ في البلاغ يبقى**

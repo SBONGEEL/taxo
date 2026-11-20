@@ -24,6 +24,9 @@ REQUEST_TIMEOUT_SECONDS = 10.0
 
 _KM = Decimal("0.001")
 _MIN = Decimal("0.01")
+#: **خطوتا الطريق لمن يجمع مسافتين** (`destination_change`: المقطوعُ + الباقي) — من بيتهما لا حرفيّاً ثانياً يقرؤه حارسُ المال مالاً
+KM_STEP = _KM
+MIN_STEP = _MIN
 
 # **كلمةُ Mapbox كما هي أو لا شيء** (§٦٢-ج/٤٢): نوعُ المناورة واتجاهُها مفرداتٌ
 # قصيرةٌ معروفة («turn» · «sharp right»، وأطولُها «exit roundabout» بخمسة عشر

@@ -17,7 +17,8 @@ import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getMySubscription } from "@/api/endpoints";
+import { deleteMyPhoto, getMyLivePhoto, getMySubscription, listDocuments, uploadDocument } from "@/api/endpoints";
+import { ProfilePhoto } from "@/components/ProfilePhoto";
 import type { DriverStatus, MySubscription } from "@/api/types";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
@@ -50,7 +51,14 @@ const STATUS_LINE: Record<DriverStatus, { text: string; tone: Tone; icon: string
 
 export function AccountScreen() {
   const navigate = useNavigate();
-  const { profile } = useDriver();
+  const { profile, refresh } = useDriver();
+  // **هل الصورةُ مطلوبةٌ منه؟** (§١٠٩-هـ/٢) — من بابها لا من تخمينٍ بالجنس هنا: المطلوبةُ لا تُحذف، والمُعفاةُ تحذفها
+  const [photoRequired, setPhotoRequired] = useState(true);
+  useEffect(() => {
+    listDocuments()
+      .then((answer) => setPhotoRequired(answer.required.includes("profile_photo")))
+      .catch(() => undefined);
+  }, []);
   const { signOut } = useSession();
   const country = useCountryConfig(profile?.user.country_code);
   const whatsapp = useSupportWhatsapp(profile?.user.country_code);
@@ -96,6 +104,14 @@ export function AccountScreen() {
   }
 
   const { driver, user, vehicles, documents } = profile;
+  // **سطرُ حال الصورة** (§١٠٩-هـ/٢) — من مستندها: تنتظر ⇐ «يرى الركّابُ السابقة»، رُفضت ⇐ السببُ كما كتبه المشرف
+  const photoDoc = documents.find((document) => document.doc_type === "profile_photo");
+  const photoNote =
+    photoDoc?.review_status === "pending"
+      ? tr("صورتك الجديدة قيد المراجعة — يرى الركّابُ صورتك المعتمَدة حتى تُعتمد.")
+      : photoDoc?.review_status === "rejected"
+        ? tr("لم تُعتمد صورتك الجديدة: {0}", { 0: photoDoc.review_note ?? tr("راجع الإدارة") })
+        : null;
   const status = STATUS_LINE[driver.status];
   const vehicle = vehicles[0];
 
@@ -151,9 +167,20 @@ export function AccountScreen() {
   return (
     <div className="t2 t2-acc">
       <div className="t2-acc-prof">
-        <span className="t2-acc-avatar" aria-hidden="true">
-          {user.name.trim().slice(0, 1)}
-        </span>
+        {/* **صورةُ الملفّ** (§١٠٩-هـ) — ما يراه الركّابُ الآن، وتغييرُها ينتظر المراجعةَ والسابقةُ باقيةٌ حتى تُعتمد */}
+        <ProfilePhoto
+          name={user.name}
+          load={() => getMyLivePhoto().catch(() => null)}
+          upload={async (file) => {
+            await uploadDocument("profile_photo", file);
+          }}
+          remove={photoRequired ? null : async () => {
+            await deleteMyPhoto();
+          }}
+          deleteNote={tr("صورتُك الشخصيّةُ مطلوبةٌ للعمل فلا تُحذف — يمكنك تغييرُها.")}
+          note={photoNote}
+          onChanged={() => void refresh()}
+        />
         <div className="t2-acc-main">
           <div className="t2-acc-name">{user.name}</div>
           {/* الرقم كما هو: معرّفٌ يُقارَن ويُملى، لا كمّيةٌ تُقرأ — نفس
@@ -347,7 +374,7 @@ export function AccountScreen() {
         <Row
           icon="settings"
           label={tr("الإعدادات")}
-          sub={tr("الإشعارات · المظهر · alias كليك")}
+          sub={tr("الإشعارات · المظهر · اسم كليك المستعار")}
           onClick={() => navigate("/account/settings")}
         />
         {/* **آخرُ الصفوف وأشدُّها أثراً** (البند ١٣): ما يخصّ الحساب يسكن هنا

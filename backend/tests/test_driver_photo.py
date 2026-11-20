@@ -221,7 +221,8 @@ async def test_a_first_photo_never_costs_an_approved_driver_his_approval(
     assert upload["approval_reverted"] is False
     assert upload["driver_status"] == "approved"
 
-    # **والاستبدالُ بعد الاعتماد عليها يُسقطه** — فالقاعدةُ لم تُلغَ بل قُيّدت
+    # **وتغييرُها بعد الاعتماد عليها لا يُسقطه أيضاً** (أمرُ المالك ٢٠٢٦-١١-٢٠، SPEC §١٠٩-هـ/٢ — يعدّل قاعدةَ 9-ب للصورة وحدَها):
+    # الجديدةُ تنتظر والمعتمَدةُ باقيةٌ للركّاب، فلا يعمل على ما لم يره مشرف. تفصيلُه في `test_profile_photo_change.py`
     await review_document(
         client, admin_headers, driver_id=driver["driver_id"], document_id=upload["document"]["id"]
     )
@@ -229,7 +230,8 @@ async def test_a_first_photo_never_costs_an_approved_driver_his_approval(
         client, driver["headers"], doc_type="profile_photo", content=JPEG_BYTES,
         filename="face2.jpg", envelope=True,
     )
-    assert again["approval_reverted"] is True
+    assert again["approval_reverted"] is False
+    assert again["driver_status"] == "approved"
 
 
 # ------------------------------------------------------------ منفذُ القراءة

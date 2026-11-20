@@ -35,7 +35,12 @@ for (const name of PLUGINS) {
 }
 
 // و`location-help.ts` (SPEC §١٠٩-ج): رسالةُ «لم نتمكن من تحديد موقعك» بنصّ المالك حرفاً — ومنسوخةٌ لا تفترق جملتُها بين التطبيقين
-for (const lib of ["permissions-center.ts", "haptics.ts", "location-help.ts"]) {
+// و`photo-crop.ts` مع ورقة صورة الملفّ (`components/ProfilePhoto.tsx` وأسلوبُها) — §١٠٩-هـ: الورقةُ واحدةٌ في التطبيقين
+for (const comp of ["ProfilePhoto.tsx", "profile-photo.css"]) {
+  const [ca, cb] = ["driver-app", "customer-app"].map((app) => readFileSync(join(ROOT, app, "src/components", comp), "utf8"));
+  if (ca !== cb) fail(`components/${comp} يفترق بين التطبيقين؛ انسخ أحدهما فوق الآخر بعد قراءة الفرق`);
+}
+for (const lib of ["permissions-center.ts", "haptics.ts", "location-help.ts", "photo-crop.ts"]) {
   const [la, lb] = ["driver-app", "customer-app"].map((app) => readFileSync(join(ROOT, app, "src/lib", lib), "utf8"));
   if (la !== lb) fail(`lib/${lib} يفترق بين التطبيقين؛ انسخ أحدهما فوق الآخر بعد قراءة الفرق`);
 }

@@ -314,7 +314,7 @@
   "الخدمة النسائية — {0}": "Service femmes — {0}",
   "الخدمة مفعّلة في حسابك": "Le service est activé sur votre compte",
   "الخريطة غير متاحة": "Carte indisponible",
-  "الخريطة غير متاحة على iPhone حالياً — توكن الخرائط الخاص بـiOS غير مضبوط.": "La carte n’est pas disponible sur iPhone pour le moment — le jeton de cartes iOS n’est pas configuré.",
+  "الخريطة غير متاحة على iPhone الآن — نعمل على إصلاحها.": "La carte n’est pas disponible sur iPhone pour le moment — le jeton de cartes iOS n’est pas configuré.",
   "الخصوصية": "Confidentialité",
   "الخطوة {0} من {1}": "Étape {0} sur {1}",
   "الخميس": "Jeudi",
@@ -1810,5 +1810,17 @@
   "تحديث الموقع الحالي": "Actualiser la position",
   "فتح إعدادات الموقع": "Ouvrir les réglages de localisation",
   "فتح إذن الموقع": "Ouvrir l'autorisation de localisation",
-  "جارٍ تحديد موقعك…": "Localisation en cours…"
+  "جارٍ تحديد موقعك…": "Localisation en cours…",
+  "صورة الملف": "Photo de profil",
+  "التقاط صورة": "Prendre une photo",
+  "اختيار من المعرض": "Choisir dans la galerie",
+  "ستُحذف صورتك، ويظهر حرفُ اسمك بدلاً منها.": "Votre photo sera supprimée et l'initiale de votre nom s'affichera à la place.",
+  "نطلب إذنَ الكاميرا أو الصور عند الضغط فقط، ولا نستعمل الصورةَ إلا صورةً لملفّك.": "Nous demandons l'accès à l'appareil photo ou aux photos uniquement quand vous appuyez, et la photo ne sert qu'à votre profil.",
+  "تعذّرت قراءة الصورة — اختر صورةً أخرى": "Impossible de lire l'image — choisissez-en une autre",
+  "تعذّر حفظ الصورة": "Impossible d'enregistrer la photo",
+  "تعديل الصورة": "Modifier la photo",
+  "حرّك الصورةَ وكبّرها لتملأ الدائرة": "Déplacez et agrandissez la photo pour remplir le cercle",
+  "التكبير": "Zoom",
+  "جارٍ الحفظ…": "Enregistrement…",
+  "اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها. المس الدائرةَ لتغييرها أو حذفها.": "Facultative : seul le chauffeur de votre course la voit, après avoir accepté votre demande — jamais avant, ni aucun autre passager. Elle apparaît dès l'envoi. Touchez le cercle pour la changer ou la supprimer."
 }

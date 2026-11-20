@@ -373,7 +373,7 @@ export function useMapboxToken(): string | null {
  *
  *  **وقبل وصول `/config` لا يُسمّى شيء**: غيابٌ لم يُقَس بعدُ ليس غياباً. */
 export const IOS_MAP_TOKEN_MISSING =
-  tr("الخريطة غير متاحة على iPhone حالياً — توكن الخرائط الخاص بـiOS غير مضبوط.");
+  tr("الخريطة غير متاحة على iPhone الآن — نعمل على إصلاحها.");
 
 export function useMapboxMissing(): string | null {
   const { config } = useConfig();

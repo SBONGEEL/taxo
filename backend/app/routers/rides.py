@@ -633,11 +633,12 @@ async def get_driver_photo_for_push(
 async def _driver_photo_response(session: AsyncSession, ride: Ride) -> Response:
     """**ردُّ صورة الكبتن الواحد لبابيها** — بطولٍ ثابتٍ ونوعٍ واحد، والحرفُ لمن لا صورةَ مقبولةً له."""
     assert ride.driver_id is not None
-    photo = await documents_service.approved_photo(session, ride.driver_id)
+    # **المعتمَدةُ أو السابقةُ المعتمَدة ما دامت الجديدةُ تنتظر** (§١٠٩-هـ/٢)
+    photo_path = await documents_service.visible_photo_path(session, ride.driver_id)
     raw: bytes | None = None
-    if photo is not None:
+    if photo_path is not None:
         try:
-            raw = storage.resolve(photo.file_path).read_bytes()
+            raw = storage.resolve(photo_path).read_bytes()
         except OSError:
             # **ملفٌّ مفقودٌ يُعامَل كغيابه**: صفٌّ يَعِد بملفٍّ ليس هناك عطبٌ
             # يُصلَح في موضعه، **ولا يجوز أن يصير خطؤه قناةً** تُقرأ منها حال

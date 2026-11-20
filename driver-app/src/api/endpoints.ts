@@ -612,6 +612,11 @@ export const deleteSavedCard = (cardId: string) =>
 export const listDocuments = () =>
   api.get<DriverDocuments>("/drivers/me/documents");
 
+/** **الصورةُ التي يراها الركّابُ الآن** (§١٠٩-هـ/٢) — المعتمَدة، أو السابقةُ ما دامت الجديدةُ تنتظر؛ ٤٠٤ ⇐ الحرف */
+export const getMyLivePhoto = () => api.blob("/drivers/me/photo");
+/** **حذفُ صورتي** — للمُعفاة وحدَها؛ والمطلوبةُ ٤٠٩ بسببها */
+export const deleteMyPhoto = () => api.del<void>("/drivers/me/photo");
+
 /** رفعُ مستند — `multipart` لا JSON، فيمر خارج `api.*` بعميلٍ يعرف الملفات. */
 export const uploadDocument = (
   docType: DocumentType,

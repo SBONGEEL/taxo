@@ -17,7 +17,9 @@ from typing import Annotated
 from fastapi import APIRouter, File, UploadFile, status
 from sqlalchemy import select
 
-from app.core import rate_limit
+from fastapi.responses import FileResponse
+
+from app.core import rate_limit, storage
 from app.core.app_scope import ClientApp
 from app.core.config import settings
 from app.core import app_scope
@@ -1002,6 +1004,17 @@ async def set_my_photo(
     await session.commit()
     await session.refresh(user)
     return UserOut.model_validate(user)
+
+
+@router.get("/me/photo")
+async def get_my_photo(user: CurrentUser) -> FileResponse:
+    """**صورتي كما رفعتُها** (§١٠٩-هـ/١) — لصاحبها وحدَه، فتظهر في دائرة حسابه بدل «لم يُبنَ بعد». و٤٠٤ بلا صورة (يرسم الحرف)."""
+    if user.photo_path is None:
+        raise NotFound("لا صورةَ لك")
+    return FileResponse(
+        storage.resolve(user.photo_path),
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.delete("/me/photo", response_model=UserOut)

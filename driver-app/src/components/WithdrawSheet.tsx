@@ -281,7 +281,7 @@ export function WithdrawSheet({
         ) : (
           <div className="t2-wds-aliasfield">
             <label className="t2-fld-label" htmlFor="withdraw-alias">
-              {tr("alias كليك")}
+              {tr("اسم كليك المستعار")}
             </label>
             <input
               id="withdraw-alias"

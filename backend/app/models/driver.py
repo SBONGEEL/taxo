@@ -271,6 +271,9 @@ class DriverDocument(UUIDMixin, TimestampMixin, Base):
     # `core/storage.py`. لا يُعرض لأحد ولا يُبنى منه رابط: الملف يُقرأ من
     # مسارٍ يتحقق من الملكية أولاً
     file_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    # **الصورةُ الشخصيّةُ المعتمَدةُ السابقة ما دامت الجديدةُ تنتظر** (SPEC §١٠٩-هـ/٢، ترحيلة 0179): الركّابُ يرونها حتى يعتمد مشرفٌ
+    # الجديدة — فيُفرَّغ هذا ويُحذف ملفُّه؛ والرفضُ يُبقيها. **ولغير الصورة الشخصيّة فارغٌ دائماً**
+    live_file_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # نوع المحتوى **المستنتج من بايتات الملف** لا المُعلن من العميل — به
     # تُخدَم القراءة بلا استنتاجٍ ثانٍ في كل طلب
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)

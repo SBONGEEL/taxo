@@ -486,7 +486,7 @@ export function SettingsT2Screen() {
                 dir="ltr"
                 className="t2-input"
                 placeholder="ABUMOHD"
-                aria-label={tr("alias كليك")}
+                aria-label={tr("اسم كليك المستعار")}
                 value={alias}
                 onChange={(event) => setAlias(event.target.value)}
               />

@@ -1,4 +1,4 @@
-/** بطاقةُ الهوية والصورة — TAXO 2.0 «R22» (`design/t2-new/rider/R22-profile.dc.html`): **الدائرةُ هي الصورة** — المختارةُ
+/** بطاقةُ الهوية والصورة — **والصورةُ بورقة §١٠٩-هـ** (`components/ProfilePhoto`: التقاط · معرض · تعديلٌ دائريّ · حذف)؛ — TAXO 2.0 «R22» (`design/t2-new/rider/R22-profile.dc.html`): **الدائرةُ هي الصورة** — المختارةُ
  *  أو المرفوعةُ في هذه الجلسة، وإلا الحرفُ الأوّل كما في R15 — وبجانبها الاسمُ والرقم، ثمّ البريدُ المُثبَت، ثمّ «صورتي» وأفعالُها.
  *
  * **والصورةُ اختياريةٌ، بمعاينةٍ قبل الرفع، وبلا مراجعة**
@@ -23,124 +23,29 @@
  * بريدٍ مُثبَتٍ يحتاج إثباتَ الجديد، و`null` تعني لا بريدَ مُثبَت فلا يُرسم سطرٌ فارغ.
  */
 
-import { useEffect, useRef, useState } from "react";
-
-import { ApiError } from "@/api/client";
-import { clearMyPhoto, setMyPhoto } from "@/api/endpoints";
-import { NoteT2 } from "@/screens/t2/KitT2";
-import { describeShrink, shrinkImage } from "@/lib/shrink";
+import { clearMyPhoto, getMyPhoto, setMyPhoto } from "@/api/endpoints";
+import { ProfilePhoto } from "@/components/ProfilePhoto";
 import { useSession } from "@/lib/session";
-import { digits } from "@/lib/utils";
-import { Icon } from "@/taxo2"; import { tr } from "@/lib/i18n";
-
-/** ما يُقبل من المعرض أو الكاميرا — والخلفيةُ تقرأ النوعَ من البايتات لا من هذا. */
-const ACCEPT = "image/*";
+import { tr } from "@/lib/i18n";
 
 export function PhotoCard() {
   const { user, refreshUser } = useSession();
-  const picker = useRef<HTMLInputElement>(null);
-  const abort = useRef<AbortController | null>(null);
-
-  /** الملفُّ المختار **قبل** الرفع — وجودُه هو حالُ المعاينة. */
-  const [picked, setPicked] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  /** آخرُ ما رُفع في هذه الجلسة — يُعرض فيرى صاحبُه أن الرفعَ وقع فعلاً. */
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
-
-  const [progress, setProgress] = useState(0);
-  const [busy, setBusy] = useState<"upload" | "clear" | null>(null);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
-  const [shrunkNote, setShrunkNote] = useState<string | null>(null);
-
-  // **يُحرَّر العنوان**: `createObjectURL` يحجز الصورةَ في الذاكرة حتى يُلغى،
-  // وشاشةٌ تُفتح عشرَ مراتٍ تحجز عشرَ نسخ
-  useEffect(() => {
-    if (!previewUrl) return;
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
-  useEffect(() => {
-    if (!uploadedUrl) return;
-    return () => URL.revokeObjectURL(uploadedUrl);
-  }, [uploadedUrl]);
-
-  function choose(file: File | undefined) {
-    if (!file) return;
-    setError(null);
-    setDone(null);
-    setShrunkNote(null);
-    setPicked(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  }
-
-  function discard() {
-    setPicked(null);
-    setPreviewUrl(null);
-    setError(null);
-  }
-
-  async function send(file: File) {
-    setBusy("upload");
-    setProgress(0);
-    setError(null);
-    setDone(null);
-    const controller = new AbortController();
-    abort.current = controller;
-    try {
-      // **تُضغط قبل أن تخرج** (`lib/shrink.ts`): كلُّ بابٍ يعرضها في الخلفية
-      // يُنزلها إلى ٢٥٦ بكسل، فما فوق ذلك بايتاتٌ تُرفع ثم تُرمى
-      const shrunk = await shrinkImage(file);
-      await setMyPhoto(shrunk.file, {
-        onProgress: setProgress,
-        signal: controller.signal,
-      });
-      await refreshUser();
-      // **يُقال بعد نجاح الرفع لا قبله**: سطرٌ يعلن التصغير ثم يفشل الرفعُ
-      // يترك صاحبَه يظنّ أن صورتَه ذهبت مصغَّرةً وهي لم تذهب أصلاً
-      setShrunkNote(describeShrink(shrunk));
-      setUploadedUrl(URL.createObjectURL(shrunk.file));
-      setPicked(null);
-      setPreviewUrl(null);
-      setDone(tr("رُفعت صورتك، وهي ظاهرةٌ الآن لكبتن رحلتك."));
-    } catch (caught) {
-      // من ألغى يعرف أنه ألغى — ورسالةٌ حمراءُ بعده تجعله يظنّ شيئاً انكسر
-      if ((caught as Error)?.name === "AbortError") return;
-      // **النصُّ من الخلفية** (§17): لا تخترع الواجهةُ عربيةً لخطأٍ سمّته
-      setError(caught instanceof ApiError ? caught.message : tr("تعذّر رفع الصورة"));
-    } finally {
-      abort.current = null;
-      setBusy(null);
-      setProgress(0);
-    }
-  }
-
-  async function remove() {
-    setBusy("clear");
-    setError(null);
-    setDone(null);
-    try {
-      await clearMyPhoto();
-      await refreshUser();
-      setUploadedUrl(null);
-      setShrunkNote(null);
-      setDone(tr("حُذفت صورتك."));
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : tr("تعذّر حذف الصورة"));
-    } finally {
-      setBusy(null);
-      setConfirmClear(false);
-    }
-  }
-
-  const shown = previewUrl ?? uploadedUrl;
-  const uploading = busy === "upload";
 
   return (
     <section className="t2-idcard">
       <div className="t2-idcard-top">
-        {/* الدائرةُ بلغة R15 — **برقوقيّةٌ في السِمة الوردية** (`t2.css`) */}
-        <span className="t2-avatar">{shown ? <img src={shown} alt="" /> : (user?.name.slice(0, 1) ?? tr("؟"))}</span>
+        {/* **الدائرةُ هي الصورة** — صورتُه كما رفعها (`GET /auth/me/photo`)، وإلا حرفُ اسمه في دائرةٍ لونُها من اسمه */}
+        <ProfilePhoto
+          name={user?.name ?? ""}
+          load={() => getMyPhoto().catch(() => null)}
+          upload={async (file) => {
+            await setMyPhoto(file);
+          }}
+          remove={async () => {
+            await clearMyPhoto();
+          }}
+          onChanged={() => void refreshUser()}
+        />
         <div className="t2-prof-main">
           <div className="t2-prof-name">{user?.name}</div>
           <div dir="ltr" className="t2-prof-phone">
@@ -161,118 +66,8 @@ export function PhotoCard() {
       <div className="t2-idcard-sec">
         <p className="t2-idcard-title">{tr("صورتي")}</p>
         <p className="t2-idcard-body">
-          {tr("اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها.")}
+          {tr("اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها. المس الدائرةَ لتغييرها أو حذفها.")}
         </p>
-
-        {/* **حدُّ التطبيق يُقال ولا يُخفى**: لا بابَ يقرأ الصورةَ المرفوعةَ في
-            شاشةِ الحساب، فالدائرةُ أعلاه حرفُ الاسم لا الصورة. وسكوتُنا عن ذلك
-            يجعل من رفع صورتَه أمس يقرأ الحرفَ «حُذفت صورتي» */}
-        {shown ? null : (
-          <p className="t2-idcard-note">
-            {tr("ما في الدائرة حرفُ اسمك لا صورتُك المرفوعة — وعرضُ الصورة الحالية في هذه الشاشة لم يُبنَ بعد. واختيارُ صورةٍ جديدةٍ يحلّ محلّ ما قبلها.")}
-
-          </p>
-        )}
-
-        <input
-          ref={picker}
-          type="file"
-          accept={ACCEPT}
-          className="t2-idcard-file"
-          aria-label={tr("اختر صورة")}
-          onChange={(event) => {
-            choose(event.target.files?.[0]);
-            // **يُفرَّغ المدخل**: اختيارُ الملف نفسِه مرةً ثانيةً بعد إلغاءٍ لا
-            // يُطلق `change` ما لم تُمسح القيمة
-            event.target.value = "";
-          }}
-        />
-
-        {uploading ? (
-          <div className="t2-idcard-progress">
-            <div className="t2-idcard-progress-top">
-              <span>{tr("جارٍ رفع الصورة")}</span>
-              <span dir="ltr" className="t2-num">
-                {digits(String(progress))}%
-              </span>
-            </div>
-            <div
-              className="t2-idcard-bar"
-              role="progressbar"
-              aria-label={tr("جارٍ رفع الصورة")}
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <span style={{ width: `${progress}%` }} />
-            </div>
-            <button type="button" className="t2-cbtn soft full" onClick={() => abort.current?.abort()}>
-              <Icon name="close" />
-              {tr("أوقف الرفع")}
-            </button>
-          </div>
-        ) : picked ? (
-          <div className="t2-idcard-row">
-            <button type="button" className="t2-cbtn ink grow" onClick={() => void send(picked)}>
-              {tr("ارفع هذه الصورة")}
-            </button>
-            <button type="button" className="t2-cbtn soft" onClick={discard}>
-              {tr("تراجع")}
-            </button>
-          </div>
-        ) : (
-          <div className="t2-idcard-row">
-            <button type="button" className="t2-cbtn soft grow" onClick={() => picker.current?.click()}>
-              <Icon name="photo_camera" />
-              {tr("اختر صورة")}
-            </button>
-            <button
-              type="button"
-              className="t2-cbtn destroy-text"
-              disabled={busy !== null}
-              onClick={() => setConfirmClear(true)}
-            >
-              <Icon name="delete" />
-              {tr("احذف")}
-            </button>
-          </div>
-        )}
-
-        {/* **خطوةٌ ثانيةٌ للحذف**: الملفُّ يُمحى من القرص ولا يُستردّ، وضغطةٌ
-            واحدةٌ على زرٍّ بجانب «اختر صورة» تقع بالخطأ */}
-        {confirmClear ? (
-          <div className="t2-idcard-confirm">
-            <p>{tr("ستُحذف صورتك نهائياً، ويرى كبتنُ رحلتك حرفَ اسمك بدلاً منها.")}</p>
-            <div className="t2-idcard-row">
-              <button
-                type="button"
-                className="t2-cbtn destroy grow"
-                disabled={busy === "clear"}
-                aria-busy={busy === "clear"}
-                onClick={() => void remove()}
-              >
-                {tr("نعم، احذفها")}
-              </button>
-              <button type="button" className="t2-cbtn soft" onClick={() => setConfirmClear(false)}>
-                {tr("تراجع")}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* **الخطأُ يحمل زرّاً لا نصّاً وحدَه**: من انقطع رفعُه لا يجد المدخلَ
-            مفتوحاً، وإعادةُ اختيار الصورة من المعرض خطواتٌ يفقد بينها الغرض */}
-        {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
-        {error && picked && !uploading ? (
-          <div className="t2-idcard-row">
-            <button type="button" className="t2-cbtn soft full" onClick={() => void send(picked)}>
-              {tr("أعد رفع الصورة نفسها")}
-            </button>
-          </div>
-        ) : null}
-
-        {done ? <NoteT2 tone="ok">{done}</NoteT2> : null}
-        {shrunkNote ? <p className="t2-idcard-note">{shrunkNote}</p> : null}
       </div>
     </section>
   );

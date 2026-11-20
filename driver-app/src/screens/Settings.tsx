@@ -529,7 +529,7 @@ export function SettingsScreen() {
       ) : null}
 
       <section className="card p-15">
-        <h2 className="mb-4 text-13.5 font-bold text-ink">{tr("alias كليك")}</h2>
+        <h2 className="mb-4 text-13.5 font-bold text-ink">{tr("اسم كليك المستعار")}</h2>
         <p className="mb-10 text-11 leading-snug text-muted">
           {tr("عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.")}
         </p>
