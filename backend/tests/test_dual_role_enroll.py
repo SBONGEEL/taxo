@@ -129,7 +129,9 @@ async def test_a_person_is_never_matched_with_himself(client: AsyncClient, sessi
     assert driver_id in other
 
 
-async def test_a_person_cannot_accept_his_own_ride(client: AsyncClient, session_factory) -> None:
+async def test_a_person_cannot_accept_his_own_ride(
+    client: AsyncClient, session_factory, jordan_settings, stub_mapbox, fast_dispatch
+) -> None:
     """**البابُ الثاني بعد التوزيع** (أمرُ المالك ٢٠/١١ الثالث §٤): حسابٌ بالدورين يطلب راكباً ثمّ يحاول القبولَ كبتناً — لا يُقبل
     والرحلةُ بلا كبتن. (التوزيعُ لا يعرضها عليه أصلاً — `test_a_person_is_never_matched_with_himself` — وقِيس على الإنتاج ٢٠/١١.)"""
     from app.models.ride import Ride
@@ -144,7 +146,9 @@ async def test_a_person_cannot_accept_his_own_ride(client: AsyncClient, session_
         assert row is not None and row.driver_id is None
 
 
-async def test_online_as_captain_cannot_request_as_rider(client: AsyncClient, session_factory) -> None:
+async def test_online_as_captain_cannot_request_as_rider(
+    client: AsyncClient, session_factory, jordan_settings, stub_mapbox, fast_dispatch
+) -> None:
     captain = await approved_driver(client, session_factory)
     as_rider = auth(await _enroll(client, DRIVER, "rider"))
     await bring_online(client, captain)
@@ -156,7 +160,9 @@ async def test_online_as_captain_cannot_request_as_rider(client: AsyncClient, se
     await request_ride(client, as_rider)
 
 
-async def test_riding_as_rider_cannot_go_online_as_captain(client: AsyncClient, session_factory) -> None:
+async def test_riding_as_rider_cannot_go_online_as_captain(
+    client: AsyncClient, session_factory, jordan_settings, stub_mapbox, fast_dispatch
+) -> None:
     captain = await approved_driver(client, session_factory)
     as_rider = auth(await _enroll(client, DRIVER, "rider"))
     await request_ride(client, as_rider)

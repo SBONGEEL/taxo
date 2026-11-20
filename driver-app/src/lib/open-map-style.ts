@@ -15,7 +15,7 @@
  */
 
 /** بلاطاتُ OpenFreeMap (TileJSON) وخطوطُها — وفيها نطاقُ العربيّة (U+0600–06FF) في «Noto Sans». */
-import { arabicOnlyExpression } from "./arabic-name";
+import { arabicOnlyExpression } from "./arabic-name.ts";
 
 export const OPEN_TILES_URL = "https://tiles.openfreemap.org/planet";
 export const OPEN_GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
