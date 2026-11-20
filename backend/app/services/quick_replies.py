@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvalidInput
@@ -61,11 +62,14 @@ async def save(
 ) -> tuple[list[str], list[str]]:
     driver = clean(driver_texts, "driver_texts")
     rider = clean(rider_texts, "rider_texts")
-    row = await session.get(QuickReplySetting, country, with_for_update=True)
-    before = None if row is None else {"driver": list(row.driver_texts), "rider": list(row.rider_texts)}
-    if row is None:
-        row = QuickReplySetting(country_code=country)
-        session.add(row)
+    # **الصفُّ يُضمن أوّلاً ثمّ يُقفل**: حفظان أوّلان معاً لدولةٍ بلا صفّ كانا سيصطدمان بالمفتاح الأساسيّ (٥٠٠ لأحدهما) — والقفلُ لا
+    # يحرس صفّاً لم يوجد بعد. `ON CONFLICT DO NOTHING` يجعل الإدراجَ واحداً، والقفلُ يرتّب الكتابتين فيبقى «من/إلى» السجلِّ صادقاً
+    await session.execute(
+        pg_insert(QuickReplySetting).values(country_code=country, driver_texts=[], rider_texts=[]).on_conflict_do_nothing()
+    )
+    row = await session.get(QuickReplySetting, country, with_for_update=True, populate_existing=True)
+    assert row is not None
+    before = {"driver": list(row.driver_texts), "rider": list(row.rider_texts)}
     row.driver_texts = driver
     row.rider_texts = rider
     row.updated_by = actor.id

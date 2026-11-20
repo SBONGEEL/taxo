@@ -1,13 +1,12 @@
 """**الفقاعتان — أجزاءُ الخادم** (أمرُ المالك ٢٠٢٦-١١-٢٠ الرابع، SPEC §١١٠).
 
 ما يُقاس: الاستراحةُ (٤٤) تُخرج الكبتنَ من التوزيع حتى تنتهي **بالساعة وحدَها** ويمحوها الخروجُ، ولا تبدأ إلا متّصلاً بلا رحلة،
-ومعها خروجٌ في اللحظة نفسِها لا يترك «غيرَ متّصلٍ في استراحة» · أقربُ منطقةٍ مزدحمة (٤٥) من خلايا الخريطة بمستوى ٢ فما فوق، و«لا نعرف»
+(والتزامنُ في `test_bubbles_concurrency.py`) · أقربُ منطقةٍ مزدحمة (٤٥) من خلايا الخريطة بمستوى ٢ فما فوق، و«لا نعرف»
 بلا موقع · الردودُ السريعة (٥٠) بافتراض الأمر حرفاً، والحفظُ يرفض الرقمَ والرابطَ بمرشِّح المحادثة · وكلُّها مطفأةٌ بلا صفٍّ في المفاتيح.
 """
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -86,24 +85,6 @@ async def test_only_fifteen_or_thirty_and_only_while_online(client: AsyncClient,
     await bring_online(client, driver)
     odd = await client.post("/drivers/me/break", json={"minutes": 45}, headers=driver["headers"])
     assert odd.status_code == 422, odd.text
-
-
-async def test_a_break_and_going_offline_at_once_stay_coherent(client: AsyncClient, session_factory) -> None:
-    """**القفلُ يملك الحال** — استراحةٌ وخروجٌ معاً: إمّا خرج بلا استراحة، وإمّا ردّت الاستراحةُ ٤٠٩؛ لا «خارجٌ في استراحة»."""
-    await enable_features(session_factory, "driver_break")
-    driver = await approved_driver(client, session_factory)
-    await bring_online(client, driver)
-    await asyncio.wait_for(
-        asyncio.gather(
-            client.post("/drivers/me/break", json={"minutes": 15}, headers=driver["headers"]),
-            client.post("/drivers/me/offline", headers=driver["headers"]),
-        ),
-        timeout=20,
-    )
-    async with session_factory() as session:
-        row = await session.get(Driver, uuid.UUID(str(driver["driver_id"])))
-        assert row is not None
-        assert not (row.is_online is False and row.break_until is not None)
 
 
 # ─────────────────────────────── ٤٥ أقربُ منطقةٍ مزدحمة
