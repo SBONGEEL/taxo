@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>TAXO — اللوحة ١: المركبات</title>
+<style>
+  @font-face { font-family: "IBM Plex Sans Arabic"; src: local("IBM Plex Sans Arabic"), local("Segoe UI"); }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif; width: 1800px; background: #f4f5f7; }
+  header { padding: 40px 56px 24px; background: #0e1013; color: #fff; display: flex; align-items: baseline; gap: 18px; }
+  header h1 { font-size: 40px; font-weight: 800; }
+  header h1 b { color: #ff6a33; }
+  header p { font-size: 17px; color: #a9adb6; }
+  section { padding: 36px 56px 44px; }
+  section.night { background: #0e1013; color: #f2f3f5; }
+  section.day { background: #f4f5f7; color: #15171c; }
+  h2 { font-size: 26px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; }
+  h2 i { font-style: normal; font-size: 14px; padding: 4px 12px; border-radius: 99px; background: #f05a28; color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 28px; }
+  .car { text-align: center; }
+  .car img { width: 100%; display: block; }
+  .car span { font-size: 18px; font-weight: 700; }
+  .car small { display: block; font-size: 13px; opacity: .6; margin-top: 2px; }
+  .row { display: flex; gap: 22px; align-items: flex-end; margin-top: 26px; flex-wrap: wrap; }
+  .row figure { text-align: center; font-size: 12px; opacity: .85; }
+  .tops { display: flex; gap: 26px; align-items: flex-end; margin-top: 18px; flex-wrap: wrap; }
+  .tops figure { text-align: center; font-size: 12px; }
+  .note { font-size: 15px; line-height: 1.9; color: #4a4f59; padding: 26px 56px 40px; background: #fff; }
+  .note b { color: #ad3b0b; }
+  .lbl { font-size: 15px; font-weight: 700; margin: 30px 0 4px; opacity: .8; }
+</style></head>
+<body>
+<header><h1>مركبات <b>TAXO</b> الجديدة — اللوحة ١</h1><p>نماذجُ أصيلةٌ ثلاثيّةُ الأبعاد · منظران · نهاراً وليلاً · خلفيّةٌ شفّافة</p></header>
+<div id="root"></div>
+<div class="note">
+  <b>أصيلةٌ تماماً</b>: كلُّ سيارةٍ مبنيّةٌ بالمعادلات في استوديو TAXO (three.js، رخصة MIT — استعمالٌ تجاريٌّ حرّ)، لا مولِّدَ صورٍ ولا طرازَ حقيقيّاً ولا شعاراً ولا شارة.
+  <b>البرتقاليُّ توقيعٌ على السيارة</b>: شريطُ ضوءٍ أماميٌّ يلتفّ حول الأنف ووهجُه · خطٌّ رفيعٌ على الجانبين · المرايا · مراكزُ العجلات · زعنفةٌ صغيرةٌ على السقف.
+  <b>خدمةُ النساء بلونها</b> (البرقوقيّ نهاراً والورديّ ليلاً). <b>تاكسي المدينة</b> بلافتةِ سقفٍ مضيئةٍ بلا كتابة.
+  <b>المنظرُ العلويُّ</b> لعلامات الخريطة بستّة ألوانِ جسمٍ تتبع سيارةَ الكبتن الحقيقيّة — واللمسةُ البرتقاليّةُ ثابتة.
+  <b>المقاسات من مصدرٍ واحد</b>: ثلاثةُ أرباع ١٢٨٠/٦٤٠/٣٢٠/١٦٠ بكسل (WebP شفّاف)، والعلويّ ١٩٢/٩٦/٤٨.
+</div>
+<script>
+const CARS = [
+  ["economy", "اقتصادي", "سيدان"], ["comfort", "مريح", "سيدان أطول بعجلاتٍ داكنة"], ["vip", "مميّزة", "سيدان فاخرة سوداء"],
+  ["hatchback", "هاتشباك", "هيكل"], ["suv", "SUV", "هيكل · إطارٌ سفليٌّ داكن"], ["family", "عائليّة", "حتى ٦ ركّاب"],
+  ["van", "فان", "مساحةٌ للأمتعة"], ["city_taxi", "تاكسي المدينة", "لافتةُ سقفٍ مضيئة"], ["women", "خدمة النساء", "بلون هويّتها"],
+];
+const COLORS = [["white", "أبيض"], ["black", "أسود"], ["silver", "فضّي"], ["gray", "رمادي"], ["red", "أحمر"], ["blue", "أزرق"]];
+const root = document.getElementById("root");
+for (const theme of ["day", "night"]) {
+  const sec = document.createElement("section");
+  sec.className = theme;
+  sec.innerHTML = `<h2>${theme === "day" ? "نهاراً" : "ليلاً"} <i>ثلاثةُ أرباع · ٦٤٠ بكسل</i></h2>` +
+    `<div class="grid">${CARS.map(([k, n, d]) => `<div class="car"><img src="out/${k}-34-${theme}-640.webp"><span>${n}</span><small>${d}</small></div>`).join("")}</div>` +
+    `<div class="lbl">صغيرةً — ١٦٠ بكسل (كما في القوائم والودجات)</div>` +
+    `<div class="row">${CARS.map(([k, n]) => `<figure><img src="out/${k}-34-${theme}-160.webp" width="160"><figcaption>${n}</figcaption></figure>`).join("")}</div>` +
+    `<div class="lbl">المنظرُ العلويّ لعلامات الخريطة — ٩٦ بكسل</div>` +
+    `<div class="tops">${CARS.map(([k, n]) => `<figure><img src="out/${k}-top-${theme === "day" ? "white" : "black"}-96.webp" width="48"><figcaption>${n}</figcaption></figure>`).join("")}` +
+    `<span style="width:30px"></span>${COLORS.map(([c, n]) => `<figure><img src="out/economy-top-${c}-96.webp" width="48"><figcaption>${n}</figcaption></figure>`).join("")}</div>`;
+  root.appendChild(sec);
+}
+window.BOARD_READY = Promise.all([...document.images].map((i) => i.decode().catch(() => null)));
+</script>
+</body></html>

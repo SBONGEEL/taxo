@@ -416,7 +416,7 @@ export function TrackingSheetT2({
             </div>
             <div className="t2-srch-meta">
               <span className="t2-srch-cat">
-                <Icon name={CATEGORY_ICON[ride.vehicle_category] ?? "local_taxi"} art />
+                <Icon name={CATEGORY_ICON[ride.vehicle_category] ?? "local_taxi"} art car={ride.vehicle_category} />
                 <span>{VEHICLE_LABEL[ride.vehicle_category]}</span>
               </span>
               <span className="t2-srch-fare">

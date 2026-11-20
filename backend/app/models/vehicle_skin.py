@@ -102,7 +102,7 @@ class VehicleSkin(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     rarity: Mapped[str] = mapped_column(String(16), nullable=False)
 
-    #: **رسمةُ المستودع** — ملفٌّ في `app/assets/skins/` لِما وُلِّد SVGاً،
+    #: **رسمةُ المستودع** — ملفٌّ في `app/assets/skins/` لِما وُلِّد في المستودع (WebP من `design/cars-3d/`)،
     #: **أو** مسارٌ في التخزين لِما رُفع من اللوحة. أحدهما لا كلاهما.
     asset_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     store_image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)

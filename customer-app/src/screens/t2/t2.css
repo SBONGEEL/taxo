@@ -1136,6 +1136,8 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   box-shadow: var(--t2-map-car-shadow);
 }
 .t2-map-car-front, .t2-map-car-back { position: absolute; display: block; background: var(--t2-accent); }
+/* سيارةُ TAXO من الأعلى فوق المرسومة — أكبرُ منها قليلاً فتغطّيها كلَّها، **وتبقى المرسومةُ إن لم تصل الصورة** */
+.t2-map-car3 { position: absolute; left: 50%; top: 50%; width: 22px; height: 44px; transform: translate(-50%, -50%); pointer-events: none; }
 .t2-map-car-front { left: 2px; right: 2px; top: 6px; height: 7px; border-radius: 3px 3px 2px 2px; }
 .t2-map-car-back { left: 3px; right: 3px; bottom: 4px; height: 4px; border-radius: 2px 2px 3px 3px; opacity: 0.55; }
 /* **النقطةُ وحدَها علامة** — والهالةُ طبقةُ دائرةٍ في الخريطة تحت أسماء الأماكن (`t2-me-halo` في `MapView`، أمرُ المالك ٢٠٢٦-١١-١٩):

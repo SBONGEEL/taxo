@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>TAXO — اللوحة ٢: الودجات</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300..700&display=swap">
+<style>
+@font-face { font-family: "Unbounded"; src: url("Unbounded-800.ttf"); font-weight: 800; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Readex Pro", "Segoe UI", Tahoma, sans-serif; width: 1900px; background: #0b0c0f; color: #f4f5f7; }
+.num { direction: ltr; unicode-bidi: isolate; font-feature-settings: "tnum"; }
+header.top { padding: 44px 60px 30px; display: flex; align-items: center; gap: 22px; background: #0b0c0f; }
+header.top h1 { font-size: 42px; font-weight: 700; }
+header.top h1 b { color: #ff6a33; }
+header.top p { color: #9aa0aa; font-size: 17px; margin-top: 6px; }
+.band { padding: 34px 60px 46px; }
+.band.night { background: radial-gradient(70% 60% at 85% 0%, #3b1a0e 0%, transparent 60%), radial-gradient(60% 60% at 0% 100%, #1c2233 0%, transparent 60%), #0e1014; }
+.band.day { background: radial-gradient(70% 60% at 85% 0%, #ffe3d6 0%, transparent 60%), radial-gradient(60% 60% at 0% 100%, #dfe6f3 0%, transparent 60%), #eef0f4; color: #15171c; }
+.band h2 { font-size: 28px; font-weight: 700; display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.band h2 i { font-style: normal; font-size: 14px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: #f05a28; color: #fff; }
+.band .sub { font-size: 15px; opacity: .7; margin-bottom: 22px; }
+.wall { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.cap { font-size: 13px; opacity: .72; margin-top: 8px; text-align: center; max-width: 352px; line-height: 1.5; }
+figure { display: flex; flex-direction: column; align-items: center; }
+
+/* ── الودجة — زجاجٌ مقلَّدٌ بالتدرّجات والطبقات، بلا blur (أندرويد) */
+.w { position: relative; overflow: hidden; border-radius: 28px; padding: 16px 18px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow); isolation: isolate; }
+.w::before { content: ""; position: absolute; inset: 0; background: var(--sheen); pointer-events: none; z-index: -1; }
+.w::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 1px 0 var(--hi); pointer-events: none; }
+.dark { --bg: radial-gradient(110% 90% at 100% 0%, rgba(255,106,51,.26) 0%, rgba(255,106,51,0) 52%), linear-gradient(165deg, #262931 0%, #17191f 55%, #101216 100%);
+  --sheen: linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 38%); --hi: rgba(255,255,255,.10);
+  --fg: #f5f6f8; --mut: #a5abb5; --line: rgba(255,255,255,.08); --chip: rgba(255,255,255,.07); --chip2: rgba(255,255,255,.12); --acc: #ff6a33; --acc2: #ff8a5c;
+  --shadow: 0 14px 34px rgba(0,0,0,.42); --ixc-back: #8f2f10; --ixc-cut: #1b1e24; --ixc-detail: #b8401a; --ixc-ground: #000; --ixc-ground-op: .45; --track: rgba(255,255,255,.10); --women: #f08cc0; }
+.light { --bg: radial-gradient(110% 90% at 100% 0%, rgba(240,90,40,.14) 0%, rgba(240,90,40,0) 52%), linear-gradient(165deg, #ffffff 0%, #f7f8fa 60%, #eef0f3 100%);
+  --sheen: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 30%); --hi: rgba(255,255,255,.95);
+  --fg: #15171c; --mut: #636974; --line: rgba(16,24,40,.08); --chip: rgba(16,24,40,.045); --chip2: rgba(16,24,40,.08); --acc: #f05a28; --acc2: #f05a28;
+  --shadow: 0 12px 30px rgba(30,40,60,.14); --ixc-back: #ffb595; --ixc-cut: #ffffff; --ixc-detail: #b8401a; --ixc-ground: #1f2433; --ixc-ground-op: .12; --track: rgba(16,24,40,.08); --women: #9c2c6e; }
+.S { width: 168px; height: 168px; } .M { width: 352px; height: 168px; } .L { width: 352px; height: 352px; }
+.ios.S { width: 170px; height: 170px; border-radius: 24px; } .ios.M { width: 364px; height: 170px; border-radius: 24px; } .ios.L { width: 364px; height: 382px; border-radius: 24px; }
+svg.ixc { width: 1em; height: 1em; display: inline-block; vertical-align: middle; overflow: visible; }
+svg.ixc .b { fill: #f05a28; } svg.ixc .k { fill: var(--ixc-back); } svg.ixc .d { fill: var(--ixc-detail); } svg.ixc .c { fill: var(--ixc-cut); } svg.ixc .g { fill: var(--ixc-ground); opacity: var(--ixc-ground-op); }
+.women svg.ixc .b { fill: var(--women); }
+.wm { font-family: "Unbounded", sans-serif; font-weight: 800; letter-spacing: -.03em; direction: ltr; display: inline-flex; align-items: center; line-height: 1; color: var(--fg); }
+.wm .x { position: relative; display: inline-block; width: .8em; height: .78em; margin: 0 .06em; }
+.wm .x i { position: absolute; left: 50%; top: 50%; width: 1em; height: .225em; border-radius: .13em; background: currentColor; transform: translate(-50%,-50%) rotate(-50deg); }
+.wm .x i + i { background: var(--acc); transform: translate(-50%,-50%) rotate(50deg); }
+.h { font-size: 19px; font-weight: 700; line-height: 1.25; }
+.hs { font-size: 15px; font-weight: 700; }
+.mut { color: var(--mut); font-size: 12.5px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 99px; background: linear-gradient(180deg, var(--acc2), var(--acc)); color: #fff; font-weight: 700; font-size: 14px; box-shadow: 0 6px 16px rgba(240,90,40,.35), inset 0 1px 0 rgba(255,255,255,.35); white-space: nowrap; }
+.btn.ghost { background: var(--chip2); color: var(--fg); box-shadow: inset 0 1px 0 var(--hi); }
+.chip { background: var(--chip); border: 1px solid var(--line); border-radius: 18px; box-shadow: inset 0 1px 0 var(--hi); }
+.row { display: flex; align-items: center; gap: 10px; }
+.col { display: flex; flex-direction: column; }
+.sp { flex: 1; }
+.car { position: absolute; pointer-events: none; }
+.big { font-size: 34px; font-weight: 700; line-height: 1; }
+.tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.tile svg { font-size: 30px; }
+.bar { height: 6px; border-radius: 9px; background: var(--track); overflow: hidden; }
+.bar b { display: block; height: 100%; border-radius: 9px; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+.dot { width: 8px; height: 8px; border-radius: 9px; background: var(--acc); box-shadow: 0 0 0 4px rgba(240,90,40,.18); }
+.green { background: #1fbf75; box-shadow: 0 0 0 4px rgba(31,191,117,.2); }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--chip2); }
+.avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(160deg, #3a3e48, #22252c); border: 2px solid var(--acc); display: grid; place-items: center; font-size: 26px; overflow: hidden; }
+.light .avatar { background: linear-gradient(160deg, #e8eaee, #d5d8de); }
+.map { position: absolute; inset: 0; z-index: -1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: var(--chip2); font-weight: 700; font-size: 14px; box-shadow: inset 0 1px 0 var(--hi); }
+.ring { position: relative; display: grid; place-items: center; }
+.ring svg.r { position: absolute; inset: 0; transform: rotate(-90deg); }
+.note { background: #fff; color: #2b2f37; padding: 30px 60px 40px; font-size: 15.5px; line-height: 1.95; }
+.note h3 { font-size: 20px; margin: 10px 0 4px; color: #15171c; }
+.note b { color: #ad3b0b; }
+.note table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 14px; }
+.note td, .note th { border-bottom: 1px solid #eceef2; padding: 7px 10px; text-align: right; vertical-align: top; }
+.note th { background: #f6f7f9; }
+/* شاشةُ القفل وDynamic Island */
+.lock, .la, .island, .picker { --acc: #ff6a33; --fg: #fff; --track: rgba(255,255,255,.18); }
+.lock { background: linear-gradient(180deg, #2b3448, #11141b); border-radius: 30px; padding: 26px; width: 520px; color: #fff; }
+.lock .acc-c { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; position: relative; }
+.lock .acc-r { width: 170px; height: 72px; border-radius: 18px; background: rgba(255,255,255,.14); padding: 9px 12px; font-size: 12.5px; line-height: 1.35; }
+.island { background: #000; color: #fff; border-radius: 40px; display: flex; align-items: center; }
+.la { background: linear-gradient(165deg, #1d2027, #0d0e11); border-radius: 26px; width: 380px; padding: 16px 18px; color: #fff; border: 1px solid rgba(255,255,255,.08); }
+.picker { background: #1c1d21; border-radius: 26px; padding: 18px; width: 400px; color: #fff; }
+.picker .pv { transform: scale(.62); transform-origin: top right; }
+</style></head>
+<body>
+<header class="top">
+  <div><h1>ودجات <b>TAXO</b> — اللوحة ٢</h1>
+  <p>الراكب ١٤ ودجة · الكبتن ٥ · صغيرة ومتوسّطة وكبيرة · ليلاً ونهاراً · أندرويد وآيفون · من اليمين إلى اليسار بأرقامٍ لاتينيّة</p></div>
+</header>
+<div id="root"></div>
+<script src="glyphs.js"></script>
+<script>
+const G = window.GLYPHS_C;
+// رسمان بالنمط C لا تحملهما المجموعةُ بعد — الحقيبة (العمل) والطائرة (المطار)، بالأدوار نفسها
+G.work = '<path class="g" d="M8 41.2a16 1.8 0 1 0 32 0a16 1.8 0 1 0 -32 0z"/><path class="k" transform="translate(2 2)" d="M12 14h24a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5V19a5 5 0 0 1 5-5z"/><path class="d" d="M18 15v-4a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v4h-3v-3.5h-6V15z"/><path class="b" d="M12 14h24a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5V19a5 5 0 0 1 5-5z"/><path class="c" d="M7 24.5h34v2.6H7z"/><path class="d" d="M21.5 22h5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-5a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z"/>';
+G.flight = '<path class="k" transform="translate(2 2)" d="M24 4c1.7 0 3 1.6 3 3.6V19l14 8v4l-14-4.2V36l4 3v3l-7-2-7 2v-3l4-3v-9.2L7 31v-4l14-8V7.6C21 5.6 22.3 4 24 4z"/><path class="b" d="M24 4c1.7 0 3 1.6 3 3.6V19l14 8v4l-14-4.2V36l4 3v3l-7-2-7 2v-3l4-3v-9.2L7 31v-4l14-8V7.6C21 5.6 22.3 4 24 4z"/><path class="c" d="M22.6 9.5h2.8v4h-2.8z"/>';
+G.intercity = G.location_on; G.group = G.person;
+const ic = (n, s = 22) => `<svg class="ixc" viewBox="0 0 48 48" style="font-size:${s}px">${G[n] ?? ""}</svg>`;
+const wm = (s) => `<span class="wm" style="font-size:${s}px">TA<span class="x"><i></i><i></i></span>O</span>`;
+const N = (x) => `<span class="num">${x}</span>`;
+const car = (k, t, w, css) => `<img class="car" src="out/${k}-34-${t === "dark" ? "night" : "day"}-${w > 200 ? 640 : 320}.webp" style="width:${w}px;${css}">`;
+const topv = (k, c, w, css) => `<img class="car" src="out/${k}-top-${c}-96.webp" style="width:${w}px;${css}">`;
+const ring = (size, pct, stroke = 9) => { const r = (size - stroke) / 2, C = 2 * Math.PI * r;
+  return `<svg class="r" width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#gr)" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${C*pct} ${C}"/></svg>`; };
+const miniMap = (t) => `<svg class="map" viewBox="0 0 352 168" preserveAspectRatio="none">
+  <rect width="352" height="168" fill="${t === "dark" ? "#14171d" : "#f1f2f4"}"/>
+  ${[20,62,110,150].map(y => `<path d="M0 ${y}H352" stroke="${t === "dark" ? "#22262e" : "#e2e4e8"}" stroke-width="7"/>`).join("")}
+  ${[40,120,210,300].map(x => `<path d="M${x} 0V168" stroke="${t === "dark" ? "#22262e" : "#e2e4e8"}" stroke-width="7"/>`).join("")}
+  <path d="M72 84C110 84 128 58 160 56S206 46 222 30" fill="none" stroke="#f05a28" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 0"/>
+  <circle cx="222" cy="30" r="9" fill="#f05a28"/><circle cx="222" cy="30" r="3.5" fill="#fff"/></svg>`;
+const fade = (t) => `<div style="position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg, ${t === "dark" ? "rgba(16,18,22,.96) 0%, rgba(16,18,22,.55) 45%, rgba(16,18,22,0) 75%" : "rgba(255,255,255,.97) 0%, rgba(255,255,255,.6) 45%, rgba(255,255,255,0) 75%"})"></div>`;
+
+/* ── ودجاتُ الراكب — كلُّ دالّةٍ ترسم الودجةَ لسمةٍ وحجم */
+const R = {
+  request: { name: "اطلب مشوارك الآن", src: "ثابتة · «إلى أين؟» يفتح البحث، والوجهةُ تُفتح في ورقة الطلب للتأكيد", sizes: ["M", "L"], draw: (t, s) => s === "L" ? `
+    <div class="row">${wm(20)}</div>
+    <div class="h" style="margin-top:14px;font-size:24px">اطلب مشوارك الآن</div><div class="mut">بأمانٍ وبسعرٍ تعرفه قبل أن تركب</div>
+    ${car("economy", t, 250, "left:-4px;top:98px")}
+    <div style="position:absolute;inset:auto 18px 18px 18px" class="col">
+      <div class="chip row" style="padding:12px 14px">${ic("search", 22)}<span class="hs">إلى أين؟</span><span class="sp"></span><span class="btn" style="height:34px;padding:0 14px">←</span></div>
+      <div class="row" style="margin-top:10px;gap:8px">${["home|المنزل", "work|العمل", "flight|المطار"].map(x => { const [i, n] = x.split("|"); return `<div class="chip tile" style="flex:1;height:70px">${ic(i, 26)}${n}</div>`; }).join("")}</div>
+    </div>` : `
+    ${car("economy", t, 200, "left:-14px;bottom:2px")}
+    <div class="col" style="width:178px">${wm(16)}<div class="h" style="margin-top:12px">اطلب مشوارك الآن</div><div class="mut" style="margin-top:2px">بكلِّ سهولةٍ وأمان</div>
+    <span class="btn" style="margin-top:14px;align-self:flex-start">إلى أين؟ <span>←</span></span></div>` },
+  onTheWay: { name: "السائق في الطريق", src: "رحلةٌ حيّة: الوقتُ المقدَّر واللوحةُ واللون من الرحلة نفسها، والصورةُ أثناء الرحلة وحدها، ولا رقمَ هاتف", sizes: ["M", "S"], draw: (t, s) => s === "S" ? `
+    <div class="row"><span class="dot"></span><span class="hs">في الطريق</span></div>
+    <div class="big" style="margin-top:8px;font-size:30px">${N("3")} <span style="font-size:15px">دقائق</span></div>
+    ${car("economy", t, 118, "left:6px;bottom:30px")}
+    <div class="mut" style="position:absolute;bottom:14px;right:18px">${N("12-34567")} · أبيض</div>` : `
+    ${miniMap(t)}${topv("economy", "white", 26, "left:58px;top:70px;transform:rotate(-70deg)")}
+    <span class="pill" style="position:absolute;top:14px;right:16px">${ic("schedule", 18)} ${N("3")} دقائق</span>
+    <div class="chip row" style="position:absolute;left:12px;right:12px;bottom:12px;padding:9px 12px;background:${t === "dark" ? "rgba(18,20,25,.9)" : "rgba(255,255,255,.94)"}">
+      <div class="avatar">${ic("person", 28)}</div><div class="col"><span class="hs">السائق في الطريق</span><span class="mut">${N("12-34567")} · سيدان بيضاء · ${ic("star", 12)} ${N("4.9")}</span></div></div>` },
+  quick: { name: "طلب سريع", src: "ثابتة · تفتح ورقةَ الطلب من موقعك — لا رحلةَ قبل «تأكيد»", sizes: ["S"], draw: (t) => `
+    <div class="col" style="align-items:center;height:100%;justify-content:space-between">${wm(18)}<span class="hs">طلب سريع</span>
+    <div style="width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--acc2),var(--acc));box-shadow:0 8px 20px rgba(240,90,40,.4), inset 0 1px 0 rgba(255,255,255,.4)"><svg class="ixc" viewBox="0 8 48 34" style="font-size:46px;--ixc-back:#ffd2bd;--ixc-cut:#f05a28">${G.local_taxi}</svg></div></div>` },
+  favorites: { name: "وجهاتك المفضلة", src: "الأماكنُ المحفوظة في الحساب (المنزل والعمل وما حفظه) — بلا أماكنَ: «احفظ منزلك» بدل الفراغ", sizes: ["M"], draw: (t) => `
+    <div class="row"><span class="hs">وجهاتك المفضلة</span><span class="sp"></span>${ic("star", 20)}</div>
+    <div class="row" style="margin-top:12px;gap:8px">${["home|المنزل", "work|العمل", "flight|المطار"].map(x => { const [i, n] = x.split("|"); return `<div class="chip tile" style="flex:1;height:76px">${ic(i, 30)}${n}</div>`; }).join("")}</div>
+    <div class="mut row" style="justify-content:center;margin-top:9px;font-weight:600">عرض الكلّ ←</div>` },
+  wallet: { name: "محفظتي", src: "رصيدُ المحفظة من الدفتر (GET /wallet/me) — بثلاث خاناتٍ وعملة البلد", sizes: ["M", "S"], draw: (t, s) => s === "S" ? `
+    <div class="row"><span class="hs">محفظتي</span><span class="sp"></span>${ic("account_balance_wallet", 24)}</div>
+    <div style="margin-top:18px" class="big">${N("12.750")}</div><div class="mut" style="margin-top:4px">دينار أردنيّ</div>
+    <span class="btn ghost" style="position:absolute;bottom:14px;right:16px;left:16px;justify-content:center;height:34px">+ شحن</span>` : `
+    <div style="position:absolute;left:22px;top:30px">${ic("account_balance_wallet", 96)}</div>
+    <div class="col" style="width:190px"><div class="row"><span class="hs">محفظتي</span></div>
+    <div class="row" style="margin-top:12px;align-items:baseline;gap:6px"><span class="big">${N("12.750")}</span><span class="mut">د.أ</span></div>
+    <span class="btn" style="margin-top:16px;align-self:flex-start">+ شحن الرصيد</span></div>` },
+  discount: { name: "خصم خاص", src: "عرضٌ مفعَّلٌ لهذا الراكب (العروض/رموز الخصم) — بلا عرضٍ لا تُعرض الودجةُ في القائمة، وإن كانت على الشاشة: «لا عروض الآن»", sizes: ["M"], draw: (t) => `
+    <div style="position:absolute;left:18px;top:26px">${ic("redeem", 104)}</div>
+    <div class="col" style="width:190px"><span class="hs" style="color:var(--acc)">خصم خاص</span>
+    <span class="big" style="font-size:44px;margin-top:6px">${N("25%")}</span><span class="mut" style="margin-top:4px">على رحلتك القادمة · حتى ${N("30/11")}</span>
+    <span class="btn ghost" style="margin-top:12px;align-self:flex-start;height:34px">استفد الآن ←</span></div>` },
+  schedule: { name: "حجز مسبق", src: "حجوزاتُ الراكب (bookings) — والودجةُ لا تُعرض حيث الحجزُ المسبق مطفأٌ في البلد", sizes: ["M"], draw: (t) => `
+    <div style="position:absolute;left:24px;top:30px">${ic("schedule", 100)}</div>
+    <div class="col" style="width:190px"><span class="hs">حجز مسبق</span><span class="mut" style="margin-top:4px">رحلتك القادمة</span>
+    <span class="h" style="margin-top:6px">الأحد ${N("06:30")}</span><span class="mut">إلى المطار</span>
+    <span class="btn" style="margin-top:10px;align-self:flex-start;height:34px">احجز موعداً</span></div>` },
+  services: { name: "خدمات التنقل السريع", src: "الفئاتُ والخدماتُ المفعَّلة في البلد وحدها (GET /config)", sizes: ["M"], draw: (t) => `
+    <div class="row"><span class="hs">خدمات التنقل السريع</span><span class="sp"></span>${ic("tune", 18)}</div>
+    <div class="row" style="margin-top:12px;gap:8px">${[["local_taxi", "مشوار الآن", 1], ["flight", "المطار"], ["intercity", "بين المدن"], ["woman", "للنساء", 1, "women"]].map(([i, n, v, cls]) => `<div class="chip tile ${cls ?? ""}" style="flex:1;height:96px">${v ? `<svg class="ixc" viewBox="0 8 48 34" style="font-size:40px">${G[i]}</svg>` : ic(i, 32)}${n}</div>`).join("")}</div>` },
+  current: { name: "رحلتي الحالية", src: "الرحلةُ النشطة: الحالُ والوقتُ المتبقّي والتقدّمُ على المسار — بلا رحلة: «لا رحلة الآن · اطلب»", sizes: ["M"], draw: (t) => `
+    ${car("comfort", t, 176, "left:-6px;top:22px")}
+    <div class="col" style="width:170px"><div class="row"><span class="dot"></span><span class="hs">رحلتي الحالية</span></div>
+    <span class="mut" style="margin-top:12px">الوصول خلال</span><span class="big" style="font-size:30px">${N("8")} <span style="font-size:15px">دقائق</span></span>
+    <span class="mut" style="margin-top:2px">إلى جامعة عمّان</span></div>
+    <div class="bar" style="position:absolute;left:18px;right:18px;bottom:16px"><b style="width:62%"></b></div>` },
+  home: { name: "المنزل · العمل", src: "المكانُ المحفوظ — لمسةٌ تفتح ورقةَ الطلب إليه للتأكيد؛ وبلا مكانٍ: «احفظ المنزل»", sizes: ["S", "S2"], draw: (t, s) => `
+    <div class="col" style="align-items:center;justify-content:center;height:100%;gap:10px">${ic(s === "S2" ? "work" : "home", 64)}<span class="h">${s === "S2" ? "العمل" : "المنزل"}</span><span class="mut">${N(s === "S2" ? "14" : "9")} دقيقة الآن</span></div>` },
+  points: { name: "نقاطي", src: "برنامجُ الولاء (GET /loyalty/me): النقاطُ والمستوى والتقدّمُ إلى التالي — ومطفأً لا تُعرض", sizes: ["S"], draw: (t) => `
+    <div class="ring" style="width:132px;height:132px;margin:2px auto 0">${ring(132, 0.73, 10)}
+    <div class="col" style="align-items:center">${ic("star", 22)}<span class="big" style="font-size:30px">${N("850")}</span><span class="mut">نقطة · فضّي</span></div></div>` },
+  recent: { name: "آخر رحلاتي", src: "آخرُ رحلةٍ مكتملة (GET /rides/me) — «اطلب مجدداً» يفتح ورقةَ الطلب للتأكيد", sizes: ["M"], draw: (t) => `
+    <div class="row"><span class="hs">آخر رحلاتي</span><span class="sp"></span>${ic("history", 20)}</div>
+    <div class="chip row" style="margin-top:12px;padding:10px 12px;height:92px;position:relative">
+      <div class="col"><span class="hs">السبت ${N("21:30")}</span><span class="mut" style="margin-top:3px">من الصويفية إلى عبدون</span>
+      <span class="badge" style="margin-top:8px;align-self:flex-start;color:var(--acc)">اطلب مجدداً ←</span></div>${car("economy", t, 118, "left:6px;top:14px")}</div>` },
+  offers: { name: "العروض والخصومات", src: "العروضُ القائمة للراكب وبلده — بلا عروضٍ لا تُعرض", sizes: ["M"], draw: (t) => `
+    <div style="position:absolute;left:24px;top:28px">${ic("sell", 96)}</div>
+    <div class="col" style="width:190px"><span class="hs">العروض والخصومات</span><span class="mut" style="margin-top:4px">${N("3")} عروضٍ تخصّك</span>
+    <span class="btn ghost" style="margin-top:22px;align-self:flex-start">مشاهدة العروض ←</span></div>` },
+  nearest: { name: "أقرب سائق متاح", src: "تقديرُ الوصول من موقعك (GET /rides/eta) — لا موقعَ لسائقٍ ولا اسم؛ وبلا سائقين: «لا سائقين قريبين الآن»", sizes: ["M"], draw: (t) => `
+    ${car("hatchback", t, 196, "left:-8px;bottom:4px")}
+    <div class="col" style="width:170px"><div class="row"><span class="dot green"></span><span class="hs">أقرب سائق متاح</span></div>
+    <span class="big" style="margin-top:12px;font-size:30px">${N("4")} <span style="font-size:15px">دقائق</span></span><span class="mut" style="margin-top:2px">من موقعك الآن</span>
+    <span class="btn" style="margin-top:12px;align-self:flex-start;height:34px">اطلب ←</span></div>` },
+};
+/* ── ودجاتُ الكبتن */
+const D = {
+  online: { name: "متّصل · أرباح اليوم", src: "زرُّ الاتّصال الحقيقيّ وأرباحُ اليوم بيوم البلد (GET /drivers/me/earnings)", sizes: ["M", "S"], draw: (t, s) => s === "S" ? `
+    <div class="row"><span class="dot green"></span><span class="hs">متّصل</span></div>
+    <div class="mut" style="margin-top:14px">أرباح اليوم</div><div class="big">${N("23.400")}</div><div class="mut">د.أ · ${N("9")} رحلات</div>
+    <span class="btn ghost" style="position:absolute;bottom:14px;right:16px;left:16px;justify-content:center;height:32px">قطع الاتصال</span>` : `
+    ${car("economy", t, 176, "left:-4px;top:48px")}
+    <div class="col" style="width:170px"><div class="row"><span class="dot green"></span><span class="hs">أنت متّصل</span></div>
+    <span class="mut" style="margin-top:12px">أرباح اليوم</span><div class="row" style="align-items:baseline;gap:6px"><span class="big">${N("23.400")}</span><span class="mut">د.أ</span></div>
+    <span class="mut">${N("9")} رحلات · ${N("6:40")} ساعة</span></div>
+    <span class="btn ghost" style="position:absolute;left:16px;top:14px;height:30px;font-size:12.5px;padding:0 12px">قطع الاتصال</span>` },
+  goal: { name: "هدف اليوم", src: "أهدافُ الكبتن (GET /drivers/me/goals) — بلا هدفٍ مفعَّل لا تُعرض", sizes: ["S"], draw: (t) => `
+    <div class="ring" style="width:132px;height:132px;margin:2px auto 0">${ring(132, 0.6, 10)}
+    <div class="col" style="align-items:center"><span class="mut">هدف اليوم</span><span class="big" style="font-size:30px">${N("60%")}</span><span class="mut">${N("9")} / ${N("15")} رحلة</span></div></div>` },
+  sub: { name: "أيام الاشتراك", src: "الاشتراكُ الساري (GET /subscriptions/me) — حيث الاشتراكُ مفعَّلٌ في البلد", sizes: ["S"], draw: (t) => `
+    <div class="row"><span class="hs">اشتراكك</span><span class="sp"></span>${ic("check_circle", 22)}</div>
+    <div class="big" style="font-size:52px;margin-top:10px">${N("12")}</div><div class="mut">يوماً متبقّياً</div>
+    <div class="bar" style="position:absolute;left:18px;right:18px;bottom:18px"><b style="width:40%"></b></div>` },
+  hot: { name: "أقرب منطقة مزدحمة", src: "خريطةُ الطلب للكبتن (GET /drivers/me/demand) — «اذهب إليها» يفتح الملاحة؛ وبلا ازدحامٍ: «الطلب هادئ الآن»", sizes: ["M"], draw: (t) => `
+    <svg class="map" viewBox="0 0 352 168"><rect width="352" height="168" fill="${t === "dark" ? "#14171d" : "#f1f2f4"}"/>
+    ${[30,80,130].map(y => `<path d="M0 ${y}H352" stroke="${t === "dark" ? "#20242b" : "#e3e5e9"}" stroke-width="6"/>`).join("")}${[60,150,250].map(x => `<path d="M${x} 0V168" stroke="${t === "dark" ? "#20242b" : "#e3e5e9"}" stroke-width="6"/>`).join("")}
+    <defs><radialGradient id="hz"><stop offset="0" stop-color="#ff6a33" stop-opacity=".75"/><stop offset="1" stop-color="#ff6a33" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="96" cy="70" r="62" fill="url(#hz)"/><circle cx="96" cy="70" r="7" fill="#f05a28" stroke="#fff" stroke-width="3"/></svg>${fade(t)}
+    <div class="col" style="position:absolute;right:18px;bottom:14px;left:18px"><div class="row"><span class="dot"></span><span class="hs">أقرب منطقة مزدحمة</span></div>
+    <div class="row" style="margin-top:6px"><span class="mut">الشميساني · ${N("2.4")} كم · طلبٌ مرتفع</span><span class="sp"></span><span class="btn" style="height:34px">اذهب إليها ←</span></div></div>` },
+  ride: { name: "حالة الرحلة", src: "الرحلةُ الجارية للكبتن: المرحلةُ والوقتُ والعنوان — بلا هاتف الراكب وبلا اسمه الكامل", sizes: ["M"], draw: (t) => `
+    <div class="row"><span class="dot"></span><span class="hs">في الطريق إلى الراكب</span><span class="sp"></span><span class="pill">${N("5")} د</span></div>
+    <div class="chip col" style="margin-top:12px;padding:10px 12px;gap:6px">
+      <div class="row">${ic("location_on", 18)}<span class="hs" style="font-size:14px">دوّار الداخليّة · بوّابة ٢</span></div>
+      <div class="bar"><b style="width:35%"></b></div><div class="mut">ثم إلى: جبل عمّان</div></div>` },
+};
+
+function widget(def, t, s, ios) {
+  const size = s.replace("2", "");
+  const cls = ["w", t, size, ios ? "ios" : "", def.cls ?? ""].join(" ");
+  return `<div class="${cls}"><svg width="0" height="0" style="position:absolute"><defs><linearGradient id="gr" x1="0" x2="1"><stop offset="0" stop-color="#ff8a5c"/><stop offset="1" stop-color="#f05a28"/></linearGradient></defs></svg>${def.draw(t, s)}</div>`;
+}
+function band(title, badge, theme, set, ios = false, filter = null) {
+  const b = document.createElement("section");
+  b.className = "band " + (theme === "dark" ? "night" : "day");
+  let html = `<h2>${title} <i>${badge}</i></h2><div class="sub">${theme === "dark" ? "ليلاً — برتقاليٌّ على داكن" : "نهاراً — نسخةٌ فاتحةٌ نظيفة"} · المقاساتُ بنسبها الحقيقيّة</div><div class="wall">`;
+  for (const [k, def] of Object.entries(set)) {
+    if (filter && !filter.includes(k)) continue;
+    for (const s of (ios && def.ios) || def.sizes) html += `<figure>${widget(def, theme, s, ios)}<figcaption class="cap"><b>${def.name}</b> · ${({ S: "صغيرة", S2: "صغيرة", M: "متوسّطة", L: "كبيرة" })[s]}</figcaption></figure>`;
+  }
+  b.innerHTML = html + "</div>";
+  document.getElementById("root").appendChild(b);
+}
+band("ودجاتُ الراكب — أندرويد", "١٤ ودجة", "dark", R);
+band("ودجاتُ الراكب — أندرويد", "١٤ ودجة", "light", R);
+band("ودجاتُ الكبتن — أندرويد", "٥ ودجات", "dark", D);
+band("ودجاتُ الكبتن — أندرويد", "٥ ودجات", "light", D);
+
+/* ── الحالاتُ الخاصّة: خارجُ الحساب · بلا بيانات · قائمةُ الاختيار */
+const st = document.createElement("section");
+st.className = "band night";
+st.innerHTML = `<h2>الحالاتُ الخاصّة <i>لا رقمَ مخترَع</i></h2><div class="sub">خارجُ الحساب · بلا بيانات · الميزةُ مطفأة · معاينةُ قائمة الودجات</div><div class="wall">
+ ${["dark", "light"].map(t => `<figure><div class="w ${t} M"><div class="row">${wm(16)}</div><div class="h" style="margin-top:14px">سجّل الدخول لترى رحلاتك</div><div class="mut" style="margin-top:4px">لا يظهر شيءٌ من حسابك قبل الدخول</div><span class="btn" style="margin-top:14px">تسجيل الدخول ←</span>${car("economy", t, 150, "left:-4px;bottom:6px;opacity:.9")}</div><figcaption class="cap"><b>خارجُ الحساب</b> — كلُّ ودجةٍ تصير هذه البطاقة</figcaption></figure>`).join("")}
+ <figure><div class="w dark M"><div class="row"><span class="hs">آخر رحلاتي</span><span class="sp"></span>${ic("history", 20)}</div><div class="chip col" style="margin-top:12px;padding:14px;height:92px;justify-content:center"><span class="hs">لا رحلات بعد</span><span class="mut" style="margin-top:4px">أولُ مشوارٍ يظهر هنا</span></div></div><figcaption class="cap"><b>بلا بيانات</b> — فراغٌ لطيفٌ لا صفرٌ مخترَع</figcaption></figure>
+ <figure><div class="w light M"><div class="row"><span class="hs">أقرب سائق متاح</span></div><div class="h" style="margin-top:16px">لا سائقين قريبين الآن</div><div class="mut" style="margin-top:4px">جرّب بعد قليل أو اطلب وسننتظر</div></div><figcaption class="cap"><b>بلا سائقين</b> — جملةٌ صادقة بدل «0 دقائق»</figcaption></figure>
+ <figure><div class="picker dark" style="background:#1c1d21;border:0"><div class="row" style="margin-bottom:12px">${wm(16)}<span class="sp"></span><span class="mut" style="color:#aaa">${N("12")} ودجة</span></div><div class="pv" style="height:112px">${widget(R.request, "dark", "M")}</div><div class="mut" style="margin-top:4px">اطلب مشوارك الآن · ${N("4×2")}</div></div><figcaption class="cap"><b>قائمةُ الاختيار</b> — معاينةٌ بالشكل نفسه؛ والمطفأُ في البلد لا يُدرج</figcaption></figure>
+</div>`;
+document.getElementById("root").appendChild(st);
+
+/* ── آيفون */
+band("آيفون — الشاشة الرئيسيّة", "WidgetKit", "dark", { ...R, ...D }, true, ["request", "onTheWay", "quick", "wallet", "points", "recent", "online", "goal"]);
+band("آيفون — الشاشة الرئيسيّة", "WidgetKit", "light", { ...R, ...D }, true, ["request", "favorites", "quick", "wallet", "points", "nearest", "online", "sub"]);
+const ios = document.createElement("section");
+ios.className = "band night";
+ios.innerHTML = `<h2>آيفون — شاشةُ القفل والنشاطُ الحيّ وDynamic Island <i>Live Activity</i></h2><div class="sub">تتبع الرحلةَ الحيّة وحدها، وتنتهي بانتهائها</div><div class="wall" style="gap:30px">
+ <figure><div class="lock"><div style="text-align:center;font-size:70px;font-weight:300;line-height:1">${N("9:41")}</div><div class="row" style="justify-content:center;gap:14px;margin-top:16px">
+  <div class="acc-c ring">${ring(72, .7, 6)}<div class="col" style="align-items:center;line-height:1"><b>${N("3")}</b><span style="font-size:10px">دقائق</span></div></div>
+  <div class="acc-r"><b>السائق في الطريق</b><br>${N("12-34567")} · أبيض<br><span style="opacity:.7">${N("3")} دقائق</span></div>
+  <div class="acc-c"><div class="col" style="align-items:center;line-height:1.1"><span style="font-size:10px">نقاط</span><b>${N("850")}</b></div></div></div>
+  <div style="text-align:center;margin-top:14px;font-size:13px;opacity:.85">TAXO · الكبتن بعد ${N("3")} دقائق</div></div><figcaption class="cap"><b>إكسسواراتُ القفل</b> — دائريّة · مستطيلة · سطريّة (أحاديّةُ اللون كما يفرض النظام)</figcaption></figure>
+ <figure><div class="la"><div class="row">${wm(15)}<span class="sp"></span><span class="pill" style="background:rgba(255,255,255,.1)">${N("3")} دقائق</span></div>
+  <div class="row" style="margin-top:12px"><div class="avatar" style="border-color:#ff6a33">${ic("person", 28)}</div><div class="col"><b>السائق في الطريق</b><span style="font-size:12.5px;opacity:.7">${N("12-34567")} · سيدان بيضاء</span></div></div>
+  <div style="position:relative;margin-top:16px;height:22px"><div class="bar" style="background:rgba(255,255,255,.12);margin-top:8px"><b style="width:58%;background:linear-gradient(90deg,#f05a28,#ff8a5c)"></b></div>${topv("economy", "white", 30, "top:-4px;right:calc(58% - 15px);transform:rotate(-90deg)")}</div></div><figcaption class="cap"><b>النشاطُ الحيّ على شاشة القفل</b></figcaption></figure>
+ <figure><div class="col" style="gap:16px;align-items:center">
+  <div class="island" style="width:250px;height:38px;padding:0 14px;justify-content:space-between"><svg class="ixc" viewBox="0 8 48 34" style="font-size:24px;--ixc-back:#8f2f10;--ixc-cut:#000">${G.local_taxi}</svg><b style="color:#ff6a33">${N("3")} د</b></div>
+  <div class="island" style="width:38px;height:38px;justify-content:center"><svg class="ixc" viewBox="0 8 48 34" style="font-size:22px;--ixc-back:#8f2f10;--ixc-cut:#000">${G.local_taxi}</svg></div>
+  <div class="island" style="width:372px;border-radius:44px;padding:18px 22px;flex-direction:column;align-items:stretch">
+   <div class="row"><img src="out/economy-34-night-320.webp" style="width:92px"><div class="col"><b>السائق في الطريق</b><span style="font-size:12.5px;opacity:.7">${N("12-34567")} · أبيض</span></div><span class="sp"></span><b style="color:#ff6a33;font-size:24px">${N("3")} د</b></div>
+   <div class="bar" style="background:rgba(255,255,255,.12);margin-top:10px"><b style="width:58%;background:linear-gradient(90deg,#f05a28,#ff8a5c)"></b></div></div>
+ </div><figcaption class="cap"><b>Dynamic Island</b> — مضغوطة · دنيا · موسَّعة</figcaption></figure>
+</div>`;
+document.getElementById("root").appendChild(ios);
+
+const note = document.createElement("div");
+note.className = "note";
+note.innerHTML = `<h3>قواعدُ الودجات — كما في الأمر</h3>
+<b>الأرقامُ والأسماءُ في هذه اللوحة أمثلةٌ للتصميم وحدَه</b>؛ وفي الهاتف لا يظهر رقمٌ إلا من مصدره في الحساب، <b>وما لا مصدرَ له أو ميزتُه مطفأةٌ</b> يُعرض فراغاً لطيفاً أو لا يُدرج في قائمة الودجات.
+<b>لا رحلةَ تُطلب من الودجة</b>: كلُّ زرٍّ يفتح ورقةَ الطلب، والراكبُ يؤكّد. <b>لا رقمَ هاتفٍ أبداً</b>، وصورةُ الكبتن أثناء الرحلة وحدها. خلف <b>rider_widgets_plus</b> و<b>driver_widgets_plus</b> ومفاتيح البلد.
+<b>على أندرويد لا blur</b>: الزجاجُ تدرّجاتٌ وطبقاتٌ وخطُّ ضوءٍ علويّ — خفيفٌ على البطارية والذاكرة (Note 20). وتتحدّث الودجاتُ حين يتغيّر الحال لا بمؤقّت.
+الشعارُ وحده (التقاطع)، وأيقوناتُ النمط C، والسياراتُ الجديدة من اللوحة ١.
+<table><tr><th>الودجة</th><th>مصدرُ بياناتها</th></tr>${Object.values({ ...R, ...D }).map(d => `<tr><td><b>${d.name}</b></td><td>${d.src}</td></tr>`).join("")}</table>`;
+document.body.appendChild(note);
+window.BOARD_READY = Promise.all([...document.images].map((i) => i.decode().catch(() => null))).then(() => document.fonts.ready);
+</script>
+</body></html>

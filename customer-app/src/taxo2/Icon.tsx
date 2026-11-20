@@ -6,8 +6,10 @@
  * **والمجموعةُ الجديدةُ هي النمطُ C** (قرارُ المالك ١٧/١١/٢٠٢٦: «معتمدة»): ٣٦ رسماً ملوّناً على شبكة ٤٨ من `glyphsC.ts`، **وما ليس فيها يبقى
  * من الخطّ كما كان** — فالمجموعةُ الخطّيّةُ الأولى (`glyphs.ts`) لا تُرسم بعد اليوم (رفضها المالك ١٦/١١)، ويبقى ملفُّها حتى يُقرَّر حذفُه.
  *
- * و`art` لأيقونة الفئة: **مركبةُ النمط C** بثلاثة أرباع حين تشتعل المجموعةُ ويكون للاسم مركبة، وإلا الأيقونةُ نفسُها.
+ * و`art` لأيقونة الفئة: **سيارةُ TAXO ثلاثيّةُ الأبعاد** (`cars.ts`، أمرُ المالك ٢٠/١١ الثامن) لكلِّ اسمٍ له مركبة — نهاراً وليلاً بصورتين
+ * يُظهر الـCSS إحداهما، **و`car` مفتاحُ الفئة** إن عُرف (فلـ«مميّزة» و«تاكسي المدينة» سيّارتاهما).
  */
+import { carKey, carSrc, carSrcSet } from "./cars";
 import { GLYPHS_C, VEHICLES_C } from "./glyphsC";
 import { useIconSetV2 } from "./iconSet";
 import "./glyphs.css";
@@ -16,11 +18,30 @@ import "./glyphs.css";
  *  §٧٦-ع/٢): كان سهمُ الرجوع يشير يميناً في الفرنسيّة. والقلبُ في `primitives.css` (`.t2-icon-dir`). */
 const DIRECTIONAL = new Set(["arrow_forward", "arrow_back", "chevron_left", "chevron_right"]);
 
-export function Icon({ name, fill = false, className, art = false }: { name: string; fill?: boolean; className?: string; art?: boolean }) {
+export function Icon({
+  name,
+  fill = false,
+  className,
+  art = false,
+  car = null,
+}: {
+  name: string;
+  fill?: boolean;
+  className?: string;
+  art?: boolean;
+  /** مفتاحُ الفئة لأيقونة `art` — يختار سيّارتَها حين يكون لها سيّارة. */
+  car?: string | null;
+}) {
   const v2 = useIconSetV2();
   const classes = ["t2-icon", fill ? "fill" : null, DIRECTIONAL.has(name) ? "t2-icon-dir" : null, className].filter(Boolean).join(" ");
-  if (v2 && art && VEHICLES_C.has(name)) {
-    return <svg className={`t2-car ixc ${className ?? ""}`.trim()} viewBox="0 8 48 34" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPHS_C[name] }} />;
+  if (art && VEHICLES_C.has(name)) {
+    const key = carKey(name, car);
+    return (
+      <span className={`t2-car t2-car3 ${className ?? ""}`.trim()} aria-hidden="true">
+        <img className="d" src={carSrc(key, false)} srcSet={carSrcSet(key, false)} sizes="120px" alt="" decoding="async" loading="lazy" />
+        <img className="n" src={carSrc(key, true)} srcSet={carSrcSet(key, true)} sizes="120px" alt="" decoding="async" loading="lazy" />
+      </span>
+    );
   }
   if (v2 && GLYPHS_C[name]) {
     return (

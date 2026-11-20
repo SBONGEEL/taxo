@@ -10,6 +10,7 @@
  * على فئة، وهو بعينه ما أُصلح في «عطب الإعفاء».
  */
 
+import { carTopSrc } from "@/taxo2/cars";
 import { markerPx, skinAssetUrl } from "@/lib/skins";
 import type { MapSkin, VehicleSkin } from "@/api/types";
 
@@ -59,7 +60,10 @@ function rotatable(child: Element): HTMLElement {
 export function carElement(px: number, muted = false): HTMLElement {
   const element = document.createElement("div");
   const fill = muted ? "var(--mut)" : "var(--tx)";
-  element.innerHTML = `
+  // **وفوقها سيارةُ TAXO من الأعلى** (أمرُ المالك ٢٠/١١ الثامن) — تغطّي المرسومةَ حين تصل، وتبقى المرسومةُ إن لم تصل؛
+  // **ولمن لا اشتراكَ له رماديّةٌ** كما كانت
+  const top = Math.round(px * 0.74);
+  element.innerHTML = `<span style="position:relative;display:block;width:${px}px;height:${px}px">
     <svg width="${px}" height="${px}" viewBox="0 0 24 24" aria-hidden="true"
          style="filter: ${SHADOW}">
       <g fill="${fill}" stroke="var(--inv)" stroke-width="0.7">
@@ -73,7 +77,7 @@ export function carElement(px: number, muted = false): HTMLElement {
       </g>
       <path d="M8.6 6.6c.5-1.1 1.7-1.7 3.4-1.7s2.9.6 3.4 1.7l.5 1.6c-1.2-.5-2.5-.7-3.9-.7
                s-2.7.2-3.9.7Z" fill="var(--inv)" opacity="0.85"/>
-    </svg>`;
+    </svg><img src="${carTopSrc()}" alt="" decoding="async" style="position:absolute;left:50%;top:50%;width:${top}px;height:${top * 2}px;transform:translate(-50%,-50%);pointer-events:none;${muted ? "filter:grayscale(1);" : ""}"></span>`;
   element.replaceChildren(rotatable(element.firstElementChild!));
   element.style.width = "max-content";
   element.style.willChange = "transform";

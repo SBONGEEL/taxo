@@ -711,7 +711,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                   onClick={() => c.setCategory(option)}
                 >
                   <span className="t2-cat-icon">
-                    <Icon name={CATEGORY_ICON[option] ?? "local_taxi"} art />
+                    <Icon name={CATEGORY_ICON[option] ?? "local_taxi"} art car={option} />
                   </span>
                   <span className="t2-cat-main">
                     <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>

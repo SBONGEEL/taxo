@@ -317,7 +317,7 @@ async def test_every_bundled_drawing_passes_the_same_allowlist() -> None:
         for slot in ("store", "map"):
             path = skin_artwork.bundled_path(row["key"], slot)  # type: ignore[arg-type]
             art = skin_artwork.render(path.read_bytes())
-            assert art.media_type == "image/svg+xml"
+            assert art.media_type == "image/webp"
 
 
 async def test_the_manifest_and_the_folder_do_not_drift() -> None:
@@ -467,7 +467,7 @@ async def test_a_bundled_drawing_can_be_attached_without_any_upload(
         f"/admin/vehicle-skins/{skin_id}/artwork/map", headers=admin_headers
     )
     assert served.status_code == 200
-    assert served.headers["content-type"] == "image/svg+xml"
+    assert served.headers["content-type"] == "image/webp"
     assert "sandbox" in served.headers["content-security-policy"]
 
     # **مفتاحٌ لا وجودَ له لا يفتح ملفاً** — ولا يخرج من الجذر

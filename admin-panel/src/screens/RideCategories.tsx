@@ -8,6 +8,7 @@
  * هما وحدَهما ما يُكتب في صفِّ المدمجة من هنا؛ واسمُها ووصفُها كما هما.
  */
 
+import { Icon } from "@/taxo2/Icon";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -244,6 +245,10 @@ function CategoryCard({
   return (
     <div className="rounded-16 border border-line bg-surface p-18">
       <div className="flex items-start gap-12">
+        {/* **سيارةُ الفئة كما يراها الراكب** (أمرُ المالك ٢٠/١١ الثامن) — من مفتاحها ثمّ أيقونتها */}
+        <span style={{ fontSize: 34 }}>
+          <Icon name={row.icon} art car={row.key} />
+        </span>
         <div className="flex-1">
           <h2 className="text-16 font-bold text-ink">
             {row.name}{" "}

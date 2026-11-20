@@ -132,7 +132,9 @@ CACHE_SECONDS = 30 * 24 * 3600
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets" / "skins"
 
 #: لاحقةُ ملفِّ كلِّ خانةٍ داخل `ASSETS_DIR`.
-_ASSET_SUFFIX: dict[str, str] = {"store": "-store.svg", "map": "-map.svg"}
+#: **WebP لا SVG** (أمرُ المالك ٢٠/١١ الثامن): رسومُ العاديّة والمميّزة صارت نماذجَ TAXO ثلاثيّةَ الأبعاد من `design/cars-3d/` —
+#: والمفتاحُ (`asset_key`) هو هو، فلا صفَّ في القاعدة يتغيّر.
+_ASSET_SUFFIX: dict[str, str] = {"store": "-store.webp", "map": "-map.webp"}
 
 #: **مفتاحُ الرسمة المولَّدة** — حروفٌ صغيرةٌ وأرقامٌ وشرطات، فلا يصير مساراً.
 _ASSET_KEY = re.compile(r"^[a-z][a-z0-9-]{1,62}$")
@@ -601,7 +603,7 @@ def artwork_response(
     """
     if asset_key:
         path = bundled_path(asset_key, slot)
-        media_type = "image/svg+xml"
+        media_type = "image/webp"
     elif stored_path:
         path = storage.resolve(stored_path)
         media_type = "image/svg+xml" if path.suffix == ".svg" else "image/webp"

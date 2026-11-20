@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TAXO cars studio</title></head>
+<body style="margin:0;background:transparent">
+<script type="module">
+import "./cars.js";
+// قصٌّ على حدود الشفافيّة ثمّ وضعٌ في إطارٍ بنسبةٍ ثابتة، ومقاساتٌ عدّة
+window.finish = async (url, { aspect = 1.6, pad = 0.06, sizes = [1280], type = "image/webp", quality = 0.9 }) => {
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d");
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    if (d[(y * c.width + x) * 4 + 3] > 6) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  let fw = bw * (1 + 2 * pad), fh = bh * (1 + 2 * pad);
+  if (fw / fh < aspect) fw = fh * aspect; else fh = fw / aspect;
+  const out = {};
+  for (const w of sizes) {
+    const h = Math.round(w / aspect);
+    const o = document.createElement("canvas");
+    o.width = w; o.height = h;
+    const og = o.getContext("2d");
+    og.imageSmoothingQuality = "high";
+    const k = w / fw;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    og.drawImage(c, (w / 2) - cx * k, (h / 2) - cy * k, c.width * k, c.height * k);
+    out[w] = o.toDataURL(type, quality);
+  }
+  return out;
+};
+</script>
+</body></html>

@@ -27,6 +27,14 @@ svg.t2-icon.t2-glyph {
 .t2-glyph .a { stroke: var(--t2-accent); }
 .t2-glyph.fill .t { fill: var(--t2-glyph-tint-on); }
 
+/* ── سياراتُ TAXO ثلاثيّةُ الأبعاد (أمرُ المالك ٢٠/١١ الثامن) — صورتان، نهارٌ وليل، **ويُحمَّل ما يُرى وحده** (`loading="lazy"`
+   لا يجلب المخفيَّ بـ`display: none`) */
+.t2-car3 { width: 3em; height: 1.75em; flex: none; display: block; position: relative; }
+.t2-car3 img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.t2-car3 .n { display: none; }
+html.dark .t2-car3 .d { display: none; }
+html.dark .t2-car3 .n { display: block; }
+
 /* ── رسومُ الفئات */
 svg.t2-car { width: 3em; height: 1.75em; flex: none; display: block; overflow: visible; }
 .t2-car .cb { fill: var(--t2-accent); }

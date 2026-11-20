@@ -38,7 +38,7 @@ router = APIRouter(prefix="/vehicle-skins", tags=["vehicle-skins"])
 #: مجلَّدُ الرسمات المولَّدة داخل الصورة — يملؤه `services/skin_artwork.py`
 ASSET_DIR = "skins"
 #: اصطلاحُ اسم الملفّ المولَّد: `{asset_key}-{kind}.svg`
-ASSET_SUFFIX = ".svg"
+ASSET_SUFFIX = ".webp"  # نماذجُ TAXO ثلاثيّةُ الأبعاد (أمرُ المالك ٢٠/١١ الثامن)
 _ASSET_ROOT = Path(__file__).resolve().parents[1] / "assets" / ASSET_DIR
 
 
@@ -154,7 +154,7 @@ async def art(skin_id: uuid.UUID, kind: str, session: DbSession) -> FileResponse
         path = _ASSET_ROOT / f"{skin.asset_key}-{kind}{ASSET_SUFFIX}"
         if not path.is_file():
             raise NotFound("رسمةُ هذه المركبة غير موجودة")
-        media_type = "image/svg+xml"
+        media_type = "image/webp"
     else:
         raise NotFound("رسمةُ هذه المركبة غير موجودة")
 

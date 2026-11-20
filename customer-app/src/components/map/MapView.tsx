@@ -16,6 +16,7 @@
  * التطبيق تعمل — الطلبُ يقع بالإحداثيات لا بالخريطة.
  */
 
+import { carTopSrc } from "@/taxo2/cars";
 import mapboxgl from "mapbox-gl";
 import {
   type CSSProperties,
@@ -109,9 +110,12 @@ function calmLook(instance: mapboxgl.Map, host: HTMLElement, labels: boolean) {
   }
 }
 
-/** **سيارةُ الهوية** (TaxoMap): جسمٌ بالحبر بحافّةٍ بيضاء، وزجاجٌ أماميٌّ بالجمر وخلفيٌّ أخفت — 16×30. */
+/** **سيارةُ الهوية** (TaxoMap): جسمٌ بالحبر بحافّةٍ بيضاء، وزجاجٌ أماميٌّ بالجمر وخلفيٌّ أخفت — 16×30.
+ *
+ * **وفوقها سيارةُ TAXO ثلاثيّةُ الأبعاد من الأعلى** (أمرُ المالك ٢٠/١١ الثامن): صورةٌ تغطّي المرسومةَ حين تصل، **وإن لم تصل بقيت المرسومة**
+ * — فالعلامةُ لا تفرغ أبداً على شبكةٍ بطيئة (قاعدةُ `driverElement` نفسُها). */
 function t2CarMarkup(): string {
-  return `<span class="t2-map-car"><i class="t2-map-car-front"></i><i class="t2-map-car-back"></i></span>`;
+  return `<span class="t2-map-car"><i class="t2-map-car-front"></i><i class="t2-map-car-back"></i><img class="t2-map-car3" src="${carTopSrc()}" alt="" decoding="async"></span>`;
 }
 const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
