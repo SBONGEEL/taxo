@@ -24,7 +24,7 @@ from sqlalchemy.orm import selectinload
 if TYPE_CHECKING:  # pragma: no cover - للتلميح فقط
     from app.schemas.party import DriverPartyOut
 
-from app.core.exceptions import Conflict, DocumentsIncomplete, PermissionDenied
+from app.core.exceptions import Conflict, DocumentsIncomplete, PermissionDenied, RidingAsRider
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
@@ -91,6 +91,14 @@ async def go_online(
     لا يدخل الكبتنُ الفهرسَ الجغرافي هنا: لا موقع له بعد. أول بث موقع هو ما
     يجعله مرئياً للتوزيع فعلاً.
     """
+    # **لا استقبالَ ورحلتُه راكباً جارية** (أمرُ المالك ٢٠/١١ الثالث §٤) — هنا لا في الراوتر: المقبسُ يمرّ بالباب نفسِه عند كلِّ اتصال
+    from app.models.ride import ACTIVE_RIDER_STATUSES, Ride
+
+    riding = await session.scalar(
+        select(Ride.id).where(Ride.rider_id == driver.user_id, Ride.status.in_(ACTIVE_RIDER_STATUSES)).limit(1)
+    )
+    if riding is not None:
+        raise RidingAsRider()
     context = await presence_context(session, driver)
     driver.is_online = True
     return context

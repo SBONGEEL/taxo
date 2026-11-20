@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
-from app.core.exceptions import Conflict, NotFound, PermissionDenied, RideOfferExpired
+from app.core.exceptions import Conflict, NotFound, OnlineAsCaptain, PermissionDenied, RideOfferExpired
 from app.models.driver import Driver
 from app.models.user import User
 from app.models.enums import CancelReasonCode, CancellationChargeStatus, DriverStatus, FeatureKey, RideStatus, UserRole
@@ -300,6 +300,11 @@ async def request_ride(
     """
     # **السوقُ المغلقُ لا يُطلب فيه جديد** (SPEC §٧٤-أ/٢) — هنا لا في الخدمة: الحجزُ الذي سبق الإغلاقَ يُنشئ رحلتَه من الخدمة ويُنفَّذ
     await markets.require_open_for(session, rider, door="ride")
+    # **لا يطلب راكباً وهو متّصلٌ كبتناً** (أمرُ المالك ٢٠/١١ الثالث §٤) — في بابِ الطلب الفوريّ هنا لا في الخدمة، **وعن قصد**:
+    # الحجزُ المجدولُ يُنشئ رحلتَه من الخدمة في موعده، ورفضُه صامتاً لأن صاحبَه متّصلٌ ساعتَها يُسقط حجزاً دفع له — والوجهُ الآخر
+    # (لا استقبالَ ورحلتُه راكباً جارية) في `drivers.go_online` فيحرس الحجزَ أيضاً
+    if await session.scalar(select(Driver.is_online).where(Driver.user_id == rider.id)):
+        raise OnlineAsCaptain()
     # **حدُّ الإساءة قبل أيِّ عمل** (§٩٢-د): طلباتُ التفاوض وتعديلاتُ السعر معاً
     if payload.negotiation is not None:
         from app.core.redis_client import get_redis_client as _redis

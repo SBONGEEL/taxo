@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 from app.models.driver import Driver
 from app.models.enums import DriverStatus, UserRole, WalletOwnerType, WalletTransactionType
 from app.models.user import User
-from tests.helpers import DRIVER, RIDER, approved_driver, auth, register
+from tests.helpers import DRIVER, DROPOFF, PICKUP, RIDER, approved_driver, auth, bring_online, register, request_ride
 
 pytestmark = pytest.mark.asyncio
 
@@ -127,6 +127,41 @@ async def test_a_person_is_never_matched_with_himself(client: AsyncClient, sessi
     assert driver_id in anyone, "الكبتنُ غيرُ مؤهَّلٍ أصلاً — الاختبارُ لا يقيس شيئاً"
     assert driver_id not in himself
     assert driver_id in other
+
+
+async def test_a_person_cannot_accept_his_own_ride(client: AsyncClient, session_factory) -> None:
+    """**البابُ الثاني بعد التوزيع** (أمرُ المالك ٢٠/١١ الثالث §٤): حسابٌ بالدورين يطلب راكباً ثمّ يحاول القبولَ كبتناً — لا يُقبل
+    والرحلةُ بلا كبتن. (التوزيعُ لا يعرضها عليه أصلاً — `test_a_person_is_never_matched_with_himself` — وقِيس على الإنتاج ٢٠/١١.)"""
+    from app.models.ride import Ride
+
+    captain = await approved_driver(client, session_factory)
+    as_rider = auth(await _enroll(client, DRIVER, "rider"))
+    ride = await request_ride(client, as_rider)
+    took = await client.post(f"/rides/{ride['id']}/accept", headers=captain["headers"])
+    assert took.status_code in (403, 404, 409), took.text
+    async with session_factory() as session:
+        row = await session.get(Ride, uuid.UUID(ride["id"]))
+        assert row is not None and row.driver_id is None
+
+
+async def test_online_as_captain_cannot_request_as_rider(client: AsyncClient, session_factory) -> None:
+    captain = await approved_driver(client, session_factory)
+    as_rider = auth(await _enroll(client, DRIVER, "rider"))
+    await bring_online(client, captain)
+    refused = await client.post("/rides", json={"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": "economy"}, headers=as_rider)
+    assert refused.status_code == 409 and refused.json()["code"] == "online_as_captain", refused.text
+    # **وبعد إيقاف الاستقبال يُطلب** — الرفضُ عن الحالة لا عن الحساب
+    off = await client.post("/drivers/me/offline", headers=captain["headers"])
+    assert off.status_code in (200, 204), off.text
+    await request_ride(client, as_rider)
+
+
+async def test_riding_as_rider_cannot_go_online_as_captain(client: AsyncClient, session_factory) -> None:
+    captain = await approved_driver(client, session_factory)
+    as_rider = auth(await _enroll(client, DRIVER, "rider"))
+    await request_ride(client, as_rider)
+    refused = await client.post("/drivers/me/online", headers=captain["headers"])
+    assert refused.status_code == 409 and refused.json()["code"] == "riding_as_rider", refused.text
 
 
 async def test_a_self_referral_cannot_exist_across_roles(session_factory, client: AsyncClient) -> None:
