@@ -2006,5 +2006,11 @@
   "بلّغتَ عن هذا من قبل": "Vous l’avez déjà signalé",
   "شكراً — البلاغُ ظاهرٌ الآن على الخريطة": "Merci — le signalement est maintenant visible sur la carte",
   "شكراً — يظهر حين يؤكّده كبتنٌ آخر": "Merci — il apparaîtra quand un autre chauffeur le confirmera",
-  "بلّغ عن الطريق": "Signaler la route"
+  "بلّغ عن الطريق": "Signaler la route",
+  "لم نتمكن من تحديد موقعك الحالي. تأكد أن زر الموقع (GPS) مفعّل في هاتفك، ثم اضغط تحديث الموقع": "Nous n'avons pas pu déterminer votre position actuelle. Vérifiez que la localisation (GPS) est activée sur votre téléphone, puis appuyez sur « Actualiser la position »",
+  "الإشارة ضعيفة، اقترب من نافذة أو اخرج قليلاً ثم اضغط تحديث": "Le signal est faible : approchez-vous d'une fenêtre ou sortez un instant, puis appuyez sur Actualiser",
+  "تحديث الموقع الحالي": "Actualiser la position",
+  "فتح إعدادات الموقع": "Ouvrir les réglages de localisation",
+  "فتح إذن الموقع": "Ouvrir l'autorisation de localisation",
+  "جارٍ تحديد موقعك…": "Localisation en cours…"
 }

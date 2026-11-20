@@ -1132,7 +1132,16 @@ async def _final_fare(
     base = ride.estimated_fare
     base_lines: list[dict[str, str]] = list(ride.fare_lines or [])
     # **والسعرُ المتّفق عليه لا يعيده انحرافُ الطريق** (§٩٢-ج): `estimated_fare` وسطرُه كُتبا عند الاتفاق (`negotiation.agree`)
-    if ride.negotiated_fare is None and actual_km is not None and route.deviates(ride.distance_km, actual_km):
+    # **وما أكّده الراكبُ بتعديل الوجهة لا يعيده انحرافُ الطريق أيضاً** (§١٠٩-أ/٤): «الأجرةُ النهائيّةُ = ما أكّده» بنصّ المالك
+    from app.services import destination_change
+
+    fixed_by_rider = await destination_change.has_confirmed(session, ride.id)
+    if (
+        ride.negotiated_fare is None
+        and not fixed_by_rider
+        and actual_km is not None
+        and route.deviates(ride.distance_km, actual_km)
+    ):
         rule = await pricing.get_rule(
             session, ride.country_code, ride.vehicle_category
         )

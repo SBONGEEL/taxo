@@ -657,6 +657,8 @@ export type FeatureKey =
   | "rider_order_sheet_v2"
   | "icons_v2"
   | "places_search_v2"
+  | "destination_change_searching"
+  | "destination_change_in_ride"
   | "permissions_center"
   | "notification_tones_enabled"
   | "quick_tile"

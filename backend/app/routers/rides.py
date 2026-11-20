@@ -47,8 +47,11 @@ from app.schemas.ride import (
     FareAmountIn,
     NegotiationCounterOut,
     NegotiationStateOut,
+    DestinationChangeOut,
+    DestinationQuoteIn,
 )
 from app.services import approach, avatar, cancellation, rider_photo
+from app.services import destination_change
 from app.services import eta, markets, negotiation
 from app.services import (
     categories,
@@ -1428,3 +1431,79 @@ async def _driver_ride(
     if ride.driver_id != driver.id:
         raise NotFound("الرحلة غير موجودة")
     return ride
+
+
+# ------------------------------------------------------------------ تعديلُ الوجهة (§١٠٩-أ)
+
+
+async def _rider_ride(session: AsyncSession, ride_id: uuid.UUID, user: User) -> Ride:
+    """**للراكب صاحب الرحلة وحدَه** — الكبتنُ يُخبَر ولا يغيّر، والملكيةُ أوّلاً (القسم 14)."""
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    if ride.rider_id != user.id:
+        raise PermissionDenied("تعديلُ الوجهة للراكب صاحب الرحلة")
+    return ride
+
+
+@router.post(
+    "/{ride_id}/destination/quote",
+    response_model=DestinationChangeOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def quote_destination(
+    ride_id: uuid.UUID,
+    payload: DestinationQuoteIn,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> DestinationChangeOut:
+    """**سعرُ الوجهة الجديدة — ولا يتغيّر شيء.** يعيش العرضُ دقيقتين، ولا يسري إلا بـ`confirm`."""
+    ride = await _rider_ride(session, ride_id, user)
+    change = await destination_change.quote(
+        session, redis, ride=ride, rider=user, lat=payload.lat, lng=payload.lng, address=payload.address
+    )
+    await session.commit()
+    return DestinationChangeOut.from_row(change, ride)
+
+
+@router.post("/{ride_id}/destination/{change_id}/confirm", response_model=RideOut)
+async def confirm_destination(
+    ride_id: uuid.UUID,
+    change_id: uuid.UUID,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> RideOut:
+    """**تأكيدُ الراكب** — الوجهةُ والأجرةُ تتغيّران معاً أو لا يتغيّر شيء. والتأكيدُ الثاني (شبكةٌ انقطعت بعد الإرسال) يردّ الرحلةَ
+    نفسَها بلا إشعارٍ ثانٍ."""
+    ride = await _rider_ride(session, ride_id, user)
+    ride, _change, applied = await destination_change.confirm(
+        session, redis, ride=ride, change_id=change_id, actor=user
+    )
+    await session.commit()
+    if applied:
+        await notifications.publish_destination_changed(session, redis, ride=ride)
+    return _to_out(ride)
+
+
+@router.post("/{ride_id}/destination/{change_id}/decline", response_model=DestinationChangeOut)
+async def decline_destination(
+    ride_id: uuid.UUID,
+    change_id: uuid.UUID,
+    user: CurrentUser,
+    session: DbSession,
+) -> DestinationChangeOut:
+    """**رفضُ الراكب لا يمسّ الرحلة** — يُكتب في تاريخها وحدَه."""
+    ride = await _rider_ride(session, ride_id, user)
+    change = await destination_change.decline(session, ride=ride, change_id=change_id)
+    await session.commit()
+    return DestinationChangeOut.from_row(change, ride)
+
+
+@router.get("/{ride_id}/destination/changes", response_model=list[DestinationChangeOut])
+async def list_destination_changes(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> list[DestinationChangeOut]:
+    """**تاريخُ الوجهة** للطرفين — ما عُرض وما أُكِّد وما رُفض وما انقضى."""
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    rows = await destination_change.history(session, ride.id)
+    return [DestinationChangeOut.from_row(row, ride) for row in rows]

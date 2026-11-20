@@ -23,6 +23,9 @@ const SRC = join(process.cwd(), "src");
 /** اتحاداتُ واجهةٍ خالصة تشترك في أسماءٍ مع تعدادات الخلفية بالمصادفة.
  *  كلُّ إعفاءٍ هنا يذكر لماذا هو اتحادُ عرضٍ لا مرآةُ عقد. */
 const UI_UNIONS = new Set([
+  // **طورُ «تعديل الوجهة»** (SPEC §١٠٩-أ، src/lib/destination-change.ts) — ثابتا `models/destination_change.PHASE_*` نصّاً لا `StrEnum`،
+  // و`searching` فيه يوافق حالَ رحلةٍ بالصدفة لا بالمرآة
+  "DestinationPhase",
   // **مصدرُ دبّوس الانطلاق وشكلُ سطره** (أمرُ المالك ٢٠٢٦-١١-١٩، src/lib/pickup-confirm.ts) — حالُ عرضٍ في الجهاز وحدَه، لا يُرسل إلى الخلفيّة
   "PickupSource",
   "PickupLineKind",

@@ -236,8 +236,8 @@ export function currentPosition(): Promise<Coordinates | null> {
  *  الواجهة، و`unavailable` لمهلةٍ انقضت بلا جواب (لا يُقال للراكب «مطفأ» وهو ليس كذلك). والدقّةُ بالأمتار كما يعطيها الجهاز. */
 export type PositionFix =
   | { kind: "fix"; point: Coordinates; accuracy_m: number | null }
-  | { kind: "denied" }
-  | { kind: "unavailable" };
+  | { kind: "denied"; code?: number | null }
+  | { kind: "unavailable"; code?: number | null };
 
 export function currentFix(): Promise<PositionFix> {
   if (demoActive()) return Promise.resolve({ kind: "fix", point: DEMO_CENTER, accuracy_m: null });
@@ -251,7 +251,8 @@ export function currentFix(): Promise<PositionFix> {
           accuracy_m: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
         }),
       // 1 = PERMISSION_DENIED · 2 = POSITION_UNAVAILABLE (GPS مطفأ غالباً) · 3 = TIMEOUT
-      (error) => resolve(error.code === 3 ? { kind: "unavailable" } : { kind: "denied" }),
+      // **والرمزُ يُحمل** — «لم نتمكن من تحديد موقعك» (§١٠٩-ج) يقرؤه ليقول السببَ (`locationCause`)
+      (error) => resolve(error.code === 3 ? { kind: "unavailable", code: 3 } : { kind: "denied", code: error.code }),
       { enableHighAccuracy: true, timeout: 8_000, maximumAge: 30_000 },
     );
   });

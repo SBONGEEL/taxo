@@ -146,3 +146,29 @@ export async function openPermission(key: PermissionKey): Promise<OpenedAt> {
     return "none";
   }
 }
+
+// ── «لم نتمكن من تحديد موقعك» (SPEC §١٠٩-ج) ─────────────────────────────
+
+/** **إذنُ الموقع وزرُّ الموقع في الهاتف معاً** — الثاني ليس إذناً فلا صفَّ له في المركز (`ordered` يُسقط ما لا شرحَ له)؛
+ *  والغلافُ الأقدمُ لا يقوله فيبقى `unknown` — **ولا يُخمَّن**. */
+export async function readLocationSignals(): Promise<{ permission: PermissionState; services: PermissionState }> {
+  const unknown = { permission: "unknown" as PermissionState, services: "unknown" as PermissionState };
+  if (!centerAvailable()) return unknown;
+  try {
+    const rows = ((await native.status()).rows ?? []) as unknown as { key: string; state: PermissionState }[];
+    const of = (key: string) => rows.find((row) => row.key === key)?.state ?? "unknown";
+    return { permission: of("location"), services: of("location_services") };
+  } catch {
+    return unknown;
+  }
+}
+
+/** **صفحةُ «الموقع» في إعدادات الهاتف** حيث زرُّ GPS — في الغلاف الذي يعرفها وحدَه (`readLocationSignals().services` معروف) */
+export async function openLocationServices(): Promise<OpenedAt> {
+  if (!centerAvailable()) return "none";
+  try {
+    return (await native.open({ key: "location_services" as PermissionKey })).opened ?? "none";
+  } catch {
+    return "none";
+  }
+}

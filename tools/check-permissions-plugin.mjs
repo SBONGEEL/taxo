@@ -34,7 +34,8 @@ for (const name of PLUGINS) {
   }
 }
 
-for (const lib of ["permissions-center.ts", "haptics.ts"]) {
+// و`location-help.ts` (SPEC §١٠٩-ج): رسالةُ «لم نتمكن من تحديد موقعك» بنصّ المالك حرفاً — ومنسوخةٌ لا تفترق جملتُها بين التطبيقين
+for (const lib of ["permissions-center.ts", "haptics.ts", "location-help.ts"]) {
   const [la, lb] = ["driver-app", "customer-app"].map((app) => readFileSync(join(ROOT, app, "src/lib", lib), "utf8"));
   if (la !== lb) fail(`lib/${lib} يفترق بين التطبيقين؛ انسخ أحدهما فوق الآخر بعد قراءة الفرق`);
 }

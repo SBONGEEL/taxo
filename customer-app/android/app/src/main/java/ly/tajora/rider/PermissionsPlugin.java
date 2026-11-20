@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
@@ -14,6 +15,7 @@ import android.provider.Settings;
 
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.location.LocationManagerCompat;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -110,6 +112,10 @@ public class PermissionsPlugin extends Plugin {
         JSArray rows = new JSArray();
         if (declared(Manifest.permission.ACCESS_FINE_LOCATION)) {
             put(rows, "location", granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION));
+            // **زرُّ الموقع في الهاتف** (SPEC §١٠٩-ج) — غيرُ إذن التطبيق: إذنٌ ممنوحٌ وGPS مطفأٌ لا موقعَ لهما. يقرؤه «لم نتمكن من
+            // تحديد موقعك» ليقول السببَ الصحيح ويفتح الصفحةَ الصحيحة، **ولا يُعرض صفّاً في مركز الأذونات** (ليس إذناً)
+            LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+            put(rows, "location_services", lm == null ? null : LocationManagerCompat.isLocationEnabled(lm));
         }
         if (declared("android.permission.ACCESS_BACKGROUND_LOCATION")) {
             // قبل أندرويد ١٠ لا إذنَ منفصلاً — الموقعُ يكفي
@@ -187,6 +193,10 @@ public class PermissionsPlugin extends Plugin {
                 if (Build.VERSION.SDK_INT >= 34) {
                     exact = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + pkg));
                 }
+                break;
+            case "location_services":
+                // **صفحةُ «الموقع» في إعدادات الهاتف** — حيث زرُّ GPS نفسُه، لا أذوناتُ التطبيق
+                exact = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                 break;
             case "autostart":
                 if (openVendor()) {

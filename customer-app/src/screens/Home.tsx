@@ -64,9 +64,15 @@ import { usePickupSuggestion } from "@/lib/pickup-suggestion";
 import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 import { useBackLayer } from "@/lib/back-layers";
 import { SEARCH_V2_FLAG } from "@/lib/place-search";
-import { DEFAULT_CENTER, currentFix, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
+import { DEFAULT_CENTER, currentFix, currentPosition, reverseArea, reverseGeocode, type Place, type PositionFix } from "@/lib/geocode";
 import { movedEnough, pickupLine as pickupConfirmLine, refreshOnResume, snapToRoad, type LocationState, type PickupSource } from "@/lib/pickup-confirm";
-import { centerAvailable as permissionsCenterAvailable, openPermission } from "@/lib/permissions-center";
+import {
+  centerAvailable as permissionsCenterAvailable,
+  openLocationServices,
+  openPermission,
+  readLocationSignals,
+} from "@/lib/permissions-center";
+import { actionFor, locationCause, messageFor, type LocationCause } from "@/lib/location-help";
 import { noDestination } from "@/lib/hourly";
 import { clearPendingRide, readPendingRide, savePendingRide } from "@/lib/ride-topup";
 import { isActive, useRide } from "@/lib/ride";
@@ -102,6 +108,12 @@ interface AgainState {
   pickupAddress: string | null;
   dropoff: Coordinates;
   dropoffAddress: string | null;
+}
+
+/** **سببُ غياب الموقع** (§١٠٩-ج) — رمزُ المتصفّح مع ما يقوله الغلاف (إذنُ التطبيق وزرُّ GPS) */
+async function diagnoseFix(fix: Exclude<PositionFix, { kind: "fix" }>): Promise<LocationCause> {
+  const signals = await readLocationSignals();
+  return locationCause({ errorCode: fix.code ?? null, ...signals });
 }
 
 export function HomeScreen() {
@@ -143,6 +155,11 @@ export function HomeScreen() {
   // يحتاج كلُّ بابٍ يضع الانطلاقَ أن يتذكّر وسمَه، وما لم يُوسَم لا يُقرأ «موقعك الحالي» خطأً.
   const [autoPickup, setAutoPickup] = useState<{ point: Coordinates; accuracy_m: number | null } | null>(null);
   const [locationState, setLocationState] = useState<LocationState>("unknown");
+  // **«لم نتمكن من تحديد موقعك»** (أمرُ المالك ٢٠٢٦-١١-٢٠، SPEC §١٠٩-ج) — السببُ حين لا قراءة، و`null` حين وُجد الموقع؛
+  // و«تحديث الموقع الحالي» طلبٌ واحدٌ في كلِّ مرّة (`locatingRef`) لا طلباتٌ تتراكم بالنقر
+  const [locationHelp, setLocationHelp] = useState<LocationCause | null>(null);
+  const [locating, setLocating] = useState(false);
+  const locatingRef = useRef(false);
   const pickupSource: PickupSource =
     pickup && autoPickup && pickup.lat === autoPickup.point.lat && pickup.lng === autoPickup.point.lng ? "gps" : "manual";
   const [dropoff, setDropoff] = useState<Coordinates | null>(null);
@@ -285,9 +302,11 @@ export function HomeScreen() {
   const [routeLine, setRouteLine] = useState<number[][] | null>(null);
   /** **مسارُ الأجرة قبل الطلب** (SPEC §١٠٢) — تضعه ورقةُ الطلب الجديدة وحدَها، ومطفأةً لا يُكتب أبداً */
   const [previewLine, setPreviewLine] = useState<number[][] | null>(null);
+  // **ومفتاحُه الرحلةُ ووجهتُها** — «تعديل الوجهة» (SPEC §١٠٩-أ/٥) يمحو الخطَّ في الخلفيّة فيُجلب إلى الوجهة الجديدة
   const drawableRide = ride && tracking && ride.status !== "searching" && ride.driver
     ? ride.id
     : null;
+  const routeKey = drawableRide ? `${drawableRide}:${ride!.dropoff.lat},${ride!.dropoff.lng}` : null;
   useEffect(() => {
     if (!drawableRide) {
       setRouteLine(null);
@@ -303,7 +322,8 @@ export function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [drawableRide]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeKey]);
 
   // رحلةٌ انتهت أو أُلغيت تبقى على الشاشة حتى يراها صاحبها: شاشة الدفع تلي
   // `completed` مباشرةً في تدفّق القسم 5، و«لم نجد كبتناً» خبرٌ يُقرأ لا حالةٌ
@@ -338,8 +358,12 @@ export function HomeScreen() {
       if (fix.kind !== "fix") {
         // **مهلةٌ بلا جوابٍ ليست رفضاً** — لا يُقال للراكب «مطفأ» وهو ليس كذلك
         if (fix.kind === "denied") setLocationState("denied");
+        void diagnoseFix(fix).then((cause) => {
+          if (!cancelled) setLocationHelp(cause);
+        });
         return;
       }
+      setLocationHelp(null);
       setLocationState("granted");
       setCenter(fix.point);
       setPickup((current) => current ?? fix.point);
@@ -379,6 +403,42 @@ export function HomeScreen() {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
+
+  /** **«تحديث الموقع الحالي»** (§١٠٩-ج) — طلبٌ واحدٌ في كلِّ مرّة؛ وُجد ⇐ تختفي الرسالةُ وتنتقل الخريطةُ إليه، وإلا يُقال السببُ الجديد */
+  async function refreshLocation() {
+    if (locatingRef.current) return;
+    locatingRef.current = true;
+    setLocating(true);
+    try {
+      const fix = await currentFix();
+      if (fix.kind !== "fix") {
+        if (fix.kind === "denied") setLocationState("denied");
+        setLocationHelp(await diagnoseFix(fix));
+        return;
+      }
+      setLocationHelp(null);
+      setLocationState("granted");
+      setCenter(fix.point);
+      setPickup((current) => current ?? fix.point);
+      setAutoPickup((current) => current ?? { point: fix.point, accuracy_m: fix.accuracy_m });
+      map.current?.flyTo(fix.point, 15);
+    } finally {
+      locatingRef.current = false;
+      setLocating(false);
+    }
+  }
+  const refreshLocationRef = useRef(refreshLocation);
+  refreshLocationRef.current = refreshLocation;
+
+  // **إعادةُ المحاولة تلقائيّاً عند العودة من الإعدادات** (§١٠٩-ج) — والمستمعُ قائمٌ ما دامت الرسالةُ معروضةً وحدَها
+  useEffect(() => {
+    if (!locationHelp) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshLocationRef.current();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [locationHelp]);
 
   // **«أعد الطلب»**: يصل بنقطتَي رحلةٍ مضت في حالة التنقّل، فتُفتح شاشةُ
   // التأكيد بهما مباشرةً (`FUTURE-FEATURES` بند 3). و`replace` بعدها: رجوعٌ
@@ -1117,10 +1177,23 @@ export function HomeScreen() {
       ) : null,
     area,
     // **الإذنُ مرفوضٌ أو GPS مطفأ** (٥): رسالةٌ قصيرةٌ بزرٍّ يفتح إعدادَ الموقع (في الغلاف)، والانطلاقُ على الخريطة في الأثناء
+    // **«لم نتمكن من تحديد موقعك»** (§١٠٩-ج) — بنصّ المالك، و«تحديث الموقع الحالي»، والزرُّ الثاني بحسب السبب (في الغلاف وحدَه:
+    // المتصفّحُ لا يفتح إعداداتِ الهاتف)، و«اختر على الخريطة» باقٍ دائماً
     locationOff:
-      locationState === "denied" && !pickup
+      locationHelp && !pickup
         ? {
-            onSettings: permissionsCenterAvailable() ? () => void openPermission("location") : null,
+            message: messageFor(locationHelp),
+            action: (() => {
+              const action = actionFor(locationHelp);
+              if (!action || !permissionsCenterAvailable()) return null;
+              return {
+                label: action.label,
+                onPress: () =>
+                  void (action.key === "location_services" ? openLocationServices() : openPermission("location")),
+              };
+            })(),
+            refreshing: locating,
+            onRefresh: () => void refreshLocation(),
             onPickOnMap: () => setPhase("pick-pickup"),
           }
         : null,

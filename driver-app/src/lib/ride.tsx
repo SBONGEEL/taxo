@@ -217,6 +217,11 @@ export function RideProvider({ children }: { children: ReactNode }) {
         void hideOfferAlert();
         setRide(event.ride);
         break;
+      // **«غيّر الراكبُ الوجهة»** (SPEC §١٠٩-أ/٥) — الرحلةُ تُستبدل بقيمها الجديدة (الوجهةُ والأجرة)، والمسارُ يُعاد جلبُه لأن مفتاحَه
+      // الوجهةُ (`Home.tsx`)؛ **والبلاغُ «غيّر الراكبُ الوجهة — …» يصل `notice` بنصّه وصوته** فلا نغمةَ ثانيةً هنا
+      case "ride_destination_changed":
+        setRide(event.ride);
+        break;
       // **بلاغُ ما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — اشتراكٌ، وثيقةٌ، بقشيش
       case "notice":
         presentNotice(event);

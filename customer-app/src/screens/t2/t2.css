@@ -1795,4 +1795,9 @@ html.t2-calm .t2-srch-pulse > i:nth-child(2) { opacity: 0; }
   background: var(--t2-surface-2, rgba(127, 127, 127, 0.08));
 }
 .t2-location-off-text { flex: 1 1 100%; font-weight: 700; line-height: 1.4; }
+/* «تحديث الموقع الحالي» (§١٠٩-ج) — الزرُّ الأوّل بلون الفعل، وأيقونتُه تدور ما دام الطلبُ جارياً */
+.t2-location-refresh { background: var(--t2-accent); color: var(--t2-on-accent); gap: 6px; }
+.t2-location-refresh[disabled] { opacity: 0.75; }
+.t2-location-refresh[aria-busy="true"] .t2-icon { animation: t2-loc-spin 0.9s linear infinite; }
+@keyframes t2-loc-spin { to { transform: rotate(360deg); } }
 

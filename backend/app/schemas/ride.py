@@ -527,6 +527,9 @@ class RideOut(BaseModel):
     negotiation_offer: Decimal | None = None
     #: **السعرُ المتّفق عليه** — ووجودُه وسمُ «سعر متفاوض عليه» في السجلّ والإيصال واللوحة (§٩٢-ج)
     negotiated_fare: Decimal | None = None
+    #: **«تعديل الوجهة» بنوع الرحلة** (§١٠٩-أ/٧) — لا يقول إن المفتاحَ مشتعلٌ ولا إن الحالَ تسمح: التطبيقُ يجمعه بمفتاحَي `/config`
+    #: وبحال الرحلة، **والبابُ يرفض ما يصله على كلِّ حال**. وبالساعة والمشوارُ والمشتركةُ والمتفاوَضُ عليها وذاتُ المحطات والطردُ = `false`
+    destination_editable: bool = False
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -641,6 +644,7 @@ class RideOut(BaseModel):
             payment_method_hint=ride.payment_method_hint,
             negotiation_offer=ride.negotiation_offer,
             negotiated_fare=ride.negotiated_fare,
+            destination_editable=_destination_editable(ride),
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,
@@ -823,3 +827,60 @@ class StartCodeOut(BaseModel):
     """رمزُ الرحلة لصاحبتها — أربعُ خاناتٍ لاتينية."""
 
     code: str
+
+
+def _destination_editable(ride: "Ride") -> bool:
+    from app.services.destination_change import ineligible_reason
+
+    return ineligible_reason(ride) is None
+
+
+class DestinationQuoteIn(BaseModel):
+    """الوجهةُ الجديدة كما اختارها الراكبُ من البحث أو الخريطة (§١٠٩-أ/٢)."""
+
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    address: str | None = Field(default=None, max_length=255)
+
+
+class DestinationChangeOut(BaseModel):
+    """عرضُ «تعديل الوجهة» — **`fare` ما سيُدفع لو أكّد** (مقرَّباً بسياسة رحلته)، و`old_fare` ما كان قبله بالتقريب نفسِه."""
+
+    id: uuid.UUID
+    ride_id: uuid.UUID
+    phase: Literal["searching", "in_ride"]
+    status: Literal["quoted", "confirmed", "declined", "expired"]
+    old_address: str | None
+    new_address: str | None
+    new_lat: float
+    new_lng: float
+    old_fare: Decimal
+    fare: Decimal
+    currency: Currency
+    expires_at: datetime
+    expires_in_seconds: int
+    created_at: datetime
+    decided_at: datetime | None
+
+    @classmethod
+    def from_row(cls, row, ride: "Ride", now: datetime | None = None) -> "DestinationChangeOut":
+        from app.services import destination_change, rounding
+
+        moment = now or datetime.now(UTC)
+        return cls(
+            id=row.id,
+            ride_id=row.ride_id,
+            phase=row.phase,
+            status=destination_change.effective_status(row, moment),
+            old_address=row.old_address,
+            new_address=row.new_address,
+            new_lat=row.new_lat,
+            new_lng=row.new_lng,
+            old_fare=rounding.ride_display_fare(ride, row.old_fare),
+            fare=row.shown_fare,
+            currency=ride.currency,
+            expires_at=row.expires_at,
+            expires_in_seconds=max(0, int((row.expires_at - moment).total_seconds())),
+            created_at=row.created_at,
+            decided_at=row.decided_at,
+        )

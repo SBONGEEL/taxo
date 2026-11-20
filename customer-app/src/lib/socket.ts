@@ -25,6 +25,8 @@ export type SocketEvent =
   | { type: "nearby_drivers"; drivers: NearbyDriver[] }
   | { type: "driver_location"; driver_id: string; lat: number; lng: number; heading: number | null }
   | { type: "driver_assigned" | "driver_arrived" | "ride_started" | "ride_completed" | "ride_cancelled"; ride: Ride }
+  // **«تعديل الوجهة»** (SPEC §١٠٩-أ/٥) — الرحلةُ بوجهتها وأجرتها الجديدتين بعد تأكيد الراكب
+  | { type: "ride_destination_changed"; ride: Ride }
   | { type: "no_driver_found"; ride: Ride }
   | { type: "driver_connection_lost" | "driver_reconnected"; ride?: Ride }
   | { type: "error"; detail: string }

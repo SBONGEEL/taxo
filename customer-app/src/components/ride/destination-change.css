@@ -1,0 +1,52 @@
+/* **«تعديل الوجهة»** (SPEC §١٠٩-أ) — بطاقةُ السعر الجديد بتأكيده: رموزُ الهويّة وحدَها، فتصحّ نهاراً وليلاً */
+.t2-dest-card {
+  margin: 0 0 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--t2-surface);
+  border: 1.5px solid var(--t2-accent);
+  color: var(--t2-text);
+}
+.t2-dest-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.t2-dest-place {
+  margin: 8px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.t2-dest-fares {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 14px;
+}
+.t2-dest-old {
+  color: var(--t2-muted);
+}
+.t2-dest-new {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t2-accent-text);
+}
+.t2-dest-note {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t2-muted);
+}
+.t2-dest-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.t2-dest-error {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--t2-danger);
+}

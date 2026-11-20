@@ -615,6 +615,8 @@ export interface Ride {
   negotiation_offer: string | null;
   /** **ما اتُّفق عليه** — يُكتب عند القبول ويحلّ محلَّ التقدير؛ و`null` قبله أو بلا تفاوض */
   negotiated_fare: string | null;
+  /** **«تعديل الوجهة» بنوع الرحلة** (SPEC §١٠٩-أ/٧) — والمفتاحُ والحالُ يُجمعان معه في `lib/destination-change.ts` */
+  destination_editable: boolean;
 
   created_at: string;
   accepted_at: string | null;
@@ -1667,4 +1669,23 @@ export interface PaymentCheckout {
   /** **حين يحمل الدافعُ رسومَ الوسيط** (SPEC §٧٤-ك/١): رسمُها والمجموعُ كما قالهما الوسيط — **تُعرض قبل الدفع**؛ و`null` على TAXO */
   fee_amount?: string | null;
   total_amount?: string | null;
+}
+
+/** **عرضُ «تعديل الوجهة»** (SPEC §١٠٩-أ) — `fare` ما سيُدفع لو أكّد، و`old_fare` ما كان قبله، كلاهما بتقريب الرحلة نفسِه */
+export interface DestinationChange {
+  id: string;
+  ride_id: string;
+  phase: "searching" | "in_ride";
+  status: "quoted" | "confirmed" | "declined" | "expired";
+  old_address: string | null;
+  new_address: string | null;
+  new_lat: number;
+  new_lng: number;
+  old_fare: string;
+  fare: string;
+  currency: Currency;
+  expires_at: string;
+  expires_in_seconds: number;
+  created_at: string;
+  decided_at: string | null;
 }

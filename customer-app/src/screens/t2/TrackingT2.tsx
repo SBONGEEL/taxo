@@ -43,6 +43,7 @@ import { PauseNotice } from "@/components/ride/PauseNotice";
 import { StopProgress } from "@/components/ride/StopProgress";
 import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
 import { EmergencyRowT2 } from "@/components/ride/EmergencyT2";
+import { DestinationChangeT2 } from "@/components/ride/DestinationChangeT2";
 import { createTrackLink } from "@/api/endpoints";
 import { trackUrl } from "@/lib/for-other";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -341,8 +342,9 @@ export function TrackingSheetT2({
         footer={
           confirm ?? (
             <div className="t2-srch-actions t2-phase">
-              {/* **«مشاركة الرحلة» قائمةٌ من البحث** — رابطُ التتبّع يُفتح لكلِّ رحلةٍ نشطة (`ride_for_other.TRACKABLE`). **و«تعديل
-                  الوجهة» لا يُرسم**: لا بابَ لتغيير وجهة طلبٍ قائم في الخلفيّة، وزرٌّ بلا بابٍ وعدٌ كاذب */}
+              {/* **«تعديل الوجهة»** (SPEC §١٠٩-أ) — خلف مفتاح «أثناء البحث» في الدولة، وبتأكيد السعر الجديد؛ مطفأً لا يُرسم */}
+              <DestinationChangeT2 ride={ride} onChanged={onChanged} />
+              {/* **«مشاركة الرحلة» قائمةٌ من البحث** — رابطُ التتبّع يُفتح لكلِّ رحلةٍ نشطة (`ride_for_other.TRACKABLE`) */}
               <button type="button" className="t2-srch-share" onClick={() => void share()}>
                 <Icon name="share" />
                 <span>{t.copied ? tr("نُسخت التفاصيل") : tr("مشاركة الرحلة")}</span>
@@ -557,6 +559,8 @@ export function TrackingSheetT2({
         {/* **والساعاتُ وكيلومتراتُها المشمولة** (§٦٣-ج/٥) — بلا تبديل: المحجوزُ دُفع عند البدء */}
         {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
         {skinRow}
+        {/* **«تعديل الوجهة» أثناء الرحلة** (SPEC §١٠٩-أ) — المقطوعُ + الباقي بالمعادلة نفسِها، وبتأكيد الراكب */}
+        <DestinationChangeT2 ride={ride} onChanged={onChanged} />
         {shareRow}
         <EmergencyRowT2 rideId={ride.id} country={ride.country_code} />
         {/* **«مدفوعة من اشتراكك» مكانَ صفِّ الدفع** (§٦٣-ج/٦) — صفٌّ يُقرأ ولا يُضغط: لا قناةَ تُبدَّل */}
@@ -673,6 +677,8 @@ export function TrackingSheetT2({
       {/* **انتظارُ الوصول يُقال حين ينشأ** (§5.10) — مالٌ في لحظته كما في الورقة القائمة */}
       <PauseNotice ride={ride} />
       <div className="t2-trk-gap" />
+      {/* **«تعديل الوجهة» بعد القبول** (SPEC §١٠٩-أ) — السعرُ من نقطة الانطلاق إلى الوجهة الجديدة، وبتأكيد الراكب */}
+      <DestinationChangeT2 ride={ride} onChanged={onChanged} />
       {shareRow}
       {driver ? <EmergencyRowT2 rideId={ride.id} country={ride.country_code} /> : null}
       <ErrorNote message={t.error} className="t2-error" />

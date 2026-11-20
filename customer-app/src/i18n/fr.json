@@ -1804,5 +1804,11 @@
   "نعرض طلبك على أقرب الكباتن": "Nous proposons votre demande aux chauffeurs les plus proches",
   "{0}{1} الآن": "{0}{1} en ce moment",
   "أقرب كبتن على بُعد {0} د تقريباً": "Chauffeur le plus proche à environ {0} min",
-  "قد يستغرق دقيقتين": "Cela peut prendre deux minutes"
+  "قد يستغرق دقيقتين": "Cela peut prendre deux minutes",
+  "لم نتمكن من تحديد موقعك الحالي. تأكد أن زر الموقع (GPS) مفعّل في هاتفك، ثم اضغط تحديث الموقع": "Nous n'avons pas pu déterminer votre position actuelle. Vérifiez que la localisation (GPS) est activée sur votre téléphone, puis appuyez sur « Actualiser la position »",
+  "الإشارة ضعيفة، اقترب من نافذة أو اخرج قليلاً ثم اضغط تحديث": "Le signal est faible : approchez-vous d'une fenêtre ou sortez un instant, puis appuyez sur Actualiser",
+  "تحديث الموقع الحالي": "Actualiser la position",
+  "فتح إعدادات الموقع": "Ouvrir les réglages de localisation",
+  "فتح إذن الموقع": "Ouvrir l'autorisation de localisation",
+  "جارٍ تحديد موقعك…": "Localisation en cours…"
 }

@@ -57,12 +57,20 @@ import { UnconfirmedStripT2 } from "./UnconfirmedT2";
 import "@/taxo2";
 import "./t2.css";
 import "./cashback.css"; import { tr } from "@/lib/i18n";
+import { REFRESH_LABEL } from "@/lib/location-help";
 
 /** خصائصُ الرئيسية (R05) — **كانت في الوجه القديم** (`components/home/RiderHome.tsx`) ونُزع (§٦٢/٣). */
 export interface RiderHomeProps {
   /** **الموقعُ مرفوضٌ أو GPS مطفأ** (أمرُ المالك ٢٠٢٦-١١-١٩/٥) — رسالةٌ قصيرةٌ بزرٍّ يفتح إعدادَ الموقع (`null` في المتصفّح: لا صفحةَ
    *  إعدادٍ يفتحها) وزرِّ الاختيار على الخريطة. و`null` كلُّه حين الموقعُ معروف. */
-  locationOff?: { onSettings: (() => void) | null; onPickOnMap: () => void } | null;
+  /** **«لم نتمكن من تحديد موقعك»** (SPEC §١٠٩-ج) — النصُّ بسببه، و«تحديث الموقع الحالي» بحالة تحميل، والزرُّ الثاني بحسب السبب */
+  locationOff?: {
+    message: string;
+    action: { label: string; onPress: () => void } | null;
+    refreshing: boolean;
+    onRefresh: () => void;
+    onPickOnMap: () => void;
+  } | null;
   name: string;
   /** عنوانُ موقعه إن عُرف — **ولا مدينةَ تُخمَّن**. */
   place: string | null;
@@ -354,12 +362,20 @@ export function RiderHomeT2({
 
       {locationOff ? (
         <div className="t2-location-off" role="status">
-          <span className="t2-location-off-text">
-            {tr("الموقع مطفأ أو غير مسموح — فعّله لنحدّد نقطة انطلاقك، أو اخترها على الخريطة")}
-          </span>
-          {locationOff.onSettings ? (
-            <button type="button" className="t2-chip" onClick={locationOff.onSettings}>
-              {tr("افتح إعداد الموقع")}
+          <span className="t2-location-off-text">{tr(locationOff.message)}</span>
+          <button
+            type="button"
+            className="t2-chip t2-location-refresh"
+            onClick={locationOff.onRefresh}
+            disabled={locationOff.refreshing}
+            aria-busy={locationOff.refreshing}
+          >
+            <Icon name="my_location" />
+            {locationOff.refreshing ? tr("جارٍ تحديد موقعك…") : tr(REFRESH_LABEL)}
+          </button>
+          {locationOff.action ? (
+            <button type="button" className="t2-chip" onClick={locationOff.action.onPress}>
+              {tr(locationOff.action.label)}
             </button>
           ) : null}
           <button type="button" className="t2-chip" onClick={locationOff.onPickOnMap}>

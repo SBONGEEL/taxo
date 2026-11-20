@@ -51,6 +51,8 @@ import { useMapExpand } from "@/components/home/MapCard";
 import { BannerImage, OfferCard, PromoBanners, type PromoSkin } from "@/components/home/PromoBanners";
 import { MapView } from "@/components/map/MapView";
 import { PermissionNotice } from "@/components/PermissionNotice";
+import { LocationHelpNotice } from "@/components/LocationHelpNotice";
+import { useLocationGate } from "@/lib/location-gate";
 import { BecomeRiderButton } from "@/components/t2/BecomeButton";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import {
@@ -268,14 +270,17 @@ export function HomeT2Screen() {
   // **كلُّ هوكٍ فوق `if (settling) return`** (عطبٌ مقيسٌ ٢٠٢٦-١١-١٨): هوكاتُ §١٠٣ وُضعت تحته فكان كلُّ إنهاءِ رحلةٍ يُنقص عددَها —
   // و«Rendered fewer hooks than expected» يُسقط الرئيسيّةَ لحظةَ التحصيل. `useTheme` وحده كان هناك قبلها ولا يحجز خانةً فلم يظهر
   const riding = tracking && (ride.status === "in_progress" || ride.status === "at_stop");
-  // **زرُّ الاستقبال نفسُه** — سطرُ `onToggleOnline` في الشاشة القائمة بحرفه
+  // **لا استقبالَ بلا موقع** (§١٠٩-ج) — يُسأل الجهازُ قبل الاتصال، وما لم يُوجد يُقال سببُه فوق الزرّ ويُعاد السؤالُ عند العودة
+  // من الإعدادات؛ وُجد ⇐ يكتمل الاتصالُ الذي طلبه
+  const locationGate = useLocationGate(goOnline);
+  // **زرُّ الاستقبال نفسُه** — سطرُ `onToggleOnline` في الشاشة القائمة بحرفه، **والاتصالُ يمرّ ببوّابة الموقع**
   const toggleOnline = () => {
     clearError();
     if (!covered) navigate("/subscription");
     else if (online) {
       goOffline();
       maybeAskForReview();
-    } else goOnline();
+    } else void locationGate.attempt();
   };
   // **المُطلِق** (SPEC §١٠٣ المرحلة A/4–6، 10): البلاطةُ والأداةُ والاختصاراتُ وإشعارُ ما بعد الإقلاع تحمل فعلاً — **وهنا يُنفَّذ بزرِّ
   // الاستقبال نفسِه** (`toggleOnline`)، فلا بابَ ثانياً يتجاوز الاشتراكَ والأذونات. ونصُّ الأداة نصُّ «أرباح اليوم» أدناه بحرفه
@@ -460,6 +465,13 @@ export function HomeT2Screen() {
             </button>
           ) : null}
           <PermissionNotice country={user?.country_code} />
+          {locationGate.help && !online ? (
+            <LocationHelpNotice
+              cause={locationGate.help}
+              locating={locationGate.locating}
+              onRefresh={() => void locationGate.attempt()}
+            />
+          ) : null}
           {error || actionError ? (
             <p className="t2-note danger">
               <Icon name="error" fill />

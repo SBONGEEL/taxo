@@ -1,6 +1,7 @@
 """نماذج SQLAlchemy — كل النماذج تُستورد هنا ليراها Alembic autogenerate."""
 
 from app.models.photo_report import UserPhotoReport  # noqa: F401
+from app.models.destination_change import RideDestinationChange  # noqa: F401
 from app.models.verification_campaign import (  # noqa: F401
     VerificationCampaign,
     VerificationEnforcement,

@@ -2263,3 +2263,47 @@ async def publish_support_event(session: AsyncSession, redis: Redis, *, user_id:
             data={"type": SupportEvent.UPDATE.value, "ticket_id": str(ticket.id)},
         ),
     )
+
+
+async def publish_destination_changed(session: AsyncSession, redis: Redis, *, ride: Ride) -> None:
+    """**«غيّر الراكبُ الوجهة»** (§١٠٩-أ/٥) — بعد الإيداع.
+
+    **المقبسُ للطرفين بالرحلة كاملة** (الوجهةُ والأجرةُ والمسارُ يُعاد رسمُه)، **والإشعارُ للكبتن وحدَه** — الراكبُ هو من غيّرها.
+    **وكبتنٌ غيرُ متّصلٍ** يصله الإشعارُ، ويقرأ الوجهةَ الجديدةَ من الرحلة نفسِها حين يفتحها — لا شيءَ يُفقد بغيابه.
+
+    **وأثناء البحث لا كبتنَ للرحلة** — فمن عُرضت عليه البطاقةُ الآن تُعاد إليه بقيمها الجديدة **وبما بقي من مهلتها** (لا مهلةَ
+    جديدة): من يقبل يقبل الوجهةَ والأجرةَ اللتين سيعمل بهما، لا ما كانتا قبل لحظة.
+    """
+    from app.services import dispatch, rounding
+
+    await events.publish_ride_event(redis, ride, RideEvent.DESTINATION_CHANGED)
+
+    if ride.driver is None:
+        offered = await dispatch.current_offer(redis, ride.id)
+        if offered is not None:
+            driver = await session.get(Driver, offered)
+            if driver is not None:
+                frame = await dispatch.pending_offer_frame(session, redis, driver=driver)
+                if frame is not None:
+                    await events.publish(redis, events.user_channel(driver.user_id), frame)
+        return
+
+    shown = rounding.ride_display_fare(ride, ride.estimated_fare)
+    where = ride.dropoff_address or "نقطةٌ على الخريطة"
+    await _safe_notify(
+        session,
+        redis,
+        user_id=ride.driver.user_id,
+        message=PushMessage(
+            title="غيّر الراكبُ الوجهة",
+            body=f"الوجهةُ الجديدة: {where} — الأجرة {amount_text(shown, ride.currency)}",
+            # قيمٌ خامٌ لا جملة (القسم 10) — الجملةُ في العنوان والنصِّ وحدَهما
+            data={
+                "type": RideEvent.DESTINATION_CHANGED.value,
+                "ride_id": str(ride.id),
+                "amount": str(shown),
+                "currency": ride.currency.value,
+                "status": ride.status.value,
+            },
+        ),
+    )

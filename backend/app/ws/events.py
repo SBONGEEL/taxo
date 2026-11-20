@@ -54,6 +54,8 @@ class RideEvent(StrEnum):
     # **«تفاوض»** (§٩٢-أ/٤) — للراكب وحدَه: عرضٌ مقابلٌ من الكبتن بمهلة جوابه، **وانقضاؤه** (الطلبُ يمضي إلى التالي بسعره الأصليّ)
     FARE_COUNTER = "fare_counter"
     FARE_COUNTER_EXPIRED = "fare_counter_expired"
+    # **«تعديل الوجهة»** (§١٠٩-أ/٥) — للطرفين بالرحلة كاملةً بعد تأكيد الراكب: الوجهةُ والأجرةُ الجديدتان والمسار
+    DESTINATION_CHANGED = "ride_destination_changed"
 
 
 class PaymentEvent(StrEnum):

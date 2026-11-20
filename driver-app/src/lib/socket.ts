@@ -44,7 +44,9 @@ export type DriverSocketEvent =
         | "driver_arrived"
         | "ride_started"
         | "ride_completed"
-        | "ride_cancelled";
+        | "ride_cancelled"
+        // **«غيّر الراكبُ الوجهة»** (SPEC §١٠٩-أ/٥) — الرحلةُ بوجهتها وأجرتها الجديدتين؛ والبلاغُ المرئيُّ يصل `notice` من الخلفيّة
+        | "ride_destination_changed";
       ride: Ride;
     }
   | {

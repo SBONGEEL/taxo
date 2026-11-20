@@ -274,6 +274,8 @@ function makeRide(draft: RideDraft): Ride {
     // **العرضُ لا يتفاوض** — رحلتُه بالسعر العاديّ دائماً
     negotiation_offer: null,
     negotiated_fare: null,
+    // **«تعديل الوجهة» لا يُعرض في العرض** — لا بابَ في المحرّك يسعّره (SPEC §١٠٩-أ)
+    destination_editable: false,
     created_at: now(),
     accepted_at: null,
     arrived_at: null,

@@ -8,6 +8,7 @@
 import { API_URL, ApiError, api, sendForm, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  DestinationChange,
   MyPaymentRequest,
   NegotiationState,
   PaymentCheckout,
@@ -317,6 +318,14 @@ export const changeOffer = (rideId: string, amount: string) => api.post<Ride>(`/
  *  (غيرُه ٤٠٤)، ويعيد الرحلةَ بقيمتها الجديدة. */
 export const changeHourlyPrepay = (rideId: string, prepay: HourlyPrepay) =>
   api.patch<Ride>(`/rides/${rideId}/hourly-prepay`, { prepay });
+
+/** **«تعديل الوجهة»** (SPEC §١٠٩-أ) — السعرُ أوّلاً ولا يتغيّر شيء، ثمّ التأكيدُ أو الرفض */
+export const quoteDestination = (rideId: string, target: { lat: number; lng: number; address: string | null }) =>
+  api.post<DestinationChange>(`/rides/${rideId}/destination/quote`, target);
+export const confirmDestination = (rideId: string, changeId: string) =>
+  api.post<Ride>(`/rides/${rideId}/destination/${changeId}/confirm`);
+export const declineDestination = (rideId: string, changeId: string) =>
+  api.post<DestinationChange>(`/rides/${rideId}/destination/${changeId}/decline`);
 
 /** **رمزُ رابط التتبّع** لرحلةٍ يطلبها لغيره (§٦٣-ج/١) — **الرمزُ نفسُه في كلِّ ضغطة**، والتطبيقُ يبني الرابطَ من عنوانه هو
  *  (`lib/for-other.ts::trackUrl`)، فلا نطاقَ مكتوبٌ في الخلفية يفترق عن مكان التطبيق. */

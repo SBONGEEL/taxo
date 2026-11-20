@@ -354,6 +354,8 @@ export function useHomeScreen() {
     samples.current = [];
     setEta(null);
   }, [routeLine]);
+  // **المسارُ مفتاحُه الرحلةُ ووجهتُها** — «تعديل الوجهة» (SPEC §١٠٩-أ/٥) يمحو الخطَّ في الخلفيّة فيُجلب من جديد إلى الوجهة الجديدة
+  const routeKey = tracking ? `${ride.id}:${ride.dropoff.lat},${ride.dropoff.lng}` : null;
   useEffect(() => {
     const id = tracking ? ride.id : null;
     if (!id) {
@@ -375,7 +377,8 @@ export function useHomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [tracking ? ride.id : null]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeKey]);
   // اشتراكٌ ساري شرطُ التوزيع (القسم 8) — والزرُّ يقول ذلك بدل أن يفتح
   // مقبساً ترفضه الخلفية
   const covered = subscription?.is_active === true;
