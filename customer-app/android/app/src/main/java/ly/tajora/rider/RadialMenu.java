@@ -117,10 +117,21 @@ public final class RadialMenu {
         int first = Math.min(n, capacity(r1, itemR, gap));
         place(out, 0, first, base, cx, cy, r1, itemR, gap);
         if (n > first) place(out, first, n - first, base, cx, cy, r2, itemR, gap);
+        // **المروحةُ كلُّها تُزاح إلى داخل الشاشة معاً** — قصُّ كلِّ زرٍّ وحدَه عند الحافّة كان يُلصق زرّين (والإزاحةُ تحفظ المسافات)؛
+        // وما لا يسعه العرضُ بعد الإزاحة يُقصّ أخيراً
         float margin = itemR + 4f;
+        float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
         for (float[] p : out) {
-            p[0] = Math.max(margin, Math.min(w - margin, p[0]));
-            p[1] = Math.max(margin, Math.min(h - margin, p[1]));
+            minX = Math.min(minX, p[0]);
+            maxX = Math.max(maxX, p[0]);
+            minY = Math.min(minY, p[1]);
+            maxY = Math.max(maxY, p[1]);
+        }
+        float dx = Math.max(0f, margin - minX) - Math.max(0f, maxX - (w - margin));
+        float dy = Math.max(0f, margin - minY) - Math.max(0f, maxY - (h - margin));
+        for (float[] p : out) {
+            p[0] = Math.max(margin, Math.min(w - margin, p[0] + dx));
+            p[1] = Math.max(margin, Math.min(h - margin, p[1] + dy));
         }
         return out;
     }
