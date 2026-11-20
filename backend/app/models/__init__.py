@@ -12,6 +12,7 @@ from app.models.facility import Facility  # noqa: F401
 from app.models.ride_category import DriverCategoryAccess, RideCategory  # noqa: F401
 from app.models.learned_place import LearnedPlace  # noqa: F401
 from app.models.map_place import MapPlace  # noqa: F401
+from app.models.map_name_fix import MapNameFix  # noqa: F401
 from app.models.map_community import PlaceSuggestion, RoadReport, RoadReportVote  # noqa: F401
 from app.models.service_setting import ServiceSetting  # noqa: F401
 from app.models.trip_chat import RideMessage, RideMessageReport  # noqa: F401

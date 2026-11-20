@@ -67,6 +67,40 @@ function firstSymbol(instance: MapboxMap): string | undefined {
   return instance.getStyle()?.layers?.find((layer) => layer.type === "symbol")?.id;
 }
 
+/** **أسماءُ المشرف** (أمرُ المالك ٢٠٢٦-١١-٢٠، SPEC §١٠٩-ب) — مفتاحُ المكان (`k` في المربّع) ⇐ اسمٌ عربيٌّ كتبه في «أماكن بلا اسم عربي»،
+ *  **يُرسم فوق اسم المربّع** فلا ينتظر البناءَ الشهريّ. يُقرأ مرّةً كلَّ عشر دقائق، وغيابُه لا يُخفي شيئاً: الاسمُ الأصليُّ باقٍ. */
+let nameFixes: Record<string, string> = {};
+let nameFixesAt = 0;
+let nameFixesLoading: Promise<void> | null = null;
+function loadNameFixes(): Promise<void> {
+  if (Date.now() - nameFixesAt < 600_000) return Promise.resolve();
+  nameFixesLoading ??= api
+    .get<Record<string, string>>("/map/name-fixes")
+    .then((data) => {
+      nameFixes = data ?? {};
+      nameFixesAt = Date.now();
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      nameFixesLoading = null;
+    });
+  return nameFixesLoading;
+}
+
+/** اسمُ المكان: اسمُ المشرف بمفتاحه، وإلا اسمُ المربّع */
+function placeName(): unknown {
+  return ["coalesce", ["get", ["to-string", ["get", "k"]], ["literal", nameFixes]], ["get", "n"]];
+}
+
+function placeLabel(): unknown {
+  return [
+    "case",
+    ["==", ["get", "o"], "public"], ["concat", placeName(), " · حكومي"],
+    ["==", ["get", "o"], "private"], ["concat", placeName(), " · خاص"],
+    placeName(),
+  ];
+}
+
 /** **الأماكنُ والمباني والصيانة** — `on=false` يزيلها ويعيد محلّاتِ المزوّد كما كانت. يُنادى مع كلِّ ستايلٍ يُحمَّل. */
 export function drawOpenPlaces(instance: MapboxMap, host: HTMLElement, on: boolean) {
   const provider = instance.getLayer("poi-label") ? "poi-label" : null;
@@ -77,6 +111,9 @@ export function drawOpenPlaces(instance: MapboxMap, host: HTMLElement, on: boole
   }
   // **المكانُ لا يُكتب مرّتين** — محلّاتُ المزوّد من OSM نفسِه، وطبقتُنا تحملها ومعها Overture
   if (provider) instance.setLayoutProperty(provider, "visibility", "none");
+  void loadNameFixes().then(() => {
+    if (instance.getLayer(PLACES)) instance.setLayoutProperty(PLACES, "text-field", placeLabel() as never);
+  });
   if (instance.getSource(SOURCE)) return;
   const colors = tokens(host);
   instance.addSource(SOURCE, {
@@ -123,12 +160,7 @@ export function drawOpenPlaces(instance: MapboxMap, host: HTMLElement, on: boole
           "icon-image": ["concat", OPEN_PREFIX, ["get", "c"]],
           "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.62, 16, 0.85],
           "symbol-sort-key": ["-", 0, ["get", "r"]],
-          ...label([
-            "case",
-            ["==", ["get", "o"], "public"], ["concat", ["get", "n"], " · حكومي"],
-            ["==", ["get", "o"], "private"], ["concat", ["get", "n"], " · خاص"],
-            ["get", "n"],
-          ]),
+          ...label(placeLabel()),
         },
         paint: { "text-color": colors.label, "text-halo-color": colors.halo, "text-halo-width": 1.4 },
       } as never,
@@ -165,7 +197,8 @@ export function bindOpenTap(instance: MapboxMap, handler: (place: { name: string
     const hit = instance.queryRenderedFeatures([[x - 12, y - 12], [x + 12, y + 12]] as never, { layers: [PLACES] })[0];
     if (!hit || hit.geometry.type !== "Point") return;
     const [lng, lat] = hit.geometry.coordinates as [number, number];
-    const name = String(hit.properties?.n ?? "").trim();
+    const key = String(hit.properties?.k ?? "");
+    const name = String((key && nameFixes[key]) || hit.properties?.n || "").trim();
     const category = String(hit.properties?.c ?? "place");
     const owner = hit.properties?.o === "public" ? " حكومي" : hit.properties?.o === "private" ? " خاص" : "";
     if (name) handler({ name, lat, lng, kind: (OPEN_CATEGORY_LABEL[category] ?? "مكان") + owner });

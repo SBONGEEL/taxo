@@ -22,7 +22,7 @@ from app.schemas.map_community import (
     RoadReportOut,
     TrafficOut,
 )
-from app.services import map_community, settings_service, traffic
+from app.services import map_community, map_names, settings_service, traffic
 
 router = APIRouter(prefix="/map", tags=["map"])
 
@@ -78,6 +78,15 @@ async def live_traffic(user: CurrentUser, session: DbSession, redis: RedisDep) -
     if not await settings_service.is_feature_enabled(session, user.country_code, FeatureKey.MAP_LIVE_TRAFFIC):
         return TrafficOut(features=[])
     return TrafficOut(**await traffic.view(redis, user.country_code))
+
+
+@router.get("/name-fixes", response_model=dict[str, str])
+async def name_fixes(user: CurrentUser, session: DbSession) -> dict[str, str]:
+    """**أسماءٌ عربيّةٌ كتبها المشرفُ لأماكن المربّعات** (SPEC §١٠٩-ب) — مفتاحُ المكان ⇐ اسمُه؛ يرسمها التطبيقان فوق اسم المربّع.
+    **وفارغٌ والأماكنُ المفتوحةُ مطفأةٌ للسوق** — لا مربّعاتٍ فلا أسماءَ عليها."""
+    if not await settings_service.is_feature_enabled(session, user.country_code, FeatureKey.MAP_OPEN_PLACES):
+        return {}
+    return await map_names.for_country(session, user.country_code)
 
 
 @router.get("/tiles/{layer}/{z}/{x}/{y}.pbf", include_in_schema=False)

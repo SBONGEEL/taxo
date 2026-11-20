@@ -2667,6 +2667,34 @@ export interface PanelPlaceSearch {
   attribution_text: string | null;
 }
 
+/** **«أماكن بلا اسم عربي»** (SPEC §١٠٩-ب) — مكانٌ على الخريطة بلا اسمٍ عربيٍّ في أيِّ مصدرٍ مفتوح */
+export interface MissingArabicPlace {
+  okey: string;
+  city: string;
+  name: string;
+  tag: string;
+  lat: number;
+  lng: number;
+}
+
+export interface MissingArabicPage {
+  /** `false` ⇐ فهرسُ الخادم أقدمُ من القائمة */
+  built: boolean;
+  cities: { city: string; count: number }[];
+  total: number;
+  items: MissingArabicPlace[];
+}
+
+/** اسمٌ عربيٌّ كتبه المشرف — يُرسم في التطبيقين فوق اسم المربّع */
+export interface MapNameFix {
+  okey: string;
+  country_code: CountryCode;
+  name_ar: string;
+  original_name: string;
+  city: string;
+  updated_at: string;
+}
+
 export interface MapPlace {
   id: string;
   country_code: CountryCode;

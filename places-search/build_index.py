@@ -56,7 +56,7 @@ class Handler(osmium.SimpleHandler):
         self.cc = cc
         self.rows = []
 
-    def _add(self, kind, rank, tags, lat, lng, extra_kind=""):
+    def _add(self, kind, rank, tags, lat, lng, extra_kind="", key=""):
         ar, en, alt = names(tags)
         if not alt:
             return
@@ -67,7 +67,11 @@ class Handler(osmium.SimpleHandler):
                 extra_kind += " op=public"
             elif op in ("private", "private_non_profit", "charitable", "ngo", "religious"):
                 extra_kind += " op=private"
-        self.rows.append((self.cc, kind, extra_kind, ar, en, alt, lat, lng, rank))
+        # **مفتاحٌ ثابتٌ ووسمُ wikidata وعلامةٌ تجاريّة** (SPEC §١٠٩-ب): المفتاحُ يربط اسمَ اللوحة بالمكان عبر البناءات، وwikidata مصدرُ
+        # الاسم العربيّ الثالث، **والعلامةُ تبقى كما تكتبها** فلا تُدرج في «بلا اسم عربي»
+        wd = tags.get("wikidata") or tags.get("brand:wikidata") or ""
+        brand = 1 if (tags.get("brand") or tags.get("brand:wikidata")) else 0
+        self.rows.append((self.cc, kind, extra_kind, ar, en, alt, lat, lng, rank, key, wd, brand))
 
     def _classify(self, tags):
         place = tags.get("place")
@@ -85,7 +89,7 @@ class Handler(osmium.SimpleHandler):
             return
         c = self._classify(n.tags)
         if c and n.location.valid():
-            self._add(c[0], c[1], n.tags, n.location.lat, n.location.lon, c[2])
+            self._add(c[0], c[1], n.tags, n.location.lat, n.location.lon, c[2], f"n{n.id}")
 
     def way(self, w):
         tags = w.tags
@@ -97,13 +101,13 @@ class Handler(osmium.SimpleHandler):
         if tags.get("highway") in STREET_TYPES:
             mid = pts[len(pts) // 2]
             self._add("street", 5 if tags["highway"] in ("motorway", "trunk", "primary", "secondary") else 4,
-                      tags, mid[0], mid[1], "highway=" + tags["highway"])
+                      tags, mid[0], mid[1], "highway=" + tags["highway"], f"w{w.id}")
             return
         c = self._classify(tags)
         if c:
             lat = sum(p[0] for p in pts) / len(pts)
             lng = sum(p[1] for p in pts) / len(pts)
-            self._add(c[0], c[1] + 1, tags, lat, lng, c[2])
+            self._add(c[0], c[1] + 1, tags, lat, lng, c[2], f"w{w.id}")
 
     def area(self, a):  # multipolygon relations only (ways handled above)
         if a.from_way():
@@ -121,7 +125,7 @@ class Handler(osmium.SimpleHandler):
                     lats.append(nd.lat)
                     lngs.append(nd.lon)
         if lats:
-            self._add(c[0], c[1] + 1, tags, sum(lats) / len(lats), sum(lngs) / len(lngs), c[2])
+            self._add(c[0], c[1] + 1, tags, sum(lats) / len(lats), sum(lngs) / len(lngs), c[2], f"r{a.orig_id()}")
 
 
 def cell(lat, lng, size):
@@ -180,10 +184,10 @@ def main():
         for n in r[5]:
             osm_keys.add((norm(n),) + cell(r[6], r[7], 0.0015))
     ov = duckdb.connect().execute(
-        "SELECT cc, name, name_ar, name_en, cat, confidence, lat, lng, locality, street FROM read_parquet(?) "
+        "SELECT cc, name, name_ar, name_en, cat, confidence, lat, lng, locality, street, oid, brand_wd, brand_name FROM read_parquet(?) "
         "WHERE name IS NOT NULL AND confidence >= 0.5", [os.path.join(WORK, "overture_places.parquet")]).fetchall()
     added = 0
-    for cc, name, n_ar, n_en, cat, conf, lat, lng, locality, street in ov:
+    for cc, name, n_ar, n_en, cat, conf, lat, lng, locality, street, oid, brand_wd, brand_name in ov:
         alts = [x for x in (name, n_ar, n_en) if x]
         k = norm(name)
         c = cell(lat, lng, 0.0015)
@@ -192,7 +196,7 @@ def main():
         ar = n_ar or (name if ARABIC.search(name) else None)
         en = n_en or (None if ARABIC.search(name) else name)
         rows.append((cc, "poi", f"overture={cat or ''}", ar, en, list(dict.fromkeys(alts)), lat, lng,
-                     4 + (1 if conf >= 0.8 else 0)))
+                     4 + (1 if conf >= 0.8 else 0), f"o{oid}" if oid else "", brand_wd or "", 1 if (brand_wd or brand_name) else 0))
         added += 1
     print("overture added", added, "of", len(ov), flush=True)
 
@@ -202,7 +206,8 @@ def main():
     db.executescript("""
     PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA page_size=4096;
     CREATE TABLE places(id INTEGER PRIMARY KEY, cc TEXT, kind TEXT, tag TEXT, name_ar TEXT, name_en TEXT,
-                        alt TEXT, ctx_local TEXT, ctx_city TEXT, lat REAL, lng REAL, rank INTEGER, src TEXT);
+                        alt TEXT, ctx_local TEXT, ctx_city TEXT, lat REAL, lng REAL, rank INTEGER, src TEXT,
+                        okey TEXT, wd TEXT, brand INTEGER);
     CREATE VIRTUAL TABLE fts USING fts5(n, content='', tokenize='trigram');
     """)
     batch, fts = [], []
@@ -211,13 +216,13 @@ def main():
         city = nearest("city", r, 0.5, 25)
         src = "overture" if r[2].startswith("overture=") else "osm"
         batch.append((i, r[0], r[1], r[2], r[3], r[4], " | ".join(r[5]), label(loc) if loc else None,
-                      label(city) if city else None, r[6], r[7], r[8], src))
+                      label(city) if city else None, r[6], r[7], r[8], src, r[9] or None, r[10] or None, r[11]))
         fts.append((i, " ".join(dict.fromkeys(norm(n) for n in r[5]))))
         if len(batch) >= 50000:
-            db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+            db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
             db.executemany("INSERT INTO fts(rowid, n) VALUES (?,?)", fts)
             batch, fts = [], []
-    db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+    db.executemany("INSERT INTO places VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
     db.executemany("INSERT INTO fts(rowid, n) VALUES (?,?)", fts)
     db.execute("CREATE INDEX ix_places_cc ON places(cc)")
     db.execute("INSERT INTO fts(fts) VALUES ('optimize')")

@@ -46,6 +46,7 @@ jobs:
       - name: فهرسُ البحث
         run: |
           python -I places-search/build_index.py work
+          python -I places-search/arabic_names.py work
           python -I places-search/postprocess.py work/places.sqlite places-search
       - name: طبقاتُ الخريطة ومقاطعُ الطرق
         run: python -I places-search/build_map_data.py work
@@ -69,6 +70,7 @@ jobs:
       - name: الأرقام
         run: |
           cat work/stats.json
+          cat work/arabic_stats.json
           echo "release=$(cat work/overture_release.txt)" >> "$GITHUB_STEP_SUMMARY"
           python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           import json
@@ -76,6 +78,17 @@ jobs:
           print("| المدينة | أماكن | شوارع مسمّاة | مبانٍ |\n|---|---:|---:|---:|")
           for c, v in s["cities"].items():
               print(f"| {c} | {sum(v['places'].values())} | {v['streets_named']} | {v['buildings']} |")
+          a = json.load(open("work/arabic_stats.json"))
+          print("
+**الأسماءُ العربيّة (SPEC §١٠٩-ب)**
+
+| المدينة | أماكن | بالعربيّة | OSM | Overture | Wikidata | GeoNames | علامةٌ كما هي | بلا اسم |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+          for c, v in a["cities"].items():
+              print(f"| {c} | {v['places']} | {v['arabic']} | {v['osm']} | {v['overture']} | {v['wikidata']} | {v['geonames']} | {v['brand_as_written']} | {v['missing']} |")
+          for e in a["errors"]:
+              print(f"
+⚠ {e}")
           EOF
       - uses: actions/upload-artifact@v4
         with:
@@ -87,4 +100,5 @@ jobs:
             work/places.mbtiles
             work/roads.sqlite
             work/stats.json
+            work/arabic_stats.json
             work/overture_release.txt

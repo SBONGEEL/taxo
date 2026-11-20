@@ -248,6 +248,36 @@ try:
 except _ureq.HTTPError as exc:
     check("ونداءٌ بلا إحداثيّات ⇐ 400 لا انهيار", exc.code == 400)
 
+# ── «أماكن بلا اسم عربي» (SPEC §١٠٩-ب): فهرسٌ أقدمُ يقول «لم يُبنَ»، والجدولُ يُقرأ الأهمُّ أوّلاً وبمدينته
+check("فهرسٌ بلا جدول القائمة ⇐ built=false لا انهيار", srv.missing_arabic("JO", "", 0, 50) == {"built": False, "cities": [], "total": 0, "items": []})
+_m = sqlite3.connect(INDEX)
+_m.execute("CREATE TABLE missing_ar(okey TEXT PRIMARY KEY, cc TEXT, city TEXT, name TEXT, tag TEXT, rank INTEGER, lat REAL, lng REAL)")
+_m.executemany("INSERT INTO missing_ar VALUES (?,?,?,?,?,?,?,?)", [
+    ("n1", "JO", "عمّان", "Abdali Hospital", "amenity=hospital", 8, 31.96, 35.91),
+    ("n2", "JO", "عمّان", "Blom Bank", "amenity=bank", 4, 31.95, 35.90),
+    ("w3", "JO", "إربد", "Courthouse", "amenity=courthouse", 6, 32.55, 35.85),
+    ("n4", "DZ", "وهران", "Clinique Ibn Sina", "amenity=clinic", 5, 35.7, -0.6),
+])
+_m.commit()
+_m.close()
+# **الاتصالاتُ `immutable` لا ترى ما كُتب بعد فتحها** — والإنتاجُ يعيد تشغيلَ الحاوية مع كلِّ فهرس؛ فيُعاد فتحُها هنا كذلك
+while not srv._pool.empty():
+    srv._pool.get_nowait().close()
+srv._fill()
+_got = srv.missing_arabic("JO", "", 0, 50)
+check("القائمةُ لدولتها وحدَها", _got["built"] and _got["total"] == 3 and all(i["okey"] != "n4" for i in _got["items"]))
+check("والأهمُّ أوّلاً (الرتبة)", [i["okey"] for i in _got["items"]] == ["n1", "w3", "n2"])
+check("والمدنُ بأعدادها", {c["city"]: c["count"] for c in _got["cities"]} == {"عمّان": 2, "إربد": 1})
+check("ومدينةٌ واحدة", [i["okey"] for i in srv.missing_arabic("JO", "إربد", 0, 50)["items"]] == ["w3"])
+check("والصفحةُ تُقطع", [i["okey"] for i in srv.missing_arabic("JO", "", 1, 1)["items"]] == ["w3"])
+with _ureq.urlopen(f"http://127.0.0.1:{_port}/missing-ar?cc=jo&limit=2", timeout=5) as r:
+    check("و/missing-ar عبر HTTP", [i["okey"] for i in _j.loads(r.read())["items"]] == ["n1", "w3"])
+try:
+    _ureq.urlopen(f"http://127.0.0.1:{_port}/missing-ar?cc=EG", timeout=5)
+    check("ودولةٌ ليست من الثلاث ⇐ 400", False)
+except _ureq.HTTPError as exc:
+    check("ودولةٌ ليست من الثلاث ⇐ 400", exc.code == 400)
+
 _httpd.shutdown()
 
 sys.exit(1 if failures else 0)

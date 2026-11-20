@@ -1042,3 +1042,11 @@ class SkinUnavailable(Conflict):
 class InvalidSkinArtwork(InvalidInput):
     code = "invalid_skin_artwork"
     message = "الملف ليس صورةً صالحة"
+
+
+class PlacesServiceUnavailable(AppError):
+    """**خدمةُ الأماكن المفتوحة لا تجيب** (`places-search`) — قائمةُ «أماكن بلا اسم عربي» تُقرأ منها (SPEC §١٠٩-ب)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "places_service_unavailable"
+    message = "خدمةُ الأماكن لا تجيب الآن — أعد المحاولة بعد قليل"

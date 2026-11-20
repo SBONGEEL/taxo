@@ -28,6 +28,8 @@ from app.models.vehicle_skin import VehicleSkin
 #: **الأعمدةُ التي تكتب فيها `storage.save` (أو `_write_svg`) مساراً نسبيّاً** — وأيُّ عمودٍ جديدٍ يُضاف هنا في الإيداع نفسِه
 STORED_FILE_COLUMNS: tuple[InstrumentedAttribute, ...] = (
     DriverDocument.file_path,
+    # **الصورةُ المعتمَدةُ السابقةُ ما دامت الجديدةُ تنتظر** (§١٠٩-هـ/٢، ٢٠٢٦-١١-٢٠) — بلا تسجيلها يمحوها الكنسُ فيرى الركّابُ الحرف
+    DriverDocument.live_file_path,
     RideCall.recording_path,
     User.photo_path,
     VehicleSkin.store_image_path,

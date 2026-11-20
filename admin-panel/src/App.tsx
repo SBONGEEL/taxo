@@ -116,6 +116,9 @@ const FacilitiesScreen = lazy(() =>
   import("@/screens/Facilities").then((m) => ({ default: m.FacilitiesScreen })),
 );
 // **الأماكن** (§٧١-د/١٤) — حزمةٌ كسولةٌ كأختها
+const MapNamesScreen = lazy(() =>
+  import("@/screens/MapNames").then((m) => ({ default: m.MapNamesScreen })),
+);
 const PlacesScreen = lazy(() =>
   import("@/screens/Places").then((m) => ({ default: m.PlacesScreen })),
 );
@@ -709,6 +712,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PlacesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/map-names"
+                    element={
+                      <Guarded>
+                        <MapNamesScreen />
                       </Guarded>
                     }
                   />

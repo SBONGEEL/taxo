@@ -100,18 +100,23 @@ def display_name(name_ar, name_en, alt):
 
 def export_places(stats):
     db = sqlite3.connect(f"file:{os.path.join(WORK, 'places.sqlite')}?mode=ro", uri=True)
-    rows = db.execute("SELECT cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src FROM places WHERE kind IN ('poi', 'building')")
+    cols = {r[1] for r in db.execute("PRAGMA table_info(places)")}
+    okey = "okey" if "okey" in cols else "NULL"
+    rows = db.execute(f"SELECT cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, {okey} FROM places WHERE kind IN ('poi', 'building')")
     n = 0
     # **ملفٌّ لكلِّ تكبيرِ بدءٍ لا مفتاحُ `tippecanoe.minzoom`** (قِيس ١٨/١١): tippecanoe 2.49 أسقط مع ذلك المفتاح ٩٨٪ من نقاط عيّنةٍ
     # في عمّان عند z16 (٦٬٤٥٩ ⇐ ١٠٧)، وبدونه بقيت كلُّها — فالمجموعةُ تُبنى وحدَها بـ`-Z<N>` في `map-data.yml` ثمّ تُدمج بـ`tile-join`.
     files = {}
     try:
-        for cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src in rows:
+        for cc, kind, tag, name_ar, name_en, alt, lat, lng, rank, src, key in rows:
             name = display_name(name_ar, name_en, alt)
             if not name:
                 continue
             cat = category(tag or "") if kind == "poi" else "place"
             props = {"n": name[:60], "c": cat, "r": int(rank or 0), "cc": cc}
+            if key:
+                # **مفتاحُ المكان** (SPEC §١٠٩-ب): اسمٌ عربيٌّ يكتبه المشرفُ في «أماكن بلا اسم عربي» يُرسم بهذا المفتاح في التطبيقين
+                props["k"] = key
             if cat == "hospital" and " op=" in (tag or ""):
                 props["o"] = tag.split(" op=")[1]  # public | private — من `operator:type`، وما لا وسمَ له لا يُوصف
             if name_en and name_en.strip() != props["n"]:

@@ -7,6 +7,8 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  MapNameFix,
+  MissingArabicPage,
   LoyaltyRule,
   RiderPlan,
   PriceExperiment,
@@ -1874,6 +1876,21 @@ export const updateMapPlace = (
     aliases: string[];
   }>,
 ) => api.patch<MapPlace>(`/admin/map-places/${placeId}`, payload);
+
+// ── «أماكن بلا اسم عربي» (SPEC §١٠٩-ب) — القائمةُ من بناء الخريطة، والاسمُ يكتبه المشرف ويُختم في التدقيق
+
+export const listMissingArabicPlaces = (country: CountryCode, city: string, offset: number, limit: number) =>
+  api.get<MissingArabicPage>("/admin/map-names/missing", { query: { country, city, offset, limit } });
+
+export const listMapNameFixes = (country: CountryCode) =>
+  api.get<MapNameFix[]>("/admin/map-names/fixes", { query: { country } });
+
+export const putMapName = (
+  okey: string,
+  payload: { country_code: CountryCode; name_ar: string; original_name: string; city: string },
+) => api.put<MapNameFix>(`/admin/map-names/${encodeURIComponent(okey)}`, payload);
+
+export const deleteMapName = (okey: string) => api.del<void>(`/admin/map-names/${encodeURIComponent(okey)}`);
 
 export const listFacilities = (country: CountryCode) =>
   api.get<Facility[]>("/admin/facilities", { query: { country } });

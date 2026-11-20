@@ -51,21 +51,24 @@ for cc, (x0, y0, x1, y1) in COUNTRY_BOX.items():
     src = f"read_parquet('{BUCKET}/{release}/theme=places/type=place/*', hive_partitioning=1)"
     cols = {r[0] for r in con.execute(f"DESCRIBE SELECT * FROM {src} LIMIT 0").fetchall()}
     cat = "categories.primary" if "categories" in cols else "basic_category"
+    # **المعرِّفُ والعلامة** (SPEC §١٠٩-ب): `id` مفتاحٌ ثابتٌ لاسم اللوحة، و`brand` تُبقي اسمَ العلامة كما تكتبه
+    brand = "brand.wikidata, brand.names.primary" if "brand" in cols else "NULL, NULL"
     q = f"""
       SELECT names.primary, names.common, {cat}, confidence, (bbox.ymin + bbox.ymax) / 2, (bbox.xmin + bbox.xmax) / 2,
-             addresses[1].locality, addresses[1].freeform
+             addresses[1].locality, addresses[1].freeform, id, {brand}
       FROM {src}
       WHERE bbox.xmin BETWEEN {x0} AND {x1} AND bbox.ymin BETWEEN {y0} AND {y1} AND addresses[1].country = '{cc}'
     """
     got = con.execute(q).fetchall()
-    for name, names_common, category, conf, lat, lng, locality, street in got:
+    for name, names_common, category, conf, lat, lng, locality, street, oid, brand_wd, brand_name in got:
         if not name:
             continue
-        rows.append((cc, name, common(names_common, "ar"), common(names_common, "en"), category, conf or 0.0, lat, lng, locality, street))
+        rows.append((cc, name, common(names_common, "ar"), common(names_common, "en"), category, conf or 0.0, lat, lng, locality, street,
+                     oid, brand_wd, brand_name))
     print(cc, "places", len(got), flush=True)
 
-con.execute("CREATE TABLE ov(cc VARCHAR, name VARCHAR, name_ar VARCHAR, name_en VARCHAR, cat VARCHAR, confidence DOUBLE, lat DOUBLE, lng DOUBLE, locality VARCHAR, street VARCHAR)")
-con.executemany("INSERT INTO ov VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+con.execute("CREATE TABLE ov(cc VARCHAR, name VARCHAR, name_ar VARCHAR, name_en VARCHAR, cat VARCHAR, confidence DOUBLE, lat DOUBLE, lng DOUBLE, locality VARCHAR, street VARCHAR, oid VARCHAR, brand_wd VARCHAR, brand_name VARCHAR)")
+con.executemany("INSERT INTO ov VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
 con.execute(f"COPY ov TO '{os.path.join(WORK, 'overture_places.parquet')}' (FORMAT PARQUET)")
 
 n = 0
