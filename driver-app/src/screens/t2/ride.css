@@ -519,6 +519,7 @@ button.t2-hm-tile { cursor: pointer; }
 }
 .t2-hm-tile-tag.ok { background: color-mix(in srgb, var(--t2-success) 12%, transparent); color: var(--t2-success); }
 .t2-hm-tile-tag.new { background: var(--t2-text); color: var(--t2-bg); }
+.t2-hm-tile-tag.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
 .t2-hm-tile-tag.soon { background: var(--t2-glass, var(--t2-sunken)); color: var(--t2-muted); }
 .t2-hm-tile-title {
   display: block;

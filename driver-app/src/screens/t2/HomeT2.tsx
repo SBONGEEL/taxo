@@ -94,9 +94,8 @@ import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
 import { OfferT2 } from "@/screens/t2/OfferT2";
 import { RideT2 } from "@/screens/t2/RideT2";
-import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
+import { HOME_TILES, ServiceGrid, homeTiles, useHomeServices } from "@/screens/t2/ServicesT2";
 import { readUsage } from "@/lib/service-usage";
-import { tileOpenable } from "@/components/home/ServiceTiles";
 import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { useRide } from "@/lib/ride";
@@ -1011,7 +1010,8 @@ function Services({
 }) {
   // **الأكثرُ استعمالاً أوّلاً، والمطفأُ لدولته لا يظهر** (§١٠٩-د) — العدُّ يُقرأ مع كلِّ عودةٍ إلى الرئيسيّة (الشاشةُ تُركَّب من جديد)
   const [usage] = useState(readUsage);
-  const open = tiles.filter(tileOpenable);
+  // **خدماتُ «حسابي» ثمّ بلاطاتُ اللوحة** — كانت بلاطاتِ اللوحة وحدَها فخلت رئيسيّةُ ليبيا (لا بلاطةَ لها) — `lib/captain-services.ts`
+  const open = useHomeServices(tiles);
   if (open.length === 0) return null;
   return (
     <>
@@ -1024,7 +1024,7 @@ function Services({
         ) : null}
       </div>
       <ServiceGrid
-        tiles={homeTiles(tiles, usage)}
+        tiles={homeTiles(open, usage)}
         subscription={subscription}
         progress={progress}
         covered={covered}

@@ -32,3 +32,36 @@ test("ستُّ بلاطاتٍ وحدَها — والباقي في «كل الخ
   assert.equal(shown.length, HOME_TILES);
   assert.deepEqual(shown.slice(0, 3).map((t) => t.id), ["t8", "t7", "t0"]);
 });
+
+// ── خدماتُ الكبتن من «حسابي» (أمرُ المالك ٢٠/١١ البند ٤) — كانت بلاطاتِ اللوحة وحدَها فخلت رئيسيّةُ ليبيا ──────────────
+import { allServices, captainServices } from "../src/lib/captain-services.ts";
+
+test("سوقٌ بلا بلاطةٍ في اللوحة (ليبيا) يرى خدماتِ الكبتن — لا رئيسيّةً خالية", () => {
+  const shown = homeTiles(allServices(captainServices({ levels: false, advances: false, garage: false }), []), {});
+  assert.equal(shown.length, HOME_TILES);
+  assert.deepEqual(
+    shown.map((t) => t.key),
+    ["subscription", "wallet", "earnings", "vehicle", "support", "referral"],
+  );
+});
+
+test("ما أطفأته اللوحةُ لدولته (السلفة · المستويات · الكراج) لا يُعدّ أصلاً", () => {
+  const off = captainServices({ levels: false, advances: false, garage: false }).map((t) => t.key);
+  const on = captainServices({ levels: true, advances: true, garage: true }).map((t) => t.key);
+  for (const key of ["missions", "advance", "garage"]) {
+    assert.ok(!off.includes(key), key);
+    assert.ok(on.includes(key), key);
+  }
+});
+
+test("بلاطةُ اللوحة التي تكرّر مقصداً قائماً لا تظهر مرّتين، والأخرى تُلحق بعد خدمات الكبتن", () => {
+  const captain = captainServices({ levels: true, advances: true, garage: true });
+  const merged = allServices(captain, [tile("offers"), { ...tile("dup"), destination: "/wallet" }]);
+  assert.equal(merged.filter((t) => t.destination === "/wallet").length, 1);
+  assert.equal(merged.at(-1)?.id, "offers");
+});
+
+test("الأكثرُ استعمالاً يتقدّم بين خدمات الكبتن", () => {
+  const all = allServices(captainServices({ levels: true, advances: true, garage: true }), []);
+  assert.equal(homeTiles(all, { "captain:garage": 4 })[0].key, "garage");
+});

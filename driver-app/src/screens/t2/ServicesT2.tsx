@@ -16,6 +16,10 @@ import type { MyProgress, MySubscription, ServiceTile, Storefront } from "@/api/
 import { tileOpenable } from "@/components/home/ServiceTiles";
 import { Spinner } from "@/components/ui/Feedback";
 import { useDocumentsAttention } from "@/lib/attention";
+import { allServices, captainServices, type HomeTile } from "@/lib/captain-services";
+import { useFeature } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
+import { useGarage } from "@/lib/garage";
 import { recordUse } from "@/lib/service-usage";
 import { useGoBack } from "@/lib/back";
 import { digits } from "@/lib/utils";
@@ -28,6 +32,33 @@ import "./ride.css"; import { tr } from "@/lib/i18n";
 
 // **ستُّ الرئيسية وترتيبُها** (§١٠٩-د: الأكثرُ استعمالاً أوّلاً، والمطفأُ لا يظهر) — من بيتها الخالص المختبَر
 export { HOME_TILES, homeTiles } from "@/lib/service-usage";
+
+/** **عناوينُ خدمات الكبتن بالترجمة** — حرفيّاتُ `tr` هنا ليقرأها جردُ النصوص (`ar-inventory.json`) ويترجمها `fr.json`. */
+function captainTitle(text: string): string {
+  const titles: Record<string, string> = {
+    "الاشتراك": tr("الاشتراك"),
+    "المحفظة": tr("المحفظة"),
+    "الأرباح": tr("الأرباح"),
+    "المركبة والوثائق": tr("المركبة والوثائق"),
+    "مهامّي": tr("مهامّي"),
+    "الدعم": tr("الدعم"),
+    "السلفة": tr("السلفة"),
+    "المتجر والكراج": tr("المتجر والكراج"),
+    "أحِل صديقك": tr("أحِل صديقك"),
+    "المستحقّات": tr("المستحقّات"),
+  };
+  return titles[text] ?? text;
+}
+
+/** **خدماتُ الكبتن ثمّ بلاطاتُ اللوحة** (§١٠٩-د) — المفاتيحُ من بيوتها التي يسألها «حسابي» نفسُه، فلا تَعِد الرئيسيّةُ ببابٍ أغلقه. */
+export function useHomeServices(panelTiles: readonly ServiceTile[]): HomeTile[] {
+  const { profile } = useDriver();
+  const country = profile?.user.country_code;
+  const levels = useFeature(country, "driver_levels_enabled");
+  const advances = useFeature(country, "driver_advances_enabled");
+  const { enabled: garage } = useGarage();
+  return allServices(captainServices({ levels, advances, garage }, captainTitle), panelTiles.filter(tileOpenable));
+}
 
 /** مقصدُ «المركبة ووثائقها» — حيث ترتفع نقطةُ «الوثائق». */
 const DOCUMENTS_DESTINATION = "/account/vehicle";
@@ -43,7 +74,7 @@ export function ServiceGrid({
   attention,
   navigate,
 }: {
-  tiles: ServiceTile[];
+  tiles: HomeTile[];
   subscription: MySubscription | null;
   progress: MyProgress | null;
   covered: boolean;
@@ -61,14 +92,14 @@ export function ServiceGrid({
   return (
     <div className="t2-hm-tiles">
       {tiles.map((tile) => {
-        const tag = tileTag(tile, subscription, progress);
+        const tag = tileTag(tile, subscription, progress, covered);
         const ok = tile.destination === "/subscription" && covered;
         const dot = attention && tile.destination === DOCUMENTS_DESTINATION;
         const body = (
           <>
             <span className="t2-hm-tile-top">
               <span className={`t2-hm-tile-icon${ok ? " ok" : ""}`}>
-                <Icon name={serviceIcon(tile.icon)} fill />
+                <Icon name={tile.glyph ?? serviceIcon(tile.icon)} fill />
                 {dot ? <span className="t2-hm-tile-dot" aria-hidden="true" /> : null}
               </span>
               {tag ? (
@@ -119,11 +150,16 @@ function tileTag(
   tile: ServiceTile,
   subscription: MySubscription | null,
   progress: MyProgress | null,
+  covered: boolean,
 ): { text: string; tone: string; ltr?: boolean } | null {
   if (tile.status === "soon") return { text: tr("قريباً"), tone: "soon" };
   if (tile.is_new) return { text: tr("جديد"), tone: "new" };
   if (tile.destination === "/subscription" && subscription?.is_active) {
     return { text: countDays(subscription.days_remaining), tone: "ok" };
+  }
+  // **«جدّد» حين لا يغطّيه اشتراكٌ فعلاً** — بعد أن يُقرأ اشتراكُه لا قبل (فلا تومض الشارةُ لحظةَ التحميل)
+  if (tile.destination === "/subscription" && subscription !== null && !covered) {
+    return { text: tr("جدّد"), tone: "warn" };
   }
   if (tile.destination === "/account/missions" && progress?.enabled && progress.missions_total > 0) {
     return {
@@ -144,6 +180,8 @@ export function ServicesT2Screen() {
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [progress, setProgress] = useState<MyProgress | null>(null);
   const [failed, setFailed] = useState(false);
+  // **خدماتُ الكبتن لا تنتظر اللوحة**: تُرسم فوراً، وبلاطاتُ اللوحة تُلحق حين تصل
+  const services = useHomeServices(storefront?.tiles ?? []);
 
   useEffect(() => {
     getStorefront()
@@ -166,6 +204,14 @@ export function ServicesT2Screen() {
           </button>
           <h1 className="t2-title">{tr("كل الخدمات")}</h1>
         </div>
+        <ServiceGrid
+          tiles={services}
+          subscription={subscription}
+          progress={progress}
+          covered={subscription?.is_active === true}
+          attention={attention}
+          navigate={navigate}
+        />
         {storefront === null ? (
           failed ? (
             <p className="t2-note danger" role="alert">
@@ -177,18 +223,7 @@ export function ServicesT2Screen() {
               <Spinner />
             </div>
           )
-        ) : storefront.tiles.filter(tileOpenable).length === 0 ? (
-          <p className="t2-empty">{tr("لا خدمات معروضة في سوقك الآن.")}</p>
-        ) : (
-          <ServiceGrid
-            tiles={storefront.tiles.filter(tileOpenable)}
-            subscription={subscription}
-            progress={progress}
-            covered={subscription?.is_active === true}
-            attention={attention}
-            navigate={navigate}
-          />
-        )}
+        ) : null}
       </div>
     </div>
   );
