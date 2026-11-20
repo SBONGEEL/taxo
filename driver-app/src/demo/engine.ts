@@ -286,6 +286,7 @@ const profile = (): DriverProfile => ({
     rating_avg: "4.90",
     is_online: online,
     current_ride_id: active?.id ?? null,
+    break_until: null,
     inspection_at: null,
     inspection_place: null,
     inspection_passed_at: null,

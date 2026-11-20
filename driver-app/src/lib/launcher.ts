@@ -13,7 +13,8 @@ import type { CountryCode } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
 
-export type LauncherAction = "go_online" | "go_offline" | "earnings" | "home";
+/** و`call` · `chat` · `last_ride` · `emergency` من القائمة الدائريّة والودجة (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) */
+export type LauncherAction = "go_online" | "go_offline" | "earnings" | "home" | "call" | "chat" | "last_ride" | "emergency";
 
 interface NativeLauncher {
   consume(): Promise<{ action?: string | null }>;
@@ -63,13 +64,15 @@ export function launcherAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Launcher");
 }
 
-const ACTIONS: ReadonlySet<string> = new Set(["go_online", "go_offline", "earnings", "home"]);
+const ACTIONS: ReadonlySet<string> = new Set(["go_online", "go_offline", "earnings", "home", "call", "chat", "last_ride", "emergency"]);
 
 /** **فعلٌ يُنفَّذ أو لا** — ما يطلب الحالَ القائمةَ يُتجاهل (`go_online` وهو متّصل)، والمجهولُ يُتجاهل. خالصٌ ومختبَر. */
 export function resolveAction(raw: string | null | undefined, online: boolean): LauncherAction | null {
   if (!raw || !ACTIONS.has(raw)) return null;
   if (raw === "go_online" && online) return null;
   if (raw === "go_offline" && !online) return null;
+  // **«آخر رحلة» لمن هو متّصل** — وغيرُه لا رحلةَ تالية ليجعلها الأخيرة
+  if (raw === "last_ride" && !online) return null;
   return raw as LauncherAction;
 }
 

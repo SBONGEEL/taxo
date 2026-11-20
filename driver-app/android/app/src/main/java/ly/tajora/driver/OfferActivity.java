@@ -36,6 +36,8 @@ import android.widget.TextView;
  */
 public class OfferActivity extends Activity {
 
+    private OfferVoice voice;
+
     /** يُمرَّر من {@link OfferAlert}: أهي شاشةُ القفل أم بديلُ الفقاعة؟ */
     public static final String EXTRA_LOCKED = "locked";
 
@@ -226,11 +228,24 @@ public class OfferActivity extends Activity {
             }
         };
         timer.start();
+        // **«قبول» أو «رفض» بالصوت** (أمرُ ٢٠/١١ الرابع، البند ٥٤) — في هذه الشاشة الظاهرة وحدَها، ويتوقّف بإغلاقها
+        if (OfferVoice.wanted(this)) {
+            voice = OfferVoice.listen(this, verdict -> {
+                if ("accept".equals(verdict)) accept(offer);
+                else decline(offer);
+            });
+        }
+    }
+
+    private void stopVoice() {
+        if (voice != null) voice.stop();
+        voice = null;
     }
 
     private void accept(OfferData offer) {
         if (settled) return;
         settled = true;
+        stopVoice();
         if (timer != null) timer.cancel();
         OfferAlert.hide(this);
         OfferApi.accept(this, offer.rideId, ok -> finishAndRemoveTask());
@@ -239,6 +254,7 @@ public class OfferActivity extends Activity {
     private void decline(OfferData offer) {
         if (settled) return;
         settled = true;
+        stopVoice();
         if (timer != null) timer.cancel();
         OfferAlert.hide(this);
         OfferApi.decline(this, offer.rideId, ok -> finishAndRemoveTask());
@@ -260,6 +276,7 @@ public class OfferActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (timer != null) timer.cancel();
+        stopVoice();
         super.onDestroy();
     }
 }

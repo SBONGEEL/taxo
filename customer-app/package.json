@@ -29,7 +29,7 @@
     "check:readers": "node ../tools/check-readers.mjs customer-app",
     "check:client-doors": "node ../tools/check-client-doors.mjs customer-app",
     "check:money-math": "node ../tools/check-money-math.mjs",
-    "test:unit": "node --experimental-strip-types --no-warnings --test tests/order-sheet.test.ts tests/place-search.test.ts tests/sheet-snap.test.ts tests/glyphs.test.ts tests/permissions-center.test.ts tests/smart-destination.test.ts tests/native-call.test.ts tests/open-map-glyphs.test.ts tests/native-ios.test.ts tests/shell-features.test.ts tests/map-attribution.test.ts tests/pickup-confirm.test.ts tests/money-one-arg.test.ts tests/place-name.test.ts tests/ride-found.test.ts tests/destination-change.test.ts tests/location-help.test.ts tests/photo-crop.test.ts",
+    "test:unit": "node --experimental-strip-types --no-warnings --test tests/order-sheet.test.ts tests/place-search.test.ts tests/sheet-snap.test.ts tests/glyphs.test.ts tests/permissions-center.test.ts tests/smart-destination.test.ts tests/native-call.test.ts tests/open-map-glyphs.test.ts tests/native-ios.test.ts tests/shell-features.test.ts tests/map-attribution.test.ts tests/pickup-confirm.test.ts tests/money-one-arg.test.ts tests/place-name.test.ts tests/ride-found.test.ts tests/destination-change.test.ts tests/location-help.test.ts tests/photo-crop.test.ts tests/rider-bubble.test.ts",
     "check:rtl": "node scripts/check-rtl-plugin.mjs",
     "check:outcome": "node --experimental-strip-types scripts/test-outcome.mjs"
   },

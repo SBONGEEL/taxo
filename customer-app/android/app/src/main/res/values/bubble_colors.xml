@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ألوانُ ودجات ٢٠/١١** (أمرُ المالك الرابع) — رموزُ tokens.css: الحجرُ الجيريّ نهاراً -->
+<resources>
+    <color name="w2_sur">#FFFFFFFF</color>
+    <color name="w2_sur2">#FFF4F1EA</color>
+    <color name="w2_tx">#FF14161A</color>
+    <color name="w2_mut">#FF6A6862</color>
+    <color name="w2_acc">#FFF05A28</color>
+    <color name="w2_inv">#FFFFFFFF</color>
+    <color name="w2_ok">#FF1E7F55</color>
+</resources>

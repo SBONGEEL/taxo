@@ -144,6 +144,17 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ride_info" />
         </receiver>
+        <!-- **ودجةُ الراكب الجديدة** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — خلف مفتاحها؛ كلُّ زرٍّ يفتح التطبيقَ للتأكيد -->
+        <receiver
+            android:name=".RiderQuickWidget"
+            android:exported="false"
+            android:label="TAXO — إلى أين؟">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_rider_quick_info" />
+        </receiver>
         <receiver
             android:name=".CallDeclineReceiver"
             android:exported="false" />
@@ -182,6 +193,9 @@
          إيداعاتِ الفرع فلا يفصل حزمةً فيها الإذنُ عن أخرى. **والعلامةُ والإذنُ يُضافان ويُنزعان معاً**، ويقيسهما
          `tools/check-mic-gate.mjs`. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- **فقاعةُ الراكب** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠): «الظهور فوق التطبيقات» — إذنٌ خاصٌّ لا يُمنح إلا من إعدادات النظام،
+         ولا يُطلب إلا حين يختار الراكبُ الفقاعةَ من الإعدادات (شاشةُ الأذونات تفتح الإعدادَ مباشرةً). وبلاه لا فقاعةَ ولا شيءَ ينكسر -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- **مكالمةُ الرحلة يعرفها النظام** (SPEC §١٠٣ B/27) — إذنٌ عاديٌّ يُمنح عند التثبيت، بلا نافذة سؤالٍ ولا إعلانٍ في Play -->
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

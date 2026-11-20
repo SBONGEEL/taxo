@@ -29,8 +29,20 @@ function here(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
+/** **تفتحه الفقاعةُ إن تعذّر نداؤها** (البند ٥٣، SPEC §١١٠) — حدثٌ تسمعه الورقةُ المرسومة؛ ولا رحلةَ ⇐ لا ورقةَ ولا أثر. */
+const OPEN_EVENT = "taxo:emergency-open";
+
+export function openEmergency(): void {
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 export function EmergencyRowT2({ rideId, country }: { rideId: string; country: CountryCode }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(OPEN_EVENT, show);
+    return () => window.removeEventListener(OPEN_EVENT, show);
+  }, []);
   const [number, setNumber] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);

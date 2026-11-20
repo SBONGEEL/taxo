@@ -43,6 +43,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SpeechInputPlugin.class);
         // **مُحيلُ التثبيت** — رمزُ الدعوة لمن ثبّت من رابط صديق (`lib/invite.ts`)
         registerPlugin(InstallReferrerPlugin.class);
+        // **فقاعةُ الراكب** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — جلسةُ نداءَيها الخفيفين
+        registerPlugin(RiderBubblePlugin.class);
         super.onCreate(savedInstanceState);
         // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
         // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`.
@@ -67,6 +69,8 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         CallAlert.onAppShown(this);
+        // **الفقاعةُ تختفي والتطبيقُ مفتوح** (البند ٥٥ للراكب)
+        RiderBubble.onAppShown(this);
     }
 
     /** <b>غاب التطبيق</b> — فمكالمةٌ ترنّ بعدها يرسمها {@link CallAlert}. */
@@ -74,6 +78,8 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         CallAlert.onAppHidden();
+        // **وتظهر حين يخرج — أثناء البحث والرحلة وحدَهما، وباختياره**
+        RiderBubble.onAppHidden(this);
     }
 
     /**

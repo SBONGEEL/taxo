@@ -54,6 +54,8 @@ import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { useRiderLauncher } from "@/lib/launcher";
+import { useRiderBubbleBridge } from "@/lib/rider-bubble";
+import { useBubbleAction } from "@/lib/bubble-actions";
 import { useHaptics } from "@/lib/haptics";
 import { useNativeFlags } from "@/lib/native-flags";
 import { useRideLive } from "@/lib/ride-live";
@@ -114,6 +116,20 @@ interface AgainState {
 async function diagnoseFix(fix: Exclude<PositionFix, { kind: "fix" }>): Promise<LocationCause> {
   const signals = await readLocationSignals();
   return locationCause({ errorCode: fix.code ?? null, ...signals });
+}
+
+/** **الوجهاتُ الأخيرةُ للودجة** (SPEC §١١٠) — من رحلاته المنتهية، بلا تكرارٍ وبعنوانٍ مكتوب، ثلاثٌ على الأكثر. */
+function recentDestinations(rides: Ride[]): Place[] {
+  const seen = new Set<string>();
+  const out: Place[] = [];
+  for (const row of rides) {
+    const name = row.dropoff_address?.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push({ id: `recent:${row.id}`, name, address: name, coordinates: { lat: row.dropoff.lat, lng: row.dropoff.lng } });
+    if (out.length === 3) break;
+  }
+  return out;
 }
 
 export function HomeScreen() {
@@ -1074,6 +1090,24 @@ export function HomeScreen() {
       coordinates: { lat: place.lat, lng: place.lng },
     });
   });
+
+  // **فقاعةُ الراكب وودجته** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — الوجهاتُ الأخيرةُ بأسمائها، **وكلُّها تفتح ورقةَ الطلب للتأكيد**
+  const recentPlaces = recentDestinations(recent);
+  useRiderBubbleBridge({
+    country: user?.country_code,
+    ride: tracking ? ride : null,
+    approachMinutes,
+    places,
+    recent: recentPlaces.map((place) => place.name),
+  });
+  useBubbleAction("where_to", () => openSearch("dropoff"), !tracking);
+  const pickRecent = (index: number) => {
+    const place = recentPlaces[index];
+    if (place) pickPlace(place);
+  };
+  useBubbleAction("recent_0", () => pickRecent(0), !tracking);
+  useBubbleAction("recent_1", () => pickRecent(1), !tracking);
+  useBubbleAction("recent_2", () => pickRecent(2), !tracking);
 
   // **اقتراحُ الوجهة الذكيّ** (SPEC §١٠٣ C/35) — يُسجَّل في الهاتف عند كلِّ طلب، ويُقترح من سجلّه وحدَه
   useRecordDestination(user?.country_code, user?.id, ride);

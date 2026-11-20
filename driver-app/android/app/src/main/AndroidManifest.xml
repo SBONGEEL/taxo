@@ -166,6 +166,24 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_earnings_info" />
         </receiver>
+        <!-- **ودجةُ الكبتن الجديدة** وتنبيهُ نهاية الاستراحة (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — كلاهما خلف مفتاحه -->
+        <receiver
+            android:name=".DriverWidget"
+            android:exported="false"
+            android:label="TAXO كبتن">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_driver_info" />
+        </receiver>
+        <receiver
+            android:name=".BubbleAlerts"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ly.tajora.driver.BREAK_ALERT" />
+            </intent-filter>
+        </receiver>
         <receiver
             android:name=".BootReceiver"
             android:exported="false">

@@ -109,6 +109,9 @@ import "./t2.css";
 import "./ride.css";
 import "./guarantees.css"; import { tr } from "@/lib/i18n";
 import { useBackLayer } from "@/lib/back-layers";
+import { useBubbleBridge } from "@/lib/bubble-bridge";
+import { useComms } from "@/lib/comms";
+import { openEmergency } from "@/components/ride/EmergencyT2";
 import { maybeAskForReview, noteCompletedRide } from "@/lib/in-app-review";
 
 export function HomeT2Screen() {
@@ -318,6 +321,14 @@ export function HomeT2Screen() {
   // **سطرُ الرحلة في إشعار «متّصل»** (SPEC §١٠٣ B/18) — بحالها، ويُمحى حين تنتهي
   const rideStatus = tracking ? ride.status : null;
   useEffect(() => setRideLine(rideNoticeLine(rideStatus)), [rideStatus]);
+  // **الفقاعةُ الجديدة والقائمةُ الدائريّة والودجة** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — المفاتيحُ والحالُ للطرف الأصليّ
+  useBubbleBridge({
+    country: user?.country_code,
+    ride: tracking ? ride : null,
+    currencyLabel: currency ?? null,
+    breakUntil: profile?.driver.break_until ?? null,
+  });
+  const comms = useComms();
   useDriverLauncher({
     country: user?.country_code,
     online,
@@ -326,6 +337,11 @@ export function HomeT2Screen() {
     onAction: (action) => {
       if (action === "go_online" || action === "go_offline") toggleOnline();
       else if (action === "earnings") navigate("/wallet/earnings");
+      // **بمسار الشاشة نفسِه** — المكالمةُ بأرقامٍ مخفيّة، والدردشةُ كما تُفتح من زرّها
+      else if (action === "call" && comms?.canCall) comms.startCall();
+      else if (action === "chat" && comms?.canMessage) comms.openChat();
+      else if (action === "last_ride" && lastRideOn) setLastRide(true);
+      else if (action === "emergency") openEmergency();
     },
   });
   // **التقييمُ كما يصل** (`rating_avg` بمنزلتين — «4.92» كما رُسم)؛ والشاشةُ القائمةُ تقرّبه إلى منزلة

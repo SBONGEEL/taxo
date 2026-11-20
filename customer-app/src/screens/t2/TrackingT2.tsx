@@ -42,6 +42,7 @@ import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { PauseNotice } from "@/components/ride/PauseNotice";
 import { StopProgress } from "@/components/ride/StopProgress";
 import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
+import { useBubbleAction } from "@/lib/bubble-actions";
 import { EmergencyRowT2 } from "@/components/ride/EmergencyT2";
 import { DestinationChangeT2 } from "@/components/ride/DestinationChangeT2";
 import { createTrackLink } from "@/api/endpoints";
@@ -219,6 +220,9 @@ export function TrackingSheetT2({
   const pickupName = usePlaceName(ride.pickup_address ?? pickupLine ?? null, ride.pickup, t.searching);
   const dropoffName = usePlaceName(ride.dropoff_address ?? null, ride.dropoff, t.searching && !(hourly && noDestination(ride)));
 
+  // **من الفقاعة** (SPEC §١١٠): الإلغاءُ يفتح التأكيدَ نفسَه برسمه إن وُجد، والمشاركةُ زرُّها
+  useBubbleAction("cancel_ride", () => t.setConfirming(true), CANCELLABLE.has(ride.status));
+  useBubbleAction("share_ride", () => void share());
   const share = async () => {
     // **رابطٌ حيٌّ لا نصٌّ ساكن** (البند ٧، ٢٠٢٦-١١-١٠) — من يفتحه يرى السيارةَ تتحرّك واسمَ الكبتن الأوّلَ ولوحتَه، ويتوقّف بانتهاء
     // الرحلة. **وتعذُّرُه لا يُسقط المشاركة**: النصُّ القديمُ (الكبتن واللوحة والوجهة) يُرسل وحدَه

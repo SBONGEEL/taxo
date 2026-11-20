@@ -109,6 +109,12 @@ export function hydrateTokens(): Promise<void> {
   return hydrated;
 }
 
+/** **مَن يتبع رمزَ الوصول** (فقاعةُ الراكب، SPEC §١١٠) — يُخطَر بكلِّ دخولٍ وتدويرٍ وخروج؛ و`null` خروج. */
+let accessWriter: ((access: string | null) => void) | null = null;
+export function setAccessWriter(writer: ((access: string | null) => void) | null): void {
+  accessWriter = writer;
+}
+
 export const tokens = {
   access: () => localStorage.getItem(ACCESS_KEY),
   /** **في المتصفّح المشتركُ أوّلاً** (SPEC §60): تبويبان يتقاسمان `localStorage` ولكلٍّ ذاكرتُه، فمن دوّر الرمزَ في أحدهما ترك
@@ -118,6 +124,7 @@ export const tokens = {
   save(pair: { access_token: string; refresh_token: string }) {
     liveRefresh = pair.refresh_token;
     localStorage.setItem(ACCESS_KEY, pair.access_token);
+    accessWriter?.(pair.access_token);
     if (store.native) {
       localStorage.removeItem(REFRESH_KEY);
       void store.save(pair.refresh_token);
@@ -135,12 +142,14 @@ export const tokens = {
     if (store.native) await store.save(pair.refresh_token);
     else localStorage.setItem(REFRESH_KEY, pair.refresh_token);
     localStorage.setItem(ACCESS_KEY, pair.access_token);
+    accessWriter?.(pair.access_token);
   },
   clear() {
     liveRefresh = null;
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
     if (store.native) void store.clear();
+    accessWriter?.(null);
   },
 };
 

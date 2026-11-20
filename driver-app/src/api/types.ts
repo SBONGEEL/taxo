@@ -382,6 +382,8 @@ export interface Driver {
   rating_avg: string;
   is_online: boolean;
   current_ride_id: string | null;
+  /** **استراحةٌ مؤقّتة** (البند ٤٤، SPEC §١١٠) — لا عروضَ قبلها، و`null` بلا استراحة. */
+  break_until: string | null;
   /** **فحصُ المركبة** (§61-ط/٥): موعدٌ ومكانٌ يضعهما المشرف ووقتُ اجتيازه — ولا يشترطها الاعتماد. */
   inspection_at: string | null;
   inspection_place: string | null;

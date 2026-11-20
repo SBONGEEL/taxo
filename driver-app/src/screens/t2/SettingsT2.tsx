@@ -41,6 +41,7 @@ import { openAppTour } from "@/lib/app-tour";
 import { shareApp, shareNote } from "@/lib/share-app";
 
 import { WomenModeRowT2 } from "./WomenModeT2";
+import { BubbleSettingsT2 } from "@/components/t2/BubbleSettingsT2";
 import "@/taxo2";
 import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/lib/i18n";
 import { updateMyLanguage } from "@/api/endpoints";
@@ -331,6 +332,9 @@ export function SettingsT2Screen() {
           <Soon icon="record_voice_over" title={tr("صوت الإرشاد")} />
         )}
       </Group>
+
+      {/* **الفقاعة** (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — تظهر بمفاتيحها وحدَها */}
+      <BubbleSettingsT2 country={profile?.user.country_code} currencyLabel={null} />
 
       <Group label={tr("التطبيق")}>
         {/* **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — حيث يشتعل مفتاحُ السوق */}

@@ -59,6 +59,7 @@ import {
 import { forgetRememberedLogin, rememberLogin } from "@/lib/remembered";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { setNativeSession } from "@/lib/offer-alert";
+import { setSignedIn } from "@/lib/bubble-bridge";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
 import {
@@ -146,6 +147,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // (قرارُ المالك 2026-08-30). ويُمحى بالخروج.
     setNativeSessionWriter((accessToken) => {
       void setNativeSession(accessToken === null ? null : API_URL, accessToken);
+      // **الودجةُ تعرف من دخل ومن خرج** (SPEC §١١٠) — ولا يبقى رقمُ من خرج على الشاشة الرئيسيّة
+      setSignedIn(accessToken !== null);
     });
   }, []);
 

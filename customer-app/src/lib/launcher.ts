@@ -11,6 +11,7 @@ import type { CountryCode } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
 import { routeCommsPush } from "@/lib/trip-comms";
+import { bubbleAction, fireBubbleAction } from "@/lib/bubble-actions";
 
 export type RiderAction = "ride_home" | "ride_work" | "wallet";
 
@@ -53,6 +54,12 @@ export function useRiderLauncher(country: CountryCode | undefined, onAction: (ac
       const comms = rideCommsAction(raw);
       if (comms) {
         routeCommsPush(comms, "tap");
+        return;
+      }
+      // **فقاعةُ الراكب وودجته** (SPEC §١١٠) — للشاشة التي تملك الفعل
+      const bubble = bubbleAction(raw);
+      if (bubble) {
+        fireBubbleAction(bubble);
         return;
       }
       const action = riderAction(raw);

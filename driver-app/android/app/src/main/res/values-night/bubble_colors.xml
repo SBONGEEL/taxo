@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ألوانُ ودجات ٢٠/١١** — الإسفلتُ ليلاً (`html.dark` في tokens.css) -->
+<resources>
+    <color name="w2_sur">#FF171A1F</color>
+    <color name="w2_sur2">#FF20242B</color>
+    <color name="w2_tx">#FFF2EFE8</color>
+    <color name="w2_mut">#FF9097A1</color>
+    <color name="w2_acc">#FFFF6A33</color>
+    <color name="w2_inv">#FF0E1013</color>
+    <color name="w2_ok">#FF3DBE7E</color>
+</resources>

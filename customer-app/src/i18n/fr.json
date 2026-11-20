@@ -1822,5 +1822,8 @@
   "حرّك الصورةَ وكبّرها لتملأ الدائرة": "Déplacez et agrandissez la photo pour remplir le cercle",
   "التكبير": "Zoom",
   "جارٍ الحفظ…": "Enregistrement…",
-  "اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها. المس الدائرةَ لتغييرها أو حذفها.": "Facultative : seul le chauffeur de votre course la voit, après avoir accepté votre demande — jamais avant, ni aucun autre passager. Elle apparaît dès l'envoi. Touchez le cercle pour la changer ou la supprimer."
+  "اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها. المس الدائرةَ لتغييرها أو حذفها.": "Facultative : seul le chauffeur de votre course la voit, après avoir accepté votre demande — jamais avant, ni aucun autre passager. Elle apparaît dès l'envoi. Touchez le cercle pour la changer ou la supprimer.",
+  "فعّل TAXO": "Activez TAXO",
+  "لتظهر فقاعةُ رحلتك وأنت في تطبيقٍ آخر — أثناء البحث والرحلة وحدَهما، وحين تختارها من الإعدادات.": "Pour afficher la bulle de votre course dans une autre appli — seulement pendant la recherche et la course, et si vous l’activez dans les réglages.",
+  "للمكالمة مع الراكب داخل التطبيق، ولقول «قبول» أو «رفض» وشاشةُ الطلب ظاهرة إن اخترت ذلك.": "Pour appeler le passager dans l’appli, et dire « accepter » ou « refuser » pendant l’affichage de la demande si vous l’activez."
 }

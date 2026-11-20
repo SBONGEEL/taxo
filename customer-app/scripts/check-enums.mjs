@@ -23,6 +23,9 @@ const SRC = join(process.cwd(), "src");
 /** اتحاداتُ واجهةٍ خالصة تشترك في أسماءٍ مع تعدادات الخلفية بالمصادفة.
  *  كلُّ إعفاءٍ هنا يذكر لماذا هو اتحادُ عرضٍ لا مرآةُ عقد. */
 const UI_UNIONS = new Set([
+  // **طورُ فقاعة الراكب** (SPEC §١١٠، src/lib/rider-bubble-core.ts) — يُكتب لـ`RiderBubble.java` في تفضيلات الجهاز وحدَها، لا حقلُ عقدٍ؛
+  // و`searching`/`arrived`/`in_progress` توافق حالَ الرحلة بالصدفة، و`assigned` اسمُ «كابتنٌ في الطريق» في الفقاعة
+  "RiderPhase",
   // **طورُ «تعديل الوجهة»** (SPEC §١٠٩-أ، src/lib/destination-change.ts) — ثابتا `models/destination_change.PHASE_*` نصّاً لا `StrEnum`،
   // و`searching` فيه يوافق حالَ رحلةٍ بالصدفة لا بالمرآة
   "DestinationPhase",

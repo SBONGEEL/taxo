@@ -20,6 +20,7 @@ import {
 } from "@/lib/destination-change";
 import type { Place } from "@/lib/geocode";
 import { tr } from "@/lib/i18n";
+import { useBubbleAction } from "@/lib/bubble-actions";
 import { currencyLabel, formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -44,6 +45,8 @@ export function DestinationChangeT2({ ride, onChanged }: { ride: Ride; onChanged
   const searchingOn = useFeature(ride.country_code, DESTINATION_CHANGE_SEARCHING_FLAG);
   const inRideOn = useFeature(ride.country_code, DESTINATION_CHANGE_IN_RIDE_FLAG);
   const [searchOpen, setSearchOpen] = useState(false);
+  // **«تعديل الوجهة» من الفقاعة** (SPEC §١١٠) — البابُ نفسُه بتأكيد السعر
+  useBubbleAction("edit_destination", () => setSearchOpen(true), inRideOn && ride.status === "in_progress");
   const [quote, setQuote] = useState<DestinationChange | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

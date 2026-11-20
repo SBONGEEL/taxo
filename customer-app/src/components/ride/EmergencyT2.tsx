@@ -11,6 +11,7 @@ import { pressEmergency, supportContacts } from "@/api/endpoints";
 import { ApiError } from "@/api/client";
 import type { CountryCode } from "@/api/types";
 import { tr } from "@/lib/i18n";
+import { useBubbleAction } from "@/lib/bubble-actions";
 
 import "./emergency.css";
 import { Icon } from "@/taxo2";
@@ -31,6 +32,8 @@ function here(): Promise<{ lat: number; lng: number } | null> {
 
 export function EmergencyRowT2({ rideId, country }: { rideId: string; country: CountryCode }) {
   const [open, setOpen] = useState(false);
+  // **الطوارئُ من الفقاعة إن تعذّر نداؤها** (SPEC §١١٠) — الورقةُ نفسُها
+  useBubbleAction("emergency", () => setOpen(true));
   const [number, setNumber] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
