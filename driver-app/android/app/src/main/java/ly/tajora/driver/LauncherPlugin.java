@@ -46,6 +46,13 @@ public class LauncherPlugin extends Plugin {
     @Override
     public void load() {
         if (getActivity() != null) capture(getActivity().getIntent());
+        // **ودجاتُ الأمر الثامن** (٢٠/١١): عند كلِّ إقلاعٍ تتبع ما كُتب آخرَ مرّة — بعد التحديث وقبل أن يكتب الويب؛
+        // **وبلا `w_kinds` أو بمفتاحٍ مطفأ لا يُظهر شيئاً** (البيانُ يُطفئها)
+        try {
+            TaxoWidgets.sync(getContext());
+        } catch (Exception ignored) {
+            // مُدير الودجات غائبٌ في هذا الجهاز — لا ودجات
+        }
     }
 
     @Override
