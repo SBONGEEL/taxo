@@ -692,6 +692,23 @@ export type FeatureKey =
   | "sms_autofill"
   | "voice_ride_phrase"
   | "last_ride_mode"
+  | "bubble_radial_menu"
+  | "bubble_online_toggle"
+  | "bubble_today_card"
+  | "driver_break"
+  | "bubble_busy_area"
+  | "bubble_last_ride"
+  | "bubble_goal_ring"
+  | "bubble_subscription_ring"
+  | "bubble_ride_panel"
+  | "quick_replies"
+  | "bubble_wait_counter"
+  | "bubble_road_report"
+  | "bubble_sos"
+  | "voice_offer_answer"
+  | "rider_bubble"
+  | "driver_widgets_plus"
+  | "rider_widgets_plus"
   | "map_open_places"
   | "map_place_suggestions"
   | "map_live_traffic"
@@ -4117,4 +4134,11 @@ export interface RoadReportRow {
   approved: boolean;
   status: "active" | "removed";
   created_at: string;
+}
+
+/** **الردودُ السريعة** (أمرُ المالك ٢٠/١١ الرابع، البند ٥٠) — `GET/PUT /admin/quick-replies/{country}`. */
+export interface QuickReplySettings {
+  country_code: CountryCode;
+  driver_texts: string[];
+  rider_texts: string[];
 }

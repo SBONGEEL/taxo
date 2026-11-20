@@ -1080,6 +1080,26 @@ class FeatureKey(StrEnum):
     MAP_LIVE_TRAFFIC = "map_live_traffic"
     # **بلاغاتُ الطريق: صيانة · طريق مغلق · حادث · ازدحام** (المهمّة ٣-٣) — بتأكيد كباتنَ آخرين أو موافقة المشرف، وتنتهي وحدَها
     MAP_ROAD_REPORTS = "map_road_reports"
+    # **الفقاعتان والودجات** (أمرُ المالك ٢٠٢٦-١١-٢٠ الرابع، `design/OWNER-2026-11-20-FOURTH-BUBBLES.md`، SPEC §١١٠) — **كلُّها مطفأةٌ لكلِّ
+    # دولة، وتحتاج الغلافَ الجديد**؛ والأرباحُ والأهدافُ عرضٌ وحدَه، **ولا يمسّ أيٌّ منها نداءً ماليّاً**:
+    # القائمةُ الدائريّة نفسُها وإعداداتُ الفقاعة (٥٥) — ومطفأةً تبقى لمسةُ الفقاعة «افتح التطبيق» كما اليوم
+    BUBBLE_RADIAL_MENU = "bubble_radial_menu"
+    BUBBLE_ONLINE_TOGGLE = "bubble_online_toggle"  # ٤٢
+    BUBBLE_TODAY_CARD = "bubble_today_card"  # ٤٣
+    DRIVER_BREAK = "driver_break"  # ٤٤ — `drivers.break_until`، لا عروضَ حتى ينتهي
+    BUBBLE_BUSY_AREA = "bubble_busy_area"  # ٤٥ — من خلايا خريطة الطلب المجمَّعة
+    BUBBLE_LAST_RIDE = "bubble_last_ride"  # ٤٦
+    BUBBLE_GOAL_RING = "bubble_goal_ring"  # ٤٧ — هدفٌ على الهاتف، عرضٌ وحدَه
+    BUBBLE_SUBSCRIPTION_RING = "bubble_subscription_ring"  # ٤٨
+    BUBBLE_RIDE_PANEL = "bubble_ride_panel"  # ٤٩
+    QUICK_REPLIES = "quick_replies"  # ٥٠ — نصوصُها من اللوحة (`quick_reply_settings`)، الفقاعتان
+    BUBBLE_WAIT_COUNTER = "bubble_wait_counter"  # ٥١
+    BUBBLE_ROAD_REPORT = "bubble_road_report"  # ٥٢ — بباب بلاغات الطريق القائم وقواعده
+    BUBBLE_SOS = "bubble_sos"  # ٥٣ — بباب الطوارئ القائم، ضغطةٌ طويلةٌ وعدٌّ تنازليّ، الفقاعتان
+    VOICE_OFFER_ANSWER = "voice_offer_answer"  # ٥٤ — في شاشة الطلب الظاهرة وحدَها، لا ميكروفونَ في الخلفيّة
+    RIDER_BUBBLE = "rider_bubble"  # فقاعةُ الراكب — البحثُ والرحلةُ وحدَهما، وباختياره
+    DRIVER_WIDGETS_PLUS = "driver_widgets_plus"  # ودجاتُ الكبتن الثلاثة
+    RIDER_WIDGETS_PLUS = "rider_widgets_plus"  # ودجاتُ الراكب
 
 
 class MapPlaceCategory(StrEnum):

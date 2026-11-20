@@ -63,6 +63,7 @@ from app.services import (
     notifications,
     settings_service,
     subscriptions,
+    driver_break,
     unconfirmed_rules,
 )
 from app.schemas.ride import RideOut
@@ -451,6 +452,9 @@ async def _eligible_levels(
         # يومٍ، بعتبات سوقه. **مشتقٌّ هنا لا عمودٌ محضَّر** خلافَ إخوته فوقه — «يُرفع فور الحسم»، وعمودٌ تكتبه دورةٌ يُرفع
         # بعدها. **ومطفأً لا يحجب أحداً**: المفتاحُ أوّلُ شروطه
         ~unconfirmed_rules.driver_blocked_clause(),
+        # **وفي استراحةٍ مؤقّتة** (أمرُ المالك ٢٠/١١ الرابع، البند ٤٤): متّصلٌ ولا عروضَ حتى `break_until` — **بساعة القاعدة**، فيعود
+        # وحدَه لحظةَ انتهائها بلا مهمّةٍ تُطفئها. وفارغٌ لكلِّ من لم يأخذ استراحة، فلا يتغيّر شيءٌ والمفتاحُ مطفأ
+        driver_break.available_clause(),
         has_vehicle,
         subscribed,
         ~busy,

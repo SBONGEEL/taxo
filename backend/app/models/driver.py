@@ -183,6 +183,9 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     debt_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # **الاستراحةُ المؤقّتة** (أمرُ المالك ٢٠/١١ الرابع، البند ٤٤): متّصلٌ ولا عروضَ حتى هذه اللحظة، ثمّ يعود وحدَه — **بلا مهمّةٍ
+    # دوريّة**: التوزيعُ يقارن بالساعة (`driver_break.available_clause`)، فلا شيءَ يُنسى إطفاؤه. يمحوه الاتّصالُ والخروجُ والإنهاءُ المبكر.
+    break_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — يراه المشرفون وحدَهم (`AdminDriverRow`، لا `DriverOut`).
     # يُكتب في `services/exceptional_approval.approve`، ويُمحى عند الاعتماد العاديّ (`drivers.approve` ⇐ `clear`).
     exceptional_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

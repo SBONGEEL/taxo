@@ -104,6 +104,7 @@ from app.routers import (
     site_stats,
     storefront,
     trip_chat,
+    quick_replies,
     ride_calls,
     admin_trip_chat,
     admin_ride_calls,
@@ -131,6 +132,7 @@ api_router.include_router(referrals.router)
 api_router.include_router(rides.router)
 # **محادثةُ الرحلة ومكالمتُها** (SPEC §٦٦) — موجّهٌ لكلِّ بابٍ في ملفِّه: الطرفان، واللوحة
 api_router.include_router(trip_chat.router)
+api_router.include_router(quick_replies.router)
 api_router.include_router(ride_calls.router)
 api_router.include_router(admin_trip_chat.router)
 api_router.include_router(admin_ride_calls.router)

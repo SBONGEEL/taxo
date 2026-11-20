@@ -101,6 +101,8 @@ async def go_online(
         raise RidingAsRider()
     context = await presence_context(session, driver)
     driver.is_online = True
+    # **اتّصالٌ جديدٌ بلا استراحةٍ قديمة** (البند ٤٤)
+    driver.break_until = None
     return context
 
 
@@ -116,6 +118,7 @@ async def go_offline(session: AsyncSession, redis: Redis, driver: Driver) -> Non
         select(User.country_code).where(User.id == driver.user_id)
     )
     driver.is_online = False
+    driver.break_until = None
     await geo.go_offline(redis, driver_id=driver.id, country_code=country_code)
     await presence_token.revoke(redis, user_id=driver.user_id)
 

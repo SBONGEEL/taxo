@@ -8,7 +8,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getSupportSettings, handleEmergency, listEmergencies, saveSupportSettings } from "@/api/endpoints";
+import {
+  getQuickReplies,
+  getSupportSettings,
+  handleEmergency,
+  listEmergencies,
+  saveQuickReplies,
+  saveSupportSettings,
+} from "@/api/endpoints";
 import type { CountryCode, EmergencyRow } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
@@ -150,6 +157,88 @@ function ContactsCard() {
   );
 }
 
+/** **الردودُ السريعة** (أمرُ المالك ٢٠/١١ الرابع، البند ٥٠) — سطرٌ لكلِّ ردّ، ستّةٌ على الأكثر، بلا رقمٍ ولا رابط. */
+function QuickRepliesCard() {
+  const [country, setCountry] = useState<CountryCode>("JO");
+  const [driver, setDriver] = useState("");
+  const [rider, setRider] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    setError(null);
+    setDone(null);
+    getQuickReplies(country)
+      .then((row) => {
+        setDriver(row.driver_texts.join("\n"));
+        setRider(row.rider_texts.join("\n"));
+      })
+      .catch((cause: unknown) => setError((cause as Error).message));
+  }, [country]);
+
+  const lines = (text: string) =>
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+  const save = async () => {
+    setError(null);
+    setDone(null);
+    try {
+      const row = await saveQuickReplies(country, { driver_texts: lines(driver), rider_texts: lines(rider) });
+      setDriver(row.driver_texts.join("\n"));
+      setRider(row.rider_texts.join("\n"));
+      setDone("حُفظ — يظهر في الفقاعتين حين يُفتح التطبيقُ التالي.");
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  };
+
+  return (
+    <section className="card mt-16 flex flex-col gap-10 p-16" aria-labelledby="quick-replies-title">
+      <div className="flex flex-wrap items-end justify-between gap-12">
+        <div>
+          <h2 id="quick-replies-title" className="text-15 font-bold text-ink">
+            الردود السريعة لكلِّ دولة
+          </h2>
+          <p className="text-12 text-muted">
+            أزرارٌ تُرسل في محادثة الرحلة بنقرةٍ من الفقاعة بلا كتابة. سطرٌ لكلِّ ردّ، ستّةٌ على الأكثر، أربعون حرفاً لكلٍّ، ولا رقمَ ولا
+            رابط. فارغاً يعود إلى الافتراض. تظهر حين يشتعل مفتاحُ «الردود السريعة بنقرة».
+          </p>
+        </div>
+        <Segmented
+          label="الدولة"
+          value={country}
+          onPick={(key) => setCountry(key as CountryCode)}
+          options={[
+            { key: "JO", label: "الأردن" },
+            { key: "LY", label: "ليبيا" },
+            { key: "DZ", label: "الجزائر" },
+          ]}
+        />
+      </div>
+      <div className="grid gap-10 sm:grid-cols-2">
+        <label className="flex flex-col gap-4 text-12 text-muted">
+          ردود الكبتن
+          <textarea className="ad-input" rows={4} value={driver} onChange={(event) => setDriver(event.target.value)} />
+        </label>
+        <label className="flex flex-col gap-4 text-12 text-muted">
+          ردود الراكب
+          <textarea className="ad-input" rows={4} value={rider} onChange={(event) => setRider(event.target.value)} />
+        </label>
+      </div>
+      <ErrorNote message={error} />
+      <SuccessNote message={done} />
+      <div>
+        <Button size="sm" onClick={() => void save()}>
+          حفظ
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 export function EmergenciesScreen() {
   const [status, setStatus] = useState<EmergencyFilter>("open");
   const [rows, setRows] = useState<EmergencyRow[] | null>(null);
@@ -259,6 +348,7 @@ export function EmergenciesScreen() {
           </div>
         ) : null}
         <ContactsCard />
+        <QuickRepliesCard />
       </div>
     </Shell>
   );

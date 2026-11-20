@@ -11,7 +11,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -68,3 +69,20 @@ class EmergencyAlert(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class QuickReplySetting(TimestampMixin, Base):
+    """**الردودُ السريعةُ لكلِّ دولة** (أمرُ المالك ٢٠/١١ الرابع، البند ٥٠) — نصوصٌ يرسلها الكبتنُ أو الراكبُ بنقرةٍ من الفقاعة بلا كتابة.
+
+    من اللوحة لكلِّ دولة، **وغيابُ الصفِّ افتراضُ `services/quick_replies.DEFAULTS`**. وتمرّ بمرشِّح المحادثة نفسِه قبل الحفظ
+    (`chat_filter.check`) — فلا رقمَ ولا رابطَ يُكتب في نصٍّ يُرسل باسم الطرف.
+    """
+
+    __tablename__ = "quick_reply_settings"
+
+    country_code: Mapped[CountryCode] = mapped_column(pg_enum(CountryCode, "country_code"), primary_key=True)
+    driver_texts: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    rider_texts: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )

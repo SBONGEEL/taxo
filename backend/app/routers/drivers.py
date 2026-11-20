@@ -940,3 +940,79 @@ async def list_my_debt_claims(
         await cliq_debts.claim_out(session, order)
         for order in await cliq_debts.list_mine(session, user_id=user.id)
     ]
+
+
+
+# ═══════════════════════ الفقاعة (أمرُ المالك ٢٠٢٦-١١-٢٠ الرابع، SPEC §١١٠)
+
+
+class BreakIn(BaseModel):
+    minutes: int
+
+
+class BreakOut(BaseModel):
+    break_until: datetime | None
+
+
+@router.post("/me/break", response_model=BreakOut)
+async def start_break(body: BreakIn, driver: CurrentDriver, user: CurrentUser, session: DbSession) -> BreakOut:
+    """**«توقّف 15 / 30 دقيقة»** (البند ٤٤) — متّصلٌ ولا عروضَ حتى تنتهي، ثمّ يعود وحدَه. خلف `driver_break`."""
+    from app.services import driver_break
+
+    if not await settings_service.is_feature_enabled(session, user.country_code, FeatureKey.DRIVER_BREAK):
+        raise PermissionDenied("الاستراحةُ المؤقّتة غيرُ مفعّلةٍ في سوقك")
+    until = await driver_break.start(session, driver, minutes=body.minutes, now=datetime.now(UTC))
+    await session.commit()
+    return BreakOut(break_until=until)
+
+
+@router.delete("/me/break", response_model=BreakOut)
+async def end_break(driver: CurrentDriver, session: DbSession) -> BreakOut:
+    """**إنهاءُ الاستراحة مبكراً** — يعود إلى العروض الآن. بلا فحص مفتاح: إنهاءُ ما بدأ لا يُحجب بإطفاءٍ لاحق."""
+    from app.services import driver_break
+
+    await driver_break.end(session, driver)
+    await session.commit()
+    return BreakOut(break_until=None)
+
+
+class BusyAreaPointOut(BaseModel):
+    lat: float
+    lng: float
+    #: ٢ متوسّط · ٣ مرتفع — **مستوىً لا عدد**
+    level: int
+    #: **خطٌّ مستقيمٌ** بالكيلومتر، منزلةٌ واحدة — تقول الواجهةُ «تقريباً»
+    distance_km: float
+    #: اسمُ المكان من باب العنوان القائم (`maps.reverse`) — `null` إن لم يُعرف، **ولا اسمَ يُخترع**
+    name: str | None
+
+
+class BusyAreaOut(BaseModel):
+    enabled: bool
+    area: BusyAreaPointOut | None
+    #: لمَ لا منطقة: `no_position` (لا موقعَ مبثوث) · `quiet` (لا خليةَ بالمستوى ٢ الآن)
+    reason: str | None = None
+
+
+@router.get("/me/busy-area", response_model=BusyAreaOut)
+async def my_busy_area(driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep) -> BusyAreaOut:
+    """**أقربُ منطقةٍ مزدحمة** (البند ٤٥) — من خلايا خريطة الطلب المجمَّعة، إلى موقعه المبثوث. خلف `bubble_busy_area`."""
+    from app.services import busy_area, geo, heatmap, maps
+
+    if not await settings_service.is_feature_enabled(session, user.country_code, FeatureKey.BUBBLE_BUSY_AREA):
+        return BusyAreaOut(enabled=False, area=None)
+    here = await geo.last_position(redis, driver_id=driver.id, country_code=user.country_code)
+    if here is None:
+        return BusyAreaOut(enabled=True, area=None, reason="no_position")
+    found = await heatmap.cells(session, country=user.country_code, now=datetime.now(UTC), test=user.is_test)
+    best = busy_area.nearest(found, lat=here.lat, lng=here.lng)
+    if best is None:
+        return BusyAreaOut(enabled=True, area=None, reason="quiet")
+    try:
+        name, _ = await maps.reverse(session, user.country_code, best.lat, best.lng)
+    except Exception:  # pragma: no cover — العنوانُ زينةٌ لا شرط
+        name = None
+    return BusyAreaOut(
+        enabled=True,
+        area=BusyAreaPointOut(lat=best.lat, lng=best.lng, level=best.level, distance_km=best.distance_km, name=name),
+    )

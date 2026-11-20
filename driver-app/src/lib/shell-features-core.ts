@@ -39,8 +39,34 @@ export const NEW_SHELL_KEYS: ReadonlySet<string> = new Set([
   "last_ride_mode",
 ]);
 
+/** **أوّلُ غلافٍ يحمل الفقاعتين والودجات** (أمرُ المالك ٢٠/١١ الرابع) — يُضبط على رقم الإصدار الموقَّع نفسِه حين يُوسم. */
+export const BUBBLE_SHELL_MIN_ANDROID = 1405;
+
+/** مفاتيحُ الفقاعتين والودجات — **مطفأةٌ لكلِّ دولة**، ولا تُقرأ في غلافٍ أقدم: الغلافُ القديمُ لا قائمةَ دائريّةَ فيه ولا فقاعةَ راكب. */
+export const BUBBLE_SHELL_KEYS: ReadonlySet<string> = new Set([
+  "bubble_radial_menu",
+  "bubble_online_toggle",
+  "bubble_today_card",
+  "driver_break",
+  "bubble_busy_area",
+  "bubble_last_ride",
+  "bubble_goal_ring",
+  "bubble_subscription_ring",
+  "bubble_ride_panel",
+  "quick_replies",
+  "bubble_wait_counter",
+  "bubble_road_report",
+  "bubble_sos",
+  "voice_offer_answer",
+  "rider_bubble",
+  "driver_widgets_plus",
+  "rider_widgets_plus",
+]);
+
 /** خالصة: أيُقرأ المفتاحُ في هذا الغلاف؟ — `false` لمفتاحٍ من القائمة على أندرويد تحت الحدّ (أو برقمٍ لم يُعرف بعد). */
 export function shellAllowsFor(key: string, platform: string, build: number | null): boolean {
-  if (!NEW_SHELL_KEYS.has(key) || platform !== "android") return true;
+  if (platform !== "android") return true;
+  if (BUBBLE_SHELL_KEYS.has(key)) return build !== null && build >= BUBBLE_SHELL_MIN_ANDROID;
+  if (!NEW_SHELL_KEYS.has(key)) return true;
   return build !== null && build >= NEW_SHELL_MIN_ANDROID;
 }

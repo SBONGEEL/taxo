@@ -289,7 +289,7 @@ from app.models.negotiation import (  # noqa: F401
 from app.models.facebook import FacebookPost, FacebookPostRequest  # noqa: F401  — قناةُ فيسبوك (SPEC §٩٤)
 from app.models.signup_country import SignupAttemptDaily, SignupCountry  # noqa: F401  — مُنتقي الدول (البند ٥)
 from app.models.document_setting import DocumentSetting  # noqa: F401  — متابعةُ الوثائق لكلِّ دولة (البندان ١ و٢)
-from app.models.support import EmergencyAlert, SupportSetting  # noqa: F401  — الطوارئُ وأرقامُ التواصل (البندان ٧ و٨)
+from app.models.support import EmergencyAlert, QuickReplySetting, SupportSetting  # noqa: F401  — الطوارئُ وأرقامُ التواصل والردودُ السريعة
 from app.models.eta_sample import EtaSample
 from app.models.quality import DriverQualityScore, QualitySetting  # noqa: F401  — درجةُ الجودة (البند ٣)
 from app.models.support_ticket import SupportMessage, SupportTicket  # noqa: F401  — التذاكر (البندان ٨ و٩)

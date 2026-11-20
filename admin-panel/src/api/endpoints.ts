@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  QuickReplySettings,
   MapNameFix,
   MissingArabicPage,
   LoyaltyRule,
@@ -2797,6 +2798,13 @@ export const saveSupportSettings = (
   country: CountryCode,
   body: { emergency_number: string | null; whatsapp_number: string | null },
 ) => api.put<SupportContacts>(`/admin/support-settings/${country}`, body);
+
+/** **الردودُ السريعة لكلِّ دولة** (أمرُ المالك ٢٠/١١ الرابع، البند ٥٠) — غيابُ الصفِّ افتراضُ الأمر. */
+export const getQuickReplies = (country: CountryCode) =>
+  api.get<QuickReplySettings>(`/admin/quick-replies/${country}`);
+
+export const saveQuickReplies = (country: CountryCode, body: { driver_texts: string[]; rider_texts: string[] }) =>
+  api.put<QuickReplySettings>(`/admin/quick-replies/${country}`, body);
 
 /** **درجةُ جودة الكبتن** (البند ٣) — كلُّ دولة، والغائبةُ بالافتراضيّ المطفأ. */
 export const listQualitySettings = () => api.get<QualitySetting[]>("/admin/quality/settings");

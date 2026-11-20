@@ -183,6 +183,8 @@ class DriverOut(BaseModel):
     inspection_place: str | None
     inspection_passed_at: datetime | None
     created_at: datetime
+    # **الاستراحةُ المؤقّتة** (البند ٤٤) — تقرؤها الفقاعةُ والرئيسيّةُ لترسما العدَّ وتنبّها قبل نهايتها
+    break_until: datetime | None = None
 
 
 class DriverInspectionIn(BaseModel):
