@@ -2012,5 +2012,7 @@
   "تحديث الموقع الحالي": "Actualiser la position",
   "فتح إعدادات الموقع": "Ouvrir les réglages de localisation",
   "فتح إذن الموقع": "Ouvrir l'autorisation de localisation",
-  "جارٍ تحديد موقعك…": "Localisation en cours…"
+  "جارٍ تحديد موقعك…": "Localisation en cours…",
+  "كل الخدمات": "Tous les services",
+  "لا يمكنك استقبال الطلبات قبل تحديد موقعك — فالطلباتُ تصلك بحسب مكانك.": "Vous ne pouvez pas recevoir de courses tant que votre position n'est pas déterminée : les demandes vous parviennent selon votre emplacement."
 }

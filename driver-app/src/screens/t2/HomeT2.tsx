@@ -94,6 +94,8 @@ import { CollectT2Screen } from "@/screens/t2/CollectT2";
 import { OfferT2 } from "@/screens/t2/OfferT2";
 import { RideT2 } from "@/screens/t2/RideT2";
 import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
+import { readUsage } from "@/lib/service-usage";
+import { tileOpenable } from "@/components/home/ServiceTiles";
 import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { useRide } from "@/lib/ride";
@@ -990,19 +992,22 @@ function Services({
   attention: boolean;
   navigate: NavigateFunction;
 }) {
-  if (tiles.length === 0) return null;
+  // **الأكثرُ استعمالاً أوّلاً، والمطفأُ لدولته لا يظهر** (§١٠٩-د) — العدُّ يُقرأ مع كلِّ عودةٍ إلى الرئيسيّة (الشاشةُ تُركَّب من جديد)
+  const [usage] = useState(readUsage);
+  const open = tiles.filter(tileOpenable);
+  if (open.length === 0) return null;
   return (
     <>
       <div className="t2-hm-svc-head">
         <span className="t2-hm-svc-title">{tr("خدماتك")}</span>
-        {tiles.length > HOME_TILES ? (
+        {open.length > HOME_TILES ? (
           <button type="button" className="t2-hm-svc-all" onClick={() => navigate("/services")}>
-            {tr("الكل")}
+            {tr("كل الخدمات")}
           </button>
         ) : null}
       </div>
       <ServiceGrid
-        tiles={homeTiles(tiles)}
+        tiles={homeTiles(tiles, usage)}
         subscription={subscription}
         progress={progress}
         covered={covered}

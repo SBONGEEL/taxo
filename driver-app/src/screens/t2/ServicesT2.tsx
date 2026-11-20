@@ -16,6 +16,7 @@ import type { MyProgress, MySubscription, ServiceTile, Storefront } from "@/api/
 import { tileOpenable } from "@/components/home/ServiceTiles";
 import { Spinner } from "@/components/ui/Feedback";
 import { useDocumentsAttention } from "@/lib/attention";
+import { recordUse } from "@/lib/service-usage";
 import { useGoBack } from "@/lib/back";
 import { digits } from "@/lib/utils";
 import { Icon, serviceIcon } from "@/taxo2";
@@ -25,15 +26,8 @@ import { countDays } from "./count";
 import "./t2.css";
 import "./ride.css"; import { tr } from "@/lib/i18n";
 
-/** عددُ بلاطات الرئيسية — **صفّان من ثلاث** كما رُسمت C04. */
-export const HOME_TILES = 6;
-
-/** **ستُّ الرئيسية**: ما يُفتح أوّلاً بترتيب اللوحة، ثمّ «قريباً» — فلا تحجب أربعُ بلاطاتٍ لا تعمل بلاطتين تعملان. */
-export function homeTiles(tiles: ServiceTile[]): ServiceTile[] {
-  const open = tiles.filter(tileOpenable);
-  const rest = tiles.filter((tile) => !tileOpenable(tile));
-  return [...open, ...rest].slice(0, HOME_TILES);
-}
+// **ستُّ الرئيسية وترتيبُها** (§١٠٩-د: الأكثرُ استعمالاً أوّلاً، والمطفأُ لا يظهر) — من بيتها الخالص المختبَر
+export { HOME_TILES, homeTiles } from "@/lib/service-usage";
 
 /** مقصدُ «المركبة ووثائقها» — حيث ترتفع نقطةُ «الوثائق». */
 const DOCUMENTS_DESTINATION = "/account/vehicle";
@@ -96,7 +90,11 @@ export function ServiceGrid({
             key={tile.id}
             type="button"
             className="t2-hm-tile"
-            onClick={() => navigate(tile.destination!)}
+            onClick={() => {
+              // **«الأكثرُ استعمالاً أوّلاً»** (§١٠٩-د) — عدٌّ في هذا الهاتف وحدَه
+              recordUse(tile.id);
+              navigate(tile.destination!);
+            }}
             // **النقطةُ تُقال لقارئ الشاشة** — هي معنًى لا زينة
             aria-label={dot ? tr("{0} — وثائق تحتاج انتباهك", { 0: tile.title }) : undefined}
           >
@@ -166,7 +164,7 @@ export function ServicesT2Screen() {
           <button type="button" className="t2-back" aria-label={tr("رجوع")} onClick={() => goBack()}>
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="t2-title">{tr("خدماتك")}</h1>
+          <h1 className="t2-title">{tr("كل الخدمات")}</h1>
         </div>
         {storefront === null ? (
           failed ? (
@@ -179,11 +177,11 @@ export function ServicesT2Screen() {
               <Spinner />
             </div>
           )
-        ) : storefront.tiles.length === 0 ? (
+        ) : storefront.tiles.filter(tileOpenable).length === 0 ? (
           <p className="t2-empty">{tr("لا خدمات معروضة في سوقك الآن.")}</p>
         ) : (
           <ServiceGrid
-            tiles={storefront.tiles}
+            tiles={storefront.tiles.filter(tileOpenable)}
             subscription={subscription}
             progress={progress}
             covered={subscription?.is_active === true}
