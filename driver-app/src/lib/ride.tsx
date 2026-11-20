@@ -392,6 +392,32 @@ export function RideProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, [rideId, online]);
 
+  // **وغيرُ المتّصل يرى موضعَه لا عمّان** (قِيس على S21، ٢٠٢٦-١١-٢٠): قراءةٌ واحدةٌ **إن كان الإذنُ ممنوحاً سلفاً** — لا طلبَ إذنٍ
+  // من الرئيسيّة (الطلبُ عند «ابدأ الاستقبال»، `location-gate.ts`)، ولا مراقبةَ مستمرّة؛ والمتّصلُ يُقرأ من المقبس كما كان
+  const located = position !== null;
+  useEffect(() => {
+    if (online || located) return;
+    let live = true;
+    void (async () => {
+      try {
+        const state = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+        if (state?.state !== "granted") return;
+        navigator.geolocation.getCurrentPosition(
+          (fix) => {
+            if (live) setPosition({ lat: fix.coords.latitude, lng: fix.coords.longitude });
+          },
+          () => undefined,
+          { timeout: 8000, maximumAge: 120_000 },
+        );
+      } catch {
+        // لا Permissions API ⇐ لا قراءة؛ والمركزُ مركزُ الدولة (`countryCenter`)
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [online, located]);
+
   // موقعُ الجهاز للخريطة — يُقرأ من المقبس نفسه فلا يُفتح مُراقبان
   useEffect(() => {
     if (!online) return;

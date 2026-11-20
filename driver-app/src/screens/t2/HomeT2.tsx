@@ -32,6 +32,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { countryCenter } from "@/lib/country-center";
 import type { NavigateFunction } from "react-router-dom";
 
 import {
@@ -487,7 +488,7 @@ export function HomeT2Screen() {
       <div className={`t2-hm-map${mode === "home" && open ? " open" : ""}`}>
         <MapView
           token={token}
-          center={position}
+          center={position ?? countryCenter(user?.country_code)}
           selfSkin={activeSkin}
           subscribed={covered}
           colleagues={colleagues}
