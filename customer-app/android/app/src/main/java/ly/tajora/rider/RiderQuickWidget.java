@@ -69,11 +69,15 @@ public class RiderQuickWidget extends AppWidgetProvider {
         for (int id : recentIds) v.setViewVisibility(id, View.GONE);
         v.setViewVisibility(R.id.rq_ride, View.GONE);
         if (!enabled || !signedIn) {
-            v.setTextViewText(R.id.rq_where, signedIn ? "اطلب رحلة" : "سجّل الدخول لتطلب رحلة");
-            v.setOnClickPendingIntent(R.id.rq_where, open(ctx, null, 82));
+            // **بطاقةٌ تملأ الودجة** (٢٠/١١ السادس، البند ٣) — لا سطرٌ في أعلاها وفراغٌ تحته
+            v.setViewVisibility(R.id.rq_where, View.GONE);
             v.setViewVisibility(R.id.rq_places, View.GONE);
+            WidgetSignedOut.show(ctx, v, h, signedIn ? "رحلتُك التالية بلمسة" : "اطلب رحلتك بلمسةٍ من هنا بعد الدخول",
+                    signedIn ? "اطلب رحلة" : "سجّل الدخول", open(ctx, null, 82));
             return v;
         }
+        v.setViewVisibility(R.id.wo_root, View.GONE);
+        v.setViewVisibility(R.id.rq_where, View.VISIBLE);
         v.setTextViewText(R.id.rq_where, "إلى أين؟");
         v.setOnClickPendingIntent(R.id.rq_where, open(ctx, "where_to", 83));
         JSONObject ride = RiderBubble.ride(p);

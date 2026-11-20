@@ -95,4 +95,110 @@
         android:textSize="13sp"
         android:textStyle="bold"
         android:background="@drawable/w2_chip" />
+    <!-- **قبل الدخول** (أمرُ المالك ٢٠/١١ السادس، البند ٣): ثلثا الودجة كانا فارغين — الآن بطاقةٌ كاملة: الشعارُ وسطرٌ عربيٌّ قصيرٌ وزرٌّ
+         واحدٌ واضح. عموديّةٌ حين يتّسع الارتفاع، وصفٌّ واحدٌ حين يضيق — ويُختار في Java من أبعاد الودجة (WidgetSignedOut). -->
+    <LinearLayout
+        android:id="@+id/wo_root"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+        <LinearLayout
+            android:id="@+id/wo_col"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@mipmap/ic_launcher_round"
+                android:contentDescription="TAXO" />
+            <TextView
+                android:id="@+id/wo_mark"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="TAXO"
+                android:letterSpacing="0.08"
+                android:textColor="@color/w2_tx"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/wo_line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:textColor="@color/w2_mut"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/wo_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginTop="10dp"
+                android:minWidth="168dp"
+                android:gravity="center"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="سجّل الدخول"
+                android:textColor="@color/w2_inv"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:background="@drawable/w2_btn" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/wo_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@mipmap/ic_launcher_round"
+                android:contentDescription="TAXO" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/wo_mark2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TAXO"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/w2_tx"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/wo_line2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/w2_mut"
+                    android:textSize="12sp" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/wo_btn2"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="112dp"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="سجّل الدخول"
+                android:textColor="@color/w2_inv"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="@drawable/w2_btn" />
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

@@ -80,13 +80,14 @@ public class DriverWidget extends AppWidgetProvider {
         v.setViewVisibility(R.id.w2_busy_row, View.GONE);
         v.setViewVisibility(R.id.w2_ride_row, View.GONE);
         if (!enabled || !signedIn) {
-            v.setTextViewText(R.id.w2_title, signedIn ? "TAXO كبتن" : "سجّل الدخول");
-            v.setTextViewText(R.id.w2_line, signedIn ? "افتح التطبيق" : "لترى حالك وأرباح اليوم");
-            v.setTextViewText(R.id.w2_toggle, "افتح");
-            v.setOnClickPendingIntent(R.id.w2_toggle, open(ctx, null, 72));
-            v.setImageViewBitmap(R.id.w2_ring, ring(ctx, -1f, -1f, "TAXO"));
+            // **بطاقةٌ تملأ الودجة** (٢٠/١١ السادس، البند ٣) — لا سطرٌ في أعلاها وفراغٌ تحته
+            v.setViewVisibility(R.id.w2_head, View.GONE);
+            WidgetSignedOut.show(ctx, v, h, signedIn ? "حالُك وأرباحُ يومك في التطبيق" : "حالُك وأرباحُ يومك هنا بعد الدخول",
+                    signedIn ? "افتح التطبيق" : "سجّل الدخول", open(ctx, null, 72));
             return v;
         }
+        v.setViewVisibility(R.id.wo_root, View.GONE);
+        v.setViewVisibility(R.id.w2_head, View.VISIBLE);
         v.setTextViewText(R.id.w2_title, online ? "متّصل" : "غير متّصل");
         String earnings = p.getString("widget_earnings", null);
         String rides = p.getString("widget_rides", null);
