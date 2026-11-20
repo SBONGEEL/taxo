@@ -15,4 +15,11 @@ public class WidgetSignedOutUnitTest {
         assertTrue(WidgetSignedOut.column(WidgetSignedOut.COLUMN_MIN_DP));
         assertTrue(WidgetSignedOut.column(220));
     }
+
+    @Test
+    public void portraitTakesTheTallerHeight() {
+        assertTrue(WidgetSignedOut.pick(true, 110, 190) == 190);
+        assertTrue(WidgetSignedOut.pick(true, 110, 0) == 110);
+        assertTrue(WidgetSignedOut.pick(false, 110, 190) == 110);
+    }
 }

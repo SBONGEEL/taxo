@@ -22,6 +22,21 @@ final class WidgetSignedOut {
 
     private WidgetSignedOut() {}
 
+    /** <b>ارتفاعُ الودجة في الاتّجاه الظاهر</b> بالـdp — الطوليُّ {@code MAX_HEIGHT} والأفقيُّ {@code MIN_HEIGHT} (عُرفُ أندرويد للمشغِّلات). */
+    static int heightDp(Context ctx, android.os.Bundle options, int fallback) {
+        if (options == null) return fallback;
+        boolean portrait = ctx.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_PORTRAIT;
+        return pick(portrait,
+                options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, fallback),
+                options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0));
+    }
+
+    /** خالصة: الطوليُّ يأخذ الأكبرَ من الاثنين (بعضُ المشغِّلات لا تملأ MAX فيبقى صفراً). */
+    static int pick(boolean portrait, int minH, int maxH) {
+        return portrait ? Math.max(minH, maxH) : minH;
+    }
+
     /** خالصة: <b>أعموديّة؟</b> من ارتفاع الودجة بالـdp. */
     static boolean column(int heightDp) {
         return heightDp >= COLUMN_MIN_DP;

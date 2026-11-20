@@ -71,7 +71,9 @@ public class DriverWidget extends AppWidgetProvider {
         SharedPreferences p = ctx.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE);
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_driver);
         int w = options == null ? 250 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
-        int h = options == null ? 110 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110);
+        // **ارتفاعُ الاتّجاه الظاهر** (قِيس على المحاكي ٢٠/١١): MIN_HEIGHT ارتفاعُ الأفقيّ، فودجةُ 4×2 في الطوليّ كانت تُحسب أقصرَ
+        // من حقيقتها فتُرسم بمقاسٍ أصغرَ ويبقى نصفُها فارغاً — والطوليُّ ارتفاعُه MAX_HEIGHT.
+        int h = WidgetSignedOut.heightDp(ctx, options, 110);
         int size = sizeClass(w, h);
         boolean enabled = p.getBoolean("driver_widgets_plus", false);
         boolean signedIn = p.getBoolean("signed_in", false);
