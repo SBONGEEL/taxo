@@ -21,6 +21,7 @@
  * وتقاريرُ الأعطال، وإشعاراتُ العروض، والسِمةُ الوردية.
  */
 
+import { zoneNote } from "@/lib/zone";
 import { DisplaySettings } from "@/components/DisplaySettings";
 import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
 import { offerSpeechChosen, setOfferSpeech } from "@/lib/launcher";
@@ -431,7 +432,7 @@ export function SettingsT2Screen() {
           <span className="t2-srow-main">
             <span className="t2-srow-title">{tr("ساعات الهدوء للعروض")}</span>
             <span className="t2-srow-hint">
-              {country?.quiet_hours_timezone ? tr("بتوقيت {0}. ", { 0: country.quiet_hours_timezone }) : ""}
+              {zoneNote(country?.quiet_hours_timezone)}
               {tr("تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.")}
             </span>
           </span>

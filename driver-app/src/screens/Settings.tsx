@@ -16,6 +16,7 @@
  * ولا صفَّ لغة: التطبيق عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
  */
 
+import { zoneNote } from "@/lib/zone";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -412,9 +413,7 @@ export function SettingsScreen() {
             ) : null}
           </div>
           <div className="mt-4 text-11 leading-snug text-muted">
-            {country?.quiet_hours_timezone
-              ? tr("بتوقيت {0}. ", { 0: country.quiet_hours_timezone })
-              : ""}
+            {zoneNote(country?.quiet_hours_timezone)}
             {tr("تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.")}
           </div>
         </div>
