@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { syncSystemBars } from "@/lib/system-bars";
 
 /** **و«تلقائي»** (SPEC §١٠٣ B/16، خلف `auto_night_keep_awake`): ليليٌّ من السادسة مساءً إلى السادسة صباحاً بساعة الهاتف —
  *  **بالساعة لا بضوء المكان ولا بوضع النظام**، فلا يبيضّ في نفقٍ ولا يسودّ تحت جسر (العلّةُ التي في رأس هذا الملفّ). */
@@ -74,6 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .querySelector('meta[name="theme-color"]')
       // **أرضُ TAXO 2.0** (`taxo2/tokens.css`: `--t2-bg`) — كان `#14181d`/`#f2f0eb` من الهوية القديمة فيبقى خطٌّ غريبٌ أعلى الهاتف
       ?.setAttribute("content", dark ? "#0e1013" : "#f4f1ea");
+    syncSystemBars(dark);
   }, [dark]);
 
   const setChoice = useCallback((next: ThemeChoice) => {

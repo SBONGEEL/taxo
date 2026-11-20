@@ -7,6 +7,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { syncSystemBars } from "@/lib/system-bars";
 
 type ThemeChoice = "system" | "light" | "dark";
 
@@ -53,6 +54,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // **أرضُ TAXO 2.0** (`taxo2/tokens.css`: `--t2-bg`) — شريطُ النظام يجب أن يكون خلفيةَ الشاشة نفسها،
       // ولونٌ من لوحةٍ سابقة يترك خطاً غريباً أعلى الهاتف (كان `#14181d`/`#f2f0eb` من الهوية القديمة)
       ?.setAttribute("content", dark ? "#0e1013" : "#f4f1ea");
+    syncSystemBars(dark);
   }, [dark]);
 
   const setChoice = useCallback((next: ThemeChoice) => {

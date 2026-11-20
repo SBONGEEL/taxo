@@ -27,6 +27,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SmsConsentPlugin.class);
         // **النصُّ الكبير** (SPEC §١٠٣ C/40)
         registerPlugin(TextZoomPlugin.class);
+        // **أيقوناتُ شريط النظام بمظهر التطبيق** (قِيس على S21 ٢٠٢٦-١١-٢٠)
+        registerPlugin(SystemBarsPlugin.class);
         // **مكالمةُ الرحلة يعرفها النظام** (SPEC §١٠٣ B/27) — البلوتوثُ والسيّارةُ وأزرارُ السمّاعة
         registerPlugin(CallBridgePlugin.class);
         // **تعطّلُ أندرويد الأصليّ يصل اللوحة** (SPEC §١٠٣ C/41) — الماسكُ أوّلاً، ثمّ الملحقُ الذي يسلّمه للويب
