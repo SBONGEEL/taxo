@@ -99,7 +99,7 @@ Play Console → App content → **Full-screen intent permission**.
 
 | Permission | App | Why (as in the policy) |
 |---|---|---|
-| `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS` | both | In-app calls only |
+| `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS` | both | In-app calls; and in the captain app only, if the captain turns it on in Settings, answering a ride request by voice ("accept"/"reject"), recognised by the phone's speech service, never sent to TAXO, never stored (§١١٠، حُدِّث ٢٠/١١) |
 | `POST_NOTIFICATIONS` | both | Ride, wallet and request notifications |
 | `SYSTEM_ALERT_WINDOW` | captain | Show an incoming request over a navigation app |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | captain | Keep the connection alive while online |
