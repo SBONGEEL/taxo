@@ -44,18 +44,25 @@ export function MapNamesScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [unreachable, setUnreachable] = useState(false);
 
+  /** **تحميلان مستقلّان**: «ما كُتب» من قاعدتنا، والقائمةُ من خدمة الأماكن — سقوطُ الخدمة لا يُخفي ما كُتب
+   *  ولا يُبقي الجدولَ هيكلَ تحميلٍ إلى الأبد (قِيس على مكدّس التطوير ٢٠٢٦-١١-٢٠) */
   const load = useCallback(async () => {
-    const [missing, written] = await Promise.all([
+    const [missing, written] = await Promise.allSettled([
       listMissingArabicPlaces(country, city, offset, PAGE),
       listMapNameFixes(country),
     ]);
-    setPage(missing);
-    setFixes(written);
+    setPage(missing.status === "fulfilled" ? missing.value : { built: true, total: 0, cities: [], items: [] });
+    setUnreachable(missing.status === "rejected");
+    setFixes(written.status === "fulfilled" ? written.value : []);
+    const failed = [missing, written].find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failed) throw failed.reason;
   }, [country, city, offset]);
 
   useEffect(() => {
     setPage(null);
+    setFixes(null);
     setError(null);
     load().catch((caught) => setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة القائمة"));
   }, [load]);
@@ -144,7 +151,11 @@ export function MapNamesScreen() {
         headers={["الاسمُ على الخريطة", "المدينة", "النوع", "الاسمُ العربيّ", ""]}
         rows={page?.items ?? null}
         keyOf={(row) => row.okey}
-        empty={{ title: "لا مكانَ بلا اسمٍ عربيّ هنا", hint: "كلُّ ما على الخريطة في هذه المدينة له اسمٌ عربيّ." }}
+        empty={
+          unreachable
+            ? { title: "لم تُقرأ القائمة", hint: "خدمةُ الأماكن لا تجيب الآن — لا يعني هذا أنّ كلَّ مكانٍ له اسمٌ عربيّ." }
+            : { title: "لا مكانَ بلا اسمٍ عربيّ هنا", hint: "كلُّ ما على الخريطة في هذه المدينة له اسمٌ عربيّ." }
+        }
         render={(row) => (
           <>
             <a

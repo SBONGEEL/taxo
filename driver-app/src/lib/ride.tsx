@@ -378,6 +378,20 @@ export function RideProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, [accruing]);
 
+  // **رحلةٌ جاريةٌ بلا مقبس تُقرأ كلَّ ربع دقيقة** (قِيس ٢٠٢٦-١١-٢٠): التطبيقُ يسترجع الرحلةَ عند فتحه عبر REST، **والمقبسُ لا يُفتح
+  // إلا بزرّ الاستقبال** — فكبتنٌ أُعيد فتحُ تطبيقه وسط رحلةٍ يبقى بلا أحداثها، **وتعديلُ الوجهة (§١٠٩-أ/٥) لا يصله فيقود إلى
+  // الوجهة القديمة بالأجرة القديمة**. القراءةُ لا تمسّ الحضورَ ولا التوزيع، وتكفّ لحظةَ يعود المقبسُ أو تنتهي الرحلة
+  const rideId = ride?.id ?? null;
+  useEffect(() => {
+    if (!rideId || online) return;
+    const timer = window.setInterval(() => {
+      getActiveRide()
+        .then((active) => setRide(isActive(active) ? active : null))
+        .catch(() => undefined);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [rideId, online]);
+
   // موقعُ الجهاز للخريطة — يُقرأ من المقبس نفسه فلا يُفتح مُراقبان
   useEffect(() => {
     if (!online) return;

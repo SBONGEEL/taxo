@@ -132,7 +132,7 @@ export function DestinationChangeT2({ ride, onChanged }: { ride: Ride; onChanged
           <div className="t2-dest-actions">
             <button
               type="button"
-              className="t2-button"
+              className="t2-button primary"
               disabled={busy || expired}
               aria-busy={busy}
               onClick={() => void confirm()}
