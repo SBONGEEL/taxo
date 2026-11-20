@@ -125,6 +125,8 @@ public class LauncherPlugin extends Plugin {
     /** يوقظ البلاطةَ والأداةَ لتقرآ الجديد — <b>وما لا وجودَ له في هذا التطبيق يُتجاوز بلا أثر</b>. */
     public static void wake(Context ctx) {
         ctx.sendBroadcast(new Intent(CHANGED).setPackage(ctx.getPackageName()));
+        // **ودجاتُ الأمر الثامن** (٢٠/١١): ما يُدرج في المنتقي، ورسمُ ما على الشاشة — والمطفأةُ لا تسمع البثّ فتُنادى هنا
+        TaxoWidgets.sync(ctx);
         if (Build.VERSION.SDK_INT >= 24) {
             try {
                 String pkg = LauncherPlugin.class.getPackage().getName();

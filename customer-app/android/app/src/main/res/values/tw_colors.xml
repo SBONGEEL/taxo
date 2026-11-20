@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجاتُ TAXO** (أمرُ المالك ٢٠/١١ الثامن) — نهارٌ نظيفٌ وليلٌ برتقاليٌّ على داكن. مولَّد. -->
+<resources>
+    <color name="tw_bg0">#FFFFFFFF</color>
+    <color name="tw_bg1">#FFEEF0F3</color>
+    <color name="tw_glow">#2EF05A28</color>
+    <color name="tw_line">#14101828</color>
+    <color name="tw_hi">#E6FFFFFF</color>
+    <color name="tw_tx">#FF15171C</color>
+    <color name="tw_mut">#FF636974</color>
+    <color name="tw_acc">#FFF05A28</color>
+    <color name="tw_acc2">#FFFF8A5C</color>
+    <color name="tw_chip">#0B101828</color>
+    <color name="tw_chip2">#14101828</color>
+    <color name="tw_track">#17101828</color>
+    <color name="tw_g_b">#FFF05A28</color>
+    <color name="tw_g_k">#FFFFB595</color>
+    <color name="tw_g_d">#FFB8401A</color>
+    <color name="tw_g_c">#FFFFFFFF</color>
+    <color name="tw_g_g">#1F1F2433</color>
+    <color name="tw_on">#FFFFFFFF</color>
+    <color name="tw_ok">#FF1FBF75</color>
+    <color name="tw_women">#FF9C2C6E</color>
+</resources>

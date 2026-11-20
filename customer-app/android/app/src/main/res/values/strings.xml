@@ -5,4 +5,35 @@
     <string name="package_name">ly.tajora.rider</string>
     <string name="custom_url_scheme">ly.tajora.rider</string>
     <string name="widget_rider_desc">إلى أين؟ والبيت والعمل وحال رحلتك</string>
+    <!-- ودجاتُ الأمر الثامن (٢٠/١١) -->
+    <string name="tw_request_label">اطلب مشوارك</string>
+    <string name="tw_request_desc">إلى أين؟ — اطلب مشوارك بكل سهولة وأمان</string>
+    <string name="tw_on_the_way_label">السائق في الطريق</string>
+    <string name="tw_on_the_way_desc">دقائقُ الوصول وسائقُك ولوحتُه أثناء الرحلة</string>
+    <string name="tw_quick_label">طلب سريع</string>
+    <string name="tw_quick_desc">زرٌّ واحدٌ يفتح «إلى أين؟»</string>
+    <string name="tw_favorites_label">وجهاتك المفضلة</string>
+    <string name="tw_favorites_desc">المنزل والعمل وكلُّ أماكنك</string>
+    <string name="tw_wallet_label">محفظتي</string>
+    <string name="tw_wallet_desc">رصيدُك وشحنُ الرصيد</string>
+    <string name="tw_discount_label">خصم خاص</string>
+    <string name="tw_discount_desc">العرضُ القائمُ الآن</string>
+    <string name="tw_schedule_label">حجز مسبق</string>
+    <string name="tw_schedule_desc">رحلتُك المحجوزةُ القادمة</string>
+    <string name="tw_services_label">خدمات التنقّل السريع</string>
+    <string name="tw_services_desc">خدماتُ TAXO المتاحةُ في بلدك</string>
+    <string name="tw_current_label">رحلتي الحالية</string>
+    <string name="tw_current_desc">حالُ رحلتك أثناءها</string>
+    <string name="tw_home_label">المنزل</string>
+    <string name="tw_home_desc">رحلةٌ إلى المنزل بلمسة — وتؤكّدها في التطبيق</string>
+    <string name="tw_work_label">العمل</string>
+    <string name="tw_work_desc">رحلةٌ إلى العمل بلمسة — وتؤكّدها في التطبيق</string>
+    <string name="tw_points_label">نقاطي</string>
+    <string name="tw_points_desc">نقاطُك وحلقةُ مستواك</string>
+    <string name="tw_recent_label">آخر رحلاتي</string>
+    <string name="tw_recent_desc">آخرُ رحلةٍ و«اطلبها مرة أخرى»</string>
+    <string name="tw_offers_label">العروض والخصومات</string>
+    <string name="tw_offers_desc">عروضُ TAXO القائمة</string>
+    <string name="tw_nearest_label">أقرب سائق متاح</string>
+    <string name="tw_nearest_desc">دقائقُ أقرب سائقٍ إليك</string>
 </resources>

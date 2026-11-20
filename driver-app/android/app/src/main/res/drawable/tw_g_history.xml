@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <group android:translateX="2" android:translateY="2"><path android:fillColor="@color/tw_g_k" android:pathData="M24 6a18 18 0 1 1-17.2 23.4l4.3-1.3A13.5 13.5 0 1 0 12.5 15.6L8.6 13.4A18 18 0 0 1 24 6z" /></group>
+    <group android:translateX="2" android:translateY="2"><path android:fillColor="@color/tw_g_k" android:pathData="M24 14h0a1.8 1.8 0 0 1 1.8 1.8v8.4a1.8 1.8 0 0 1 -1.8 1.8h0a1.8 1.8 0 0 1 -1.8 -1.8v-8.4a1.8 1.8 0 0 1 1.8 -1.8z" /></group>
+    <group android:translateX="2" android:translateY="2"><path android:fillColor="@color/tw_g_k" android:pathData="M23 23.6l7.6 4.4-1.8 3.1-7.6-4.4z" /></group>
+    <path android:fillColor="@color/tw_g_d" android:pathData="M5.5 10.5l9.8 1.1-6.7 7.3z" />
+    <path android:fillColor="@color/tw_g_b" android:pathData="M24 6a18 18 0 1 1-17.2 23.4l4.3-1.3A13.5 13.5 0 1 0 12.5 15.6L8.6 13.4A18 18 0 0 1 24 6z" />
+    <path android:fillColor="@color/tw_g_b" android:pathData="M24 14h0a1.8 1.8 0 0 1 1.8 1.8v8.4a1.8 1.8 0 0 1 -1.8 1.8h0a1.8 1.8 0 0 1 -1.8 -1.8v-8.4a1.8 1.8 0 0 1 1.8 -1.8z" />
+    <path android:fillColor="@color/tw_g_b" android:pathData="M23 23.6l7.6 4.4-1.8 3.1-7.6-4.4z" />
+</vector>

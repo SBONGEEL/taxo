@@ -201,6 +201,63 @@
                 <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
+        <!-- **ودجاتُ الكبتن الخمس** (أمرُ المالك ٢٠/١١ الثامن) — **مطفأةٌ هنا**، ويُظهرها `TaxoWidgets.sync` في المنتقي حين يشتعل
+             `driver_widgets_plus` لبلد الكبتن ومفتاحُ بياناتها؛ فمن لم يُشعَل له شيءٌ لا يرى ودجةً جديدة -->
+        <receiver
+            android:name=".TaxoWidgets$Status"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_status_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_status" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Goal"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_goal_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_goal" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Subscription"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_subscription_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_subscription" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Busy"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_busy_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_busy" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Ride"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_ride_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_ride" />
+        </receiver>
     </application>
 
     <!-- Permissions -->

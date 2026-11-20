@@ -5,7 +5,14 @@ export interface BubbleRideInput {
   id: string;
   status: string;
   arrived_at: string | null;
-  driver: { name: string; vehicle: { make: string; model: string; color: string; plate_number: string } | null } | null;
+  /** فئةُ الرحلة — **لسيّارتها في الودجة** (أمرُ المالك ٢٠/١١ الثامن). */
+  vehicle_category?: string;
+  driver: {
+    name: string;
+    /** متوسّطُ التقييم كما تحسبه الخلفيّة — و«٠» يعني بلا تقييمٍ بعد فلا يُعرض. */
+    rating_avg?: string | null;
+    vehicle: { make: string; model: string; color: string; plate_number: string } | null;
+  } | null;
 }
 
 export type RiderPhase = "searching" | "assigned" | "arrived" | "in_progress";
@@ -44,5 +51,8 @@ export function riderBubbleRide(ride: BubbleRideInput | null, etaMin: number | n
     eta_min: phase === "assigned" && etaMin !== null ? Math.max(0, Math.round(etaMin)) : -1,
     eta_first: phase === "assigned" && etaFirst !== null ? Math.max(1, Math.round(etaFirst)) : -1,
     arrived_ms: phase === "arrived" && Number.isFinite(arrivedMs) ? arrivedMs : 0,
+    // **لودجتَي «السائق في الطريق» و«رحلتي الحالية»** (٢٠/١١ الثامن): تقييمُ الخلفيّة بخانةٍ واحدة، وفئةُ الرحلة لسيّارتها
+    rating: ride.driver?.rating_avg && Number(ride.driver.rating_avg) > 0 ? Number(ride.driver.rating_avg).toFixed(1) : "",
+    cat: ride.vehicle_category ?? "",
   });
 }

@@ -155,6 +155,173 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_rider_quick_info" />
         </receiver>
+        <!-- **ودجاتُ الراكب الأربعَ عشرة** (أمرُ المالك ٢٠/١١ الثامن) — **مطفأةٌ هنا**، ويُظهرها `TaxoWidgets.sync` في المنتقي حين يشتعل
+             `rider_widgets_plus` لبلد الراكب وتوجد بياناتُها؛ فمن لم يُشعَل له شيءٌ لا يرى ودجةً جديدة -->
+        <receiver
+            android:name=".TaxoWidgets$Request"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_request_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_request" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$OnTheWay"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_on_the_way_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_on_the_way" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Quick"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_quick_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_quick" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Favorites"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_favorites_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_favorites" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Wallet"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_wallet_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_wallet" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Discount"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_discount_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_discount" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Schedule"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_schedule_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_schedule" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Services"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_services_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_services" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Current"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_current_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_current" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Home"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_home_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_home" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Work"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_work_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_work" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Points"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_points_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_points" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Recent"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_recent_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_recent" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Offers"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_offers_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_offers" />
+        </receiver>
+        <receiver
+            android:name=".TaxoWidgets$Nearest"
+            android:enabled="false"
+            android:exported="false"
+            android:label="@string/tw_nearest_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ly.tajora.LAUNCHER_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/tw_info_nearest" />
+        </receiver>
         <receiver
             android:name=".CallDeclineReceiver"
             android:exported="false" />

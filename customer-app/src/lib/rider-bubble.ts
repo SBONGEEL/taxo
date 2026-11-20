@@ -103,7 +103,7 @@ export function useRiderBubbleBridge({ country, ride, approachMinutes, places, r
       // **الودجةُ تعرف من دخل ومن خرج** — ولا تبقى رحلةُ من خرج ولا أماكنُه على الشاشة الرئيسيّة
       if (!launcherAvailable()) return;
       void native
-        .setPrefs(access === null ? { signed_in: false, rider_ride: null, rider_recent: null, rider_places: null } : { signed_in: true })
+        .setPrefs(access === null ? { signed_in: false, rider_ride: null, rider_recent: null, rider_places: null, w_feed: null } : { signed_in: true })
         .catch(() => undefined);
     };
     write(tokens.access());

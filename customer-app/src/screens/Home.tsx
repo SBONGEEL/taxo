@@ -14,6 +14,7 @@
  * حقلَ «إلى أين؟» — وهي تصل من `GET /rides/me/active` عند كل اتصالٍ بالمقبس.
  */
 
+import { useWidgetFeed } from "@/lib/widget-feed";
 import { isOutcomeClosed, outcomeDecision } from "@/lib/outcome";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1067,6 +1068,9 @@ export function HomeScreen() {
   // **زمنُ الوصول** (§٦٢-ج/١٠): قبل الطلب ما دامت الرئيسيةُ أو ورقةُ الطلب مفتوحة، وفي الطريق إليها من مسار الاقتراب — ومطفأً لا رقم
   const nearestEta = useNearestEta(pickup ?? center, browsing || phase === "confirm");
   const approachMinutes = useApproachMinutes(tracking ? ride : null, driverPing);
+  // **ودجاتُ الأمر الثامن** (٢٠/١١): أقربُ كبتنٍ متاحٍ من نقطة الرئيسيّة بأقلِّ دقائق فئاتها — ولا رقمَ حيث لا جواب
+  const nearestValues = Object.values(nearestEta.minutes ?? {}).filter((value): value is number => typeof value === "number");
+  useWidgetFeed(user?.country_code, user !== null && user !== undefined, nearestValues.length ? Math.min(...nearestValues) : null);
 
   // **اختصارا الأيقونة** (SPEC §١٠٣/10): «البيت» يمرّ بـ`pickPlace` نفسِه، وبلا بيتٍ محفوظٍ ⇐ «أماكني» ليضيفه
   // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
@@ -1079,6 +1083,12 @@ export function HomeScreen() {
   useVolumeEmergency(user?.country_code, tracking ? ride : null);
   useRiderLauncher(user?.country_code, (action) => {
     if (action === "wallet") return navigate("/wallet");
+    // **ودجاتُ الأمر الثامن** (٢٠/١١) — شاشاتٌ تُفتح، والطلبُ نفسُه يبقى في ورقة الطلب بتأكيد الراكب
+    if (action === "topup") return navigate("/wallet/topup");
+    if (action === "bookings") return navigate("/account/bookings");
+    if (action === "loyalty") return navigate("/loyalty");
+    if (action === "rides") return navigate("/rides");
+    if (action.startsWith("go:")) return navigate(action.slice(3));
     // **«البيت» أو «العمل»** (§١٠٣/10 و B/20) — المكانُ المحفوظ، وبلاه «أماكني» ليضيفه
     const icon = action === "ride_work" ? "work" : "home";
     const place = places.find((saved) => saved.icon === icon);

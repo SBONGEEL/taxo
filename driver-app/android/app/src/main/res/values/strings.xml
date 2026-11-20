@@ -5,4 +5,15 @@
     <string name="package_name">ly.tajora.driver</string>
     <string name="custom_url_scheme">ly.tajora.driver</string>
     <string name="widget_driver_desc">حالك وأرباح اليوم وأقرب منطقة مزدحمة</string>
+    <!-- ودجاتُ الأمر الثامن (٢٠/١١) -->
+    <string name="tw_status_label">حالي وأرباح اليوم</string>
+    <string name="tw_status_desc">متّصلٌ أو غيرُ متّصلٍ مع أرباح اليوم</string>
+    <string name="tw_goal_label">هدفي اليومي</string>
+    <string name="tw_goal_desc">حلقةُ هدفك اليوميّ من أرباحك</string>
+    <string name="tw_subscription_label">اشتراكي</string>
+    <string name="tw_subscription_desc">الأيّامُ الباقيةُ من اشتراكك</string>
+    <string name="tw_busy_label">أقرب منطقة مزدحمة</string>
+    <string name="tw_busy_desc">أين الطلبُ الآن، و«اذهب إليها»</string>
+    <string name="tw_ride_label">رحلتي الحالية</string>
+    <string name="tw_ride_desc">حالُ رحلتك أثناءها</string>
 </resources>
