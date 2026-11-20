@@ -27,6 +27,7 @@ from app.models.audit import AdminAuditLog
 from app.models.enums import CountryCode, FeatureKey, WalletTransactionType
 from app.models.feature_flag import FeatureFlag
 from app.models.notification import NotificationSetting
+from app.models.ride import Ride
 from app.models.user import User
 from app.models.wallet_setting import WalletSetting
 from app.services import finance_summary as fs
@@ -258,6 +259,10 @@ async def test_test_accounts_are_left_out_of_every_total(
     # **والضابط** — بلا الوسم تعود الأرقامُ اثنين، فالواحدُ فوق أثرُ الاستثناء لا قلّةُ الصفوف
     await _mark_test(session_factory, tester["user_id"], False)
     await _mark_test(session_factory, test_rider["user"]["id"], False)
+    # **وختمُ الرحلة نفسِها** (§٦٥-ج/٧): رحلةُ راكب التجربة مختومةٌ عند إنشائها، فيُفكّ مع وسم الحسابين
+    async with session_factory() as session:
+        await session.execute(update(Ride).where(Ride.rider_id == uuid.UUID(test_rider["user"]["id"])).values(is_test=False))
+        await session.commit()
     again = await summary(client, reader)
     assert amount(again, "ride_payments_confirmed") == Decimal("16.000")
     assert amount(again, "adjustments") == Decimal("45.000")
