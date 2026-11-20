@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.app_release import AppRelease
-from app.models.enums import ClientApp, ReleasePlatform
+from app.models.enums import ClientApp, ReleasePlatform, ReleaseSource
 
 #: مهلةُ طرقِ رابط التحميل. **أقصرُ من مهلة المزوّدين**: هذه على مشرفٍ ينتظر
 #: أمام نموذج، **ورابطٌ لا يجيب في عشر ثوانٍ ليس رابطاً يُعتمد عليه قفلُ ناس**.
@@ -55,18 +55,35 @@ async def current(
     session: AsyncSession,
     app: ClientApp,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
+    source: ReleaseSource = ReleaseSource.DEFAULT,
+    *,
+    fallback: bool = True,
 ) -> AppRelease | None:
-    """الصفُّ الحاكم لتطبيقٍ على نظام — **أعلى رقمٍ لا أحدثُ إنشاء**.
+    """الصفُّ الحاكم لتطبيقٍ على نظامٍ من متجر — **أعلى رقمٍ لا أحدثُ إنشاء**.
 
     **والنظامُ جزءٌ من السؤال** (2026-10-12): رقمُ iOS لا يُقارَن برقم أندرويد،
     **ورابطُ هذا الصفِّ هو ما يفتحه زرُّ «تحديث» على ذلك النظام**.
+
+    **والمتجرُ كذلك** (٢٠٢٦-١١-٢٠): صفُّه يحكمه، **ومتجرٌ بلا صفٍّ يُحكم بصفِّ `default`** (`fallback`) — فلا يُفتح بابٌ
+    لحزمةٍ قديمةٍ لأنّ متجرَها لم يُسجَّل بعد. **واللوحةُ تسأل بلا `fallback`**: «أهذا الصفُّ حاكمُ متجره؟» سؤالٌ عن صفوفه وحدها.
     """
-    return await session.scalar(
-        select(AppRelease)
-        .where(AppRelease.app == app, AppRelease.platform == platform)
-        .order_by(AppRelease.build.desc())
-        .limit(1)
-    )
+
+    async def top(which: ReleaseSource) -> AppRelease | None:
+        return await session.scalar(
+            select(AppRelease)
+            .where(
+                AppRelease.app == app,
+                AppRelease.platform == platform,
+                AppRelease.source == which,
+            )
+            .order_by(AppRelease.build.desc())
+            .limit(1)
+        )
+
+    row = await top(source)
+    if row is None and fallback and source != ReleaseSource.DEFAULT:
+        row = await top(ReleaseSource.DEFAULT)
+    return row
 
 
 async def verdict_for(
@@ -75,6 +92,7 @@ async def verdict_for(
     app: ClientApp,
     build: int | None,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
+    source: ReleaseSource = ReleaseSource.DEFAULT,
 ) -> VersionVerdict:
     """ماذا يفعل التطبيقُ عند الإقلاع.
 
@@ -82,7 +100,7 @@ async def verdict_for(
     ملحقُه. **ولا يُقفل من لا نعرف نسختَه**: القفلُ عقوبةٌ على قِدَمٍ مثبَت،
     **والظنُّ لا يقفل باباً**.
     """
-    release = await current(session, app, platform)
+    release = await current(session, app, platform, source)
     if release is None:
         return NO_POLICY
 
@@ -171,6 +189,7 @@ async def _require_second_permission(
     min_supported_build: int,
     confirmation: int | None,
     release_id: uuid.UUID | None = None,
+    source: ReleaseSource = ReleaseSource.DEFAULT,
 ) -> None:
     """**الإذنُ الثاني حين يرتفع الحدُّ فعلاً** (§39٫٨: «يستأذن مرّتين»).
 
@@ -184,7 +203,7 @@ async def _require_second_permission(
     **وأوّلُ صفٍّ لتطبيقٍ يستأذن دائماً**: لا حدَّ قبله، **فكلُّ حدٍّ يكتبه
     يقفل من هو دونه** — وذاك أوسعُ فعلٍ في هذه الشاشة لا أهونُه.
     """
-    live = await current(session, app, platform)
+    live = await current(session, app, platform, source, fallback=False)
     if release_id is None:
         governs = live is None or build > live.build
     else:
@@ -214,6 +233,7 @@ async def create(
     reminder_hours: int,
     confirmation: int | None,
     open_map_min_build: int | None = None,
+    source: ReleaseSource = ReleaseSource.DEFAULT,
 ) -> AppRelease:
     """يضيف إصداراً — **بعد أن يطرق رابطَه ويستأذن مرّتين**."""
     if min_supported_build > build:
@@ -224,12 +244,13 @@ async def create(
         select(AppRelease).where(
             AppRelease.app == app,
             AppRelease.platform == platform,
+            AppRelease.source == source,
             AppRelease.build == build,
         )
     )
     if exists is not None:
         raise Conflict(
-            "هذا الرقم مسجَّلٌ لهذا التطبيق على هذا النظام — والرقمُ هو هويةُ الحزمة."
+            "هذا الرقم مسجَّلٌ لهذا التطبيق على هذا النظام وهذا المتجر — والرقمُ هو هويةُ الحزمة."
         )
 
     await _require_second_permission(
@@ -239,12 +260,14 @@ async def create(
         build=build,
         min_supported_build=min_supported_build,
         confirmation=confirmation,
+        source=source,
     )
     await check_download_url(download_url)
 
     release = AppRelease(
         app=app,
         platform=platform,
+        source=source,
         build=build,
         min_supported_build=min_supported_build,
         download_url=download_url,
@@ -295,6 +318,7 @@ async def update(
         min_supported_build=min_supported_build,
         confirmation=confirmation,
         release_id=release.id,
+        source=release.source,
     )
     if download_url != release.download_url:
         await check_download_url(download_url)

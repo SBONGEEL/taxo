@@ -2376,6 +2376,9 @@ export type ClientApp = "rider" | "driver" | "panel";
  *  لا حزمةَ في متصفّحٍ لتُحدَّث. **ورقمُ iOS يُرقَّم وحدَه** (قرارُ المالك 2026-10-12). */
 export type ReleasePlatform = "android" | "ios";
 
+/** **المتجرُ الذي ثبّت الحزمة** — مرآةُ `ReleaseSource`، ويحرسها `check:enums`. و`default` = Google Play والموقع (أمرُ المالك ٢٠/١١ السابع). */
+export type ReleaseSource = "default" | "galaxy" | "huawei" | "xiaomi" | "oppo" | "vivo" | "honor" | "palm" | "uptodown" | "aptoide";
+
 /** إصدارٌ مسجَّل — **والرقمُ `versionCode` لا اسمُ نسخة**.
  *
  * `versionName` ثابتٌ في هذه الشجرة (قِيست حزمتان بـ`1.0` و`1.1` ورقمُهما
@@ -2386,6 +2389,8 @@ export interface AppRelease {
   app: ClientApp;
   /** **ولكلِّ (تطبيق، نظام) صفٌّ حاكمٌ ورابط** — رابطُه ما يفتحه زرُّ «تحديث» هناك. */
   platform: ReleasePlatform;
+  /** **ولكلِّ متجرٍ صفٌّ حاكمٌ ورابط** — ومتجرٌ بلا صفٍّ يُحكم بصفِّ `default`. */
+  source: ReleaseSource;
   build: number;
   min_supported_build: number;
   download_url: string;

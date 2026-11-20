@@ -38,6 +38,36 @@ public class AppUpdatePlugin extends Plugin {
         return manager;
     }
 
+    /**
+     * <b>من أيِّ متجرٍ ثُبّتت الحزمة، وأفي الهاتف خدماتُ Google</b> (أمرُ المالك ٢٠/١١ السابع) — قراءةٌ محضةٌ لا تغيّر شيئاً.
+     * البوّابةُ تختار بها رابطَ «تحديث» متجرِها من اللوحة؛ <b>ومثبِّتُ Play أو صفحةِ التحميل يُقرأ كما كان</b>.
+     */
+    @PluginMethod
+    public void source(PluginCall call) {
+        JSObject ret = new JSObject();
+        String installer = null;
+        android.content.pm.PackageManager pm = getContext().getPackageManager();
+        String pkg = getContext().getPackageName();
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                installer = pm.getInstallSourceInfo(pkg).getInstallingPackageName();
+            } else {
+                installer = pm.getInstallerPackageName(pkg);
+            }
+        } catch (Exception ignored) {
+            // لا مثبِّتَ يُقرأ — يُقرأ «الافتراضيّ»
+        }
+        boolean gms = false;
+        try {
+            gms = pm.getApplicationInfo("com.google.android.gms", 0).enabled;
+        } catch (Exception ignored) {
+            // هاتفٌ بلا خدمات Google
+        }
+        ret.put("installer", installer);
+        ret.put("gms", gms);
+        call.resolve(ret);
+    }
+
     /** <b>يبدأ التحديث إن قدر Play</b> — {@code immediate: true} للإلزاميّ. يُحلّ دائماً بـ{@code started}، ولا يُرفض. */
     @PluginMethod
     public void start(PluginCall call) {

@@ -35,7 +35,7 @@ import {
   listReleases,
   updateRelease,
 } from "@/api/endpoints";
-import type { AppRelease, ClientApp, ReleasePlatform } from "@/api/types";
+import type { AppRelease, ClientApp, ReleasePlatform, ReleaseSource } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -60,7 +60,23 @@ const PLATFORM_LABEL: Record<ReleasePlatform, string> = {
   ios: "iOS",
 };
 
+/** **المتجرُ الذي ثبّت الحزمة** (أمرُ المالك ٢٠/١١ السابع): لكلِّ متجرٍ رابطُه وحدُّه — **و«Google Play والموقع» هو ما كان قبله حرفاً**،
+ *  ومتجرٌ بلا صفٍّ يُحكم بصفِّه. والتطبيقُ يعرف متجرَه من الهاتف نفسِه (مثبِّتُ الحزمة)، فلا يُسأل أحد. */
+const SOURCE_LABEL: Record<ReleaseSource, string> = {
+  default: "Google Play والموقع",
+  galaxy: "Galaxy Store",
+  huawei: "AppGallery",
+  xiaomi: "GetApps",
+  oppo: "OPPO App Market",
+  vivo: "V-Appstore",
+  honor: "HONOR App Market",
+  palm: "Palm Store",
+  uptodown: "Uptodown",
+  aptoide: "Aptoide",
+};
+
 const APPS = Object.keys(APP_LABEL) as ClientApp[];
+const SOURCES = Object.keys(SOURCE_LABEL) as ReleaseSource[];
 const PLATFORMS = Object.keys(PLATFORM_LABEL) as ReleasePlatform[];
 
 const COLUMNS = "0.9fr 0.5fr 0.6fr 0.7fr 0.6fr 1.4fr 0.7fr";
@@ -68,6 +84,7 @@ const COLUMNS = "0.9fr 0.5fr 0.6fr 0.7fr 0.6fr 1.4fr 0.7fr";
 interface Draft {
   app: ClientApp;
   platform: ReleasePlatform;
+  source: ReleaseSource;
   build: string;
   min: string;
   url: string;
@@ -80,6 +97,7 @@ interface Draft {
 const EMPTY: Draft = {
   app: "rider",
   platform: "android",
+  source: "default",
   build: "",
   min: "",
   url: "",
@@ -110,24 +128,35 @@ export function ReleasesScreen() {
   }, [load]);
 
   /** **الصفُّ الحاكمُ لتطبيقٍ على نظام** — محسوبٌ في الخلفية (`is_current`)، ورابطُه ما يفتحه زرُّ «تحديث» هناك. */
-  const governing = (app: ClientApp, platform: ReleasePlatform) =>
+  const governing = (app: ClientApp, platform: ReleasePlatform, source: ReleaseSource = "default") =>
     rows?.find(
-      (row) => row.app === app && row.platform === platform && row.is_current,
+      (row) => row.app === app && row.platform === platform && row.source === source && row.is_current,
     ) ?? null;
+
+  /** **خاناتُ زرِّ «تحديث»**: (تطبيق، نظام) لـGoogle Play والموقع دائماً، **وكلُّ متجرٍ له صفٌّ حاكم** — لا ثلاثون خانةً فارغة. */
+  const slots: Array<[ClientApp, ReleasePlatform, ReleaseSource]> = [
+    ...APPS.flatMap((app) =>
+      PLATFORMS.map((platform): [ClientApp, ReleasePlatform, ReleaseSource] => [app, platform, "default"]),
+    ),
+    ...(rows ?? [])
+      .filter((row) => row.is_current && row.source !== "default")
+      .map((row): [ClientApp, ReleasePlatform, ReleaseSource] => [row.app, row.platform, row.source]),
+  ];
 
   /** **الحدُّ القائم للتطبيق والنظام المختارين** — منه تُعرف الورقةُ الأولى: هل يرتفع؟ */
   const standing =
-    governing(draft.app, draft.platform)?.min_supported_build ?? 0;
+    governing(draft.app, draft.platform, draft.source)?.min_supported_build ?? 0;
 
   /** إصدارٌ جديدٌ لتطبيقٍ ونظام — **ورابطُه يبدأ برابط الحاكم هناك** إن لم يُكتب غيرُه: الرابطُ صفةُ (تطبيق، نظام) لا صفةُ رقم. */
-  function choose(app: ClientApp, platform: ReleasePlatform) {
-    const before = governing(draft.app, draft.platform)?.download_url ?? "";
+  function choose(app: ClientApp, platform: ReleasePlatform, source: ReleaseSource = draft.source) {
+    const before = governing(draft.app, draft.platform, draft.source)?.download_url ?? "";
     const keep = draft.url.length > 0 && draft.url !== before;
     setDraft({
       ...draft,
       app,
       platform,
-      url: keep ? draft.url : (governing(app, platform)?.download_url ?? ""),
+      source,
+      url: keep ? draft.url : (governing(app, platform, source)?.download_url ?? ""),
     });
   }
 
@@ -138,6 +167,7 @@ export function ReleasesScreen() {
     setDraft({
       app: row.app,
       platform: row.platform,
+      source: row.source,
       build: String(row.build),
       min: String(row.min_supported_build),
       url: row.download_url,
@@ -170,6 +200,7 @@ export function ReleasesScreen() {
     const body = {
       app: draft.app,
       platform: draft.platform,
+      source: draft.source,
       build: Number(draft.build),
       min_supported_build: Number(draft.min),
       download_url: draft.url.trim(),
@@ -227,16 +258,16 @@ export function ReleasesScreen() {
             التطبيق بلا كودٍ ولا رفع، ويُطرق الرابطُ قبل الحفظ.
           </p>
           <div className="flex flex-col gap-8">
-            {APPS.flatMap((app) =>
-              PLATFORMS.map((platform) => {
-                const live = governing(app, platform);
+            {slots.map(([app, platform, source]) => {
+                const live = governing(app, platform, source);
                 return (
                   <div
-                    key={`${app}-${platform}`}
+                    key={`${app}-${platform}-${source}`}
                     className="flex items-center gap-10 rounded-13 border border-line bg-surface-2 px-13 py-10"
                   >
                     <span className="flex-none text-12.5 text-ink">
                       {APP_LABEL[app]} · {PLATFORM_LABEL[platform]}
+                      {source === "default" ? "" : ` · ${SOURCE_LABEL[source]}`}
                     </span>
                     {live ? (
                       <span
@@ -257,8 +288,7 @@ export function ReleasesScreen() {
                     ) : null}
                   </div>
                 );
-              }),
-            )}
+              })}
           </div>
         </section>
 
@@ -305,6 +335,22 @@ export function ReleasesScreen() {
                 {PLATFORMS.map((key) => (
                   <option key={key} value={key}>
                     {PLATFORM_LABEL[key]}
+                  </option>
+                ))}
+              </Select>
+              {/* **المتجرُ هويةٌ مع الرقم** فلا يُعدَّل في صفٍّ قائم — ومتجرٌ بلا صفٍّ يُحكم بصفِّ «Google Play والموقع» */}
+              <Select
+                label="المتجر"
+                name="source"
+                value={draft.source}
+                disabled={editing !== null}
+                onChange={(event) =>
+                  choose(draft.app, draft.platform, event.target.value as ReleaseSource)
+                }
+              >
+                {SOURCES.map((key) => (
+                  <option key={key} value={key}>
+                    {SOURCE_LABEL[key]}
                   </option>
                 ))}
               </Select>
@@ -453,6 +499,7 @@ export function ReleasesScreen() {
               </span>
               <span className="text-12.5 text-ink">
                 {PLATFORM_LABEL[row.platform]}
+                {row.source === "default" ? "" : ` · ${SOURCE_LABEL[row.source]}`}
               </span>
               <span className="text-12.5 text-ink" dir="ltr">
                 {digits(String(row.build))}

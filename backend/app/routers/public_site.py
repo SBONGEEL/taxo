@@ -41,6 +41,7 @@ from app.models.enums import (
     PolicyApp,
     PolicyDocType,
     ReleasePlatform,
+    ReleaseSource,
 )
 from app.models.subscription_offer import (
     AUDIENCE_ALL,
@@ -161,6 +162,7 @@ async def app_version(
     app: ClientApp,
     build: int | None = None,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
+    source: ReleaseSource = ReleaseSource.DEFAULT,
 ) -> AppVersionOut:
     """ماذا يفعل التطبيقُ عند الإقلاع — **البند ٨ (§39٫٨، §43)**.
 
@@ -178,7 +180,7 @@ async def app_version(
     ترسل نظامَها منذه — **وحزمةُ iOS لا يحكمها رقمُ أندرويد**.
     """
     verdict = await releases_service.verdict_for(
-        session, app=app, build=build, platform=platform
+        session, app=app, build=build, platform=platform, source=source
     )
     return AppVersionOut(
         state=verdict.state,

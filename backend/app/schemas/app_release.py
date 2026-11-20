@@ -15,7 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from app.models.app_release import MAX_REMINDER_HOURS
-from app.models.enums import ClientApp, ReleasePlatform
+from app.models.enums import ClientApp, ReleasePlatform, ReleaseSource
 
 
 class AppReleaseIn(BaseModel):
@@ -25,6 +25,8 @@ class AppReleaseIn(BaseModel):
     #: **أندرويد افتراضاً** — وكلُّ صفٍّ قبل 2026-10-12 أندرويد. ولا يُعدَّل في
     #: صفٍّ قائم كما لا يُعدَّل رقمُه: هو هويةُ الحزمة معه
     platform: ReleasePlatform = ReleasePlatform.ANDROID
+    #: **المتجر** (٢٠٢٦-١١-٢٠) — `default` افتراضاً: Google Play والموقع، وهو كلُّ صفٍّ قبله. ولا يُعدَّل في صفٍّ قائم
+    source: ReleaseSource = ReleaseSource.DEFAULT
     build: int = Field(ge=1)
     min_supported_build: int = Field(ge=1)
     #: **يُفحص قبل الحفظ** — `HttpUrl` تحرس الشكل، والخدمةُ تطرق الباب
@@ -45,6 +47,7 @@ class AppReleaseOut(BaseModel):
     id: uuid.UUID
     app: ClientApp
     platform: ReleasePlatform
+    source: ReleaseSource
     build: int
     min_supported_build: int
     download_url: str

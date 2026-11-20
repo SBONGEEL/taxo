@@ -48,7 +48,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, pg_enum
-from app.models.enums import ClientApp, ReleasePlatform
+from app.models.enums import ClientApp, ReleasePlatform, ReleaseSource
 
 #: أقصى مدّةٍ لكتم التنبيه الاختياريّ — شهرٌ. وما فوقه «لا يعود أبداً» بصيغةٍ
 #: أخرى، **وكتمٌ أبديٌّ يُكتب بابَ إطفاءٍ لا حقلَ مدّة**.
@@ -63,8 +63,13 @@ class AppRelease(Base):
         # **لا رقمان متساويان لتطبيقٍ واحدٍ على نظامٍ واحد**: الرقمُ هو الهوية
         # عند أندرويد، وصفّان به يجعلان «الأخير» غيرَ معرَّف. **والنظامُ في
         # المفتاح** (2026-10-12): رقمُ iOS يُرقَّم وحدَه، فيلتقي برقم أندرويد
+        # **والمتجرُ في المفتاح** (٢٠٢٦-١١-٢٠): الحزمةُ نفسُها برقمها تُنشر في Play وفي Galaxy Store — **صفٌّ لكلٍّ منهما ليس تكراراً**
         UniqueConstraint(
-            "app", "platform", "build", name="uq_app_releases_app_platform_build"
+            "app",
+            "platform",
+            "source",
+            "build",
+            name="uq_app_releases_app_platform_source_build",
         ),
         # **ولا حدٌّ فوق الإصدار نفسِه**: يُقفل صاحبُ أحدث حزمةٍ خارجَ تطبيقه
         # ولا شيءَ يحمّله ليخرج — وهو القفلُ الذي لا مخرجَ منه
@@ -99,6 +104,14 @@ class AppRelease(Base):
         nullable=False,
         default=ReleasePlatform.ANDROID,
         server_default=ReleasePlatform.ANDROID.value,
+    )
+    #: **المتجرُ الذي ثبّت الحزمة** (أمرُ المالك ٢٠٢٦-١١-٢٠ السابع) — `default` = Google Play والموقع، **وهو كلُّ صفٍّ قبله**.
+    #: ومتجرٌ بلا صفٍّ يُحكم بصفِّ `default` (`releases.current`).
+    source: Mapped[ReleaseSource] = mapped_column(
+        pg_enum(ReleaseSource, "release_source"),
+        nullable=False,
+        default=ReleaseSource.DEFAULT,
+        server_default=ReleaseSource.DEFAULT.value,
     )
     #: `versionCode` الحزمة — عددٌ صحيحٌ يزيد أبداً (عددُ الإيداعات).
     build: Mapped[int] = mapped_column(Integer, nullable=False)

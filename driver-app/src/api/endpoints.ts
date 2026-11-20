@@ -894,10 +894,15 @@ export const getAppVersion = (
   app: "rider" | "driver" | "panel",
   build: number | null,
   platform: "android" | "ios",
+  /** **المتجرُ الذي ثبّت الحزمة** (٢٠/١١ السابع) — `null` لـPlay والموقع وكلِّ غلافٍ قديم: **فلا يُرسل، والسؤالُ ما كان حرفاً**. */
+  source: string | null = null,
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
-    query: build === null ? { app, platform } : { app, build, platform },
+    query: {
+      ...(build === null ? { app, platform } : { app, build, platform }),
+      ...(source === null ? {} : { source }),
+    },
   });
 
 // ------------------------------------------------- تقاريرُ الأعطال (2026-09-20)

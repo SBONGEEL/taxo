@@ -112,12 +112,15 @@ async def _version(
     app: str,
     build: int | None = None,
     platform: str | None = None,
+    source: str | None = None,
 ):
     params: dict[str, Any] = {"app": app}
     if build is not None:
         params["build"] = build
     if platform is not None:
         params["platform"] = platform
+    if source is not None:
+        params["source"] = source
     response = await client.get("/public/app-version", params=params)
     assert response.status_code == 200, response.text
     return response.json()
@@ -586,3 +589,73 @@ async def test_open_map_bar_is_positive(
 ) -> None:
     refused = await _create(client, admin_headers, open_map_min_build=0)
     assert refused.status_code == 422
+
+
+# ------------------------------------------------- المتجر (أمرُ المالك ٢٠٢٦-١١-٢٠ السابع)
+
+GALAXY = "https://galaxystore.samsung.com/detail/ly.tajora.rider"
+
+
+async def test_a_store_row_governs_its_store_alone(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**صفُّ Galaxy Store يحكم من ثبّت من Galaxy Store وحدَه** — وصفُّ Play يبقى لمن سواه.
+
+    **والقياسُ بالنقض**: الحزمةُ 390 نفسُها **تُقفل** من Play (حدُّه 400) **وتمرّ** من Galaxy Store (حدُّه 380)،
+    ورابطُ كلٍّ منهما رابطُ متجره.
+    """
+    links.kinds[PAGE] = "text/html"
+    play = await _create(client, admin_headers, build=400, min_supported_build=400, download_url=PAGE)
+    galaxy = await _create(
+        client, admin_headers, source="galaxy", build=390, min_supported_build=380, download_url=GALAXY
+    )
+    assert play.status_code == 201, play.text
+    assert galaxy.status_code == 201, galaxy.text
+    assert galaxy.json()["source"] == "galaxy" and play.json()["source"] == "default"
+
+    assert (await _version(client, "rider", 390))["state"] == "forced"
+    assert (await _version(client, "rider", 390, "android", "default"))["state"] == "forced"
+    from_store = await _version(client, "rider", 385, "android", "galaxy")
+    assert from_store["state"] == "optional" and from_store["download_url"] == GALAXY
+    assert (await _version(client, "rider", 390, "android", "galaxy"))["state"] == "ok"
+
+
+async def test_a_store_without_a_row_reads_the_default_row(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**متجرٌ لم يُسجَّل يُحكم بصفِّ Play** — فلا يفتح غيابُ صفِّه بابَ حزمةٍ أقدمَ من الحدّ."""
+    links.kinds[PAGE] = "text/html"
+    created = await _create(client, admin_headers, build=400, min_supported_build=400, download_url=PAGE)
+    assert created.status_code == 201, created.text
+    answer = await _version(client, "rider", 390, "android", "xiaomi")
+    assert answer["state"] == "forced" and answer["download_url"] == PAGE
+
+
+async def test_the_same_build_in_two_stores_is_two_rows_and_two_governors(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**الرقمُ نفسُه في Play وفي Galaxy Store صفّان لا تكرار**، ولكلٍّ منهما حاكمُه — **والتكرارُ في المتجر نفسِه يُرفض**."""
+    links.kinds[PAGE] = "text/html"
+    first = await _create(client, admin_headers, build=400, min_supported_build=400, download_url=PAGE)
+    second = await _create(client, admin_headers, source="galaxy", build=400, min_supported_build=400, download_url=GALAXY)
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+
+    listed = (await client.get("/admin/releases", headers=admin_headers)).json()
+    governing = {(row["source"], row["build"]): row["is_current"] for row in listed}
+    assert governing == {("default", 400): True, ("galaxy", 400): True}
+
+    again = await _create(client, admin_headers, source="galaxy", build=400)
+    assert again.status_code == 409, again.text
+
+
+async def test_the_first_store_row_asks_twice_even_after_play(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**أوّلُ صفٍّ لمتجرٍ يستأذن مرّتين** ولو كان لـPlay صفٌّ بالحدِّ نفسِه — فحدُّه يقفل من ثبّت من ذلك المتجر."""
+    links.kinds[PAGE] = "text/html"
+    assert (await _create(client, admin_headers, build=400, min_supported_build=400, download_url=PAGE)).status_code == 201
+    refused = await _create(
+        client, admin_headers, confirm=False, source="galaxy", build=400, min_supported_build=400, download_url=GALAXY
+    )
+    assert refused.status_code == 422, refused.text

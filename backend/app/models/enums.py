@@ -118,6 +118,26 @@ class ReleasePlatform(StrEnum):
     IOS = "ios"
 
 
+class ReleaseSource(StrEnum):
+    """**المتجرُ الذي ثبّت الحزمة** — لكلِّ متجرٍ رابطُ «تحديث» وحدٌّ أدنى (أمرُ المالك ٢٠٢٦-١١-٢٠ السابع).
+
+    **و`default` هو ما كان قبله حرفاً**: Google Play وصفحةُ التحميل وكلُّ غلافٍ لا يعرف متجرَه — فكلُّ صفٍّ قائمٍ `default`،
+    **وكلُّ تطبيقٍ لا يرسل المصدرَ يُحكم كما كان**. **ومتجرٌ بلا صفٍّ يقرأ صفَّ `default`**: غيابُ صفِّه لا يقفل أحداً ولا يفتح ثغرة.
+    والتطبيقُ يعرف متجرَه من الهاتف نفسِه (مثبِّتُ الحزمة) — لا يُسأل صاحبُه ولا يُخمَّن.
+    """
+
+    DEFAULT = "default"
+    GALAXY = "galaxy"
+    HUAWEI = "huawei"
+    XIAOMI = "xiaomi"
+    OPPO = "oppo"
+    VIVO = "vivo"
+    HONOR = "honor"
+    PALM = "palm"
+    UPTODOWN = "uptodown"
+    APTOIDE = "aptoide"
+
+
 class DriverStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"

@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import DbSession, SettingsWriter, StaffUser
 from app.models.app_release import AppRelease
-from app.models.enums import AuditAction, ClientApp, ReleasePlatform
+from app.models.enums import AuditAction, ClientApp
 from app.schemas.app_release import AppReleaseIn, AppReleaseOut
 from app.services import audit, releases as releases_service
 
@@ -38,6 +38,7 @@ def _out(release: AppRelease, *, is_current: bool) -> AppReleaseOut:
         id=release.id,
         app=release.app,
         platform=release.platform,
+        source=release.source,
         build=release.build,
         min_supported_build=release.min_supported_build,
         download_url=release.download_url,
@@ -51,7 +52,9 @@ def _out(release: AppRelease, *, is_current: bool) -> AppReleaseOut:
 
 
 async def _row(session: AsyncSession, release: AppRelease) -> AppReleaseOut:
-    live = await releases_service.current(session, release.app, release.platform)
+    live = await releases_service.current(
+        session, release.app, release.platform, release.source, fallback=False
+    )
     return _out(release, is_current=live is not None and live.id == release.id)
 
 
@@ -65,19 +68,21 @@ async def list_releases(
     أعلى ما في الجدول — وهي قاعدةُ «التجميعُ في الخلفية» بعينها.
     """
     stmt = select(AppRelease).order_by(
-        AppRelease.app, AppRelease.platform, AppRelease.build.desc()
+        AppRelease.app, AppRelease.platform, AppRelease.source, AppRelease.build.desc()
     )
     if app is not None:
         stmt = stmt.where(AppRelease.app == app)
     rows = (await session.scalars(stmt)).all()
 
+    # **صفٌّ حاكمٌ لكلِّ (تطبيق، نظام، متجر)** — فحاكمُ أندرويد لا يُطفئ حاكمَ iOS، وحاكمُ Galaxy Store لا يُطفئ حاكمَ Play.
+    # **والصفوفُ مرتّبةٌ بالرقم نزولاً داخل كلِّ ثلاثيّة** فأوّلُها هو حاكمُها — والقائمةُ هنا كلُّ صفوف الثلاثيّة لا صفحةٌ مقصوصة.
     current_ids = set()
-    # **صفٌّ حاكمٌ لكلِّ (تطبيق، نظام)** — فحاكمُ أندرويد لا يُطفئ حاكمَ iOS
-    for one in ClientApp if app is None else (app,):
-        for platform in ReleasePlatform:
-            live = await releases_service.current(session, one, platform)
-            if live is not None:
-                current_ids.add(live.id)
+    seen: set[tuple[object, object, object]] = set()
+    for row in rows:
+        key = (row.app, row.platform, row.source)
+        if key not in seen:
+            seen.add(key)
+            current_ids.add(row.id)
 
     return [_out(row, is_current=row.id in current_ids) for row in rows]
 
@@ -91,6 +96,7 @@ async def create_release(
         session,
         app=payload.app,
         platform=payload.platform,
+        source=payload.source,
         build=payload.build,
         min_supported_build=payload.min_supported_build,
         download_url=str(payload.download_url),
@@ -108,6 +114,7 @@ async def create_release(
         details={
             "app": release.app.value,
             "platform": release.platform.value,
+            "source": release.source.value,
             "build": release.build,
             "min_supported_build": release.min_supported_build,
         },
@@ -149,6 +156,7 @@ async def update_release(
         details={
             "app": release.app.value,
             "platform": release.platform.value,
+            "source": release.source.value,
             "build": release.build,
         },
         changes=changes,
@@ -173,6 +181,7 @@ async def delete_release(
         details={
             "app": release.app.value,
             "platform": release.platform.value,
+            "source": release.source.value,
             "build": release.build,
             "min_supported_build": release.min_supported_build,
             "download_url": release.download_url,

@@ -68,6 +68,9 @@ export type UpdateApp = "rider" | "driver" | "panel";
 /** نظامُ الحزمة — **مرآةُ `ReleasePlatform` في الخلفية**. ولا `web`: لا حزمةَ في متصفّح. */
 export type ReleasePlatform = "android" | "ios";
 
+/** **المتجرُ الذي ثبّت الحزمة** — مرآةُ `ReleaseSource` في الخلفية (أمرُ المالك ٢٠/١١ السابع). */
+export type ReleaseSource = "default" | "galaxy" | "huawei" | "xiaomi" | "oppo" | "vivo" | "honor" | "palm" | "uptodown" | "aptoide";
+
 /** **متى يعود التنبيهُ الاختياريُّ** — لحظةٌ لا راية، فالمدّةُ تُضبط من اللوحة. */
 const SNOOZE_KEY = "taxo.update.snoozed_until";
 
@@ -119,7 +122,41 @@ export function useShellOpenMap(): boolean {
  *  **والمفتاحُ لكلِّ دولة** (`in_app_update`) يكتبه التطبيقُ بعد أن يعرف سوقَه (`setPlayInAppUpdate`) ويُحفظ لإقلاعٍ قادم —
  *  فالبوّابةُ تحكم قبل أن تُعرف الدولة. **واللوحةُ لا تكتبه**: لا Play لها، فيبقى الرابط. */
 const PLAY_KEY = "taxo.update.play";
-const appUpdate = registerPlugin<{ start(options: { immediate: boolean }): Promise<{ started: boolean }> }>("AppUpdate");
+const appUpdate = registerPlugin<{
+  start(options: { immediate: boolean }): Promise<{ started: boolean }>;
+  source(): Promise<{ installer: string | null; gms: boolean }>;
+}>("AppUpdate");
+
+/** **من أيِّ متجرٍ ثُبّتت الحزمة** (أمرُ المالك ٢٠/١١ السابع) — مثبِّتُ الحزمة كما يقوله الهاتف، **فلكلِّ متجرٍ رابطُه وحدُّه في اللوحة**.
+ *  **وGoogle Play وصفحةُ التحميل وكلُّ غلافٍ قديمٍ بلا الدالّة = `default`**: لا يُرسل شيءٌ جديد، فالسؤالُ والجوابُ ما كانا حرفاً. */
+const INSTALLERS: Record<string, ReleaseSource> = {
+  "com.sec.android.app.samsungapps": "galaxy",
+  "com.huawei.appmarket": "huawei",
+  "com.xiaomi.mipicks": "xiaomi",
+  "com.xiaomi.market": "xiaomi",
+  "com.heytap.market": "oppo",
+  "com.oppo.market": "oppo",
+  "com.vivo.appstore": "vivo",
+  "com.bbk.appstore": "vivo",
+  "com.hihonor.appmarket": "honor",
+  "com.transsnet.store": "palm",
+  "net.bat.store": "palm",
+  "com.uptodown": "uptodown",
+  "cm.aptoide.pt": "aptoide",
+};
+
+let storeSource: ReleaseSource = "default";
+
+async function sourceOf(): Promise<ReleaseSource> {
+  if (Capacitor.getPlatform() !== "android" || !Capacitor.isPluginAvailable("AppUpdate")) return "default";
+  try {
+    const answer = await appUpdate.source();
+    return INSTALLERS[answer.installer ?? ""] ?? "default";
+  } catch {
+    // غلافٌ قبل الدالّة — يبقى ما كان
+    return "default";
+  }
+}
 
 export function setPlayInAppUpdate(enabled: boolean): void {
   try {
@@ -131,6 +168,8 @@ export function setPlayInAppUpdate(enabled: boolean): void {
 
 function playUpdateAllowed(): boolean {
   if (Capacitor.getPlatform() !== "android" || !Capacitor.isPluginAvailable("AppUpdate")) return false;
+  // **حزمةُ متجرٍ آخر تُحدَّث من متجرها** — رابطُ صفِّه في اللوحة، لا Play
+  if (storeSource !== "default") return false;
   try {
     return localStorage.getItem(PLAY_KEY) === "1";
   } catch {
@@ -193,8 +232,10 @@ async function ask(app: UpdateApp): Promise<AppVersion | null> {
     build = null;
   }
 
+  storeSource = await sourceOf();
+
   try {
-    return await getAppVersion(app, build, platform);
+    return await getAppVersion(app, build, platform, storeSource === "default" ? null : storeSource);
   } catch {
     return null;
   }
