@@ -465,6 +465,9 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     hourly_prepay_method: Mapped[str | None] = mapped_column(String(8), nullable=True)
     #: **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣) — بحثٌ أوسعُ وأطولُ **بين الكبتنات وحدهنّ**؛ لا يكون إلا على طلبٍ نسائيّ
     search_widened: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    #: **رحلةُ تجربة** (قرارُ المالك ٢٠٢٦-١١-٢٠ الخامس، SPEC §٦٥-ج/٧): تخرج من التقارير والإحصاءات كما تخرج رحلاتُ حسابات التجربة.
+    #: **يُختم عند الإنشاء من وسم الراكب**، ويُكتب يدويّاً لرحلةٍ حقيقيّةِ الحسابين قرّر المالكُ أنها تجربة — بنسخةٍ وقيدِ تدقيق
+    is_test: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     #: **«تفاوض»** (§٩٢، `design/NEGOTIATE.md`): ما يعرضه الراكبُ الآن — **ووجودُه يعني رحلةً متفاوَضاً عليها**، فتوزيعُها تسلسليٌّ قسراً
     negotiation_offer: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     #: **السعرُ المتّفق عليه** — فارغٌ حتى يقبل أحدُ الطرفين، **ويحلّ محلَّ أجرة الطريق** في `rides._final_fare`

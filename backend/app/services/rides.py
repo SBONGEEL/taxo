@@ -588,6 +588,8 @@ async def request_ride(
 
     ride = Ride(
         rider_id=rider.id,
+        # **رحلةُ حساب تجربةٍ معلَّمةٌ على صفّها** (§٦٥-ج/٧) — فلا يتّكئ العدُّ على وسم الحساب وحدَه
+        is_test=bool(rider.is_test),
         country_code=rider.country_code,
         vehicle_category=vehicle_category,
         # موعدُ الحجز مجمَّداً على الرحلة (12-ط) — و`None` للطلب الفوري

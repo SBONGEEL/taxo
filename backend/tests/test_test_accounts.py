@@ -503,14 +503,59 @@ async def test_stats_reports_levels_and_campaigns_leave_the_test_accounts_out(
             )
         await session.rollback()
 
-    # **والضابط**: بلا الوسم تعود الأرقامُ اثنين — فالواحدُ فوق أثرُ الاستثناء لا قلّةُ الرحلات
+    # **والضابط**: بلا الوسم تعود الأرقامُ اثنين — فالواحدُ فوق أثرُ الاستثناء لا قلّةُ الرحلات.
+    # **والختمُ اثنان منذ §٦٥-ج/٧**: وسمُ الحسابين، وختمُ الرحلة نفسِها عند إنشائها — فيُفكّ الثلاثة
     await _unmark(session_factory, test_rider["user"]["id"])
     await _unmark(session_factory, tester["user_id"])
+    async with session_factory() as session:
+        stamped = await session.get(Ride, uuid.UUID(test_ride["id"]))
+        assert stamped.is_test is True
+        stamped.is_test = False
+        await session.commit()
     again = (
         await client.get("/admin/stats/overview", params={"country_code": "JO"}, headers=admin_headers)
     ).json()
     assert again["completed_rides"] == 2
     assert again["online_drivers"] == 2
+
+
+async def test_a_ride_marked_test_leaves_the_numbers_while_its_accounts_stay_real(
+    client: AsyncClient, jordan_settings: None, session_factory, admin_headers: dict
+) -> None:
+    """**رحلةٌ تجربةٌ بين حسابين حقيقيّين** (قرارُ المالك ٢٠٢٦-١١-٢٠ الخامس، §٦٥-ج/٧): تخرج من العدّ، **والحسابان باقيان في الأرقام**.
+
+    ورحلةُ راكبِ التجربة **تُختم على صفّها عند الإنشاء** — فلا يتّكئ العدُّ على وسم الحساب وحدَه.
+    """
+    real = await approved_driver(client, session_factory, DRIVER, plate_number="AMM-1003")
+    await bring_online(client, real, NEAR_PICKUP)
+    first_rider = await rider_session(client)
+    second_rider = await rider_session(client, OTHER_RIDER)
+    kept = await completed_ride(client, first_rider["headers"], real)
+    marked = await completed_ride(client, second_rider["headers"], real)
+
+    async with session_factory() as session:
+        row = await session.get(Ride, uuid.UUID(marked["id"]))
+        assert row.is_test is False
+        row.is_test = True
+        await session.commit()
+
+    body = (await client.get("/admin/stats/overview", params={"country_code": "JO"}, headers=admin_headers)).json()
+    assert body["completed_rides"] == 1
+    assert body["revenue"] in (kept["final_fare"], kept["estimated_fare"])
+
+    # **والحسابان لم يُوسما**: رحلةٌ جديدةٌ للراكب نفسِه تُعدّ
+    async with session_factory() as session:
+        assert (await session.get(User, uuid.UUID(second_rider["user"]["id"]))).is_test is False
+
+    # **وراكبُ التجربة: الختمُ من وسمه عند الإنشاء**
+    tester = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-1004")
+    await _mark_test(session_factory, tester["user_id"])
+    await bring_online(client, tester, FAR_PICKUP)
+    test_rider = await rider_session(client, RIDER | {"phone": "0796666661", "name": "راكبٌ ثالث"})
+    await _mark_test(session_factory, test_rider["user"]["id"])
+    test_ride = await completed_ride(client, test_rider["headers"], tester)
+    async with session_factory() as session:
+        assert (await session.get(Ride, uuid.UUID(test_ride["id"]))).is_test is True
 
 
 # ------------------------------------------------------------------------- لا مالَ حقيقيّ
