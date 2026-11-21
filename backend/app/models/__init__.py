@@ -116,6 +116,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.payment_request import PayMethod, PaymentRequest  # noqa: F401
 from app.models.gateway_reconciliation import GatewayReconciliation  # noqa: F401
+from app.models.cross_transfer import CrossTransfer, CrossTransferLimit, FxRate  # noqa: F401
 from app.models.taxo_card import (  # noqa: F401
     CardBatch,
     CardDenomination,

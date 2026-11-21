@@ -176,6 +176,9 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   rounding: "تقريب",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
   taxo_card: "شحن ببطاقة TAXO",
+  cross_transfer_out: "تحويل إلى دولة أخرى",
+  cross_transfer_in: "تحويل وارد من دولة أخرى",
+  cross_transfer_fee: "رسم تحويل بين الدول",
 };
 
 /** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */

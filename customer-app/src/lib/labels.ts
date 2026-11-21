@@ -140,6 +140,9 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   rounding: tr("تقريب"),
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
   taxo_card: tr("شحن ببطاقة TAXO"),
+  cross_transfer_out: tr("تحويل إلى دولة أخرى"),
+  cross_transfer_in: tr("تحويل وارد من دولة أخرى"),
+  cross_transfer_fee: tr("رسم تحويل بين الدول"),
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

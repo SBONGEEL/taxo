@@ -71,6 +71,9 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   rounding: tr("تقريب"),
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — اسمٌ مميَّزٌ في السجلّ بأمر المالك
   taxo_card: tr("شحن ببطاقة TAXO"),
+  cross_transfer_out: tr("تحويل إلى دولة أخرى"),
+  cross_transfer_in: tr("تحويل وارد من دولة أخرى"),
+  cross_transfer_fee: tr("رسم تحويل بين الدول"),
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -121,6 +124,9 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   rounding: Undo2,
   // **بطاقةُ TAXO** — تذكرةٌ مختومة: رمزٌ مطبوعٌ صار رصيداً
   taxo_card: TicketCheck,
+  cross_transfer_out: ArrowLeftRight,
+  cross_transfer_in: ArrowLeftRight,
+  cross_transfer_fee: ArrowLeftRight,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

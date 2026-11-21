@@ -76,6 +76,7 @@ from app.routers import (
     admin_transfers,
     payment_requests,
     admin_taxo_cards,
+    admin_cross_transfer,
     taxo_cards,
     account,
     auth,
@@ -189,6 +190,7 @@ api_router.include_router(admin_transfers.router)
 api_router.include_router(payment_requests.router)
 # **بطاقاتُ شحن TAXO** (SPEC §٧٣-هـ المرحلة ٢) — إدارتُها في اللوحة، واستعمالُها للراكب والكبتن
 api_router.include_router(admin_taxo_cards.router)
+api_router.include_router(admin_cross_transfer.router)
 api_router.include_router(taxo_cards.router)
 api_router.include_router(admin_payments.router)
 # **طابورُ المدفوعات غير المؤكَّدة** (SPEC §٦٤-ج) — موجّهٌ في ملفِّه لا ثانٍ في `admin_payments` (`check:contract`)

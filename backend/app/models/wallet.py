@@ -75,6 +75,8 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.GOAL_REWARD,
     # **استبدالُ نقاط الولاء** (§٩٧/١٤) — رصيدٌ من TAXO
     WalletTransactionType.LOYALTY_REWARD,
+    # **ما يصل المستلمَ من تحويلٍ بين دولتين** (الترحيلة `0187`) — بعملته، والسعرُ في `cross_transfers`
+    WalletTransactionType.CROSS_TRANSFER_IN,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -102,6 +104,9 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.INTERCITY_HOLD,
     # **ثمنُ اشتراك الراكب** (§٩٧/١٣) — مدينٌ بلا دائن، والمالُ إلى TAXO
     WalletTransactionType.RIDER_PLAN_PAYMENT,
+    # **التحويلُ بين الدول** (الترحيلة `0187`): المرسَلُ بعملة المرسل، **ورسمُه مدينٌ بلا دائن** إلى TAXO
+    WalletTransactionType.CROSS_TRANSFER_OUT,
+    WalletTransactionType.CROSS_TRANSFER_FEE,
 )
 
 # `adjustment` يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص. **و`rounding` معه** (SPEC §٧٠-ج/٦، الترحيلة `0104`):

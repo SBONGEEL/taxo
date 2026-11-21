@@ -21,6 +21,7 @@ import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/type
 import type { CardPayLimits, CardPayLive, CardPayOverview, WhopLive, WhopMethod, WhopOverview } from "@/api/types";
 import type { MapSuggestion, RoadReportRow } from "@/api/types";
 import type { AmbassadorRevoked, GiftRow, SubscriptionPreview } from "@/api/types";
+import type { CrossLimit, FxRate } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -3031,3 +3032,15 @@ export const listRoadReports = (country: CountryCode) =>
 export const approveRoadReport = (id: string) => api.post<RoadReportRow>(`/admin/map/road-reports/${id}/approve`);
 
 export const removeRoadReport = (id: string) => api.post<RoadReportRow>(`/admin/map/road-reports/${id}/remove`);
+
+// ---------------------------------------------- التحويل بين الدول (أمرُ المالك ٢٠٢٦-١١-٢٢)
+
+export const getFxRates = () => api.get<FxRate[]>("/admin/cross-transfer/rates");
+
+export const putFxRate = (body: { from_currency: Currency; to_currency: Currency; rate: string; fee_percent: string }) =>
+  api.put<FxRate>("/admin/cross-transfer/rates", body);
+
+export const getCrossLimits = () => api.get<CrossLimit[]>("/admin/cross-transfer/limits");
+
+export const putCrossLimits = (country: CountryCode, body: { daily_limit: string; monthly_limit: string }) =>
+  api.put<CrossLimit>(`/admin/cross-transfer/limits/${country}`, body);

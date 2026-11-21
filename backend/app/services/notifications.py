@@ -937,6 +937,35 @@ async def publish_taxo_card_topup(
     )
 
 
+async def publish_cross_transfer(session: AsyncSession, redis: Redis, *, sender, recipient, row) -> None:
+    """**إشعارٌ للطرفين في التحويل بين الدول** (أمرُ المالك ٢٠٢٦-١١-٢٢) — المرسلُ يرى ما أُرسل، والمستلمُ ما وصل بعملته.
+    **والجملةُ في العنوان والنصّ وحدَهما**؛ `data` أرقامٌ وعملات (`tests/test_notification_data.py`)."""
+    from app.core.currency import money_text
+
+    sent = money_text(row.amount, row.from_currency)
+    got = money_text(row.received, row.to_currency)
+    await _safe_notify(
+        session,
+        redis,
+        user_id=sender.id,
+        message=PushMessage(
+            title="أُرسل تحويلُك",
+            body=f"أرسلت {sent} ووصل المستلمَ {got}",
+            data={"type": "cross_transfer_out", "amount": str(row.amount), "currency": row.from_currency.value},
+        ),
+    )
+    await _safe_notify(
+        session,
+        redis,
+        user_id=recipient.id,
+        message=PushMessage(
+            title="وصلك تحويل",
+            body=f"وصل إلى محفظتك {got}",
+            data={"type": "cross_transfer_in", "amount": str(row.received), "currency": row.to_currency.value},
+        ),
+    )
+
+
 # ------------------------------------------- أحداث الأمان (المرحلة 12-د)
 
 

@@ -833,7 +833,10 @@ export type WalletTransactionType =
   // **التقريب** (§٧٠-ج/٦): زائدُ «سدّد كلَّه» يُردّ إلى محفظة صاحبه قيداً صريحاً — يقع للكبتن، ويُسمّى للعلّة أعلاه
   | "rounding"
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — شحنٌ برمز بطاقةٍ مطبوعة، دائنٌ يُقرأ «شحن ببطاقة TAXO»
-  | "taxo_card";
+  | "taxo_card"
+  | "cross_transfer_out"
+  | "cross_transfer_in"
+  | "cross_transfer_fee";
 
 export interface WalletTransaction {
   id: string;
@@ -874,7 +877,23 @@ export interface CliqTopup {
 
 export interface TransferRecipient {
   phone: string;
+  /** **مخفيٌّ جزئيّاً لمستلمٍ في دولةٍ أخرى** («سارة ب.») — والخلفيةُ هي التي تخفيه */
   name: string;
+  country_code?: CountryCode | null;
+  /** مستلمٌ في دولةٍ أخرى (أمرُ المالك ٢٠٢٦-١١-٢٢) — فالمبلغُ الواصلُ بعملته من `quoteTransfer` */
+  cross?: boolean;
+}
+
+/** **عرضُ التحويل بين الدول** — كلُّ طرفٍ بعملته (`send` · `receive`)، محسوبٌ في الخلفية. */
+export interface CrossQuote {
+  recipient_name: string;
+  recipient_country: CountryCode;
+  /** `balance_after` رصيدُك بعده من الخلفية، و`null` حين لا يكفي */
+  send: { currency: Currency; amount: string; fee: string; total: string; balance_after: string | null };
+  receive: { currency: Currency; amount: string };
+  rate: string;
+  fee_percent: string;
+  rate_set_at: string;
 }
 
 export interface SavedCard {

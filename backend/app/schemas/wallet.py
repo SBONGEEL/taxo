@@ -72,16 +72,23 @@ class WalletTransactionOut(BaseModel):
 
 
 class TransferRecipientOut(BaseModel):
-    """اسم المستلم للتأكيد قبل التنفيذ (SPEC القسم 7) — بلا مُعرّفه."""
+    """اسم المستلم للتأكيد قبل التنفيذ (SPEC القسم 7) — بلا مُعرّفه.
+
+    **ولمستلمٍ في دولةٍ أخرى** (أمرُ المالك ٢٠٢٦-١١-٢٢): `cross` صادقة، ودولتُه، **والاسمُ مخفيٌّ جزئيّاً** («محمد ع.») — والمستلمُ في
+    دولتك كما كان: اسمُه كاملاً و`cross` كاذبة."""
 
     phone: str
     name: str
+    country_code: CountryCode | None = None
+    cross: bool = False
 
 
 class TransferRequest(BaseModel):
     recipient_phone: str = Field(min_length=6, max_length=20)
     amount: Decimal = Money
     idempotency_key: str = IdempotencyKey
+    #: **ما عرضته ورقةُ التأكيد للتحويل بين الدول** — إن تغيّر السعرُ قبل الضغط يُردّ ٤٠٩. ويُهمل في التحويل داخل الدولة
+    expected_received: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=3)
 
 
 # -------------------------------------------------------------------- الشحن

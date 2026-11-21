@@ -101,6 +101,9 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   rounding: "undo",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
   taxo_card: "confirmation_number",
+  cross_transfer_out: "swap_horiz",
+  cross_transfer_in: "swap_horiz",
+  cross_transfer_fee: "swap_horiz",
 };
 
 export function WalletT2Screen() {

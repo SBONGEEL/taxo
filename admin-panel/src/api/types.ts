@@ -718,6 +718,7 @@ export type FeatureKey =
   // **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) و**«شحن ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١)
   | "subscription_gifts"
   | "taxo_cards_enabled"
+  | "cross_country_transfer_enabled"
   | "map_open_places"
   | "map_place_suggestions"
   | "map_live_traffic"
@@ -1401,7 +1402,10 @@ export type WalletTransactionType =
   // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
   | "rounding"
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — شحنٌ برمز بطاقةٍ مطبوعة، دائنٌ يُقرأ «شحن ببطاقة TAXO»
-  | "taxo_card";
+  | "taxo_card"
+  | "cross_transfer_out"
+  | "cross_transfer_in"
+  | "cross_transfer_fee";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -4195,4 +4199,22 @@ export interface QuickReplySettings {
   country_code: CountryCode;
   driver_texts: string[];
   rider_texts: string[];
+}
+
+/** **اتّجاهُ سعر صرفٍ واحد** (التحويل بين الدول، ٢٠٢٦-١١-٢٢) — و`null` لما لم يُضبط بعد، لا صفر. */
+export interface FxRate {
+  from_currency: Currency;
+  to_currency: Currency;
+  rate: string | null;
+  fee_percent: string | null;
+  set_at: string | null;
+  set_by_name: string | null;
+}
+
+/** حدّا التحويل بين الدول لدولة المرسل بعملتها — **وصفرٌ = لم يُضبط فيُردّ**. */
+export interface CrossLimit {
+  country_code: CountryCode;
+  currency: Currency;
+  daily_limit: string;
+  monthly_limit: string;
 }

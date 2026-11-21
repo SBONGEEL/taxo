@@ -80,6 +80,7 @@ import type {
   TipOptions,
   TopupRequest,
   TransferRecipient,
+  CrossQuote,
   User,
   UserNotification,
   VehicleCategory,
@@ -556,11 +557,22 @@ export const checkCliqTopup = (cartId: string) =>
 export const lookupRecipient = (phone: string) =>
   api.get<TransferRecipient>("/wallet/transfer/recipient", { query: { phone } });
 
-export const transfer = (recipientPhone: string, amount: string, idempotencyKey: string) =>
+/** **ورقةُ التحويل إلى دولةٍ أخرى** (أمرُ المالك ٢٠٢٦-١١-٢٢) — المبالغُ والسعرُ والرسمُ من الخلفية، والواجهةُ تعرضها كما هي (§14). */
+export const quoteTransfer = (phone: string, amount: string) =>
+  api.get<CrossQuote>("/wallet/transfer/quote", { query: { phone, amount } });
+
+export const transfer = (
+  recipientPhone: string,
+  amount: string,
+  idempotencyKey: string,
+  /** **ما عرضته ورقةُ التأكيد للتحويل بين الدول** — إن تغيّر السعرُ ترفض الخلفيةُ بدل أن تُرسل غيرَه */
+  expectedReceived?: string,
+) =>
   api.post<WalletTransaction>("/wallet/me/transfers", {
     recipient_phone: recipientPhone,
     amount,
     idempotency_key: idempotencyKey,
+    ...(expectedReceived ? { expected_received: expectedReceived } : {}),
   });
 
 // ------------------------------------------------------------ الأجهزة

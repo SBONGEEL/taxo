@@ -588,3 +588,8 @@ html.dark .t2:not(.t2-day) .t2-m-avatar {
   .t2-m-change:active,
   .t2-m-make-default:active { transform: scale(0.98); }
 }
+
+/* **«ترسل … ← يصل …»** في ورقة التحويل إلى دولةٍ أخرى (أمرُ المالك ٢٠٢٦-١١-٢٢) — السطرُ الأوّلُ وأكبرُ ما فيها */
+.t2-m-fx { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 16px; margin-bottom: 8px; border-radius: 16px; background: var(--t2-accent-soft); }
+.t2-m-fx .t2-m-num.sm { font-size: 20px; }
+.t2-m-fx-arrow { color: var(--t2-accent-text); font-size: 20px; font-weight: 700; }

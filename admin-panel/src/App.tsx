@@ -94,6 +94,9 @@ const CardBatchesScreen = lazy(() =>
 const CardSellScreen = lazy(() =>
   import("@/screens/CardSell").then((m) => ({ default: m.CardSellScreen })),
 );
+const CrossTransferScreen = lazy(() =>
+  import("@/screens/CrossTransfer").then((m) => ({ default: m.CrossTransferScreen })),
+);
 const TaxoCardsScreen = lazy(() =>
   import("@/screens/TaxoCards").then((m) => ({ default: m.TaxoCardsScreen })),
 );
@@ -570,6 +573,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <CardSellScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/cross-transfer"
+                    element={
+                      <Guarded>
+                        <CrossTransferScreen />
                       </Guarded>
                     }
                   />

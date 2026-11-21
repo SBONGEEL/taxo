@@ -87,6 +87,9 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   rider_plan_payment: "card_membership",
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — رمزٌ مطبوعٌ صار رصيداً
   taxo_card: "confirmation_number",
+  cross_transfer_out: "sync_alt",
+  cross_transfer_in: "sync_alt",
+  cross_transfer_fee: "sync_alt",
 };
 
 export function WalletT2Screen() {

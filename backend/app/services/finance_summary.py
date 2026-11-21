@@ -938,6 +938,10 @@ LEDGER_LABEL: dict[str, str] = {
     "goal_reward": "مكافأة هدف",
     "rider_plan_payment": "اشتراك راكب",
     "loyalty_reward": "نقاط ولاء مستبدلة",
+    # **التحويلُ بين الدول** (أمرُ المالك ٢٠٢٦-١١-٢٢، `0187`)
+    "cross_transfer_out": "تحويل إلى دولة أخرى",
+    "cross_transfer_in": "تحويل وارد من دولة أخرى",
+    "cross_transfer_fee": "رسم تحويل بين الدول",
 }
 
 METHOD_LABEL: dict[str, str] = {

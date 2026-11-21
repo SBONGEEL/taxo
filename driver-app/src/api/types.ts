@@ -719,7 +719,10 @@ export type WalletTransactionType =
   // يُقرَّبان للأعلى إلى وحدة السوق، والفرقُ له لا يُبتلع
   | "rounding"
   // **بطاقةُ TAXO** (§٧٣-هـ المرحلة ٢) — شحنٌ برمز بطاقةٍ مطبوعة، دائنٌ يُقرأ «شحن ببطاقة TAXO»
-  | "taxo_card";
+  | "taxo_card"
+  | "cross_transfer_out"
+  | "cross_transfer_in"
+  | "cross_transfer_fee";
 
 export interface WalletTransaction {
   id: string;

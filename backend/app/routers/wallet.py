@@ -12,11 +12,12 @@ from app.core import rate_limit
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import NotFound, RateLimited
-from app.core.phone import InvalidPhoneNumber, resolve_phone
-from app.models.enums import UserRole, WalletOwnerType, WalletTransactionType
+from app.core.phone import InvalidPhoneNumber, country_for_phone, normalize_phone, resolve_phone
+from app.models.enums import CountryCode, UserRole, WalletOwnerType, WalletTransactionType
 from app.models.driver import Driver
 from app.models.user import User
 from app.models.enums import AccountKind
+from app.schemas.cross_transfer import CrossQuoteOut, QuoteReceiveOut, QuoteSendOut
 from app.schemas.payment import CardOrderOut, CardTopupCreate
 from app.schemas.wallet import (
     CliqTopupCreate,
@@ -32,7 +33,7 @@ from app.schemas.wallet import (
     WithdrawalCreate,
     WithdrawalOut,
 )
-from app.services import cancellation, commission_view, earnings_hold
+from app.services import cancellation, commission_view, cross_transfer, earnings_hold, notifications
 from app.services import (
     card_payments,
     cliq_topups,
@@ -156,15 +157,69 @@ async def lookup_transfer_recipient(
         raise RateLimited(retry_after=limit.retry_after)
 
     recipient = await _resolve_rider(session, phone, rider)
-    return TransferRecipientOut(phone=recipient.phone, name=recipient.name)
+    if cross_transfer.is_cross(rider, recipient):
+        # **مستلمٌ في دولةٍ أخرى** — لا يُكشف وجودُه قبل أن يكون البابُ مفتوحاً في الدولتين، **واسمُه مخفيٌّ جزئيّاً**
+        await cross_transfer.require_cross_enabled(session, rider, CountryCode(recipient.country_code))
+        return TransferRecipientOut(
+            phone=recipient.phone,
+            name=cross_transfer.mask_name(recipient.name),
+            country_code=CountryCode(recipient.country_code),
+            cross=True,
+        )
+    return TransferRecipientOut(
+        phone=recipient.phone, name=recipient.name, country_code=CountryCode(recipient.country_code)
+    )
+
+
+@router.get("/transfer/quote", response_model=CrossQuoteOut)
+async def quote_cross_transfer(
+    rider: RiderUser,
+    session: DbSession,
+    phone: str = Query(min_length=6, max_length=20),
+    amount: Decimal = Query(gt=0, max_digits=12, decimal_places=3),
+) -> CrossQuoteOut:
+    """**ورقةُ تأكيد التحويل إلى دولةٍ أخرى** — ما يدفعه المرسلُ بعملته والرسمُ والسعرُ وما يصل بعملة المستلم، **محسوبةً هنا** (§14)."""
+    recipient = await _resolve_rider(session, phone, rider)
+    offer = await cross_transfer.quote(session, sender=rider, recipient=recipient, amount=amount)
+    after = await wallet_service.balance(session, rider.id, WalletOwnerType.RIDER) - offer.total
+    return CrossQuoteOut(
+        recipient_name=cross_transfer.mask_name(recipient.name),
+        recipient_country=CountryCode(recipient.country_code),
+        send=QuoteSendOut(
+            currency=offer.from_currency,
+            amount=offer.amount,
+            fee=offer.fee,
+            total=offer.total,
+            balance_after=after if after >= 0 else None,
+        ),
+        receive=QuoteReceiveOut(currency=offer.to_currency, amount=offer.received),
+        rate=format(offer.rate.normalize(), "f"),
+        fee_percent=format(offer.fee_percent.normalize(), "f"),
+        rate_set_at=offer.rate_set_at,
+    )
 
 
 @router.post("/me/transfers", response_model=WalletTransactionOut)
 async def transfer_to_rider(
-    payload: TransferRequest, rider: RiderUser, session: DbSession
+    payload: TransferRequest, rider: RiderUser, session: DbSession, redis: RedisDep
 ) -> WalletTransactionOut:
-    """تحويل P2P — قيدان ذرّيان في معاملة واحدة (SPEC القسم 7/14)."""
+    """تحويل P2P — قيدان ذرّيان في معاملة واحدة (SPEC القسم 7/14).
+
+    **وإلى دولةٍ أخرى** (أمرُ المالك ٢٠٢٦-١١-٢٢): ثلاثةُ قيودٍ بسعرها (`cross_transfer.transfer`) وإشعارٌ للطرفين — **والتحويلُ داخل
+    الدولة يمرّ بـ`wallet_service.transfer` كما كان حرفاً**."""
     recipient = await _resolve_rider(session, payload.recipient_phone, rider)
+    if cross_transfer.is_cross(rider, recipient):
+        entry, row = await cross_transfer.transfer(
+            session,
+            sender=rider,
+            recipient=recipient,
+            amount=payload.amount,
+            idempotency_key=payload.idempotency_key,
+            expected_received=payload.expected_received,
+        )
+        await session.commit()
+        await notifications.publish_cross_transfer(session, redis, sender=rider, recipient=recipient, row=row)
+        return WalletTransactionOut.model_validate(entry)
     entry = await wallet_service.transfer(
         session,
         sender=rider,
@@ -185,7 +240,18 @@ async def _resolve_rider(session, phone: str, sender: User) -> User:
     try:
         normalized = resolve_phone(phone, sender.country_code)
     except InvalidPhoneNumber as exc:
-        raise NotFound("لا يوجد حساب بهذا الرقم") from exc
+        # **رقمٌ دوليٌّ من دولةٍ أخرى** (‎+218… / 00962…، أمرُ المالك ٢٠٢٦-١١-٢٢) — يُطبَّع بقواعد دولته هو. **ولا يُفتح بابٌ هنا**:
+        # المستدعي يقرّر بـ`cross_transfer.is_cross` ويسأل المفتاحَ في الدولتين قبل أيِّ اسمٍ أو مال
+        raw = phone.strip()
+        # **و«00» بادئةٌ دوليّةٌ كـ«+»** (00213…) — `country_for_phone` يقرأ الرمزَ بعدها لا قبلها
+        probe = f"+{raw[2:]}" if raw.startswith("00") else raw
+        other = country_for_phone(probe) if raw.startswith(("+", "00")) else None
+        if other is None or other == sender.country_code:
+            raise NotFound("لا يوجد حساب بهذا الرقم") from exc
+        try:
+            normalized = normalize_phone(phone, other)
+        except InvalidPhoneNumber as inner:
+            raise NotFound("لا يوجد حساب بهذا الرقم") from inner
 
     # **حسابُ `taxo` وحدَه** (§D9.1، 1-أ/4): التحويلُ بين راكبين، والرقمُ قد
     # يحمل حسابَ زبونٍ أو تاجرٍ لا صلةَ له بالمحفظة المحوَّل إليها
