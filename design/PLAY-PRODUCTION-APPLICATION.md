@@ -204,3 +204,15 @@
 > **وسطرُ «كبتنٌ هو راكبٌ أيضاً» في ٨ (أمرُ المالك ٢٠٢٦-١١-٠٦)**: مقبسُ الكبتن كان يسقط لمن يحمل الدورين فلا يصله طلب — قائمٌ على الإنتاج منذ ٢٠٢٦-٠٨-١٩،
 > وأُصلح في 41c96e0f ورُفع في 6ab90e1e (٢٠٢٦-١١-٠٦). وهو إصلاحُ خادمٍ يبلغ كلَّ الإصداراتِ بلا حزمةٍ جديدة؛ **ويُذكر في ملاحظات أوّلِ إصدارٍ مغلقٍ قادمٍ للكبتن**:
 > «إصلاح: الكبتن الذي يستعمل التطبيقَ راكباً أيضاً تصله طلباتُ الرحلات الآن» / "Fix: captains who also ride with Taxo now receive ride offers."
+
+### نصُّ إعادة تقديم الكبتن ليوم ٢٦ نوفمبر (٢٠٢٦-١١-٢١، أمرُ المالك ٢١/١١ الرابع البند ٣) — **يُعرض على المالك قبل «تطبيق»**
+
+**الشرطُ**: عدّادُ Play يقول ١٤ يوماً بـ١٢ مشتركاً (اليومَ ٢١/١١: **١٢ يوماً** ⇐ يبلغ ١٤ في ٢٣/١١)، **ولا إرسالَ قبل ٢٦/١١** ولا بلا كلمته.
+**الأسئلةُ ١ و٢ و٥ و٦ و٧ كنصِّ ٢٠٢٦-١١-٠٥ أعلاه بلا تغيير.** والأربعةُ المتغيّرة (كلٌّ دون ٣٠٠ حرف، تُقاس أطوالُها يومَ الإرسال):
+
+3. Testers used the closed builds on their own phones, mostly in guest mode: home map, going online, ride offers, the floating offer bubble, earnings, wallet, plans and the new home-screen widgets. 12 testers stayed opted in for 14 straight days.
+4. Feedback came from the in-app Send feedback form and our captain WhatsApp groups. Testers asked for a simpler home with the online button first, a card for their car, and home-screen widgets for status and plan; all three shipped in the closed builds.
+8. Since the last review we shipped closed builds 1409 and 1442: a new home with the online button and a "Your car" card, sharper car images, home-screen widgets for status, earnings and plan, an "Add widget" button, and system bar icons that follow the app theme.
+10. Testers stayed opted in for the full 14 days and every change since the review came from their feedback: the new home, the car card and the widgets. Each build was checked on real phones before release, with 0 crashes and 0 ANRs in Play vitals.
+
+**ويُقاس يومَ الإرسال**: عدّادُ Play (الأيّامُ والمشتركون) · أعطالُ وANR ٢٨ يوماً · آخرُ إصدارٍ مغلق (فإن صدر بعد 1442 أُضيف إلى ٨) · **وإن خالف رقمٌ النصَّ عُدّل الرقمُ لا القياس**.
