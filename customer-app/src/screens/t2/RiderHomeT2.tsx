@@ -23,6 +23,7 @@
 import type { ReactNode } from "react";
 import type {
   MyReferrals,
+  VehicleCategory,
   PromoBanner,
   Ride,
   RiderUnconfirmed,
@@ -52,6 +53,7 @@ import { useWomenService } from "@/lib/women";
 import { Icon, Wordmark } from "@/taxo2";
 
 import { DrawerT2 } from "./DrawerT2";
+import { HomeCarsHeroT2, HomeCarsRowT2 } from "./HomeCarsT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import { DeclareGenderSheetT2 } from "./WomenServiceT2";
 import { UnconfirmedStripT2 } from "./UnconfirmedT2";
@@ -120,6 +122,9 @@ export interface RiderHomeProps {
   /** **ما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية؛ و`null` حيث المفتاحُ مطفأ. */
   unconfirmed?: RiderUnconfirmed | null;
   onOpenUnconfirmed?: () => void;
+  /** **سياراتُ الرئيسيّة** (SPEC §١١١، مفتاحُ `home_cars`) — البطاقةُ البطلةُ وصفُّ فئات الدولة المشتعلة؛ و`null` حيث المفتاحُ مطفأ
+   *  فتبقى الرئيسيّةُ كما كانت حرفاً. */
+  homeCars?: { categories: VehicleCategory[]; selected: VehicleCategory; onPick: (category: VehicleCategory) => void } | null;
 }
 
 
@@ -277,6 +282,7 @@ export function RiderHomeT2({
   onOpenUnconfirmed,
   suggestion = null,
   locationOff = null,
+  homeCars = null,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
@@ -395,6 +401,12 @@ export function RiderHomeT2({
         </div>
       ) : null}
 
+      {homeCars ? (
+        <>
+          <HomeCarsHeroT2 onWhereTo={whereTo} category={homeCars.selected} eta={heroEta} />
+          <HomeCarsRowT2 categories={homeCars.categories} selected={homeCars.selected} eta={eta} onPick={homeCars.onPick} />
+        </>
+      ) : (
       <button type="button" className="t2-home-hero" onClick={whereTo}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />
         <span className="t2-home-hero-text">
@@ -413,6 +425,7 @@ export function RiderHomeT2({
           <Icon name="arrow_back" />
         </span>
       </button>
+      )}
 
       {/* **اقتراحُ الوجهة** (SPEC §١٠٣ C/35) — لمسةٌ تختارها وجهةً كما يختار «أماكني» */}
       {suggestion ? (

@@ -100,6 +100,7 @@ import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { useRide } from "@/lib/ride";
 import { Icon, Wordmark } from "@/taxo2";
+import { YourCarT2 } from "@/screens/t2/YourCarT2";
 import { RoadReportButton } from "@/components/map/RoadReportButton";
 
 import { countBookings, countCommutes, countRides, hoursClock } from "./count";
@@ -304,6 +305,9 @@ export function HomeT2Screen() {
   const lastRideOn = useFeature(user?.country_code, "last_ride_mode");
   // **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — عرضٌ وحدَه
   const pickupTimerOn = useFeature(user?.country_code, "pickup_wait_timer");
+  // **سياراتُ الرئيسيّة** (SPEC §١١١) — «سيارتك» ومدخلُ المتجر؛ ومطفأً تبقى الرئيسيّةُ كما كانت حرفاً
+  const homeCarsOn = useFeature(user?.country_code, "home_cars");
+  const skinsOn = useFeature(user?.country_code, "vehicle_skins_enabled");
   const [lastRide, setLastRide] = useState(false);
   const hadRide = useRef(false);
   useEffect(() => {
@@ -607,6 +611,19 @@ export function HomeT2Screen() {
         </div>
       ) : null}
 
+      {mode === "home" && homeCarsOn ? (
+        <YourCarT2
+          vehicle={profile?.vehicles[0] ?? null}
+          skin={activeSkin}
+          covered={covered}
+          daysRemaining={subscription ? subscription.days_remaining : null}
+          level={level}
+          storeOn={skinsOn}
+          onOpenVehicle={() => navigate("/account/vehicle")}
+          onOpenStore={() => navigate("/account/garage/store")}
+        />
+      ) : null}
+
       {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — فوق الخدمات حين يكون فيها شيءٌ وحدَه: عرضٌ ينتظر، أو حجزٌ قبله، **أو سؤالُ «هل أنت
           في الطريق؟»** وهو أوّلُها لأن الحجزَ يُسحب بعده بلا ردّ. ومطفأً أو فارغاً لا صفّ */}
       {mode === "home" && dest && dest.lat !== null ? <DestinationRow dest={dest} onClear={dropDestination} /> : null}
@@ -645,7 +662,7 @@ export function HomeT2Screen() {
               <span className="t2-hm-row-go">{tr("جدّد")}</span>
             </button>
           ) : null}
-          {vehicleLine ? (
+          {vehicleLine && !homeCarsOn ? (
             <button type="button" className="t2-hm-row" onClick={() => navigate("/account/vehicle")}>
               <span className="t2-hm-row-main">
                 <span className="t2-hm-row-title">{vehicleLine}</span>

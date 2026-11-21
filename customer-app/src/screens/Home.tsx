@@ -98,6 +98,8 @@ import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2, useJustFoun
 import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 import { SheetModalT2 } from "@/screens/t2/MoneyT2"; import { language, tr } from "@/lib/i18n";
 import { useOpenFlags } from "@/lib/open-layers";
+import { useWomenService } from "@/lib/women";
+import { readNextCategory, shownCategories, writeNextCategory } from "@/screens/t2/HomeCarsT2";
 import { PlaceSuggestSheet, type SuggestTarget } from "@/components/map/PlaceSuggestSheet";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
@@ -265,6 +267,10 @@ export function HomeScreen() {
   const [presetPreference, setPresetPreference] = useState<GenderPreference | undefined>();
   // **و«جدولي الرحلة لوقت لاحق» (RW3، §٦٢-ج/٢٣) تفتحها بفئة تلك الرحلة ومنتقي الموعد مفتوحاً** — `null` في كلِّ طلبٍ غيرِه
   const [presetSchedule, setPresetSchedule] = useState<VehicleCategory | null>(null);
+  // **سياراتُ الرئيسيّة** (SPEC §١١١): الفئةُ التي لمسها في صفِّ الرئيسيّة تُختار للطلب التالي — في هذا الهاتف وحدَه، ولا تُرسل شيئاً
+  const homeCarsOn = useFeature(user?.country_code, "home_cars");
+  const homeWomen = useWomenService();
+  const [nextCategory, setNextCategory] = useState<VehicleCategory | null>(() => readNextCategory());
   // **«ارفع سعرك»** (§٩٢-أ/٧) — سعرُ الطلب السابق يُفتح به التفاوضُ في الورقة؛ ويُمحى مع كلِّ ما يُمحى معه الحجز
   const [presetOffer, setPresetOffer] = useState<string | null>(null);
   // **وبلاطةُ «طرد» تبدأه طلبَ طرد** (§٦٣-ج/٤): الوجهةُ ثمّ ورقتُه. **ومسوّدتُه هنا لا في ورقة الطلب** — إضافةُ محطةٍ تطوي الورقةَ
@@ -1146,6 +1152,20 @@ export function HomeScreen() {
     currency: countryConfig?.currency ?? "",
     nearby: drivers.length,
     eta: nearestEta.minutes,
+    homeCars: homeCarsOn
+      ? (() => {
+          const categories = shownCategories(countryConfig?.vehicle_categories ?? ["economy"], homeWomen.available);
+          const selected = nextCategory && categories.includes(nextCategory) ? nextCategory : categories[0] ?? "economy";
+          return {
+            categories,
+            selected,
+            onPick: (category: VehicleCategory) => {
+              setNextCategory(category);
+              writeNextCategory(category);
+            },
+          };
+        })()
+      : null,
     onOpenNotifications: () => navigate("/account/notifications"),
     onOpenWallet: () => navigate("/wallet"),
     onOpenAccount: () => navigate("/account"),
@@ -1390,7 +1410,7 @@ export function HomeScreen() {
           countryConfig,
           onBack: leaveConfirm,
           initialPreference: presetPreference,
-          initialCategory: presetSchedule ?? undefined,
+          initialCategory: presetSchedule ?? (homeCarsOn && nextCategory ? nextCategory : undefined),
           initialScheduling: presetSchedule !== null,
           initialOffer: presetOffer ?? undefined,
           pickupLine,

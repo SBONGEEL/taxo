@@ -1,0 +1,106 @@
+/* **«سيارتك» ومدخلُ المتجر** (SPEC §١١١) — رموزُ الهويّة وحدَها، نهاراً وليلاً، وبلا حركة. */
+.yc { display: flex; flex-direction: column; gap: 8px; margin: 0 16px 10px; }
+.yc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 24px;
+  background:
+    radial-gradient(110% 90% at 0% 100%, color-mix(in srgb, var(--t2-accent) 14%, transparent), transparent 60%),
+    var(--t2-surface);
+  box-shadow: inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  text-align: start;
+}
+.yc-top { display: flex; align-items: center; gap: 8px; }
+.yc-title { font-size: 15px; font-weight: 800; }
+.yc-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--t2-accent) 14%, transparent);
+  color: var(--t2-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.yc-level .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.yc-go { margin-inline-start: auto; color: var(--t2-muted); }
+.yc-body { display: flex; align-items: center; gap: 8px; }
+.yc-info { display: flex; flex: 1 1 46%; flex-direction: column; gap: 2px; min-width: 0; }
+.yc-cat { font-size: 18px; font-weight: 800; }
+.yc-model { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.yc-plate {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: var(--t2-bg);
+  box-shadow: inset 0 0 0 1px var(--t2-line);
+  font-family: var(--t2-font-num);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.yc-color { color: var(--t2-muted); font-size: 12px; }
+
+.yc-car, .yc-skin { position: relative; flex: 1 1 54%; min-width: 0; aspect-ratio: 16 / 10; }
+.yc-layer { position: absolute; inset: 0; isolation: isolate; }
+.yc-layer img, .yc-skin img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.yc-paint {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.yc-layer.n { display: none; }
+html.dark .yc-layer.d { display: none; }
+html.dark .yc-layer.n { display: block; }
+
+.yc-badge {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.yc-badge.r-premium { background: var(--t2-accent); color: var(--t2-on-accent); }
+.yc-badge.r-rare { background: #2f5fae; color: #fff; }
+.yc-badge.r-legendary { background: linear-gradient(90deg, #c9a45a, #f0d58a); color: #14161a; }
+
+.yc-sub { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.yc-sub.ok { color: var(--t2-success); }
+.yc-sub.off { color: var(--t2-muted); }
+.yc-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.yc-store {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--t2-surface);
+  box-shadow: inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  text-align: start;
+}
+.yc-store-thumbs { display: flex; flex: none; }
+.yc-store-thumbs img { width: 52px; height: 34px; object-fit: contain; }
+.yc-store-thumbs img + img { margin-inline-start: -14px; }
+.yc-store-text { font-size: 14px; font-weight: 700; }

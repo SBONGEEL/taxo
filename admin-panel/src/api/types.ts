@@ -709,6 +709,7 @@ export type FeatureKey =
   | "rider_bubble"
   | "driver_widgets_plus"
   | "rider_widgets_plus"
+  | "home_cars"
   | "map_open_places"
   | "map_place_suggestions"
   | "map_live_traffic"
