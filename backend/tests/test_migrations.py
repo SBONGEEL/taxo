@@ -605,7 +605,8 @@ async def test_0143_negotiation_round_trips() -> None:
 
 async def test_0184_lights_home_cars_everywhere_and_keeps_an_admin_row() -> None:
     """**سياراتُ الرئيسيّة مشتعلةٌ بعد الرفع** (أمرُ المالك ٢١/١١، SPEC §١١١): `0184` تكتب `home_cars = true` للدول الثلاث، **وصفٌّ كتبه
-    المشرفُ قبلها يبقى كما هو** (`ON CONFLICT DO NOTHING`)، والنزولُ يرفع صفوفَ المفتاح وحدَها — ويُقاس بالنزول والصعود."""
+    المشرفُ قبلها يبقى كما هو** (`ON CONFLICT DO NOTHING`)، والنزولُ يرفع صفوفَ المفتاح وحدَها — ويُقاس بالنزول والصعود. **وقاعدةُ الاختبار
+    لا أعلامَ فيها**، فصفُّ مفتاحٍ آخرَ يُزرع شاهداً على أنّ النزولَ لا يمسّ غيرَه (أوّلُ نسخةٍ عدّت «الأعلامَ الأخرى» فوجدتها صفراً في CI)."""
     config = alembic_config()
     try:
         await asyncio.to_thread(command.downgrade, config, "0183")
@@ -614,7 +615,9 @@ async def test_0184_lights_home_cars_everywhere_and_keeps_an_admin_row() -> None
             await conn.execute(
                 text(
                     "INSERT INTO feature_flags (id, country_code, feature_key, enabled, created_at, updated_at) "
-                    "VALUES (gen_random_uuid(), 'DZ', 'home_cars', false, now(), now())"
+                    "VALUES (gen_random_uuid(), 'DZ', 'home_cars', false, now(), now()), "
+                    "(gen_random_uuid(), 'JO', 'country_visible', true, now(), now()) "
+                    "ON CONFLICT (country_code, feature_key) DO NOTHING"
                 )
             )
         await asyncio.to_thread(command.upgrade, config, "0184")
@@ -633,11 +636,26 @@ async def test_0184_lights_home_cars_everywhere_and_keeps_an_admin_row() -> None
             down = (
                 await conn.execute(text("SELECT count(*) FROM feature_flags WHERE feature_key = 'home_cars'"))
             ).scalar_one()
-            others = (await conn.execute(text("SELECT count(*) FROM feature_flags"))).scalar_one()
+            witness = (
+                await conn.execute(
+                    text(
+                        "SELECT count(*) FROM feature_flags "
+                        "WHERE country_code::text = 'JO' AND feature_key = 'country_visible'"
+                    )
+                )
+            ).scalar_one()
     finally:
         await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "DELETE FROM feature_flags WHERE feature_key = 'home_cars' "
+                    "OR (country_code::text = 'JO' AND feature_key = 'country_visible')"
+                )
+            )
         await engine.dispose()
 
     assert up == {"JO": True, "LY": True, "DZ": False}
     assert down == 0
-    assert others > 0
+    assert witness == 1
