@@ -13,7 +13,10 @@ public class TaxoWidgetsUnitTest {
         assertEquals(0, TaxoWidgets.sizeClass(180, 200));
         assertEquals(1, TaxoWidgets.sizeClass(250, 110));
         assertEquals(1, TaxoWidgets.sizeClass(240, 200));
-        assertEquals(2, TaxoWidgets.sizeClass(250, 180));
+        // 4×2 في Pixel 7 (قِيس ٢١/١١) متوسّطةٌ لا كبيرة — والكبيرةُ من 4×3
+        assertEquals(1, TaxoWidgets.sizeClass(373, 200));
+        assertEquals(1, TaxoWidgets.sizeClass(250, 180));
+        assertEquals(2, TaxoWidgets.sizeClass(373, 300));
     }
 
     @Test

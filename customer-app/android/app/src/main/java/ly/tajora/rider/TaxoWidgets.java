@@ -122,7 +122,7 @@ public final class TaxoWidgets {
 
     /** خالصة: {@code 0} صغيرة · {@code 1} متوسّطة · {@code 2} كبيرة — من أبعاد الودجة بالـdp (ما قبل أندرويد ١٢). */
     static int sizeClass(int widthDp, int heightDp) {
-        if (heightDp >= 170 && widthDp >= 250) return 2;
+        if (heightDp >= 260 && widthDp >= 250) return 2;
         if (widthDp >= 230) return 1;
         return 0;
     }
@@ -147,7 +147,8 @@ public final class TaxoWidgets {
             Map<SizeF, RemoteViews> map = new ArrayMap<>();
             map.put(new SizeF(100f, 100f), render(ctx, kind, 0));
             map.put(new SizeF(230f, 100f), render(ctx, kind, 1));
-            map.put(new SizeF(230f, 200f), render(ctx, kind, 2));
+            // **الكبيرةُ من 4×3** (قِيس على المحاكي ٢١/١١): 4×2 في Pixel 7 نحوُ 373×200dp، فعتبةُ 200 أعطته الكبيرةَ فقُصّ زرُّها
+            map.put(new SizeF(230f, 260f), render(ctx, kind, 2));
             return new RemoteViews(map);
         }
         int w = options == null ? 250 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
