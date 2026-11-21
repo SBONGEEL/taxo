@@ -30,4 +30,12 @@ public class TaxoWidgetsUnitTest {
         for (String kind : TaxoWidgets.KINDS) seen.add(TaxoWidgets.provider(kind));
         assertEquals(TaxoWidgets.KINDS.length, seen.size());
     }
+
+    @Test
+    public void daysUnitByCount() {
+        assertEquals("يوم باقٍ", TaxoWidgets.daysUnit(1));
+        assertEquals("أيام باقية", TaxoWidgets.daysUnit(3));
+        assertEquals("أيام باقية", TaxoWidgets.daysUnit(10));
+        assertEquals("يوماً باقياً", TaxoWidgets.daysUnit(25));
+    }
 }

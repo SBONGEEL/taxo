@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape android:shape="rectangle"><gradient android:angle="180" android:startColor="@color/tw_fade" android:centerColor="@color/tw_fade0" android:centerX="0.45" android:endColor="@color/tw_fade0" /></shape></item>
+    <item><shape android:shape="rectangle"><gradient android:angle="270" android:startColor="@color/tw_fade" android:centerColor="@color/tw_fade0" android:centerY="0.4" android:endColor="@color/tw_fade0" /></shape></item>
+    <item><shape android:shape="rectangle"><gradient android:angle="0" android:startColor="@color/tw_fade" android:centerColor="@color/tw_fade0" android:centerX="0.18" android:endColor="@color/tw_fade0" /></shape></item>
+</layer-list>

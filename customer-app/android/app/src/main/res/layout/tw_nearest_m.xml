@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «nearest_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:paddingStart="16dp" android:paddingTop="15dp" android:paddingEnd="4dp" android:paddingBottom="14dp" android:orientation="vertical">
+            <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="16sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" android:text="أقرب سائق متاح" />
+            <LinearLayout android:id="@+id/tw_bigrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="bottom" android:layout_marginTop="6dp" android:visibility="gone" android:orientation="horizontal">
+                <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+                <TextView android:id="@+id/tw_unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:textColor="@color/tw_mut" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+            </LinearLayout>
+            <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="افتح التطبيق لنعرف أقربَ سائقٍ إليك" />
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+            <ImageView android:id="@+id/tw_btn" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/tw_circle" android:src="@drawable/tw_v_arrow_on" android:scaleType="fitCenter" android:contentDescription="اطلب الآن" android:padding="11dp" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.15">
+            <ImageView android:id="@+id/tw_scene" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_scene" android:scaleType="fitEnd" android:importantForAccessibility="no" android:alpha="0.8" />
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="10dp" android:layout_marginEnd="6dp" android:layout_marginBottom="8dp" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

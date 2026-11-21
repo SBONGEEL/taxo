@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «quick_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:paddingStart="18dp" android:paddingTop="14dp" android:paddingEnd="16dp" android:paddingBottom="14dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <ImageView android:layout_width="wrap_content" android:layout_height="15dp" android:src="@drawable/tw_wordmark" android:scaleType="fitStart" android:adjustViewBounds="true" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/tw_tx" android:textSize="19sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="طلب سريع" />
+            <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:text="رحلتك بلمسةٍ واحدة" />
+        </LinearLayout>
+        <ImageView android:id="@+id/tw_qbtn" android:layout_width="80dp" android:layout_height="80dp" android:background="@drawable/tw_circle" android:src="@drawable/tw_v_car_on" android:scaleType="fitCenter" android:contentDescription="اطلب رحلة" android:padding="21dp" />
+    </LinearLayout>
+</FrameLayout>

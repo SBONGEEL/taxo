@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «quick_s»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_horizontal" android:paddingStart="12dp" android:paddingTop="14dp" android:paddingEnd="12dp" android:paddingBottom="12dp" android:orientation="vertical">
+        <ImageView android:layout_width="wrap_content" android:layout_height="13dp" android:src="@drawable/tw_wordmark" android:scaleType="fitCenter" android:adjustViewBounds="true" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="طلب سريع" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center">
+            <ImageView android:id="@+id/tw_qbtn" android:layout_width="72dp" android:layout_height="72dp" android:background="@drawable/tw_circle" android:src="@drawable/tw_v_car_on" android:scaleType="fitCenter" android:contentDescription="اطلب رحلة" android:padding="19dp" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

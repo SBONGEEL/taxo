@@ -1,24 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- **ودجاتُ TAXO** (أمرُ المالك ٢٠/١١ الثامن) — نهارٌ نظيفٌ وليلٌ برتقاليٌّ على داكن. مولَّد. -->
+<!-- **ودجاتُ TAXO** — نهارٌ نظيفٌ وليلٌ داكنٌ بلمسةٍ برتقاليّة. مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
 <resources>
     <color name="tw_bg0">#FFFFFFFF</color>
-    <color name="tw_bg1">#FFEEF0F3</color>
-    <color name="tw_glow">#2EF05A28</color>
-    <color name="tw_line">#14101828</color>
-    <color name="tw_hi">#E6FFFFFF</color>
+    <color name="tw_bg1">#FFF4EFEB</color>
+    <color name="tw_glow">#38FF8A5C</color>
+    <color name="tw_line">#12101828</color>
+    <color name="tw_hi">#B3FFFFFF</color>
     <color name="tw_tx">#FF15171C</color>
-    <color name="tw_mut">#FF636974</color>
+    <color name="tw_mut">#FF5F6570</color>
     <color name="tw_acc">#FFF05A28</color>
     <color name="tw_acc2">#FFFF8A5C</color>
-    <color name="tw_chip">#0B101828</color>
-    <color name="tw_chip2">#14101828</color>
-    <color name="tw_track">#17101828</color>
+    <color name="tw_acc_tx">#FFC2451A</color>
+    <color name="tw_glass">#FFF8F3F0</color>
+    <color name="tw_gline">#14101828</color>
+    <color name="tw_glass2">#FFFFFFFF</color>
+    <color name="tw_chipbg">#F2FFFFFF</color>
+    <color name="tw_track">#1A101828</color>
     <color name="tw_g_b">#FFF05A28</color>
-    <color name="tw_g_k">#FFFFB595</color>
+    <color name="tw_g_k">#FFFFC4AA</color>
     <color name="tw_g_d">#FFB8401A</color>
     <color name="tw_g_c">#FFFFFFFF</color>
     <color name="tw_g_g">#1F1F2433</color>
     <color name="tw_on">#FFFFFFFF</color>
     <color name="tw_ok">#FF1FBF75</color>
-    <color name="tw_women">#FF9C2C6E</color>
+    <color name="tw_star">#FFFFB020</color>
+    <color name="tw_icon">#FF15171C</color>
+    <color name="tw_fade">#FFFAF6F3</color>
+    <color name="tw_fade0">#00FAF6F3</color>
+    <color name="h_tx">#FFFFFFFF</color>
+    <color name="h_mut">#E6FFFFFF</color>
+    <color name="h_glass">#29FFFFFF</color>
+    <color name="h_line">#40FFFFFF</color>
 </resources>

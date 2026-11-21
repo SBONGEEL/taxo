@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «offers_s»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <ImageView android:id="@+id/tw_art" android:layout_width="64dp" android:layout_height="64dp" android:layout_gravity="top|left" android:layout_marginTop="6dp" android:layout_marginEnd="4dp" android:src="@drawable/tw_il_percent" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="12dp" android:paddingTop="12dp" android:paddingEnd="12dp" android:paddingBottom="12dp" android:orientation="vertical">
+        <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+        <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:textColor="@color/tw_tx" android:textSize="26sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+        <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="13.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" android:text="العروض والخصومات" />
+        <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/tw_mut" android:textSize="11sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="عروضٌ مميّزة لك" />
+    </LinearLayout>
+</FrameLayout>

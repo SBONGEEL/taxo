@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «on_the_way_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <ImageView android:id="@+id/tw_map" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" android:scaleType="centerCrop" android:importantForAccessibility="no" />
+    <FrameLayout android:id="@+id/tw_carbox" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+        <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginStart="14dp" android:layout_marginTop="56dp" android:layout_marginEnd="14dp" android:layout_marginBottom="124dp" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+    </FrameLayout>
+    <LinearLayout android:id="@+id/tw_live" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="14dp" android:paddingTop="14dp" android:paddingEnd="14dp" android:paddingBottom="14dp" android:visibility="gone" android:orientation="vertical">
+        <LinearLayout android:id="@+id/tw_chip" android:layout_width="wrap_content" android:layout_height="34dp" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingTop="0dp" android:paddingEnd="12dp" android:paddingBottom="0dp" android:background="@drawable/tw_chip" android:orientation="horizontal">
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginEnd="6dp" android:src="@drawable/tw_v_clock_acc" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+            <TextView android:id="@+id/tw_unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:textColor="@color/tw_mut" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:text="دقائق" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:paddingStart="10dp" android:paddingTop="9dp" android:paddingEnd="12dp" android:paddingBottom="9dp" android:background="@drawable/tw_glass" android:orientation="horizontal">
+            <FrameLayout android:layout_width="52dp" android:layout_height="52dp">
+                <ImageView android:id="@+id/tw_photo" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/tw_v_person_mut" android:scaleType="centerCrop" android:importantForAccessibility="no" />
+                <ImageView android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/tw_photo_ring" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            </FrameLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="10dp" android:orientation="vertical">
+                <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="السائق في الطريق" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <ImageView android:layout_width="14dp" android:layout_height="14dp" android:layout_marginEnd="4dp" android:src="@drawable/tw_v_star_star" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                    <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+        <ProgressBar android:id="@+id/tw_bar" android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginStart="4dp" android:layout_marginTop="10dp" android:layout_marginEnd="4dp" style="?android:attr/progressBarStyleHorizontal" android:max="100" android:progress="0" android:progressDrawable="@drawable/tw_bar" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/tw_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="14dp" android:paddingTop="14dp" android:paddingEnd="14dp" android:paddingBottom="14dp" android:orientation="vertical">
+        <TextView android:id="@+id/tw_e_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="السائق في الطريق" />
+        <TextView android:id="@+id/tw_e_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="يظهر سائقك هنا حين تطلب رحلة" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:id="@+id/tw_e_btn" android:layout_width="wrap_content" android:layout_height="34dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_e_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="13sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="اطلب رحلة" />
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_on" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

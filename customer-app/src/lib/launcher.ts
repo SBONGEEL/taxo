@@ -14,7 +14,7 @@ import { routeCommsPush } from "@/lib/trip-comms";
 import { bubbleAction, fireBubbleAction } from "@/lib/bubble-actions";
 
 /** و`topup`/`bookings`/`loyalty`/`rides` و`go:/مسار` لودجات الأمر الثامن (٢٠/١١) — **شاشاتٌ تُفتح لا أفعالٌ تُنفَّذ**. */
-export type RiderAction = "ride_home" | "ride_work" | "wallet" | "topup" | "bookings" | "loyalty" | "rides" | `go:${string}`;
+export type RiderAction = "ride_home" | "ride_work" | "ride_airport" | "wallet" | "topup" | "bookings" | "loyalty" | "rides" | `go:${string}`;
 
 interface NativeLauncher {
   consume(): Promise<{ action?: string | null }>;
@@ -39,7 +39,7 @@ export function rideCommsAction(raw: string | null | undefined): { type: string;
 }
 
 export function riderAction(raw: string | null | undefined): RiderAction | null {
-  if (raw === "ride_home" || raw === "ride_work" || raw === "wallet") return raw;
+  if (raw === "ride_home" || raw === "ride_work" || raw === "ride_airport" || raw === "wallet") return raw;
   if (raw === "topup" || raw === "bookings" || raw === "loyalty" || raw === "rides") return raw;
   // **مسارٌ داخليٌّ وحدَه** (بلاطةُ خدمةٍ في الودجة) — حروفٌ صغيرةٌ وشرطاتٌ بعد «/»، فلا رابطَ خارجيٌّ ولا مخطّط
   const go = /^go:(\/[a-z0-9/_-]*)$/.exec(raw ?? "");

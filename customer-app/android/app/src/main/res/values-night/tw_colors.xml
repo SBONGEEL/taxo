@@ -1,24 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- **ودجاتُ TAXO** (أمرُ المالك ٢٠/١١ الثامن) — نهارٌ نظيفٌ وليلٌ برتقاليٌّ على داكن. مولَّد. -->
+<!-- **ودجاتُ TAXO** — نهارٌ نظيفٌ وليلٌ داكنٌ بلمسةٍ برتقاليّة. مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
 <resources>
-    <color name="tw_bg0">#FF262931</color>
-    <color name="tw_bg1">#FF101216</color>
-    <color name="tw_glow">#47FF6A33</color>
-    <color name="tw_line">#17FFFFFF</color>
-    <color name="tw_hi">#1FFFFFFF</color>
-    <color name="tw_tx">#FFF5F6F8</color>
-    <color name="tw_mut">#FFA5ABB5</color>
+    <color name="tw_bg0">#FF2A2C35</color>
+    <color name="tw_bg1">#FF111217</color>
+    <color name="tw_glow">#59FF6A33</color>
+    <color name="tw_line">#1CFFFFFF</color>
+    <color name="tw_hi">#12FFFFFF</color>
+    <color name="tw_tx">#FFF6F7F9</color>
+    <color name="tw_mut">#FFA9AFB9</color>
     <color name="tw_acc">#FFFF6A33</color>
-    <color name="tw_acc2">#FFFF8A5C</color>
-    <color name="tw_chip">#12FFFFFF</color>
-    <color name="tw_chip2">#21FFFFFF</color>
-    <color name="tw_track">#1FFFFFFF</color>
-    <color name="tw_g_b">#FFF05A28</color>
-    <color name="tw_g_k">#FF8F2F10</color>
-    <color name="tw_g_d">#FFB8401A</color>
+    <color name="tw_acc2">#FFFF9466</color>
+    <color name="tw_acc_tx">#FFFF8A5C</color>
+    <color name="tw_glass">#14FFFFFF</color>
+    <color name="tw_gline">#1FFFFFFF</color>
+    <color name="tw_glass2">#1FFFFFFF</color>
+    <color name="tw_chipbg">#D9101116</color>
+    <color name="tw_track">#24FFFFFF</color>
+    <color name="tw_g_b">#FFFF6A33</color>
+    <color name="tw_g_k">#FF7A2A10</color>
+    <color name="tw_g_d">#FFFFB08A</color>
     <color name="tw_g_c">#FF1B1E24</color>
     <color name="tw_g_g">#73000000</color>
     <color name="tw_on">#FFFFFFFF</color>
     <color name="tw_ok">#FF3DBE7E</color>
-    <color name="tw_women">#FFF08CC0</color>
+    <color name="tw_star">#FFFFB020</color>
+    <color name="tw_icon">#FFF6F7F9</color>
+    <color name="tw_fade">#FF1D1E24</color>
+    <color name="tw_fade0">#001D1E24</color>
+    <color name="h_tx">#FFFFFFFF</color>
+    <color name="h_mut">#E6FFFFFF</color>
+    <color name="h_glass">#29FFFFFF</color>
+    <color name="h_line">#40FFFFFF</color>
 </resources>

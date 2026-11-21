@@ -7,12 +7,13 @@
 import { useEffect, useRef } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
-import { API_URL, setAccessWriter, tokens } from "@/api/client";
+import { API_URL, api, setAccessWriter, tokens } from "@/api/client";
 import type { CountryCode } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { launcherAvailable } from "@/lib/launcher";
 import { askPermission } from "@/lib/permissions-center";
-import { riderBubbleRide, type BubbleRideInput } from "@/lib/rider-bubble-core";
+import { riderBubbleRide, riderPhase, type BubbleRideInput } from "@/lib/rider-bubble-core";
+import { thinRoute } from "@/lib/widget-core";
 
 interface NativePrefs {
   setPrefs(options: Record<string, boolean | string | null>): Promise<void>;
@@ -59,9 +60,30 @@ interface Options {
   approachMinutes: number | null;
   places: { icon: string }[];
   recent: string[];
+  /** **مسارُ الرحلة كما ترسمه الخريطة** (`[lng, lat]`) — لخريطة الودجة الصغيرة، و`null` بلا مسار. */
+  routePoints?: number[][] | null;
 }
 
-export function useRiderBubbleBridge({ country, ride, approachMinutes, places, recent }: Options): void {
+/** **صورةُ الكبتن مصغّرةً للودجة** — من باب الرحلة نفسِه (`/rides/{id}/driver/photo`): المعتمَدةُ أو حرفُ الاسم بطولٍ ثابت،
+ *  **فلا يصير غيابُها علامة**. ٩٦ بكسلاً JPEG، وفشلٌ ⇐ `null` (تبقى الدائرةُ الافتراضيّة). */
+async function driverThumb(rideId: string): Promise<string | null> {
+  try {
+    const blob = await api.blob(`/rides/${rideId}/driver/photo`);
+    const bitmap = await createImageBitmap(blob);
+    const side = Math.min(bitmap.width, bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = 96;
+    canvas.height = 96;
+    canvas.getContext("2d")?.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 96, 96);
+    bitmap.close();
+    const url = canvas.toDataURL("image/jpeg", 0.82);
+    return url.startsWith("data:image/jpeg;base64,") ? url.slice("data:image/jpeg;base64,".length) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function useRiderBubbleBridge({ country, ride, approachMinutes, places, recent, routePoints = null }: Options): void {
   const bubble = useFeature(country, "rider_bubble");
   const widgets = useFeature(country, "rider_widgets_plus");
   const quick = useFeature(country, "quick_replies");
@@ -103,7 +125,11 @@ export function useRiderBubbleBridge({ country, ride, approachMinutes, places, r
       // **الودجةُ تعرف من دخل ومن خرج** — ولا تبقى رحلةُ من خرج ولا أماكنُه على الشاشة الرئيسيّة
       if (!launcherAvailable()) return;
       void native
-        .setPrefs(access === null ? { signed_in: false, rider_ride: null, rider_recent: null, rider_places: null, w_feed: null } : { signed_in: true })
+        .setPrefs(
+          access === null
+            ? { signed_in: false, rider_ride: null, rider_recent: null, rider_places: null, w_feed: null, rider_ride_photo: null, rider_ride_route: null }
+            : { signed_in: true },
+        )
         .catch(() => undefined);
     };
     write(tokens.access());
@@ -114,4 +140,30 @@ export function useRiderBubbleBridge({ country, ride, approachMinutes, places, r
     if (!launcherAvailable()) return;
     void native.setPrefs({ rider_ride: rideJson, rider_places: placesJson, rider_recent: recentJson }).catch(() => undefined);
   }, [rideJson, placesJson, recentJson]);
+
+  // **صورةُ الكبتن ومسارُ الرحلة في الودجة** (أمرُ المالك ٢١/١١) — **أثناء الرحلة وحدَها** وخلف `rider_widgets_plus`، وتُمحى بانتهائها
+  const liveId = widgets && ride && ride.driver && riderPhase(ride.status) !== null && riderPhase(ride.status) !== "searching" ? ride.id : null;
+  const routeJson = liveId ? (() => {
+    const pts = thinRoute(routePoints);
+    return pts ? JSON.stringify({ id: liveId, pts }) : null;
+  })() : null;
+  useEffect(() => {
+    if (!launcherAvailable()) return;
+    void native.setPrefs({ rider_ride_route: routeJson }).catch(() => undefined);
+  }, [routeJson]);
+  useEffect(() => {
+    if (!launcherAvailable()) return;
+    if (!liveId) {
+      void native.setPrefs({ rider_ride_photo: null }).catch(() => undefined);
+      return;
+    }
+    let cancelled = false;
+    void driverThumb(liveId).then((b64) => {
+      if (cancelled) return;
+      void native.setPrefs({ rider_ride_photo: b64 ? JSON.stringify({ id: liveId, b64 }) : null }).catch(() => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [liveId]);
 }

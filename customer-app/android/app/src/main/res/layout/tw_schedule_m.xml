@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «schedule_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="14dp" android:paddingTop="13dp" android:paddingEnd="10dp" android:paddingBottom="13dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.2" android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_g_schedule" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="14.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="حجز مسبق" />
+            </LinearLayout>
+            <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:visibility="gone" android:textColor="@color/tw_tx" android:textSize="17sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="رحلتك في موعدٍ لاحق" />
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+            <LinearLayout android:id="@+id/tw_btn" android:layout_width="wrap_content" android:layout_height="36dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:orientation="horizontal">
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginEnd="6dp" android:src="@drawable/tw_v_clock_on" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="13sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="احجز الآن" />
+            </LinearLayout>
+        </LinearLayout>
+        <ImageView android:id="@+id/tw_art" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.9" android:layout_marginStart="4dp" android:layout_marginTop="4dp" android:layout_marginBottom="4dp" android:src="@drawable/tw_il_calendar" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+    </LinearLayout>
+</FrameLayout>

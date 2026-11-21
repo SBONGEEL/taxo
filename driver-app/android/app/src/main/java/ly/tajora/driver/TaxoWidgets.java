@@ -9,17 +9,24 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.ArrayMap;
+import android.util.SizeF;
 import android.view.View;
 import android.widget.RemoteViews;
 
 import org.json.JSONObject;
 
 import java.util.Locale;
+import java.util.Map;
 
 /**
- * <b>ودجاتُ الكبتن الخمس</b> (أمرُ المالك ٢٠٢٦-١١-٢٠ الثامن) — بأسلوب ودجات الراكب: متّصلٌ أو غيرُ متّصلٍ مع أرباح اليوم · حلقةُ
- * الهدف اليوميّ · أيّامُ الاشتراك الباقية · أقربُ منطقةٍ مزدحمة و«اذهب إليها» · حالُ الرحلة أثناءها.
+ * <b>ودجاتُ الكبتن الخمس</b> (أمرُ المالك ٢٠٢٦-١١-٢٠ الثامن؛ وأُعيد تصميمُها ٢١/١١ على صورته المرجعيّة بهويّة TAXO) — متّصلٌ أو غيرُ
+ * متّصلٍ مع أرباح اليوم · حلقةُ الهدف اليوميّ · أيّامُ الاشتراك الباقية · أقربُ منطقةٍ مزدحمة و«اذهب إليها» · حالُ الرحلة أثناءها.
+ *
+ * <p><b>تخطيطٌ لكلِّ نوعٍ ولكلِّ حجم</b> ({@link TwLayouts}، مولَّدٌ من {@code tools/gen-android-widgets.py})، والثلاثةُ معاً على أندرويد ١٢+،
+ * <b>والمعاينةُ في المنتقي هي التخطيطُ نفسُه</b>. <b>ونصوصُ التخطيط الافتراضيّةُ هي الحالُ الفارغة</b>: لا رقمَ في المعاينة.
  *
  * <p><b>ترسم ما تقرؤه الفقاعةُ نفسُها من أبوابها</b> ({@code today_earned} و{@code sub_days} و{@code busy_json} يكتبها
  * {@link DriverBubbleMenu#refresh} من الخادم، و{@code bubble_ride} الويب) — <b>لا رقمَ مخترَع</b>، وما لا قيمةَ له حالٌ فارغةٌ تقول ذلك.
@@ -70,15 +77,36 @@ public final class TaxoWidgets {
                     p.getBoolean("bubble_busy_area", false)) || ids.length > 0;
             int state = want ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
             if (pm.getComponentEnabledSetting(name) != state) pm.setComponentEnabledSetting(name, state, PackageManager.DONT_KILL_APP);
-            for (int id : ids) manager.updateAppWidget(id, render(ctx, kind, manager.getAppWidgetOptions(id)));
+            for (int id : ids) manager.updateAppWidget(id, views(ctx, kind, manager.getAppWidgetOptions(id)));
         }
     }
 
-    /** خالصة: {@code 0} صغيرة · {@code 1} متوسّطة · {@code 2} كبيرة. */
+    /** خالصة: {@code 0} صغيرة · {@code 1} متوسّطة · {@code 2} كبيرة (ما قبل أندرويد ١٢). */
     static int sizeClass(int widthDp, int heightDp) {
         if (heightDp >= 170 && widthDp >= 250) return 2;
         if (widthDp >= 230) return 1;
         return 0;
+    }
+
+    /** خالصة: «يوم باقٍ» للواحد، و«أيام باقية» من ٢ إلى ١٠، و«يوماً باقياً» فوقها. */
+    static String daysUnit(int n) {
+        if (n == 1) return "يوم باقٍ";
+        if (n >= 2 && n <= 10) return "أيام باقية";
+        return "يوماً باقياً";
+    }
+
+    /** الثلاثةُ معاً على أندرويد ١٢+ (يختار المشغِّل)، وواحدٌ بالمقاس قبله. */
+    static RemoteViews views(Context ctx, String kind, Bundle options) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            Map<SizeF, RemoteViews> map = new ArrayMap<>();
+            map.put(new SizeF(100f, 100f), render(ctx, kind, 0));
+            map.put(new SizeF(230f, 100f), render(ctx, kind, 1));
+            map.put(new SizeF(230f, 200f), render(ctx, kind, 2));
+            return new RemoteViews(map);
+        }
+        int w = options == null ? 250 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
+        int h = WidgetSignedOut.heightDp(ctx, options, 110);
+        return render(ctx, kind, sizeClass(w, h));
     }
 
     private static PendingIntent open(Context ctx, String action, int code) {
@@ -93,115 +121,78 @@ public final class TaxoWidgets {
         return 3299;
     }
 
-    /** أداةُ رسمٍ صغيرة: تُظهر ما يُكتب فيه وتُخفي ما سواه. */
-    static final class Card {
+    /** أداةُ رسمٍ صغيرة على تخطيط النوع والحجم؛ <b>والمعرّفُ الغائبُ عن تخطيطٍ يُتجاوَز</b>. */
+    static final class W {
         final Context ctx;
         final RemoteViews v;
         final String kind;
+        final int size;
 
-        Card(Context ctx, String kind) {
+        W(Context ctx, String kind, int size) {
             this.ctx = ctx;
             this.kind = kind;
-            v = new RemoteViews(ctx.getPackageName(), R.layout.tw_widget);
-            int[] hidden = {R.id.tw_car, R.id.tw_car_s, R.id.tw_art, R.id.tw_dot, R.id.tw_mark, R.id.tw_icon, R.id.tw_bigrow, R.id.tw_sub,
-                    R.id.tw_tiles, R.id.tw_actions, R.id.tw_btn, R.id.tw_btn2, R.id.tw_bar, R.id.tw_ringbox, R.id.tw_quick, R.id.tw_place,
-                    R.id.wo_root};
-            for (int id : hidden) v.setViewVisibility(id, View.GONE);
-            v.setViewVisibility(R.id.tw_body, View.VISIBLE);
-            v.setViewVisibility(R.id.tw_fill, View.VISIBLE);
-            v.setTextViewText(R.id.tw_title, "");
+            this.size = size;
+            v = new RemoteViews(ctx.getPackageName(), TwLayouts.of(kind, size));
         }
 
-        Card title(String text) { v.setTextViewText(R.id.tw_title, text); return this; }
-        Card dot(boolean live) {
-            v.setViewVisibility(R.id.tw_dot, View.VISIBLE);
-            v.setImageViewResource(R.id.tw_dot, live ? R.drawable.tw_dot_ok : R.drawable.tw_dot);
+        W text(int id, String s) { v.setTextViewText(id, s == null ? "" : s); return this; }
+        W show(int id, boolean on) { v.setViewVisibility(id, on ? View.VISIBLE : View.GONE); return this; }
+        W img(int id, int res) { v.setImageViewResource(id, res); return this; }
+        W click(int id, String action, int slot) { v.setOnClickPendingIntent(id, open(ctx, action, code(kind, slot))); return this; }
+        W click(int id, PendingIntent intent) { v.setOnClickPendingIntent(id, intent); return this; }
+        W bar(int id, float f) {
+            v.setProgressBar(id, 100, Math.round(Math.max(0f, Math.min(1f, f)) * 100), false);
             return this;
         }
-        Card icon(int res) { v.setViewVisibility(R.id.tw_icon, View.VISIBLE); v.setImageViewResource(R.id.tw_icon, res); return this; }
-        Card big(String value, String unit) {
-            v.setViewVisibility(R.id.tw_bigrow, View.VISIBLE);
-            v.setTextViewText(R.id.tw_big, value);
-            v.setTextViewText(R.id.tw_unit, unit == null ? "" : unit);
-            return this;
+        /** زرٌّ بنصّه وفعله — والنصُّ في {@code tw_btn_t} إن كان للزرِّ نصٌّ داخليّ. */
+        W button(String label, String action, int slot) {
+            return show(R.id.tw_btn, true).text(R.id.tw_btn_t, label).click(R.id.tw_btn, action, slot);
         }
-        Card sub(String text) {
-            if (text == null || text.isEmpty()) return this;
-            v.setViewVisibility(R.id.tw_sub, View.VISIBLE);
-            v.setTextViewText(R.id.tw_sub, text);
-            return this;
-        }
-        Card car() {
-            v.setViewVisibility(R.id.tw_car_s, View.VISIBLE);
-            v.setImageViewResource(R.id.tw_car_s, R.drawable.tw_car_economy);
-            return this;
-        }
-        Card button(String text, String action, int slot) {
-            return button(text, open(ctx, action, code(kind, slot)));
-        }
-        Card button(String text, PendingIntent intent) {
-            v.setViewVisibility(R.id.tw_actions, View.VISIBLE);
-            v.setViewVisibility(R.id.tw_btn, View.VISIBLE);
-            v.setTextViewText(R.id.tw_btn, text);
-            v.setOnClickPendingIntent(R.id.tw_btn, intent);
-            return this;
-        }
-        Card bar(float value) {
-            v.setViewVisibility(R.id.tw_bar, View.VISIBLE);
-            v.setProgressBar(R.id.tw_bar, 100, Math.round(Math.max(0f, Math.min(1f, value)) * 100), false);
-            return this;
-        }
-        Card tap(String action) { v.setOnClickPendingIntent(R.id.tw_root, open(ctx, action, code(kind, 0))); return this; }
     }
 
-    static RemoteViews render(Context ctx, String kind, Bundle options) {
+    static RemoteViews render(Context ctx, String kind, int size) {
         SharedPreferences p = ctx.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE);
-        int w = options == null ? 250 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
-        int h = WidgetSignedOut.heightDp(ctx, options, 110);
-        int size = sizeClass(w, h);
-        Card c = new Card(ctx, kind);
-        c.tap(null);
         boolean plus = p.getBoolean("driver_widgets_plus", false);
-        boolean signedIn = p.getBoolean("signed_in", false);
-        if (!plus || !signedIn) {
-            c.v.setViewVisibility(R.id.tw_body, View.GONE);
-            c.v.setViewVisibility(R.id.wo_root, View.VISIBLE);
-            WidgetSignedOut.show(ctx, c.v, h, !plus ? "هذه الودجة غير متاحة الآن" : "حالُك وأرباحُ يومك هنا بعد الدخول",
+        if (!plus || !p.getBoolean("signed_in", false)) {
+            RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.tw_signed_out);
+            WidgetSignedOut.show(ctx, v, size == 1 ? 110 : 170, !plus ? "هذه الودجة غير متاحة الآن" : "حالُك وأرباحُ يومك هنا بعد الدخول",
                     !plus ? "افتح TAXO" : "سجّل الدخول", open(ctx, null, code(kind, 9)));
-            return c.v;
+            v.setOnClickPendingIntent(R.id.tw_root, open(ctx, null, code(kind, 9)));
+            return v;
         }
+        W c = new W(ctx, kind, size);
+        c.click(R.id.tw_root, null, 0);
         boolean online = p.getBoolean("online", false);
         String unit = p.getString("currency_label", "");
         String earned = p.getString("today_earned", null);
-        JSONObject ride = DriverBubbleMenu.ride(p);
         switch (kind) {
             case "status":
-                c.dot(online).title(online ? "متّصل" : "غير متّصل");
-                if (earned != null) c.big(earned, unit).sub("أرباح اليوم" + rides(p));
-                else c.sub("أرباحُ اليوم تظهر بعد فتح التطبيق");
+                c.text(R.id.tw_title, online ? "متّصل" : "غير متّصل").img(R.id.tw_dot, online ? R.drawable.tw_dot_ok : R.drawable.tw_dot_off);
+                if (earned != null) {
+                    c.show(R.id.tw_bigrow, true).text(R.id.tw_big, earned).text(R.id.tw_unit, unit).text(R.id.tw_sub, "أرباح اليوم" + rides(p));
+                } else {
+                    c.show(R.id.tw_bigrow, false).text(R.id.tw_sub, "أرباحُ اليوم تظهر بعد فتح التطبيق");
+                }
                 c.button(online ? "أوقف الاستقبال" : "اتّصل الآن", online ? "go_offline" : "go_online", 1);
-                if (size > 0) c.car();
                 break;
             case "goal": {
                 String goal = p.getString("bubble_goal", null);
                 if (goal == null || goal.isEmpty()) {
-                    c.title("هدفي اليوميّ").icon(R.drawable.tw_g_flag).sub("حدّد هدفَك اليوميَّ من إعدادات الفقاعة");
+                    c.text(R.id.tw_big, "").text(R.id.tw_ring_t, "").bar(R.id.tw_ring, 0).text(R.id.tw_sub, "حدّد هدفَك اليوميَّ من إعدادات الفقاعة");
                     break;
                 }
                 float fraction = BubbleLogic.goalFraction(earned, goal);
-                c.v.setViewVisibility(R.id.tw_body, View.GONE);
-                c.v.setViewVisibility(R.id.tw_ringbox, View.VISIBLE);
-                c.v.setImageViewResource(R.id.tw_ring_icon, R.drawable.tw_g_flag);
-                c.v.setProgressBar(R.id.tw_ring, 100, Math.round(fraction * 100), false);
-                c.v.setTextViewText(R.id.tw_ring_big, Math.round(fraction * 100) + "%");
-                c.v.setTextViewText(R.id.tw_ring_sub, (earned == null ? "0" : earned) + " / " + goal + (unit == null || unit.isEmpty() ? "" : " " + unit));
+                int pct = Math.round(fraction * 100);
+                String of = (earned == null ? "0" : earned) + " / " + goal + (unit == null || unit.isEmpty() ? "" : " " + unit);
+                c.bar(R.id.tw_ring, fraction).text(R.id.tw_ring_t, pct + "%").text(R.id.tw_big, earned == null ? "0" : earned)
+                        .text(R.id.tw_sub, size == 0 ? of : "من هدفك " + goal + (unit == null || unit.isEmpty() ? "" : " " + unit));
                 break;
             }
             case "subscription": {
                 String days = p.getString("sub_days", null);
-                c.title("اشتراكي").icon(R.drawable.tw_g_receipt_long);
+                c.click(R.id.tw_root, null, 0);
                 if (days == null) {
-                    c.sub("يظهر هنا ما بقي من اشتراكك");
+                    c.show(R.id.tw_bigrow, false).show(R.id.tw_bar, false).show(R.id.tw_btn, false).text(R.id.tw_sub, "يظهر هنا ما بقي من اشتراكك");
                     break;
                 }
                 int n;
@@ -210,37 +201,38 @@ public final class TaxoWidgets {
                 } catch (NumberFormatException ignored) {
                     n = 0;
                 }
-                c.big(days, "1".equals(days) ? "يوم باقٍ" : "أيام باقية").bar(BubbleLogic.subscriptionFraction(n));
+                c.show(R.id.tw_bigrow, true).text(R.id.tw_big, days).text(R.id.tw_unit, daysUnit(n)).show(R.id.tw_bar, true)
+                        .bar(R.id.tw_bar, BubbleLogic.subscriptionFraction(n)).text(R.id.tw_sub, n <= 3 ? "اشتراكك ينتهي قريباً" : "اشتراكك فعّال");
                 if (n <= 3) c.button("جدّد الاشتراك", null, 1);
+                else c.show(R.id.tw_btn, false);
                 break;
             }
             case "busy": {
                 JSONObject area = DriverBubbleMenu.busy(p);
-                c.title("أقرب منطقة مزدحمة").icon(R.drawable.tw_g_my_location);
                 if (!online) {
-                    c.sub("اتّصل لترى أين الطلبُ الآن").button("اتّصل الآن", "go_online", 1);
+                    c.text(R.id.tw_sub, "اتّصل لترى أين الطلبُ الآن").button("اتّصل الآن", "go_online", 1);
                 } else if (area == null) {
-                    c.sub("لا منطقةَ مزدحمة قريبة الآن");
+                    c.text(R.id.tw_sub, "لا منطقةَ مزدحمة قريبة الآن").show(R.id.tw_btn, false);
                 } else {
-                    c.sub(BubbleLogic.busyLine(area.optString("name", null), area.optDouble("distance_km", 0)));
+                    c.text(R.id.tw_sub, BubbleLogic.busyLine(area.optString("name", null), area.optDouble("distance_km", 0)));
                     Intent nav = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(Locale.ROOT, "google.navigation:q=%.6f,%.6f",
                             area.optDouble("lat"), area.optDouble("lng"))));
-                    c.button("اذهب إليها", PendingIntent.getActivity(ctx, code(kind, 1), nav,
+                    c.show(R.id.tw_btn, true).text(R.id.tw_btn_t, "اذهب إليها").click(R.id.tw_btn, PendingIntent.getActivity(ctx, code(kind, 1), nav,
                             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
                 }
                 break;
             }
-            default: // ride
-                c.title("رحلتي الحالية");
+            default: { // ride
+                JSONObject ride = DriverBubbleMenu.ride(p);
                 if (ride == null) {
-                    c.sub(online ? "بانتظار طلبٍ جديد" : "لا رحلة الآن");
+                    c.img(R.id.tw_dot, R.drawable.tw_dot_off).text(R.id.tw_sub, online ? "بانتظار طلبٍ جديد" : "لا رحلة الآن").show(R.id.tw_btn, false);
                     break;
                 }
                 String status = ride.optString("status", "");
-                c.dot(true).sub("accepted".equals(status) ? "في الطريق إلى الراكب"
+                c.img(R.id.tw_dot, R.drawable.tw_dot_ok).text(R.id.tw_sub, "accepted".equals(status) ? "في الطريق إلى الراكب"
                         : "arrived".equals(status) ? "وصلتَ — بانتظار الراكب" : "في الرحلة إلى الوجهة").button("افتح الرحلة", null, 1);
-                if (size > 0) c.car();
                 break;
+            }
         }
         return c.v;
     }
@@ -256,12 +248,12 @@ public final class TaxoWidgets {
 
         @Override
         public void onUpdate(Context ctx, AppWidgetManager manager, int[] ids) {
-            for (int id : ids) manager.updateAppWidget(id, render(ctx, kind(), manager.getAppWidgetOptions(id)));
+            for (int id : ids) manager.updateAppWidget(id, views(ctx, kind(), manager.getAppWidgetOptions(id)));
         }
 
         @Override
         public void onAppWidgetOptionsChanged(Context ctx, AppWidgetManager manager, int id, Bundle options) {
-            manager.updateAppWidget(id, render(ctx, kind(), options));
+            manager.updateAppWidget(id, views(ctx, kind(), options));
         }
 
         @Override

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «subscription_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="16dp" android:paddingTop="16dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_g_receipt_long" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="16sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="اشتراكي" />
+        </LinearLayout>
+        <ImageView android:id="@+id/tw_art" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp" android:layout_marginBottom="8dp" android:src="@drawable/tw_il_calendar" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        <LinearLayout android:id="@+id/tw_bigrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="36sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+            <TextView android:id="@+id/tw_unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:layout_marginBottom="2dp" android:textColor="@color/tw_mut" android:textSize="13sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+        </LinearLayout>
+        <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="يظهر هنا ما بقي من اشتراكك" />
+        <ProgressBar android:id="@+id/tw_bar" android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginTop="10dp" style="?android:attr/progressBarStyleHorizontal" android:max="100" android:progress="0" android:progressDrawable="@drawable/tw_bar" />
+        <LinearLayout android:id="@+id/tw_btn" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center" android:layout_marginTop="12dp" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:visibility="gone" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="14sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="جدّد الاشتراك" />
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_on" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «favorites_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="14dp" android:paddingTop="13dp" android:paddingEnd="14dp" android:paddingBottom="12dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_v_star_star" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="14.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="وجهاتك المفضلة" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="10dp" android:layout_marginBottom="8dp" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/tw_t0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t0i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_home" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t0l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="المنزل" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/tw_t1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:layout_marginStart="7dp" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t1i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_work" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t1l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="العمل" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/tw_t2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:layout_marginStart="7dp" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:visibility="gone" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t2i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_flight" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t2l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="المطار" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/tw_btn" android:layout_width="match_parent" android:layout_height="32dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill_glass" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="12.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="عرض الكل" />
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_tx" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

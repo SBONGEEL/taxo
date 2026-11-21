@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «goal_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="16dp" android:paddingTop="16dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_g_flag" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="16sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="هدفي اليوميّ" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center">
+            <FrameLayout android:layout_width="160dp" android:layout_height="160dp">
+                <ProgressBar android:id="@+id/tw_ring" android:layout_gravity="center" android:layout_width="160dp" android:layout_height="160dp" style="?android:attr/progressBarStyleHorizontal" android:max="100" android:progress="0" android:progressDrawable="@drawable/tw_ring" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center_horizontal" android:orientation="vertical">
+                    <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_flag" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                    <TextView android:id="@+id/tw_ring_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/tw_tx" android:textSize="26sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+                </LinearLayout>
+            </FrameLayout>
+        </FrameLayout>
+        <TextView android:id="@+id/tw_big" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="22sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" android:gravity="center" />
+        <TextView android:id="@+id/tw_sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:gravity="center" android:text="حدّد هدفَك اليوميَّ من إعدادات الفقاعة" />
+    </LinearLayout>
+</FrameLayout>

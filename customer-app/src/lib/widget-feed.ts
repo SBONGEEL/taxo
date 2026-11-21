@@ -9,12 +9,13 @@
 import { useEffect } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
-import { getMyLoyalty, getStorefront, getWallet, listBookings, listMyRides, type MyLoyalty } from "@/api/endpoints";
-import type { Booking, CountryCode, PromoBanner, RideListItem, ServiceTile, Wallet } from "@/api/types";
+import { getAirports, getMyLoyalty, getStorefront, getWallet, listBookings, listMyRides, type MyLoyalty } from "@/api/endpoints";
+import type { Booking, CountryCode, PromoBanner, RideListItem, SavedPlace, ServiceTile, Wallet } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { tr } from "@/lib/i18n";
 import { currencyLabel, digits, formatAmount } from "@/lib/utils";
 import { carKey, type CarKey } from "@/taxo2/cars";
+import { nearestAirport, type LatLng, type WidgetAirport } from "@/lib/widget-core";
 
 interface NativePrefs {
   setPrefs(options: Record<string, boolean | string | null>): Promise<void>;
@@ -40,6 +41,9 @@ export interface WidgetFeed {
   services: { title: string; go: string }[];
   /** أقربُ كبتنٍ متاحٍ بالدقائق من نقطة الرئيسيّة — و`null` حيث لا جواب. */
   nearest: number | null;
+  /** **«المطار» في المفضّلة** (٢١/١١) — أقربُ مطارٍ حقيقيٍّ أو المكانُ المحفوظُ له (`widget-core.ts`)، **و`null` يُخفي الزرّ**.
+   *  المعرّفُ والاسمُ وحدَهما — والإحداثيّةُ تُقرأ من جديدٍ حين يُلمس. */
+  airport: { id: string; name: string } | null;
 }
 
 const TIER: Record<MyLoyalty["tier"], string> = { bronze: "برونزيّ", silver: "فضّيّ", gold: "ذهبيّ" };
@@ -70,6 +74,7 @@ export interface FeedInputs {
   tiles: ServiceTile[];
   banners: PromoBanner[];
   nearest: number | null;
+  airport?: WidgetAirport | null;
 }
 
 /** خالصٌ ومختبَر. */
@@ -107,6 +112,7 @@ export function buildWidgetFeed(input: FeedInputs): WidgetFeed {
       .slice(0, 4)
       .map((tile) => ({ title: tile.title, go: internalPath(tile.destination)! })),
     nearest: input.nearest,
+    airport: input.airport ? { id: input.airport.id, name: input.airport.name } : null,
   };
 }
 
@@ -129,8 +135,19 @@ function available(): boolean {
 }
 
 /** يُنادى من الرئيسيّة: يجمع الأبوابَ مرّةً عند الفتح وكلَّما عاد التطبيقُ إلى الواجهة. */
-export function useWidgetFeed(country: CountryCode | undefined, signedIn: boolean, nearest: number | null): void {
+export function useWidgetFeed(
+  country: CountryCode | undefined,
+  signedIn: boolean,
+  nearest: number | null,
+  here: LatLng | null = null,
+  places: SavedPlace[] = [],
+): void {
   const on = useFeature(country, "rider_widgets_plus");
+  const airportOn = useFeature(country, "airport_enabled");
+  // **مفتاحا المكان والأماكن مقرَّبان** — تحريكُ الخريطة متراً لا يعيد جمعَ الأبواب (كيلومترٌ تقريباً)
+  const hereKey = here ? `${here.lat.toFixed(2)},${here.lng.toFixed(2)}` : "";
+  const placesKey = places.map((place) => `${place.id}:${place.label}`).join("|");
+  const latest = { here, places };
   const schedule = useFeature(country, "scheduled_rides_enabled");
   const eta = useFeature(country, "eta_enabled");
   const walletOn = useFeature(country, "wallet_enabled");
@@ -143,12 +160,13 @@ export function useWidgetFeed(country: CountryCode | undefined, signedIn: boolea
     }
     let cancelled = false;
     const collect = async () => {
-      const [wallet, loyalty, bookings, rides, store] = await Promise.all([
+      const [wallet, loyalty, bookings, rides, store, airports] = await Promise.all([
         getWallet().catch(() => null),
         getMyLoyalty().catch(() => null),
         schedule ? listBookings().catch(() => null) : Promise.resolve(null),
         listMyRides(5, 0, "completed").catch(() => null),
         getStorefront().catch(() => null),
+        airportOn ? getAirports().catch(() => null) : Promise.resolve(null),
       ]);
       if (cancelled) return;
       const feed = buildWidgetFeed({
@@ -160,6 +178,7 @@ export function useWidgetFeed(country: CountryCode | undefined, signedIn: boolea
         tiles: store?.tiles ?? [],
         banners: store?.banners ?? [],
         nearest,
+        airport: nearestAirport(airports, latest.here, latest.places),
       });
       await native.setPrefs({ w_feed: JSON.stringify(feed), w_kinds: JSON.stringify(widgetKinds(feed, { schedule, eta, wallet: walletOn })) });
     };
@@ -172,5 +191,6 @@ export function useWidgetFeed(country: CountryCode | undefined, signedIn: boolea
       cancelled = true;
       document.removeEventListener("visibilitychange", again);
     };
-  }, [on, signedIn, schedule, eta, walletOn, nearest]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- المكانُ والأماكنُ بمفتاحيهما المقرَّبين
+  }, [on, signedIn, schedule, eta, walletOn, nearest, airportOn, hereKey, placesKey]);
 }

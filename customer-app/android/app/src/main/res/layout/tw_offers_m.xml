@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «offers_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="15dp" android:paddingTop="14dp" android:paddingEnd="10dp" android:paddingBottom="14dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.25" android:orientation="vertical">
+            <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" android:text="العروض والخصومات" />
+            <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="عروضٌ مميّزة لك" />
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+            <LinearLayout android:id="@+id/tw_btn" android:layout_width="wrap_content" android:layout_height="34dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill_glass" android:orientation="horizontal">
+                <TextView android:id="@+id/tw_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="12.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="مشاهدة العروض" />
+                <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_tx" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            </LinearLayout>
+        </LinearLayout>
+        <ImageView android:id="@+id/tw_art" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.85" android:layout_marginStart="4dp" android:layout_marginTop="4dp" android:layout_marginBottom="4dp" android:src="@drawable/tw_il_percent" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+    </LinearLayout>
+</FrameLayout>

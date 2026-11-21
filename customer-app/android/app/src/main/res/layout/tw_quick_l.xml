@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «quick_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:paddingStart="18dp" android:paddingTop="16dp" android:paddingEnd="16dp" android:paddingBottom="0dp" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <ImageView android:layout_width="wrap_content" android:layout_height="16dp" android:src="@drawable/tw_wordmark" android:scaleType="fitStart" android:adjustViewBounds="true" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/tw_tx" android:textSize="20sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="طلب سريع" />
+                <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="13sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:text="رحلتك بلمسةٍ واحدة" />
+            </LinearLayout>
+            <ImageView android:id="@+id/tw_qbtn" android:layout_width="80dp" android:layout_height="80dp" android:background="@drawable/tw_circle" android:src="@drawable/tw_v_car_on" android:scaleType="fitCenter" android:contentDescription="اطلب رحلة" android:padding="21dp" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <ImageView android:id="@+id/tw_scene" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_scene" android:scaleType="fitEnd" android:importantForAccessibility="no" android:alpha="0.8" />
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginStart="14dp" android:layout_marginTop="4dp" android:layout_marginEnd="14dp" android:layout_marginBottom="4dp" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="74dp" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginBottom="12dp" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/tw_t0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t0i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_home" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t0l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="المنزل" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/tw_t1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:layout_marginStart="7dp" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t1i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_work" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t1l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="العمل" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/tw_t2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:layout_marginStart="7dp" android:paddingStart="4dp" android:paddingTop="6dp" android:paddingEnd="4dp" android:paddingBottom="6dp" android:background="@drawable/tw_tile" android:visibility="gone" android:orientation="vertical">
+                <ImageView android:id="@+id/tw_t2i" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/tw_g_flight" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_t2l" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_tx" android:textSize="11.5sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:text="المطار" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- **ودجةُ «أقرب منطقة مزدحمة»** (أمرُ المالك ٢٠/١١ الثامن) — تتحدّث حين يتغيّر الحال لا بمؤقّت. مولَّد. -->
+<!-- **ودجةُ «busy»** — المعاينةُ في المنتقي هي التخطيطُ نفسُه (`previewLayout`، أندرويد ١٢+)، والصورةُ لما قبله. مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="70dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="530dp"
+    android:maxResizeHeight="530dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/tw_widget"
+    android:initialLayout="@layout/tw_busy_m"
+    android:previewLayout="@layout/tw_busy_m"
     android:previewImage="@drawable/tw_prev_busy"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"

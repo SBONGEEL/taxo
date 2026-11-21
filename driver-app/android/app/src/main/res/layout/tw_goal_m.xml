@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «goal_m»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:paddingStart="16dp" android:paddingTop="14dp" android:paddingEnd="14dp" android:paddingBottom="14dp" android:orientation="horizontal">
+        <FrameLayout android:layout_width="112dp" android:layout_height="112dp">
+            <ProgressBar android:id="@+id/tw_ring" android:layout_gravity="center" android:layout_width="112dp" android:layout_height="112dp" style="?android:attr/progressBarStyleHorizontal" android:max="100" android:progress="0" android:progressDrawable="@drawable/tw_ring" />
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center_horizontal" android:orientation="vertical">
+                <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/tw_g_flag" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_ring_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/tw_tx" android:textSize="18sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+            </LinearLayout>
+        </FrameLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_g_flag" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+                <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="هدفي اليوميّ" />
+            </LinearLayout>
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+            <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="22sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+            <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="حدّد هدفَك اليوميَّ من إعدادات الفقاعة" />
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="0dp" android:layout_weight="1" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «current_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:id="@+id/tw_live" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="16dp" android:paddingTop="16dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:visibility="gone" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:id="@+id/tw_dot" android:layout_width="8dp" android:layout_height="8dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_dot_ok" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="16sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="رحلتي الحالية" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="10dp" android:layout_marginBottom="10dp" android:background="@drawable/tw_glass">
+            <ImageView android:id="@+id/tw_map" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" android:scaleType="centerCrop" android:importantForAccessibility="no" />
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_car_economy" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/tw_chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="14dp" android:paddingTop="10dp" android:paddingEnd="14dp" android:paddingBottom="10dp" android:background="@drawable/tw_glass" android:orientation="vertical">
+                <TextView android:id="@+id/tw_chip_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_mut" android:textSize="11.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:text="الوصول خلال" />
+                <LinearLayout android:id="@+id/tw_bigrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="bottom" android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="26sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+                    <TextView android:id="@+id/tw_unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:layout_marginBottom="2dp" android:textColor="@color/tw_mut" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+                </LinearLayout>
+            </LinearLayout>
+            <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/tw_bar" android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginTop="10dp" style="?android:attr/progressBarStyleHorizontal" android:max="100" android:progress="0" android:progressDrawable="@drawable/tw_bar" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/tw_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="14dp" android:paddingTop="14dp" android:paddingEnd="14dp" android:paddingBottom="14dp" android:orientation="vertical">
+        <TextView android:id="@+id/tw_e_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="15sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="رحلتي الحالية" />
+        <TextView android:id="@+id/tw_e_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="لا رحلة الآن" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:id="@+id/tw_e_btn" android:layout_width="wrap_content" android:layout_height="34dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_e_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="13sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="اطلب رحلة" />
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_on" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

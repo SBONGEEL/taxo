@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «work_s»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:paddingStart="10dp" android:paddingTop="10dp" android:paddingEnd="10dp" android:paddingBottom="10dp" android:orientation="vertical">
+        <FrameLayout android:layout_width="70dp" android:layout_height="70dp" android:background="@drawable/tw_circle_glass">
+            <ImageView android:id="@+id/tw_icon" android:layout_width="39dp" android:layout_height="39dp" android:layout_gravity="center" android:src="@drawable/tw_g_work" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <TextView android:id="@+id/tw_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:textColor="@color/tw_tx" android:textSize="17sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="العمل" />
+        <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/tw_mut" android:textSize="11.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:text="اطلب رحلة" />
+    </LinearLayout>
+</FrameLayout>

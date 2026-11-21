@@ -15,6 +15,7 @@
  */
 
 import { useWidgetFeed } from "@/lib/widget-feed";
+import { nearestAirport } from "@/lib/widget-core";
 import { isOutcomeClosed, outcomeDecision } from "@/lib/outcome";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1070,7 +1071,7 @@ export function HomeScreen() {
   const approachMinutes = useApproachMinutes(tracking ? ride : null, driverPing);
   // **ودجاتُ الأمر الثامن** (٢٠/١١): أقربُ كبتنٍ متاحٍ من نقطة الرئيسيّة بأقلِّ دقائق فئاتها — ولا رقمَ حيث لا جواب
   const nearestValues = Object.values(nearestEta.minutes ?? {}).filter((value): value is number => typeof value === "number");
-  useWidgetFeed(user?.country_code, user !== null && user !== undefined, nearestValues.length ? Math.min(...nearestValues) : null);
+  useWidgetFeed(user?.country_code, user !== null && user !== undefined, nearestValues.length ? Math.min(...nearestValues) : null, pickup ?? center, places);
 
   // **اختصارا الأيقونة** (SPEC §١٠٣/10): «البيت» يمرّ بـ`pickPlace` نفسِه، وبلا بيتٍ محفوظٍ ⇐ «أماكني» ليضيفه
   // **الاهتزازُ الخفيف** (SPEC §١٠٣/11) — مستمعٌ واحدٌ على الأزرار الرئيسيّة، خلف `haptics`
@@ -1089,6 +1090,18 @@ export function HomeScreen() {
     if (action === "loyalty") return navigate("/loyalty");
     if (action === "rides") return navigate("/rides");
     if (action.startsWith("go:")) return navigate(action.slice(3));
+    // **«المطار» من ودجة المفضّلة** (٢١/١١) — المطارُ نفسُه الذي كتبته الخلاصة، **يُحسب من جديدٍ من مطارات السوق** ويمرّ بـ`pickPlace`
+    // كأيِّ وجهة؛ ولا مطارَ قريباً بعدُ ⇐ البحثُ مفتوحاً على الوجهة — **لا مكانَ يُخترع**
+    if (action === "ride_airport") {
+      getAirports()
+        .catch(() => [])
+        .then((list) => {
+          const airport = nearestAirport(list, pickup ?? center, places);
+          if (!airport) return openSearch("dropoff");
+          pickPlace({ id: airport.id, name: airport.name, address: "", coordinates: { lat: airport.lat, lng: airport.lng } });
+        });
+      return;
+    }
     // **«البيت» أو «العمل»** (§١٠٣/10 و B/20) — المكانُ المحفوظ، وبلاه «أماكني» ليضيفه
     const icon = action === "ride_work" ? "work" : "home";
     const place = places.find((saved) => saved.icon === icon);
@@ -1109,6 +1122,7 @@ export function HomeScreen() {
     approachMinutes,
     places,
     recent: recentPlaces.map((place) => place.name),
+    routePoints: routeLine,
   });
   useBubbleAction("where_to", () => openSearch("dropoff"), !tracking);
   const pickRecent = (index: number) => {

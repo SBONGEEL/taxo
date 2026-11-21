@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ودجةُ TAXO «status_l»** — مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tw_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/tw_card" android:clipToOutline="true" android:layoutDirection="rtl">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:paddingStart="16dp" android:paddingTop="16dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:id="@+id/tw_dot" android:layout_width="8dp" android:layout_height="8dp" android:layout_marginEnd="7dp" android:src="@drawable/tw_dot_off" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/tw_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="@color/tw_tx" android:textSize="18sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="غير متّصل" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="10dp" android:layout_marginBottom="10dp">
+            <ImageView android:id="@+id/tw_scene" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_scene" android:scaleType="fitEnd" android:importantForAccessibility="no" android:alpha="0.8" />
+            <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginStart="10dp" android:layout_marginTop="6dp" android:layout_marginEnd="10dp" android:layout_marginBottom="6dp" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:id="@+id/tw_bigrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_big" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_tx" android:textSize="32sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:textDirection="ltr" />
+            <TextView android:id="@+id/tw_unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:layout_marginBottom="2dp" android:textColor="@color/tw_mut" android:textSize="13sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+        </LinearLayout>
+        <TextView android:id="@+id/tw_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:layout_marginBottom="12dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="أرباحُ اليوم تظهر بعد فتح التطبيق" />
+        <LinearLayout android:id="@+id/tw_btn" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:orientation="horizontal">
+            <TextView android:id="@+id/tw_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="14sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="اتّصل الآن" />
+            <ImageView android:layout_width="17dp" android:layout_height="17dp" android:layout_marginStart="8dp" android:src="@drawable/tw_v_arrow_on" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

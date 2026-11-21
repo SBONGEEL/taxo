@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- مولَّدٌ من tools/gen-android-widgets.py — لا يُحرَّر باليد. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@android:id/background"><shape android:shape="ring" android:innerRadiusRatio="2.6" android:thicknessRatio="13" android:useLevel="false"><solid android:color="@color/tw_track" /></shape></item>
-    <item android:id="@android:id/progress"><rotate android:fromDegrees="270" android:toDegrees="270" android:pivotX="50%" android:pivotY="50%"><shape android:shape="ring" android:innerRadiusRatio="2.6" android:thicknessRatio="13" android:useLevel="true"><gradient android:type="sweep" android:startColor="@color/tw_acc2" android:endColor="@color/tw_acc" /></shape></rotate></item>
+    <item android:id="@android:id/background"><shape android:shape="ring" android:innerRadiusRatio="2.5" android:thicknessRatio="11" android:useLevel="false"><solid android:color="@color/tw_track" /></shape></item>
+    <item android:id="@android:id/progress"><rotate android:fromDegrees="270" android:toDegrees="270" android:pivotX="50%" android:pivotY="50%"><shape android:shape="ring" android:innerRadiusRatio="2.5" android:thicknessRatio="11" android:useLevel="true"><gradient android:type="sweep" android:startColor="@color/tw_acc2" android:endColor="@color/tw_acc" /></shape></rotate></item>
 </layer-list>
