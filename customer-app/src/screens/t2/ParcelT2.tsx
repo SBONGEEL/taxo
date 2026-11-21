@@ -84,11 +84,16 @@ export function ParcelOptionT2({
  *  **والإقرارُ لا يُعطى قبل أن تُقرأ الشروط**: المربّعُ معطَّلٌ ما دامت لم تصل، **وورقةٌ تعود للتعديل تبدأ بإقرارها كما كان** —
  *  الشروطُ هي هي ما دام الطلبُ نفسَه. **والرقمُ بحقل «لشخص آخر» نفسِه** (`PhoneFieldsT2`): دولتُه ومفتاحُه من `/config`، ويُرسل
  *  E.164 — **ورقمُه هو لا يُرفض**: من يرسل طرداً إلى نفسه في مكانٍ آخر يُرسله. */
+/** **ملخّصُ الطلب قبل «تأكيد»** (أمرُ المالك ٢٠٢٦-١١-٢١): النقطتان والسعرُ التقديريُّ وطريقةُ الدفع — **كما ترسمها ورقةُ الطلب**:
+ *  السعرُ هو هو المعروضُ على زرّها (من تقدير الخلفية، بتقريب الدولة)، ولا حسابَ هنا (§14). */
+export type ParcelSummary = { from: string; to: string; fare: string | null; payment: string | null };
+
 export function ParcelSheetT2({
   terms,
   failed,
   initial,
   fetch = false,
+  summary = null,
   onSave,
   onClose,
 }: {
@@ -99,26 +104,45 @@ export function ParcelSheetT2({
   initial: RideParcel | null;
   /** **«أحضر غرضي»** (§٧٢-ج/١) — الغرضُ ومن يسلّمه وعنوانُ الاستلام، **ولا «من يدفع»**: صاحبُ الطلب. */
   fetch?: boolean;
+  summary?: ParcelSummary | null;
   onSave: (next: RideParcel) => void;
   onClose: () => void;
 }) {
   const phoneDraft = usePhoneDraft(initial?.recipient_phone ?? null);
-  const { dialCode, complete, full } = phoneDraft;
+  const { complete, full } = phoneDraft;
   const [accepted, setAccepted] = useState(initial?.accepted_terms ?? false);
   const [name, setName] = useState(initial?.recipient_name ?? "");
   const [address, setAddress] = useState(initial?.recipient_address ?? "");
   const [payer, setPayer] = useState<RideParcel["payer"]>(initial?.payer ?? "requester");
   const [item, setItem] = useState(initial?.item ?? "");
 
-  const phoneError = dialCode === null ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.") : null;
-  // **حدودُ الخلفية نفسُها** (`ParcelIn`): اسمٌ بحرفين وعنوانٌ بثلاثة — وما بعدها ترفضه هي بنصّها
-  const ready =
-    terms !== null &&
-    accepted &&
-    name.trim().length >= 2 &&
-    full !== null &&
-    address.trim().length >= 3 &&
-    (!fetch || item.trim().length >= 2);
+  // **الخطأُ نصُّ الحقل المشترك** — دولةٌ أخرى · بدايةٌ خاطئة · مفتاحٌ غائب (`usePhoneDraft`)
+  const phoneError = phoneDraft.problem;
+  // **حدودُ الخلفية نفسُها** (`ParcelIn`): اسمٌ بحرفين وعنوانٌ بثلاثة — وما بعدها ترفضه هي بنصّها.
+  // **والزرُّ المعطَّلُ يقول ما ينقص** (أمرُ المالك ٢٠٢٦-١١-٢١) — بترتيب الورقة من أعلاها، فأوّلُ ناقصٍ يُرى هو أوّلُ ما يُملأ
+  const missing =
+    terms === null
+      ? failed
+        ? tr("تعذّرت قراءة الشروط — أغلق الورقة وأعد المحاولة.")
+        : tr("نقرأ الشروط…")
+      : !accepted
+        ? tr("وافق على الشروط أولاً")
+        : fetch && item.trim().length < 2
+          ? tr("اكتب ما الغرض")
+          : name.trim().length < 2
+            ? fetch
+              ? tr("اكتب اسم المُسلِّم")
+              : tr("اكتب اسم المستلم")
+            : full === null
+              ? fetch
+                ? tr("أدخل رقم المُسلِّم")
+                : tr("أدخل رقم المستلم")
+              : address.trim().length < 3
+                ? fetch
+                  ? tr("اكتب عنوان الاستلام")
+                  : tr("اكتب عنوان التسليم")
+                : null;
+  const ready = missing === null;
 
   const payers: Array<{ value: RideParcel["payer"]; icon: string; label: string; hint: string }> = [
     { value: "requester", icon: "account_balance_wallet", label: tr("أنا أدفع"), hint: tr("عند الاستلام منك — بأيِّ طريقة دفع") },
@@ -134,9 +158,16 @@ export function ParcelSheetT2({
     <SheetModalT2
       onClose={onClose}
       footer={
+        <>
+        {missing ? (
+          <p className="t2-pc-missing" role="status">
+            <Icon name="info" />
+            {missing}
+          </p>
+        ) : null}
         <button
           type="button"
-          className="t2-button primary t2-fo-save"
+          className="t2-button primary t2-fo-save t2-pc-confirm"
           disabled={!ready}
           onClick={() =>
             full !== null &&
@@ -163,6 +194,7 @@ export function ParcelSheetT2({
         >
           {tr("تأكيد")}
         </button>
+        </>
       }
     >
       <div className="t2-picker-title">{fetch ? tr("أحضر غرضي") : tr("طرد")}</div>
@@ -176,7 +208,8 @@ export function ParcelSheetT2({
       {/* **الشروطُ أوّلاً** (§٦٣-ج/٤: «يُعرض على المرسل قبل أن يطلب») — بلفظ الخلفية، ومربّعُ الإقرار تحتها */}
       <div className="t2-auth-consent t2-pc-terms">
         <div className="t2-pc-terms-title">
-          <Icon name="gavel" />
+          {/* **وثيقةٌ لا مطرقة** (أمرُ المالك ٢٠٢٦-١١-٢١): «gavel» بدت مطرقةً مشطوبة */}
+          <Icon name="verified_user" />
           {fetch ? tr("الشروط") : tr("شروط الطرد")}
         </div>
         {terms ? (
@@ -286,12 +319,47 @@ export function ParcelSheetT2({
         </>
       )}
 
+      {/* **سطرُ الخصوصيّة** (أمرُ المالك ٢٠٢٦-١١-٢١) — وهو ما تفعله الخلفيةُ فعلاً: الرقمُ في أطوار القبول وحدَها (`PASSENGER_VISIBLE`) */}
+      <p className="t2-note t2-fo-keep">
+        <Icon name="visibility" />
+        {tr("يرى الكبتنُ الرقمَ أثناء هذا الطلب فقط، ويُخفى عنه بعد انتهائه.")}
+      </p>
       <p className="t2-note t2-fo-keep">
         <Icon name="lock" />
         {fetch
           ? tr("نحفظ اسمَ من يسلّم الغرضَ ورقمَه ووصفَ الغرض لهذا الطلب وحده، ونحذفها بعد ثلاثين يوماً.")
           : tr("نحفظ بيانات المستلم لهذا التوصيل وحده، ونحذفها بعد ثلاثين يوماً.")}
       </p>
+
+      {/* **ملخّصُ الطلب قبل «تأكيد»** (أمرُ المالك ٢٠٢٦-١١-٢١) — من ورقة الطلب نفسِها */}
+      {summary ? (
+        <div className="t2-pc-sum" aria-label={tr("ملخّص الطلب")}>
+          <div className="t2-pc-sum-row">
+            <span className="t2-route-from" aria-hidden="true" />
+            <span className="t2-pc-sum-label">{tr("من")}</span>
+            <span className="t2-pc-sum-value">{summary.from}</span>
+          </div>
+          <div className="t2-pc-sum-row">
+            <span className="t2-route-to" aria-hidden="true" />
+            <span className="t2-pc-sum-label">{tr("إلى")}</span>
+            <span className="t2-pc-sum-value">{summary.to}</span>
+          </div>
+          {summary.fare ? (
+            <div className="t2-pc-sum-row">
+              <Icon name="sell" />
+              <span className="t2-pc-sum-label">{tr("السعر التقديري")}</span>
+              <span className="t2-pc-sum-value strong" dir="ltr">{summary.fare}</span>
+            </div>
+          ) : null}
+          {summary.payment ? (
+            <div className="t2-pc-sum-row">
+              <Icon name="payments" />
+              <span className="t2-pc-sum-label">{tr("الدفع")}</span>
+              <span className="t2-pc-sum-value">{summary.payment}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </SheetModalT2>
   );
 }

@@ -20,6 +20,7 @@ import type { DriverQuality, QualitySetting } from "@/api/types";
 import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
 import type { CardPayLimits, CardPayLive, CardPayOverview, WhopLive, WhopMethod, WhopOverview } from "@/api/types";
 import type { MapSuggestion, RoadReportRow } from "@/api/types";
+import type { AmbassadorRevoked, GiftRow, SubscriptionPreview } from "@/api/types";
 import type {
   AlertCatalog,
   AlertCategory,
@@ -1062,7 +1063,28 @@ export const recordSubscription = (payload: {
   method: PaymentMethod;
   amount_paid?: string | null;
   reference?: string | null;
+  /** **«عدد أيام»** بدل مدّة الباقة (١–٣٦٥) — والمبلغُ معه إلزاميٌّ صراحةً (صفرٌ للهديّة). */
+  days?: number | null;
+  /** **«سفير TAXO»** — للمالك وحدَه. */
+  permanent?: boolean;
 }) => api.post<Subscription>("/admin/subscriptions", payload);
+
+/** **ما سيُكتب قبل أن يُكتب** (SPEC §١١١-د/٤): من متى إلى متى، والمقترَحُ تلميحاً — قراءةٌ بلا أثر. */
+export const previewSubscription = (payload: {
+  driver_id: string;
+  plan_id: string;
+  days?: number | null;
+  permanent?: boolean;
+}) => api.post<SubscriptionPreview>("/admin/subscriptions/preview", payload);
+
+/** «السفراء والمميّزون» — كلُّ دائمٍ ساري وكلُّ «عدد أيام» لم ينقضِ. */
+export const listGiftSubscriptions = (
+  params: { country_code?: CountryCode; q?: string; limit?: number; offset?: number } = {},
+) => api.get<GiftRow[]>("/admin/subscriptions/gifts", { query: params });
+
+/** **نزعُ «سفير TAXO»** — بسببٍ إلزاميٍّ وللمالك وحدَه؛ يُلغى الصفُّ الدائمُ وحدَه ويبقى ما دُفع. */
+export const revokeAmbassador = (driverId: string, reason: string) =>
+  api.post<AmbassadorRevoked>(`/admin/subscriptions/ambassadors/${driverId}/revoke`, { reason });
 
 /** **ما سيقع قبل أن يقع** (§38): عددُ ما سيُلغى وقيمةُ الردّ الكلّية.
  *

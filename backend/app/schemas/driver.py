@@ -435,6 +435,8 @@ class AdminDriverRow(BaseModel):
     inspection_passed_at: datetime | None
     # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — للمشرفين وحدَهم، ولذلك هنا لا في `DriverOut` الذي يقرؤه الكبتن
     exceptional: bool = False
+    # **«سفير TAXO»** (SPEC §١١١-د/٤) — شارةٌ في القائمة، من صفِّ الاشتراك الدائم الساري
+    ambassador: bool = False
     documents_deadline_at: datetime | None = None
     # **الأذوناتُ الأساسيّةُ المطفأةُ على هاتفه** (SPEC §١٠٣/٢٨) — `null` لم يُبلَّغ، و`[]` كلُّها مشتعلة. قراءةٌ لا قرار
     permissions_off: list[str] | None = None

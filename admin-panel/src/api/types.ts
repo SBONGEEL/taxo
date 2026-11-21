@@ -139,6 +139,8 @@ export interface CountryConfig {
   ride_categories: Array<{ key: string; name: string; icon: string; description: string | null; seats: number }>;
   dial_code: string;
   national_number_length: number;
+  /** **بادئاتُ الجوّال** (أمرُ المالك ٢٠٢٦-١١-٢١) — من `core/phone.py`؛ وغيابُها (خادمٌ أقدم) لا يمنع شيئاً */
+  mobile_prefixes?: string[];
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   quiet_hours_timezone: string | null;
@@ -359,6 +361,8 @@ export interface AdminDriverRow {
   inspection_at: string | null;
   inspection_place: string | null;
   inspection_passed_at: string | null;
+  /** **«سفير TAXO»** (SPEC §١١١-د/٤) — اشتراكُه دائم. */
+  ambassador?: boolean;
   /** **«معتمد دون وثائق»** (البند ١) — للمشرفين وحدَهم، ومعه مهلةُ الرفع. */
   exceptional: boolean;
   documents_deadline_at: string | null;
@@ -711,6 +715,9 @@ export type FeatureKey =
   | "rider_widgets_plus"
   | "home_cars"
   | "widgets_announce"
+  // **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) و**«شحن ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١)
+  | "subscription_gifts"
+  | "taxo_cards_enabled"
   | "map_open_places"
   | "map_place_suggestions"
   | "map_live_traffic"
@@ -1472,6 +1479,46 @@ export interface Subscription {
   transaction_id: string | null;
   reference: string | null;
   created_at: string;
+  /** **«عدد أيام»** (SPEC §١١١-د/٤) — `null` لمدّة الباقة. */
+  custom_days?: number | null;
+  /** **«سفير TAXO»** — دائمٌ لا ينتهي. */
+  is_permanent?: boolean;
+}
+
+/** ورقةُ التأكيد قبل «تسجيل اشتراك» — من الخلفية، والمقترَحُ تلميحٌ لا يُفرض (`null` للدائم). */
+export interface SubscriptionPreview {
+  starts_at: string;
+  expires_at: string;
+  suggested_amount: string | null;
+  currency: Currency;
+  permanent_exists: boolean;
+}
+
+/** صفٌّ في «السفراء والمميّزون» — الدائمُ الساري و«عدد أيام» لم ينقضِ. */
+export interface GiftRow {
+  subscription_id: string;
+  driver_id: string;
+  name: string;
+  phone: string | null;
+  country_code: CountryCode;
+  is_permanent: boolean;
+  custom_days: number | null;
+  plan_name: string;
+  starts_at: string;
+  expires_at: string;
+  amount_paid: string;
+  currency: Currency;
+  payment_method: PaymentMethod;
+  reference: string | null;
+  created_at: string;
+  /** ما يعود إلى محفظته إن نُزع — من بيت حسبة الإلغاء نفسِه. */
+  revoke_refund: string;
+}
+
+export interface AmbassadorRevoked {
+  subscription_id: string;
+  refund: string;
+  currency: string;
 }
 
 // ------------------------------------------------------------ التسعيرة

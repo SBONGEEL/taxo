@@ -215,6 +215,8 @@ export interface CountryConfig {
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
+  /** **بادئاتُ الجوّال** (أمرُ المالك ٢٠٢٦-١١-٢١) — من `core/phone.py`؛ وغيابُها (خادمٌ أقدم) لا يمنع شيئاً */
+  mobile_prefixes?: string[];
   /** ساعاتُ هدوء الحملات ومِنطقتُها — `null` تعني «لم تُضبط بعد». */
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
@@ -829,6 +831,8 @@ export interface MySubscription {
   days_remaining: number;
   current: DriverSubscription | null;
   plans: SubscriptionPlan[];
+  /** **«سفير TAXO»** (SPEC §١١١-د/٤) — اشتراكُه دائم: «دائم» بدل عدّاد الأيّام، ولا تجديدَ ولا شراء */
+  ambassador?: boolean;
 }
 
 /** **المسارُ الذي سارته الرحلة** (`GET /rides/{id}/route`، §٦٢-ج/١١) — `[lng, lat]` كـ`route-line`، **وفارغٌ حين صمت بثُّك**
@@ -1811,6 +1815,8 @@ export interface TaxoCardRedeemed {
   serial: string;
   amount: string;
   currency: Currency;
+  /** **الرصيدُ الجديد** (أمرُ المالك ٢٠٢٦-١١-٢١) — من الدفتر في الخلفية لا من حسابٍ هنا */
+  balance_after?: string | null;
 }
 
 /** **صفحةُ دفعٍ عند وسيطٍ آليّ** (SPEC §٧٣-هـ المرحلة ٣) — الطلبُ معلَّقٌ حتى يقول الوسيط. */

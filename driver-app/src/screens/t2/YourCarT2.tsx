@@ -72,6 +72,7 @@ export function YourCarT2({
   skin,
   covered,
   daysRemaining,
+  ambassador = false,
   level,
   storeOn,
   onOpenVehicle,
@@ -82,6 +83,8 @@ export function YourCarT2({
   skin: VehicleSkin | null;
   covered: boolean;
   daysRemaining: number | null;
+  /** **«سفير TAXO»** — «دائم» بدل عدّاد الأيّام */
+  ambassador?: boolean;
   level: number | null;
   storeOn: boolean;
   onOpenVehicle: () => void;
@@ -141,7 +144,9 @@ export function YourCarT2({
           </span>
           <span className={covered ? "yc-sub ok" : "yc-sub off"}>
             <span className="yc-dot" />
-            {covered
+            {covered && ambassador
+              ? tr("دائم · سفير TAXO")
+              : covered
               ? daysRemaining !== null && daysRemaining <= 5
                 ? tr("اشتراكك ساري — يتبقّى {0} أيام", { 0: digits(String(daysRemaining)) })
                 : tr("اشتراكك ساري")

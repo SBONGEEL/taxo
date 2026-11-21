@@ -57,7 +57,7 @@ from app.models.taxo_card import (
     TaxoCardSetting,
 )
 from app.models.user import User
-from app.services import audit, cancellation, payment_requests, rounding, test_accounts, verification, wallet
+from app.services import audit, cancellation, rounding, test_accounts, verification, wallet
 
 #: **أبجديّةٌ بلا لَبس** — لا `0/O` ولا `1/I/L`: رمزٌ يُقرأ من ورقةٍ ويُكتب بإصبع
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -505,6 +505,9 @@ async def review_alert(session: AsyncSession, *, alert_id: uuid.UUID, actor: Use
 class Redeemed:
     card: TaxoCard
     request: PaymentRequest
+    #: **الرصيدُ بعد الشحن** — من الدفتر نفسِه (`wallet.balance`)، يُعرض في شاشة النجاح
+    balance_after: Decimal | None = None
+    owner_type: WalletOwnerType | None = None
 
 
 async def _card_provider(session: AsyncSession, country: CountryCode) -> PayMethod:
@@ -524,6 +527,15 @@ async def _card_provider(session: AsyncSession, country: CountryCode) -> PayMeth
     return provider
 
 
+async def require_cards_enabled(session: AsyncSession, country: CountryCode) -> None:
+    """**«شحن ببطاقة TAXO» خلف مفتاح دولته وحدَه** (`taxo_cards_enabled`، أمرُ المالك ٢٠٢٦-١١-٢١)."""
+    from app.models.enums import FeatureKey
+    from app.services import settings_service
+
+    if not await settings_service.is_feature_enabled(session, country, FeatureKey.TAXO_CARDS):
+        raise FeatureDisabled("الشحنُ ببطاقات TAXO غيرُ متاحٍ في بلدك الآن")
+
+
 async def redeem(
     session: AsyncSession, *, user: User, code_raw: str | None, declared: WalletOwnerType | None = None
 ) -> Redeemed:
@@ -532,6 +544,8 @@ async def redeem(
     **وما يُعدّ خطأً** (`CardCodeRejected`): غيرُ صحيح، أو من سوقٍ آخر، أو مستعمَل، أو ملغًى. **وما لا يُعدّ**: صحيحٌ في غير نافذته.
     """
     _pepper()
+    # **مفتاحُ الدولة أوّلاً** (`taxo_cards_enabled`) — قبل قراءة الرمز، فمطفأً لا يُعرف من الردّ شيءٌ عن رمز
+    await require_cards_enabled(session, user.country_code)
     code = normalize_code(code_raw)
     if code is None:
         raise CardCodeRejected("الرمزُ غيرُ صحيح — ستّةَ عشرَ حرفاً كما في البطاقة")
@@ -555,7 +569,7 @@ async def redeem(
         raise CardNotUsableNow("انتهت صلاحيةُ هذه البطاقة")
 
     test_accounts.require_real_money(user, "حسابُ التجربة لا يُشحن ببطاقةٍ حقيقيّة")
-    await payment_requests.require_enabled(session, user.country_code)
+    # **لا نظامُ الدفع العامّ ولا عقدُ بطاقة** — مفتاحُ البطاقات وحدَه (فوق)، وطريقتُها في السوق (`_card_provider`)
     provider = await _card_provider(session, user.country_code)
     verification.require_usable_account(user)
     await wallet.require_wallet_enabled(session, user.country_code)
@@ -601,7 +615,9 @@ async def redeem(
     card.payment_request_id = request.id
     # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** — كالشحن القائم حرفاً
     await cancellation.on_wallet_funded(session, user=user)
-    return Redeemed(card=card, request=request)
+    await session.flush()
+    after = await wallet.balance(session, user.id, owner_type)
+    return Redeemed(card=card, request=request, balance_after=after, owner_type=owner_type)
 
 
 # ------------------------------------------------------------------ التقرير

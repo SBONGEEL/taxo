@@ -28,6 +28,8 @@ export function composeBody(entry: UserNotification): string | null {
     case "cliq_confirmation_expired":
       return money ? tr("{0} — تفصل فيها الإدارة الآن.", { 0: money }) : null;
     case "topup_confirmed":
+    // **«شُحنت محفظتك ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١) — المبلغُ من `data`
+    case "taxo_card_topup":
       return money ? tr("أُضيف {0} إلى رصيدك.", { 0: money }) : null;
     default:
       return null;
@@ -49,7 +51,7 @@ export function destinationOf(entry: UserNotification): string | null {
   // **حجزٌ بلا رحلة** — لم يُنفَّذ أو فات أو **ينتظر اختيارَها** (`booking_women_paused`، §٦٤-ج/٤-١): بطاقتُه في «رحلاتي المجدولة»
   if (bookingId && !rideId) return "/account/bookings";
   if (rideId) return `/rides/${rideId}`;
-  if (entry.kind === "topup_confirmed") return "/wallet";
+  if (entry.kind === "topup_confirmed" || entry.kind === "taxo_card_topup") return "/wallet";
   // **تذكيرُ الاسترداد الأسبوعي** (§٦٣-ج/٨) — إلى الرئيسية حيث النارُ وأيامُها، ومنها يطلب رحلةَ اليوم
   if (entry.kind === "cashback_reminder") return "/";
   return null;

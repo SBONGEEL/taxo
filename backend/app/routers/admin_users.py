@@ -485,6 +485,7 @@ async def list_drivers(
             inspection_place=driver.inspection_place,
             inspection_passed_at=driver.inspection_passed_at,
             exceptional=driver.exceptional_approved_at is not None,
+            ambassador=bool(driver.is_ambassador),
             documents_deadline_at=driver.documents_deadline_at,
             permissions_off=driver.permissions_off,
             permissions_reported_at=driver.permissions_reported_at,

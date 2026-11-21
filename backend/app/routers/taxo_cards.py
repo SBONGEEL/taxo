@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 
 from app.core.deps import CurrentUser, DbSession, RedisDep, client_ip
 from app.schemas.taxo_card import TaxoCardRedeemedOut, TaxoCardRedeemIn
-from app.services import cancellation, taxo_cards
+from app.services import cancellation, notifications, taxo_cards
 
 router = APIRouter(prefix="/taxo-cards", tags=["taxo-cards"])
 
@@ -35,4 +35,7 @@ async def redeem_card(
         raise
     # شحنٌ اكتمل قد يكون سدّد رسمَ إلغاءٍ معلّقاً — **بعد الـcommit** كبقية البثّ
     await cancellation.announce_settled_for_debtor(session, redis, user=user)
-    return TaxoCardRedeemedOut(serial=result.card.serial, amount=result.card.amount, currency=result.card.currency)
+    serial, amount, currency = result.card.serial, result.card.amount, result.card.currency
+    # **إشعارٌ بعد الـcommit** (صندوقُ الوارد ثمّ Push) — المبلغُ رقمٌ خامٌ في `data`، والجملةُ يرسمها النظام
+    await notifications.publish_taxo_card_topup(session, redis, user_id=user_id, amount=str(amount), currency=currency.value)
+    return TaxoCardRedeemedOut(serial=serial, amount=amount, currency=currency, balance_after=result.balance_after)

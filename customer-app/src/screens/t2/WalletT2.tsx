@@ -132,6 +132,8 @@ export function WalletT2Screen() {
   }, [cardEnabled]);
   const card = cards?.find((row) => row.is_default) ?? cards?.[0] ?? null;
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
+  // **«شحن ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١): مفتاحُ دولته وحدَه — لا نظامُ الدفع العامّ ولا بطاقةُ البنك
+  const taxoCards = country?.features.taxo_cards_enabled === true;
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبان خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا قسمَ يُرسم**
   // **وDpay في ليبيا** (أمرُ المالك ٢٠٢٦-١١-١٧) — بمفتاحه في سوقه ونظامُ الدفع العامُّ مطفأٌ فيه: ورقةُ الشحن تعرض وسائلَه كطرق النظام
   const dpayTopup = country?.features.dpay_topup_enabled === true;
@@ -231,6 +233,12 @@ export function WalletT2Screen() {
               <button type="button" className="t2-btn ember" onClick={() => setTopupOpen(true)}>
                 <Icon name="add" />
                 {tr("شحن الرصيد")}
+              </button>
+            ) : null}
+            {taxoCards ? (
+              <button type="button" className="t2-btn ghost" onClick={() => navigate("/wallet/card")}>
+                <Icon name="confirmation_number" />
+                {tr("شحن ببطاقة TAXO")}
               </button>
             ) : null}
             {loyaltyEnabled ? (

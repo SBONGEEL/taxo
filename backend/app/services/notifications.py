@@ -892,6 +892,51 @@ async def publish_subscription_event(
     )
 
 
+#: **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) — النوعُ واحدٌ يفتح شاشةَ الاشتراك، والحدثُ في `kind`
+SUBSCRIPTION_GIFT_TEXT: dict[str, tuple[str, str]] = {
+    "days": ("أُضيفت أيّامٌ إلى اشتراكك", "تبدأ بعد اشتراكك القائم — افتح «اشتراكي» لترى حتى متى"),
+    "permanent": ("أنت الآن سفير TAXO", "اشتراكك دائمٌ لا ينتهي — شكراً لك"),
+    "revoked": ("أُلغي اشتراكك الدائم", "لم تعد سفير TAXO — افتح «اشتراكي» لترى حالَ اشتراكك"),
+}
+
+
+async def publish_subscription_gift(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    kind: str,
+    days: int | None = None,
+) -> None:
+    """**إشعارُ الكبتن بالمنح والنزع** (SPEC §١١١-د/٤) — صندوقُ الوارد ثمّ Push. والأيّامُ رقمٌ خامٌ في `data` تبني منه الواجهةُ جملتَها."""
+    title, body = SUBSCRIPTION_GIFT_TEXT[kind]
+    data: dict[str, str] = {"type": "subscription_gift", "kind": kind}
+    if days is not None:
+        data["days"] = str(days)
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(title=title, body=body, data=data),
+    )
+
+
+async def publish_taxo_card_topup(
+    session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, amount: str, currency: str
+) -> None:
+    """**«شُحنت محفظتك ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١) — والقيدُ نفسُه في سجلّ المحفظة."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="شُحنت محفظتك ببطاقة TAXO",
+            body="الرصيدُ الجديد في محفظتك الآن",
+            data={"type": "taxo_card_topup", "amount": amount, "currency": currency},
+        ),
+    )
+
+
 # ------------------------------------------- أحداث الأمان (المرحلة 12-د)
 
 

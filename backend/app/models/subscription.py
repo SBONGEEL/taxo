@@ -22,6 +22,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     text,
@@ -105,6 +106,19 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("idempotency_key", name="uq_driver_subscriptions_idempotency_key"),
         # سؤال التوزيع الوحيد: «هل يغطي هذا الكبتنَ صفٌّ الآن؟»
         Index("ix_driver_subscriptions_driver_expires", "driver_id", "expires_at"),
+        # **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤، الترحيلة `0186`)
+        CheckConstraint(
+            "custom_days IS NULL OR (custom_days >= 1 AND custom_days <= 365)",
+            name="subscription_custom_days_range",
+        ),
+        CheckConstraint("NOT is_permanent OR custom_days IS NULL", name="subscription_permanent_no_days"),
+        # **دائمٌ واحدٌ ساري لكلِّ كبتن** — حارسُ القاعدة خلف قفل صفِّ الكبتن (`_locked_driver`)
+        Index(
+            "uq_driver_subscriptions_one_permanent",
+            "driver_id",
+            unique=True,
+            postgresql_where=text("is_permanent AND status = 'active'"),
+        ),
     )
 
     driver_id: Mapped[uuid.UUID] = mapped_column(
@@ -219,6 +233,16 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
         nullable=True,
     )
 
+    # ---------------------------------- «عدد أيام» و«سفير TAXO» (SPEC §١١١-د/٤)
+    #
+    # **أيّامٌ حدّدها المشرفُ بدل مدّة الخطّة** (١–٣٦٥) — والصفُّ يبدأ بعد التغطية القائمة كأيِّ شراء. فارغٌ لكلِّ شراءٍ عاديّ.
+    custom_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # **«سفير TAXO»: صفٌّ دائمٌ لا علمٌ على الكبتن** — ينتهي بعد ٣٦٥٠٠ يوم، فالتوزيعُ وكلُّ سائلٍ «أمغطّى؟» يجده بلا تعديل،
+    # والتذكيرُ والتجديدُ لا يبلغانه (أفقُهما قريب). **ونزعُه إلغاءٌ** (`status=cancelled` بسببٍ ومن ألغى) لا حذفٌ ولا تعديلُ تاريخ
+    is_permanent: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
     # مرجع خارجي: حوالة كليك أو إيصال الكاش أو مرجع الطلب لدى مزود البطاقة
     reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -228,3 +252,31 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<DriverSubscription {self.driver_id} → {self.expires_at}>"
+
+
+# ---------------------------------------------------------------- «سفير TAXO»
+#
+# **شارةُ السفير تُقرأ من صفِّ الاشتراك نفسِه** (SPEC §١١١-د/٤) لا من علمٍ على الكبتن: صفٌّ دائمٌ ساريٌ الآن. **وعمودٌ محسوبٌ على
+# `Driver`** لأن بانِيَ بطاقة الكبتن عند الراكب (`RideDriverOut.from_ride`) متزامنٌ لا يستطيع استعلاماً — والاستعلامُ الفرعيُّ على
+# الفهرس `(driver_id, expires_at)` يُضمّ إلى كلِّ قراءةٍ للكبتن بلا ذهابٍ ثانٍ.
+def _attach_ambassador() -> None:
+    from sqlalchemy import exists, func
+    from sqlalchemy.orm import column_property
+
+    from app.models.driver import Driver
+
+    Driver.is_ambassador = column_property(
+        exists()
+        .where(
+            DriverSubscription.driver_id == Driver.id,
+            DriverSubscription.is_permanent.is_(True),
+            DriverSubscription.status == SubscriptionStatus.ACTIVE,
+            DriverSubscription.starts_at <= func.now(),
+            DriverSubscription.expires_at > func.now(),
+        )
+        .correlate_except(DriverSubscription)
+        .label("is_ambassador")
+    )
+
+
+_attach_ambassador()

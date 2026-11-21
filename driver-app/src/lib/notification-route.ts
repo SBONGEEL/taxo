@@ -40,7 +40,10 @@ export function destinationFor(
   if (kind === "support_update" && data?.ticket_id) return `/support/${data.ticket_id}`;
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
+  // **ومعها `subscription_gift`** («عدد أيام» و«سفير TAXO»، SPEC §١١١-د/٤)
   if (kind.startsWith("subscription_")) return "/subscription";
+  // **«شُحنت محفظتك ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١)
+  if (kind === "taxo_card_topup") return "/wallet";
   // **ملخّصُ الأسبوع** (البند ١٧، ٢٠٢٦-١١-١٠) — «أرباحي» ومنها الملخّصُ تحتها
   if (kind === "weekly_digest") return "/wallet/earnings";
   // **«درجتك تحتاج انتباهاً»** (البند ٣) — «درجتي» تحت «أرباحي»

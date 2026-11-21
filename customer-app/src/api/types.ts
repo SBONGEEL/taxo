@@ -257,6 +257,8 @@ export interface CountryConfig {
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
+  /** **بادئاتُ الجوّال** (أمرُ المالك ٢٠٢٦-١١-٢١) — من `core/phone.py`؛ وغيابُها (خادمٌ أقدم) لا يمنع شيئاً */
+  mobile_prefixes?: string[];
   /** ساعاتُ هدوء الحملات ومنطقتُها (`FUTURE-FEATURES` 5) — تنشرها الخلفيةُ منذ
    *  المرحلة 8 ولم يكن هذا النوعُ يحملها، فلم تصل الشاشة. و`null` تعني «لم
    *  تُضبط بعد» فلا يُعرض رقمٌ لا مصدرَ له. */
@@ -492,6 +494,8 @@ export interface RideDriver {
   /** مركبتُه النشطة — **تصل بعد القبول**، و`null`/غيابٌ يعني «ارسم السيارةَ
    *  العامّة» **بلا أيِّ فرقٍ مرئيّ** (الشكلُ الثالثَ عشر). */
   skin?: RideDriverSkin | null;
+  /** **«سفير TAXO»** (SPEC §١١١-د/٤) — شارةٌ بجانب اسمه */
+  ambassador?: boolean;
 }
 
 /** وقفةٌ مفتوحةٌ كما يراها الطرفان (SPEC §5.10-ب).
@@ -1659,6 +1663,8 @@ export interface TaxoCardRedeemed {
   serial: string;
   amount: string;
   currency: Currency;
+  /** **الرصيدُ الجديد** (أمرُ المالك ٢٠٢٦-١١-٢١) — من الدفتر في الخلفية لا من حسابٍ هنا */
+  balance_after?: string | null;
 }
 
 /** **صفحةُ دفعٍ عند وسيطٍ آليّ** (SPEC §٧٣-هـ المرحلة ٣) — الطلبُ معلَّقٌ حتى يقول الوسيط. */

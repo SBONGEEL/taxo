@@ -21,7 +21,11 @@ import "./money.css";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 
 function grouped(raw: string): string {
-  const plain = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  // **الأرقامُ العربيّةُ والفارسيّةُ تُحوَّل لاتينيّةً لا تُمحى** (§٢٠) — والمسافاتُ والشرطاتُ تُقبل وتُرتَّب
+  const latin = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+  const plain = latin.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
   return plain.replace(/(.{4})(?=.)/g, "$1-");
 }
 
@@ -104,6 +108,11 @@ export function CardRedeemT2Screen() {
           <p className="t2-pr-done-text">
             {tr("أُضيف")}{" "}{formatAmount(done.amount, done.currency)} {CURRENCY_LABEL[done.currency]}{" "}{tr("من البطاقة")}{" "}<span dir="ltr">{done.serial}</span>.
           </p>
+          {done.balance_after ? (
+            <p className="t2-pr-done-text">
+              {tr("رصيدك الآن:")}{" "}<b dir="ltr">{formatAmount(done.balance_after, done.currency)} {CURRENCY_LABEL[done.currency]}</b>
+            </p>
+          ) : null}
           <button type="button" className="t2-clq-cta t2-pr-gap" onClick={() => navigate("/wallet")}>
             {tr("إلى المحفظة")}
           </button>

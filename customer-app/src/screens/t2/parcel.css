@@ -29,5 +29,43 @@
 .t2-pc-ride-to { display: flex; flex-direction: column; min-width: 0; }
 .t2-pc-ride-addr { font-size: 12.5px; color: var(--t2-muted); }
 
+/* ── «تأكيد» (أمرُ المالك ٢٠٢٦-١١-٢١): **جاهزاً** جمرُ TAXO بنصٍّ عالي التباين، **ومعطَّلاً مقروءاً** — لا شبحاً بنصفِ عتمة —
+ *    وسطرُ «ما ينقص» فوقه ── */
+.t2-button.primary.t2-pc-confirm:not(:disabled) { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-button.primary.t2-pc-confirm:disabled {
+  opacity: 1;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  box-shadow: inset 0 0 0 1px var(--t2-line);
+}
+.t2-pc-missing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-text);
+}
+.t2-pc-missing .t2-icon { font-size: 18px; color: var(--t2-accent); }
+
+/* ── ملخّصُ الطلب قبل «تأكيد»: النقطتان والسعرُ والدفع ── */
+.t2-pc-sum {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t2-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.t2-pc-sum-row { display: grid; grid-template-columns: 18px auto 1fr; align-items: center; gap: 8px; font-size: 13px; }
+.t2-pc-sum-row .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-pc-sum-row .t2-route-from,
+.t2-pc-sum-row .t2-route-to { justify-self: center; }
+.t2-pc-sum-label { color: var(--t2-muted); }
+.t2-pc-sum-value { color: var(--t2-text); text-align: end; min-width: 0; overflow-wrap: anywhere; }
+.t2-pc-sum-value.strong { font-weight: 700; }
+
 /* ── «أحضر غرضي» (§٧٢-ج/١، لوحتُه R2): سطرُ التعريف تحت العنوان ── */
 .t2-pf-lead { margin: 0 0 12px; }

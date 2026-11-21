@@ -118,7 +118,9 @@ export function AccountScreen() {
   // سطرُ الاشتراك ونبرتُه — نفس الحالات الأربع في شاشة الاشتراك
   const subLine = !subscription
     ? "…"
-    : subscription.is_active
+    : subscription.is_active && subscription.ambassador
+      ? tr("دائم · سفير TAXO")
+      : subscription.is_active
       ? tr("ساري · باقٍ {0} يوماً", { 0: digits(String(subscription.days_remaining)) })
       : subscription.coverage_until
         ? tr("منتهٍ — جدّد للعودة للتوزيع")
@@ -128,6 +130,8 @@ export function AccountScreen() {
     ? ""
     : !subscription.is_active
       ? "danger"
+      : subscription.ambassador
+      ? "ok"
       : subscription.days_remaining <= 1
         ? "warn"
         : "ok";

@@ -363,6 +363,8 @@ class RideDriverOut(BaseModel):
     #: الراكبُ اسمَه ولوحتَه أصلاً فلا شيءَ يُخفى. و`None` لمن لا مركبةَ نشطةً
     #: له — ولا بديلَ يُدسّ هنا: بعد القبول لا فئةَ تُميَّز بغيابٍ
     skin: MapSkinOut | None = None
+    #: **شارةُ «سفير TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١ الخامس، SPEC §١١١-د/٤) — صفُّ اشتراكٍ دائمٌ ساري، يُقرأ بالضمّ (`Driver.is_ambassador`)
+    ambassador: bool = False
 
     @classmethod
     def from_ride(cls, ride: "Ride") -> "RideDriverOut | None":
@@ -381,6 +383,7 @@ class RideDriverOut(BaseModel):
             rating_avg=ride.driver.rating_avg,
             vehicle=RideVehicleOut.model_validate(vehicles[0]) if vehicles else None,
             skin=MapSkinOut.for_skin(skin),
+            ambassador=bool(getattr(ride.driver, "is_ambassador", False)),
         )
 
 

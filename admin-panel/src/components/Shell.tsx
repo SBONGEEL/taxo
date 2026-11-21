@@ -126,6 +126,8 @@ const GROUPS: {
       // أحداً منها. **وبلا `adminOnly`**: القراءةُ لـ`support` والأفعالُ يحرسها الخادم (`DisputeResolver`) كالنزاعات
       { label: "المدفوعات غير المؤكدة", icon: "request_quote", to: "/payments/unconfirmed" },
       { label: "الاشتراكات والباقات", icon: "card_membership", to: "/subscriptions" },
+      // **«السفراء والمميّزون»** (SPEC §١١١-د/٤) — جوارَ الاشتراكات: الدائمُ و«عدد أيام»، بحثاً ونزعاً بسبب
+      { label: "السفراء والمميّزون", icon: "workspace_premium", to: "/subscriptions/gifts" },
       { label: "عروض الاشتراكات", icon: "redeem", to: "/offers", adminOnly: true },
       { label: "التسعيرة", icon: "sell", to: "/pricing" },
       // **«مناطق التسعير»** (SPEC §٧٤-أ/٥) — جوارَ «التسعيرة»: السعرُ الموحَّدُ هناك، والولاياتُ الوعرةُ ونسبتُها هنا. وتتبع مبدّلَ الدولة

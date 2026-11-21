@@ -929,6 +929,12 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           failed={!c.loading && c.error !== null}
           initial={c.parcel}
           fetch={c.parcelFetch}
+          summary={{
+            from: oneLine(pickupAddress ?? props.pickupLine) || tr("نقطة الانطلاق المحددة"),
+            to: noDestination ? tr("بلا وجهة — تقولها للكبتن") : oneLine(dropoffAddress) || tr("الوجهة المحددة"),
+            fare: c.shownFare === null ? null : v2 ? v2Money(c.shownFare) : formatMoney(c.shownFare, currency),
+            payment: c.payMethod ? PAYMENT_METHOD_LABEL[c.payMethod.method] : null,
+          }}
           onSave={(next) => {
             c.setParcel?.(next);
             setParcelOpen(false);

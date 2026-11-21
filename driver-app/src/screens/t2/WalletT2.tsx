@@ -109,6 +109,8 @@ export function WalletT2Screen() {
 
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — طلبٌ خلف مفتاحه وحدَه: **مطفأً (الأردنُ وليبيا) لا طلبَ يزيد ولا بابَ يُرسم**
   const payRequests = useCountryConfig(w.profile?.user?.country_code)?.features.payment_requests_enabled === true;
+  // **«شحن ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١): مفتاحُ دولته وحدَه
+  const taxoCards = useCountryConfig(w.profile?.user?.country_code)?.features.taxo_cards_enabled === true;
   // **كليك أردنيٌّ لا يُذكر حيث لا يعمل** (أمرُ المالك ٢٠٢٦-١١-١٧: «Hide CliQ in Libya») — مفتاحُ السوق نفسُه الذي يُظهر قناتَه
   const cliqMarket = useCountryConfig(w.profile?.user?.country_code)?.features.cliq_enabled === true;
   const [requests, setRequests] = useState<MyPaymentRequest[]>([]);
@@ -417,6 +419,16 @@ export function WalletT2Screen() {
             </p>
           )}
         </div>
+
+        {taxoCards ? (
+          <button type="button" className="t2-wal-door" onClick={() => w.navigate("/wallet/card")}>
+            <span className="t2-wal-txicon" aria-hidden="true">
+              <Icon name="confirmation_number" />
+            </span>
+            <span className="t2-wal-door-title">{tr("شحن ببطاقة TAXO")}</span>
+            <Icon name="arrow_back" className="t2-wal-door-go" />
+          </button>
+        ) : null}
 
         {/* **بابُ الشحن بطرق السوق** (SPEC §٧٣-هـ) — حيث المفتاحُ مشتعلٌ وحدَه، **وطلباتُ الدفع تحته بحالها وسببها كما كُتب** */}
         {payRequests ? (

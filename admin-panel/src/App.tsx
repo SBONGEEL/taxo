@@ -204,6 +204,9 @@ const SubscriptionsScreen = lazy(() =>
     default: m.SubscriptionsScreen,
   })),
 );
+const AmbassadorsScreen = lazy(() =>
+  import("@/screens/Ambassadors").then((m) => ({ default: m.AmbassadorsScreen })),
+);
 const PricingScreen = lazy(() =>
   import("@/screens/Pricing").then((m) => ({ default: m.PricingScreen })),
 );
@@ -784,6 +787,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <SubscriptionsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/subscriptions/gifts"
+                    element={
+                      <Guarded>
+                        <AmbassadorsScreen />
                       </Guarded>
                     }
                   />

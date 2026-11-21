@@ -64,6 +64,7 @@ from app.models.enums import (
     AuditAction,
     CountryCode,
     DriverStatus,
+    FeatureKey,
     PaymentMethod,
     RoundingMode,
     RoundingSource,
@@ -103,6 +104,15 @@ PLAN_DURATIONS: dict[SubscriptionDurationType, timedelta] = {
 # ما يسجّله الموظف نيابةً عن الكبتن بعد قبضه. القناتان الأخريان (المحفظة
 # والبطاقة) يفتحهما صاحبهما ويشهد عليهما الدفترُ أو المزود، فلا تُسجَّل يدوياً.
 STAFF_METHODS: tuple[PaymentMethod, ...] = (PaymentMethod.CASH, PaymentMethod.CLIQ)
+
+# **«عدد أيام» و«سفير TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١ الخامس، SPEC §١١١-د/٤). الحدّان يحرسهما قيدٌ في القاعدة كذلك
+GIFT_DAYS_MIN = 1
+GIFT_DAYS_MAX = 365
+#: **«لا ينتهي» بلغة عمودٍ لا يقبل الفراغ**: مئةُ سنة — فكلُّ سائلٍ «أمغطّى؟» يجده بلا تعديل، والتذكيرُ والتجديدُ (أفقُهما
+#: أيّام) لا يبلغانه أبداً
+PERMANENT_SPAN = timedelta(days=36500)
+#: مرجعُ الهديّة حين لا يكتب المشرفُ مرجعاً والمبلغُ صفر — فتُقرأ في التقارير هديّةً لا كاشاً مموَّهاً
+GIFT_REFERENCE = "هديّة"
 
 # «إشعار قبل الانتهاء بـ 24 ساعة» (SPEC القسم 8)
 EXPIRY_NOTICE_WINDOW = timedelta(hours=24)
@@ -323,6 +333,38 @@ def days_remaining(until: datetime | None, *, now: datetime | None = None) -> in
     return -(-int(remaining.total_seconds()) // 86400)
 
 
+# ------------------------------------------------------- «سفير TAXO» (§١١١-د/٤)
+
+
+async def active_permanent(
+    session: AsyncSession, driver_id: uuid.UUID
+) -> DriverSubscription | None:
+    """**الصفُّ الدائمُ الساري لهذا الكبتن** — شارةُ «سفير TAXO» تُقرأ منه، ولا يكون إلا واحداً (فهرسٌ فريدٌ جزئيّ)."""
+    return await session.scalar(
+        select(DriverSubscription)
+        .where(
+            DriverSubscription.driver_id == driver_id,
+            DriverSubscription.is_permanent.is_(True),
+            *coverage_condition(),
+        )
+        .options(selectinload(DriverSubscription.plan))
+        .limit(1)
+    )
+
+
+async def require_no_permanent(session: AsyncSession, driver_id: uuid.UUID) -> None:
+    """**لا شراءَ فوق الدائم**: كبتنٌ اشتراكُه لا ينتهي لا يُخصم منه مالٌ لأيّامٍ لا يحتاجها — يُردّ قبل فتح أيِّ طلب."""
+    if await active_permanent(session, driver_id) is not None:
+        raise Conflict("اشتراكك دائمٌ (سفير TAXO) — لا يحتاج شراءً")
+
+
+def custom_days_price(plan: SubscriptionPlan, days: int) -> Decimal:
+    """**سعرُ الخطّة متناسباً بالأيّام** — تلميحٌ للمشرف لا أكثر (شرطُ المالك: «المبلغُ المقترحُ تلميح»)، وسعرُ القائمة المجمَّدُ
+    على الصفّ فيُقرأ «كم تنازلنا؟» كما في كلِّ صفّ. سعرُ الخطّة ÷ مدّتها × الأيّام."""
+    span_days = PLAN_DURATIONS[plan.duration_type].days
+    return (plan.price * Decimal(days) / Decimal(span_days)).quantize(_MONEY_UNIT)
+
+
 # ------------------------------------------------------------------ الإنشاء
 
 
@@ -417,8 +459,15 @@ async def _create(
     transaction_id: uuid.UUID | None = None,
     offer: "offers.ResolvedOffer | None" = None,
     price: PriceToPay | None = None,
+    days: int | None = None,
+    permanent: bool = False,
+    over_permanent_ok: bool = False,
 ) -> DriverSubscription:
     """يكتب صف الاشتراك — **يُستدعى وصفُّ الكبتن مقفول**.
+
+    **و«عدد أيام» و«سفير TAXO» من هنا وحدَه** (SPEC §١١١-د/٤): `days` يحلّ محلَّ مدّة الخطّة ويبدأ بعد التغطية القائمة (لا يضيع
+    يوم)، و`permanent` صفٌّ يبدأ الآن وينتهي بعد `PERMANENT_SPAN`. **ولا شراءَ فوق الدائم** — إلا مالاً وصل فعلاً من مزوّد
+    (`over_permanent_ok`): رفضُه بعد القبض يبتلع مالاً، والطلبُ نفسُه يُردّ قبل فتحه (`require_no_permanent`).
 
     بدايته من حيث تنتهي تغطيته القائمة إن وُجدت، وإلا فمن الآن.
 
@@ -438,7 +487,17 @@ async def _create(
                 "عليك سلفةٌ تجاوزت مهلتها — سدّدها ثم اشترِ اشتراكاً يومياً"
             )
 
-    starts_at = await coverage_until(session, driver.id) or _now()
+    if not over_permanent_ok:
+        await require_no_permanent(session, driver.id)
+
+    if permanent:
+        starts_at = _now()
+        expires_at = starts_at + PERMANENT_SPAN
+    else:
+        starts_at = await coverage_until(session, driver.id) or _now()
+        expires_at = starts_at + (
+            timedelta(days=days) if days is not None else PLAN_DURATIONS[plan.duration_type]
+        )
 
     # **نسبةُ العمولة تُجمَّد هنا وحدَها** (§25.11): هذا البابُ الوحيد الذي يكتب
     # صفَّ اشتراكٍ في القنوات الأربع، فتجميدٌ فوقه يُنسى في إحداها.
@@ -461,7 +520,13 @@ async def _create(
     #
     # **ولا ينزل تحت الصفر**: تسويةُ فرقٍ تجعل المدفوعَ أكبرَ من السعر، وذاك
     # ليس تنازلاً سالباً.
-    list_price = plan.price
+    # **وسعرُ القائمة للأيّام متناسبٌ بها، وللدائم ما دُفع** — لا سعرَ قائمةٍ لما لا يُباع، فلا «تنازلٌ» يُخترع له
+    if permanent:
+        list_price = amount_paid
+    elif days is not None:
+        list_price = custom_days_price(plan, days)
+    else:
+        list_price = plan.price
     # **يُكمَّم صراحةً إلى ثلاث خانات**: `max(Decimal("0"), Decimal("0.000"))`
     # يعيد **الأول** لأنهما متساويان — فيخرج `"0"` حيث تخرج بقيةُ المال
     # `"0.000"`. وهو الشكلُ السابع في عائلة «ما لا يراه البناء»، وقد أمسكه
@@ -475,7 +540,9 @@ async def _create(
         # الـ commit في سياقٍ لا متزامن يرفع `MissingGreenlet`
         plan=plan,
         starts_at=starts_at,
-        expires_at=starts_at + PLAN_DURATIONS[plan.duration_type],
+        expires_at=expires_at,
+        custom_days=days,
+        is_permanent=permanent,
         amount_paid=amount_paid,
         payment_method=method,
         status=SubscriptionStatus.ACTIVE,
@@ -598,6 +665,75 @@ async def purchase_with_wallet(
     )
 
 
+async def gifts_enabled(session: AsyncSession, country_code: CountryCode) -> bool:
+    """**«عدد أيام» و«سفير TAXO» للمشرفين خلف مفتاح دولتهم** (`subscription_gifts`) — مطفأً لا يقبلهما البابُ ولا تعرضهما اللوحة."""
+    return await settings_service.is_feature_enabled(
+        session, country_code, FeatureKey.SUBSCRIPTION_GIFTS
+    )
+
+
+def _validate_gift(days: int | None, permanent: bool) -> None:
+    if days is not None and permanent:
+        raise InvalidInput("اختر «عدد أيام» أو «دائم» — لا الاثنين", field="days")
+    if days is not None and not (GIFT_DAYS_MIN <= days <= GIFT_DAYS_MAX):
+        raise InvalidInput(
+            f"عدد الأيام بين {GIFT_DAYS_MIN} و{GIFT_DAYS_MAX}", field="days"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class GiftPreview:
+    """**ما سيُكتب قبل أن يُكتب** — ورقةُ التأكيد في اللوحة تقرؤه، والتسجيلُ يحسب بالبيت نفسِه (`_create`)."""
+
+    starts_at: datetime
+    expires_at: datetime
+    #: المقترَحُ تلميحٌ لا يُفرض (شرطُ المالك) — للأيّام متناسباً مقرَّباً، وللدائم لا اقتراح (`None`)
+    suggested_amount: Decimal | None
+    currency: str
+    permanent_exists: bool
+
+
+async def preview_manual(
+    session: AsyncSession,
+    *,
+    driver: Driver,
+    user: User,
+    plan_id: uuid.UUID,
+    days: int | None,
+    permanent: bool,
+) -> GiftPreview:
+    """**معاينةٌ بلا أثر** — لا قفلَ ولا كتابة."""
+    _validate_gift(days, permanent)
+    plan = await get_plan(session, plan_id, user.country_code)
+    existing = await active_permanent(session, driver.id)
+    now = _now()
+    if permanent:
+        starts_at, expires_at = now, now + PERMANENT_SPAN
+    else:
+        starts_at = await coverage_until(session, driver.id) or now
+        expires_at = starts_at + (
+            timedelta(days=days) if days is not None else PLAN_DURATIONS[plan.duration_type]
+        )
+    suggested: Decimal | None
+    if permanent:
+        suggested = None
+    else:
+        offer = None if days is not None else await offers.resolve(session, driver=driver, plan=plan)
+        price = await price_to_pay(session, plan, offer)
+        if days is not None:
+            policy = price.policy
+            suggested = rounding.rounded(custom_days_price(plan, days), policy)
+        else:
+            suggested = price.payable
+    return GiftPreview(
+        starts_at=starts_at,
+        expires_at=expires_at,
+        suggested_amount=suggested,
+        currency=plan.currency.value,
+        permanent_exists=existing is not None,
+    )
+
+
 async def record_manual(
     session: AsyncSession,
     *,
@@ -608,6 +744,8 @@ async def record_manual(
     amount_paid: Decimal | None,
     reference: str | None,
     actor: User,
+    days: int | None = None,
+    permanent: bool = False,
 ) -> DriverSubscription:
     """اشتراكٌ قبضته الإدارة كاشاً أو كليكاً فسجّلته (SPEC القسم 8/13.5).
 
@@ -615,9 +753,22 @@ async def record_manual(
     الكاش مؤكدةً في `topups.create_confirmed`. `amount_paid` يقبل قيمةً مغايرةً
     لسعر الخطة (خصمٌ أو تسويةُ فرقٍ يقرّرها المشرف) ويبقى ما دُفع فعلاً
     مسجّلاً، والقيدُ في سجل التدقيق يقول من قرّره.
+
+    **و«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤، شرطُ المالك بحرفه): **المبلغُ ما قُبض فعلاً أو صفرٌ للهديّة ويُكتب صراحةً** —
+    لا يُفترض من الخطّة، فالمقترَحُ تلميحٌ في المعاينة لا أكثر؛ ولا عرضَ يُطبَّق عليهما؛ **والدائمُ للمالك وحدَه** (يحرسه الراوتر).
     """
     if method not in STAFF_METHODS:
         raise InvalidInput("هذه القناة لا تُسجَّل من اللوحة")
+
+    gift = days is not None or permanent
+    if gift:
+        _validate_gift(days, permanent)
+        if not await gifts_enabled(session, user.country_code):
+            raise PermissionDenied("«عدد أيام» و«سفير TAXO» غير مفعّلين لهذه الدولة")
+        if amount_paid is None:
+            raise InvalidInput(
+                "اكتب المبلغ المقبوض فعلاً — أو صفراً للهديّة", field="amount_paid"
+            )
 
     locked = await _locked_driver(session, driver.id)
     require_purchasable(locked)
@@ -627,8 +778,12 @@ async def record_manual(
     # التقريرُ **أيُّ عرضٍ** كان، و`amount_paid` يبقى ما قاله المشرفُ أنه قبض —
     # وحريةُ تسوية الفرق القائمة لا تُصادَر. والفرقُ بين الرقمين يُقرأ «تسويةً
     # يدوية» بمقارنةٍ حيّة، بلا عمودٍ يُخزَّن وبلا سببٍ يُطلب.
-    offer = await offers.resolve(
-        session, driver=locked, plan=plan, for_update=True
+    #
+    # **ولا عرضَ على «عدد أيام» ولا «دائم»**: العرضُ خصمٌ على خطّةٍ تُباع، وهذان ليسا بيعَ خطّة
+    offer = (
+        None
+        if gift
+        else await offers.resolve(session, driver=locked, plan=plan, for_update=True)
     )
     # **المقترَحُ هو الثمنُ مقرَّباً** (SPEC §٧٠-ج/٥)، **وما يكتبه المشرفُ بيده مضاعفٌ للوحدة وإلا رُدّ** (§٧٠-ج/٦): حريةُ
     # تسوية الفرق قائمةٌ، والكسرُ وحدَه يُردّ — مالٌ قُبض نقداً أو بكليك في سوقٍ لا كسورَ فيه. **ولا يُقرَّب رقمُه من وراء ظهره**
@@ -648,16 +803,28 @@ async def record_manual(
             user, "اشتراكُ حساب التجربة يُسجَّل بصفرٍ أو يُشترى من المحفظة"
         )
 
+    clean_reference = (reference or "").strip() or None
+    if gift and paid == 0 and clean_reference is None:
+        clean_reference = GIFT_REFERENCE
+
     subscription = await _create(
         session,
         driver=locked,
         plan=plan,
         method=method,
         amount_paid=paid,
-        reference=(reference or "").strip() or None,
+        reference=clean_reference,
         offer=offer,
-        price=price,
+        # **التقريبُ يُكتب للخطّة وحدَها**: «عدد أيام» و«دائم» مبلغُهما ما قُبض لا ثمنٌ مقرَّب
+        price=None if gift else price,
+        days=days,
+        permanent=permanent,
     )
+    details: dict[str, object] = {"driver_id": str(driver.id), "method": method.value}
+    if days is not None:
+        details["days"] = days
+    if permanent:
+        details["permanent"] = True
     await audit.record(
         session,
         actor=actor,
@@ -665,7 +832,7 @@ async def record_manual(
         entity_type="driver_subscription",
         entity_id=subscription.id,
         # أسماء الحقول وقنواتها لا مبالغها (SPEC القسم 14)
-        details={"driver_id": str(driver.id), "method": method.value},
+        details=details,
     )
     return subscription
 
@@ -728,6 +895,8 @@ async def activate_paid_order(
         reference=reference,
         idempotency_key=idempotency_key,
         offer=offer,
+        # **مالٌ وصل من مزوّد لا يُردّ هنا** — الطلبُ يُردّ قبل فتحه لمن اشتراكُه دائم (`require_no_permanent`)
+        over_permanent_ok=True,
     )
 
 
@@ -1326,3 +1495,149 @@ async def cancel_for_driver(
         },
     )
     return plan
+
+
+
+# ═══════════════════════════ «السفراء والمميّزون» (SPEC §١١١-د/٤)
+
+
+@dataclass(frozen=True)
+class GiftRow:
+    """صفٌّ في صفحة «السفراء والمميّزون»: دائمٌ ساري، أو «عدد أيام» لم ينقضِ."""
+
+    subscription: DriverSubscription
+    name: str
+    phone: str
+    country_code: CountryCode
+    #: **ما يُردّ لو نُزع الآن** — بقاعدة الإلغاء القائمة نفسِها (`_refund_for`)، فلا رقمَ في ورقة التأكيد يخالف ما يقع
+    revoke_refund: Decimal
+
+
+async def list_gifts(
+    session: AsyncSession,
+    *,
+    country_code: CountryCode | None,
+    q: str | None,
+    limit: int,
+    offset: int,
+) -> list[GiftRow]:
+    now = _now()
+    stmt = (
+        select(DriverSubscription, User.name, User.phone, User.country_code)
+        .join(Driver, Driver.id == DriverSubscription.driver_id)
+        .join(User, User.id == Driver.user_id)
+        .where(
+            DriverSubscription.status == SubscriptionStatus.ACTIVE,
+            DriverSubscription.expires_at > now,
+            (DriverSubscription.is_permanent.is_(True))
+            | (DriverSubscription.custom_days.is_not(None)),
+        )
+        .options(selectinload(DriverSubscription.plan))
+        .order_by(DriverSubscription.is_permanent.desc(), DriverSubscription.created_at.desc())
+    )
+    if country_code is not None:
+        stmt = stmt.where(User.country_code == country_code)
+    if (q or "").strip():
+        stmt = stmt.where(admin_search.person_clause(q.strip()))
+    rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
+    out: list[GiftRow] = []
+    for subscription, name, phone, country in rows:
+        policy = await rounding.policy_for(session, country)
+        refund, _started, _precise = _refund_for(subscription, now, policy)
+        out.append(
+            GiftRow(
+                subscription=subscription,
+                name=name,
+                phone=phone,
+                country_code=country,
+                revoke_refund=refund,
+            )
+        )
+    return out
+
+
+async def revoke_permanent(
+    session: AsyncSession,
+    *,
+    driver_id: uuid.UUID,
+    admin: User,
+    reason: str,
+) -> tuple[DriverSubscription, Decimal]:
+    """**نزعُ «سفير TAXO»**: يُلغى الصفُّ الدائمُ وحدَه بمسار الإلغاء القائم — `status=cancelled` ومن ألغى ولماذا، **لا حذفَ ولا
+    تعديلَ تاريخ** — وما سبقه من اشتراكاتٍ مدفوعةٍ يبقى يغطّيه (لم تُشترَ لتُلغى بنزع شارة).
+
+    **والردُّ بقاعدة الإلغاء نفسِها** (`_refund_for`: ما لم يُستعمل من المدفوع فعلاً، والكسورُ لصالح الكبتن) — صفرٌ للهديّة،
+    وقيدٌ في الدفتر بمفتاح `subscription_refund:{id}` إن قُبض مال. **والترتيبُ ترتيبُ الإلغاء**: صفُّ الكبتن ثمّ قفلُ المحفظة.
+    """
+    driver = await _locked_driver(session, driver_id)
+    owner = await session.get(User, driver.user_id)
+    if owner is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
+        raise NotFound("حساب الكبتن غير موجود")
+    row = await session.scalar(
+        select(DriverSubscription)
+        .where(
+            DriverSubscription.driver_id == driver_id,
+            DriverSubscription.is_permanent.is_(True),
+            DriverSubscription.status == SubscriptionStatus.ACTIVE,
+        )
+        .options(selectinload(DriverSubscription.plan))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if row is None:
+        raise NotFound("لا اشتراكَ دائمَ لهذا الكبتن")
+
+    moment = _now()
+    policy = await rounding.policy_for(session, owner.country_code)
+    refund, started, precise = _refund_for(row, moment, policy)
+    row.status = SubscriptionStatus.CANCELLED
+    row.cancelled_at = moment
+    row.cancelled_by = admin.id
+    row.cancel_reason = reason
+    if refund > 0:
+        entry = await wallet.record(
+            session,
+            owner=owner,
+            owner_type=WalletOwnerType.DRIVER,
+            tx_type=WalletTransactionType.REFUND,
+            amount=refund,
+            created_by=admin.id,
+            idempotency_key=f"subscription_refund:{row.id}",
+        )
+        row.refund_transaction_id = entry.id
+        if started:
+            await rounding.record(
+                session,
+                country=owner.country_code,
+                source=RoundingSource.SUBSCRIPTION_REFUND,
+                source_id=row.id,
+                user_id=owner.id,
+                precise=precise,
+                rounded_amount=refund,
+                policy=rounding.toward(policy, RoundingMode.UP),
+            )
+    await session.flush()
+
+    # **ما بقي يغطّيه يحكم نسبتَه** — وإلا فمخرجُ الانتهاء نفسُه (`expire_due`)
+    remaining = await current_subscription(session, driver_id)
+    if remaining is not None:
+        driver.commission_percent_from_subscription = remaining.commission_percent_at_purchase
+    else:
+        driver.commission_percent_from_subscription = None
+        if driver.is_online and not await _has_active_ride(session, driver_id):
+            driver.is_online = False
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="driver_subscription",
+        entity_id=row.id,
+        details={
+            "action": "revoke_permanent",
+            "reason": reason,
+            "refund_total": str(refund),
+            "currency": row.plan.currency.value if row.plan else "",
+        },
+    )
+    return row, refund

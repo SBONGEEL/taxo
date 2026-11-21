@@ -32,6 +32,8 @@ export function composeBody(entry: UserNotification): string | null {
       return money ? tr("{0} — تفصل فيها الإدارة الآن.", { 0: money }) : null;
     case "ride_completed":
       return money ? tr("أجرة الرحلة {0}.", { 0: money }) : null;
+    case "taxo_card_topup":
+      return money ? tr("أُضيف {0} إلى رصيدك.", { 0: money }) : null;
     case "document_rejected":
       return data.review_note || null;
     case "subscription_expiring":

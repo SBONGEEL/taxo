@@ -14,20 +14,24 @@ import uuid
 from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
-from app.core.deps import FinanceManager, DbSession, StaffUser
-from app.core.exceptions import NotFound
+from app.core.deps import FinanceManager, DbSession, OwnerUser, RedisDep, StaffUser
+from app.core.exceptions import NotFound, PermissionDenied
 from app.models.driver import Driver
-from app.models.enums import CountryCode, SubscriptionStatus
+from app.models.enums import CountryCode, SubscriptionStatus, UserRole
 from app.models.subscription import DriverSubscription
 from app.models.user import User
 from app.schemas.subscription import (
     AdminSubscriptionCreate,
+    AdminSubscriptionPreviewIn,
+    AdminSubscriptionPreviewOut,
+    AmbassadorRevokeOut,
     CancellationLineOut,
+    GiftRowOut,
     CancellationPlanOut,
     SubscriptionCancelIn,
     SubscriptionOut,
 )
-from app.services import subscriptions
+from app.services import notifications, subscriptions
 
 router = APIRouter(prefix="/admin/subscriptions", tags=["admin"])
 
@@ -56,15 +60,54 @@ async def list_subscriptions(
     return [SubscriptionOut.from_subscription(row) for row in rows]
 
 
-@router.post("", response_model=SubscriptionOut, status_code=status.HTTP_201_CREATED)
-async def record_subscription(
-    payload: AdminSubscriptionCreate, admin: FinanceManager, session: DbSession
-) -> SubscriptionOut:
-    """يسجّل اشتراكاً قبضته الإدارة كاشاً أو كليكاً — بعد وصول المال لا قبله."""
-    driver = await session.get(Driver, payload.driver_id)
+async def _driver_and_user(session, driver_id: uuid.UUID) -> tuple[Driver, User]:
+    driver = await session.get(Driver, driver_id)
     if driver is None:
         raise NotFound("ملف الكبتن غير موجود")
     user = await session.scalar(select(User).where(User.id == driver.user_id))
+    return driver, user
+
+
+def _require_owner_for_permanent(permanent: bool, admin: User) -> None:
+    """**منحُ «سفير TAXO» ونزعُه للمالك وحدَه** (SPEC §١١١-د/٤)."""
+    if permanent and not admin.has_role(UserRole.OWNER):
+        raise PermissionDenied("منحُ الاشتراك الدائم ونزعُه للمالك وحدَه")
+
+
+@router.post("/preview", response_model=AdminSubscriptionPreviewOut)
+async def preview_subscription(
+    payload: AdminSubscriptionPreviewIn, admin: FinanceManager, session: DbSession
+) -> AdminSubscriptionPreviewOut:
+    """**ورقةُ التأكيد قبل «تسجيل اشتراك»** — من متى إلى متى، والمقترَحُ تلميحاً. قراءةٌ بلا أثر (SPEC §١١١-د/٤)."""
+    _require_owner_for_permanent(payload.permanent, admin)
+    driver, user = await _driver_and_user(session, payload.driver_id)
+    preview = await subscriptions.preview_manual(
+        session,
+        driver=driver,
+        user=user,
+        plan_id=payload.plan_id,
+        days=payload.days,
+        permanent=payload.permanent,
+    )
+    return AdminSubscriptionPreviewOut(
+        starts_at=preview.starts_at,
+        expires_at=preview.expires_at,
+        suggested_amount=preview.suggested_amount,
+        currency=preview.currency,
+        permanent_exists=preview.permanent_exists,
+    )
+
+
+@router.post("", response_model=SubscriptionOut, status_code=status.HTTP_201_CREATED)
+async def record_subscription(
+    payload: AdminSubscriptionCreate, admin: FinanceManager, session: DbSession, redis: RedisDep
+) -> SubscriptionOut:
+    """يسجّل اشتراكاً قبضته الإدارة كاشاً أو كليكاً — بعد وصول المال لا قبله.
+
+    **ومعه «عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤): الدائمُ للمالك وحدَه، والكبتنُ يُشعَر بعد الـ commit.
+    """
+    _require_owner_for_permanent(payload.permanent, admin)
+    driver, user = await _driver_and_user(session, payload.driver_id)
 
     subscription = await subscriptions.record_manual(
         session,
@@ -75,9 +118,79 @@ async def record_subscription(
         amount_paid=payload.amount_paid,
         reference=payload.reference,
         actor=admin,
+        days=payload.days,
+        permanent=payload.permanent,
     )
     await session.commit()
+    if payload.permanent or payload.days is not None:
+        await notifications.publish_subscription_gift(
+            session,
+            redis,
+            driver_user_id=user.id,
+            kind="permanent" if payload.permanent else "days",
+            days=payload.days,
+        )
     return SubscriptionOut.from_subscription(subscription)
+
+
+# ═══════════════════════════ «السفراء والمميّزون» (SPEC §١١١-د/٤)
+
+
+@router.get("/gifts", response_model=list[GiftRowOut])
+async def list_gift_subscriptions(
+    _admin: FinanceManager,
+    session: DbSession,
+    country_code: CountryCode | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[GiftRowOut]:
+    """صفحةُ «السفراء والمميّزون»: كلُّ دائمٍ ساري وكلُّ «عدد أيام» لم ينقضِ، ببحثٍ بالاسم والهاتف."""
+    rows = await subscriptions.list_gifts(
+        session, country_code=country_code, q=q, limit=limit, offset=offset
+    )
+    return [
+        GiftRowOut(
+            subscription_id=row.subscription.id,
+            driver_id=row.subscription.driver_id,
+            name=row.name,
+            phone=row.phone,
+            country_code=row.country_code,
+            is_permanent=bool(row.subscription.is_permanent),
+            custom_days=row.subscription.custom_days,
+            plan_name=row.subscription.plan.name,
+            starts_at=row.subscription.starts_at,
+            expires_at=row.subscription.expires_at,
+            amount_paid=row.subscription.amount_paid,
+            currency=row.subscription.plan.currency,
+            payment_method=row.subscription.payment_method,
+            reference=row.subscription.reference,
+            created_at=row.subscription.created_at,
+            revoke_refund=row.revoke_refund,
+        )
+        for row in rows
+    ]
+
+
+@router.post("/ambassadors/{driver_id}/revoke", response_model=AmbassadorRevokeOut)
+async def revoke_ambassador(
+    driver_id: uuid.UUID,
+    payload: SubscriptionCancelIn,
+    owner: OwnerUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> AmbassadorRevokeOut:
+    """**نزعُ «سفير TAXO»** — بسببٍ إلزاميٍّ وتأكيد، للمالك وحدَه، ويُلغى الصفُّ الدائمُ وحدَه بمسار الإلغاء (لا حذفَ ولا تعديلَ تاريخ)."""
+    row, refund = await subscriptions.revoke_permanent(
+        session, driver_id=driver_id, admin=owner, reason=payload.reason.strip()
+    )
+    currency = row.plan.currency.value if row.plan else ""
+    user_id = (await session.get(Driver, driver_id)).user_id
+    await session.commit()
+    await notifications.publish_subscription_gift(
+        session, redis, driver_user_id=user_id, kind="revoked"
+    )
+    return AmbassadorRevokeOut(subscription_id=row.id, refund=refund, currency=currency)
 
 
 def _plan_out(plan: subscriptions.CancellationPlan) -> CancellationPlanOut:

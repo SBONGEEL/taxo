@@ -476,6 +476,8 @@ export function DriversScreen() {
                 {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — بجانب حاله لا بدلاً منها */}
                 <TestAccountBadge isTest={row.is_test} />
                 <ExceptionalBadge exceptional={row.exceptional} deadline={row.documents_deadline_at} />
+                {/* **«سفير TAXO»** (SPEC §١١١-د/٤) — اشتراكُه دائم */}
+                {row.ambassador ? <Badge tone="ink">سفير TAXO</Badge> : null}
               </span>
 
               <span>

@@ -54,6 +54,27 @@ export function toNational(input: string, dialCode: string): string {
   return digits.replace(/^0+/, "");
 }
 
+/** **رقمُ شخصٍ آخر — من دولة الحساب وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١): يُنظَّف «+218» و«00218» ومفتاحُ الدولة نفسِها والصفرُ
+ *  البادئ، **ورقمٌ يحمل مفتاحَ دولةٍ أخرى يُعلَّم ولا يُقصّ** — قصُّ مفتاحه يصنع رقماً محلّياً لغريب. والمفتاحُ يُقرأ مفتاحاً حين
+ *  يُكتب دوليّاً (`+` · `00`) أو حين يزيد الرقمُ على طوله الوطنيّ — فلا يُقصّ «21…» من رقمٍ محلّيٍّ يبدأ بهما. */
+export function cleanSecondPhone(
+  input: string,
+  dialCode: string,
+  otherDials: string[],
+  nationalLength: number,
+): { national: string; foreign: boolean } {
+  let digits = digitsOnly(input);
+  const international = input.trim().startsWith("+") || digits.startsWith("00");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  const prefixed = international || digits.length > nationalLength;
+  if (prefixed && digits.startsWith(dialCode)) {
+    digits = digits.slice(dialCode.length);
+  } else if (prefixed && otherDials.some((dial) => dial !== "" && digits.startsWith(dial))) {
+    return { national: digits.slice(0, 15), foreign: true };
+  }
+  return { national: digits.replace(/^0+/, "").slice(0, nationalLength), foreign: false };
+}
+
 /** صيغة E.164 لما يُرسل ولتدفّق Firebase. */
 export function toE164(raw: string, dialCode: string): string {
   return `+${dialCode}${toNational(raw, dialCode)}`;

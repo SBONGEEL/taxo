@@ -112,11 +112,14 @@ export function AuthPhone({
   valid,
   invalid,
   country,
+  fixed,
   ...input
 }: InputProps & {
   dial: string | null;
   valid?: boolean;
   country?: { code: string; name: string; onOpen: () => void; disabled?: boolean };
+  /** **دولةٌ ثابتةٌ لا تُختار** (أمرُ المالك ٢٠٢٦-١١-٢١): رقمُ شخصٍ آخر من دولة الحساب وحدَها — العلمُ والمفتاحُ بلا زرٍّ ولا سهم */
+  fixed?: { code: string; name: string };
 }) {
   return (
     <div className={invalid ? "t2-auth-field phone error" : "t2-auth-field phone"}>
@@ -133,6 +136,11 @@ export function AuthPhone({
           <span className="t2-auth-dial">+{dial ?? ""}</span>
           <Icon name="expand_more" />
         </button>
+      ) : fixed ? (
+        <span className="t2-auth-country fixed">
+          <Flag code={fixed.code} label={fixed.name} size={22} />
+          <span className="t2-auth-dial" dir="ltr">+{dial ?? ""}</span>
+        </span>
       ) : (
         <span className="t2-auth-dial">+{dial ?? ""}</span>
       )}

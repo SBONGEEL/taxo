@@ -112,6 +112,8 @@ function endsLine(until: string): string {
 
 export function SubscriptionT2Screen() {
   const s = useSubscriptionScreen();
+  // **«سفير TAXO»**: اشتراكٌ دائم — لا عدّادَ ولا خططَ ولا تجديد (SPEC §١١١-د/٤)
+  const ambassador = s.subscription?.ambassador === true;
   const navigate = useNavigate();
   const { profile } = useDriver();
   // **نظامُ الدفع الجديد** (SPEC §٧٣-هـ) — خيارٌ في ورقة التأكيد حيث مفتاحُه مشتعلٌ وحدَه
@@ -229,15 +231,19 @@ export function SubscriptionT2Screen() {
         <div className="t2-sub-now">
           <div className="t2-sub-now-top">
             <span className="t2-sub-now-name">
-              {s.subscription?.is_active && current
+              {ambassador
+                ? tr("سفير TAXO")
+                : s.subscription?.is_active && current
                 ? current.plan_name
                 : copy.title}
             </span>
-            <span className={chip.tone ? `t2-chip ${chip.tone}` : "t2-chip"}>
-              {chip.text}
+            <span className={ambassador ? "t2-chip ok" : chip.tone ? `t2-chip ${chip.tone}` : "t2-chip"}>
+              {ambassador ? tr("دائم") : chip.text}
             </span>
           </div>
-          {s.subscription?.is_active && until ? (
+          {ambassador ? (
+            <div className="t2-sub-now-left">{tr("اشتراكُك دائمٌ لا ينتهي — لا تجديدَ ولا دفع.")}</div>
+          ) : s.subscription?.is_active && until ? (
             <>
               <div className="t2-sub-now-left">{remainingLine(until, now)}</div>
               {elapsed !== null ? (
@@ -262,6 +268,7 @@ export function SubscriptionT2Screen() {
           </span>
         </div>
 
+        {ambassador ? null : (<>
         <div className="t2-section">{tr("باقتك القادمة")}</div>
         <div className="t2-sub-plans" role="radiogroup" aria-label={tr("الخطط")}>
           {plans.map((row) => {
@@ -366,6 +373,7 @@ export function SubscriptionT2Screen() {
             ? tr("الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")
             : tr("الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق.")}
         </p>
+        </>)}
 
         {s.history.length > 0 ? (
           <>
@@ -407,6 +415,7 @@ export function SubscriptionT2Screen() {
 
       {/* **الذيلُ مثبَّتٌ أسفلَ الشاشة كما في اللوحة** — والزرُّ يفتح التأكيدَ لا يخصم: المبلغُ فيه ما يُخصم فعلاً،
           والقناةُ تُختار هناك كما هي اليوم */}
+      {ambassador ? null : (
       <div className="t2-sub-foot">
         <button
           type="button"
@@ -427,6 +436,7 @@ export function SubscriptionT2Screen() {
           </p>
         ) : null}
       </div>
+      )}
 
       {s.confirming ? (
         // **ورقةُ التأكيد نفسُها** — بألوان الهوية عبر جسر الألوان القائمة (`.t2-legacy`)

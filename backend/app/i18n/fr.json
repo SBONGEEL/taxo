@@ -976,5 +976,20 @@
  "الهدفُ غيرُ موجود": "Objectif introuvable",
  "المبلغُ بخانات عملة الدولة": "Le montant doit respecter les décimales de la devise du pays",
  "سقفُ الميزانيّة لا يقلّ عن مكافأةٍ واحدة": "Le plafond du budget ne peut pas être inférieur à une prime",
- "النهايةُ بعد البداية": "La fin doit être après le début"
+ "النهايةُ بعد البداية": "La fin doit être après le début",
+ "أُضيفت أيّامٌ إلى اشتراكك": "Des jours ont été ajoutés à votre abonnement",
+ "تبدأ بعد اشتراكك القائم — افتح «اشتراكي» لترى حتى متى": "Ils commencent après votre abonnement en cours — ouvrez « Mon abonnement » pour voir jusqu’à quand.",
+ "أنت الآن سفير TAXO": "Vous êtes désormais ambassadeur TAXO",
+ "اشتراكك دائمٌ لا ينتهي — شكراً لك": "Votre abonnement est permanent et n’expire pas — merci.",
+ "أُلغي اشتراكك الدائم": "Votre abonnement permanent a été annulé",
+ "لم تعد سفير TAXO — افتح «اشتراكي» لترى حالَ اشتراكك": "Vous n’êtes plus ambassadeur TAXO — ouvrez « Mon abonnement » pour voir son état.",
+ "اشتراكك دائمٌ (سفير TAXO) — لا يحتاج شراءً": "Votre abonnement est permanent (ambassadeur TAXO) — aucun achat n’est nécessaire.",
+ "اختر «عدد أيام» أو «دائم» — لا الاثنين": "Choisissez « nombre de jours » ou « permanent » — pas les deux.",
+ "عدد الأيام بين {0} و{1}": "Le nombre de jours doit être entre {0} et {1}.",
+ "«عدد أيام» و«سفير TAXO» غير مفعّلين لهذه الدولة": "« Nombre de jours » et « ambassadeur TAXO » ne sont pas activés pour ce pays.",
+ "اكتب المبلغ المقبوض فعلاً — أو صفراً للهديّة": "Saisissez le montant réellement encaissé — ou zéro pour un cadeau.",
+ "لا اشتراكَ دائمَ لهذا الكبتن": "Ce chauffeur n’a pas d’abonnement permanent.",
+ "منحُ الاشتراك الدائم ونزعُه للمالك وحدَه": "Seul le propriétaire peut accorder ou retirer l’abonnement permanent.",
+ "شُحنت محفظتك ببطاقة TAXO": "Votre portefeuille a été rechargé avec une carte TAXO",
+ "الرصيدُ الجديد في محفظتك الآن": "Le nouveau solde est dans votre portefeuille."
 }

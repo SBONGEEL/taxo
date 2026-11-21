@@ -76,6 +76,8 @@ async def start_subscription(
     )
     await require_cliq_manual_enabled(session, owner.country_code)
     subscriptions_service.require_purchasable(driver)
+    # **لا شراءَ فوق الدائم** (SPEC §١١١-د/٤) — قبل فتح الطلب، فلا مالَ يُحوَّل ثمّ يُرفض
+    await subscriptions_service.require_no_permanent(session, driver.id)
 
     offer = await offers.resolve(session, driver=driver, plan=plan)
     # **الثمنُ من بيته الواحد مقرَّباً** (SPEC §٧٠-ج/٥) — نفسُ ما يفتح به بابُ البطاقة، وفرقُه يُكتب عند التفعيل

@@ -441,6 +441,8 @@ async def _prepare(
 
         driver = await _driver_of(session, owner)
         subscriptions.require_purchasable(driver)
+        # **لا شراءَ فوق الدائم** (SPEC §١١١-د/٤) — قبل أن يُطلب مال
+        await subscriptions.require_no_permanent(session, driver.id)
         plan = await subscriptions.get_plan(session, plan_id, owner.country_code, held_ok=bool(owner.is_test))
         offer = await offers.resolve(session, driver=driver, plan=plan, for_update=False)
         price = await subscriptions.price_to_pay(session, plan, offer)

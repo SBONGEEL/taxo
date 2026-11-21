@@ -339,6 +339,8 @@ export function usePhoneCountry(override?: CountryCode): {
   /** `null` حين لا تُنشر الدولةُ في `GET /config` — **ولا افتراضَ ثابت**. */
   dialCode: string | null;
   nationalLength: number;
+  /** بادئاتُ الجوّال المقبولة — `[]` حين لا تُنشر فلا يُفحص البدء. */
+  prefixes: string[];
 } {
   const { config } = useConfig();
   const country = override ?? config?.default_country_code ?? "JO";
@@ -356,6 +358,7 @@ export function usePhoneCountry(override?: CountryCode): {
     country,
     dialCode: entry?.dial_code ?? null,
     nationalLength: entry?.national_number_length ?? 9,
+    prefixes: entry?.mobile_prefixes ?? [],
   };
 }
 

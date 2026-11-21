@@ -2042,5 +2042,10 @@
   "أحِل صديقك": "Parrainez un ami",
   "سيارتك": "Votre voiture",
   "لا اشتراك ساري": "Aucun abonnement actif",
-  "اشتراكك ساري — يتبقّى {0} أيام": "Votre abonnement est actif — {0} jours restants"
+  "اشتراكك ساري — يتبقّى {0} أيام": "Votre abonnement est actif — {0} jours restants",
+  "رصيدك الآن:": "Votre solde maintenant :",
+  "سفير TAXO": "Ambassadeur TAXO",
+  "دائم": "Permanent",
+  "دائم · سفير TAXO": "Permanent · Ambassadeur TAXO",
+  "اشتراكُك دائمٌ لا ينتهي — لا تجديدَ ولا دفع.": "Votre abonnement est permanent — aucun renouvellement ni paiement."
 }

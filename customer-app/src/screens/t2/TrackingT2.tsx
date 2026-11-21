@@ -642,7 +642,11 @@ export function TrackingSheetT2({
         <div className="t2-trk-driver">
           <DriverAvatar rideId={ride.id} name={driver.name} className="t2-trk-avatar" />
           <div className="t2-trk-dmain">
-            <div className="t2-trk-dname lg">{driver.name}</div>
+            <div className="t2-trk-dname lg">
+              {driver.name}
+              {/* **«سفير TAXO»** (SPEC §١١١-د/٤) — شارةٌ بجانب الاسم لا بدلَه */}
+              {driver.ambassador ? <span className="t2-chip ok t2-trk-amb">{tr("سفير TAXO")}</span> : null}
+            </div>
             {/* **ولا «★ 0.00» لكبتنٍ لم يُقيَّم بعد** (`ratedAverage`، §٦٢-ب/٤٩) — والسطرُ كلُّه يغيب إن لم يبقَ فيه شيء */}
             {ratedAverage(driver.rating_avg) || driverRides ? (
               <div className={driverRides ? "t2-trk-rating with-rides" : "t2-trk-rating"}>

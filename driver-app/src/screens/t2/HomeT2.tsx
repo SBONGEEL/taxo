@@ -619,6 +619,7 @@ export function HomeT2Screen() {
           skin={activeSkin}
           covered={covered}
           daysRemaining={subscription ? subscription.days_remaining : null}
+          ambassador={subscription?.ambassador === true}
           level={level}
           storeOn={skinsOn}
           onOpenVehicle={() => navigate("/account/vehicle")}

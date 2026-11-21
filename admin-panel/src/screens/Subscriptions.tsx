@@ -28,6 +28,7 @@ import {
   listDrivers,
   listPlans,
   listSubscriptions,
+  previewSubscription,
   previewSubscriptionCancellation,
   recordSubscription,
   updatePlan,
@@ -39,6 +40,7 @@ import type {
   Subscription,
   SubscriptionDurationType,
   SubscriptionPlan,
+  SubscriptionPreview,
   SubscriptionStatus,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
@@ -50,6 +52,7 @@ import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { MoneyField } from "@/components/ui/Inputs";
 import { Picker, type PickerOption } from "@/components/ui/Picker";
+import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, currencyOf, day, days, daysUntil, money } from "@/lib/format";
@@ -57,6 +60,13 @@ import { useSession } from "@/lib/session";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { digits } from "@/lib/utils";
+
+/** أرقامٌ عربيّةٌ أو فارسيّةٌ تُكتب في حقل الأيّام ⇐ لاتينيّة (§٢٠). */
+function toLatin(text: string): string {
+  return text
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+}
 
 const DURATION_LABEL: Record<SubscriptionDurationType, string> = {
   daily: "يومية",
@@ -236,7 +246,11 @@ export function SubscriptionsScreen() {
                 <span className="text-muted">{day(row.starts_at)}</span>
 
                 <span className="text-muted">
-                  {DURATION_LABEL[row.duration_type]}
+                  {row.is_permanent
+                    ? "دائم · سفير TAXO"
+                    : row.custom_days
+                      ? `${digits(String(row.custom_days))} يوماً`
+                      : DURATION_LABEL[row.duration_type]}
                 </span>
 
                 <span className="text-muted">{day(row.expires_at)}</span>
@@ -543,8 +557,23 @@ function RecordModal({
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤): خلف مفتاح الدولة، والدائمُ للمالك وحدَه
+  const { user } = useSession();
+  const isOwner = Boolean(user?.roles?.includes("owner"));
+  const giftsOn = useCountryConfig(country)?.features.subscription_gifts === true;
+  const [mode, setMode] = useState<"plan" | "days" | "permanent">("plan");
+  const [daysText, setDaysText] = useState("");
+  // **ورقةُ التأكيد قبل الكتابة** — من الخلفية: من متى إلى متى، والمقترَحُ تلميحاً لا يُفرض
+  const [preview, setPreview] = useState<SubscriptionPreview | null>(null);
 
   const plan = plans.find((row) => row.id === planId) ?? null;
+  const gift = mode !== "plan";
+  const daysValue = mode === "days" ? Number(daysText) : null;
+  const daysValid = mode !== "days" || (Number.isInteger(daysValue) && (daysValue ?? 0) >= 1 && (daysValue ?? 0) <= 365);
+  // **المبلغُ إلزاميٌّ صراحةً مع الأيّام والدائم** (صفرٌ للهديّة) — لا يُفترض من الباقة
+  const amountReady = !gift || amount.trim() !== "";
+  const ready = driver !== null && planId !== "" && daysValid && amountReady;
+  const stale = () => setPreview(null);
 
   // **المعتمدون وحدهم**: عدُّ الأيام يبدأ فوراً، فبيعُه لمن ينتظر الموافقة
   // يحرق أيامه في الانتظار (القسم 8). **والمرشِّحُ في النداء لا بعده** — قائمةٌ
@@ -610,11 +639,49 @@ function RecordModal({
           />
         </div>
 
+        {giftsOn ? (
+          <div className="mt-14 grid gap-12 md:grid-cols-2">
+            <Select
+              label="نوع التسجيل"
+              value={mode}
+              onChange={(event) => {
+                setMode(event.target.value as "plan" | "days" | "permanent");
+                stale();
+              }}
+            >
+              <option value="plan">باقة بمدّتها</option>
+              <option value="days">عدد أيام</option>
+              {isOwner ? <option value="permanent">دائم · سفير TAXO</option> : null}
+            </Select>
+            {mode === "days" ? (
+              <Field
+                label="عدد الأيام (1–365) — تبدأ بعد اشتراكه القائم"
+                value={daysText}
+                inputMode="numeric"
+                dir="ltr"
+                maxLength={3}
+                onChange={(event) => {
+                  // **أرقامٌ لاتينيّة وحدَها** — والعربيّةُ تُحوَّل لا تُمحى
+                  setDaysText(toLatin(event.target.value).replace(/[^0-9]/g, ""));
+                  stale();
+                }}
+              />
+            ) : mode === "permanent" ? (
+              <p className="self-end text-11.5 leading-note text-muted">
+                دائمٌ يبدأ الآن ولا ينتهي، ولا يُخصم منه مالٌ بعدها — ويظهر للراكب والكبتن «سفير TAXO». النزعُ من «السفراء والمميّزون».
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-14 grid gap-12 md:grid-cols-2">
           <Select
             label="الباقة"
             value={planId}
-            onChange={(event) => setPlanId(event.target.value)}
+            onChange={(event) => {
+              setPlanId(event.target.value);
+              stale();
+            }}
           >
             <option value="">اختر باقة</option>
             {plans.map((plan) => (
@@ -643,7 +710,11 @@ function RecordModal({
             // «سعر الباقة» بل **المبلغَ بعد خصم العرض** إن انطبق عرضٌ على هذا
             // الكبتن (قِيس: فارغاً أعطى ١٫٢٠٠ لا ١٫٥٠٠). ونصٌّ يصف سلوكاً
             // انتهى يجعل المشرفَ يحصّل رقماً ويسجّل غيرَه.
-            label="المبلغ (اتركه فارغاً بالمبلغ المستحق بعد الخصم)"
+            label={
+              gift
+                ? "المبلغ المقبوض فعلاً — أو 0 للهديّة (إلزاميّ)"
+                : "المبلغ (اتركه فارغاً بالمبلغ المستحق بعد الخصم)"
+            }
             value={amount}
             onChange={setAmount}
             // **عملةُ الباقة المختارة لا عملةُ الشاشة**: الباقةُ تحمل عملتَها،
@@ -665,26 +736,90 @@ function RecordModal({
           الدفترُ أو المزود، فلا شيء فيهما ينتظر إنساناً.
         </p>
 
-        <div className="mt-16">
+        {preview ? (
+          <div className="mt-14 rounded-14 border border-line bg-surface-2 px-14 py-12 text-12.5">
+            <div className="flex items-baseline justify-between gap-10">
+              <span className="text-muted">من</span>
+              <span className="font-semibold text-ink">{day(preview.starts_at)}</span>
+            </div>
+            <div className="mt-6 flex items-baseline justify-between gap-10">
+              <span className="text-muted">إلى</span>
+              <span className="font-semibold text-ink">
+                {mode === "permanent" ? "لا ينتهي · سفير TAXO" : day(preview.expires_at)}
+              </span>
+            </div>
+            {preview.suggested_amount !== null ? (
+              <div className="mt-6 flex items-baseline justify-between gap-10">
+                <span className="text-muted">المقترَح (تلميحٌ لا يُفرض)</span>
+                <button
+                  type="button"
+                  className="font-semibold text-ink underline"
+                  onClick={() => setAmount(preview.suggested_amount ?? "")}
+                >
+                  {money(preview.suggested_amount, preview.currency)}
+                </button>
+              </div>
+            ) : null}
+            {preview.permanent_exists ? (
+              <p className="mt-8 text-11.5 text-danger">لهذا الكبتن اشتراكٌ دائمٌ ساري — لا يُسجَّل فوقه شيء.</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-16 flex gap-10">
           <Button
             size="md"
-            disabled={busy || driver === null || planId === ""}
+            variant="secondary"
+            disabled={busy || driver === null || planId === "" || !daysValid}
             onClick={() => {
               if (driver === null) return;
               setBusy(true);
+              previewSubscription({
+                driver_id: driver.id,
+                plan_id: planId,
+                days: mode === "days" ? daysValue : null,
+                permanent: mode === "permanent",
+              })
+                .then((found) => {
+                  setPreview(found);
+                  setError(null);
+                })
+                .catch((caught) =>
+                  setError(caught instanceof ApiError ? caught.message : "تعذّرت المعاينة"),
+                )
+                .finally(() => setBusy(false));
+            }}
+          >
+            مراجعة
+          </Button>
+          <Button
+            size="md"
+            // **لا تسجيلَ قبل أن تُقرأ الورقة** — زرٌّ يُضغط قبل المعاينة توقيعٌ على ورقةٍ بيضاء
+            disabled={busy || !ready || preview === null || preview.permanent_exists}
+            onClick={() => {
+              if (driver === null || preview === null) return;
+              const from = preview.starts_at;
+              setBusy(true);
               const who = driver.label;
-              const which = plan?.name ?? "";
+              const which =
+                mode === "permanent"
+                  ? "«سفير TAXO» الدائم"
+                  : mode === "days"
+                    ? `${digits(daysText)} يوماً`
+                    : plan?.name ?? "";
               recordSubscription({
                 driver_id: driver.id,
                 plan_id: planId,
                 method,
                 amount_paid: amount.trim() || null,
                 reference: reference.trim() || null,
+                days: mode === "days" ? daysValue : null,
+                permanent: mode === "permanent",
               })
                 // **يقول ماذا وقع بالضبط لا «تمّ بنجاح»** (§39٫١٢٫٥): من،
-                // وأيُّ باقة، وأنّ السريانَ بدأ الآن لا عند تفعيلٍ لاحق.
+                // وأيُّ باقة، ومتى يبدأ — من الورقة نفسِها.
                 .then(() =>
-                  onDone(`سُجّل اشتراكُ ${which} لـ${who} — بدأ سريانه الآن`),
+                  onDone(`سُجّل ${which} لـ${who} — من ${day(from)}`),
                 )
                 .catch((caught) => {
                   setError(
@@ -696,7 +831,7 @@ function RecordModal({
                 });
             }}
           >
-            تسجيل
+            تأكيد التسجيل
           </Button>
         </div>
       </div>

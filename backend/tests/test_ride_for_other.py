@@ -218,6 +218,17 @@ async def test_own_number_is_not_another_person_and_a_bad_number_is_refused(
     assert mine.status_code == 422 and mine.json()["code"] == "invalid_input"
     bad = await client.post("/rides", json=_body(phone="12345678"), headers=rider)
     assert bad.status_code == 422 and bad.json()["code"] == "invalid_input"
+    # **رقمُ دولةٍ أخرى يُرفض بعلّته** (أمرُ المالك ٢٠٢٦-١١-٢١): رقمُ الطرف الثاني من دولة الحساب وحدَها — ولا «غيرُ صالح»
+    # عن رقمٍ صالحٍ في بلده. **وبالصيغ الثلاث**: الدوليّةُ بـ«+» وبـ«00»، والمحلّيةُ الليبيّةُ في حسابٍ أردنيّ
+    for foreign in ("+218912345678", "00218912345678", "0912345678"):
+        refused = await client.post("/rides", json=_body(phone=foreign), headers=rider)
+        assert refused.status_code == 422, (foreign, refused.text)
+        assert "الرقم يجب أن يكون من نفس دولة حسابك" in refused.json()["message"], (foreign, refused.text)
+    # **وتنظيفُ مفتاح الدولة نفسِها يبقى**: «+962» و«00962» والصفرُ البادئ رقمٌ واحد
+    for own_country in ("+962 79 111 2222", "00962791112222"):
+        ok = await client.post("/rides", json=_body(phone=own_country), headers=rider)
+        assert ok.status_code == 201, (own_country, ok.text)
+        await client.post(f"/rides/{ok.json()['id']}/cancel", json={"reason": "تجربة"}, headers=rider)
 
 
 async def test_the_track_link_is_the_requesters_shows_the_captain_and_stops_at_the_end(

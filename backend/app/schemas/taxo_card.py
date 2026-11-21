@@ -35,6 +35,8 @@ class TaxoCardRedeemedOut(BaseModel):
     serial: str
     amount: Decimal
     currency: Currency
+    #: **الرصيدُ الجديد** (أمرُ المالك ٢٠٢٦-١١-٢١) — من الدفتر لا من حسابٍ في الواجهة
+    balance_after: Decimal | None = None
 
 
 class CardDenominationOut(BaseModel):

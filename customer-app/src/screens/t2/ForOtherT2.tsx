@@ -12,14 +12,14 @@ import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { createTrackLink } from "@/api/endpoints";
-import type { CountryCode, CountryConfig, Ride, RideForOther, RidePayer } from "@/api/types";
+import type { CountryCode, Ride, RideForOther, RidePayer } from "@/api/types";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig, usePhoneCountry } from "@/lib/config";
 import { PAYER_LINE, shareTrackLink, trackUrl, webOrigin } from "@/lib/for-other";
-import { COUNTRY_LABEL, looksComplete, toE164, toNational } from "@/lib/phone";
+import { COUNTRY_LABEL, cleanSecondPhone, looksComplete } from "@/lib/phone";
 import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
-import { AuthBlock, AuthChoice, AuthInput, AuthPhone, Icon } from "@/taxo2";
+import { AuthBlock, AuthInput, AuthPhone, Icon } from "@/taxo2";
 
 import { SheetModalT2 } from "./MoneyT2";
 import "./t2.css";
@@ -85,90 +85,88 @@ export function ForOtherOptionT2({
   );
 }
 
-/** «+962791112222» ⇐ دولتُه ورقمُه الوطنيّ بمفاتيح `/config` — **لتعديل ما كُتب** لا لتخمين دولة. */
-function splitPhone(phone: string, countries: CountryConfig[]): { code: CountryCode; national: string } | null {
-  const entry = countries.find((item) => phone.startsWith(`+${item.dial_code}`));
-  return entry ? { code: entry.country_code, national: phone.slice(entry.dial_code.length + 1) } : null;
-}
-
-/** **رقمُ طرفٍ آخرَ بدولته** — حالُ حقل التحويل نفسِه (`WalletTransfer`): الدولةُ ومفتاحُها من `/config`، والرقمُ الوطنيّ، **وE.164
- *  حين يكتمل**. **يقرؤه بابان**: الراكبُ الفعليُّ هنا، ومستلمُ الطرد (`ParcelT2`) — فلا يفترق حقلا رقمٍ في دولةٍ ولا في طول.
- *  و`initial` رقمٌ كُتب قبلُ (E.164) يُفكّ لتعديله. */
+/** **رقمُ شخصٍ آخر — من دولة حسابك وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١، SPEC §٦٣-ج/١): لا زرَّ دولة — **الدولةُ دولةُ الحساب ولا
+ *  تُغيَّر**، وعلمُها ومفتاحُها ثابتان أمام الحقل. **يقرؤه كلُّ بابٍ يُكتب فيه رقمُ طرفٍ ثانٍ**: الراكبُ الفعليّ هنا، والمستلمُ
+ *  والمُسلِّمُ (`ParcelT2`)، والمحوَّلُ إليه (`WalletTransfer`) — فلا يفترق حقلا رقمٍ في دولةٍ ولا في طولٍ ولا في نصِّ رفض.
+ *  و`initial` رقمٌ كُتب قبلُ (E.164) يُنظَّف كما لو كُتب الآن. **والتسجيلُ خارجه**: يختار دولتَه كما كان. */
 export function usePhoneDraft(initial: string | null) {
   const { user } = useSession();
   const { config } = useConfig();
-  const listed = config?.countries ?? [];
-  const held = initial ? splitPhone(initial, listed) : null;
-  const [code, setCode] = useState<CountryCode>(held?.code ?? user?.country_code ?? "JO");
-  const { dialCode, nationalLength } = usePhoneCountry(code);
-  const [phone, setPhone] = useState(held?.national ?? "");
-  const complete = dialCode !== null && looksComplete(phone, nationalLength);
+  const code: CountryCode = user?.country_code ?? config?.default_country_code ?? "JO";
+  const { dialCode, nationalLength, prefixes } = usePhoneCountry(code);
+  // **كلُّ مفاتيح الدول المنشورة** — لا المفتوحةُ وحدَها: رقمٌ ليبيٌّ يُعرف ليبيّاً ولو كان سوقُه مغلقاً
+  const others = (config?.countries ?? []).map((entry) => entry.dial_code).filter((dial) => dial !== dialCode);
+  const [state, setState] = useState(() =>
+    dialCode === null ? { national: "", foreign: false } : cleanSecondPhone(initial ?? "", dialCode, others, nationalLength),
+  );
+  const badStart =
+    !state.foreign && state.national.length > 0 && prefixes.length > 0 && !prefixes.some((p) => state.national.startsWith(p));
+  const complete = dialCode !== null && !state.foreign && !badStart && looksComplete(state.national, nationalLength);
+  // **النصُّ بلفظ المالك**، والخلفيةُ ترفض بالحرف نفسِه (`ride_for_other.FOREIGN_PHONE`) — هذا يقوله قبل الإرسال لا بدلَها
+  const problem =
+    dialCode === null
+      ? tr("مفتاحُ دولتك غير متاح الآن — أعد المحاولة بعد قليل.")
+      : state.foreign
+        ? tr("الرقم يجب أن يكون من نفس دولة حسابك")
+        : badStart
+          ? tr("رقمُ الجوّال في {0} يبدأ بـ{1}", { 0: COUNTRY_LABEL[code], 1: prefixes.join(tr(" أو ")) })
+          : null;
   return {
-    // **المفتوحةُ وحدَها تُختار** (SPEC §٧٤-أ/٢) — `/config` ينشر المغلقةَ للدخول، والفكُّ أعلاه يقرأ الكلَّ لرقمٍ كُتب قبل
-    countries: listed.filter((entry) => entry.status === "open").map((entry) => entry.country_code),
     code,
-    setCode,
     dialCode,
     nationalLength,
-    phone,
-    setPhone,
+    prefixes,
+    phone: state.national,
+    setPhone: (input: string) => {
+      if (dialCode !== null) setState(cleanSecondPhone(input, dialCode, others, nationalLength));
+    },
     complete,
-    full: complete && dialCode !== null ? toE164(phone, dialCode) : null,
+    problem,
+    full: complete && dialCode !== null ? `+${dialCode}${state.national}` : null,
   };
 }
 
-/** **حقلا الرقم كما في شاشة التحويل** — الدولةُ زرّان حين تُنشر دولتان، والرقمُ بمفتاحه أمامه. **وحقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ
- *  خاطئ** — قاعدةُ شاشة التحويل بعينها. والخطأُ نصٌّ يمرّره صاحبُ الورقة (رقمُه هو · مفتاحٌ غائب). */
+/** **حقلُ رقمِ الطرف الثاني** — علمُ دولة الحساب ومفتاحُها ثابتان أمامه (`AuthPhone` بـ`fixed`)، **ولا زرَّ دولة**. وحقلٌ معطَّلٌ
+ *  خيرٌ من رقمٍ بمفتاحٍ خاطئ — قاعدةُ شاشة التحويل بعينها. والخطأُ نصٌّ يمرّره صاحبُ الورقة (`draft.problem` أوّلاً، ثمّ ما يخصّه). */
 export function PhoneFieldsT2({
   draft,
   id,
   label,
   error,
   valid,
+  disabled = false,
 }: {
   draft: ReturnType<typeof usePhoneDraft>;
   id: string;
   label: string;
   error: string | null;
   valid: boolean;
+  disabled?: boolean;
 }) {
-  const { countries, code, setCode, dialCode, nationalLength, phone, setPhone } = draft;
+  const { code, dialCode, nationalLength, prefixes, phone, setPhone } = draft;
   return (
-    <>
-      {/* **دولتان أو أكثر ⇒ تُختار دولةُ الرقم** — كشاشة التحويل (`AuthChoice`) */}
-      {countries.length > 1 ? (
-        <AuthBlock label={tr("دولة الرقم")}>
-          <AuthChoice
-            label={tr("دولة الرقم")}
-            value={code}
-            options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
-            onChange={setCode}
-          />
-        </AuthBlock>
-      ) : null}
-      <AuthBlock label={label} htmlFor={id} error={error}>
-        <AuthPhone
-          id={id}
-          type="tel"
-          autoComplete="off"
-          dial={dialCode}
-          value={phone}
-          maxLength={nationalLength}
-          placeholder={"7".padEnd(nationalLength, "X")}
-          valid={valid}
-          disabled={dialCode === null}
-          invalid={Boolean(error)}
-          onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
-        />
-      </AuthBlock>
-    </>
+    <AuthBlock label={label} htmlFor={id} error={error}>
+      <AuthPhone
+        id={id}
+        type="tel"
+        autoComplete="off"
+        dial={dialCode}
+        fixed={{ code, name: COUNTRY_LABEL[code] }}
+        value={phone}
+        placeholder={(prefixes[0] ?? "").padEnd(nationalLength, "X")}
+        valid={valid}
+        disabled={disabled || dialCode === null}
+        invalid={Boolean(error)}
+        onChange={(event) => setPhone(event.target.value)}
+      />
+    </AuthBlock>
   );
 }
 
 /** **ورقةُ الراكب الفعليّ** — اسمُه ورقمُه ومن يدفع، **وسطرُ الحفظ والمحو** بنصّ الوعد (ثلاثون يوماً، `PASSENGER_RETENTION_DAYS`).
  *
- *  **والرقمُ بحقل التحويل نفسِه** (`WalletTransfer`): الدولةُ زرّان حين تُنشر دولتان، والمفتاحُ أمام الرقم من `/config` —
- *  **فيُكتب رقمٌ أردنيٌّ أو ليبيٌّ** أيّاً كانت دولةُ الحساب، ويُرسل E.164. **ورقمُه هو يُقال قبل الإرسال** بنصِّ الخلفية نفسِه:
+ *  **والرقمُ من دولة الحساب وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١ — كان يُكتب رقمٌ أردنيٌّ أو ليبيٌّ أيّاً كانت دولةُ الحساب):
+ *  علمُها ومفتاحُها ثابتان أمام الحقل، ويُرسل E.164. **ورقمُه هو يُقال قبل الإرسال** بنصِّ الخلفية نفسِه:
  *  الخلفيةُ هي الحارس، وهذا يمنع رحلةً ترتدّ لا يستبدل رفضَها. */
 export function ForOtherSheetT2({
   initial,
@@ -185,19 +183,14 @@ export function ForOtherSheetT2({
   const { user } = useSession();
   // **حالُ الرقم من بيته** (`usePhoneDraft`) — ورقةُ الطرد تقرؤه كذلك
   const phoneDraft = usePhoneDraft(initial?.phone ?? null);
-  const { dialCode, complete, full } = phoneDraft;
+  const { complete, full } = phoneDraft;
   const [name, setName] = useState(initial?.name ?? "");
   const [payer, setPayer] = useState<RidePayer>(
     initial?.payer ?? (requesterPayable ? "requester" : "passenger_cash"),
   );
 
   const own = full !== null && full === user?.phone;
-  const phoneError =
-    dialCode === null
-      ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
-      : own
-        ? tr("هذا رقمُك — اطلب الرحلةَ لنفسك")
-        : null;
+  const phoneError = phoneDraft.problem ?? (own ? tr("هذا رقمُك — اطلب الرحلةَ لنفسك") : null);
   const ready = name.trim().length >= 2 && full !== null && !own && (payer !== "requester" || requesterPayable);
 
   const payers: Array<{ value: RidePayer; icon: string; label: string; hint: string; off: boolean }> = [
@@ -278,6 +271,11 @@ export function ForOtherSheetT2({
         })}
       </div>
 
+      {/* **سطرُ الخصوصيّة** (أمرُ المالك ٢٠٢٦-١١-٢١) — وهو ما تفعله الخلفيةُ فعلاً (`PASSENGER_VISIBLE`) */}
+      <p className="t2-note t2-fo-keep">
+        <Icon name="visibility" />
+        {tr("يرى الكبتنُ الرقمَ أثناء هذه الرحلة فقط، ويُخفى عنه بعد انتهائها.")}
+      </p>
       <p className="t2-note t2-fo-keep">
         <Icon name="lock" />
         {tr("نحفظ اسمه ورقمه لهذه الرحلة وحدها، ونحذفهما بعد ثلاثين يوماً.")}

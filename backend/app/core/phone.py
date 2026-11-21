@@ -30,6 +30,12 @@ def dial_code_for(country_code: CountryCode) -> str:
     return _COUNTRY_RULES[country_code][0]
 
 
+def mobile_prefixes_for(country_code: CountryCode) -> tuple[str, ...]:
+    """**بادئاتُ الجوّال المقبولة** — تُنشر في `GET /config` ليقول حقلُ رقمِ شخصٍ آخر «يبدأ بـ7» قبل الإرسال
+    (أمرُ المالك ٢٠٢٦-١١-٢١)، **من الجدول نفسِه** فلا يكتبها تطبيقٌ من عنده."""
+    return _COUNTRY_RULES[country_code][2]
+
+
 def national_length_for(country_code: CountryCode) -> int:
     """طول الرقم الوطني بلا الصفر البادئ — تحدّ به الواجهةُ طولَ الحقل."""
     return _COUNTRY_RULES[country_code][1][0]

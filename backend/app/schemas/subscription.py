@@ -56,6 +56,28 @@ class AdminSubscriptionCreate(BaseModel):
         default=None, ge=0, max_digits=12, decimal_places=3
     )
     reference: str | None = Field(default=None, max_length=120)
+    # **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) — واحدٌ منهما أو لا شيء، والمبلغُ معهما يُكتب صراحةً (ما قُبض أو صفر)
+    days: int | None = Field(default=None, ge=1, le=365)
+    permanent: bool = False
+
+
+class AdminSubscriptionPreviewIn(BaseModel):
+    """معاينةُ «تسجيل اشتراك» قبل التأكيد — بلا أثر."""
+
+    driver_id: uuid.UUID
+    plan_id: uuid.UUID
+    days: int | None = Field(default=None, ge=1, le=365)
+    permanent: bool = False
+
+
+class AdminSubscriptionPreviewOut(BaseModel):
+    """ورقةُ التأكيد: من متى إلى متى، والمقترَحُ تلميحاً (`null` للدائم)، وهل له دائمٌ ساري."""
+
+    starts_at: datetime
+    expires_at: datetime
+    suggested_amount: Decimal | None
+    currency: str
+    permanent_exists: bool
 
 
 class SubscriptionOut(BaseModel):
@@ -81,6 +103,9 @@ class SubscriptionOut(BaseModel):
     transaction_id: uuid.UUID | None
     reference: str | None
     created_at: datetime
+    # **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) — الدائمُ يُعرض «دائم» لا عددَ أيّام
+    custom_days: int | None = None
+    is_permanent: bool = False
 
     @field_serializer("plan_name")
     def _plan_in_language(self, value: str) -> str:
@@ -109,6 +134,8 @@ class SubscriptionOut(BaseModel):
             transaction_id=subscription.transaction_id,
             reference=subscription.reference,
             created_at=subscription.created_at,
+            custom_days=subscription.custom_days,
+            is_permanent=bool(subscription.is_permanent),
         )
 
 
@@ -125,6 +152,8 @@ class MySubscriptionOut(BaseModel):
     days_remaining: int
     current: SubscriptionOut | None
     plans: list[SubscriptionPlanOut]
+    # **«سفير TAXO»** (SPEC §١١١-د/٤): اشتراكُه دائمٌ لا ينتهي — فالشاشةُ تقول «دائم» بدل عدّاد الأيّام، ولا تعرض تجديداً
+    ambassador: bool = False
 
 
 class SubscriptionCliqPurchase(BaseModel):
@@ -200,3 +229,35 @@ class CancellationPlanOut(BaseModel):
     total_refund: Decimal
     currency: str
     lines: list[CancellationLineOut]
+
+
+# ══════════════════════ «السفراء والمميّزون» (SPEC §١١١-د/٤)
+
+
+class GiftRowOut(BaseModel):
+    """صفٌّ في صفحة «السفراء والمميّزون»: دائمٌ ساري أو «عدد أيام» لم ينقضِ — **ومعه ما يُردّ لو نُزع الآن** بقاعدة الإلغاء نفسِها."""
+
+    subscription_id: uuid.UUID
+    driver_id: uuid.UUID
+    name: str
+    phone: str
+    country_code: CountryCode
+    is_permanent: bool
+    custom_days: int | None
+    plan_name: str
+    starts_at: datetime
+    expires_at: datetime
+    amount_paid: Decimal
+    currency: Currency
+    payment_method: PaymentMethod
+    reference: str | None
+    created_at: datetime
+    revoke_refund: Decimal
+
+
+class AmbassadorRevokeOut(BaseModel):
+    """ما وقع بالنزع: الصفُّ المُلغى وما رُدّ (صفرٌ للهديّة)."""
+
+    subscription_id: uuid.UUID
+    refund: Decimal
+    currency: str

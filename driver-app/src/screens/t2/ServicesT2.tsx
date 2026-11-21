@@ -155,6 +155,8 @@ function tileTag(
   if (tile.status === "soon") return { text: tr("قريباً"), tone: "soon" };
   if (tile.is_new) return { text: tr("جديد"), tone: "new" };
   if (tile.destination === "/subscription" && subscription?.is_active) {
+    // **«سفير TAXO»**: دائمٌ لا عدّاد
+    if (subscription.ambassador) return { text: tr("دائم"), tone: "ok" };
     return { text: countDays(subscription.days_remaining), tone: "ok" };
   }
   // **«جدّد» حين لا يغطّيه اشتراكٌ فعلاً** — بعد أن يُقرأ اشتراكُه لا قبل (فلا تومض الشارةُ لحظةَ التحميل)

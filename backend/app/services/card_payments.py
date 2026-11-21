@@ -417,6 +417,8 @@ async def start_subscription(
     )
     await require_card_enabled(session, owner.country_code)
     subscriptions_service.require_purchasable(driver)
+    # **لا شراءَ فوق الدائم** (SPEC §١١١-د/٤) — قبل فتح الطلب، فلا مالَ يُقبض ثمّ يُرفض
+    await subscriptions_service.require_no_permanent(session, driver.id)
 
     # **الخصمُ يقع على مبلغ الطلب لا على صفّ الاشتراك** (البند ٥٤): الطلبُ هو
     # ما يُدفع، فمبلغٌ كاملٌ يُفتح به ثم صفٌّ مخفَّضٌ يُكتب بعده يحصّل من الكبتن

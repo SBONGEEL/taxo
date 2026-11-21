@@ -83,6 +83,11 @@ async def test_its_own_switch_decides_and_only_its_owner_pays_for_a_described_it
     assert cash_by_other.status_code == 422 and cash_by_other.json()["code"] == "invalid_input"
     no_item = await client.post("/rides", json=_body(item=None), headers=rider)
     assert no_item.status_code == 422 and "الغرض" in no_item.json()["message"]
+    # **رقمُ المُسلِّم من دولة الحساب وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١)
+    foreign = _body()
+    foreign["parcel"]["recipient_phone"] = "+218912345678"
+    refused = await client.post("/rides", json=foreign, headers=rider)
+    assert refused.status_code == 422 and "الرقم يجب أن يكون من نفس دولة حسابك" in refused.json()["message"], refused.text
     assert await _rides(session_factory) == 0
 
     created = await client.post("/rides", json=_body(), headers=rider)

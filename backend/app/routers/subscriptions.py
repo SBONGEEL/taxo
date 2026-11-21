@@ -124,6 +124,7 @@ async def get_my_subscription(
         ),
         # **مبنيّةٌ سلفاً بخصمها** — ولا يُعاد تحويلُها هنا فيُمحى الخصم
         plans=plans,
+        ambassador=bool(current is not None and current.is_permanent),
     )
 
 

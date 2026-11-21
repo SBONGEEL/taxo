@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from app.core.currency import COUNTRY_NAME, CURRENCY_LABEL, CURRENCY_NAME, currency_for_country, decimals_of
 from app.core.i18n import translate
-from app.core.phone import dial_code_for, national_length_for
+from app.core.phone import dial_code_for, mobile_prefixes_for, national_length_for
 from app.models.enums import CountryCode, FeatureKey
 from app.schemas.config import CountryConfigOut
 from app.services import campaigns, categories, markets, otp, settings_service, verification
@@ -74,6 +74,7 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         ride_categories=[categories.public_face(key, rows.get(key)) for key in keys],
         dial_code=dial_code_for(country),
         national_number_length=national_length_for(country),
+        mobile_prefixes=list(mobile_prefixes_for(country)),
         quiet_hours_start=(
             quiet.quiet_hours_start.strftime("%H:%M") if quiet else None
         ),

@@ -517,6 +517,8 @@ html.dark .t2:not(.t2-day),
 }
 .t2-auth-country .t2-icon { font-size: 18px; color: var(--t2-muted); }
 .t2-auth-country:disabled { cursor: default; opacity: 0.6; }
+/* **الثابتةُ لا تُضغط** (أمرُ المالك ٢٠٢٦-١١-٢١) — رقمُ شخصٍ آخر من دولة الحساب: الشكلُ نفسُه بلا سهمٍ ولا مؤشّر */
+.t2-auth-country.fixed { cursor: default; pointer-events: none; }
 /* الورقة */
 .t2-country {
   position: fixed;

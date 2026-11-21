@@ -12,7 +12,9 @@ from sqlalchemy import func, select, text
 
 from app.core.config import settings
 from app.models.audit import AdminAuditLog
-from app.models.enums import CountryCode, PaymentProviderKind, WalletTransactionType
+from app.models.enums import CountryCode, FeatureKey, PaymentProviderKind, WalletTransactionType
+from app.models.feature_flag import FeatureFlag
+from app.models.notification import UserNotification
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.taxo_card import CardGuessAlert, TaxoCard
 from app.models.wallet import WalletTransaction
@@ -40,6 +42,8 @@ async def card_market(session_factory) -> dict[str, uuid.UUID]:
         provider = PayMethod(country_code=CountryCode.DZ, kind=PaymentProviderKind.PURCHASE_CODE, code="taxo_card",
                                    name="بطاقة TAXO", enabled=True, sort_order=5)
         session.add(provider)
+        # **مفتاحُ البطاقات وحدَه يفتحها** (أمرُ المالك ٢٠٢٦-١١-٢١) — لا نظامُ الدفع العامّ
+        session.add(FeatureFlag(country_code=CountryCode.DZ, feature_key=FeatureKey.TAXO_CARDS.value, enabled=True))
         await session.commit()
         ids["cards"] = provider.id
     return ids
@@ -136,8 +140,12 @@ async def test_a_code_tops_up_once_under_its_own_name(client: AsyncClient, sessi
     # **بمسافاتٍ وحروفٍ صغيرة** — الرمزُ كما يُكتب بإصبع
     used = await redeem(client, rider["headers"], " " + code.lower().replace("-", " ") + " ")
     assert used.status_code == 200, used.text
-    assert used.json() == {"serial": "DZ-B0001-000001", "amount": "1000", "currency": "DZD"}
+    # **والرصيدُ الجديد في الردّ** (أمرُ المالك ٢٠٢٦-١١-٢١) — هو ما يقوله الدفترُ نفسُه في `/wallet/me`
+    assert used.json() == {"serial": "DZ-B0001-000001", "amount": "1000", "currency": "DZD", "balance_after": "1000"}
     assert await balance(client, rider["headers"]) == "1000"
+    async with session_factory() as session:
+        inbox = await session.scalar(select(UserNotification).where(UserNotification.kind == "taxo_card_topup"))
+        assert inbox is not None and inbox.data["amount"] == "1000"
     async with session_factory() as session:
         entry = await session.scalar(select(WalletTransaction).where(WalletTransaction.type == WalletTransactionType.TAXO_CARD))
         assert entry is not None and entry.amount == Decimal("1000.000")
@@ -255,9 +263,32 @@ async def test_cards_are_never_deleted(client: AsyncClient, session_factory, adm
                 await session.execute(text(f"DELETE FROM {table}"))
 
 
+async def test_the_country_switch_alone_opens_cards(client: AsyncClient, session_factory, admin_headers: dict) -> None:
+    """**`taxo_cards_enabled` مطفأً: لا شحنَ ولا طريقةَ في ورقة الشحن** — ولا يُعرف من الردّ شيءٌ عن الرمز، ولا تُحسب محاولة."""
+    await card_market(session_factory)
+    body = await issue(client, admin_headers, quantity=1)
+    rider = await rider_session(client, ALGERIAN_RIDER)
+    methods = (await client.get("/payment-requests/methods", headers=rider["headers"])).json()["methods"]
+    assert "purchase_code" in {m["kind"] for m in methods}
+    async with session_factory() as session:
+        await session.execute(text("UPDATE feature_flags SET enabled = false WHERE feature_key = 'taxo_cards_enabled'"))
+        await session.commit()
+    refused = await redeem(client, rider["headers"], body["codes"][0]["code"])
+    assert refused.status_code == 403 and refused.json()["code"] == "feature_disabled", refused.text
+    assert await balance(client, rider["headers"]) == "0"
+    methods = (await client.get("/payment-requests/methods", headers=rider["headers"])).json()["methods"]
+    assert "purchase_code" not in {m["kind"] for m in methods}
+
+
 async def test_jordan_cannot_use_a_card(client: AsyncClient, session_factory, admin_headers: dict) -> None:
     await card_market(session_factory)
     body = await issue(client, admin_headers, quantity=1)
+    # **البطاقاتُ مفتوحةٌ في الأردن أيضاً** — فالردُّ ردُّ الرمز لا ردُّ المفتاح
+    async with session_factory() as session:
+        session.add(PayMethod(country_code=CountryCode.JO, kind=PaymentProviderKind.PURCHASE_CODE, code="taxo_card",
+                              name="بطاقة TAXO", enabled=True, sort_order=5))
+        session.add(FeatureFlag(country_code=CountryCode.JO, feature_key=FeatureKey.TAXO_CARDS.value, enabled=True))
+        await session.commit()
     jordanian = await rider_session(client, RIDER)
     # **رمزٌ جزائريٌّ في يد أردنيّ رمزٌ غيرُ صحيح** — ولا يُعرف أنه موجودٌ في سوقٍ آخر
     refused = await redeem(client, jordanian["headers"], body["codes"][0]["code"])

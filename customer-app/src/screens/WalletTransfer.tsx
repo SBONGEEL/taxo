@@ -17,10 +17,9 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getWallet, lookupRecipient, transfer } from "@/api/endpoints";
-import type { CountryCode, TransferRecipient } from "@/api/types";
+import type { TransferRecipient } from "@/api/types";
 import { useGoBack } from "@/lib/back";
-import { useConfig, useCountryConfig, usePhoneCountry } from "@/lib/config";
-import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
+import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import {
@@ -30,24 +29,19 @@ import {
   newIdempotencyKey,
   subtractMoney,
 } from "@/lib/utils";
-import { AuthBlock, AuthChoice, AuthPhone, Icon } from "@/taxo2";
+import { Icon } from "@/taxo2";
+import { PhoneFieldsT2, usePhoneDraft } from "@/screens/t2/ForOtherT2";
 import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
 
 export function WalletTransferScreen() {
   const navigate = useNavigate();
   const goBack = useGoBack("/wallet");
   const { user } = useSession();
-  const { config } = useConfig();
   const country = useCountryConfig(user?.country_code);
 
-  // **ولا سوقٌ مكتوبٌ هنا** (SPEC §24): القائمةُ من `/config`، فالمخفيُّ لا
-  // يُعرض ولو كان لصاحب الحساب — والتحويلُ إليه بابٌ يفتحه إشعالُ المفتاح
-  // **ومنذ §٧٤ تُنشر المغلقةُ للدخول** — فالتحويلُ يصفّي المفتوحةَ هنا كما كان يصفّيها الإخفاء
-  const countries =
-    config?.countries.filter((entry) => entry.status === "open").map((entry) => entry.country_code) ?? [];
-  const [code, setCode] = useState<CountryCode>(user?.country_code ?? "JO");
-  const { dialCode, nationalLength } = usePhoneCountry(code);
-  const [phone, setPhone] = useState("");
+  // **رقمُ المحوَّل إليه من دولة حسابك وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١) — الحقلُ المشترك (`usePhoneDraft`) لا زرُّ دولة
+  const phoneDraft = usePhoneDraft(null);
+  const { phone, setPhone, complete } = phoneDraft;
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState<TransferRecipient | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,12 +107,7 @@ export function WalletTransferScreen() {
   }
 
   // **سببُ الخطأ تحت حقله** (§٦٢/٢٠): ما يردّه البحثُ عن المستلم يخصّ الرقم — فتحته؛ وما يردّه التحويلُ سطرٌ فوق الزرّ
-  const phoneError =
-    dialCode === null
-      ? tr("مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.")
-      : recipient
-        ? null
-        : error;
+  const phoneError = phoneDraft.problem ?? (recipient ? null : error);
   const currency = country?.currency;
   // **المبلغُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦) — والخلفيةُ تردّ غيرَه؛ هذا يقول الخطواتِ قبل الردّ
   const unit = roundingUnit(country);
@@ -146,35 +135,14 @@ export function WalletTransferScreen() {
         </div>
       ) : (
         <>
-          {/* **دولتان أو أكثر ⇒ تُختار الدولة** — زرّان لا قائمة، كشاشات الدخول (`AuthChoice`) */}
-          {countries.length > 1 ? (
-            <AuthBlock label={tr("الدولة")}>
-              <AuthChoice
-                label={tr("الدولة")}
-                value={code}
-                options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
-                onChange={setCode}
-              />
-            </AuthBlock>
-          ) : null}
-          <AuthBlock label={tr("رقم الهاتف")} htmlFor="transfer-phone" error={phoneError}>
-            <AuthPhone
-              id="transfer-phone"
-              type="tel"
-              autoComplete="tel"
-              dial={dialCode}
-              value={phone}
-              maxLength={nationalLength}
-              placeholder={"7".padEnd(nationalLength, "X")}
-              // **حقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ خاطئ**: بلا مفتاحٍ منشورٍ لهذه
-              // الدولة لا يُبنى رقمٌ أصلاً — فالبديلُ أن يُبنى بمفتاح سوقٍ آخر
-              disabled={busy || dialCode === null}
-              invalid={Boolean(phoneError)}
-              onChange={(event) =>
-                dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
-              }
-            />
-          </AuthBlock>
+          <PhoneFieldsT2
+            draft={phoneDraft}
+            id="transfer-phone"
+            label={tr("رقم الهاتف")}
+            error={phoneError}
+            valid={complete}
+            disabled={busy}
+          />
         </>
       )}
 
@@ -227,7 +195,7 @@ export function WalletTransferScreen() {
           <button
             type="button"
             className="t2-button primary t2-m-cta"
-            disabled={busy || !looksComplete(phone, nationalLength)}
+            disabled={busy || !complete}
             aria-busy={busy}
             onClick={findRecipient}
           >

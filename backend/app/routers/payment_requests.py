@@ -25,7 +25,7 @@ from app.core.currency import currency_for_country
 from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
 from app.core.i18n import translate
-from app.models.enums import PaymentRequestPurpose, UserRole, WalletOwnerType
+from app.models.enums import FeatureKey, PaymentProviderKind, PaymentRequestPurpose, UserRole, WalletOwnerType
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
     MyPaymentRequestOut,
@@ -35,7 +35,7 @@ from app.schemas.payment_request import (
     PaymentMethodOut,
     PaymentMethodsOut,
 )
-from app.services import cancellation, gateway_health, payment_breaker, payment_gateways, payment_requests
+from app.services import cancellation, gateway_health, payment_breaker, payment_gateways, payment_requests, settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,11 @@ async def list_methods(
         await payment_requests.require_enabled(session, user.country_code)
     shown: list[PaymentMethodOut] = []
     is_driver = user.has_role(UserRole.DRIVER)
+    # **بطاقاتُ TAXO بمفتاحها** (`taxo_cards_enabled`) — مطفأً لا تُعرض طريقتُها في ورقة الشحن
+    cards_on = await settings_service.is_feature_enabled(session, user.country_code, FeatureKey.TAXO_CARDS)
     for provider in providers:
+        if provider.kind is PaymentProviderKind.PURCHASE_CODE and not cards_on:
+            continue
         if provider.integration in payment_gateways.OWN_SWITCH:
             if provider.id not in own:
                 continue

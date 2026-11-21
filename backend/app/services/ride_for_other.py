@@ -66,18 +66,27 @@ class PreparedPassenger:
     payer: RidePayer
 
 
+#: نصُّ رفضِ رقمٍ من دولةٍ غيرِ دولة الحساب — **بلفظ المالك** (٢٠٢٦-١١-٢١)، والتطبيقُ يقوله قبل الإرسال بالحرف نفسِه
+FOREIGN_PHONE = "الرقم يجب أن يكون من نفس دولة حسابك"
+
+
 def _normalize_any(raw: str, country: CountryCode) -> str:
-    """**سوقُ الطالب أولاً ثمّ الآخر** — الراكبُ الفعليُّ قد يحمل رقماً من السوق الثاني (+962 · +218)، **والصيغةُ المحلّيةُ
-    تُقرأ بسوق الطالب** فلا يُخمَّن بلدُ «079…»."""
-    order = [country, *(c for c in CountryCode if c != country)]
-    last: InvalidPhoneNumber | None = None
-    for code in order:
-        try:
-            return normalize_phone(raw, code)
-        except InvalidPhoneNumber as exc:
-            last = exc
-    assert last is not None
-    raise last
+    """**رقمُ شخصٍ آخر من دولة الحساب وحدَها** (أمرُ المالك ٢٠٢٦-١١-٢١ — المُسلِّمُ والمستلمُ والراكبُ الفعليّ).
+
+    كان يقبل السوقَ الثاني (+962 · +218) بعد سوق الطالب؛ **والآن رقمٌ يُقرأ صالحاً لدولةٍ أخرى يُرفض بنصٍّ يقول علّتَه** —
+    لا «رقمٌ غيرُ صالح» عن رقمٍ صالحٍ في بلده. وما لا يصلح لأيِّ دولةٍ يُرفض بنصِّ دولة الطالب كما كان."""
+    try:
+        return normalize_phone(raw, country)
+    except InvalidPhoneNumber as own:
+        for other in CountryCode:
+            if other is country:
+                continue
+            try:
+                normalize_phone(raw, other)
+            except InvalidPhoneNumber:
+                continue
+            raise InvalidPhoneNumber(FOREIGN_PHONE) from own
+        raise
 
 
 async def prepare(
