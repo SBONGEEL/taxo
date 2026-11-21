@@ -24,9 +24,12 @@ import { LEVEL_LABEL } from "@/screens/Missions";
 import { Icon } from "@/taxo2";
 import { carKey, carSrc, carSrcSet } from "@/taxo2/cars";
 
+import "./home-kit.css";
 import "./your-car.css";
 
 const BASE = `${import.meta.env.BASE_URL}cars/`;
+/** **المدينةُ الناعمة** خلف السيارة — الصورتان نفسُهما في رئيسيّة الراكب (نظامُ الرئيسيّة المشترك، أمرُ المالك ٢١/١١ الثاني) */
+const SCENE = `${import.meta.env.BASE_URL}home/`;
 
 function PaintedCar({ category, color }: { category: string; color: string }) {
   const key = carKey("local_taxi", category);
@@ -102,6 +105,10 @@ export function YourCarT2({
     <div className="yc">
       {vehicle ? (
         <button type="button" className="yc-card" onClick={onOpenVehicle}>
+          <span className="yc-scene" aria-hidden="true">
+            <img className="d" src={`${SCENE}scene-day.webp`} alt="" decoding="async" />
+            <img className="n" src={`${SCENE}scene-night.webp`} alt="" decoding="async" />
+          </span>
           <span className="yc-top">
             <span className="yc-title">{tr("سيارتك")}</span>
             {level !== null ? (
@@ -149,7 +156,10 @@ export function YourCarT2({
               <img key={item.id} src={skinAssetUrl(item.store_image_url)} alt="" decoding="async" loading="lazy" />
             ))}
           </span>
-          <span className="yc-store-text">{tr("متجر المركبات")}</span>
+          <span className="yc-store-text">
+            <span className="yc-store-title">{tr("متجر المركبات")}</span>
+            <span className="yc-store-sub">{tr("أشكالٌ جديدة لمركبتك")}</span>
+          </span>
           <Icon name="chevron_left" className="yc-go" />
         </button>
       ) : null}

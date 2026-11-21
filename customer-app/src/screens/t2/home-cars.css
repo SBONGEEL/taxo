@@ -1,158 +1,293 @@
-/* **سياراتُ TAXO في الرئيسيّة** (أمرُ المالك ٢١/١١، SPEC §١١١) — رموزُ الهويّة وحدَها (`tokens.css`)، نهاراً وليلاً بالرموز نفسِها.
-   **خفيفةٌ على الهواتف الضعيفة**: لا `backdrop-filter` ولا ظلٌّ متحرّك، والحركةُ `transform`/`opacity` مرّةً واحدة. */
+/* **رئيسيّةُ الراكب الجديدة** (أمرُ المالك ٢١/١١ الثاني، SPEC §١١١) — رموزُ الهويّة (`tokens.css`) ونظامُ الرئيسيّة المشترك (`home-kit.css`)،
+   نهاراً وليلاً بالرموز نفسِها. **خفيفةٌ على الهواتف الضعيفة**: لا `backdrop-filter` ولا ظلٌّ متحرّك ولا حركةٌ إلا التمريرُ نفسُه. */
 
-.hc-hero {
-  position: relative;
-  margin-bottom: 10px;
-  padding: 10px 14px 14px;
-  overflow: hidden;
-  border-radius: 28px;
-  background:
-    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--t2-accent) 16%, transparent), transparent 60%),
-    linear-gradient(160deg, var(--t2-surface), color-mix(in srgb, var(--t2-accent) 7%, var(--t2-surface)));
-  box-shadow: inset 0 0 0 1px var(--t2-line);
-  color: var(--t2-text);
-  touch-action: pan-y;
-}
-.hc-hero.folded { padding-top: 6px; padding-bottom: 10px; }
+.t2.t2-home.hm { padding-inline: var(--hm-gutter); padding-bottom: var(--hm-nav-room); }
+.hm .t2-home-head { margin-bottom: var(--hm-gap); }
 
-.hc-grip {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  height: 14px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-.hc-grip span { width: 38px; height: 4px; border-radius: 2px; background: var(--t2-line); }
-
-/* المدينةُ الناعمة — نصفُ البطاقة الأيسر، تحت السيارة */
-.hc-scene { position: absolute; inset-block: 0 54px; inset-inline-end: -10px; width: 74%; pointer-events: none; }
-.hc-scene img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; opacity: 0.85; }
-.hc-scene .n, .hc-car .n { display: none; }
-html.dark .hc-scene .d, html.dark .hc-car .d { display: none; }
-html.dark .hc-scene .n, html.dark .hc-car .n { display: block; }
-
-.hc-hero-top { position: relative; display: flex; align-items: stretch; gap: 6px; min-height: 124px; }
-.hc-hero-text { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; flex: 1 1 52%; min-width: 0; padding-top: 2px; }
-.hc-title { margin: 8px 0 0; font-size: 22px; font-weight: 800; line-height: 1.25; }
-.hc-sub { margin: 4px 0 0; font-size: 13px; color: var(--t2-muted); }
-
-.hc-hero-car { position: relative; display: flex; align-items: flex-end; flex: 1 1 48%; min-width: 0; overflow: hidden; }
-.hc-hero-car .hc-car { display: block; width: 100%; aspect-ratio: 16 / 10; }
-.hc-car img { display: block; width: 100%; height: 100%; object-fit: contain; }
-
-/* حقلُ «إلى أين؟» — زجاجٌ مصمَتٌ (لا تمويه) وزرٌّ برتقاليٌّ مستدير */
+/* ── «إلى أين؟» — عنصرٌ مستقلٌّ بعرض الشاشة ───────────────────────────────────────────── */
+.hc-search { margin-bottom: 16px; }
 .hc-field {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  min-height: 58px;
-  margin-top: 8px;
+  min-height: 62px;
   padding-block: 8px;
   padding-inline: 16px 8px;
   border: 0;
-  border-radius: 20px;
-  background: var(--t2-inverse);
-  color: var(--t2-on-inverse);
+  border-radius: 22px;
+  background: var(--t2-surface);
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  font: inherit;
   text-align: start;
+  cursor: pointer;
 }
-.hc-hero.folded .hc-field { margin-top: 2px; }
-.hc-field-icon { font-size: 22px; color: var(--t2-inverse-muted); }
+.hc-field-icon { flex: none; font-size: 24px; color: var(--t2-accent); }
 .hc-field-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
-.hc-field-title { font-size: 19px; font-weight: 700; }
-.hc-field-sub { margin-top: 2px; font-size: 12.5px; color: var(--t2-inverse-muted); }
+.hc-field-title { font-size: 19px; font-weight: 700; line-height: 1.4; }
+.hc-field-sub { margin-top: 1px; font-size: 12.5px; line-height: 1.5; color: var(--t2-muted); }
 .hc-field-go {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--t2-accent);
   color: var(--t2-on-accent);
 }
-.hc-num { font-family: var(--t2-font-num); font-weight: 600; color: var(--t2-accent); }
+.hc-num { font-family: var(--t2-font-num); font-weight: 600; color: var(--t2-accent-text); }
 
-/* صفُّ الفئات — تمريرٌ أفقيّ، وبطاقةٌ لكلِّ فئة */
-.hc-row-wrap { margin-bottom: 10px; }
-.hc-row {
+/* الشرائحُ — تمريرٌ أفقيٌّ إن ضاق، ولا قصَّ لنقطة ياء (السطرُ صريح) */
+.hc-chips {
   display: flex;
   gap: 8px;
-  margin-inline: -16px;
-  padding-inline: 16px;
+  margin-top: 10px;
+  margin-inline: calc(-1 * var(--hm-gutter));
+  padding-inline: var(--hm-gutter);
   padding-block: 2px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
-.hc-row::-webkit-scrollbar { display: none; }
-.hc-cat {
-  position: relative;
-  display: flex;
-  flex: none;
-  flex-direction: column;
+.hc-chips::-webkit-scrollbar { display: none; }
+.hc-chip {
+  display: inline-flex;
   align-items: center;
-  width: 104px;
-  padding: 8px 6px 10px;
+  flex: none;
+  gap: 6px;
+  max-width: 200px;
+  height: 36px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 18px;
   background: var(--t2-surface);
   box-shadow: inset 0 0 0 1px var(--t2-line);
   color: var(--t2-text);
-  scroll-snap-align: start;
+  font: inherit;
+  font-size: var(--hm-body);
+  font-weight: 600;
+  cursor: pointer;
 }
-.hc-cat.on {
-  background: color-mix(in srgb, var(--t2-accent) 10%, var(--t2-surface));
-  box-shadow: inset 0 0 0 2px var(--t2-accent);
+.hc-chip .t2-icon { flex: none; font-size: 18px; color: var(--t2-accent); }
+.hc-chip.smart { background: var(--t2-accent-soft); box-shadow: none; color: var(--t2-accent-text); }
+.hc-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+
+/* ── بطاقةُ الفئات — دوّارٌ بـ`scroll-snap`، والتاليةُ تطلّ ───────────────────────────────── */
+.hc-cats { margin-bottom: 16px; }
+.hc-track {
+  display: flex;
+  gap: 10px;
+  margin-inline: calc(-1 * var(--hm-gutter));
+  padding-inline: var(--hm-gutter);
+  padding-block: 2px 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--hm-gutter);
+  scrollbar-width: none;
 }
-.hc-cat .hc-car { display: block; width: 88px; height: 52px; }
-.hc-cat-name {
-  display: -webkit-box;
-  margin-top: 4px;
-  max-width: 100%;
+.hc-track::-webkit-scrollbar { display: none; }
+.hc-cat {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: stretch;
+  flex: 0 0 calc(100% - 34px);
+  min-height: 172px;
+  padding: 16px;
   overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-align: center;
+  border: 0;
+  border-radius: var(--hm-radius);
+  background:
+    radial-gradient(110% 90% at 0% 100%, color-mix(in srgb, var(--t2-accent) 16%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--t2-surface), color-mix(in srgb, var(--t2-accent) 6%, var(--t2-surface)));
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  scroll-snap-align: start;
+  cursor: pointer;
+}
+.hc-cat.on { box-shadow: var(--hm-shadow), inset 0 0 0 2px var(--t2-accent); }
+.hc-cat:only-child { flex-basis: 100%; }
+
+/* المدينةُ الناعمة — خلف السيارة، تذوب نحو النصّ */
+.hc-scene {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 72%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent);
+  mask-image: linear-gradient(to right, #000 45%, transparent);
+}
+.hc-scene img { width: 100%; height: 100%; object-fit: cover; object-position: center 70%; opacity: 0.55; }
+.hc-scene .n, .hc-car .n { display: none; }
+html.dark .hc-scene .d, html.dark .hc-car .d { display: none; }
+html.dark .hc-scene .n, html.dark .hc-car .n { display: block; }
+html.dark .hc-scene img { opacity: 0.7; }
+
+.hc-cat-text { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+.hc-cat-name { font-size: 23px; font-weight: 800; line-height: 1.35; }
+.hc-cat-hint {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--hm-body);
+  line-height: 1.5;
+  color: var(--t2-muted);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
-.hc-cat-eta { margin-top: 2px; font-size: 11.5px; color: var(--t2-muted); }
-.hc-row-note { margin: 6px 4px 0; font-size: 11.5px; color: var(--t2-muted); }
+.hc-cat-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.hc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--t2-text) 6%, var(--t2-surface));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.hc-pill .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.hc-pill-num { font-family: var(--t2-font-num); font-weight: 600; }
+.hc-cat-price { margin-top: 6px; font-size: var(--hm-caption); line-height: 1.5; color: var(--t2-muted); }
 
-/* **الدخولُ مرّةً واحدة** — انزلاقٌ قصيرٌ للسيارة ومسحةُ ضوءٍ تعبرها، ثمّ لا شيء */
-.hc-sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.hc-cat-car { position: relative; z-index: 1; display: flex; align-items: flex-end; min-width: 0; }
+.hc-cat-car .hc-car { display: block; width: 112%; margin-inline-end: -10%; aspect-ratio: 16 / 10; }
+.hc-car img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.hc-cat-on {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 9px 0 8px;
+  border-radius: 12px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: var(--hm-caption);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.hc-cat-on .t2-icon { font-size: 15px; }
+
+.hc-dots { display: flex; justify-content: center; gap: 2px; margin-top: 8px; }
+.hc-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hc-dot::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--t2-line); }
+.hc-dot.on::before { width: 18px; background: var(--t2-accent); }
 @media (prefers-reduced-motion: no-preference) {
-  .hc-hero.enter .hc-hero-car .hc-car { animation: hc-in 560ms cubic-bezier(.2, .8, .2, 1) both; }
-  .hc-hero.enter .hc-sweep {
-    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
-    animation: hc-sweep 900ms 420ms ease-out both;
-  }
-}
-@keyframes hc-in {
-  from { opacity: 0; transform: translateX(-28px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes hc-sweep {
-  0% { opacity: 1; transform: translateX(-100%); }
-  100% { opacity: 0; transform: translateX(100%); }
+  .hc-dot::before { transition: width var(--t2-fast) var(--t2-ease); }
 }
 
-/* الهاتفُ الصغير — عنوانٌ أصغرُ وسيارةٌ أضيق، ولا قصّ */
-@media (max-width: 400px) {
-  .hc-title { font-size: 20px; }
+/* ── الخدمات — شبكةٌ بعمودين بلا فراغ ─────────────────────────────────────────────────── */
+.hm-svc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.hm-svc-big {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 132px;
+  padding: 14px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--hm-radius);
+  background:
+    radial-gradient(120% 100% at 0% 100%, color-mix(in srgb, var(--t2-accent) 22%, transparent), transparent 65%),
+    var(--t2-surface);
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
 }
+.hm-svc-name { position: relative; z-index: 1; font-size: 17px; font-weight: 800; line-height: 1.4; }
+.hm-svc-sub { position: relative; z-index: 1; margin-top: 2px; max-width: 58%; font-size: var(--hm-caption); line-height: 1.5; color: var(--t2-muted); }
+.hm-svc-art-big { position: absolute; bottom: 6px; inset-inline-end: -6px; width: 66%; pointer-events: none; }
+.hm-svc-art-big.parcel { bottom: 6px; inset-inline-end: 6px; width: 40%; }
+.hm-svc-art-big img, .hm-svc-art-big .t2-car3 { display: block; width: 100%; height: auto; }
+.hm-svc-art-big .hc-car { display: block; width: 100%; aspect-ratio: 16 / 10; }
+.hm-svc-eta {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+  font-size: var(--hm-caption);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.hm-svc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--hm-radius-sm);
+  background: var(--t2-surface);
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.hm-svc-item.wide { grid-column: 1 / -1; }
+.hm-svc-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--t2-accent) 16%, var(--t2-surface)), color-mix(in srgb, var(--t2-accent) 5%, var(--t2-surface)));
+}
+.hm-svc-art img { width: 40px; height: 40px; object-fit: contain; }
+.hm-svc-art .t2-icon { font-size: 28px; }
+.hm-svc-text { display: flex; flex-direction: column; min-width: 0; }
+.hm-svc-item .hm-svc-name { font-size: 14px; font-weight: 700; }
+.hm-svc-item .hm-svc-sub { max-width: none; margin-top: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+.hm-svc-text .hm-svc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+.hm-svc-item.women { background: var(--t2-women-soft); box-shadow: inset 0 0 0 1.5px var(--t2-women-line); color: var(--t2-women); }
+.hm-svc-item.women .hm-svc-art { background: color-mix(in srgb, var(--t2-women) 14%, var(--t2-surface)); color: var(--t2-women); }
+.hm-svc-item.women .hm-svc-sub { color: var(--t2-women); opacity: 0.8; }
+
+/* ── الخريطةُ بطاقةً بعرض الشاشة ───────────────────────────────────────────────────────── */
+.hm-map { margin-bottom: 16px; }
+.hm-map .t2-home-map:not(.open) { grid-row: auto; height: 150px; border-radius: var(--hm-radius); }
+
+/* الهاتفُ الصغير — خطٌّ أصغر قليلاً، ولا قصّ */
 @media (max-width: 360px) {
-  .hc-title { font-size: 18px; }
-  .hc-hero-top { min-height: 108px; }
-  .hc-cat { width: 96px; }
+  .hc-cat { min-height: 156px; padding: 14px; }
+  .hc-cat-name { font-size: 20px; }
+  .hc-field-title { font-size: 17px; }
+  .hm-svc-big { min-height: 120px; }
+  .hm-svc-name { font-size: 15.5px; }
+  .hm-svc-item { gap: 8px; padding: 8px 10px; }
+  .hm-svc-art { width: 40px; height: 40px; }
+  .hm-svc-art img { width: 34px; height: 34px; }
 }

@@ -37,6 +37,7 @@ import {
   getRidePayments,
 } from "@/api/endpoints";
 import type {
+  Airport,
   Coordinates,
   GenderPreference,
   MyReferrals,
@@ -99,7 +100,7 @@ import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 import { SheetModalT2 } from "@/screens/t2/MoneyT2"; import { language, tr } from "@/lib/i18n";
 import { useOpenFlags } from "@/lib/open-layers";
 import { useWomenService } from "@/lib/women";
-import { readNextCategory, shownCategories, writeNextCategory } from "@/screens/t2/HomeCarsT2";
+import { quickChips, readNextCategory, shownCategories, writeNextCategory } from "@/screens/t2/HomeCarsT2";
 import { PlaceSuggestSheet, type SuggestTarget } from "@/components/map/PlaceSuggestSheet";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
@@ -271,6 +272,24 @@ export function HomeScreen() {
   const homeCarsOn = useFeature(user?.country_code, "home_cars");
   const homeWomen = useWomenService();
   const [nextCategory, setNextCategory] = useState<VehicleCategory | null>(() => readNextCategory());
+  // **شريحةُ «المطار» تحت «إلى أين؟»** (أمرُ المالك ٢١/١١ الثاني، الجزء ٢/٢): أقربُ مطارٍ **حقيقيٍّ** من مطارات السوق (`GET /airports`) —
+  // تُقرأ مرّةً حيث الرئيسيّةُ الجديدةُ والمطارُ مشتعلان، وبلا مطارٍ قريبٍ لا شريحة
+  const homeAirportOn = useFeature(user?.country_code, "airport_enabled");
+  const [homeAirports, setHomeAirports] = useState<Airport[] | null>(null);
+  useEffect(() => {
+    if (!homeCarsOn || !homeAirportOn || !user) return;
+    let alive = true;
+    getAirports()
+      .then((list) => {
+        if (alive) setHomeAirports(list);
+      })
+      .catch(() => {
+        if (alive) setHomeAirports([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [homeCarsOn, homeAirportOn, user]);
   // **«ارفع سعرك»** (§٩٢-أ/٧) — سعرُ الطلب السابق يُفتح به التفاوضُ في الورقة؛ ويُمحى مع كلِّ ما يُمحى معه الحجز
   const [presetOffer, setPresetOffer] = useState<string | null>(null);
   // **وبلاطةُ «طرد» تبدأه طلبَ طرد** (§٦٣-ج/٤): الوجهةُ ثمّ ورقتُه. **ومسوّدتُه هنا لا في ورقة الطلب** — إضافةُ محطةٍ تطوي الورقةَ
@@ -1156,9 +1175,35 @@ export function HomeScreen() {
       ? (() => {
           const categories = shownCategories(countryConfig?.vehicle_categories ?? ["economy"], homeWomen.available);
           const selected = nextCategory && categories.includes(nextCategory) ? nextCategory : categories[0] ?? "economy";
+          // **مقاعدُ الفئة من صفّها** (`ride_categories`) — وما لم يصل لا يُكتب
+          const seats: Partial<Record<VehicleCategory, number>> = {};
+          for (const face of countryConfig?.ride_categories ?? []) seats[face.key as VehicleCategory] = face.seats;
+          const saved = (icon: string) => {
+            const place = places.find((row) => row.icon === icon);
+            return place ? { id: `place:${place.id}`, name: place.label, lat: place.lat, lng: place.lng } : null;
+          };
+          const airport = homeAirports ? nearestAirport(homeAirports, pickup ?? center, places) : null;
+          const last = recentPlaces[0];
+          const chips = quickChips({
+            home: saved("home"),
+            work: saved("work"),
+            airport,
+            last: last ? { id: last.id, name: last.name, lat: last.coordinates.lat, lng: last.coordinates.lng } : null,
+            labels: { home: tr("المنزل"), work: tr("العمل"), airport: tr("المطار") },
+          });
           return {
             categories,
             selected,
+            seats,
+            chips,
+            // **الشريحةُ وجهةٌ كما يختارها «أماكني»** — ورقةُ الطلب تفتح للتأكيد، ولا طلبَ يُرسل بلمسة
+            onChip: (chip) =>
+              pickPlace({
+                id: chip.place.id,
+                name: chip.place.name,
+                address: chip.kind === "last" ? chip.place.name : "",
+                coordinates: { lat: chip.place.lat, lng: chip.place.lng },
+              }),
             onPick: (category: VehicleCategory) => {
               setNextCategory(category);
               writeNextCategory(category);

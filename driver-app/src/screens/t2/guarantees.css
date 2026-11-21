@@ -57,6 +57,7 @@
   text-overflow: ellipsis;
   font-size: 13.5px;
   color: var(--t2-muted);
+  line-height: 1.5;
 }
 .t2-gu-place.strong { font-weight: 600; color: var(--t2-text); }
 

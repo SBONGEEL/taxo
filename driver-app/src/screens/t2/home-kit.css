@@ -1,0 +1,47 @@
+/* **نظامُ الرئيسيّة المشترك بين التطبيقين** (أمرُ المالك ٢٠٢٦-١١-٢١ الثاني، الجزء ٤) — التباعدُ ونصفُ قطر البطاقة والظلُّ وأحجامُ الخطّ
+   **قيمٌ واحدةٌ في الراكب والكبتن**: هذا الملفُّ **منسوخٌ بايتاً** في `customer-app` و`driver-app` (`check:storefront-card` يقيس التطابق).
+   ورموزُ الألوان من الهويّة وحدَها (`tokens.css`)؛ **ولا ظلَّ في الليل** — حافّةٌ رفيعةٌ مكانَه، فالظلُّ على الإسفلت لا يُرى ويثقل. */
+
+.t2 {
+  --hm-gutter: 16px;
+  --hm-gap: 12px;
+  --hm-radius: 24px;
+  --hm-radius-sm: 18px;
+  --hm-shadow: 0 1px 2px rgba(24, 18, 10, 0.05), 0 6px 18px rgba(24, 18, 10, 0.07);
+  --hm-title: 15px;
+  --hm-body: 13px;
+  --hm-caption: 11.5px;
+  /* **لا شيءَ تحت شريط التنقّل** (الجزء ١/٤): الشريطُ ٦٢ بكسلاً فوق حافّة الأمان (`pb-float`)، وفوقه نَفَسٌ يُظهر آخرَ صفٍّ كاملاً */
+  --hm-nav-room: calc(62px + max(14px, env(safe-area-inset-bottom, 0px)) + 20px);
+}
+html.dark .t2:not(.t2-day),
+.t2.t2-night {
+  --hm-shadow: 0 0 0 1px var(--t2-line);
+}
+
+.hm-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 2px 8px;
+  font-size: var(--hm-title);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--t2-text);
+}
+.hm-title-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: var(--hm-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+.hm-card {
+  border-radius: var(--hm-radius);
+  background: var(--t2-surface);
+  box-shadow: var(--hm-shadow);
+}

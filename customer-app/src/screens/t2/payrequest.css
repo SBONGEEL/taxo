@@ -53,7 +53,7 @@
 }
 .t2-pr-file-main { display: flex; flex-direction: column; min-width: 0; }
 .t2-pr-file-title { font-size: 15px; font-weight: 700; }
-.t2-pr-file-hint { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.t2-pr-file-hint { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-pr-file-input {
   position: absolute;
   width: 1px;

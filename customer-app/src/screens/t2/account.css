@@ -190,6 +190,7 @@ div.t2-srow { cursor: default; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 .t2-plc-label { font-size: 14.5px; font-weight: 600; }
 .t2-plc-addr { font-size: 12.5px; color: var(--t2-muted); }
@@ -211,6 +212,7 @@ div.t2-srow { cursor: default; }
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 /* النموذج: الاسمُ (`AuthBlock`) والأيقونةُ (`.t2-auth-choice` بأيقوناتها) وحفظٌ وإلغاء */
 .t2-plc-form .t2-auth-choice { margin-top: 10px; }

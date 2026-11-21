@@ -319,7 +319,7 @@ html.dark .t2:not(.t2-day) .t2-m-qr { border-color: transparent; background: var
 }
 .t2-m-person-badge .t2-icon { font-size: 26px; }
 .t2-m-person-main { flex: 1; min-width: 0; }
-.t2-m-person-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-person-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-m-person-sub { margin-top: 2px; font-size: 12.5px; color: var(--t2-muted); text-align: right; }
 .t2-m-change {
   flex: none;
@@ -340,7 +340,7 @@ html.dark .t2:not(.t2-day) .t2-m-qr { border-color: transparent; background: var
 .t2-m-sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .t2-m-sum-row + .t2-m-sum-row { margin-top: 6px; }
 .t2-m-sum-label { flex: none; font-size: 13px; color: var(--t2-muted); }
-.t2-m-sum-name { min-width: 0; overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-sum-name { min-width: 0; overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-m-sum-sub { font-size: 13px; color: var(--t2-muted); }
 .t2-m-sum-after { font-size: 13.5px; font-weight: 600; }
 .t2-m-sum-after.short { color: var(--t2-danger); }
@@ -401,11 +401,11 @@ html.dark .t2:not(.t2-day) .t2-m-qr { border-color: transparent; background: var
 /* الكبتن — بطاقةُ R08: الدائرةُ المخطّطة واللوحةُ اللاتينية */
 .t2-m-driver { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 22px; background: var(--t2-surface); }
 .t2-m-driver-main { flex: 1; min-width: 0; }
-.t2-m-driver-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-driver-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-m-driver-rating { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12.5px; color: var(--t2-muted); }
 .t2-m-driver-rating .t2-icon { font-size: 15px; color: var(--t2-accent); }
 .t2-m-driver-rating b { font-weight: 600; color: var(--t2-text); }
-.t2-m-driver-car { margin-top: 2px; overflow: hidden; font-size: 12.5px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-driver-car { margin-top: 2px; overflow: hidden; font-size: 12.5px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 
 /* ── وجهُ الكبتن (`DriverAvatar`): الحرفُ في دائرةٍ مخطّطة — الصورةُ تملؤها حين تكون ─────────────────────────────────── */
 .t2-m-avatar {

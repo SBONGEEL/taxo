@@ -115,8 +115,8 @@
 .t2-cm-face.lg { width: 96px; height: 96px; }
 .t2-cm-face.lg > .t2-icon { font-size: 44px; }
 .t2-cm-who { flex: 1; min-width: 0; }
-.t2-cm-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.t2-cm-meta { margin-top: 2px; font-size: 12px; color: var(--t2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-cm-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+.t2-cm-meta { margin-top: 2px; font-size: 12px; color: var(--t2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-cm-notice {
   display: flex;
   align-items: flex-start;
@@ -416,7 +416,7 @@
   cursor: pointer;
 }
 .t2-cm-strip-open .t2-icon { font-size: 19px; }
-.t2-cm-strip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-cm-strip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-cm-strip-time { font-family: var(--t2-font-num); font-size: 12.5px; }
 .t2-cm-strip-rec { padding: 2px 7px; border-radius: 99px; background: var(--t2-bg); color: var(--t2-danger); font-size: 11px; }
 .t2-cm-strip-end {

@@ -89,6 +89,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 .t2-ride-foot {
   display: flex;
@@ -428,7 +429,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-home-place-more { color: var(--t2-muted); }
 /* **لا تنضغط الشارةُ إلى حرفٍ واحد** (أمرُ المالك ٢٠٢٦-١١-٢٠ الثالث §١): رآها على S21 ‏«ط» بدل «طرابلس» — رأسٌ بعرض ٣٦٠ يترك للنصّ
    ١٦ بكسلاً بعد العلامة والسهم والحشوة. فللنصّ حدٌّ أدنى بعرض «طرابلس»، والفاصلُ (`spacer`) هو الذي ينضغط أوّلاً */
-.t2-home-place-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 3.4em; }
+.t2-home-place-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 3.4em; line-height: 1.5; }
 /* **والاسمُ من كلمتين لا يُقصّ من وسط كلمة** («سوق الـ…»): يُكسر عند الفراغ سطرين قصيرين داخل الشارة نفسِها («سوق / الجمعة») */
 .t2-home-place-text.two-words {
   display: -webkit-box;
@@ -436,7 +437,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   -webkit-line-clamp: 2;
   white-space: normal;
   font-size: 12px;
-  line-height: 1.12;
+  line-height: 1.45;
 }
 @media (max-width: 400px) {
   /* والمساحةُ تُسترجع من الزينة لا من الاسم: السهمُ يُخفى (الشارةُ كلُّها زرّ)، والحشواتُ والفراغاتُ أضيق */
@@ -679,7 +680,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   cursor: pointer;
 }
 .t2-home-chip .t2-icon { font-size: 17px; color: var(--t2-muted); }
-.t2-home-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-home-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 
 /* ── ورقةُ الطلب فوق الخريطة «R06» — وما فوق الخريطة في أطوار الطلب ─────────────────────────────────── */
 /* **ملتصقةٌ بأسفل الشاشة كما رُسمت** (R06: `bottom:0 · radius 30 30 0 0 · padding 10 18 30`) — وسقفُها تحت سهم الرجوع */
@@ -841,7 +842,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-route-text { display: flex; flex-direction: column; min-width: 0; }
 .t2-route-edit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
 .t2-route-label { font-size: 11.5px; color: var(--t2-muted); }
-.t2-route-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; }
+.t2-route-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; line-height: 1.5; }
 .t2-route-add {
   display: flex;
   align-items: center;
@@ -874,7 +875,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   font-size: 11px;
   font-weight: 700;
 }
-.t2-stop-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.t2-stop-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; line-height: 1.5; }
 .t2-stop-btn { display: flex; padding: 2px; border: 0; background: none; color: var(--t2-muted); cursor: pointer; }
 .t2-stop-btn:disabled { opacity: 0.3; cursor: default; }
 .t2-stop-btn.danger { color: var(--t2-danger); }
@@ -1236,7 +1237,7 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-trk-dot { width: 8px; height: 8px; background: var(--t2-text); }
 .t2-trk-dot.from { border-radius: 50%; }
 .t2-trk-dot.to { border-radius: 2px; background: var(--t2-accent); }
-.t2-trk-route-text { overflow: hidden; font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; }
+.t2-trk-route-text { overflow: hidden; font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-trk-route-fare { flex: none; padding-inline-start: 14px; border-inline-start: 1px solid var(--t2-line); text-align: start; }
 .t2-trk-route-kind { font-size: 12px; color: var(--t2-muted); }
 .t2-trk-route-price { font-size: 15px; font-weight: 600; }
@@ -1383,7 +1384,7 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
   pointer-events: none;
 }
 .t2-trk-card-label { font-size: 12px; color: var(--t2-muted); }
-.t2-trk-card-dest { overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-trk-card-dest { overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-trk-progress { position: relative; display: flex; align-items: center; height: 16px; margin-top: 12px; }
 .t2-trk-progress-track { position: absolute; inset-inline: 0; height: 4px; border-radius: 2px; background: var(--t2-well); }
 .t2-trk-progress-fill { position: absolute; inset-inline-start: 0; height: 4px; border-radius: 2px; background: var(--t2-accent); }
@@ -1422,7 +1423,7 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-r10-check .t2-icon { font-size: 26px; color: var(--t2-success); }
 .t2-r10-head-main { flex: 1; min-width: 0; }
 .t2-r10-title { margin: 0; font-size: 22px; font-weight: 700; }
-.t2-r10-sub { overflow: hidden; font-size: 13px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; }
+.t2-r10-sub { overflow: hidden; font-size: 13px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-r10-skip { padding: 0; border: 0; background: none; color: var(--t2-muted); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .t2-r10-fare { margin-top: 16px; padding: 16px 18px; border-radius: 24px; background: var(--t2-surface); }
 .t2-r10-fare-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
@@ -1611,13 +1612,13 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-sheet-grab-zone .t2-sheet-grab { margin-bottom: 10px; }
 .t2-sheet-grab-zone:focus-visible .t2-sheet-grab { outline: 2px solid var(--t2-accent); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .t2.t2-sheet.snap { transition: none; } }
-.t2-note.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t2-note.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
 .t2-v2-wallet {
   display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 10px; min-height: 36px;
   border-radius: 12px; background: var(--t2-warning-soft); color: var(--t2-text); font-size: 12.5px;
 }
 .t2-v2-wallet .t2-icon { font-size: 17px; color: var(--t2-warning); }
-.t2-v2-wallet-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t2-v2-wallet-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
 .t2-v2-wallet-top {
   flex: none; min-height: 32px; padding: 0 12px; border: 0; border-radius: 10px;
   background: var(--t2-accent); color: var(--t2-on-accent); font: inherit; font-weight: 700;

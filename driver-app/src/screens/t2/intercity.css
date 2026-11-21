@@ -69,7 +69,7 @@
   font-size: 13px;
 }
 .t2-ict-person > .t2-icon { font-size: 18px; color: var(--t2-muted); }
-.t2-ict-person-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.t2-ict-person-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-ict-person-seats { color: var(--t2-muted); white-space: nowrap; }
 .t2-ict-call {
   display: flex;

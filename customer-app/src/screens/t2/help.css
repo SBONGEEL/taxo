@@ -40,6 +40,7 @@
   text-align: end;
   font-size: 13px;
   color: var(--t2-muted);
+  line-height: 1.5;
 }
 .t2-help-mail .t2-chev { flex: none; font-size: 20px; }
 

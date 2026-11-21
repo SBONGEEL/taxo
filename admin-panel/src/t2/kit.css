@@ -449,6 +449,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 .ad-facts dd[dir="ltr"] { text-align: right; }
 
@@ -460,7 +461,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
 .ad-mini-empty { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
 .ad-mini-row { display: flex; align-items: center; gap: 10px; }
 .ad-mini-main { flex: 1; min-width: 0; }
-.ad-mini-title { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.ad-mini-title { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-mini-at { display: block; font-size: 11.5px; color: var(--t2-muted); }
 .ad-mini-value { flex: none; font-weight: 600; }
 .ad-mini-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
@@ -482,7 +483,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
 }
 .ad-pick-chosen.invalid { border-color: var(--t2-danger); }
 .ad-pick-text { display: flex; flex: 1; min-width: 0; flex-direction: column; text-align: start; }
-.ad-pick-label { overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ad-pick-label { overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-pick-hint {
   overflow: hidden;
   font-size: 12px;
@@ -490,6 +491,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--t2-muted);
+  line-height: 1.5;
 }
 .ad-pick-change {
   flex: none;
@@ -782,9 +784,10 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   text-underline-offset: 3px;
   white-space: nowrap;
   cursor: pointer;
+  line-height: 1.5;
 }
 .ad-link-id:focus-visible { border-radius: 4px; outline: 2px solid var(--t2-accent); outline-offset: 2px; }
-.ad-ellipsis { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-ellipsis { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 @media (max-width: 639px) {
   /* **في البطاقة يُقرأ النصُّ كاملاً** — القصُّ يناسب عموداً ضيّقاً لا سطراً بعرض الهاتف («من ← إلى» في سجل الرحلات) */
   .ad-cell > .ad-ellipsis { white-space: normal; }
@@ -794,7 +797,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
 /* الطرفان (`PaymentParties`): الراكبُ سطرٌ والكبتنُ تحته أخفت — ولكلٍّ «الملفّ» */
 .ad-parties { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .ad-party { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
-.ad-party-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-party-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-party.sub .ad-party-name { font-size: 12.5px; color: var(--t2-muted); }
 /* «الملفّ» من أيِّ صفٍّ يخصّ إنساناً (`OpenProfile`) — رابطٌ بخطٍّ تحته، خافتٌ حتى يُمرّ عليه */
 .ad-open {
@@ -910,7 +913,7 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
   background: rgba(0, 0, 0, 0.35);
 }
 .ad-mv-title { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 10px; }
-.ad-mv-name { overflow: hidden; font-size: 14.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ad-mv-name { overflow: hidden; font-size: 14.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-mv-count { flex: none; font-size: 12.5px; color: rgba(243, 241, 236, 0.7); }
 .ad-mv-tools { display: flex; flex: none; align-items: center; gap: 4px; }
 .ad-mv-btn,

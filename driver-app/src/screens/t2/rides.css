@@ -63,7 +63,7 @@
 .t2-log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--t2-text); }
 .t2-log-dot.to { border-radius: 2px; background: var(--t2-accent); }
 .t2-log-route.off .t2-log-dot { background: var(--t2-faint); }
-.t2-log-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-log-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-log-foot {
   display: flex;
   justify-content: space-between;

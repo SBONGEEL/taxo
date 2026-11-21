@@ -243,7 +243,7 @@
   font-weight: 700;
 }
 .ad-person-text { min-width: 0; }
-.ad-person-name { display: block; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ad-person-name { display: block; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-person-note { display: block; font-size: 11.5px; color: var(--t2-danger); }
 .ad-rating { display: inline-flex; align-items: center; gap: 4px; }
 .ad-rating .t2-icon { font-size: 16px; color: var(--t2-warning); }
@@ -466,7 +466,7 @@ button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-
   button.ad-live-row:not(.on):hover { border-color: var(--t2-line); }
 }
 .ad-live-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.ad-live-row-name { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ad-live-row-name { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-live-row-since { flex: none; font-size: 11.5px; color: var(--t2-muted); }
 .ad-live-row-line { font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
 /* **تحت ١٢٨٠ الخريطةُ بعرض الصفحة** — قِيس على ١٠٢٤: بجانب عمود ٣٤٠ بقي لها ٣٥٤ بكسلاً، شريطٌ طويلٌ ضيّق. فالقائمتان تحتها
@@ -539,7 +539,7 @@ button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-
 
 /* ═══ A07 — النزاعات والدعم ═══════════════════════════════════════════════════════════════════════ */
 .ad-reason { display: flex; min-width: 0; flex-direction: column; }
-.ad-reason-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-reason-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-reason-sub { font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
 .ad-resolve-dl { margin: 0 0 14px; padding: 6px 14px; border-radius: 14px; background: var(--t2-bg); }
 .ad-resolve-dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; }
@@ -571,7 +571,7 @@ button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-
 .ad-report-photo .t2-icon { font-size: 56px; }
 .ad-report-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ad-report-body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
-.ad-report-name { margin: 0; overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ad-report-name { margin: 0; overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .ad-report-line { margin: 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
 .ad-report-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .ad-report-actions .ad-btn { width: auto; }
@@ -627,6 +627,7 @@ button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-
   text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 button.ad-fac-name { cursor: pointer; }
 button.ad-fac-name:focus-visible { border-radius: 4px; outline: 2px solid var(--t2-accent); outline-offset: 2px; }
@@ -685,7 +686,7 @@ button.ad-fac-name:focus-visible { border-radius: 4px; outline: 2px solid var(--
 /* ═══ مساراتُ بين المدن (§٦٣-ج/٧) — قائمةٌ ومحرِّرٌ بضلعين، **بلغة «المرافق الحيوية»** (سطرُ الشرط · الاسمُ بابُ المحرِّر · المفتاح) ══ */
 /* **نقطتا التجمّع سطران في خليّةٍ واحدة** — «من» بلون النصّ و«إلى» خافتة، فلا يُقرأ عمودان لشيءٍ واحد */
 .ad-ic-points { display: flex; min-width: 0; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.5; }
-.ad-ic-points > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-ic-points > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 /* **المحرِّر**: الضلعان جنباً إلى جنب — «من» ثمّ «إلى» بترتيب القراءة — **وعلى الشاشة الضيّقة فوق بعض** */
 .ad-ic-edit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .ad-ic-side {

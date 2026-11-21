@@ -207,6 +207,7 @@ html.dark .ad-side { border: 1px solid var(--t2-line); }
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.5;
 }
 .ad-account-role { font-size: 11px; color: var(--t2-muted); white-space: nowrap; }
 

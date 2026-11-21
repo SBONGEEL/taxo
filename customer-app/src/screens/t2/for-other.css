@@ -41,7 +41,7 @@
 }
 .t2-fo-chip-icon .t2-icon { font-size: 20px; }
 .t2-fo-chip-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.t2-fo-chip-title { overflow: hidden; font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.t2-fo-chip-title { overflow: hidden; font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; line-height: 1.5; }
 .t2-fo-chip-sub { font-size: 12px; color: var(--t2-muted); }
 .t2-fo-chip-btn {
   display: flex;

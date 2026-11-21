@@ -243,7 +243,7 @@ html.dark .t2:not(.t2-day) .t2-ax-cta:disabled,
 }
 html.pink .t2-acc-avatar { background: var(--t2-women-soft); }
 .t2-acc-main { flex: 1; min-width: 0; }
-.t2-acc-name { overflow: hidden; font-size: 20px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-acc-name { overflow: hidden; font-size: 20px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .t2-acc-phone { margin-top: 2px; font-size: 13px; color: var(--t2-muted); text-align: end; }
 /* حبّةُ التقييم — شارةُ C04 (٣٢، زجاجٌ بحافّة، ونجمةُ الجمر ورقمٌ بخطّ الأرقام) */
 .t2-acc-rate {

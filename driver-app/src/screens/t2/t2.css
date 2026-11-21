@@ -1045,8 +1045,8 @@ div.t2-srow { cursor: default; }
 .t2-store-bar-price { display: flex; align-items: baseline; gap: 6px; }
 .t2-store-bar-num { font-family: var(--t2-font-num); font-size: 18px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
 .t2-store-bar-cur { font-size: 11px; color: var(--t2-muted); }
-.t2-store-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 700; }
-.t2-store-bar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--t2-muted); }
+.t2-store-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 700; line-height: 1.5; }
+.t2-store-bar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--t2-muted); line-height: 1.5; }
 .t2-store-buy,
 .t2-store-garage {
   display: flex;

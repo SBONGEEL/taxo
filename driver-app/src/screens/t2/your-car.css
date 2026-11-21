@@ -1,22 +1,39 @@
 /* **«سيارتك» ومدخلُ المتجر** (SPEC §١١١) — رموزُ الهويّة وحدَها، نهاراً وليلاً، وبلا حركة. */
-.yc { display: flex; flex-direction: column; gap: 8px; margin: 0 16px 10px; }
+.yc { display: flex; flex-direction: column; gap: 10px; margin: var(--hm-gap) var(--hm-gutter) 0; }
 .yc-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
   border: 0;
-  border-radius: 24px;
+  border-radius: var(--hm-radius);
   background:
-    radial-gradient(110% 90% at 0% 100%, color-mix(in srgb, var(--t2-accent) 14%, transparent), transparent 60%),
-    var(--t2-surface);
-  box-shadow: inset 0 0 0 1px var(--t2-line);
+    radial-gradient(110% 90% at 0% 100%, color-mix(in srgb, var(--t2-accent) 16%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--t2-surface), color-mix(in srgb, var(--t2-accent) 6%, var(--t2-surface)));
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
   color: var(--t2-text);
   text-align: start;
 }
+.yc-top, .yc-body, .yc-sub { position: relative; z-index: 1; }
 .yc-top { display: flex; align-items: center; gap: 8px; }
-.yc-title { font-size: 15px; font-weight: 800; }
+/* المدينةُ الناعمة خلف السيارة — تذوب نحو النصّ (السيارةُ يساراً في الواجهة من اليمين) */
+.yc-scene {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 70%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent);
+  mask-image: linear-gradient(to right, #000 45%, transparent);
+}
+.yc-scene img { width: 100%; height: 100%; object-fit: cover; object-position: center 70%; opacity: 0.55; }
+.yc-scene .n { display: none; }
+html.dark .yc-scene .d { display: none; }
+html.dark .yc-scene .n { display: block; opacity: 0.7; }
+.yc-title { font-size: var(--hm-title); font-weight: 800; line-height: 1.5; }
 .yc-level {
   display: inline-flex;
   align-items: center;
@@ -32,8 +49,8 @@
 .yc-go { margin-inline-start: auto; color: var(--t2-muted); }
 .yc-body { display: flex; align-items: center; gap: 8px; }
 .yc-info { display: flex; flex: 1 1 46%; flex-direction: column; gap: 2px; min-width: 0; }
-.yc-cat { font-size: 18px; font-weight: 800; }
-.yc-model { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.yc-cat { font-size: 22px; font-weight: 800; line-height: 1.35; }
+.yc-model { overflow: hidden; color: var(--t2-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
 .yc-plate {
   align-self: flex-start;
   margin-top: 4px;
@@ -48,7 +65,7 @@
 }
 .yc-color { color: var(--t2-muted); font-size: 12px; }
 
-.yc-car, .yc-skin { position: relative; flex: 1 1 54%; min-width: 0; aspect-ratio: 16 / 10; }
+.yc-car, .yc-skin { position: relative; flex: 1 1 58%; min-width: 0; aspect-ratio: 16 / 10; margin-inline-end: -8px; }
 .yc-layer { position: absolute; inset: 0; isolation: isolate; }
 .yc-layer img, .yc-skin img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .yc-paint {
@@ -91,16 +108,18 @@ html.dark .yc-layer.n { display: block; }
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 56px;
-  padding: 6px 14px;
+  min-height: 60px;
+  padding: 8px 14px;
   border: 0;
-  border-radius: 20px;
+  border-radius: var(--hm-radius-sm);
   background: var(--t2-surface);
-  box-shadow: inset 0 0 0 1px var(--t2-line);
+  box-shadow: var(--hm-shadow), inset 0 0 0 1px var(--t2-line);
   color: var(--t2-text);
   text-align: start;
 }
 .yc-store-thumbs { display: flex; flex: none; }
 .yc-store-thumbs img { width: 52px; height: 34px; object-fit: contain; }
 .yc-store-thumbs img + img { margin-inline-start: -14px; }
-.yc-store-text { font-size: 14px; font-weight: 700; }
+.yc-store-text { display: flex; flex-direction: column; min-width: 0; }
+.yc-store-title { font-size: 14px; font-weight: 700; line-height: 1.5; }
+.yc-store-sub { font-size: var(--hm-caption); line-height: 1.5; color: var(--t2-muted); }

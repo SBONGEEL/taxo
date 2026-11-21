@@ -51,14 +51,17 @@ import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
 import { Icon, Wordmark } from "@/taxo2";
+import { carKey, carSrc, carSrcSet } from "@/taxo2/cars";
+import { spansLast } from "@/lib/home-cars-core";
 
 import { DrawerT2 } from "./DrawerT2";
-import { HomeCarsHeroT2, HomeCarsRowT2 } from "./HomeCarsT2";
+import { HomeCategoriesT2, HomeSearchT2, type QuickChip } from "./HomeCarsT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import { DeclareGenderSheetT2 } from "./WomenServiceT2";
 import { UnconfirmedStripT2 } from "./UnconfirmedT2";
 import "@/taxo2";
 import "./t2.css";
+import "./home-kit.css";
 import "./cashback.css"; import { tr } from "@/lib/i18n";
 import { REFRESH_LABEL } from "@/lib/location-help";
 
@@ -122,9 +125,18 @@ export interface RiderHomeProps {
   /** **ما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية؛ و`null` حيث المفتاحُ مطفأ. */
   unconfirmed?: RiderUnconfirmed | null;
   onOpenUnconfirmed?: () => void;
-  /** **سياراتُ الرئيسيّة** (SPEC §١١١، مفتاحُ `home_cars`) — البطاقةُ البطلةُ وصفُّ فئات الدولة المشتعلة؛ و`null` حيث المفتاحُ مطفأ
-   *  فتبقى الرئيسيّةُ كما كانت حرفاً. */
-  homeCars?: { categories: VehicleCategory[]; selected: VehicleCategory; onPick: (category: VehicleCategory) => void } | null;
+  /** **الرئيسيّةُ الجديدة** (أمرُ المالك ٢١/١١ الثاني، SPEC §١١١، مفتاحُ `home_cars` «سيارات الرئيسية») — «إلى أين؟» وشرائحُه، ودوّارُ فئات
+   *  الدولة المشتعلة، وشبكةُ الخدمات؛ و`null` حيث المفتاحُ مطفأ **فتبقى الرئيسيّةُ كما كانت قبلها حرفاً**. */
+  homeCars?: {
+    categories: VehicleCategory[];
+    selected: VehicleCategory;
+    onPick: (category: VehicleCategory) => void;
+    /** مقاعدُ كلِّ فئةٍ من صفّها في `/config` */
+    seats: Partial<Record<VehicleCategory, number>>;
+    /** **شرائحُ أماكنَ حقيقيّة** (`quickChips`) ولمستُها تختار الوجهة */
+    chips: QuickChip[];
+    onChip: (chip: QuickChip) => void;
+  } | null;
 }
 
 
@@ -324,6 +336,31 @@ export function RiderHomeT2({
   }, [notice]);
   const soon = (what: string) => setNotice(tr("{0} — قريباً", { 0: what }));
 
+  /** **شبكةُ الخدمات في الرئيسيّة الجديدة** (الجزء ٢/٤) — **الحيّةُ وحدَها** بأفعالها القائمة نفسِها؛ ولا «قريباً» فيها. */
+  const services: ServiceItem[] = [
+    {
+      key: "ride",
+      big: true,
+      name: tr("رحلة"),
+      sub: intercity ? tr("بين المدن") : tr("سيارة إلى وجهتك"),
+      art: { car: homeCars?.selected ?? "economy" },
+      eta: fastest !== null && !intercity ? fastest : null,
+      onPress: intercity ? () => navigate("/account/intercity") : onAskDestination,
+    },
+    ...(parcel && onParcel
+      ? [{ key: "parcel", big: true, name: tr("طرد"), sub: tr("أرسل غرضاً مع كبتن"), art: { img: "parcel" }, onPress: onParcel }]
+      : []),
+    ...(airport && onAirport ? [{ key: "airport", name: tr("المطار"), sub: tr("رحلتك إلى المطار"), art: { img: "airport" }, onPress: onAirport }] : []),
+    ...(scheduled
+      ? [{ key: "scheduled", name: tr("مجدولة"), sub: tr("رحلاتك المحجوزة"), art: { img: "scheduled" }, onPress: () => navigate("/account/bookings") }]
+      : []),
+    ...(women.enabled
+      ? [{ key: "women", name: tr("نسائية"), sub: tr("كبتنة لرحلتك"), art: { icon: "woman" }, onPress: openWomen, tone: "women" as const }]
+      : []),
+    ...(hourly && onHourly ? [{ key: "hourly", name: tr("بالساعة"), sub: tr("سيارة بالساعة"), art: { img: "hourly" }, onPress: onHourly }] : []),
+    ...(fetchOn && onFetch ? [{ key: "fetch", name: tr("أغراضي"), sub: tr("نُحضر غرضك إليك"), art: { img: "fetch" }, onPress: onFetch }] : []),
+  ];
+
   /** **«نسائية» كما تعمل الخدمةُ اليوم**: من عُرضت عليها تبدأ طلبَها بـ«كبتنة فقط»، **ومن لم تُعلن جنسها تُسأل هنا** (§٦٤-ج/٤-٢،
    *  `DeclareGenderSheetT2` — كانت تُرسل إلى «بياناتي» وهي تعرضه ولا تكتبه)، ومن أعلن غيرَ ذلك تُقال له العلّة. */
   const [declaring, setDeclaring] = useState(false);
@@ -334,7 +371,7 @@ export function RiderHomeT2({
   }
 
   return (
-    <div className="t2 t2-page t2-home pb-nav">
+    <div className={homeCars ? "t2 t2-page t2-home hm pb-nav" : "t2 t2-page t2-home pb-nav"}>
       <div className="t2-home-head">
         <span className="t2-home-brand">
           <Wordmark size={15} />
@@ -403,10 +440,33 @@ export function RiderHomeT2({
 
       {homeCars ? (
         <>
-          <HomeCarsHeroT2 onWhereTo={whereTo} category={homeCars.selected} eta={heroEta} />
-          <HomeCarsRowT2 categories={homeCars.categories} selected={homeCars.selected} eta={eta} onPick={homeCars.onPick} />
+          <HomeSearchT2 onWhereTo={whereTo} eta={heroEta} chips={homeCars.chips} onChip={homeCars.onChip} suggestion={suggestion} />
+          <HomeCategoriesT2
+            categories={homeCars.categories}
+            selected={homeCars.selected}
+            eta={eta}
+            seats={homeCars.seats}
+            onPick={homeCars.onPick}
+          />
+          <HomeServicesT2 items={services} />
+          <div className="hm-map">
+            <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} tools={mapTools} />
+          </div>
+          {/* **«تسوّق» حين يشتعل وحدَه** (الجزء ١/٤): كان يطلّ مقطوعاً بـ«قريباً» تحت شريط التنقّل — والرئيسيّةُ الجديدةُ لا تعرض «قريباً» */}
+          {market ? (
+            <button type="button" className="t2-promo t2-mk-strip" onClick={() => navigate("/services/market")}>
+              <span className="t2-promo-row">
+                <Icon name="shopping_bag" className="t2-mk-strip-icon" />
+                <span className="t2-promo-text">
+                  <span className="t2-promo-title">{tr("تسوّق — TAXO MARKET")}</span>
+                  <span className="t2-promo-body">{tr("مطاعم ومتاجر قريبة، يوصلها كباتن TAXO.")}</span>
+                </span>
+              </span>
+            </button>
+          ) : null}
         </>
       ) : (
+      <>
       <button type="button" className="t2-home-hero" onClick={whereTo}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />
         <span className="t2-home-hero-text">
@@ -425,7 +485,6 @@ export function RiderHomeT2({
           <Icon name="arrow_back" />
         </span>
       </button>
-      )}
 
       {/* **اقتراحُ الوجهة** (SPEC §١٠٣ C/35) — لمسةٌ تختارها وجهةً كما يختار «أماكني» */}
       {suggestion ? (
@@ -520,6 +579,8 @@ export function RiderHomeT2({
           {market ? null : <span className="t2-svc-badge soon t2-mk-strip-soon">{tr("قريباً")}</span>}
         </span>
       </button>
+      </>
+      )}
 
       {cashback ? <CashbackChipT2 cashback={cashback} /> : null}
 
@@ -543,5 +604,85 @@ export function RiderHomeT2({
         <DeclareGenderSheetT2 open={declaring} onOpenChange={setDeclaring} onFemale={() => navigate("/account/women")} />
       ) : null}
     </div>
+  );
+}
+
+interface ServiceItem {
+  key: string;
+  name: string;
+  sub: string;
+  big?: boolean;
+  /** رسمُ الخدمة: سيارةُ TAXO للفئة، أو رسمٌ ثلاثيُّ الأبعاد من `public/svc/`، أو أيقونةٌ بالنمط C */
+  art: { car?: VehicleCategory; img?: string; icon?: string };
+  eta?: number | null;
+  tone?: "women";
+  onPress: () => void;
+}
+
+const SVC = `${import.meta.env.BASE_URL}svc/`;
+
+function ServiceArt({ art, big }: { art: ServiceItem["art"]; big: boolean }) {
+  if (art.car) {
+    const key = carKey("local_taxi", art.car);
+    return (
+      <span className="hc-car" aria-hidden="true">
+        <img className="d" src={carSrc(key, false)} srcSet={carSrcSet(key, false)} sizes="200px" alt="" decoding="async" loading="lazy" />
+        <img className="n" src={carSrc(key, true)} srcSet={carSrcSet(key, true)} sizes="200px" alt="" decoding="async" loading="lazy" />
+      </span>
+    );
+  }
+  if (art.img) {
+    const size = big ? 192 : 96;
+    return (
+      <img src={`${SVC}${art.img}-${size}.webp`} srcSet={`${SVC}${art.img}-96.webp 96w, ${SVC}${art.img}-192.webp 192w`} sizes={big ? "120px" : "40px"} alt="" decoding="async" loading="lazy" />
+    );
+  }
+  return art.icon ? <Icon name={art.icon} fill /> : null;
+}
+
+/** **شبكةُ الخدمات بلا فراغ** — الكبيرتان أوّلُ صفّ (وإن غابت «طرد» امتدّت «رحلة»)، والبقيّةُ عمودان، **والفردُ يمدّ آخرَه** (`spansLast`). */
+function HomeServicesT2({ items }: { items: ServiceItem[] }) {
+  const big = items.filter((item) => item.big);
+  const small = items.filter((item) => !item.big);
+  const wideLast = spansLast(small.length);
+  return (
+    <section className="hm-svc" aria-label={tr("الخدمات")}>
+      {big.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          className={big.length === 1 ? "hm-svc-big hm-svc-item-wide" : "hm-svc-big"}
+          style={big.length === 1 ? { gridColumn: "1 / -1" } : undefined}
+          onClick={item.onPress}
+        >
+          <span className="hm-svc-name">{item.name}</span>
+          <span className="hm-svc-sub">{item.sub}</span>
+          {typeof item.eta === "number" ? (
+            <span className="hm-svc-eta">
+              <b dir="ltr">{item.eta}</b>{" "}{tr("د")}
+            </span>
+          ) : null}
+          <span className={item.art.img ? `hm-svc-art-big ${item.art.img}` : "hm-svc-art-big"} aria-hidden="true">
+            <ServiceArt art={item.art} big />
+          </span>
+        </button>
+      ))}
+      {small.map((item, index) => (
+        <button
+          key={item.key}
+          type="button"
+          className={["hm-svc-item", item.tone, wideLast && index === small.length - 1 ? "wide" : null].filter(Boolean).join(" ")}
+          onClick={item.onPress}
+        >
+          <span className="hm-svc-art" aria-hidden="true">
+            <ServiceArt art={item.art} big={false} />
+          </span>
+          <span className="hm-svc-text">
+            <span className="hm-svc-name">{item.name}</span>
+            <span className="hm-svc-sub">{item.sub}</span>
+          </span>
+        </button>
+      ))}
+    </section>
   );
 }

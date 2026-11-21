@@ -61,4 +61,4 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.ad-cm-clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-cm-clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
