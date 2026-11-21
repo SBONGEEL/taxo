@@ -443,6 +443,11 @@ export function RiderHomeT2({
 
       {homeCars ? (
         <>
+          {/* **الخريطةُ في الأعلى من أوّل ثانية، و«إلى أين؟» تحتها** (أمرُ المالك ٢١/١١ الرابع، البند ١، SPEC §١١١-ب ٧) — كانت تحت
+              الخدمات فلا تُرى بلا تمرير، وملاحظاتُ إصدار 1442 تقول «الخريطةُ أوّلاً» */}
+          <div className="hm-map top">
+            <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} tools={mapTools} />
+          </div>
           <HomeSearchT2 onWhereTo={whereTo} eta={heroEta} chips={homeCars.chips} onChip={homeCars.onChip} suggestion={suggestion} />
           <HomeCategoriesT2
             categories={homeCars.categories}
@@ -452,9 +457,6 @@ export function RiderHomeT2({
             onPick={homeCars.onPick}
           />
           <HomeServicesT2 items={services} />
-          <div className="hm-map">
-            <MapCardT2 map={map} nearby={nearby} onAskDestination={whereTo} tools={mapTools} />
-          </div>
           {/* **«تسوّق» حين يشتعل وحدَه** (الجزء ١/٤): كان يطلّ مقطوعاً بـ«قريباً» تحت شريط التنقّل — والرئيسيّةُ الجديدةُ لا تعرض «قريباً» */}
           {market ? (
             <button type="button" className="t2-promo t2-mk-strip" onClick={() => navigate("/services/market")}>

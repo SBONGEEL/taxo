@@ -279,6 +279,9 @@ html.dark .hc-scene img { opacity: 0.7; }
 /* ── الخريطةُ بطاقةً بعرض الشاشة ───────────────────────────────────────────────────────── */
 .hm-map { margin-bottom: 16px; }
 .hm-map .t2-home-map:not(.open) { grid-row: auto; height: 150px; border-radius: var(--hm-radius); }
+/* **في الأعلى** (أمرُ المالك ٢١/١١ الرابع): أطولُ قليلاً لتُقرأ من أوّل ثانية، وما تحتها يبقى في الشاشة الأولى */
+.hm-map.top { margin-bottom: 12px; }
+.hm-map.top .t2-home-map:not(.open) { height: 190px; }
 
 /* الهاتفُ الصغير — خطٌّ أصغر قليلاً، ولا قصّ */
 @media (max-width: 360px) {
