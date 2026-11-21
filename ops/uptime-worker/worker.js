@@ -2,7 +2,9 @@
 // خادمٌ ساقطٌ لا يبلّغ عن سقوطه، فالمراقبُ في مكانٍ لا يسقط معه.
 //
 // - يفحص `api.tajora.ly/health` (جوابُ JSON بـ`status: ok`) و`app.tajora.ly/` (200).
-// - **ينبّه بعد دقيقتين متّصلتين من السقوط** (الفحصُ الثالثُ الفاشل) **ومرّةً واحدة**، ثمّ **ينبّه عند العودة** بمدّة السقوط.
+// - **ينبّه عند الفحص الفاشل الثاني المتّصل** (دقيقةٌ بين أوّل فشلٍ وثانيه) **ومرّةً واحدة** — فأسوأُ ما بين السقوط والبريد
+//   دقيقتان (أمرُ المالك ٢١/١١ السابع، البند ٢: «خلال دقيقتين»؛ كان الثالثَ فبلغ ثلاثاً) — ثمّ **ينبّه عند العودة** بمدّة السقوط.
+//   **والبريدُ يصل هاتفَ المالك عبر تطبيق Gmail** (قِيس ٢١/١١: أربعُ رسائل سقوطٍ وعودةٍ في صندوقه).
 // - **التنبيهُ بريدٌ** عبر Email Routing في نطاق tajora.ly إلى العنوان المُتحقَّق منه في الحساب (ربطُ `ALERT`، لا عنوانَ في الشيفرة).
 // - **الحالُ في KV ولا يُكتب إلا حين تتغيّر** (أوّلُ سقوط، التنبيه، العودة) — حدُّ الكتابة المجانيّ ١٠٠٠ في اليوم، والفحصُ ١٤٤٠.
 // - **مجّانيٌّ بالكامل** (Workers Free: ١٠٠ ألف طلبٍ في اليوم؛ المُشغِّلُ نفسُه لا يُحسب طلباً).
@@ -15,9 +17,22 @@ const TARGETS = [
   { key: "api", name: "الخادم (api.tajora.ly)", url: "https://api.tajora.ly/health", json: true },
   { key: "app", name: "تطبيق الراكب على الويب (app.tajora.ly)", url: "https://app.tajora.ly/", json: false },
 ];
-const ALERT_AFTER_MS = 2 * 60 * 1000;
+const ALERT_AFTER_MS = 60 * 1000;
 const TIMEOUT_MS = 10_000;
 const FROM = "monitor@tajora.ly";
+
+// **تذكيرُ تجديد وثائق الشركة** (أمرُ المالك ٢١/١١ السابع، البند ٣) — قبل كلِّ انتهاءٍ بـ٣٠ و١٤ و٣ أيّام.
+// **هنا لا في جلسة**: مُشغِّلُ الجلسة يموت بعد أيّام، وهذا الـWorker يعمل كلَّ دقيقةٍ خارج خادمنا وبريدُه يصل المالكَ مقيساً.
+// يُرسل **مرّةً واحدةً** يومَه بعد التاسعة صباحاً بتوقيت عمّان، ومفتاحُ «أُرسل» في KV — **ولا بياناتِ وثيقةٍ هنا** (تفاصيلُها في الأسرار).
+const REMINDERS = [
+  { date: "2026-12-14", doc: "شهادةُ الغرفة التجاريّة", expires: "13/01/2027", left: 30 },
+  { date: "2026-12-30", doc: "شهادةُ الغرفة التجاريّة", expires: "13/01/2027", left: 14 },
+  { date: "2027-01-10", doc: "شهادةُ الغرفة التجاريّة", expires: "13/01/2027", left: 3 },
+  { date: "2026-12-21", doc: "الرخصةُ التجاريّة", expires: "20/01/2027", left: 30 },
+  { date: "2027-01-06", doc: "الرخصةُ التجاريّة", expires: "20/01/2027", left: 14 },
+  { date: "2027-01-17", doc: "الرخصةُ التجاريّة", expires: "20/01/2027", left: 3 },
+];
+const REMINDER_HOUR = 9;
 
 async function probe(target) {
   const controller = new AbortController();
@@ -100,7 +115,7 @@ async function run(env, now) {
     }
     if (!state.alerted && now - state.since >= ALERT_AFTER_MS) {
       await send(env, `🔴 ${target.name} متوقّف`, [
-        `${target.name} لا يجيب منذ ${amman(state.since)} (بتوقيت عمّان) — أكثرَ من دقيقتين.`,
+        `${target.name} لا يجيب منذ ${amman(state.since)} (بتوقيت عمّان) — فحصان متتاليان فشلا.`,
         `السبب: ${result.why}`,
         `الرابط: ${target.url}`,
         "",
@@ -111,9 +126,35 @@ async function run(env, now) {
   }
 }
 
+function ammanParts(ms) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Amman", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false })
+      .formatToParts(new Date(ms))
+      .map((part) => [part.type, part.value]),
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) % 24 };
+}
+
+async function remind(env, now) {
+  const today = ammanParts(now);
+  if (today.hour < REMINDER_HOUR) return;
+  for (const item of REMINDERS) {
+    if (item.date !== today.date) continue;
+    const key = `reminder:${item.date}:${item.left}:${item.expires}`;
+    if (await env.STATE.get(key)) continue;
+    await send(env, `📄 تذكير: ${item.doc} تنتهي بعد ${item.left} يوماً`, [
+      `${item.doc} تنتهي في ${item.expires} — بقي ${item.left} يوماً.`,
+      "وهي من وثائق التحقّق من الشركة (D-U-N-S وGoogle Play)؛ التجديدُ قبل الانتهاء يمنع توقّفَ التحقّق.",
+      "",
+      "تذكيرٌ آليٌّ من TAXO — يصل قبل الانتهاء بـ30 و14 و3 أيّام.",
+    ]);
+    await env.STATE.put(key, String(now));
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(run(env, event.scheduledTime));
+    ctx.waitUntil(Promise.all([run(env, event.scheduledTime), remind(env, event.scheduledTime)]));
   },
   // لا مسارَ عامّاً لهذا الـWorker — لا workers.dev ولا Route؛ فهذا لا يُنادى إلا من «اختبار» في لوحة Cloudflare
   async fetch() {
