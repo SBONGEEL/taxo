@@ -41,7 +41,9 @@ async def rule_for(session: AsyncSession, country: CountryCode) -> LoyaltyRule |
     return await session.scalar(select(LoyaltyRule).where(LoyaltyRule.country_code == country))
 
 
-async def save_rule(session: AsyncSession, country: CountryCode, data: dict) -> tuple[LoyaltyRule, dict]:
+async def save_rule(
+    session: AsyncSession, country: CountryCode, data: dict, *, actor=None
+) -> tuple[LoyaltyRule, dict]:
     from app.services import pricing
 
     value = Decimal(str(data["redeem_value"]))
@@ -55,6 +57,16 @@ async def save_rule(session: AsyncSession, country: CountryCode, data: dict) -> 
         rule = LoyaltyRule(country_code=country, **data)
         session.add(rule)
         changes = {key: {"from": None, "to": str(val)} for key, val in data.items()}
+        await session.flush()
+        # **أوّلُ قاعدةٍ تُشعل البرنامجَ لدولتها تلقائيّاً** (أمرُ المالك ٢١/١١ الخامس، البند ٦): المفتاحُ مطفأٌ حتى توجد قاعدة، فلا يرى
+        # الراكبُ «نقاطي» إلى برنامجٍ فارغ — ومشتعلاً بعدها بلا خطوةٍ ثانيةٍ ينساها المشرف. **ويُطفأ من اللوحة متى شاء.**
+        from app.models.enums import FeatureKey
+        from app.services import settings_service
+
+        await settings_service.set_flag(
+            session, country_code=country, feature_key=FeatureKey.LOYALTY_ENABLED, enabled=True, actor=actor,
+            reason="تلقائيّ — أوّلُ قاعدةِ ولاءٍ في الدولة (أمرُ المالك ٢١/١١ الخامس، البند ٦)",
+        )
     else:
         for key, val in data.items():
             if getattr(rule, key) != val:

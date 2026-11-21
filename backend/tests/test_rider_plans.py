@@ -16,7 +16,17 @@ from app.models.enums import FeatureKey, PaymentMethod
 from app.models.payment import Payment
 from app.models.ride import Ride
 from app.models.rider_plan import RiderPlanUse
-from tests.helpers import NEAR_PICKUP, approved_driver, bring_online, completed_ride, enable_features, rider_session, topup_wallet, wallet_of
+from tests.helpers import (
+    NEAR_PICKUP,
+    approved_driver,
+    bring_online,
+    completed_ride,
+    disable_features,
+    enable_features,
+    rider_session,
+    topup_wallet,
+    wallet_of,
+)
 
 
 async def _plan(client: AsyncClient, headers: dict, **extra) -> dict:
@@ -27,8 +37,9 @@ async def _plan(client: AsyncClient, headers: dict, **extra) -> dict:
     return answer.json()
 
 
-async def test_off_shows_and_sells_nothing(client: AsyncClient, admin_headers: dict) -> None:
+async def test_off_shows_and_sells_nothing(client: AsyncClient, session_factory, admin_headers: dict) -> None:
     plan = await _plan(client, admin_headers)
+    await disable_features(session_factory, FeatureKey.RIDER_PLANS_ENABLED.value)  # أوّلُ خطّةٍ أشعلته تلقائيّاً — والمطفأُ يُختبر هنا
     rider = await rider_session(client)
     mine = (await client.get("/rider-plans", headers=rider["headers"])).json()
     assert mine["enabled"] is False and mine["plans"] == [] and mine["current"] is None
@@ -102,3 +113,14 @@ async def test_amounts_follow_the_currency(client: AsyncClient, admin_headers: d
         headers=admin_headers,
     )
     assert answer.status_code == 422, answer.text
+
+
+async def test_first_plan_turns_rider_plans_on(client: AsyncClient, session_factory, admin_headers: dict) -> None:
+    """**أوّلُ خطّةٍ تُشعل `rider_plans_enabled` لدولتها** (أمرُ المالك ٢١/١١ الخامس، البند ٦)؛ والثانيةُ لا تعيد إشعالَ ما أطفأه المشرف."""
+    rider = await rider_session(client)
+    assert (await client.get("/rider-plans", headers=rider["headers"])).json()["enabled"] is False
+    await _plan(client, admin_headers)
+    assert (await client.get("/rider-plans", headers=rider["headers"])).json()["enabled"] is True
+    await disable_features(session_factory, FeatureKey.RIDER_PLANS_ENABLED.value)
+    await _plan(client, admin_headers, name="أسبوعيّ")
+    assert (await client.get("/rider-plans", headers=rider["headers"])).json()["enabled"] is False

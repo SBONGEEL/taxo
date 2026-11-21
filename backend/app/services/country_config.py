@@ -26,6 +26,20 @@ def _area(country: CountryCode) -> list[float]:
     return [box.min_lat, box.max_lat, box.min_lng, box.max_lng]
 
 
+async def effective_flags(session, country: CountryCode) -> dict[str, bool]:
+    """**المفاتيحُ كما تعمل لا كما كُتبت** (أمرُ المالك ٢١/١١ الخامس، البند ٤): `card_enabled` مشتعلٌ في صفِّه **وعقدُ Telr للدولة غيرُ
+    نشطٍ** يُنشر مطفأً — فلا يرى الكبتنُ «البطاقة» في الاشتراك ولا الراكبُ في المحفظة والرحلة ثمّ يقع على
+    «الدفع بالبطاقة غير متاح الآن» (503 `card_gateway_unavailable`، قِيس ٢١/١١ على الإنتاج). **والصفُّ لا يُمسّ**: اللوحةُ ترى ما كُتب
+    (`admin_settings`)، وتفعيلُ العقد يُظهر الطريقةَ في اللحظة نفسِها بلا خطوةٍ ثانية."""
+    from app.models.enums import ProviderKey
+    from app.services.providers.credentials import provider_is_active
+
+    flags = await settings_service.get_flags(session, country)
+    if flags.get(FeatureKey.CARD_ENABLED.value) and not await provider_is_active(session, ProviderKey.TELR, country):
+        flags[FeatureKey.CARD_ENABLED.value] = False
+    return flags
+
+
 async def build(session, country: CountryCode) -> CountryConfigOut:
     """إعدادات دولةٍ كما تراها الواجهات — قراءةٌ خالصة بلا إنشاء صفوف."""
     quiet = await campaigns.get_settings(session, country)
@@ -55,7 +69,7 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         currency_decimals=decimals_of(currency),
         display_decimals=await markets.display_decimals(session, country),
         display_trim_whole=await markets.display_trim_whole(session, country),
-        features=await settings_service.get_flags(session, country),
+        features=await effective_flags(session, country),
         vehicle_categories=keys,
         ride_categories=[categories.public_face(key, rows.get(key)) for key in keys],
         dial_code=dial_code_for(country),

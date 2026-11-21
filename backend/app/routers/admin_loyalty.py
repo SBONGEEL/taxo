@@ -52,7 +52,7 @@ async def get_rule(_staff: StaffUser, session: DbSession, country_code: CountryC
 
 @router.put("", response_model=LoyaltyRuleOut)
 async def put_rule(payload: LoyaltyRuleIn, admin: SettingsWriter, session: DbSession, country_code: CountryCode = Query()) -> LoyaltyRuleOut:
-    rule, changes = await loyalty.save_rule(session, country_code, payload.model_dump())
+    rule, changes = await loyalty.save_rule(session, country_code, payload.model_dump(), actor=admin)
     if not changes and rule is None:  # pragma: no cover
         raise NotFound()
     await audit.record(

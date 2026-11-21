@@ -520,13 +520,34 @@ async def enable_features(session_factory: Any, *keys: str) -> None:
     from app.models.enums import CountryCode
     from app.models.feature_flag import FeatureFlag
 
+    from sqlalchemy import select
+
     async with session_factory() as session:
         for key in keys:
-            session.add(
-                FeatureFlag(
-                    country_code=CountryCode.JO, feature_key=key, enabled=True
-                )
+            # **يرفع الموجودَ ولا يكرّره**: صفُّ المفتاح قد يسبقه منحٌ تلقائيّ (أوّلُ قاعدةِ ولاءٍ أو خطّةِ راكبٍ تُشعل مفتاحَها)
+            row = await session.scalar(
+                select(FeatureFlag).where(FeatureFlag.country_code == CountryCode.JO, FeatureFlag.feature_key == key)
             )
+            if row is None:
+                session.add(FeatureFlag(country_code=CountryCode.JO, feature_key=key, enabled=True))
+            else:
+                row.enabled = True
+        await session.commit()
+
+
+async def disable_features(session_factory: Any, *keys: str) -> None:
+    """يُطفئ مفاتيحَ الأردن الموجودة — لاختبار «مطفأً» بعد منحٍ تلقائيّ."""
+    from sqlalchemy import update
+
+    from app.models.enums import CountryCode
+    from app.models.feature_flag import FeatureFlag
+
+    async with session_factory() as session:
+        await session.execute(
+            update(FeatureFlag)
+            .where(FeatureFlag.country_code == CountryCode.JO, FeatureFlag.feature_key.in_(keys))
+            .values(enabled=False)
+        )
         await session.commit()
 
 

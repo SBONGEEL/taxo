@@ -53,9 +53,19 @@ async def create_plan(session: AsyncSession, *, country: CountryCode, actor: Use
     _precise(country, data["price"], data["per_ride_cap"], data["monthly_cap"])
     if data["monthly_cap"] < data["per_ride_cap"]:
         raise InvalidInput("حدُّ الشهر لا يقلّ عن حدِّ الرحلة")
+    first = not await session.scalar(select(RiderPlan.id).where(RiderPlan.country_code == country).limit(1))
     plan = RiderPlan(country_code=country, created_by=actor.id, **data)
     session.add(plan)
     await session.flush()
+    if first and plan.is_active:
+        # **أوّلُ خطّةٍ تُشعل «خطط الراكب» لدولتها تلقائيّاً** (أمرُ المالك ٢١/١١ الخامس، البند ٦) — كالولاء: لا برنامجَ فارغٌ يُرى
+        from app.models.enums import FeatureKey
+        from app.services import settings_service
+
+        await settings_service.set_flag(
+            session, country_code=country, feature_key=FeatureKey.RIDER_PLANS_ENABLED, enabled=True, actor=actor,
+            reason="تلقائيّ — أوّلُ خطّةِ راكبٍ في الدولة (أمرُ المالك ٢١/١١ الخامس، البند ٦)",
+        )
     return plan
 
 

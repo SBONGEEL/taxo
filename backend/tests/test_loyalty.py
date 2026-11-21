@@ -16,7 +16,16 @@ from sqlalchemy import select
 from app.models.enums import FeatureKey
 from app.models.loyalty import LoyaltyEarning
 from app.services import loyalty
-from tests.helpers import NEAR_PICKUP, approved_driver, bring_online, completed_ride, enable_features, rider_session, wallet_of
+from tests.helpers import (
+    NEAR_PICKUP,
+    approved_driver,
+    bring_online,
+    completed_ride,
+    disable_features,
+    enable_features,
+    rider_session,
+    wallet_of,
+)
 
 RULE = {"points_per_ride": 10, "expiry_days": 180, "silver_threshold": 20, "gold_threshold": 100, "silver_bonus_percent": 50,
         "gold_bonus_percent": 100, "redeem_points": 10, "redeem_value": "0.500"}
@@ -43,6 +52,7 @@ async def _sweep(session_factory) -> int:
 
 async def test_off_earns_nothing_and_on_earns_once(client: AsyncClient, jordan_settings: None, session_factory, admin_headers: dict) -> None:
     await _rule(client, admin_headers)
+    await disable_features(session_factory, FeatureKey.LOYALTY_ENABLED.value)  # أوّلُ قاعدةٍ أشعلته تلقائيّاً — والمطفأُ يُختبر هنا
     rider, _ = await _rides(client, session_factory, 1)
     assert await _sweep(session_factory) == 0
     await enable_features(session_factory, FeatureKey.LOYALTY_ENABLED.value, FeatureKey.WALLET_ENABLED.value)
@@ -87,3 +97,24 @@ async def test_redeem_uses_points_once_and_credits_the_wallet(
 async def test_redeem_value_follows_the_currency(client: AsyncClient, admin_headers: dict) -> None:
     answer = await client.put("/admin/loyalty", params={"country_code": "DZ"}, json={**RULE, "redeem_value": "10.5"}, headers=admin_headers)
     assert answer.status_code == 422, answer.text
+
+
+async def test_first_rule_turns_the_program_on_with_an_audit(client: AsyncClient, session_factory, admin_headers: dict) -> None:
+    """**أوّلُ قاعدةٍ تُشعل `loyalty_enabled` لدولتها وحدَها** (أمرُ المالك ٢١/١١ الخامس، البند ٦) — بسجلّ تدقيق؛ وتعديلُها لا يُعيد إشعالَ ما أطفأه المشرف."""
+    from app.models.audit import AdminAuditLog
+    from app.models.feature_flag import FeatureFlag
+
+    async def flags() -> dict:
+        async with session_factory() as session:
+            rows = (await session.scalars(select(FeatureFlag).where(FeatureFlag.feature_key == FeatureKey.LOYALTY_ENABLED.value))).all()
+            return {row.country_code.value: row.enabled for row in rows}
+
+    assert await flags() == {}
+    await _rule(client, admin_headers)
+    assert await flags() == {"JO": True}
+    async with session_factory() as session:
+        logged = (await session.scalars(select(AdminAuditLog).where(AdminAuditLog.entity_type == "feature_flag"))).all()
+    assert any((row.details or {}).get("feature_key") == "loyalty_enabled" for row in logged)
+    await disable_features(session_factory, FeatureKey.LOYALTY_ENABLED.value)
+    await _rule(client, admin_headers, points_per_ride=12)
+    assert await flags() == {"JO": False}
