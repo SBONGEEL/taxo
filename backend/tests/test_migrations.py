@@ -270,7 +270,8 @@ async def test_0111_hides_algeria_the_moment_it_exists() -> None:
                     text("SELECT count(*) FROM feature_flags WHERE country_code::text = 'DZ'")
                 )
             ).scalar_one()
-        await asyncio.to_thread(command.upgrade, config, "head")
+        # **إلى `0111` نفسِها لا إلى الرأس** — ما تكتبه ترحيلاتٌ لاحقةٌ للدول كلِّها (`0184` تُشعل `home_cars`) ليس سؤالَ هذا الاختبار
+        await asyncio.to_thread(command.upgrade, config, "0111")
         await engine.dispose()
         async with engine.connect() as conn:
             rows = (
@@ -600,3 +601,43 @@ async def test_0143_negotiation_round_trips() -> None:
         await engine.dispose()
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0184_lights_home_cars_everywhere_and_keeps_an_admin_row() -> None:
+    """**سياراتُ الرئيسيّة مشتعلةٌ بعد الرفع** (أمرُ المالك ٢١/١١، SPEC §١١١): `0184` تكتب `home_cars = true` للدول الثلاث، **وصفٌّ كتبه
+    المشرفُ قبلها يبقى كما هو** (`ON CONFLICT DO NOTHING`)، والنزولُ يرفع صفوفَ المفتاح وحدَها — ويُقاس بالنزول والصعود."""
+    config = alembic_config()
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0183")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO feature_flags (id, country_code, feature_key, enabled, created_at, updated_at) "
+                    "VALUES (gen_random_uuid(), 'DZ', 'home_cars', false, now(), now())"
+                )
+            )
+        await asyncio.to_thread(command.upgrade, config, "0184")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            up = dict(
+                (
+                    await conn.execute(
+                        text("SELECT country_code::text, enabled FROM feature_flags WHERE feature_key = 'home_cars'")
+                    )
+                ).all()
+            )
+        await asyncio.to_thread(command.downgrade, config, "0183")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            down = (
+                await conn.execute(text("SELECT count(*) FROM feature_flags WHERE feature_key = 'home_cars'"))
+            ).scalar_one()
+            others = (await conn.execute(text("SELECT count(*) FROM feature_flags"))).scalar_one()
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+
+    assert up == {"JO": True, "LY": True, "DZ": False}
+    assert down == 0
+    assert others > 0
