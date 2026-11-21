@@ -93,6 +93,20 @@ public final class TaxoWidgets {
             }
             for (int id : ids) manager.updateAppWidget(id, views(ctx, kind, manager.getAppWidgetOptions(id)));
         }
+        legacy(ctx, pm, manager, RiderQuickWidget.class);
+    }
+
+    /** <b>ودجةٌ قديمةٌ ترسمها ودجةٌ جديدة</b> (٢١/١١): تبقى ما دامت لها نسخةٌ موضوعة، وتُخفى من المنتقي وإلا — فلا تتكرّر فيه. */
+    static void legacy(Context ctx, PackageManager pm, AppWidgetManager manager, Class<?> cls) {
+        ComponentName name = new ComponentName(ctx, cls);
+        int[] ids = new int[0];
+        try {
+            ids = manager.getAppWidgetIds(name);
+        } catch (Exception ignored) {
+            // مطفأة — لا نسخ
+        }
+        int state = ids.length > 0 ? PackageManager.COMPONENT_ENABLED_STATE_DEFAULT : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        if (pm.getComponentEnabledSetting(name) != state) pm.setComponentEnabledSetting(name, state, PackageManager.DONT_KILL_APP);
     }
 
     /** خالصة: أفي القائمة؟ */

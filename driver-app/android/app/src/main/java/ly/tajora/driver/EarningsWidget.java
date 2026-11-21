@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.view.View;
 import android.widget.RemoteViews;
 
 /**
@@ -15,6 +16,9 @@ import android.widget.RemoteViews;
  * <p><b>لا حسابَ هنا ولا نداء</b>: النصّان كما صاغهما الويبُ من {@code /drivers/me/earnings} (§14 — المالُ يُحسب في الخلفيّة)،
  * ويُكتبان عبر {@code Launcher.setPrefs} حين تتغيّر. وزرُّ الاتّصال <b>يفتح التطبيقَ بفعله</b> كالبلاطة.
  * ومطفأةً لدولته ({@code widget=false}) تعرض «افتح التطبيق» وحدَه — لا أرقامَ قديمةً تُقرأ خبراً.
+ *
+ * <p><b>على تصميم ودجات TAXO</b> (أمرُ المالك ٢١/١١) — شريطٌ 4×1 من المولِّد ({@code tw_bar_earn}): الحالُ بنقطته، والمبلغُ كما
+ * كتبه الويب، وسيارةُ TAXO، وزرٌّ مستدير؛ <b>وما لم يُكتب بعدُ سطرٌ يقول أين يُرى</b> لا شَرطةٌ تُقرأ رقماً. والمكوّنُ هو هو.
  */
 public class EarningsWidget extends AppWidgetProvider {
 
@@ -42,21 +46,28 @@ public class EarningsWidget extends AppWidgetProvider {
 
     static RemoteViews render(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE);
-        RemoteViews views = new RemoteViews(ctx.getPackageName(), R.layout.widget_earnings);
+        RemoteViews views = new RemoteViews(ctx.getPackageName(), R.layout.tw_bar_earn);
         boolean enabled = prefs.getBoolean("widget", false);
-        boolean online = prefs.getBoolean("online", false);
-        if (enabled) {
-            views.setTextViewText(R.id.widget_earnings, prefs.getString("widget_earnings", "—"));
-            views.setTextViewText(R.id.widget_rides, prefs.getString("widget_rides", "—"));
-            views.setTextViewText(R.id.widget_toggle, online ? "افصل" : "اتّصل");
-            views.setOnClickPendingIntent(R.id.widget_toggle, open(ctx, online ? "go_offline" : "go_online", 51));
-        } else {
-            views.setTextViewText(R.id.widget_earnings, "—");
-            views.setTextViewText(R.id.widget_rides, "افتح التطبيق");
-            views.setTextViewText(R.id.widget_toggle, "افتح");
-            views.setOnClickPendingIntent(R.id.widget_toggle, open(ctx, "home", 52));
+        boolean online = enabled && prefs.getBoolean("online", false);
+        String earnings = enabled ? prefs.getString("widget_earnings", null) : null;
+        String rides = enabled ? prefs.getString("widget_rides", null) : null;
+        views.setImageViewResource(R.id.tw_dot, online ? R.drawable.tw_dot_ok : R.drawable.tw_dot_off);
+        views.setTextViewText(R.id.tw_title, !enabled ? "افتح التطبيق" : online ? "متّصل" : "غير متّصل");
+        boolean amount = earnings != null && !earnings.isEmpty();
+        views.setViewVisibility(R.id.tw_bigrow, amount ? View.VISIBLE : View.GONE);
+        views.setViewVisibility(R.id.tw_sub, amount ? View.GONE : View.VISIBLE);
+        if (amount) {
+            views.setTextViewText(R.id.tw_big, earnings);
+            views.setTextViewText(R.id.tw_unit, rides == null ? "" : rides);
         }
-        views.setOnClickPendingIntent(R.id.widget_root, open(ctx, enabled ? "earnings" : "home", 53));
+        if (enabled) {
+            views.setTextViewText(R.id.tw_btn_t, online ? "افصل" : "اتّصل");
+            views.setOnClickPendingIntent(R.id.tw_btn, open(ctx, online ? "go_offline" : "go_online", 51));
+        } else {
+            views.setTextViewText(R.id.tw_btn_t, "افتح");
+            views.setOnClickPendingIntent(R.id.tw_btn, open(ctx, "home", 52));
+        }
+        views.setOnClickPendingIntent(R.id.tw_root, open(ctx, enabled ? "earnings" : "home", 53));
         return views;
     }
 }

@@ -11,9 +11,12 @@ import android.view.View;
 import android.widget.RemoteViews;
 
 /**
- * <b>أداةُ «اطلب رحلة»</b> (SPEC §١٠٣ B/20) — زرّا «البيت» و«العمل» يفتحان التطبيقَ بفعلهما، <b>والويبُ يطلب إلى المكان المحفوظ</b>
+ * <b>أداةُ «اطلب رحلة»</b> (SPEC §١٠٣ B/20) — زرّا «المنزل» و«العمل» يفتحان التطبيقَ بفعلهما، <b>والويبُ يطلب إلى المكان المحفوظ</b>
  * ({@code ride_home} · {@code ride_work})، أو يفتح «أماكني» إن لم يُحفظ بعد. <b>لا عنوانَ ولا إحداثيّاتٍ هنا</b>: الأداةُ على الشاشة
  * الرئيسيّة يراها من يمسك الهاتف. ومطفأةً لدولته ({@code ride_widget=false}) تعرض «افتح التطبيق» وحدَه.
+ *
+ * <p><b>على تصميم ودجات TAXO</b> (أمرُ المالك ٢١/١١: «كلُّ الودجات» على صورته المرجعيّة) — شريطٌ 4×1 من المولِّد
+ * ({@code tw_bar_ride}): عنوانٌ وعلامة، زرّان مستديران، سيارةُ TAXO؛ <b>والمكوّنُ هو هو</b> فلا تنكسر أداةٌ وضعها أحدٌ على شاشته.
  */
 public class RideWidget extends AppWidgetProvider {
 
@@ -41,17 +44,17 @@ public class RideWidget extends AppWidgetProvider {
 
     static RemoteViews render(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE);
-        RemoteViews views = new RemoteViews(ctx.getPackageName(), R.layout.widget_ride);
+        RemoteViews views = new RemoteViews(ctx.getPackageName(), R.layout.tw_bar_ride);
         boolean enabled = prefs.getBoolean("ride_widget", false);
         int buttons = enabled ? View.VISIBLE : View.GONE;
-        views.setViewVisibility(R.id.ride_widget_home, buttons);
-        views.setViewVisibility(R.id.ride_widget_work, buttons);
-        views.setTextViewText(R.id.ride_widget_title, enabled ? "اطلب رحلة" : "افتح التطبيق");
+        views.setViewVisibility(R.id.tw_t0, buttons);
+        views.setViewVisibility(R.id.tw_t1, buttons);
+        views.setTextViewText(R.id.tw_title, enabled ? "اطلب رحلة" : "افتح التطبيق");
         if (enabled) {
-            views.setOnClickPendingIntent(R.id.ride_widget_home, open(ctx, "ride_home", 61));
-            views.setOnClickPendingIntent(R.id.ride_widget_work, open(ctx, "ride_work", 62));
+            views.setOnClickPendingIntent(R.id.tw_t0, open(ctx, "ride_home", 61));
+            views.setOnClickPendingIntent(R.id.tw_t1, open(ctx, "ride_work", 62));
         }
-        views.setOnClickPendingIntent(R.id.ride_widget_root, open(ctx, null, 63));
+        views.setOnClickPendingIntent(R.id.tw_root, open(ctx, null, 63));
         return views;
     }
 }

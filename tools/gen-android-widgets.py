@@ -738,6 +738,28 @@ def driver_layouts():
 
 
 LAYOUTS = rider_layouts() if ROLE_APP == "rider" else driver_layouts()
+
+
+def bar_layouts():
+    """**الشريطُ 4×1** (أمرُ المالك ٢١/١١: «كلُّ الودجات» على المرجع) — عنوانٌ وسطر، أزرارٌ مستديرة، سيارةُ TAXO؛ ولا فراغ في ارتفاعٍ قصير."""
+    car = F(I("tw_scene", "tw_scene", w="m", h="m", scale="fitEnd", alpha=0.8),
+            I("tw_car", "tw_car_economy", w="m", h="m", scale="fit", m=(0, 4, 0, 2)), w=96, h="m")
+    if ROLE_APP == "rider":
+        place = lambda i, glyph, label: Hz(I(None, glyph, w=16, h=16, m=(0, 0, 5, 0)), T(f"tw_t{i}l", label, size=12, bold=True),
+                                           id=f"tw_t{i}", w="w", h=30, g="c", pad=(12, 0, 12, 0), bg="tw_pill_glass", m=(0 if i == 0 else 6, 0, 0, 0))
+        return {"bar_ride": card(Hz(
+            V(Hz(T("tw_title", "اطلب رحلة", size=15, bold=True, weight=1), I(None, "tw_wordmark", w="w", h=11, adjust=True), w="m", g="cv"),
+              Hz(place(0, "tw_g_home", "المنزل"), place(1, "tw_g_work", "العمل"), w="m", m=(0, 7, 0, 0)), weight=1, g="cv"),
+            car, w="m", h="m", g="cv", pad=(14, 6, 4, 6)))}
+    return {"bar_earn": card(Hz(
+        V(header("غير متّصل", None, size=14.5, dot="tw_dot_off"),
+          Hz(T("tw_big", "", size=19, bold=True, ltr=True), T("tw_unit", "", size=12, color="tw_mut", m=(6, 0, 0, 2)), id="tw_bigrow", g="b", m=(0, 3, 0, 0), gone=True),
+          T("tw_sub", "أرباحُ اليوم ورحلاتُه في التطبيق", size=11, color="tw_mut", lines=1, m=(0, 3, 0, 0)), weight=1, g="cv"),
+        car, pill("اتّصل", id_="tw_btn", arrow=False, h=36, size=13, m=(4, 0, 0, 0)),
+        w="m", h="m", g="cv", pad=(14, 6, 12, 6)))}
+
+
+LAYOUTS.update(bar_layouts())
 for old in (RES / "layout").glob("tw_*.xml"):
     if old.name not in ("tw_signed_out.xml",):
         old.unlink()
@@ -896,6 +918,12 @@ if PREVIEW:
                 w, h = SIZES[sz]
                 row.append(f'<div style="width:{w}px;height:{h}px;position:relative;flex-shrink:0">{to_html(node, th, img_uri(theme), d)}</div>')
             cells.append(f'<div class="k" data-kind="{kind}"><div class="n">{kind}</div><div class="r">{"".join(row)}</div></div>')
+        for bar in [k for k in LAYOUTS if k.startswith("bar_")]:
+            d = dict(sample.get(bar, {}))
+            d["__gone__"] = set(d.pop("gone", []))
+            d["__show__"] = set(d.pop("show", []))
+            cells.append(f'<div class="k" data-kind="{bar}"><div class="n">{bar}</div><div class="r"><div style="width:345px;height:84px;position:relative;flex-shrink:0">'
+                         f'{to_html(LAYOUTS[bar], th, img_uri(theme), d)}</div></div></div>')
         page = f'''<!doctype html><html><head><meta charset="utf-8"><style>body{{margin:0;padding:24px;background:{bg};font-family:"Segoe UI","Noto Sans Arabic",Tahoma,sans-serif}}
 .k{{margin-bottom:18px}}.n{{font:12px monospace;color:#888;margin-bottom:6px}}.r{{display:flex;gap:16px;align-items:flex-start}}</style></head><body>{"".join(cells)}</body></html>'''
         (PREVIEW / f"{ROLE_APP}{suffix}-{theme}.html").write_text(page, encoding="utf-8")
