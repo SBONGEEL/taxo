@@ -28,7 +28,7 @@
         <LinearLayout android:id="@+id/tw_empty" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical">
             <TextView android:id="@+id/tw_e_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/tw_mut" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="2" android:ellipsize="end" android:text="لا رحلات بعد — رحلتك الأولى تظهر هنا" />
             <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-                <ImageView android:id="@+id/tw_car" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
+                <ImageView android:id="@+id/tw_e_car" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/tw_car_economy" android:scaleType="fitEnd" android:importantForAccessibility="no" />
             </FrameLayout>
             <LinearLayout android:id="@+id/tw_e_btn" android:layout_width="wrap_content" android:layout_height="34dp" android:gravity="center" android:paddingStart="16dp" android:paddingTop="0dp" android:paddingEnd="14dp" android:paddingBottom="0dp" android:background="@drawable/tw_pill" android:orientation="horizontal">
                 <TextView android:id="@+id/tw_e_btn_t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/tw_on" android:textSize="13sp" android:includeFontPadding="false" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:text="اطلب رحلة" />
