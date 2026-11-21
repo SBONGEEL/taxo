@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { BUBBLE_SHELL_KEYS, BUBBLE_SHELL_MIN_ANDROID, NEW_SHELL_KEYS, NEW_SHELL_MIN_ANDROID, shellAllowsFor } from "../src/lib/shell-features-core.ts";
+import { BUBBLE_SHELL_KEYS, BUBBLE_SHELL_MIN_ANDROID, NEW_SHELL_KEYS, NEW_SHELL_MIN_ANDROID, WIDGETS_SHELL_KEYS, WIDGETS_SHELL_MIN_ANDROID, shellAllowsFor } from "../src/lib/shell-features-core.ts";
 
 test("الغلافُ القديمُ على أندرويد لا يقرأ مفتاحاً جديداً مشتعلاً — والجديدُ يقرؤه", () => {
   assert.equal(NEW_SHELL_MIN_ANDROID, 1367);
@@ -21,6 +21,15 @@ test("مفاتيحُ الفقاعتين لا تُقرأ في غلاف المرا
   assert.equal(shellAllowsFor("quick_replies", "android", null), false);
   assert.equal(shellAllowsFor("quick_replies", "web", null), true);
   for (const key of BUBBLE_SHELL_KEYS) assert.ok(!NEW_SHELL_KEYS.has(key), `${key} في القائمتين`);
+});
+
+test("مفاتيحُ الودجات لا تُقرأ في غلاف الفقاعتين 1409 — مزوّداتُها ليست فيه (أمرُ المالك ٢١/١١ الثالث)", () => {
+  assert.ok(WIDGETS_SHELL_MIN_ANDROID > BUBBLE_SHELL_MIN_ANDROID);
+  assert.equal(shellAllowsFor("rider_widgets_plus", "android", 1409), false);
+  assert.equal(shellAllowsFor("driver_widgets_plus", "android", WIDGETS_SHELL_MIN_ANDROID - 1), false);
+  assert.equal(shellAllowsFor("rider_widgets_plus", "android", WIDGETS_SHELL_MIN_ANDROID), true);
+  assert.equal(shellAllowsFor("rider_widgets_plus", "web", null), true);
+  for (const key of WIDGETS_SHELL_KEYS) assert.ok(!NEW_SHELL_KEYS.has(key) && !BUBBLE_SHELL_KEYS.has(key), `${key} في قائمتين`);
 });
 
 test("رقمٌ لم يُعرف بعد على أندرويد يُقرأ مطفأً — لا يُفترض جديداً", () => {

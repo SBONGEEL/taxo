@@ -19,6 +19,8 @@ class DeviceRegisterRequest(BaseModel):
     #: **إصدارُ مجموعة القنوات التي وجدها التطبيقُ على الجهاز** (§٦١-ل) — يُسأل عنه أندرويد لا الويب،
     #: **وغيابُه حزمةٌ أقدم** يُرسَل إليها كما اليوم
     push_channels: int | None = Field(default=None, ge=1, le=99)
+    #: **غلافٌ يحمل الودجاتِ الجديدة** (أمرُ المالك ٢١/١١ الثالث، البند ٦) — يقوله الويبُ من الطرف الأصليّ؛ **وغيابُه غلافٌ أقدم**
+    shell_widgets: bool | None = None
 
 
 class DeviceOut(BaseModel):

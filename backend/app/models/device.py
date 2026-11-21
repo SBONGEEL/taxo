@@ -76,6 +76,9 @@ class DeviceToken(UUIDMixin, TimestampMixin, Base):
     # والقناةُ تُختار بما في الحزمة لا بما في الويب (`services/push/channels.py`).
     # **و`NULL` حزمةٌ أقدمُ على قنواتها اليوم حرفاً**
     push_channels: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # **غلافٌ يحمل الودجاتِ الجديدة بقوله** (أمرُ المالك ٢١/١١ الثالث، البند ٦، الترحيلة `0185`) — به تصل حملةُ
+    # `widgets_only` من حدّث وحدَه؛ **وغلافٌ أقدمُ لا يقوله فيبقى `false`**
+    shell_widgets: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<DeviceToken {self.platform} {self.device_id}>"

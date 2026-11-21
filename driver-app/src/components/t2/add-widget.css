@@ -1,0 +1,57 @@
+/* **«أضف ودجت TAXO لشاشتك»** (أمرُ المالك ٢١/١١ الثالث) — **منسوخٌ بايتاً في التطبيقين**. بطاقةٌ هادئة: سطحُ الهويّة وحافّةٌ رفيعة،
+   ولا ظلٌّ متحرّك ولا حركة. */
+.aw-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 10px 12px 14px;
+  border-radius: 18px;
+  background: var(--t2-surface);
+  box-shadow: inset 0 0 0 1px var(--t2-line);
+  color: var(--t2-text);
+}
+.aw-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.aw-icon .t2-icon { font-size: 22px; }
+.aw-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.aw-title { font-size: 14px; font-weight: 700; line-height: 1.5; }
+.aw-body { font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+.aw-add {
+  flex: none;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.aw-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.aw-close .t2-icon { font-size: 20px; }
+.aw-row-go { color: var(--t2-accent-text); }

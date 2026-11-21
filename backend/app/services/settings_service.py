@@ -140,6 +140,11 @@ async def set_flag(
         entity_id=flag.id,
         details=details,
     )
+    # **إشعالُ `widgets_announce` يُنشئ حملةَ الودجات مرّةً لدولته** (أمرُ المالك ٢١/١١ الثالث، البند ٦) — في المعاملة نفسِها
+    if enabled and key == FeatureKey.WIDGETS_ANNOUNCE.value:
+        from app.services import campaigns
+
+        await campaigns.ensure_widgets_announce(session, CountryCode(country_code), actor)
     return flag
 
 

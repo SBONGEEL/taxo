@@ -63,6 +63,7 @@ import {
   useDocumentsAttention,
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
+import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
 import { useDriverLauncher, setRideActive, setRideLine, setBubbleDemand } from "@/lib/launcher";
 import { rideNoticeLine } from "@/lib/ride-notice";
 import { useHaptics } from "@/lib/haptics";
@@ -303,6 +304,7 @@ export function HomeT2Screen() {
   // **«آخر رحلة»** (SPEC §١٠٣ C/30، خلف `last_ride_mode`) — تنتهي الجاريةُ (إنهاءً أو إلغاءً) ⇐ خروجٌ من الاستقبال بالباب نفسِه
   // (`goOffline`)، فلا يصله عرضٌ بعدها. **ولا يمسّ الرحلةَ ولا التحصيل**: التحصيلُ نداءاتُ REST لا تحتاج الاستقبال
   const lastRideOn = useFeature(user?.country_code, "last_ride_mode");
+  const widgetsPlus = useFeature(user?.country_code, "driver_widgets_plus");
   // **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — عرضٌ وحدَه
   const pickupTimerOn = useFeature(user?.country_code, "pickup_wait_timer");
   // **سياراتُ الرئيسيّة** (SPEC §١١١) — «سيارتك» ومدخلُ المتجر؛ ومطفأً تبقى الرئيسيّةُ كما كانت حرفاً
@@ -649,6 +651,8 @@ export function HomeT2Screen() {
       {mode === "home" ? (
         <div className="t2-hm-more">
           {/* **«كن راكباً» شريطاً** (أمرُ المالك ٢٠٢٦-١١-٠٢، الثاني) — تحت زرِّ الاستقبال والخدمات لا فوقهما، والعريضُ أعلى «حسابي» */}
+          {/* **«أضف ودجت TAXO لشاشتك»** (أمرُ المالك ٢١/١١ الثالث، البند ٣) — خلف `driver_widgets_plus` (يشتعل مع إصداره العلنيّ) */}
+          <AddWidgetCard kind="status" enabled={widgetsPlus} body={tr("حالتك واشتراكك على الشاشة الرئيسيّة بلمسة.")} variant="card" />
           <BecomeRiderButton compact />
           <div className="t2-legacy">
             <PromoBanners banners={storefront?.banners ?? []} offer={storefront?.offer ?? null} skin={PROMO_SKIN} />

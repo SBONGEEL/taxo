@@ -14,7 +14,7 @@ import { useSyncExternalStore } from "react";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
-import { shellAllowsFor } from "@/lib/shell-features-core";
+import { WIDGETS_SHELL_MIN_ANDROID, shellAllowsFor } from "@/lib/shell-features-core";
 
 export { NEW_SHELL_KEYS, NEW_SHELL_MIN_ANDROID, shellAllowsFor } from "@/lib/shell-features-core";
 
@@ -44,6 +44,18 @@ if (Capacitor.getPlatform() === "android") {
       for (const listener of listeners) listener();
     })
     .catch(() => undefined);
+}
+
+/** **أيحمل هذا الغلافُ الودجاتِ الجديدة؟** (أمرُ المالك ٢١/١١ الثالث، البند ٦) — يُسأل الطرفُ الأصليُّ عن رقمه الآن لا ما حُفظ،
+ *  لأن تسجيلَ الجهاز يقع في الإقلاع قبل أن يُعرف الرقم. وكلُّ فشلٍ «لا». */
+export async function shellCarriesWidgets(): Promise<boolean> {
+  if (Capacitor.getPlatform() !== "android") return false;
+  try {
+    const build = Number((await App.getInfo()).build);
+    return Number.isFinite(build) && build >= WIDGETS_SHELL_MIN_ANDROID;
+  } catch {
+    return false;
+  }
 }
 
 /** للقراءة خارج المكوّنات (مثل `sms-consent`). */

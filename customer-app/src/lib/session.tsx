@@ -50,6 +50,7 @@ import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
 import { channelSet, markPushReady, registerNativePush } from "@/lib/push";
+import { shellCarriesWidgets } from "@/lib/shell-features";
 import { setSplashStatus } from "@/lib/splash"; import { tr } from "@/lib/i18n";
 
 /** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
@@ -175,11 +176,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (!token) return;
         // **ومعه ما على الجهاز من قنوات** (§٦١-ل): به يختار الخادمُ القناة
         const channels = await channelSet();
+        // **وأيحمل غلافُه الودجات** (البند ٦) — ليصله إشعارُها وحدَه من حدّث
+        const widgets = await shellCarriesWidgets();
         await registerDevice({
           device_id: deviceId(),
           token,
           platform: platform(),
           ...(channels ? { push_channels: channels } : {}),
+          ...(widgets ? { shell_widgets: true } : {}),
         });
         markPushReady();
       })().catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));

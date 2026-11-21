@@ -571,6 +571,8 @@ export const registerDevice = (payload: {
   platform: "ios" | "android" | "web";
   /** **مجموعةُ القنوات التي على الجهاز فعلاً** (§٦١-ل) — وغيابُها حزمةٌ أقدم. */
   push_channels?: number;
+  /** **غلافٌ يحمل الودجاتِ الجديدة** (أمرُ المالك ٢١/١١ الثالث، البند ٦) — به يصله إشعارُ «جديد: ودجات TAXO لشاشتك» وحدَه. */
+  shell_widgets?: boolean;
 }) => api.put<Device>("/me/devices", payload);
 
 export const unregisterDevice = (deviceId: string) =>

@@ -710,6 +710,7 @@ export type FeatureKey =
   | "driver_widgets_plus"
   | "rider_widgets_plus"
   | "home_cars"
+  | "widgets_announce"
   | "map_open_places"
   | "map_place_suggestions"
   | "map_live_traffic"

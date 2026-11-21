@@ -47,6 +47,8 @@ import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/l
 import { updateMyLanguage } from "@/api/endpoints";
 import { useShellAllows } from "@/lib/shell-features";
 import { Icon } from "@/taxo2";
+import { useFeature } from "@/lib/config";
+import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */
 function Toggle({
@@ -157,6 +159,8 @@ export function SettingsT2Screen() {
     done,
     error,
   } = useCaptainSettings();
+  // **«أضف ودجت TAXO لشاشتك»** (أمرُ المالك ٢١/١١ الثالث، البند ٣) — خلف `driver_widgets_plus`
+  const widgetsPlus = useFeature(profile?.user.country_code, "driver_widgets_plus");
   // **تفضيلا القيادة على الجهاز** (§٦١-ط/٦–٧) — يُقرآن مرّةً ويُكتبان مع كلِّ تبديل
   const [autoAccept, setAutoAcceptState] = useState(autoAcceptEnabled);
   const [nav, setNavState] = useState<NavApp>(navApp);
@@ -337,6 +341,7 @@ export function SettingsT2Screen() {
       <BubbleSettingsT2 country={profile?.user.country_code} currencyLabel={null} />
 
       <Group label={tr("التطبيق")}>
+        <AddWidgetCard kind="status" enabled={widgetsPlus} body={tr("حالتك واشتراكك على الشاشة الرئيسيّة بلمسة.")} variant="row" />
         {/* **النصُّ الكبير والتباينُ العالي** (SPEC §١٠٣ C/40) — حيث يشتعل مفتاحُ السوق */}
         <DisplaySettings country={profile?.user.country_code} />
         {/* **«شارك التطبيق» و«جولة في التطبيق»** (اقتراحُ Testers Community وأمرُ المالك ٢٠٢٦-١٠-٢٧) — أوّلَ المجموعة: فعلان يُطلبان */}

@@ -411,6 +411,13 @@ def _audience_filters(campaign: NotificationCampaign) -> list:
         filters.append(_last_ride_in_zone(campaign.zone_id))
     if campaign.activity is not None:
         filters.append(_activity_clause(campaign.activity))
+    # **من حدّث وحدَه** (`widgets_only`، البند ٦) — جهازٌ نشطٌ غلافُه يحمل الودجات؛ ومن لا جهازَ كذلك له خارجُ الجمهور لا «تخطٍّ»
+    if campaign.widgets_only:
+        filters.append(
+            select(DeviceToken.id)
+            .where(DeviceToken.user_id == User.id, DeviceToken.is_active.is_(True), DeviceToken.shell_widgets.is_(True))
+            .exists()
+        )
     return filters
 
 
@@ -502,13 +509,13 @@ async def _batch_user_ids(
 
 
 async def _tokens_by_user(
-    session: AsyncSession, user_ids: list[uuid.UUID]
+    session: AsyncSession, user_ids: list[uuid.UUID], *, widgets_only: bool = False
 ) -> dict[uuid.UUID, list[str]]:
-    rows = await session.execute(
-        select(DeviceToken.user_id, DeviceToken.token).where(
-            DeviceToken.user_id.in_(user_ids), DeviceToken.is_active.is_(True)
-        )
-    )
+    clauses = [DeviceToken.user_id.in_(user_ids), DeviceToken.is_active.is_(True)]
+    # **وجهازُه القديمُ لا يصله** — لمن له هاتفان أحدُهما لم يُحدَّث
+    if widgets_only:
+        clauses.append(DeviceToken.shell_widgets.is_(True))
+    rows = await session.execute(select(DeviceToken.user_id, DeviceToken.token).where(*clauses))
     grouped: dict[uuid.UUID, list[str]] = {}
     for user_id, token in rows:
         grouped.setdefault(user_id, []).append(token)
@@ -539,7 +546,9 @@ async def _send_batch(
     # **الحدُّ الأسبوعيّ** (البند ١٩) — من وصلته حملاتٌ بعدد الحدِّ في سبعة أيام لا تصله أخرى؛ والحدُّ لدولة الحملة الجارية
     capped = await _weekly_capped(session, user_ids, cap)
     tokens = await _tokens_by_user(
-        session, [user_id for user_id in user_ids if user_id not in opted_out and user_id not in capped]
+        session,
+        [user_id for user_id in user_ids if user_id not in opted_out and user_id not in capped],
+        widgets_only=campaign.widgets_only,
     )
     message = PushMessage(
         title=campaign.title,
@@ -716,3 +725,48 @@ async def due_campaign_ids(
         .limit(limit)
     )
     return list(await session.scalars(stmt))
+
+
+#: **نصُّ إشعار الودجات** (أمرُ المالك ٢١/١١ الثالث، البند ٦) — العنوانُ بحرفه من الأمر، والسطرُ يقول ما تفعله الودجةُ فعلاً
+WIDGETS_ANNOUNCE_TITLE = "جديد: ودجات TAXO لشاشتك"
+WIDGETS_ANNOUNCE_BODY = "أضف ودجت TAXO إلى شاشتك الرئيسيّة واطلب رحلتك بلمسة."
+
+
+async def ensure_widgets_announce(
+    session: AsyncSession, country_code: CountryCode, actor: User | None
+) -> NotificationCampaign | None:
+    """**حملةُ «جديد: ودجات TAXO لشاشتك» مرّةً لكلِّ دولة** — يُنشئها إشعالُ `widgets_announce` (`settings_service.set_flag`).
+
+    مجدولةٌ الآن فيرسلها الموزّعُ القائمُ في دورته (`dispatch_campaigns`) بكلِّ قيوده: ساعاتُ الهدوء تؤجّلها، ومن أطفأ التسويقَ لا تصله،
+    والحدُّ الأسبوعيّ. **لركّاب الدولة الذين غلافُهم يحمل الودجات وحدَهم** (`widgets_only`). **وإن وُجدت لهذه الدولة لا تُنشأ ثانيةً**:
+    إطفاءُ المفتاح وإشعالُه لا يكرّر الإشعار. الـ commit مسؤوليةُ المستدعي.
+    """
+    existing = await session.scalar(
+        select(NotificationCampaign).where(
+            NotificationCampaign.widgets_only.is_(True), NotificationCampaign.country_code == country_code
+        )
+    )
+    if existing is not None:
+        return None
+    campaign = NotificationCampaign(
+        title=WIDGETS_ANNOUNCE_TITLE,
+        body=WIDGETS_ANNOUNCE_BODY,
+        audience=CampaignAudience.ALL_RIDERS,
+        country_code=country_code,
+        status=CampaignStatus.SCHEDULED,
+        scheduled_at=_now(),
+        created_by=actor.id if actor is not None else None,
+        widgets_only=True,
+    )
+    session.add(campaign)
+    await session.flush()
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.CREATE,
+        entity_type="notification_campaign",
+        entity_id=campaign.id,
+        details={"status": campaign.status.value, "audience": campaign.audience.value, "widgets_only": True, "via": "widgets_announce"},
+    )
+    return campaign
+

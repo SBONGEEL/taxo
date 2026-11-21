@@ -23,6 +23,7 @@ import uuid
 from datetime import datetime, time
 
 from sqlalchemy import (
+    Boolean,
     SmallInteger,
     CheckConstraint,
     DateTime,
@@ -107,6 +108,9 @@ class NotificationCampaign(UUIDMixin, TimestampMixin, Base):
     )
     #: **الحال** (البند ١٩): `active` رحلةٌ في ٣٠ يوماً · `dormant` رحلاتٌ أقدمُ وحدها · `never` لا رحلة؛ و`None` الكلّ
     activity: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: **لا تصل إلا أجهزةً غلافُها يحمل الودجاتِ الجديدة** (`device_tokens.shell_widgets`، الترحيلة `0185`) — حملةُ
+    #: «جديد: ودجات TAXO لشاشتك» وحدَها اليوم، ويُنشئها مفتاحُ `widgets_announce`
+    widgets_only: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     # يبقى بعد حذف الحساب كما في `admin_audit_logs` — من أرسل حملةً سؤالٌ
     # يُسأل بعد رحيله

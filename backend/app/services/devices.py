@@ -36,6 +36,7 @@ async def register(
     token: str,
     platform: DevicePlatform,
     push_channels: int | None = None,
+    shell_widgets: bool = False,
 ) -> DeviceToken:
     """يسجّل جهازاً أو يحدّث رمزه. الـ commit مسؤولية المستدعي.
 
@@ -81,6 +82,8 @@ async def register(
     existing.is_active = True
     existing.last_seen_at = _now()
     existing.push_channels = push_channels
+    # **كـ`push_channels` يُكتب في كلِّ تسجيل** — غلافٌ عاد إلى إصدارٍ أقدمَ لا يبقى موسوماً بما لم يعد فيه
+    existing.shell_widgets = shell_widgets
     await session.flush()
     return existing
 

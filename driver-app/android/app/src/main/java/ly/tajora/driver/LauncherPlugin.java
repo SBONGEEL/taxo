@@ -1,9 +1,11 @@
 package ly.tajora.driver;
 
+import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.service.quicksettings.TileService;
 
@@ -127,6 +129,48 @@ public class LauncherPlugin extends Plugin {
         edit.apply();
         wake(ctx);
         call.resolve();
+    }
+
+    /**
+     * <b>«أضف ودجت TAXO لشاشتك»</b> (أمرُ المالك ٢٠٢٦-١١-٢١ الثالث، البند ٣) — أيقبل المشغِّلُ طلبَ تثبيت هذه الودجة بلمسة؟
+     * <b>أندرويد ٨ فما فوق، ومشغِّلٌ يدعمه، ومزوّدٌ مشتعل</b> ({@code TaxoWidgets.sync} يُشعله حين يشتعل مفتاحُ الودجات لدولته) —
+     * وإلا {@code false} فلا تُرسم البطاقةُ أصلاً.
+     */
+    @PluginMethod
+    public void pinSupported(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("supported", pinReady(getContext(), call.getString("kind", "")));
+        call.resolve(ret);
+    }
+
+    /** يطلب التثبيت — <b>المشغِّلُ يسأل المستخدمَ بنافذته هو</b>، ولا شيءَ يُثبَّت بلا موافقته. و{@code requested} أنّ الطلبَ قُبل لا أنّه ثُبّت. */
+    @PluginMethod
+    public void pinWidget(PluginCall call) {
+        Context ctx = getContext();
+        String kind = call.getString("kind", "");
+        boolean requested = false;
+        if (pinReady(ctx, kind)) {
+            try {
+                requested = AppWidgetManager.getInstance(ctx).requestPinAppWidget(new ComponentName(ctx, TaxoWidgets.provider(kind)), null, null);
+            } catch (Exception ignored) {
+                // المشغِّلُ رفض الطلب — يُقال «لم يُقبل» ولا شيءَ غيرُه
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("requested", requested);
+        call.resolve(ret);
+    }
+
+    static boolean pinReady(Context ctx, String kind) {
+        if (Build.VERSION.SDK_INT < 26 || kind == null || kind.isEmpty()) return false;
+        try {
+            AppWidgetManager manager = AppWidgetManager.getInstance(ctx);
+            if (manager == null || !manager.isRequestPinAppWidgetSupported()) return false;
+            ComponentName name = new ComponentName(ctx, TaxoWidgets.provider(kind));
+            return ctx.getPackageManager().getComponentEnabledSetting(name) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** يوقظ البلاطةَ والأداةَ لتقرآ الجديد — <b>وما لا وجودَ له في هذا التطبيق يُتجاوز بلا أثر</b>. */

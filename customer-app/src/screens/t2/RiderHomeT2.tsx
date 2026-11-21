@@ -53,6 +53,7 @@ import { useWomenService } from "@/lib/women";
 import { Icon, Wordmark } from "@/taxo2";
 import { carKey, carSrc, carSrcSet } from "@/taxo2/cars";
 import { spansLast } from "@/lib/home-cars-core";
+import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
 
 import { DrawerT2 } from "./DrawerT2";
 import { HomeCategoriesT2, HomeSearchT2, type QuickChip } from "./HomeCarsT2";
@@ -309,6 +310,8 @@ export function RiderHomeT2({
   // **«تسوّق» — بابُ TAXO MARKET** (§٧٢-هـ، لوحتُه E1): شريطٌ تحت صفّ الخدمات **بمفتاح التوصيل** — مطفأً (وهو مطفأٌ حتى يُبنى) «قريباً»
   // والنقرُ يقول «قريباً» ولا شيءَ غيرَه؛ ومشتعلاً يفتح `/services/market`
   const market = useFeature(user?.country_code, "delivery_enabled");
+  // **«أضف ودجت TAXO لشاشتك»** (أمرُ المالك ٢١/١١ الثالث، البند ٣) — خلف مفتاح الودجات لدولته
+  const widgetsPlus = useFeature(user?.country_code, "rider_widgets_plus");
   // **و«المطار» بمفتاح سوقه** (§٦٣-ج/٢، صفُّه في جدول الخدمات: «يفتحها حين يُشعَل وإلا قريباً») — قِيس على S21 ٢٠٢٦-١٠-٠٨:
   // البلاطةُ كانت «قريباً» دائماً والخدمةُ مشتعلةٌ ومبنيّة، فلا بابَ إليها من الرئيسية
   const airport = useFeature(user?.country_code, "airport_enabled") && onAirport !== undefined;
@@ -582,6 +585,7 @@ export function RiderHomeT2({
       </>
       )}
 
+      <AddWidgetCard kind="request" enabled={widgetsPlus} body={tr("اطلب رحلتك من الشاشة الرئيسيّة بلمسة.")} variant="card" />
       {cashback ? <CashbackChipT2 cashback={cashback} /> : null}
 
       {/* **«كن سائقاً» شريطاً** (أمرُ المالك ٢٠٢٦-١١-٠٢، الثاني) — تحت الطلب والخدمات لا فوقها، والعريضُ أعلى «حسابي» */}

@@ -60,13 +60,19 @@ export const BUBBLE_SHELL_KEYS: ReadonlySet<string> = new Set([
   "bubble_sos",
   "voice_offer_answer",
   "rider_bubble",
-  "driver_widgets_plus",
-  "rider_widgets_plus",
 ]);
+
+/** **أوّلُ غلافٍ يحمل الودجاتِ الجديدة وزرَّ تثبيتها** (أمرُ المالك ٢١/١١ الثالث) — 1409 حمل الفقاعتين **بلا الودجات** (قِيس: إيداعاتُها بعده).
+ *  **والحدُّ أوّلُ إيداعٍ بعد 1439** (رأسُ ٢١/١١ صباحاً): لا غلافَ منشوراً بين 1409 والإصدار الموقَّع القادم، فلا غلافَ بلا الودجات يجتازه. */
+export const WIDGETS_SHELL_MIN_ANDROID = 1440;
+
+/** مفاتيحُ الودجات — **لا تُقرأ في غلافٍ أقدم**: مزوّداتُها ليست فيه، ومفتاحٌ مشتعلٌ هناك يَعِد بما لا يوجد. */
+export const WIDGETS_SHELL_KEYS: ReadonlySet<string> = new Set(["driver_widgets_plus", "rider_widgets_plus"]);
 
 /** خالصة: أيُقرأ المفتاحُ في هذا الغلاف؟ — `false` لمفتاحٍ من القائمة على أندرويد تحت الحدّ (أو برقمٍ لم يُعرف بعد). */
 export function shellAllowsFor(key: string, platform: string, build: number | null): boolean {
   if (platform !== "android") return true;
+  if (WIDGETS_SHELL_KEYS.has(key)) return build !== null && build >= WIDGETS_SHELL_MIN_ANDROID;
   if (BUBBLE_SHELL_KEYS.has(key)) return build !== null && build >= BUBBLE_SHELL_MIN_ANDROID;
   if (!NEW_SHELL_KEYS.has(key)) return true;
   return build !== null && build >= NEW_SHELL_MIN_ANDROID;

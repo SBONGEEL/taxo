@@ -23,7 +23,8 @@ import { TestMarketSection } from "@/components/t2/TestMarket";
 import { NotificationTones } from "@/components/NotificationTones";
 import { useGoBack } from "@/lib/back";
 import { useBrand } from "@/lib/brand";
-import { useConfig } from "@/lib/config";
+import { useConfig, useFeature } from "@/lib/config";
+import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
 import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -65,6 +66,7 @@ function changeLanguage(next: Language) {
 export function SettingsScreen() {
   const goBack = useGoBack("/account");
   const { user, biometry, setBiometric } = useSession();
+  const widgetsPlus = useFeature(user?.country_code, "rider_widgets_plus");
   const [bioError, setBioError] = useState<string | null>(null);
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
@@ -153,6 +155,7 @@ export function SettingsScreen() {
       </Group>
 
       <Group label={tr("التطبيق")}>
+        <AddWidgetCard kind="request" enabled={widgetsPlus} body={tr("اطلب رحلتك من الشاشة الرئيسيّة بلمسة.")} variant="row" />
         <div className="t2-srow tall">
           <Icon name="dark_mode" className="t2-srow-icon" />
           <span className="t2-srow-main">

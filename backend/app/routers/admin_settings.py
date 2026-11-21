@@ -404,6 +404,13 @@ async def upsert_feature_flag(
             session, payload.country_code, trip_chat.CHAT_PRIVACY_MARKER
         )
 
+    # **وإشعارُ الودجات لا يُشعَل وودجاتُ الراكب مطفأة** (أمرُ المالك ٢١/١١ الثالث، البند ٦): إشعالُه يُرسل «جديد: ودجات TAXO لشاشتك»،
+    # **وإشعارٌ عن ودجاتٍ لا تظهر في قائمة الهاتف وعدٌ بلا باب**. والإطفاءُ بلا شرط
+    if payload.enabled and payload.feature_key == FeatureKey.WIDGETS_ANNOUNCE:
+        flags = await settings_service.get_flags(session, payload.country_code)
+        if not flags.get(FeatureKey.RIDER_WIDGETS_PLUS.value):
+            raise InvalidInput("أشعِل «ودجات الراكب الجديدة» لهذه الدولة أوّلاً — الإشعارُ يَعِد بها")
+
     await settings_service.set_flag(
         session,
         country_code=payload.country_code,
