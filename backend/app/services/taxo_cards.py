@@ -57,7 +57,7 @@ from app.models.taxo_card import (
     TaxoCardSetting,
 )
 from app.models.user import User
-from app.services import audit, cancellation, rounding, test_accounts, verification, wallet
+from app.services import audit, cancellation, payment_requests, rounding, test_accounts, verification, wallet
 
 #: **أبجديّةٌ بلا لَبس** — لا `0/O` ولا `1/I/L`: رمزٌ يُقرأ من ورقةٍ ويُكتب بإصبع
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"

@@ -152,6 +152,10 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    "SubscriptionOut": (
+        "بانٍ واحد: `SubscriptionOut.from_subscription` يخدم أبوابَه الأربعة — و`custom_days` "
+        "(SPEC §١١١-د/٤) عمودٌ يُقرأ من الصفّ لا يُحسب، **وفراغُه حال**: اشتراكٌ بخطّةٍ لا بأيّام"
+    ),
     # ✅ بانٍ واحد — تقريبُ الأسعار وعرضُها (أمرُ المالك ٢٠٢٦-١١-١٩)
     "FareRoundingOut": (
         "بانٍ واحد: `GET` و`PUT /admin/settings/fare-rounding/{country}` كلاهما يردّ `admin_settings._fare_out` من `fare_rounding.current` "

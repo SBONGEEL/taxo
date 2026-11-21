@@ -793,7 +793,8 @@ async def record_manual(
         rounding.require_precise(amount_paid, plan.currency, field="amount_paid")
         rounding.require_multiple(amount_paid, price.policy, field="amount_paid")
     suggested = price.payable
-    paid = suggested if amount_paid is None else amount_paid
+    # **يُكمَّم إلى ثلاث خانات** — «0» الذي يكتبه المشرفُ للهديّة كان يخرج `"0"` حيث يخرج بقيّةُ المال `"0.000"` (الشكلُ السابع)
+    paid = (suggested if amount_paid is None else amount_paid).quantize(_MONEY_UNIT)
 
     # **اشتراكُ كبتن التجربة يُسجَّل بصفرٍ أو يُشترى من المحفظة** (SPEC §٦٥-ج/٢): هذا البابُ يسجّل مالاً **قبضته الإدارة**
     # كاشاً أو كليكاً — مالاً حقيقيّاً — وحسابُ التجربة لا يدخله مالٌ حقيقيّ (`topups.create_confirmed` يردّ مثلَه).

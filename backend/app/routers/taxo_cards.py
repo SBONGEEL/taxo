@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from app.core.currency import money_text
 from app.core.deps import CurrentUser, DbSession, RedisDep, client_ip
 from app.schemas.taxo_card import TaxoCardRedeemedOut, TaxoCardRedeemIn
 from app.services import cancellation, notifications, taxo_cards
@@ -37,5 +38,5 @@ async def redeem_card(
     await cancellation.announce_settled_for_debtor(session, redis, user=user)
     serial, amount, currency = result.card.serial, result.card.amount, result.card.currency
     # **إشعارٌ بعد الـcommit** (صندوقُ الوارد ثمّ Push) — المبلغُ رقمٌ خامٌ في `data`، والجملةُ يرسمها النظام
-    await notifications.publish_taxo_card_topup(session, redis, user_id=user_id, amount=str(amount), currency=currency.value)
+    await notifications.publish_taxo_card_topup(session, redis, user_id=user_id, amount=money_text(amount, currency), currency=currency.value)
     return TaxoCardRedeemedOut(serial=serial, amount=amount, currency=currency, balance_after=result.balance_after)
