@@ -82,6 +82,8 @@ export default defineConfig({
         // **صفحةُ التحميل** (SPEC §٦٨-ج/٦): بابٌ واحدٌ للحزمتين على `/download`،
         // **وقسمُ التحميل في الرئيسية يقود إليها** فلا نسختان من البصمة.
         download: resolve(__dirname, "download.html"),
+        // **الأسئلةُ الشائعةُ للكباتن** (أمرُ المالك ٢٠٢٦-١١-٢٢): رابطُها مثبَّتٌ في مجموعات واتساب الثلاث.
+        faq: resolve(__dirname, "faq.html"),
         404: resolve(__dirname, "404.html"),
       },
     },
