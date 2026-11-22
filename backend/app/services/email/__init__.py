@@ -7,13 +7,12 @@
 **والمُرسِلُ الوهميُّ ممنوعٌ في الإنتاج**: رمزٌ «يُرسل» إلى Redis يقرؤه من
 يبلغ Redis لا من يملك الصندوق.
 
-> **ولا مُرسِلَ حقيقيٌّ في هذا المجلَّد اليوم** (قرارُ المالك 2026-08-31):
-> **لا يُلمس عقدُ Resend ولا يُرسل بريدٌ حقيقيٌّ حتى إذنُه**. فمن يضيفه غداً
-> يكتب ملفّاً واحداً ويصله بفرعٍ في `build_provider` — **ولا يمسّ شيئاً فوقه**.
+> **والمُرسِلُ الحقيقيُّ Resend** (`resend.py`) — أُذن به ٢٠٢٦-١١-٢٢ (أمرُ
+> المالك الثاني، البند ٢) بعد قرار ٢٠٢٦-٠٨-٣١ «لا مُرسِلَ حتى إذنه». **وأُضيف
+> كما وُعد**: ملفٌّ واحدٌ وفرعٌ في `build_provider`، **ولم يتغيّر سطرٌ فوقه**.
 >
-> **وغيابُه ليس نقصاً مسكوتاً عنه**: `build_provider` **يرفض بنصٍّ** أيَّ عقدٍ
-> ليس وهميّاً — فمن أدخل عقداً حقيقيّاً اليومَ **يقف ويُقال له لمَ**، ولا
-> يمضي إلى مُرسِلٍ لا وجودَ له.
+> **وعقدٌ باسم مُرسِلٍ غيرِ معروف يُرفض بنصّه** — فمن كتب «brevo» اليومَ
+> **يقف ويُقال له لمَ**، ولا يمضي إلى مُرسِلٍ لا وجودَ له.
 """
 
 from __future__ import annotations
@@ -33,6 +32,7 @@ from app.services.email.base import (
     EmailUnavailable,
 )
 from app.services.email.mock import MockEmailProvider, last_message
+from app.services.email.resend import ResendEmailProvider
 from app.services.providers import credentials as credentials_service
 
 __all__ = [
@@ -41,6 +41,7 @@ __all__ = [
     "EmailProvider",
     "EmailUnavailable",
     "MockEmailProvider",
+    "ResendEmailProvider",
     "build_provider",
     "get_email_provider",
     "get_email_provider_or_none",
@@ -50,13 +51,26 @@ __all__ = [
 
 def build_provider(values: Mapping[str, Any]) -> EmailProvider:
     """يبني المُرسِلَ من قيم عقدٍ مفكوكِ التشفير — من هنا ومن زرِّ الاختبار."""
-    if credentials_service.is_mock(values) and not settings.is_production:
+    if credentials_service.is_mock(values):
+        if settings.is_production:
+            # **الوهميُّ ممنوعٌ في الإنتاج** — رمزٌ يُقرأ من Redis لا من الصندوق
+            raise EmailUnavailable("المُرسِلُ الوهميُّ لا يعمل في الإنتاج — أدخِل عقدَ Resend.")
         return MockEmailProvider(get_redis_client())
 
-    # **الرفضُ بنصّه لا سقوطٌ صامت** — ولا مُرسِلَ حقيقيٌّ مبنيٌّ بعد
-    raise EmailUnavailable(
-        "لم يُبنَ مُرسِلُ بريدٍ حقيقيٌّ بعد — القناةُ تعمل بالمُرسِل الوهميّ "
-        "وحدَه حتى يأذن المالك بعقدٍ حقيقيّ."
+    name = str(values.get("provider_name") or "resend").strip().lower()
+    if name != "resend":
+        # **الرفضُ بنصّه لا سقوطٌ صامت** — مُرسِلٌ واحدٌ مبنيٌّ: Resend
+        raise EmailUnavailable(
+            f"مُرسِلُ البريد «{name}» غيرُ مبنيّ — المبنيُّ Resend وحدَه."
+        )
+    api_key = str(values.get("api_key") or "").strip()
+    from_address = str(values.get("from_address") or "").strip()
+    if not api_key or not from_address:
+        raise EmailUnavailable("عقدُ البريد ناقص — المفتاحُ وعنوانُ المُرسِل مطلوبان.")
+    return ResendEmailProvider(
+        api_key=api_key,
+        from_address=from_address,
+        from_name=str(values.get("from_name") or "").strip(),
     )
 
 
