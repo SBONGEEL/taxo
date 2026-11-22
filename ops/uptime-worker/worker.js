@@ -33,6 +33,16 @@ const REMINDERS = [
   { date: "2027-01-17", doc: "الرخصةُ التجاريّة", expires: "20/01/2027", left: 3 },
 ];
 const REMINDER_HOUR = 9;
+// فاتورةُ Contabo شهريّة (طلبُ ٢٠/٠٨: «Cloud VPS 4»، عقدٌ لشهر، €5.50) — وتأخّرُها يوقف الخادمَ كلَّه.
+// موعدُها الدقيقُ في لوحة Contabo (حسابُ المالك) لا نقرؤه، فالتذكيرُ يومَ ١٥ من كلِّ شهرٍ قبل ذكرى الطلب (٢٠) (أمرُ المالك ٢٢/١١، البند ١٢)
+const MONTHLY_REMINDERS = [
+  { day: "15", id: "contabo", subject: "💳 تذكير: فاتورةُ خادم TAXO (Contabo) هذا الشهر", lines: [
+    "فاتورةُ الخادم الشهريّة عند Contabo تستحقّ قرابةَ يوم 20 (الطلبُ بدأ 20/08/2026، عقدٌ شهريّ).",
+    "تأكّد من لوحة Contabo أنّها مدفوعة أو أنّ الدفعَ التلقائيّ يعمل — تأخّرُها يوقف التطبيقين واللوحة معاً.",
+    "",
+    "تذكيرٌ آليٌّ من TAXO — يصل يومَ 15 من كلِّ شهر.",
+  ] },
+];
 
 async function probe(target) {
   const controller = new AbortController();
@@ -148,6 +158,13 @@ async function remind(env, now) {
       "",
       "تذكيرٌ آليٌّ من TAXO — يصل قبل الانتهاء بـ30 و14 و3 أيّام.",
     ]);
+    await env.STATE.put(key, String(now));
+  }
+  for (const item of MONTHLY_REMINDERS) {
+    if (today.date.slice(8) !== item.day) continue;
+    const key = `monthly:${item.id}:${today.date.slice(0, 7)}`;
+    if (await env.STATE.get(key)) continue;
+    await send(env, item.subject, item.lines);
     await env.STATE.put(key, String(now));
   }
 }
