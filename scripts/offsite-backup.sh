@@ -14,7 +14,7 @@
 # ولا يمسّ الإنتاجَ إلا قراءةً (`pg_dump` و`tar` لـ`.env`)، ولا يطبع سرّاً.
 set -Eeuo pipefail
 
-SECRETS="$HOME/.taxo-secrets"
+SECRETS="${HOME}/.taxo-secrets"  # مجلّدُ الأسرار — مسارٌ لا سرّ
 PASS_FILE="$SECRETS/offsite-backup.passphrase"
 CF_FILE="$SECRETS/cloudflare-delicate-block-888e.txt"
 SRC="${TAXO_BACKUP_DEST:-/mnt/d/taxo-backups}"

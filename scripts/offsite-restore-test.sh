@@ -31,7 +31,9 @@ echo "✓ فُكّ التشفير: $(ls "$DIR" | tr '\n' ' ')"
 
 # **والقاعدةُ تُنشأ من `template0` لا من تهيئة الصورة**: صورةُ postgis تُنشئ في `POSTGRES_DB` مخطّطاتِ tiger/topology سلفاً،
 # فيصيح التفريغُ «already exists» ثلاثاً على استعادةٍ سليمة (قِيس ٢٢/١١) — وإنذارٌ كاذبٌ يعلّم تجاهلَ الإنذار.
-docker run -d --name "$CT" -e POSTGRES_PASSWORD=restoretest -e POSTGRES_USER=taxo -e POSTGRES_DB=postgres postgis/postgis:16-3.4 >/dev/null
+# كلمةُ حاويةٍ مؤقّتةٍ بلا منفذٍ منشور تُحذف بعد دقائق — تُولَّد لا تُكتب، فلا حرفيَّ يصيح عليه ماسحُ الأسرار (قِيس ٢٢/١١)
+THROWAWAY="$(openssl rand -hex 12)"
+docker run -d --name "$CT" -e POSTGRES_PASSWORD="${THROWAWAY}" -e POSTGRES_USER=taxo -e POSTGRES_DB=postgres postgis/postgis:16-3.4 >/dev/null
 # **صورةُ Postgres تُهيّئ ثم تُعيد التشغيل** — و`pg_isready` يجيب «جاهز» أثناء التهيئة، فاستعادةٌ تبدأ هناك تسقط مع الإعادة
 # (وقع مقيساً ٢٢/١١). فيُنتظر سطرُ «init process complete» ثم الجاهزيّة.
 for _ in $(seq 1 90); do
