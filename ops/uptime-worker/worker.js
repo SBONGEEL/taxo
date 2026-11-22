@@ -169,9 +169,38 @@ async function remind(env, now) {
   }
 }
 
+// **رقيبُ النسخ خارج الموقع** (أمرُ المالك ٢٢/١١ الثاني، البند ٣: «نبّهني إن سقط رفع»).
+// الحاسوبُ يرفع نسخةً مشفَّرةً يوميّاً إلى Google Drive (`scripts/offsite-backup.sh`) ويكتب نبضاً في KV بعد كلِّ رفعٍ مقيس
+// (`backup:last`)، أو سببَ الفشل فوراً (`backup:fail`). **والرقيبُ هنا لا هناك**: حاسوبٌ مطفأٌ أو مهمّةٌ ماتت لا تبلّغ عن نفسها —
+// فغيابُ النبض ٢٦ ساعةً إنذارٌ كالفشل نفسِه. **ولا عنوانَ عامٌّ لهذا**: النبضُ يُكتب في KV بواجهة Cloudflare برمز الحساب.
+// **وقبل أوّل نبضٍ لا إنذار** — Drive لم يُربط بعد، وإنذارٌ يوميٌّ قبل الربط يعلّم تجاهلَ الإنذار.
+const BACKUP_STALE_MS = 26 * 60 * 60 * 1000;
+
+async function watchBackup(env, now) {
+  const fail = await env.STATE.get("backup:fail", "json");
+  if (fail?.at && (await env.STATE.get("backup:fail-alerted")) !== String(fail.at)) {
+    await send(env, "⚠ النسخةُ الاحتياطيّةُ الخارجيّة لم تُرفع", [
+      `فشل رفعُ النسخة المشفَّرة إلى Google Drive في ${amman(fail.at)} (بتوقيت عمّان).`,
+      `السبب: ${fail.why ?? "غيرُ معروف"}`,
+      "",
+      "النسخُ على الحاسوب (D:\\taxo-backups) سليمة؛ المتأخّرُ هو النسخةُ خارج الموقع. السجلّ: taxo-deploy-logs\\offsite.",
+    ]);
+    await env.STATE.put("backup:fail-alerted", String(fail.at));
+  }
+  const last = Number(await env.STATE.get("backup:last")) || 0;
+  if (!last) return;
+  if (now - last > BACKUP_STALE_MS && (await env.STATE.get("backup:stale-alerted")) !== String(last)) {
+    await send(env, "⚠ لا نسخةَ خارجيّةً منذ أكثر من يوم", [
+      `آخرُ نسخةٍ مشفَّرةٍ رُفعت إلى Google Drive في ${amman(last)} (بتوقيت عمّان) — قبل نحو ${Math.round((now - last) / 3600000)} ساعة.`,
+      "الأرجح أنّ الحاسوبَ كان مطفأً وقتَ المهمّة اليوميّة، أو أنّ إذنَ Drive انتهى (يُجدَّد بـ scripts/offsite-connect.sh).",
+    ]);
+    await env.STATE.put("backup:stale-alerted", String(last));
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([run(env, event.scheduledTime), remind(env, event.scheduledTime)]));
+    ctx.waitUntil(Promise.all([run(env, event.scheduledTime), remind(env, event.scheduledTime), watchBackup(env, event.scheduledTime)]));
   },
   // لا مسارَ عامّاً لهذا الـWorker — لا workers.dev ولا Route؛ فهذا لا يُنادى إلا من «اختبار» في لوحة Cloudflare
   async fetch() {
