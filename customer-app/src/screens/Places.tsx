@@ -198,14 +198,14 @@ function PlaceForm({
       <div className="t2-idcard-row">
         <button
           type="button"
-          className="t2-cbtn ink grow"
+          className="t2-cbtn ink is-grow"
           disabled={busy || label.trim().length === 0}
           aria-busy={busy}
           onClick={() => onSave(label.trim(), icon)}
         >
           {tr("حفظ")}
         </button>
-        <button type="button" className="t2-cbtn soft grow" onClick={onCancel}>
+        <button type="button" className="t2-cbtn soft is-grow" onClick={onCancel}>
           {tr("إلغاء")}
         </button>
       </div>

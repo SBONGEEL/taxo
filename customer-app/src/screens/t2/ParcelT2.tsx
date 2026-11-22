@@ -16,7 +16,10 @@
 import { useState } from "react";
 
 import type { Ride, RideParcel } from "@/api/types";
-import { PAYER_LINE } from "@/lib/for-other";
+import { payerLine } from "@/lib/for-other";
+import { useCountryConfig } from "@/lib/config";
+import { methodsPhrase } from "@/lib/payment";
+import { useSession } from "@/lib/session";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
 import { PAYER_SHORT, PhoneFieldsT2, usePhoneDraft } from "./ForOtherT2";
@@ -110,6 +113,9 @@ export function ParcelSheetT2({
 }) {
   const phoneDraft = usePhoneDraft(initial?.recipient_phone ?? null);
   const { complete, full } = phoneDraft;
+  const { user } = useSession();
+  // **قنواتُ الدفع العاملةُ في دولة الراكب** — لا «أو البطاقة» لليبيّ (أمرُ المالك ٢٢/١١)
+  const payPhrase = methodsPhrase(useCountryConfig(user?.country_code));
   const [accepted, setAccepted] = useState(initial?.accepted_terms ?? false);
   const [name, setName] = useState(initial?.recipient_name ?? "");
   const [address, setAddress] = useState(initial?.recipient_address ?? "");
@@ -286,7 +292,7 @@ export function ParcelSheetT2({
       {fetch ? (
         <p className="t2-note t2-fo-keep">
           <Icon name="payments" />
-          {tr("تدفع أنت حين يصلك — بالمحفظة أو البطاقة أو نقداً عند التسليم.")}
+          {payPhrase ? tr("تدفع أنت حين يصلك — {0}.", { 0: payPhrase }) : tr("تدفع أنت حين يصلك.")}
         </p>
       ) : (
         <>
@@ -410,7 +416,7 @@ export function ParcelTrackT2({ ride }: { ride: Ride }) {
         {ride.payer === "recipient_cash" ? (
           <div className="t2-fo-ride-payer">
             <Icon name="payments" />
-            <span>{PAYER_LINE.recipient_cash}</span>
+            <span>{payerLine("recipient_cash", null)}</span>
           </div>
         ) : null}
       </div>

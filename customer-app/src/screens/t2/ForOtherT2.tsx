@@ -14,8 +14,9 @@ import { ApiError } from "@/api/client";
 import { createTrackLink } from "@/api/endpoints";
 import type { CountryCode, Ride, RideForOther, RidePayer } from "@/api/types";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { useConfig, usePhoneCountry } from "@/lib/config";
-import { PAYER_LINE, shareTrackLink, trackUrl, webOrigin } from "@/lib/for-other";
+import { useConfig, useCountryConfig, usePhoneCountry } from "@/lib/config";
+import { REQUESTER_METHODS, payerLine, shareTrackLink, trackUrl, webOrigin } from "@/lib/for-other";
+import { methodsPhrase } from "@/lib/payment";
 import { COUNTRY_LABEL, cleanSecondPhone, looksComplete } from "@/lib/phone";
 import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
@@ -189,6 +190,8 @@ export function ForOtherSheetT2({
     initial?.payer ?? (requesterPayable ? "requester" : "passenger_cash"),
   );
 
+  const myCountry = useCountryConfig(user?.country_code);
+  const requesterPhrase = methodsPhrase(myCountry, REQUESTER_METHODS);
   const own = full !== null && full === user?.phone;
   const phoneError = phoneDraft.problem ?? (own ? tr("هذا رقمُك — اطلب الرحلةَ لنفسك") : null);
   const ready = name.trim().length >= 2 && full !== null && !own && (payer !== "requester" || requesterPayable);
@@ -197,7 +200,7 @@ export function ForOtherSheetT2({
     {
       value: "requester",
       icon: "account_balance_wallet",
-      label: tr("أنا أدفع — بالمحفظة أو البطاقة"),
+      label: requesterPhrase ? tr("أنا أدفع — {0}", { 0: requesterPhrase }) : tr("أنا أدفع"),
       hint: requesterPayable ? tr("من تطبيقك بعد الرحلة") : tr("لا محفظةَ ولا بطاقةَ مفعّلتان في بلدك"),
       off: !requesterPayable,
     },
@@ -291,6 +294,8 @@ export function ForOtherSheetT2({
  *  تنتظر الضغطةُ الثانيةُ شبكةً (والخلفيةُ تعيد الرمزَ نفسَه على أيِّ حال). **والنسخُ يُقال بتنبيه** — لا أثرَ له غيرُه يُرى. */
 export function ForOtherTrackT2({ ride }: { ride: Ride }) {
   const { notify } = useRide();
+  const { user } = useSession();
+  const myCountry = useCountryConfig(user?.country_code);
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -328,7 +333,7 @@ export function ForOtherTrackT2({ ride }: { ride: Ride }) {
         ) : null}
         <div className="t2-fo-ride-payer">
           <Icon name={ride.payer === "passenger_cash" ? "payments" : "account_balance_wallet"} />
-          <span>{PAYER_LINE[ride.payer]}</span>
+          <span>{payerLine(ride.payer, myCountry)}</span>
         </div>
       </div>
       {linkable ? (

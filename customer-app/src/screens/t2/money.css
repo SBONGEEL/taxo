@@ -209,6 +209,10 @@
 }
 /* **وقائمةٌ هي آخرُ الورقة لا هامشَ تحتها** — قاعُ الورقة يحمل حشوتَه (`--safe-area`) */
 .t2-m-modal .t2-sheet-body > .t2-list:last-child { margin-bottom: 0; }
+/* **وورقةٌ لها قدمٌ (تلميحٌ وزرّ) يحمل جسمُها حشوةَ قاعٍ وتنفصل عنه القدمُ بخطّ** (أمرُ المالك ٢٠٢٦-١١-٢٢): بلاهما يلتصق آخرُ سطرٍ
+   بـ«وافق على الشروط أولاً» فيُقرأ مقطوعاً خلف التلميح والزرّ (هاتفُ المالك، «أحضر غرضي»). */
+.t2-m-modal .t2-sheet-body:not(:last-child) { padding-bottom: 20px; }
+.t2-m-modal .t2-sheet-foot { padding-top: 12px; border-top: 1px solid var(--t2-line); }
 .t2-m-sheet-title { margin: 0 2px; font-size: 19px; font-weight: 700; }
 .t2-m-sheet-sub { margin: 2px 2px 12px; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
 .t2-m-sheet-title + .t2-list { margin-top: 10px; }
@@ -564,7 +568,7 @@ html.dark .t2:not(.t2-day) .t2-m-qr { border-color: transparent; background: var
 .t2-m-skel.map { height: calc(164px + env(safe-area-inset-top, 0px)); border-radius: 0; }
 .t2-m-skel.line { width: 40%; height: 13px; margin-top: 6px; border-radius: 7px; }
 .t2-m-skel.card { height: 124px; margin-top: 12px; border-radius: 24px; }
-.t2-m-skel.block { height: 76px; margin-top: 10px; }
+.t2-m-skel.is-block { height: 76px; margin-top: 10px; }
 @media (prefers-reduced-motion: no-preference) {
   .t2-m-skel { animation: t2-m-pulse 1.4s var(--t2-ease) infinite; }
 }

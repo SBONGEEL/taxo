@@ -233,10 +233,10 @@ export function WomenPausedChoiceT2({
         {tr("لم نطلب رحلتك — خدمةُ الكبتنات متوقّفةٌ الآن")}
       </p>
       <div className="t2-wpause-actions">
-        <button type="button" className="t2-cbtn grow t2-wpause-any" disabled={busy} onClick={onAnyCaptain}>
+        <button type="button" className="t2-cbtn is-grow t2-wpause-any" disabled={busy} onClick={onAnyCaptain}>
           {tr("اطلبيها بأي كبتن")}
         </button>
-        <button type="button" className="t2-cbtn grow soft" disabled={busy} onClick={onCancel}>
+        <button type="button" className="t2-cbtn is-grow soft" disabled={busy} onClick={onCancel}>
           {tr("ألغي الحجز")}
         </button>
       </div>

@@ -120,7 +120,7 @@ html.dark .t2:not(.t2-day) .t2-cbtn.ink,
   color: var(--t2-surface);
 }
 .t2-cbtn.destroy-text { color: var(--t2-danger); }
-.t2-cbtn.grow { flex: 1; }
+.t2-cbtn.is-grow { flex: 1; }
 .t2-cbtn.full { width: 100%; }
 .t2-cbtn:disabled { opacity: 0.45; cursor: default; }
 .t2-cbtn:active:enabled { transform: scale(0.98); }

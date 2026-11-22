@@ -79,6 +79,26 @@ export function channelsFor(country: CountryConfig | null | undefined) {
   );
 }
 
+const METHOD_WORD: Record<PayableMethod, string> = {
+  wallet: tr("بالمحفظة"),
+  cliq: tr("بكليك"),
+  card: tr("بالبطاقة"),
+  cash: tr("نقداً"),
+};
+
+/** **«بالمحفظة أو البطاقة أو نقداً» من قنوات الدولة العاملة لا من نصٍّ ثابت** (أمرُ المالك ٢٠٢٦-١١-٢٢): سطرٌ ثابتٌ وعد الليبيَّ
+ *  بالبطاقة ولا بطاقةَ في ليبيا. `only` يضيّقها بما يجوز في الحال (الطالبُ في رحلةٍ لغيره: المحفظةُ والبطاقةُ وحدهما)، و`null`
+ *  حين لا تبقى قناة — فيقول المُنادي ذلك بدل جملةٍ فارغة. */
+export function methodsPhrase(
+  country: CountryConfig | null | undefined,
+  only?: ReadonlySet<PayableMethod>,
+): string | null {
+  const words = channelsFor(country)
+    .filter((channel) => !only || only.has(channel.method))
+    .map((channel) => METHOD_WORD[channel.method]);
+  return words.length ? words.join(tr(" أو ")) : null;
+}
+
 const KEY = "taxo.payment_preference";
 
 function stored(): PayableMethod | null {

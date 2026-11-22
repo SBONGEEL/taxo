@@ -23,6 +23,7 @@ from app.models.audit import AdminAuditLog
 from app.models.cross_transfer import CrossTransfer, CrossTransferLimit, FxRate
 from app.models.enums import CountryCode, Currency, FeatureKey, WalletTransactionType
 from app.models.feature_flag import FeatureFlag
+from app.models.notification import UserNotification
 from app.models.wallet import WalletTransaction
 from tests.helpers import OTHER_RIDER, RIDER, rider_session, topup_wallet, wallet_of
 
@@ -140,6 +141,15 @@ async def test_a_transfer_writes_three_entries_with_its_rate_and_an_audit_row(
         audits = await session.scalar(select(func.count()).select_from(AdminAuditLog).where(
             AdminAuditLog.entity_type == "cross_transfer", AdminAuditLog.entity_id == row.id))
         assert audits == 1
+        # **وإشعارٌ للطرفين، وكلُّ مبلغٍ بعلامة عملته** — عملتان في جملةٍ واحدة، ورقمٌ عارٍ لا يُعرف أيُّهما
+        bodies = {
+            str(n.user_id): n.body
+            for n in (await session.scalars(select(UserNotification).where(
+                UserNotification.user_id.in_([uuid.UUID(sender["user"]["id"]), uuid.UUID(recipient["user"]["id"])])))).all()
+            if n.data and str(n.data.get("type", "")).startswith("cross_transfer")
+        }
+        assert bodies[sender["user"]["id"]] == "أرسلت 10.000 د.أ ووصل المستلمَ 1905 د.ج"
+        assert bodies[recipient["user"]["id"]] == "وصل إلى محفظتك 1905 د.ج"
 
 
 async def test_a_changed_rate_refuses_instead_of_sending_a_different_amount(

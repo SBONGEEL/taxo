@@ -456,7 +456,7 @@ export function TrackingSheetT2({
   const skinRow =
     driver?.skin && t.skinArt !== "broken" ? (
       // **مركبةُ المتجر — ما يتحرّك على الخريطة هو ما يُرسم هنا** (2026-08-22)، ولا يُحجز مكانٌ لرسمةٍ لم تصل
-      <div className={t.skinArt === "loading" ? "t2-trk-skin hidden" : "t2-trk-skin"}>
+      <div className={t.skinArt === "loading" ? "t2-trk-skin is-hidden" : "t2-trk-skin"}>
         <img
           src={skinImageUrl(driver.skin.image_url)}
           alt=""

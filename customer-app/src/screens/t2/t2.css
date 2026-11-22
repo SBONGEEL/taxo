@@ -1304,7 +1304,7 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-trk-plate-cc { display: flex; align-items: center; padding: 0 4px; background: var(--t2-text); color: var(--t2-bg); font: 600 9px/1 ui-monospace, Menlo, monospace; }
 .t2-trk-plate-no { padding: 7px 8px; font-family: var(--t2-font-num); font-size: 13px; font-weight: 600; }
 .t2-trk-skin { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 12px; border-radius: 18px; background: var(--t2-surface); }
-.t2-trk-skin.hidden { display: none; }
+.t2-trk-skin.is-hidden { display: none; }
 .t2-trk-skin > img { flex: none; width: 44px; height: 44px; object-fit: contain; }
 .t2-trk-skin > p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
 .t2-trk-gap { height: 10px; }

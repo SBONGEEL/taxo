@@ -23,7 +23,7 @@ from decimal import ROUND_DOWN, Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import amount_text, currency_for_country, round_to_currency, step_of
+from app.core.currency import STORAGE_STEP, amount_text, currency_for_country, round_to_currency, step_of
 from app.core.exceptions import (
     Conflict,
     FeatureDisabled,
@@ -99,7 +99,7 @@ async def get_rate(session: AsyncSession, source: Currency, target: Currency) ->
 
 def _convert(amount: Decimal, rate: Decimal, target: Currency) -> Decimal:
     """**ما يصل مقرَّباً للأسفل إلى أصغر وحدةٍ في عملة المستلم** — لا يصل أكثرُ ممّا يغطّيه السعر، والفرقُ أصغرُ من وحدة."""
-    return (amount * rate).quantize(step_of(target), rounding=ROUND_DOWN).quantize(Decimal("0.001"))
+    return (amount * rate).quantize(step_of(target), rounding=ROUND_DOWN).quantize(STORAGE_STEP)
 
 
 async def quote(session: AsyncSession, *, sender: User, recipient: User, amount: Decimal) -> Quote:

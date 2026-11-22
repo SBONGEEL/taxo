@@ -138,8 +138,8 @@ export function RideDetailsScreen() {
           </div>
           <span className="t2-m-skel line" aria-hidden="true" />
           <span className="t2-m-skel card" aria-hidden="true" />
-          <span className="t2-m-skel block" aria-hidden="true" />
-          <span className="t2-m-skel block" aria-hidden="true" />
+          <span className="t2-m-skel is-block" aria-hidden="true" />
+          <span className="t2-m-skel is-block" aria-hidden="true" />
         </div>
       </div>
     );

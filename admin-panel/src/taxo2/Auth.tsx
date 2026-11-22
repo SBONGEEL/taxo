@@ -137,7 +137,7 @@ export function AuthPhone({
           <Icon name="expand_more" />
         </button>
       ) : fixed ? (
-        <span className="t2-auth-country fixed">
+        <span className="t2-auth-country is-static">
           <Flag code={fixed.code} label={fixed.name} size={22} />
           <span className="t2-auth-dial" dir="ltr">+{dial ?? ""}</span>
         </span>

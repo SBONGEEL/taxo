@@ -1854,5 +1854,14 @@
   "يرى الكبتنُ الرقمَ أثناء هذا الطلب فقط، ويُخفى عنه بعد انتهائه.": "Le chauffeur voit ce numéro pendant cette commande seulement ; il lui est masqué ensuite.",
   "يرى الكبتنُ الرقمَ أثناء هذه الرحلة فقط، ويُخفى عنه بعد انتهائها.": "Le chauffeur voit ce numéro pendant cette course seulement ; il lui est masqué ensuite.",
   "ملخّص الطلب": "Récapitulatif de la commande",
-  "السعر التقديري": "Prix estimé"
+  "السعر التقديري": "Prix estimé",
+  "بالمحفظة": "par portefeuille",
+  "بكليك": "par CliQ",
+  "بالبطاقة": "par carte",
+  "نقداً": "en espèces",
+  "تدفع أنت حين يصلك — {0}.": "Vous payez à la livraison — {0}.",
+  "تدفع أنت حين يصلك.": "Vous payez à la livraison.",
+  "أنا أدفع — {0}": "Je paie — {0}",
+  "تدفع أنت بعد الرحلة — {0}": "Vous payez après la course — {0}",
+  "تدفع أنت بعد الرحلة": "Vous payez après la course"
 }

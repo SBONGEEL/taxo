@@ -11,7 +11,7 @@
 
 import type { CountryConfig, PublicTrack, RidePayer } from "@/api/types";
 import { useFeature } from "@/lib/config";
-import { channelsFor, usePaymentPreference, type PayableMethod } from "@/lib/payment";
+import { channelsFor, methodsPhrase, usePaymentPreference, type PayableMethod } from "@/lib/payment";
 import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
 
 export function useRideForOther(): boolean {
@@ -21,7 +21,7 @@ export function useRideForOther(): boolean {
 
 /** **القناتان اللتان يدفع بهما الطالبُ في رحلةٍ لغيره** — لا يقف عند السيارة ليدفع نقداً، ولا يحوّل كليك على alias كبتنٍ
  *  لم يركب معه. **ولا باقيَ نقداً من محفظةٍ لا تغطّي** (`cash_remainder=False` في `payments`): الأجرةُ كاملةً أو لا شيء. */
-const REQUESTER_METHODS: ReadonlySet<PayableMethod> = new Set(["wallet", "card"]);
+export const REQUESTER_METHODS: ReadonlySet<PayableMethod> = new Set(["wallet", "card"]);
 
 /** **أيستطيع الطالبُ أن يدفع في هذه الدولة أصلاً؟** — بلا محفظةٍ ولا بطاقةٍ مفعّلتين يصير «أنا أدفع» وعداً لا بابَ له
  *  بعد الرحلة: كلُّ قناةٍ باقيةٍ ترتدّ ٤٠٩. فيُعطَّل الخيارُ بعلّته، ولا يُترك يُختار ثمّ يُكتشف. */
@@ -57,12 +57,14 @@ export function payerScope(ride: { for_other: boolean; payer: RidePayer }): Ride
   return ride.payer === "recipient_cash" ? ride.payer : null;
 }
 
-/** **سطرُ الدافع على الرحلة الجارية** — يقول لصاحب الحساب ما عليه بعد الرحلة قبل أن تنتهي. */
-export const PAYER_LINE: Record<RidePayer, string> = {
-  requester: tr("تدفع أنت بعد الرحلة — بالمحفظة أو البطاقة"),
-  passenger_cash: tr("يدفع الراكبُ نقداً للكبتن"),
-  recipient_cash: tr("يدفع المستلمُ نقداً عند التسليم"),
-};
+/** **سطرُ الدافع على الرحلة الجارية** — يقول لصاحب الحساب ما عليه بعد الرحلة قبل أن تنتهي. **وقنواتُ الطالب من دولته**
+ *  (`methodsPhrase`) لا «بالمحفظة أو البطاقة» ثابتةً — ليبيا بلا بطاقة (أمرُ المالك ٢٢/١١). */
+export function payerLine(payer: RidePayer, country: CountryConfig | null | undefined): string {
+  if (payer === "passenger_cash") return tr("يدفع الراكبُ نقداً للكبتن");
+  if (payer === "recipient_cash") return tr("يدفع المستلمُ نقداً عند التسليم");
+  const phrase = methodsPhrase(country, REQUESTER_METHODS);
+  return phrase ? tr("تدفع أنت بعد الرحلة — {0}", { 0: phrase }) : tr("تدفع أنت بعد الرحلة");
+}
 
 /** **رابطُ التتبّع من عنوان التطبيق نفسِه** (`/t/{token}`) — والخلفيةُ لا تكتب نطاقاً يفترق عن مكان التطبيق.
  *

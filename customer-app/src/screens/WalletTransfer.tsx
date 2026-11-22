@@ -288,8 +288,10 @@ export function WalletTransferScreen() {
                   <div className="t2-m-dash" aria-hidden="true" />
                   <div className="t2-m-sum-row">
                     <span className="t2-m-sum-label">{tr("سعر الصرف")}</span>
-                    <span dir="ltr" className="t2-m-sum-sub">
-                      1 {currencyLabel(quote.send.currency)} = {quote.rate} {currencyLabel(quote.receive.currency)}
+                    {/* **كلُّ طرفٍ معزولٌ باتّجاهه** — `dir="ltr"` على السطر كلِّه قلبه: علامةُ العملة العربيّة تجرّ الرقمَ بعدها
+                        فيُقرأ «1 د.ج 190.25 = د.أ» (قِيس في لقطة ٢٢/١١) */}
+                    <span className="t2-m-sum-sub">
+                      <bdi dir="ltr">1 {currencyLabel(quote.send.currency)}</bdi> = <bdi dir="ltr">{quote.rate} {currencyLabel(quote.receive.currency)}</bdi>
                     </span>
                   </div>
                   <div className="t2-m-sum-row">
@@ -298,9 +300,9 @@ export function WalletTransferScreen() {
                   </div>
                   <div className="t2-m-sum-row">
                     <span className="t2-m-sum-label">{tr("رسم التحويل")}</span>
-                    <span dir="ltr" className="t2-m-sum-sub">
-                      {formatMoney(quote.send.fee, quote.send.currency)}
-                      {Number(quote.fee_percent) > 0 ? ` (${quote.fee_percent}%)` : ""}
+                    <span className="t2-m-sum-sub">
+                      <bdi dir="ltr">{formatMoney(quote.send.fee, quote.send.currency)}</bdi>
+                      {Number(quote.fee_percent) > 0 ? <> <bdi dir="ltr">({quote.fee_percent}%)</bdi></> : null}
                     </span>
                   </div>
                   <div className="t2-m-sum-row">
