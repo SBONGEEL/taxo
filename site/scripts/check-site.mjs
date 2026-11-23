@@ -445,6 +445,7 @@ const apkTool = readFileSync(join(ROOT, "tools", "apk-manifest.mjs"), "utf8");
  *   · وكلُّ `/src/…` تطلبه صفحةٌ ملفٌّ موجود؛
  *   · وكلُّ استيرادٍ نسبيٍّ في السكربتات (`./door.js`) ملفٌّ موجود.
  * **والتعليقُ لا يُحسب وسماً**: `<!-- <script …> -->` لا يحمّل شيئاً. */
+const THIRD_PARTY_SCRIPTS = ["https://www.digistore24.com/trusted-badge/"];
 {
   const attr = (tag, name) => new RegExp(`\\s${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(tag)?.[1];
   for (const file of PAGES) {
@@ -454,6 +455,9 @@ const apkTool = readFileSync(join(ROOT, "tools", "apk-manifest.mjs"), "utf8");
     for (const tag of src.match(/<script\b[^>]*>/gi) ?? []) {
       const ref = attr(tag, "src");
       if (!ref) continue;
+      // **سكربتُ طرفٍ ثالثٍ من مضيفه لا يمرّ بـVite ولا يُخدَم من عندنا** — فعلّةُ هذا الشرط (`/src/…` يبقى في الناتج ويردّ ٤٠٤) لا
+      // تقع عليه. **والاستثناءُ بالمضيف والمسار مسمَّيَين لا بـ`https://` عامّة**: شارتا Digistore24 (شرطُ قائمة موافقة منتجاتهم، ٢٠٢٦-١١-٢٣).
+      if (THIRD_PARTY_SCRIPTS.some((prefix) => ref.startsWith(prefix))) continue;
       if (attr(tag, "type") !== "module") bad.push(`${file}: <script src="${ref}"> بلا type="module" — **لا يبنيه Vite، فيردّ ٤٠٤ بعد النشر**`);
       else scripts.add(ref);
     }
