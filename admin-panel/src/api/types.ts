@@ -647,6 +647,9 @@ export type FeatureKey =
   | "moonpay_rider_enabled"
   // **اشتراكُ الكبتن الشهريُّ بالبطاقة عبر Polar** (أمرُ المالك ٢٠٢٦-١١-١٤) — الأردنُ وحدَه، مطفأٌ حتى يقبل Polar ويختبر المالك
   | "polar_card_enabled"
+  // **اشتراكُ الكبتن بالبطاقة عبر Digistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — الموقعُ ونسخةُ Play بمفتاحين مستقلّين، الأردنُ وحدَه
+  | "digistore24_card_enabled"
+  | "digistore24_card_play_enabled"
   // **Dpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — مفتاحٌ لكلِّ استعمال، مطفأةٌ حتى الرخصة وقبول Dpay
   | "dpay_topup_enabled"
   | "dpay_trip_enabled"
@@ -718,6 +721,8 @@ export type FeatureKey =
   // **«عدد أيام» و«سفير TAXO»** (SPEC §١١١-د/٤) و**«شحن ببطاقة TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١)
   | "subscription_gifts"
   | "taxo_cards_enabled"
+  // **«بيعُ الكباتن لبطاقات TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢٣) — لا يُفتح إلا وخصمُ الكباتن مضبوط
+  | "taxo_cards_captain_sales"
   | "cross_country_transfer_enabled"
   | "map_open_places"
   | "map_place_suggestions"
@@ -1405,7 +1410,9 @@ export type WalletTransactionType =
   | "taxo_card"
   | "cross_transfer_out"
   | "cross_transfer_in"
-  | "cross_transfer_fee";
+  | "cross_transfer_fee"
+  // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
+  | "card_purchase";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -4086,6 +4093,27 @@ export interface PosSettings {
   pos_validity_days: number;
 }
 
+/** **خصمُ الكباتن %** (الترحيلة `0189`) — فارغٌ = بيعُ الكباتن مغلق ولو اشتعل مفتاحُه؛ يضبطه المالكُ وحدَه */
+export interface CaptainDiscount {
+  captain_discount_percent: string | null;
+}
+
+/** **سطرُ كبتنٍ في «المبيعات بحسب البائع»** — من الدفعات والدفتر في الخلفية */
+export interface CaptainSellerReport {
+  driver_id: string;
+  name: string | null;
+  phone: string | null;
+  currency: Currency;
+  batches: number;
+  cards: number;
+  redeemed: number;
+  cancelled: number;
+  unused: number;
+  expired: number;
+  face_amount: string;
+  paid_amount: string;
+}
+
 export interface CardSeller {
   id: string;
   user_id: string;
@@ -4141,7 +4169,7 @@ export interface ResellerSaleRow {
 
 /** **سطرُ نوعٍ في تقرير البطاقات** (SPEC §١٠٠-ب/١٤) */
 export interface CardKindReport {
-  kind: "batch" | "gift" | "pos" | "corporate";
+  kind: "batch" | "gift" | "pos" | "captain" | "corporate";
   currency: Currency;
   batches: number;
   cards: number;

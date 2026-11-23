@@ -188,6 +188,12 @@ const CardRedeemT2Screen = lazy(() =>
     default: m.CardRedeemT2Screen,
   })),
 );
+// **بيعُ بطاقات TAXO** (أمرُ المالك ٢٠٢٦-١١-٢٣) — خلف `taxo_cards_captain_sales` وخصمٍ مضبوط
+const CaptainCardsT2Screen = lazy(() =>
+  import("@/screens/t2/CaptainCardsT2").then((m) => ({
+    default: m.CaptainCardsT2Screen,
+  })),
+);
 const RedeemLink = lazy(() =>
   import("@/screens/t2/CardRedeemT2").then((m) => ({
     default: m.RedeemLink,
@@ -803,6 +809,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CardRedeemT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/sell-cards"
+                          element={
+                            <Guarded>
+                              <CaptainCardsT2Screen />
                             </Guarded>
                           }
                         />

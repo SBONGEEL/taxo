@@ -390,6 +390,46 @@ async def notify_payment_rejected(
     )
 
 
+async def notify_subscription_paid(
+    session: AsyncSession, redis: Redis, *, user_id: uuid.UUID, request_id: uuid.UUID, subscription_id: uuid.UUID
+) -> None:
+    """**«تم الدفع وتفعيل اشتراكك» بتاريخ انتهائه** (Digistore24، أمرُ المالك ٢٠٢٦-١١-٢٣) — بعد أن حُسم الطلبُ والتُزم.
+
+    **التاريخُ بيوم بلد الكبتن** (منطقةُ `notification_settings` — خادمٌ بتوقيت UTC يقصّ ثلاثَ ساعاتٍ من يوم عمّان) **وبأرقامٍ لاتينيّة**
+    (قاعدةُ المشروع). و`data` يحمل القيمَ الخامَ (`expires_at`) فيرسم التطبيقُ ما يشاء؛ والنصُّ لدرج النظام وحدَه.
+    """
+    from app.models.subscription import DriverSubscription
+    from app.services import stats
+
+    sub = await session.get(DriverSubscription, subscription_id)
+    if sub is None:
+        return
+    from app.models.user import User
+
+    owner = await session.get(User, user_id)
+    country = owner.country_code if owner is not None else None
+    ends = sub.expires_at
+    if country is not None:
+        try:
+            ends = ends.astimezone(await stats._zone(session, country))
+        except Exception:  # noqa: BLE001 — المنطقةُ تحسين، والإشعارُ لا يسقط بسببها
+            pass
+    when = f"{ends.year:04d}/{ends.month:02d}/{ends.day:02d}"
+    await _safe_notify(
+        session, redis, user_id=user_id,
+        message=PushMessage(
+            title="تم الدفع وتفعيل اشتراكك",
+            body=f"اشتراكك فعّال حتى {when}",
+            data={
+                "type": "subscription_paid",
+                "request_id": str(request_id),
+                "subscription_id": str(subscription_id),
+                "expires_at": sub.expires_at.isoformat(),
+            },
+        ),
+    )
+
+
 # ------------------------------------------------------- أحداث الرحلة
 
 

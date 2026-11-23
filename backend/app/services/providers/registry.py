@@ -648,6 +648,40 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **Digistore24 — اشتراكُ الكبتن بالبطاقة** (أمرا المالك ٢٠٢٦-١١-٢٣) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا `feature_key`**: مفتاحاه
+    # (الموقع ونسخة Play) قرارُ المالك من اللوحة. **والقيمُ من حساب Digistore24**: Settings ← Account access ← API keys · IPN
+    ProviderKey.DIGISTORE24: ProviderSpec(
+        key=ProviderKey.DIGISTORE24,
+        label="Digistore24 — اشتراكُ الكبتن بالبطاقة المصرفية (3 · 17 · 45 د.أ)",
+        fields=(
+            ProviderField(key="api_key", label="مفتاحُ API — من Digistore24: Settings ← Account access ← API keys"),
+            ProviderField(
+                key="ipn_passphrase",
+                label="عبارةُ الإشعار (IPN passphrase) — من Digistore24: Settings ← Integrations (IPN)؛ وعنوانُه …/payment-requests/webhook/digistore24",
+            ),
+            ProviderField(key="product_daily", label="معرّفُ منتج اليوميّ (3 د.أ = 4.25$)", secret=False, required=False),
+            ProviderField(key="product_weekly", label="معرّفُ منتج الأسبوعيّ (17 د.أ = 24.00$)", secret=False, required=False),
+            ProviderField(key="product_monthly", label="معرّفُ منتج الشهريّ بعرض «TAXO MAN 45» (45 د.أ = 63.50$)", secret=False, required=False),
+            ProviderField(
+                kind="toggle", key="test_mode", label="وضع التجربة — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الكباتن معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ الكباتن)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     # **«الدفع بالعملات الرقميّة» عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا
     # `feature_key`**: مفتاحاه قرارُ المالك من اللوحة. **والمفاتيحُ من لوحة MoonPay Commerce** (Developer)، ولا تُكتب في شيفرةٍ ولا سجلّ
     ProviderKey.MOONPAY: ProviderSpec(

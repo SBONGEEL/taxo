@@ -19,6 +19,8 @@ export interface CaptainServiceSwitches {
   levels: boolean;
   advances: boolean;
   garage: boolean;
+  /** **بيعُ بطاقات TAXO** (أمرُ المالك ٢٠٢٦-١١-٢٣) — `taxo_cards_captain_sales`؛ اختياريٌّ فلا يتغيّر من لا يمرّره */
+  sellCards?: boolean;
 }
 
 interface Row {
@@ -42,6 +44,7 @@ const ROWS: readonly Row[] = [
   { key: "garage", title: "المتجر والكراج", glyph: "local_taxi", destination: "/account/garage", needs: "garage" },
   { key: "referral", title: "أحِل صديقك", glyph: "redeem", destination: "/account/referrals" },
   { key: "debt", title: "المستحقّات", glyph: "toll", destination: "/account/debt" },
+  { key: "sell_cards", title: "بيع بطاقات TAXO", glyph: "confirmation_number", destination: "/account/sell-cards", needs: "sellCards" },
 ];
 
 /** **أهو مشتعلٌ لدولته؟** — كلُّ مفتاحٍ بقراءةٍ صريحة (لا فهرسةٌ بمتغيّر) فيراه `check:readers`. */
@@ -49,6 +52,7 @@ function switchedOn(row: Row, on: CaptainServiceSwitches): boolean {
   if (row.needs === "levels") return on.levels;
   if (row.needs === "advances") return on.advances;
   if (row.needs === "garage") return on.garage;
+  if (row.needs === "sellCards") return on.sellCards === true;
   return true;
 }
 

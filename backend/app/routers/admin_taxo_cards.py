@@ -20,6 +20,9 @@ from app.models.taxo_card import CardDenomination, CardShop
 from app.models.user import User
 from app.schemas.payment_request import PaymentReasonIn
 from app.schemas.taxo_card import (
+    CaptainDiscountIn,
+    CaptainDiscountOut,
+    CaptainSellerReportOut,
     TaxoCardState,
     CardBatchExtendIn,
     CardKindReportOut,
@@ -52,7 +55,7 @@ from app.schemas.taxo_card import (
     TaxoCardLimitsOut,
     TaxoCardOut,
 )
-from app.services import audit, card_gifts, card_sellers, taxo_cards
+from app.services import audit, captain_cards, card_gifts, card_sellers, taxo_cards
 
 router = APIRouter(prefix="/admin/taxo-cards", tags=["admin"])
 
@@ -543,3 +546,36 @@ async def kind_report(_r: ListReader, session: DbSession, country: CountryCode =
             expired_amount=t["expired_value"],
         ))
     return out
+
+
+# ------------------------------------------------------------------ بيعُ الكباتن (الترحيلة `0189`)
+
+
+@router.get("/captain-discount", response_model=CaptainDiscountOut)
+async def get_captain_discount(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> CaptainDiscountOut:
+    sales = await captain_cards.state(session, country)
+    return CaptainDiscountOut(captain_discount_percent=sales.discount_percent)
+
+
+@router.put("/captain-discount", response_model=CaptainDiscountOut)
+async def save_captain_discount(payload: CaptainDiscountIn, owner: OwnerUser, session: DbSession) -> CaptainDiscountOut:
+    """**خصمُ الكباتن للمالك وحدَه** — فارغٌ يُغلق البيعَ ولو اشتعل المفتاح."""
+    value = await captain_cards.save_discount(
+        session, actor=owner, country=payload.country_code, discount=payload.captain_discount_percent
+    )
+    await session.commit()
+    return CaptainDiscountOut(captain_discount_percent=value)
+
+
+@router.get("/report/captains", response_model=list[CaptainSellerReportOut])
+async def captain_report(_r: ListReader, session: DbSession, country: CountryCode = Query()) -> list[CaptainSellerReportOut]:
+    """**المبيعاتُ بحسب الكبتن** — من الدفعات والدفتر."""
+    currency = currency_for_country(country)
+    return [
+        CaptainSellerReportOut(
+            driver_id=row.driver_id, name=row.name, phone=row.phone, currency=currency, batches=row.batches,
+            cards=row.cards, redeemed=row.redeemed, cancelled=row.cancelled, unused=row.unused, expired=row.expired,
+            face_amount=row.face_value, paid_amount=row.paid,
+        )
+        for row in await captain_cards.seller_report(session, country)
+    ]

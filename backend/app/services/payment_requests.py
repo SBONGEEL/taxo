@@ -39,6 +39,7 @@ from app.models.enums import (
     PaymentProviderKind,
     PaymentRequestPurpose,
     PaymentRequestStatus,
+    SubscriptionStatus,
     WalletOwnerType,
     WalletTransactionType,
 )
@@ -198,6 +199,27 @@ async def require_enabled(
         return
     if not await is_enabled(session, country):
         raise FeatureDisabled("الدفعُ بهذه الطرق غيرُ متاحٍ في بلدك الآن")
+
+
+async def require_channel(session: AsyncSession, country: CountryCode, provider_id: uuid.UUID, channel: str) -> None:
+    """**القناةُ التي فُتح منها الدفع** (أمرُ المالك ٢٠٢٦-١١-٢٣) — نسخةُ Play لا تفتح Digistore24 إلا بمفتاحها المستقلّ، والموقعُ بمفتاحه.
+
+    **إعلانُ القناة لا يمنح شيئاً**: يختار أيَّ المفتاحين يُسأل، وكلاهما في اللوحة؛ ومن ادّعى «الموقع» من نسخة Play لم يجد إلا ما يجده
+    الموقع نفسُه. **فالقفلُ الحقيقيُّ لنسخة Play أنها لا ترسم الزرَّ** ومفتاحُها مطفأ، وهذا الحارسُ يمنع أن يفتحه طلبٌ يدّعي Play.
+    """
+    from app.services import payment_gateways
+
+    integration, _code = await _method_of(session, provider_id)
+    table = payment_gateways.CHANNEL_SWITCHES.get(integration or "")
+    if table is None:
+        return
+    key = table.get(channel)
+    if key is None:
+        raise InvalidInput("قناةٌ غيرُ معروفة", field="channel")
+    if not payment_gateways.switch_allowed(key.value, CountryCode(country)) or not await settings_service.is_feature_enabled(
+        session, country, key
+    ):
+        raise FeatureDisabled("الدفعُ بالبطاقة المصرفية غيرُ متاحٍ في هذه النسخة الآن")
 
 
 async def _method_of(session: AsyncSession, provider_id: uuid.UUID) -> tuple[str | None, str | None]:
@@ -780,6 +802,108 @@ async def refund(
     return request
 
 
+async def reverse_gateway_refund(
+    session: AsyncSession,
+    *,
+    request: PaymentRequest,
+    reason: str | None,
+    gateway_code: str | None = None,
+    gateway_message: str | None = None,
+    test_money: bool = False,
+) -> PaymentRequest:
+    """**الوسيطُ ردّ المالَ إلى بطاقة صاحبه بعد الاعتماد** (Digistore24: استردادٌ أو ردُّ بنك) — يُعكس ما كتبه الاعتمادُ بقيودٍ مقابلةٍ لا بحذف.
+
+    **ما كتبه الاعتماد**: شحنٌ بالمبلغ (`payment_request:{id}`) ثمّ شراءُ الاشتراك من المحفظة (`payreq_sub:{id}`). **فعكسُه**: الاشتراكُ
+    الذي اشتراه هذا الطلبُ بعينه يُلغى ويُردّ ما دُفع فيه إلى المحفظة كاملاً (`subscription_refund:{صفّه}` — مفتاحُ الإلغاء القائم نفسُه)،
+    ثمّ قيدٌ مقابلٌ يُنقص المحفظةَ بقدر الشحن (`payment_request_refund:{id}` — مفتاحُ الردّ اليدويّ نفسُه، والحالان لا يجتمعان).
+    **فالمحفظةُ تعود كما كانت قبل الدفع، والمالُ نفسُه عاد إلى البطاقة.**
+
+    **والأقفالُ بترتيبها** (`CLAUDE.md`): صفُّ الطلب بيد المنادي ← صفُّ الكبتن ← قفلُ المحفظة. **وإن لم يكفِ الرصيدُ** (شحنٌ بلا اشتراكٍ
+    صُرف) لا يُكتب شيءٌ: يبقى «معتمداً» بسببٍ مكتوبٍ ويُشعَر المالكُ ليحسمه بيده — **ولا يُكتب رصيدٌ سالب**.
+    """
+    from app.models.subscription import DriverSubscription
+
+    if request.status is not PaymentRequestStatus.APPROVED:
+        return request
+    owner = await session.get(User, request.user_id)
+    if owner is None:  # pragma: no cover — مفتاحٌ أجنبيٌّ يمنعه
+        raise NotFound("صاحبُ الدفعة غيرُ موجود")
+    driver: Driver | None = None
+    if request.purpose is PaymentRequestPurpose.SUBSCRIPTION or request.owner_type is WalletOwnerType.DRIVER:
+        found = await session.scalar(select(Driver).where(Driver.user_id == owner.id))
+        driver = await drivers_service.lock(session, found) if found is not None else None
+    provider = request.provider
+    amount = request.credited_amount or request.amount
+    moment = _now()
+    mark = f"{TEST_MONEY_MARK} — " if test_money else ""
+    why = (reason or payment_reasons.CARD_REFUNDED)[:500]
+    cancelled_sub: DriverSubscription | None = None
+    try:
+        async with session.begin_nested():
+            if request.subscription_id is not None:
+                sub = await session.get(DriverSubscription, request.subscription_id)
+                if sub is not None and sub.status is SubscriptionStatus.ACTIVE:
+                    sub.status = SubscriptionStatus.CANCELLED
+                    sub.cancelled_at = moment
+                    sub.cancelled_by = None
+                    sub.cancel_reason = f"استُردّ الدفعُ عبر {provider.name}"[:500]
+                    if sub.amount_paid > 0:
+                        back = await wallet.record(
+                            session, owner=owner, owner_type=WalletOwnerType.DRIVER, tx_type=WalletTransactionType.REFUND,
+                            amount=sub.amount_paid, reference=f"{mark}إلغاءُ اشتراكٍ استُردّ دفعُه"[:120],
+                            idempotency_key=f"subscription_refund:{sub.id}",
+                        )
+                        sub.refund_transaction_id = back.id
+                    cancelled_sub = sub
+            entry = await wallet.record(
+                session, owner=owner, owner_type=request.owner_type, tx_type=WalletTransactionType.ADJUSTMENT,
+                amount=-amount, reference=f"{mark}استردادُ دفعة {provider.name}"[:120],
+                idempotency_key=f"payment_request_refund:{request.id}",
+            )
+    except InsufficientBalance:
+        await session.refresh(request)
+        request.outcome_note = (
+            f"استردّ {provider.name} الدفعةَ ولا يكفي الرصيدُ لعكسها ({amount_text(amount, request.currency)}) — تُحسم يدويّاً"
+        )[:500]
+        request.gateway_code = (gateway_code or None) and gateway_code[:32]
+        request.gateway_message = (gateway_message or None) and gateway_message[:500]
+        _flag("payment_stuck", session=session, request=request, cause="refund_unbalanced")
+        return request
+    request.status = PaymentRequestStatus.REFUNDED
+    request.refund_reason = why
+    request.refunded_by = None
+    request.refunded_at = moment
+    request.refund_transaction_id = entry.id
+    request.gateway_code = (gateway_code or None) and gateway_code[:32]
+    request.gateway_message = (gateway_message or None) and gateway_message[:500]
+    if driver is not None and cancelled_sub is not None:
+        from app.services import subscriptions
+
+        # **مخرجُ الانتهاء نفسُه** — من لم يبقَ له غطاءٌ تسقط نسبتُه المجمَّدة ويخرج إن لم يكن في رحلة
+        await session.flush()
+        if await subscriptions.coverage_until(session, driver.id) is None:
+            driver.commission_percent_from_subscription = None
+            if driver.is_online and not await subscriptions._has_active_ride(session, driver.id):
+                driver.is_online = False
+    await audit.record(
+        session,
+        actor=None,
+        action=AuditAction.UPDATE,
+        entity_type="payment_request",
+        entity_id=request.id,
+        details={
+            "action": "gateway_refund",
+            "amount": str(amount),
+            "reason": why,
+            "transaction_id": str(entry.id),
+            "subscription_id": str(cancelled_sub.id) if cancelled_sub is not None else None,
+            "provider": provider.code,
+            "test_money": test_money,
+        },
+    )
+    return request
+
+
 # ------------------------------------------------------------------ الوسيطُ الآليّ (المرحلة ٣)
 
 
@@ -947,12 +1071,28 @@ async def settle_from_gateway(
     provider = row.provider
     if provider.integration is None or row.external_id is None:
         return row, False
-    if row.status is not PaymentRequestStatus.PENDING and not (signed and row.status in _LATE_STATUSES):
+    reversible = row.status is PaymentRequestStatus.APPROVED and signed
+    if row.status is not PaymentRequestStatus.PENDING and not (signed and row.status in _LATE_STATUSES) and not reversible:
         return row, False
     gateway = await payment_gateways.gateway_for(session, provider.integration, row.country_code)
     event = await gateway.check(row.external_id)
     if event is None:
         return row, False
+    if event.outcome is PaymentRequestStatus.REFUNDED:
+        # **استردادٌ أو ردُّ بنكٍ بعد الاعتماد** (Digistore24 `on_refund` · `on_chargeback`) — يُعكس بقيودٍ مقابلة، من إشعارٍ موقَّعٍ وحدَه،
+        # وعند وسيطٍ صرّح بأنه يعكس الاسترداد (`reverses_refunds`)
+        if not (signed and getattr(gateway, "reverses_refunds", False)):
+            return row, False
+        locked = await get_request(session, request_id, for_update=True)
+        if locked.status is not PaymentRequestStatus.APPROVED:
+            return locked, False
+        reversed_row = await reverse_gateway_refund(
+            session, request=locked, reason=event.reason, gateway_code=event.gateway_code,
+            gateway_message=event.gateway_message, test_money=bool(getattr(gateway, "test_mode", False)),
+        )
+        return reversed_row, reversed_row.status is PaymentRequestStatus.REFUNDED
+    if reversible:
+        return row, False  # **إشعارُ «دُفع» مكرَّرٌ لطلبٍ معتمد** — لا شيءَ يُكتب ثانية
     may_credit = signed or not getattr(gateway, "confirms_by_webhook", False)
     if event.outcome is PaymentRequestStatus.APPROVED and not may_credit:
         return row, False  # **«دُفع» ينتظر إشعارَه الموقَّع** — لا يُقيَّد من عودة التطبيق

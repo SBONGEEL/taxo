@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { bankCardMethod, cryptoMethod } from "@/screens/t2/CardPayT2";
+import { bankCardMethod, cardFits, cryptoMethod, digistoreOnHere } from "@/screens/t2/CardPayT2";
 
 import { listPaymentMethods } from "@/api/endpoints";
 import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
@@ -144,19 +144,21 @@ export function SubscriptionT2Screen() {
   const bankCardFeatures = useCountryConfig(profile?.user?.country_code)?.features;
   // **ترتيبُ السوق** (أمرُ المالك ٢٠٢٦-١١-١٣) — البطاقةُ أوّلاً في الأردن
   const countryOrder = useCountryConfig(profile?.user?.country_code)?.payment_method_order;
+  // **وDigistore24 بمفتاح نسخته** (أمرُ المالك ٢٠٢٦-١١-٢٣) — الموقعُ بمفتاحه، ونسخةُ Play بمفتاحها المستقلّ
+  const digistoreOn = digistoreOnHere(bankCardFeatures);
   const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true ||
-    bankCardFeatures?.polar_card_enabled === true || dpaySub;
+    bankCardFeatures?.polar_card_enabled === true || dpaySub || digistoreOn;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;
     let alive = true;
     listPaymentMethods("subscription")
-      .then((body) => alive && setBankCard(bankCardMethod(body.methods)))
+      .then((body) => alive && setBankCard(bankCardMethod(body.methods, digistoreOn)))
       .catch(() => alive && setBankCard(null));
     return () => {
       alive = false;
     };
-  }, [bankCardOn]);
+  }, [bankCardOn, digistoreOn]);
   // **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — بمفتاحه في سوقه، وأوّلاً حيث رتّبه المالك
   const cryptoOn = bankCardFeatures?.moonpay_driver_enabled === true;
   const cryptoOnTop = useCountryConfig(profile?.user?.country_code)?.crypto_first === true;
@@ -478,7 +480,8 @@ export function SubscriptionT2Screen() {
                 : undefined
             }
             onBankCard={
-              bankCard
+              // **حارسُ السعر** (قرارُ المالك ٢٠٢٦-١١-٢٣) — طريقةٌ بمبالغَ ثابتة: الزرُّ لخطّةٍ يساوي ما يدفعه الكبتنُ الآن أحدَها وحدَها
+              bankCard && cardFits(bankCard, s.confirming.price_to_pay ?? s.confirming.price)
                 ? (chosen) =>
                     navigate("/wallet/card-pay", {
                       state: {

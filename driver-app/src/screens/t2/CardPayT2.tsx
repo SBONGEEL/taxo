@@ -10,6 +10,7 @@
  * **ولا شيءَ يتغيّر قبل أن يقول الوسيطُ «اكتمل»**: الاشتراكُ يُفعَّل أو المستحقّاتُ تُسدَّد في معاملة الاعتماد نفسِها.
  */
 
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -18,7 +19,9 @@ import { listPaymentMethods, openPaymentCheckout } from "@/api/endpoints";
 import type { PayMethod, PaymentRequestPurpose } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
-import { goToCheckout } from "@/lib/pay-return";
+import { useCountryConfig } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
+import { goToCheckout, openedRequest } from "@/lib/pay-return";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, formatAmount } from "@/lib/utils";
 import { Icon, Wordmark } from "@/taxo2";
@@ -39,10 +42,36 @@ export interface CardPayHandoff {
 }
 
 /** **طريقةُ البطاقة المصرفية من طرق السوق** — هي وحدَها تحمل عملةَ خصمٍ أخرى */
-export function bankCardMethod(methods: PayMethod[] | null | undefined): PayMethod | null {
+export function bankCardMethod(methods: PayMethod[] | null | undefined, digistoreOn = true): PayMethod | null {
   // **Whop أوّلاً حين يُعرض** (أمرُ المالك ٢٠٢٦-١١-١٣: طريقةُ الأردن الأساسيّة) — وإلا أيُّ وسيطِ بطاقةٍ مصرفيّةٍ في السوق
-  const cards = methods?.filter((row) => row.gateway && row.charge_currency && !row.crypto) ?? [];
+  // **وDigistore24 بمفتاح نسخته وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٣): الخادمُ يعرضه إن اشتعل مفتاحُ الموقع أو Play، **ونسخةُ Play لا ترسمه
+  // ومفتاحُها مطفأ** — فلا يُذكر الدفعُ بالبطاقة فيها قبل موافقة Google
+  const cards = methods?.filter((row) => row.gateway && row.charge_currency && !row.crypto && (digistoreOn || row.code !== DIGISTORE24)) ?? [];
   return cards.find((row) => row.code === "whop_card") ?? cards[0] ?? null;
+}
+
+/** **صفُّ Digistore24 في طرق السوق** (`0188`) */
+export const DIGISTORE24 = "digistore24_card";
+
+/** **قناةُ هذه النسخة** — الغلافُ نسخةُ Play (وحزمةُ الموقع موقَّعةٌ من Play نفسِها)، والمتصفّحُ نسخةُ الموقع */
+export function payChannel(): "web" | "play" {
+  return Capacitor.isNativePlatform() ? "play" : "web";
+}
+
+/** **أيُشعَل Digistore24 في هذه النسخة؟** — مفتاحُ قناتها وحدَه (أمرُ المالك ٢٠٢٦-١١-٢٣) */
+export function digistoreOnHere(features: Record<string, boolean> | null | undefined): boolean {
+  if (!features) return false;
+  return payChannel() === "play" ? features.digistore24_card_play_enabled === true : features.digistore24_card_enabled === true;
+}
+
+/** **حارسُ السعر** (قرارُ المالك ٢٠٢٦-١١-٢٣) — طريقةٌ بمبالغَ ثابتةٍ تُدفع بها الخطّةُ التي يساويها ما يدفعه الكبتنُ الآن وحدَها؛
+ *  وطريقةٌ بلا مبالغَ ثابتةٍ لأيِّ مبلغ. **والمقارنةُ بالمليم** — نصّان من الخادم لا حسابُ مال */
+export function cardFits(method: PayMethod | null | undefined, amount: string | null | undefined): boolean {
+  if (!method || amount == null) return false;
+  const fixed = method.fixed_amounts ?? [];
+  if (fixed.length === 0) return true;
+  const mills = (value: string) => Math.round(Number(value) * 1000);
+  return fixed.some((value) => mills(value) === mills(amount));
 }
 
 /** **طريقةُ العملات الرقميّة من طرق السوق** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — لا عملةَ خصمٍ لها، وتُعرف بـ`crypto` */
@@ -59,6 +88,15 @@ export function CardPayT2Screen() {
   const [currency, setCurrency] = useState<keyof typeof CURRENCY_LABEL | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useDriver();
+  const features = useCountryConfig(profile?.user?.country_code)?.features;
+
+  // **عاد من صفحة البطاقة بزرّ الرجوع** (نسخةُ الموقع: الصفحةُ في النافذة نفسِها) — دفعةٌ فُتحت قبل قليل تُعرض نتيجتُها لا صفحةٌ جديدة:
+  // «جارٍ تأكيد الدفع…» وزرُّ الإلغاء هناك، **فلا يُفتح طلبٌ ثانٍ والأوّلُ لم يُحسم**
+  useEffect(() => {
+    const open = openedRequest();
+    if (open) navigate(`/wallet/pay/return?r=${encodeURIComponent(open)}`, { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     if (!handoff) return;
@@ -67,7 +105,7 @@ export function CardPayT2Screen() {
       .then((body) => {
         if (!alive) return;
         setCurrency(body.currency);
-        setMethod(handoff.crypto ? cryptoMethod(body.methods) : bankCardMethod(body.methods));
+        setMethod(handoff.crypto ? cryptoMethod(body.methods) : bankCardMethod(body.methods, digistoreOnHere(features)));
       })
       .catch((caught: unknown) => {
         if (!alive) return;
@@ -77,7 +115,7 @@ export function CardPayT2Screen() {
     return () => {
       alive = false;
     };
-  }, [handoff]);
+  }, [handoff, features]);
 
   async function pay() {
     if (!handoff || !method) return;
@@ -89,6 +127,7 @@ export function CardPayT2Screen() {
         purpose: handoff.purpose,
         amount: handoff.amount,
         planId: handoff.purpose === "subscription" ? handoff.planId : undefined,
+        channel: method.code === DIGISTORE24 ? payChannel() : undefined,
       });
       goToCheckout(opened.request.id, opened.checkout_url);
     } catch (caught) {
@@ -101,6 +140,9 @@ export function CardPayT2Screen() {
   // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١، حدُّ الطريقة من اللوحة) — تحتَه لا يُفتح الدفع ويُقال لماذا
   const floor = method?.min_amount ?? null;
   const belowFloor = handoff !== null && floor !== null && Number(handoff.amount) < Number(floor);
+  // **Digistore24**: الدينارُ وحدَه على شاشات TAXO وسطرٌ خفيفٌ في الأسفل (قرارُ المالك ٢٠٢٦-١١-٢٣) — لا سعرَ دولار ولا سطرُ بنك
+  const digistore = method?.code === DIGISTORE24;
+  const offPrice = digistore && handoff !== null && !cardFits(method, handoff.amount);
 
   return (
     <div className="t2 t2-cardpay scr">
@@ -194,7 +236,7 @@ export function CardPayT2Screen() {
             </ul>
           ) : (
           <ul className="t2-cardpay-facts">
-            {method.charge_rate ? (
+            {digistore ? null : method.charge_rate ? (
               <li>
                 <Icon name="credit_card" />
                 <span>
@@ -217,7 +259,7 @@ export function CardPayT2Screen() {
                 </span>
               </li>
             ) : null}
-            {method.charge_rate ? (
+            {method.charge_rate && !digistore ? (
               <li>
                 <Icon name="account_balance" />
                 <span>{tr("وقد يضيف بنكُك رسمَ تحويل العملة، فيختلف ما في كشف حسابك قليلاً.")}</span>
@@ -247,7 +289,9 @@ export function CardPayT2Screen() {
           </ul>
           )}
 
-          {belowFloor && floor !== null ? (
+          {offPrice ? (
+            <p className="t2-note">{tr("هذا المبلغ لا يُدفع بالبطاقة الآن — ادفع بكليك أو من محفظتك.")}</p>
+          ) : belowFloor && floor !== null ? (
             <p className="t2-note">{tr("أقلُّ دفعٍ بالبطاقة {0} {1} — للمبالغ الأصغر ادفع بكليك.", { 0: formatAmount(floor, currency), 1: label })}</p>
           ) : (
             <button type="button" className="t2-debt-cta" disabled={busy || method.down === true} onClick={() => void pay()}>
@@ -257,6 +301,7 @@ export function CardPayT2Screen() {
           {method.down ? (
             <p className="t2-note">{tr("صفحة البطاقة متوقّفة الآن — حاول بعد قليل أو ادفع بكليك.")}</p>
           ) : null}
+          {digistore ? <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p> : null}
           <button type="button" className="t2-link" onClick={() => navigate(-1)}>
             {tr("تراجع")}
           </button>

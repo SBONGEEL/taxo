@@ -25,7 +25,14 @@ from app.core.currency import currency_for_country
 from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
 from app.core.exceptions import NotFound
 from app.core.i18n import translate
-from app.models.enums import FeatureKey, PaymentProviderKind, PaymentRequestPurpose, UserRole, WalletOwnerType
+from app.models.enums import (
+    FeatureKey,
+    PaymentProviderKind,
+    PaymentRequestPurpose,
+    PaymentRequestStatus,
+    UserRole,
+    WalletOwnerType,
+)
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.schemas.payment_request import (
     MyPaymentRequestOut,
@@ -60,6 +67,7 @@ def method_out(
     return PaymentMethodOut(
         charge_currency=card,
         charge_rate=rate,
+        fixed_amounts=list(getattr(gateway, "fixed_amounts", ())) if card else [],
         partner=getattr(gateway, "partner_name", None) if card or crypto else None,
         partner_fee=getattr(gateway, "partner_fee", None) if card or crypto else None,
         crypto=crypto,
@@ -324,6 +332,8 @@ async def open_checkout(
         if payload.purpose is PaymentRequestPurpose.SUBSCRIPTION or payload.wallet is WalletOwnerType.DRIVER
         else "rider"
     )
+    # **نسخةُ Play لا تفتح ما مفتاحُه مطفأٌ لها** (Digistore24، أمرُ المالك ٢٠٢٦-١١-٢٣)
+    await payment_requests.require_channel(session, user.country_code, payload.provider_id, payload.channel)
     # **نقرتان سريعتان صفحةٌ واحدة** (SPEC §٨٢-أ/٤)
     request, url = await payment_requests.open_checkout_once(
         session,
@@ -410,10 +420,10 @@ async def refresh_mine(request_id: uuid.UUID, user: CurrentUser, session: DbSess
     return mine_out(row)
 
 
-@router.post("/webhook/{integration}")
+@router.post("/webhook/{integration}", response_model=None)
 async def gateway_webhook(
     integration: str, request: Request, session: DbSession, redis: RedisDep, background: BackgroundTasks
-) -> dict[str, object]:
+) -> dict[str, object] | Response:
     """**الـwebhook الموحّد للوسطاء الآليّين** (§٧٣-هـ/١٠) — **الحمولةُ إشارةُ استيقاظٍ لا مصدرُ حقيقة** (قاعدةُ `card_gateway`).
 
     التوقيعُ يُتحقَّق حيث يوثّقه الوسيط، **على كلِّ عقدٍ مفعَّلٍ له** (الإشعارُ لا يقول سوقَه)؛ ثمّ **يُسأل الوسيطُ مباشرةً** عن كلِّ معرّف
@@ -452,6 +462,9 @@ async def gateway_webhook(
         background.add_task(_settle_webhook_in_background, integration, list(ids))
         return {"ok": True, "queued": len(ids)}
     applied = await _settle_webhook_ids(session, redis, integration, ids, signed=signed)
+    if integration == "digistore24":
+        # **Digistore24 يقرأ الجوابَ نصّاً**: `OK` وحدَه نجاح، وما عداه يُعاد (مثالُهم الرسميّ `ipn_receiver.php`)
+        return Response(content="OK", media_type="text/plain")
     return {"ok": True, "applied": applied}
 
 
@@ -470,6 +483,7 @@ async def _settle_webhook_in_background(integration: str, ids: list[str]) -> Non
 async def _settle_webhook_ids(session, redis, integration: str, ids: list[str], *, signed: bool) -> int:
     applied = 0
     owners = []
+    paid: list[tuple[uuid.UUID, uuid.UUID, uuid.UUID]] = []
     for external_id in ids:
         row = await payment_requests.find_external(session, integration=integration, external_id=external_id)
         if row is None:
@@ -480,7 +494,16 @@ async def _settle_webhook_ids(session, redis, integration: str, ids: list[str], 
         if settled:
             applied += 1
             owners.append(row.user_id)
+            if integration == "digistore24" and row.status is PaymentRequestStatus.APPROVED and row.subscription_id is not None:
+                paid.append((row.user_id, row.id, row.subscription_id))
     await session.commit()
+    for user_id, request_id, subscription_id in paid:
+        # **«تم الدفع وتفعيل اشتراكك» بتاريخ انتهائه** (أمرُ المالك ٢٠٢٦-١١-٢٣) — بعد الالتزام، وعطبُه لا يُسقط الحسم
+        from app.services import notifications
+
+        await notifications.notify_subscription_paid(
+            session, redis, user_id=user_id, request_id=request_id, subscription_id=subscription_id
+        )
     for owner_id in owners:
         from app.models.user import User
 

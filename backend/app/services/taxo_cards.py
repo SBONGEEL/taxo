@@ -245,6 +245,9 @@ async def create_batch(
     kind: str = "batch",
     buyer_company: str | None = None,
     buyer_tax_number: str | None = None,
+    batch_id: uuid.UUID | None = None,
+    seller_driver_id: uuid.UUID | None = None,
+    discount_percent: Decimal | None = None,
 ) -> tuple[CardBatch, list[tuple[str, str]]]:
     """**دفعةٌ تُولَّد معاً** — وتعود رموزُها **مرّةً واحدةً** (`(الرقم، الرمز)`) لملفّ الطباعة، ولا تُخزَّن إلا بصماتُها.
 
@@ -285,14 +288,18 @@ async def create_batch(
             select(func.coalesce(func.max(CardBatch.invoice_number), 0)).where(CardBatch.country_code == country)
         )) + 1
     currency = currency_for_country(country)
+    if (kind == "captain") != (seller_driver_id is not None):
+        raise InvalidInput("دفعةُ الكبتن وحدَها لها بائعٌ كبتن", field="kind")
     batch = CardBatch(
+        **({"id": batch_id} if batch_id is not None else {}),
         country_code=country,
         currency=currency,
         number=number,
         shop_id=shop.id if shop else None,
         amount=denomination.amount,
         quantity=quantity,
-        discount_percent_at_issue=shop.discount_percent if shop else Decimal("0"),
+        # **خصمُ الكبتن يُجمَّد على دفعته** كخصم المحلّ (الترحيلة `0189`)
+        discount_percent_at_issue=discount_percent if discount_percent is not None else (shop.discount_percent if shop else Decimal("0")),
         payment_mode_at_issue=shop.payment_mode if shop else None,
         valid_from=valid_from,
         expires_at=expires_at,
@@ -302,6 +309,7 @@ async def create_batch(
         buyer_company=company,
         buyer_tax_number=(buyer_tax_number or "").strip() or None if company else None,
         invoice_number=invoice_number,
+        seller_driver_id=seller_driver_id,
     )
     session.add(batch)
     await session.flush()
@@ -315,7 +323,7 @@ async def create_batch(
             code = new_code()
         seen.add(code)
         # **الهديةُ تُقرأ من رقمها** (`G`)، **والمبيعةُ لحظةَ الطلب** (`P`، §١٠٠-ب/٥) — والدفعةُ المطبوعةُ كما كانت (`B`)
-        prefix = {"gift": "G", "pos": "P"}.get(kind, "B")
+        prefix = {"gift": "G", "pos": "P", "captain": "C"}.get(kind, "B")
         serial = f"{country.value}-{prefix}{number:04d}-{index:06d}"
         cards.append(
             TaxoCard(
@@ -569,6 +577,16 @@ async def redeem(
         raise CardNotUsableNow("انتهت صلاحيةُ هذه البطاقة")
 
     test_accounts.require_real_money(user, "حسابُ التجربة لا يُشحن ببطاقةٍ حقيقيّة")
+    if card.batch.kind == "captain":
+        # **بطاقةُ الكبتن للراكب** (الترحيلة `0189`): لا يشحن بها بائعُها نفسَه — وإلا صار خصمُه مالاً يُصنع من محفظته إليها —
+        # **ولا محفظةُ كبتن**: رصيدُها يُسحب، فتصير البطاقةُ طريقاً من خصمٍ إلى سحب
+        from app.models.driver import Driver
+
+        seller_user = await session.scalar(select(Driver.user_id).where(Driver.id == card.batch.seller_driver_id))
+        if seller_user == user.id:
+            raise CardNotUsableNow("لا تشحن ببطاقةٍ بعتَها — هي للراكب")
+        if wallet.owner_type_for(user, declared=declared) is not WalletOwnerType.RIDER:
+            raise CardNotUsableNow("هذه البطاقةُ لمحفظة الراكب")
     # **لا نظامُ الدفع العامّ ولا عقدُ بطاقة** — مفتاحُ البطاقات وحدَه (فوق)، وطريقتُها في السوق (`_card_provider`)
     provider = await _card_provider(session, user.country_code)
     verification.require_usable_account(user)
@@ -839,7 +857,7 @@ def expiring(figures: list[BatchFigures], *, within: timedelta) -> list[BatchFig
 
 # ------------------------------------------------------------------ تقريرُ البطاقات (§١٠٠-ب/١٤)
 
-KINDS = ("batch", "gift", "pos")
+KINDS = ("batch", "gift", "pos", "captain")
 
 
 def kind_totals(figures: list[BatchFigures]) -> dict[str, dict[str, Decimal | int]]:

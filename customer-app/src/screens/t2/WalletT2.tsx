@@ -90,6 +90,7 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   cross_transfer_out: "sync_alt",
   cross_transfer_in: "sync_alt",
   cross_transfer_fee: "sync_alt",
+  card_purchase: "confirmation_number",
 };
 
 export function WalletT2Screen() {

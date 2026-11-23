@@ -68,3 +68,10 @@
   font-size: 18px;
   flex: none;
 }
+/* **السطرُ الخفيفُ في أسفل دفع Digistore24** (قرارُ المالك ٢٠٢٦-١١-٢٣) — الدينارُ وحدَه فوق، وما يُخصم بالدولار يُقال هنا بصوتٍ خافت */
+.t2-cardpay-fine {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--t2-muted);
+  text-align: center;
+}

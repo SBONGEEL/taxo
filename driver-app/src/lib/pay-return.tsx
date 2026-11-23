@@ -71,6 +71,15 @@ export function goToCheckout(requestId: string, url: string): void {
   window.location.assign(url);
 }
 
+/** **طلبٌ فُتحت صفحتُه قبل قليلٍ ولم تُعرض نتيجتُه** — معرّفُه، أو `null`. صفحةُ العودة تقرؤه حين يعيدها وسيطٌ بلا `r`
+ *  (Digistore24 يعيد إلى صفحة شكرٍ واحدةٍ لكلِّ المنتجات)، وصفحةُ البطاقة تقرؤه حين يعود صاحبُها بزرّ الرجوع. */
+export function openedRequest(): string | null {
+  const open = read();
+  if (!open) return null;
+  const away = Date.now() - open.at;
+  return away >= 0 && away <= MAX_AWAY_MS ? open.id : null;
+}
+
 /** «نتيجة الدفع» تنادي هذا حين تُفتح — **وصلها صاحبُها فلا يُعاد إليها ثانية**. */
 export function settledReturn(): void {
   forget();

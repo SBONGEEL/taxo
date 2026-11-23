@@ -462,3 +462,102 @@ class CardKindReportOut(BaseModel):
     redeemed_amount: Decimal
     outstanding_amount: Decimal
     expired_amount: Decimal
+
+
+# ------------------------------------------------------------------ بيعُ الكباتن (الترحيلة `0189`)
+
+
+class CaptainDenominationOut(BaseModel):
+    id: uuid.UUID
+    amount: Decimal
+    #: **ما يدفعه الكبتنُ للبطاقة الواحدة** بخصمه — محسوبٌ في الخلفية (§14)
+    unit_cost_amount: Decimal
+    currency: Currency
+
+
+class CaptainSalesOut(BaseModel):
+    open: bool
+    currency: Currency
+    discount_percent: Decimal | None = None
+    daily_cap: int
+    remaining_today: int
+    balance_amount: Decimal
+    denominations: list[CaptainDenominationOut] = []
+
+
+class CaptainQuoteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    denomination_id: uuid.UUID
+    quantity: int = Field(ge=1, le=100)
+
+
+class CaptainQuoteOut(BaseModel):
+    quantity: int
+    face_amount: Decimal
+    cost_amount: Decimal
+    currency: Currency
+
+
+class CaptainPurchaseIn(CaptainQuoteIn):
+    idempotency_key: str = Field(min_length=8, max_length=80)
+
+
+class CaptainPurchaseOut(BaseModel):
+    batch_id: uuid.UUID
+    quantity: int
+    face_amount: Decimal
+    cost_amount: Decimal
+    balance_amount: Decimal
+    currency: Currency
+    replayed: bool = False
+
+
+class CaptainCardOut(BaseModel):
+    id: uuid.UUID
+    serial: str
+    amount: Decimal
+    currency: Currency
+    state: TaxoCardState
+    expires_at: datetime
+    created_at: datetime
+
+
+class CaptainCardCodeOut(BaseModel):
+    id: uuid.UUID
+    serial: str
+    code: str
+    amount: Decimal
+    currency: Currency
+    #: **رابطُ الشحن للراكب** — `app.tajora.ly/redeem#<الرمز>`، والرمزُ بعد `#` فلا يصل خادماً في سجلّ
+    redeem_url: str
+    #: **QR الرابطِ صورةً** (`data:image/svg+xml`) — يُرسم في الخلفية بالمكتبة التي تطبع البطاقات، فلا مكتبةَ ثانيةٌ في التطبيق
+    qr_svg: str
+
+
+class CaptainDiscountIn(BaseModel):
+    """**المالكُ وحدَه** — فارغٌ يُغلق البيع."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: CountryCode
+    captain_discount_percent: Decimal | None = Field(default=None, ge=0, le=50, decimal_places=2)
+
+
+class CaptainDiscountOut(BaseModel):
+    captain_discount_percent: Decimal | None = None
+
+
+class CaptainSellerReportOut(BaseModel):
+    driver_id: uuid.UUID
+    name: str | None = None
+    phone: str | None = None
+    currency: Currency
+    batches: int
+    cards: int
+    redeemed: int
+    cancelled: int
+    unused: int
+    expired: int
+    face_amount: Decimal
+    paid_amount: Decimal

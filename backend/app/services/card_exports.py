@@ -214,6 +214,13 @@ def batch_pdf(meta: BatchMeta, rows: list[CardRow], *, password: str) -> bytes:
     return bytes(pdf.output())
 
 
+def qr_svg_uri(payload: str) -> str:
+    """**QR صورةً للشاشة** (بيعُ الكباتن) — المكتبةُ نفسُها التي تطبع البطاقات."""
+    import segno
+
+    return segno.make(payload, error="m").svg_data_uri(scale=6, border=2)
+
+
 def qr_png(payload: str) -> bytes:
     import segno
 

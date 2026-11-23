@@ -82,7 +82,8 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("country_code", "number"),
         CheckConstraint("amount > 0", name="card_batch_amount_positive"),
         CheckConstraint("quantity > 0", name="card_batch_quantity_positive"),
-        CheckConstraint("kind IN ('batch', 'gift', 'pos')", name="card_batches_kind_known"),
+        CheckConstraint("kind IN ('batch', 'gift', 'pos', 'captain')", name="card_batches_kind_known"),
+        CheckConstraint("(kind = 'captain') = (seller_driver_id IS NOT NULL)", name="card_batches_captain_has_seller"),
         UniqueConstraint("country_code", "invoice_number", name="uq_card_batches_country_invoice"),
         CheckConstraint("(buyer_company IS NULL) = (invoice_number IS NULL)", name="card_batches_invoice_has_buyer"),
         CheckConstraint("expires_at > valid_from", name="card_batch_window"),
@@ -127,6 +128,10 @@ class CardBatch(UUIDMixin, TimestampMixin, Base):
     buyer_company: Mapped[str | None] = mapped_column(String(160), nullable=True)
     buyer_tax_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
     invoice_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: **الكبتنُ البائع** (`kind = captain`، الترحيلة `0189`) — اشترى الدفعةَ من محفظته بخصمه المجمَّد في `discount_percent_at_issue`
+    seller_driver_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("drivers.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
 
 
 class TaxoCard(UUIDMixin, TimestampMixin, Base):
@@ -228,6 +233,10 @@ class TaxoCardSetting(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("country_code"),
         CheckConstraint(
+            "captain_discount_percent IS NULL OR (captain_discount_percent >= 0 AND captain_discount_percent <= 50)",
+            name="taxo_card_settings_captain_discount_range",
+        ),
+        CheckConstraint(
             "max_wrong_per_account >= 1 AND max_wrong_per_ip >= 1 AND window_minutes >= 1", name="taxo_card_settings_positive"
         ),
     )
@@ -244,6 +253,8 @@ class TaxoCardSetting(UUIDMixin, TimestampMixin, Base):
     #: **بياناتُ البائع على فاتورة الشركات** (§١٠٠-ب/٧) — يكتبها المالك، وفارغةٌ لا تُطبع (لا تُخترع بياناتُ شركة)
     invoice_seller_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
     invoice_seller_tax_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    #: **خصمُ الكباتن %** (الترحيلة `0189`) — **فارغٌ = البيعُ مغلق** ولو اشتعل المفتاح؛ بين ٠ و٥٠، ويضبطه المالكُ وحدَه
+    captain_discount_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
 
 
 class CardGuessAlert(UUIDMixin, TimestampMixin, Base):

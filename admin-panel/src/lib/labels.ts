@@ -179,6 +179,7 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_out: "تحويل إلى دولة أخرى",
   cross_transfer_in: "تحويل وارد من دولة أخرى",
   cross_transfer_fee: "رسم تحويل بين الدول",
+  card_purchase: "شراء بطاقات TAXO للبيع (كبتن)",
 };
 
 /** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */

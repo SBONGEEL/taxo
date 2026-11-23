@@ -31,6 +31,9 @@ import {
   listCardDenominations,
   downloadBatchInvoice,
   cardKindReport,
+  captainCardReport,
+  getCaptainDiscount,
+  saveCaptainDiscount,
   extendCardBatch,
   getInvoiceSettings,
   listCardSellers,
@@ -56,6 +59,7 @@ import type {
   CardShopPaymentMode,
   CardShopReport,
   CardKindReport,
+  CaptainSellerReport,
   CardSeller,
   CountryCode,
   InvoiceSettings,
@@ -1539,6 +1543,7 @@ function SellersTab({ country, onError, onDone }: TabProps) {
           </div>
         ) : null}
       </div>
+      <CaptainDiscountCard country={country} isOwner={isOwner} onError={onError} onDone={onDone} />
       <Table
         toolbar={
           isOwner ? (
@@ -1701,6 +1706,7 @@ const KIND_LABEL: Record<CardKindReport["kind"], string> = {
   batch: "مطبوعة",
   gift: "هدايا",
   pos: "بيعٌ في المحلّات",
+  captain: "بيعُ الكباتن",
   corporate: "للشركات (من المطبوعة)",
 };
 
@@ -1713,7 +1719,117 @@ function ReportTab({ country, isAdmin, onError, onDone }: TabProps) {
         <p className="mb-8 text-13 font-semibold text-ink">المحلّات</p>
         <ShopReport country={country} onError={onError} />
       </div>
+      <div>
+        <p className="mb-8 text-13 font-semibold text-ink">المبيعات بحسب الكبتن</p>
+        <CaptainReport country={country} onError={onError} />
+      </div>
       <InvoiceSellerCard country={country} onError={onError} onDone={onDone} />
+    </div>
+  );
+}
+
+/** **المبيعاتُ بحسب الكبتن** (الترحيلة `0189`) — ما اشتراه كلُّ كبتنٍ بقيمته الاسميّة وما دفعه من محفظته، ومستعمَلُها وغيرُ المستعمَل والمنتهي */
+function CaptainReport({ country, onError }: { country: CountryCode; onError: (message: string | null) => void }) {
+  const [rows, setRows] = useState<CaptainSellerReport[] | null>(null);
+  useEffect(() => {
+    captainCardReport(country)
+      .then(setRows)
+      .catch((caught) => onError(errorText(caught, "تعذّر قراءة مبيعات الكباتن")));
+  }, [country, onError]);
+  return (
+    <Table
+      columns="1.4fr 0.8fr 1fr 1.1fr 1.1fr"
+      headers={["الكبتن", "البطاقات", "استُعملت · لم تُستعمل", "القيمةُ الاسميّة", "ما دفعه"]}
+      rows={rows}
+      keyOf={(row) => row.driver_id}
+      empty={{ title: "لا مبيعاتِ كباتن بعد", hint: "يظهر هنا كلُّ كبتنٍ اشترى بطاقاتٍ ليبيعها — بعد ضبط خصم الكباتن وإشعال المفتاح." }}
+      render={(row) => (
+        <>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-ink">{row.name ?? "—"}</span>
+            <span dir="ltr" className="block truncate text-start text-10.5 text-muted">
+              {row.phone ? digits(row.phone) : "—"}
+            </span>
+          </span>
+          <span className="text-muted">
+            {digits(String(row.cards))}
+            <span className="block text-10.5">ملغاة {digits(String(row.cancelled))}</span>
+          </span>
+          <span className="text-ink">
+            {digits(String(row.redeemed))} · {digits(String(row.unused))}
+            <span className="block text-10.5 text-muted">منتهية {digits(String(row.expired))}</span>
+          </span>
+          <span className="text-muted">
+            {digits(row.face_amount)} {row.currency}
+          </span>
+          <span className="font-semibold text-ink">
+            {digits(row.paid_amount)} {row.currency}
+          </span>
+        </>
+      )}
+    />
+  );
+}
+
+/** **خصمُ الكباتن** (الترحيلة `0189`) — للمالك وحدَه؛ فارغٌ يُغلق بيعَ الكباتن ولو اشتعل مفتاحُه */
+function CaptainDiscountCard({ country, isOwner, onError, onDone }: { country: CountryCode; isOwner: boolean } & Pick<TabProps, "onError" | "onDone">) {
+  const [value, setValue] = useState<string | null | undefined>(undefined);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getCaptainDiscount(country)
+      .then((row) => {
+        setValue(row.captain_discount_percent);
+        setDraft(row.captain_discount_percent ?? "");
+      })
+      .catch((caught) => onError(errorText(caught, "تعذّر قراءة خصم الكباتن")));
+  }, [country, onError]);
+  async function save(percent: string | null) {
+    setBusy(true);
+    try {
+      const row = await saveCaptainDiscount(country, percent);
+      setValue(row.captain_discount_percent);
+      setDraft(row.captain_discount_percent ?? "");
+      onDone(percent === null ? "أُغلق بيعُ الكباتن (لا خصم)" : "حُفظ خصمُ الكباتن");
+    } catch (caught) {
+      onError(errorText(caught, "تعذّر الحفظ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="mb-14 rounded-card border border-line bg-surface p-14">
+      <div className="flex flex-wrap items-center gap-10">
+        <span className="text-13 font-semibold text-ink">بيعُ الكباتن لبطاقات TAXO</span>
+        <span className={cn("text-12 font-semibold", value ? "text-ok" : "text-muted")}>
+          {value === undefined ? "…" : value === null ? "لا خصم — مغلق" : `خصمُ الكباتن ${digits(value)}٪`}
+        </span>
+      </div>
+      <p className="mt-6 text-11.5 text-muted">
+        يشتري الكبتنُ من تطبيقه دفعةً من محفظته بهذا الخصم، ويبيع كلَّ بطاقةٍ للراكب بقيمتها نقداً. لا يُفتح إلا بشرطين: هذا الخصمُ
+        مضبوط، ومفتاحُ «بيعُ الكباتن لبطاقات TAXO» مشتعلٌ في «الإعدادات ← المفاتيح». السقفُ اليوميُّ والصلاحيةُ من إعدادات البيع أعلاه.
+        والخصمُ يُجمَّد على كلِّ دفعة، فتغييرُه لا يمسّ ما بيع.
+      </p>
+      {isOwner && value !== undefined ? (
+        <div className="mt-10 flex flex-wrap items-end gap-10">
+          <Field
+            label="خصمُ الكباتن ٪ (0–50)"
+            name="captain_discount_percent"
+            dir="ltr"
+            inputMode="decimal"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value.replace(/[^0-9.]/g, ""))}
+          />
+          <Button size="md" variant="secondary" loading={busy} disabled={!draft} onClick={() => void save(draft)}>
+            حفظ
+          </Button>
+          {value !== null ? (
+            <Button size="md" variant="secondary" loading={busy} onClick={() => void save(null)}>
+              إغلاق (بلا خصم)
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

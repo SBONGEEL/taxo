@@ -839,7 +839,9 @@ export type WalletTransactionType =
   | "taxo_card"
   | "cross_transfer_out"
   | "cross_transfer_in"
-  | "cross_transfer_fee";
+  | "cross_transfer_fee"
+  // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
+  | "card_purchase";
 
 export interface WalletTransaction {
   id: string;

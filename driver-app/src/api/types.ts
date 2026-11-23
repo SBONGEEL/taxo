@@ -722,7 +722,9 @@ export type WalletTransactionType =
   | "taxo_card"
   | "cross_transfer_out"
   | "cross_transfer_in"
-  | "cross_transfer_fee";
+  | "cross_transfer_fee"
+  // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
+  | "card_purchase";
 
 export interface WalletTransaction {
   id: string;
@@ -1761,6 +1763,9 @@ export interface PayMethod {
    *  البطاقة ورسمُه على الدافع. **تُقال قبل الدفع كما تصل**، و`null` لكلِّ طريقةٍ أخرى */
   charge_currency?: string | null;
   charge_rate?: string | null;
+  /** **مبالغُ ثابتةٌ وحدَها تُدفع بهذه الطريقة** (Digistore24: 3 · 17 · 45 — قرارُ المالك ٢٠٢٦-١١-٢٣) — الزرُّ للخطّة التي يساويها ما
+   *  يدفعه الكبتنُ الآن وحدَها؛ وفارغةٌ أو غائبةٌ لكلِّ طريقةٍ أخرى (أيُّ مبلغ) */
+  fixed_amounts?: string[];
   partner?: string | null;
   partner_fee?: string | null;
   /** **أيطلب معالجُ البطاقة هويّتَك؟ وأيصل المبلغُ أصلاً رقميّاً؟** — `false` ⇐ لا يُقال السطر؛ وغيابُه يُقرأ كما كان (يُقال) */
@@ -1814,6 +1819,54 @@ export interface MyPaymentRequest {
 }
 
 /** **ما شحنته بطاقةُ TAXO** (SPEC §٧٣-هـ المرحلة ٢) — رقمُها التسلسليُّ ومبلغُها بعملته. */
+/** **بيعُ الكباتن لبطاقات TAXO** (الترحيلة `0189`) — كلُّ مبلغٍ هنا من الخلفية (§14)، والواجهةُ تعرض */
+export interface CaptainSales {
+  open: boolean;
+  currency: Currency;
+  discount_percent: string | null;
+  daily_cap: number;
+  remaining_today: number;
+  balance_amount: string;
+  denominations: { id: string; amount: string; unit_cost_amount: string; currency: Currency }[];
+}
+
+export interface CaptainQuote {
+  quantity: number;
+  face_amount: string;
+  cost_amount: string;
+  currency: Currency;
+}
+
+export interface CaptainPurchase {
+  batch_id: string;
+  quantity: number;
+  face_amount: string;
+  cost_amount: string;
+  balance_amount: string;
+  currency: Currency;
+  replayed: boolean;
+}
+
+export interface CaptainCard {
+  id: string;
+  serial: string;
+  amount: string;
+  currency: Currency;
+  state: "unused" | "redeemed" | "expired" | "cancelled" | "not_started";
+  expires_at: string;
+  created_at: string;
+}
+
+export interface CaptainCardCode {
+  id: string;
+  serial: string;
+  code: string;
+  amount: string;
+  currency: Currency;
+  redeem_url: string;
+  qr_svg: string;
+}
+
 export interface TaxoCardRedeemed {
   serial: string;
   amount: string;

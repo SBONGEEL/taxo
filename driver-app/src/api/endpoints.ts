@@ -14,6 +14,11 @@ import type {
   PaymentCheckout,
   PaymentRequestPurpose,
   TaxoCardRedeemed,
+  CaptainSales,
+  CaptainQuote,
+  CaptainPurchase,
+  CaptainCard,
+  CaptainCardCode,
 } from "@/api/types";
 import type {
   CallAnswer,
@@ -1024,6 +1029,24 @@ export const cancelPaymentRequest = (requestId: string) =>
   api.post<MyPaymentRequest>(`/payment-requests/${requestId}/cancel`, {});
 
 /** **رمزُ بطاقة TAXO يشحن المحفظةَ مرّةً واحدة** (SPEC §٧٣-هـ المرحلة ٢) — والمحاولاتُ الخاطئةُ مسقوفةٌ في الخادم. */
+// **بيعُ الكباتن لبطاقات TAXO** (الترحيلة `0189`)
+export const getCaptainSales = () => api.get<CaptainSales>("/taxo-cards/captain");
+
+export const quoteCaptainCards = (denominationId: string, quantity: number) =>
+  api.post<CaptainQuote>("/taxo-cards/captain/quote", { denomination_id: denominationId, quantity });
+
+export const buyCaptainCards = (denominationId: string, quantity: number, idempotencyKey: string) =>
+  api.post<CaptainPurchase>("/taxo-cards/captain/purchase", {
+    denomination_id: denominationId,
+    quantity,
+    idempotency_key: idempotencyKey,
+  });
+
+export const listCaptainCards = () => api.get<CaptainCard[]>("/taxo-cards/captain/cards");
+
+export const getCaptainCardCode = (cardId: string) =>
+  api.get<CaptainCardCode>(`/taxo-cards/captain/cards/${encodeURIComponent(cardId)}/code`);
+
 export const redeemTaxoCard = (code: string) =>
   api.post<TaxoCardRedeemed>("/taxo-cards/redeem", { code, wallet: "driver" });
 
@@ -1033,6 +1056,8 @@ export const openPaymentCheckout = (body: {
   purpose: PaymentRequestPurpose;
   amount: string;
   planId?: string;
+  /** **نسخةُ التطبيق** (أمرُ المالك ٢٠٢٦-١١-٢٣) — «play» من الغلاف، و«web» من الموقع؛ وDigistore24 يُفتح بمفتاح قناته وحدَه */
+  channel?: "web" | "play";
 }) =>
   api.post<PaymentCheckout>("/payment-requests/checkout", {
     provider_id: body.methodId,
@@ -1040,6 +1065,7 @@ export const openPaymentCheckout = (body: {
     amount: body.amount,
     plan_id: body.planId ?? null,
     wallet: "driver",
+    ...(body.channel ? { channel: body.channel } : {}),
   });
 
 /** **يسأل الوسيطَ عن طلبي المعلَّق** — صفحةُ العودة تناديه حتى يُحسم. */

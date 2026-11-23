@@ -992,5 +992,15 @@
  "لا اشتراكَ دائمَ لهذا الكبتن": "Ce chauffeur n’a pas d’abonnement permanent.",
  "منحُ الاشتراك الدائم ونزعُه للمالك وحدَه": "Seul le propriétaire peut accorder ou retirer l’abonnement permanent.",
  "شُحنت محفظتك ببطاقة TAXO": "Votre portefeuille a été rechargé avec une carte TAXO",
- "الرصيدُ الجديد في محفظتك الآن": "Le nouveau solde est dans votre portefeuille."
+ "الرصيدُ الجديد في محفظتك الآن": "Le nouveau solde est dans votre portefeuille.",
+ "هذا المبلغُ لا يُدفع بالبطاقة الآن — ادفع بطريقةٍ أخرى": "Ce montant ne peut pas être payé par carte pour le moment — choisissez un autre moyen",
+ "الدفعُ بالبطاقة المصرفية غيرُ متاحٍ في هذه النسخة الآن": "Le paiement par carte bancaire n’est pas disponible dans cette version pour le moment",
+ "قناةٌ غيرُ معروفة": "Canal inconnu",
+ "بيعُ بطاقات TAXO للكباتن غيرُ مفتوحٍ في بلدك الآن": "La vente de cartes TAXO par les chauffeurs n’est pas ouverte dans votre pays pour le moment",
+ "بلغتَ سقفَ شراء البطاقات لهذا اليوم": "Vous avez atteint la limite d’achat de cartes pour aujourd’hui",
+ "بيعُ البطاقات للكباتن المعتمَدين وحدَهم": "La vente de cartes est réservée aux chauffeurs approuvés",
+ "لا تشحن ببطاقةٍ بعتَها — هي للراكب": "Vous ne pouvez pas recharger avec une carte que vous avez vendue — elle est destinée au passager",
+ "هذه البطاقةُ لمحفظة الراكب": "Cette carte est destinée au portefeuille passager",
+ "لا رمزَ لهذه البطاقة — استُعملت أو أُلغيت": "Aucun code pour cette carte — elle a été utilisée ou annulée",
+ "مفتاحُ التكرار مطلوب": "Clé d’idempotence requise"
 }

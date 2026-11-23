@@ -148,6 +148,7 @@ class Gateway(Protocol):
 
 def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
+    from app.services.payment_gateways.digistore24 import build_digistore24
     from app.services.payment_gateways.dpay import build_dpay
     from app.services.payment_gateways.moonpay import build_moonpay
     from app.services.payment_gateways.nowpay import build_nowpay
@@ -156,12 +157,13 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.whop import build_whop
 
     return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop,
-            "moonpay": build_moonpay, "polar": build_polar, "dpay": build_dpay}
+            "moonpay": build_moonpay, "polar": build_polar, "dpay": build_dpay, "digistore24": build_digistore24}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
 DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية",
-                                "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية", "dpay": "Dpay"}
+                                "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية", "dpay": "Dpay",
+                                "digistore24": "البطاقة المصرفية"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
@@ -172,6 +174,7 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {
     "moonpay": ProviderKey.MOONPAY,
     "polar": ProviderKey.POLAR,
     "dpay": ProviderKey.DPAY,
+    "digistore24": ProviderKey.DIGISTORE24,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -189,6 +192,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "polar": frozenset({"taxo"}),
     # **Dpay**: صفحتُه تضيف رسمَ الوسيلة فوق المبلغ وتعرضه للدافع قبل الدفع (`amount` «قبل رسم المزوّد») — فالرسمُ على الدافع بنيةً
     "dpay": frozenset({"user"}),
+    # **Digistore24**: رسمُه على TAXO (قرارُ المالك ٢٠٢٦-١١-٢٣) — **والبطاقةُ تُخصم ثمنَ المنتج وحدَه**
+    "digistore24": frozenset({"taxo"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
@@ -204,6 +209,8 @@ OWN_SWITCH: dict[str, FeatureKey] = {
     "polar": FeatureKey.POLAR_CARD_ENABLED,
     # **وDpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — مفتاحٌ لكلِّ استعمالٍ في `PURPOSE_SWITCHES`؛ وهذا عضويّتُه في «ذوي المفتاح الخاصّ» وحدَها
     "dpay": FeatureKey.DPAY_SUBSCRIPTION_ENABLED,
+    # **وDigistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — مفتاحاه (الموقع · Play) في `METHOD_SWITCHES`؛ وهذا عضويّتُه في «ذوي المفتاح الخاصّ» وحدَها
+    "digistore24": FeatureKey.DIGISTORE24_CARD_ENABLED,
 }
 SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "nowpay": frozenset({CountryCode.JO}),
@@ -211,6 +218,8 @@ SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "moonpay": frozenset({CountryCode.JO}),
     "polar": frozenset({CountryCode.JO}),
     "dpay": frozenset({CountryCode.LY, CountryCode.JO}),
+    # **الأردنُ وحدَه** — ليبيا والجزائرُ مطفأتان بأمر المالك، فلا يُشعَل فيهما المفتاحُ ولو ضُغط
+    "digistore24": frozenset({CountryCode.JO}),
 }
 #: **مفتاحٌ بدولٍ أضيقَ من دول وسيطه** — شحنُ الراكب ودفعُ الرحلة عبر Dpay ليبيا وحدَها، والاشتراكُ ليبيا والأردن (البطاقةُ الدوليّة)
 KEY_COUNTRIES: dict[str, frozenset[CountryCode]] = {
@@ -232,7 +241,7 @@ PURPOSE_SWITCHES: dict[str, dict[str, tuple[str, tuple[FeatureKey, ...]]]] = {
     },
 }
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
-DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar"})
+DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar", "digistore24"})
 #: **مفتاحٌ ⇐ وسيطُه** — فيُعرف من المفتاح أيُّ الدول مقفلة
 #: **طرقُ وسيطٍ واحدٍ بجمهورٍ ومفاتيحَ لكلٍّ منها** (Whop، أمرُ المالك ٢٠٢٦-١١-١٣) — كودُ صفِّ الطريقة ⇐ (جمهورُها، مفاتيحُها: **يكفي
 #: أحدُها مشتعلاً**). صفّان لوسيطٍ واحدٍ بعقدٍ واحدٍ وإشعارٍ واحد، **ولكلٍّ حدّاه في اللوحة**: الكبتنُ (الاشتراكُ والمستحقّات) والراكبُ
@@ -243,6 +252,9 @@ METHOD_SWITCHES: dict[str, tuple[str, tuple[FeatureKey, ...]]] = {
     # **MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — صفُّ الكبتن (الاشتراكُ والمستحقّات) وصفُّ الراكب (باقاتُ الرصيد)
     "moonpay_driver": ("driver", (FeatureKey.MOONPAY_DRIVER_ENABLED,)),
     "moonpay_rider": ("rider", (FeatureKey.MOONPAY_RIDER_ENABLED,)),
+    # **Digistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — طريقةٌ واحدةٌ بمفتاحين: الموقعُ ونسخةُ Play؛ **تُعرض إن اشتعل أحدُهما، وتُفتح بمفتاح قناتها
+    # وحدَه** (`require_channel`) — فنسخةُ Play لا تفتح الدفعَ ومفتاحُها مطفأ ولو اشتعل مفتاحُ الموقع
+    "digistore24_card": ("driver", (FeatureKey.DIGISTORE24_CARD_ENABLED, FeatureKey.DIGISTORE24_CARD_PLAY_ENABLED)),
 }
 #: **وسيطُ كلِّ طريقةٍ ذاتِ مفاتيح** — فيُعرف من المفتاح أيُّ الدول مقفلة (كان «whop» لكلِّها حين لم يكن غيرُه)
 METHOD_INTEGRATION: dict[str, str] = {
@@ -250,6 +262,11 @@ METHOD_INTEGRATION: dict[str, str] = {
     "whop_rider_card": "whop",
     "moonpay_driver": "moonpay",
     "moonpay_rider": "moonpay",
+    "digistore24_card": "digistore24",
+}
+#: **مفتاحُ كلِّ قناةٍ لطريقةٍ تُفرّق بين نسخة الموقع ونسخة Play** — القناةُ يعلنها التطبيق (`PaymentCheckoutIn.channel`) والخادمُ يقفل بها
+CHANNEL_SWITCHES: dict[str, dict[str, FeatureKey]] = {
+    "digistore24": {"web": FeatureKey.DIGISTORE24_CARD_ENABLED, "play": FeatureKey.DIGISTORE24_CARD_PLAY_ENABLED},
 }
 SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in OWN_SWITCH.items()}
 SWITCH_OWNER.update(

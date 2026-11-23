@@ -62,6 +62,9 @@ class PaymentMethodOut(BaseModel):
     #: وحدةٍ من عملة الطلب، واسمُ شريك البطاقة ورسمُه على الدافع — **فيُقال للكبتن قبل أن يدفع**؛ و`null` لكلِّ طريقةٍ أخرى
     charge_currency: str | None = None
     charge_rate: Decimal | None = None
+    #: **مبالغُ ثابتةٌ وحدَها تُدفع بهذه الطريقة** (Digistore24: 3 · 17 · 45 د.أ — قرارُ المالك ٢٠٢٦-١١-٢٣) — فيُظهر التطبيقُ الزرَّ للخطّة
+    #: التي يساويها ما يدفعه الكبتنُ الآن وحدَها؛ وفارغةٌ لكلِّ طريقةٍ أخرى (أيُّ مبلغ)
+    fixed_amounts: list[Decimal] = []
     partner: str | None = None
     partner_fee: str | None = None
     #: **أيطلب معالجُ البطاقة هويّةَ الدافع؟ وأيصل المبلغُ أصلاً رقميّاً؟** (NOWPayments نعم، Whop لا) — فلا يُقال للكبتن ما لا يقع؛
@@ -127,6 +130,9 @@ class PaymentCheckoutIn(BaseModel):
     amount: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=3)
     plan_id: uuid.UUID | None = None
     wallet: WalletOwnerType | None = None
+    #: **نسخةُ التطبيق التي فُتح منها الدفع** (أمرُ المالك ٢٠٢٦-١١-٢٣) — «web» نسخةُ الموقع (افتراضاً، فالتطبيقاتُ القائمةُ كما هي)،
+    #: و«play» نسخةُ Google Play؛ **وDigistore24 يُفتح بمفتاح قناته وحدَه**
+    channel: Literal["web", "play"] = "web"
 
 
 class PaymentCheckoutOut(BaseModel):

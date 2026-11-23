@@ -46,6 +46,7 @@ function captainTitle(text: string): string {
     "المتجر والكراج": tr("المتجر والكراج"),
     "أحِل صديقك": tr("أحِل صديقك"),
     "المستحقّات": tr("المستحقّات"),
+    "بيع بطاقات TAXO": tr("بيع بطاقات TAXO"),
   };
   return titles[text] ?? text;
 }
@@ -57,7 +58,8 @@ export function useHomeServices(panelTiles: readonly ServiceTile[]): HomeTile[] 
   const levels = useFeature(country, "driver_levels_enabled");
   const advances = useFeature(country, "driver_advances_enabled");
   const { enabled: garage } = useGarage();
-  return allServices(captainServices({ levels, advances, garage }, captainTitle), panelTiles.filter(tileOpenable));
+  const sellCards = useFeature(country, "taxo_cards_captain_sales");
+  return allServices(captainServices({ levels, advances, garage, sellCards }, captainTitle), panelTiles.filter(tileOpenable));
 }
 
 /** مقصدُ «المركبة ووثائقها» — حيث ترتفع نقطةُ «الوثائق». */

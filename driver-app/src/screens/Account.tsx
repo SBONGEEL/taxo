@@ -84,6 +84,8 @@ export function AccountScreen() {
     profile?.user.country_code,
     "driver_advances_enabled",
   );
+  // **بيعُ بطاقات TAXO** (أمرُ المالك ٢٠٢٦-١١-٢٣) — خلف مفتاحه، والخادمُ يُغلقه أيضاً ما لم يُضبط خصمُ الكباتن
+  const sellCardsOn = useFeature(profile?.user.country_code, "taxo_cards_captain_sales");
   // **من الكراج لا من `useFeature` هنا**: بيتٌ واحدٌ للسؤال، فلا يفتح صفٌّ
   // باباً يغلقه المزوّدُ نفسُه
   const { enabled: skinsOn } = useGarage();
@@ -323,6 +325,14 @@ export function AccountScreen() {
           sub={tr("ما عليك من عمولة رحلات قبضتَ أجرتها نقداً")}
           onClick={() => navigate("/account/debt")}
         />
+        {sellCardsOn ? (
+          <Row
+            icon="confirmation_number"
+            label={tr("بيع بطاقات TAXO")}
+            sub={tr("اشترِ بطاقاتٍ بخصمٍ وبِعها للركّاب نقداً")}
+            onClick={() => navigate("/account/sell-cards")}
+          />
+        ) : null}
         {advancesOn ? (
           <Row
             icon="request_quote"

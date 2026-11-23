@@ -60,6 +60,8 @@ import type {
   GiftDesign,
   GiftLink,
   PosSettings,
+  CaptainDiscount,
+  CaptainSellerReport,
   ResellerMe,
   ResellerSale,
   ResellerSaleRow,
@@ -2955,6 +2957,16 @@ export const getPosSettings = (country: CountryCode) =>
 
 export const savePosSettings = (country: CountryCode, changes: Partial<PosSettings>) =>
   api.put<PosSettings>("/admin/taxo-cards/pos-settings", { country_code: country, ...changes });
+
+// **بيعُ الكباتن** (الترحيلة `0189`) — الخصمُ للمالك وحدَه، والتقريرُ بحسب الكبتن
+export const getCaptainDiscount = (country: CountryCode) =>
+  api.get<CaptainDiscount>("/admin/taxo-cards/captain-discount", { query: { country } });
+
+export const saveCaptainDiscount = (country: CountryCode, percent: string | null) =>
+  api.put<CaptainDiscount>("/admin/taxo-cards/captain-discount", { country_code: country, captain_discount_percent: percent });
+
+export const captainCardReport = (country: CountryCode) =>
+  api.get<CaptainSellerReport[]>("/admin/taxo-cards/report/captains", { query: { country } });
 
 export const listCardSellers = (country: CountryCode) =>
   api.get<CardSeller[]>("/admin/taxo-cards/sellers", { query: { country } });

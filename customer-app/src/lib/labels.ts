@@ -143,6 +143,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_out: tr("تحويل إلى دولة أخرى"),
   cross_transfer_in: tr("تحويل وارد من دولة أخرى"),
   cross_transfer_fee: tr("رسم تحويل بين الدول"),
+  card_purchase: tr("شراء بطاقات TAXO للبيع"),
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {
