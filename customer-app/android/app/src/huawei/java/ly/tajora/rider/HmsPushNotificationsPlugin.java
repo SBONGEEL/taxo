@@ -40,9 +40,9 @@ public class HmsPushNotificationsPlugin extends PushNotificationsPlugin {
         }
         new Thread(() -> {
             try {
-                String token = HmsInstanceId.getInstance(getContext()).getToken(appId, "HCM");
+                String issued = HmsInstanceId.getInstance(getContext()).getToken(appId, "HCM");
                 // **وفارغٌ = يصل لاحقاً** إلى {@code HmsPushService.onNewToken} ومنه إلى الحدث نفسِه (EMUI القديم)
-                if (token != null && !token.isEmpty()) sendToken(token);
+                if (issued != null && !issued.isEmpty()) sendToken(issued);
             } catch (Exception failed) {
                 sendError("hms_unavailable");
             }

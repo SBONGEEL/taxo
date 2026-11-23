@@ -41,9 +41,9 @@ public class HmsPushPlugin extends Plugin {
         // **النداءُ يحجب**: خارج خيط الواجهة، كما تشترط مكتبةُ HMS
         new Thread(() -> {
             try {
-                String token = HmsInstanceId.getInstance(getContext()).getToken(appId, "HCM");
+                String issued = HmsInstanceId.getInstance(getContext()).getToken(appId, "HCM");
                 JSObject ret = new JSObject();
-                ret.put("token", token == null || token.isEmpty() ? null : token);
+                ret.put("token", issued == null || issued.isEmpty() ? null : issued);
                 call.resolve(ret);
             } catch (Exception failed) {
                 call.reject("hms_unavailable");
