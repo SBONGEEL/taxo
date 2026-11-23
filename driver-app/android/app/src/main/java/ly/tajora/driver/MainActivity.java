@@ -11,6 +11,16 @@ import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    /**
+     * <b>بعد قائمة الملحقات المولَّدة وقبل بناء الجسر</b> — موضعُ ما يحلّ محلَّ ملحقٍ مولَّدٍ باسمه (نسخةُ Huawei: ملحقُ الإشعارات بـHMS).
+     * {@code BridgeActivity.onCreate} يضيف القائمةَ ثمّ ينادي {@code load()}، فما يُسجَّل هنا يأتي آخراً ويغلب. <b>وفي نكهات Google فارغ.</b>
+     */
+    @Override
+    protected void load() {
+        FlavorPlugins.late(this);
+        super.load();
+    }
     @Override
     public void onCreate(Bundle savedInstanceState) {
         // **التسجيلُ قبل `super`**: الجسرُ يُبنى داخل `super.onCreate`، وما
@@ -43,6 +53,8 @@ public class MainActivity extends BridgeActivity {
         // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
         // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
         TaxoChannels.ensure(this);
+        // **إضافاتُ النكهة** (نسخةُ Huawei: رمزُ HMS Push) — فارغةٌ في نكهات Google
+        FlavorPlugins.register(this);
         super.onCreate(savedInstanceState);
         // **العرضُ حتى الحافّة على كلِّ إصدار** (ملاحظةُ Google على 960، CODE-HEALTH ٤-٢): أندرويد ١٥+ يفرضه أصلاً بهدف SDK 35+،
         // **فيُفعَّل لما دونه أيضاً** فيرى الجميعُ الشكلَ نفسَه — والصفحةُ تحسب حواشيها بـ`env(safe-area-inset-*)`.

@@ -13656,3 +13656,22 @@ payment as crypto in my NOWPayments account» — **مشتعلاً لكلِّ ك
    **انحرافٌ مقصودٌ عن التصميم**: بطاقةُ الكبتن **لمحفظة راكبٍ غيرِ بائعها وحدَها** — شحنُ بائعها بها يصنع خصمَه مالاً من محفظته إليها، وشحنُ محفظة
    كبتنٍ آخر يجعلها طريقاً من خصمٍ إلى سحب.
 5. **التقرير**: «بطاقات TAXO ← التقرير ← المبيعات بحسب الكبتن» (`GET /admin/taxo-cards/report/captains`) من الدفعات والدفتر، والنوعُ `captain` في تقرير الأنواع.
+
+### ج — نسخةُ Huawei (البند ٦، `design/DIGISTORE24-HUAWEI-2026-11-23.md` القسمُ الثاني)
+
+1. **نكهةٌ خامسة `huawei` بلا لاحقة** (معرّفُ Play نفسُه) في التطبيقين. **ما ينادي خدماتِ Google** (`InAppReviewPlugin` · `AppUpdatePlugin` ·
+   `SmsConsentPlugin`) **انتقل إلى `src/gms`** وتقرؤه نكهاتُ Google وحدَها (`public`/`trial`/`algeria`)، وتبعيّاتُه `…Implementation` لها وحدَها؛
+   **ونظائرُها في `src/huawei`** بالأسماء والطرق نفسِها: التقييمُ يُرفض كما حين لا يجيب المتجر، والتحديثُ `play_unavailable` فيفتح الإلزاميُّ رابطَ المتجر،
+   وملءُ الرمز بلا رمزٍ فيُكتب باليد.
+2. **الإشعارات**: `HmsPushService` بمنطق `CallMessagingService` حرفاً (طيُّ الرنين، رسمُه، وإشعارُ الرحلة الغنيُّ للراكب)، و`HmsPushPlugin`
+   (`getToken`، والحدثان `token`/`received`)، **و`HmsPushNotificationsPlugin` يحلّ محلَّ ملحق FCM باسمه `PushNotifications`** — يرثه ويستبدل
+   `register`/`unregister` وحدَهما. **ويُسجَّل في `MainActivity.load()` بعد قائمة الملحقات المولَّدة**، لأنّ ما يُسجَّل قبل `super.onCreate` تغلبه
+   القائمة. **وقع مقيساً على محاكٍ بلا خدمات Google**: الصفحةُ تنادي `register()` فرمى `FirebaseMessaging.getInstance()` وسقط التطبيقُ كلُّه.
+   معرّفُ AppGallery يُخبز من `TAXO_HMS_APP_ID`، **وفارغُه** يبثّ `registrationError` بـ`hms_unconfigured`. **ولا يُرسَل رمزُ HMS إلى الخادم**
+   قبل مُرسِل HMS في الخلفيّة (نوعُ منصّةٍ `hms` ومزوّدٌ بعقده) — **ينتظر حسابَ AppGallery**.
+3. **بلا تهيئة Google**: لا يُعالَج `google-services.json` لهذه النكهة، و`FirebaseInitProvider` و`CallMessagingService` منزوعان من بيانها.
+   **ومكتبتا Firebase Messaging وPlay Services Location باقيتان خاملتين** لأنّ ملحقَي Capacitor (الإشعارات والموقع) يحمّلان أصنافَهما عند الإقلاع —
+   نزعُهما يُسقط التطبيق. **والموقعُ**: ملحقُ الموقع يرفض الإحداثيّةَ بلا خدمات Google، **والتطبيقان يقرآنها من `navigator.geolocation`** (يعمل:
+   قِيس)، ومن الملحق طلبَ الإذن وحدَه (يعمل: نافذةُ النظام).
+4. **ولا تمسّ `public`**: قِيس `assemblePublicDebug` قبل التغيير وبعده — **البيانُ متطابق، وقائمةُ الملفّات متطابقة** إلّا ملفَّ dex واحداً زاد ٢٦٠
+   بايتاً (`FlavorPlugins` الفارغ ونداؤه)، ولا صنفَ `com.huawei` فيه.

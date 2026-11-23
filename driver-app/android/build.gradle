@@ -21,6 +21,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // **مستودعُ Huawei** — لـ`huaweiImplementation` وحدَه (HMS Push)؛ نكهاتُ Google لا تجلب منه شيئاً
+        maven { url 'https://developer.huawei.com/repo/' }
     }
 }
 

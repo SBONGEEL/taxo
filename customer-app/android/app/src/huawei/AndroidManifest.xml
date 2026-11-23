@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **نسخةُ Huawei** (أمرُ المالك ٢٠٢٦-١١-٢٣) — هذا الملفُّ لا يُدمَج في `public` ولا غيرِها:
+     · خدمةُ FCM (`CallMessagingService`) **تُنزع**، و`HmsPushService` مكانها بالمنطق نفسِه.
+     · مُهيِّئُ Firebase **يُنزع**: لا ملفَّ Firebase يُعالَج لهذه النكهة، فلا يُهيَّأ شيءٌ من Google عند الإقلاع.
+     · معرّفُ تطبيق AppGallery يُخبز من `TAXO_HMS_APP_ID` في البناء — وفارغُه نسخةٌ بلا رمزِ إشعارات تعمل في كلِّ ما عداه. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <service
+            android:name=".CallMessagingService"
+            tools:node="remove" />
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
+        <service
+            android:name=".HmsPushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.huawei.hms.client.appid"
+            android:value="appid=${hmsAppId}" />
+    </application>
+</manifest>

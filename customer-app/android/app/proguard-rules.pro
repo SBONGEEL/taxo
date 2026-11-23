@@ -34,3 +34,10 @@
 # **أسطرُ تقارير الأعطال تبقى مقروءة** — ويُرفع `mapping.txt` مع الحزمة
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# **نسخةُ Huawei — HMS Push** (قواعدُ Huawei المنشورة لـR8): تُستعمل بالانعكاس فلا تُحذف ولا تُعاد تسميتُها
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keep class com.huawei.hianalytics.** { *; }
+-keep class com.huawei.updatesdk.** { *; }
+-keep class com.huawei.hms.** { *; }
+-dontwarn com.huawei.**
