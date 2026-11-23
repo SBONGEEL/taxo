@@ -103,7 +103,8 @@ def recalled(custom: str) -> dict[str, str] | None:
 def product_for(amount: Decimal) -> tuple[str, Decimal] | None:
     """**الخطّةُ والدولار لمبلغٍ بالدينار** — `None` لمبلغٍ غيرِ مربوط (حارسُ السعر)."""
     try:
-        return PRICE_MAP.get(Decimal(amount).quantize(Decimal("0.001")))
+        # **بالتساوي العدديّ لا بالتقريب**: `Decimal("3") == Decimal("3.000")` وبصمتاهما واحدة — فلا خطوةَ مالٍ هنا خارج بيتها
+        return PRICE_MAP.get(Decimal(amount))
     except (InvalidOperation, TypeError):
         return None
 

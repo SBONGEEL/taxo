@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ مصدرٌ واحد — خصمُ الكباتن (SPEC §١١٣-ب)
+    "CaptainDiscountOut": (
+        "بانٍ واحد: `GET` و`PUT /admin/taxo-cards/captain-discount` يقرأ `captain_cards.state` والكتابةُ تردّ القيمةَ التي حفظها `captain_cards.save_discount` نفسَها — حقلٌ واحد. "
+        "**و`captain_discount_percent` فارغٌ بقصد** = «البيعُ مغلق» حتى يضبطه المالك، لا حقلٌ نسيه بانٍ."
+    ),
     "SubscriptionOut": (
         "بانٍ واحد: `SubscriptionOut.from_subscription` يخدم أبوابَه الأربعة — و`custom_days` "
         "(SPEC §١١١-د/٤) عمودٌ يُقرأ من الصفّ لا يُحسب، **وفراغُه حال**: اشتراكٌ بخطّةٍ لا بأيّام"

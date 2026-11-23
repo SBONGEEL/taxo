@@ -168,11 +168,11 @@ async def purchase(
 
     sales = await state(session, country)
     if not sales.open or sales.discount_percent is None:
-        raise CaptainSalesClosed()
+        raise CaptainSalesClosed("بيعُ بطاقات TAXO للكباتن غيرُ مفتوحٍ في بلدك الآن")
     await wallet.require_wallet_enabled(session, country)
     wallet.require_not_frozen(user, WalletOwnerType.DRIVER)
     if await bought_today(session, driver.id) + quantity > sales.daily_cap:
-        raise CaptainDailyCap()
+        raise CaptainDailyCap("بلغتَ سقفَ شراء البطاقات لهذا اليوم")
     denomination = await session.get(CardDenomination, denomination_id)
     if denomination is None or denomination.country_code != country or not denomination.is_active:
         raise InvalidInput("الفئةُ غيرُ متاحةٍ في هذا السوق", field="denomination_id")

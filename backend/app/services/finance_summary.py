@@ -942,6 +942,8 @@ LEDGER_LABEL: dict[str, str] = {
     "cross_transfer_out": "تحويل إلى دولة أخرى",
     "cross_transfer_in": "تحويل وارد من دولة أخرى",
     "cross_transfer_fee": "رسم تحويل بين الدول",
+    # **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (SPEC §١١٣-ب، `0189`) — مدينٌ من محفظة الكبتن
+    "card_purchase": "شراء بطاقات TAXO للبيع (كبتن)",
 }
 
 METHOD_LABEL: dict[str, str] = {
