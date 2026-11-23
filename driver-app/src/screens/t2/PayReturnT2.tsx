@@ -248,6 +248,17 @@ export function PayReturnT2Screen() {
       >
         {subscription ? tr("إلى اشتراكي") : tr("إلى المحفظة")}
       </button>
+      {/* **سطرُ Digistore24 على صفحة الشكر** — يشترطه لحفظ المنتج بنصّه الإنجليزيّ («The debit will be performed by Digistore24.com»)،
+          والعائدُ منه يحمل `via=ds24` (رابطُ الشكر في منتجاته الثلاثة) */}
+      {params.get("via") === "ds24" ? (
+        <p className="t2-pr-done-text t2-pr-gap">
+          {tr("يتمّ الخصمُ بواسطة Digistore24.com")}
+          <br />
+          <span lang="en" dir="ltr">
+            The debit will be performed by Digistore24.com
+          </span>
+        </p>
+      ) : null}
       {/* **سطرُ الدعم** (SPEC §٨٢-أ/٧) — ولا قناةَ دعمٍ في تطبيق الكبتن غيرُ «أرسل ملاحظة» */}
       <SupportLine to="/account/feedback" />
     </div>

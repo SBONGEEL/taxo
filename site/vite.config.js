@@ -84,6 +84,10 @@ export default defineConfig({
         download: resolve(__dirname, "download.html"),
         // **الأسئلةُ الشائعةُ للكباتن** (أمرُ المالك ٢٠٢٦-١١-٢٢): رابطُها مثبَّتٌ في مجموعات واتساب الثلاث.
         faq: resolve(__dirname, "faq.html"),
+        // **صفحةُ البيع لمنتجات Digistore24** (أمرُ المالك ٢٠٢٦-١١-٢٣): رابطُها في المنتجات الثلاثة، ويفتحه Digistore24 قبل الحفظ
+        "driver-access": resolve(__dirname, "driver-access.html"),
+        // **وصفحةُ الشكر** — تحمل سطرَ Digistore24 الإلزاميَّ ثمّ تعيد إلى «نتيجة الدفع» في التطبيق
+        "driver-paid": resolve(__dirname, "driver-paid.html"),
         404: resolve(__dirname, "404.html"),
       },
     },
