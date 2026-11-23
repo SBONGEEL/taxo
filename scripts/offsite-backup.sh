@@ -123,6 +123,20 @@ if [ "${#ALL[@]}" -gt "$KEEP" ]; then
 fi
 say "على Drive الآن: $(rclone lsf "$REMOTE" --files-only | grep -c '\.tar\.gpg$') نسخة (الحدّ $KEEP)"
 
+# ── ٥-ب) **رقيبُ نسخة الخادم** (أمرُ المالك ٢٣/١١ الجزء ١): الخادمُ يرفع وحدَه إلى `server/`؛ والحاسوبُ — حين يعمل — يقيس أنّ أحدثَها
+#     أحدثُ من ٢٦ ساعة، وإلا كتب `backup:fail` فأبرق الرقيب. **وقبل أوّل نسخةٍ من الخادم لا إنذار**.
+STEP="رقيبُ نسخة الخادم"
+SRV_NEWEST="$(rclone lsf "$REMOTE/server" --files-only 2>/dev/null | grep -E '^taxo-server-.*\.tar\.gpg$' | sort | tail -1 || true)"
+if [ -n "$SRV_NEWEST" ]; then
+  SRV_AGE_H=$(( ( $(date -u +%s) - $(date -u -d "$(sed -E 's/^taxo-server-(....)(..)(..)T(..)(..)(..)Z.*/\1-\2-\3 \4:\5:\6/' <<<"$SRV_NEWEST")" +%s) ) / 3600 ))
+  if [ "$SRV_AGE_H" -gt 26 ]; then
+    say "⚠ أحدثُ نسخةٍ من الخادم عمرُها ${SRV_AGE_H} ساعة ($SRV_NEWEST)"
+    cf_kv_put "backup:fail" "{\"at\":$(($(date +%s) * 1000)),\"why\":\"نسخةُ الخادم متأخّرة ${SRV_AGE_H} ساعة\"}" || true
+  else
+    say "✓ نسخةُ الخادم حديثة: $SRV_NEWEST (${SRV_AGE_H} ساعة)"
+  fi
+fi
+
 # ── ٦) النبض
 STEP="النبض"
 cf_kv_put "backup:last" "$(($(date +%s) * 1000))" && say "✓ النبضُ إلى الرقيب (backup:last)"

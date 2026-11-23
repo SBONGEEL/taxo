@@ -169,7 +169,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **فيسبوكُ لوكيلٍ آخر** (11-06): قواعدُنا `FACEBOOK-AGENT.md` §٨، وطلباتُه `FACEBOOK-REQUESTS.md` تُقرأ أوّلَ كلِّ جلسة.
 
-**الهاتف (٢٢/١١):** لا لمسةَ إلا والواجهةُ تطبيقُ TAXO والشاشةُ ساكنةٌ دقيقتين؛ ولا لمسَ في Fawri — `design/OWNER-2026-11-22-SECOND.md`.
+**الهاتف** `design/OWNER-2026-11-22-SECOND.md` · **الخزنة:** كلُّ سرٍّ يتغيّر ⇐ `scripts/vault_put.py` و«أضفت إلى الخزنة: [الاسم]».
 
 ## الملفّاتُ الخمسةُ المنقولة — شروطُها ملزِمةٌ لا «عند الحاجة»
 

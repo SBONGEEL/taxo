@@ -3,12 +3,14 @@
 #
 #   offsite-restore-test.sh                 # أحدثُ نسخةٍ على Drive
 #   offsite-restore-test.sh <ملفّ .tar.gpg>  # نسخةٌ مشفَّرةٌ محلّيّة (تجربةُ الطريق قبل ربط Drive)
+#   TAXO_OFFSITE_REMOTE=gdrive-taxo:TAXO-backups/server offsite-restore-test.sh   # أحدثُ نسخةٍ رفعها الخادم
 #
 # يفكّ التشفير، ويستعيد `taxo.sql.gz` **في حاويةِ Postgres مؤقّتةٍ معزولة** (صورةُ الإنتاج نفسُها `postgis/postgis:16-3.4`،
 # بلا منفذٍ منشور، تُحذف عند الانتهاء) — **فلا يمسّ قاعدةَ التطوير ولا الإنتاج**. ثم يعدّ صفوفَ جداول المال والهويّة
 # ويقيس أن `.env` في النسخة يحمل قيماً. **ونسخةٌ لم تُستعد ليست نسخة.**
 set -Eeuo pipefail
-PASS_FILE="$HOME/.taxo-secrets/offsite-backup.passphrase"
+# `TAXO_OFFSITE_PASS_FILE`: عبارةٌ من موضعٍ آخر — **تجربةُ «نسخةُ الخادم من العبارة وحدَها تكفي»** (أمرُ المالك ٢٣/١١ الجزء ٢)
+PASS_FILE="${TAXO_OFFSITE_PASS_FILE:-$HOME/.taxo-secrets/offsite-backup.passphrase}"
 REMOTE="${TAXO_OFFSITE_REMOTE:-gdrive-taxo:TAXO-backups}"
 WORK="$(mktemp -d)"; CT="taxo-restore-test-$$"
 cleanup() { docker rm -f "$CT" >/dev/null 2>&1 || true; rm -rf "$WORK"; }
@@ -17,7 +19,7 @@ trap cleanup EXIT
 if [ $# -ge 1 ]; then
   SRC="$1"; echo "• المصدر: $SRC (محلّيّ)"
 else
-  OBJ="$(rclone lsf "$REMOTE" --files-only | grep -E '\.tar\.gpg$' | sed -E 's/^taxo-(daily-)?(.*)\.tar\.gpg$/\2 &/' | sort | tail -1 | awk '{print $2}')"
+  OBJ="$(rclone lsf "$REMOTE" --files-only | grep -E '\.tar\.gpg$' | sed -E 's/^taxo-(daily-|server-)?(.*)\.tar\.gpg$/\2 &/' | sort | tail -1 | awk '{print $2}')"
   [ -n "$OBJ" ] || { echo "✗ لا نسخةَ على $REMOTE"; exit 1; }
   echo "• المصدر: $REMOTE/$OBJ — يُنزَّل…"
   rclone copyto "$REMOTE/$OBJ" "$WORK/$OBJ"; SRC="$WORK/$OBJ"
