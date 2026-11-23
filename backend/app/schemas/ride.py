@@ -365,6 +365,9 @@ class RideDriverOut(BaseModel):
     skin: MapSkinOut | None = None
     #: **شارةُ «سفير TAXO»** (أمرُ المالك ٢٠٢٦-١١-٢١ الخامس، SPEC §١١١-د/٤) — صفُّ اشتراكٍ دائمٌ ساري، يُقرأ بالضمّ (`Driver.is_ambassador`)
     ambassador: bool = False
+    #: **أللكبتن عنوانُ كليك؟** (أمرُ المالك ٢٣/١١ البند ٢) — منطقيٌّ لا العنوان: العنوانُ يُجمَّد على الدفعة حين تُختار كليك
+    #: ويظهر في `cliq_charge` وحدَه كما كان. فيُظهر الراكبُ «ادفع بكليك» حيث تصل، ويُخفيها حيث يردّها `_require_cliq_alias`.
+    accepts_cliq: bool = False
 
     @classmethod
     def from_ride(cls, ride: "Ride") -> "RideDriverOut | None":
@@ -384,6 +387,7 @@ class RideDriverOut(BaseModel):
             vehicle=RideVehicleOut.model_validate(vehicles[0]) if vehicles else None,
             skin=MapSkinOut.for_skin(skin),
             ambassador=bool(getattr(ride.driver, "is_ambassador", False)),
+            accepts_cliq=bool((ride.driver.cliq_alias or "").strip()),
         )
 
 

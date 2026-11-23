@@ -256,6 +256,21 @@ async def test_cliq_payment_exposes_the_driver_alias(
     assert body["cliq_charge"]["alias"] == "0799999999"
 
 
+async def test_rider_sees_that_the_driver_accepts_cliq_without_the_alias(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**«ادفع بكليك» حيث تصل** (أمرُ المالك ٢٣/١١ البند ٢): الراكبُ يقرأ منطقيّاً لا العنوان قبل أن يختار كليك."""
+    await enable_features(session_factory, "cliq_enabled")
+    rider, driver, ride = await _ready_ride(client, session_factory)
+    before = (await client.get(f"/rides/{ride['id']}", headers=rider["headers"])).json()
+    assert before["driver"]["accepts_cliq"] is False
+
+    await set_cliq_alias(session_factory, driver["driver_id"], "0799999999")
+    after = (await client.get(f"/rides/{ride['id']}", headers=rider["headers"])).json()
+    assert after["driver"]["accepts_cliq"] is True
+    assert "0799999999" not in str(after["driver"])
+
+
 async def test_cliq_without_an_alias_has_nowhere_to_send_the_money(
     client: AsyncClient, jordan_settings: None, session_factory
 ) -> None:

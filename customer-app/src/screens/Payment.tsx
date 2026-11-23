@@ -83,7 +83,7 @@ const CTA: Record<PayableMethod, { label: string; note: string }> = {
     note: tr("تُفتح صفحةُ الدفع الآمنة لدى المزوّد ثم تعود إلى هنا."),
   },
   cliq: {
-    label: tr("ادفع عبر كليك"),
+    label: tr("ادفع بكليك"),
     note: tr("تُحوّل على alias الكبتن ثم تُدخل رقم الحوالة — ويؤكد استلامها في تطبيقه."),
   },
   cash: {
@@ -174,7 +174,13 @@ export function PaymentScreen() {
   // **رحلةُ المشوار الثابت** (§٦٣-ج/٦) — سعرُها دُفع مقدّماً مع الاشتراك وتُسوّى من المحفوظ عند اكتمالها: **حالٌ تُقرأ لا قناةٌ
   // تُختار** — فلا منتقيَ ولا زرَّ دفع (كلُّ قناةٍ من هنا ترتدّ: لم يبقَ ما يُدفع). ومن الصفّ لا من المفتاح
   const commute = ride?.commute === true;
-  const { available, resolved, choose } = usePayerPreference(country, payer);
+  const { available: countryChannels, resolved: preferred, choose } = usePayerPreference(country, payer);
+  // **كليك حيث تصل وحدَها** (أمرُ المالك ٢٣/١١ البند ٢): كبتنٌ بلا عنوان كليك تردّ الخلفيةُ دفعتَه (`_require_cliq_alias`)، فلا تُعرض له؛
+  // وكبتنٌ بعنوانٍ يُعرض له «ادفع بكليك» زرّاً واضحاً تحت الزرّ الرئيسيّ. **ولا تتغيّر قاعدةُ مالٍ**: القناةُ نفسُها ومسارُها نفسُه
+  const driverCliq = ride?.driver?.accepts_cliq;
+  const available = driverCliq === false ? countryChannels.filter((channel) => channel.method !== "cliq") : countryChannels;
+  const resolved = preferred && available.includes(preferred) ? preferred : (available[0] ?? null);
+  const cliqOffer = driverCliq === true ? (available.find((channel) => channel.method === "cliq") ?? null) : null;
   // **من اختار طريقةً أخرى في هذه الشاشة لا تعود البطاقةُ فوقها** — الترتيبُ اقتراحٌ لا قيد
   const [pickedOther, setPickedOther] = useState(false);
 
@@ -546,6 +552,23 @@ export function PaymentScreen() {
             >
               <BusyLabel busy={busy === resolved.method}>{CTA[resolved.method].label}</BusyLabel>
             </button>
+
+            {/* **«ادفع بكليك» واضحاً** حين للكبتن عنوان ولم تكن هي المختارة (أمرُ المالك ٢٣/١١) — لا يظهر مع النقد بيد غيره ولا المشوار */}
+            {cliqOffer && resolved.method !== "cliq" && !commute && !cashByOther ? (
+              <button
+                type="button"
+                className="t2-button t2-m-cta"
+                disabled={busy !== null}
+                aria-busy={busy === "cliq"}
+                onClick={() => {
+                  setPickedOther(true);
+                  choose("cliq");
+                  void pay("cliq");
+                }}
+              >
+                <BusyLabel busy={busy === "cliq"}>{CTA.cliq.label}</BusyLabel>
+              </button>
+            ) : null}
 
             {/* **المخرجُ الذي يمنع التفضيلَ من أن يصير قيداً** (القرار 3). ولا يظهر بقناةٍ واحدة: «طريقة أخرى» حيث لا أخرى
                 وعدٌ يُخلَف */}

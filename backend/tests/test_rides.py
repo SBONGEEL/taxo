@@ -216,6 +216,9 @@ async def test_full_ride_lifecycle(
     # بطاقة الكبتن التي يراها الراكب (SPEC القسم 5.4)
     assert body["driver"]["name"] == DRIVER["name"]
     assert body["driver"]["vehicle"]["plate_number"] == "AMM-4242"
+    # **ولا عنوانَ كليك له بعد** (أمرُ المالك ٢٣/١١) — منطقيٌّ لا العنوان، فلا «ادفع بكليك» تُردّ
+    assert body["driver"]["accepts_cliq"] is False
+    assert "cliq_alias" not in body["driver"]
 
     for action, expected in (
         ("arrive", "arrived"),

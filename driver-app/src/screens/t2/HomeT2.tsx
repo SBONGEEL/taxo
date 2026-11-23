@@ -64,6 +64,8 @@ import {
 } from "@/lib/attention";
 import { useFeature } from "@/lib/config";
 import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
+import { CliqAliasCard } from "@/components/t2/CliqAliasCard";
+import { useDriver } from "@/lib/driver";
 import { useDriverLauncher, setRideActive, setRideLine, setBubbleDemand } from "@/lib/launcher";
 import { rideNoticeLine } from "@/lib/ride-notice";
 import { useHaptics } from "@/lib/haptics";
@@ -305,6 +307,10 @@ export function HomeT2Screen() {
   // (`goOffline`)، فلا يصله عرضٌ بعدها. **ولا يمسّ الرحلةَ ولا التحصيل**: التحصيلُ نداءاتُ REST لا تحتاج الاستقبال
   const lastRideOn = useFeature(user?.country_code, "last_ride_mode");
   const widgetsPlus = useFeature(user?.country_code, "driver_widgets_plus");
+  // **بطاقةُ «أضف عنوان كليك»** (أمرُ المالك ٢٣/١١) — حيث كليك مشتعل، والملفُّ مقروءٌ بلا عنوان
+  const cliqOn = useFeature(user?.country_code, "cliq_enabled");
+  const { profile: driverProfile } = useDriver();
+  const needsCliq = cliqOn && driverProfile !== null && !(driverProfile.driver.cliq_alias ?? "").trim();
   // **مؤقّتُ الانتظار عند نقطة الالتقاط** (SPEC §١٠٣ C/32) — عرضٌ وحدَه
   const pickupTimerOn = useFeature(user?.country_code, "pickup_wait_timer");
   // **سياراتُ الرئيسيّة** (SPEC §١١١) — «سيارتك» ومدخلُ المتجر؛ ومطفأً تبقى الرئيسيّةُ كما كانت حرفاً
@@ -653,6 +659,7 @@ export function HomeT2Screen() {
         <div className="t2-hm-more">
           {/* **«كن راكباً» شريطاً** (أمرُ المالك ٢٠٢٦-١١-٠٢، الثاني) — تحت زرِّ الاستقبال والخدمات لا فوقهما، والعريضُ أعلى «حسابي» */}
           {/* **«أضف ودجت TAXO لشاشتك»** (أمرُ المالك ٢١/١١ الثالث، البند ٣) — خلف `driver_widgets_plus` (يشتعل مع إصداره العلنيّ) */}
+          <CliqAliasCard show={needsCliq} />
           <AddWidgetCard kind="status" enabled={widgetsPlus} body={tr("حالتك واشتراكك على الشاشة الرئيسيّة بلمسة.")} variant="card" />
           <BecomeRiderButton compact />
           <div className="t2-legacy">

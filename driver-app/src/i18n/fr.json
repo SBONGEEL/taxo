@@ -2047,5 +2047,8 @@
   "سفير TAXO": "Ambassadeur TAXO",
   "دائم": "Permanent",
   "دائم · سفير TAXO": "Permanent · Ambassadeur TAXO",
-  "اشتراكُك دائمٌ لا ينتهي — لا تجديدَ ولا دفع.": "Votre abonnement est permanent — aucun renouvellement ni paiement."
+  "اشتراكُك دائمٌ لا ينتهي — لا تجديدَ ولا دفع.": "Votre abonnement est permanent — aucun renouvellement ni paiement.",
+  "أضف عنوان كليك": "Ajouter un alias CliQ",
+  "ليدفع لك الركّابُ بكليك مباشرةً إلى حسابك البنكيّ — يظهر لهم «ادفع بكليك» حين يكون لك عنوان.": "Pour que les passagers vous paient par CliQ directement sur votre compte bancaire — « Payer par CliQ » leur apparaît quand vous avez un alias.",
+  "أضف": "Ajouter"
 }
