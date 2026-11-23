@@ -7,7 +7,11 @@
 **حارسُ السعر (قرارُ المالك)**: لا يُفتح دفعٌ إلا لمبلغٍ مربوطٍ بمنتج — ما يدفعه هذا الكبتنُ الآن بعد العروض يساوي 3 أو 17 أو 45 بالضبط؛
 **فانتهاءُ عرض «TAXO MAN 45» يُخفي الشهريَّ آليّاً** بدل أن يُخصم 63.50$ عن 60 د.أ، والجديدُ ذو الأسبوع المجّانيّ لا يُفتح له 24$.
 
-**ورابطُ الصفحة لا نداءَ API لفتحه**: `https://www.digistore24.com/product/<id>?custom=<طلبنا>` — و`custom` يعود في الإشعار وفي صفحة الشكر.
+**ورابطُ الصفحة لا نداءَ API لفتحه**: `https://www.checkout-ds24.com/product/<id>/?custom=<طلبنا>` — و`custom` يعود في الإشعار وفي صفحة الشكر.
+**ونطاقُه `checkout-ds24.com`** لا `digistore24.com`: Digistore24 يرفض الثاني لصفحة الطلب («Incorrect domain in the link»، CUSDM1 — قِيس
+٢٠٢٦-١١-٢٣). **وبياناتُ العميل تُملأ مسبقاً** (أمرُ المالك ٢٠٢٦-١١-٢٣، `design/OWNER-2026-11-23-DS24-PREFILL.md`) بمعاملاتهم الرسميّة
+(«Pre-fill order form with GET parameters»): `first_name` · `last_name` · `email` إن كان في الحساب · `country` دولةُ الحساب — **ولا شيءَ غيرُها**:
+لا هاتف ولا هويّة ولا عنوان ولا لقب. والرمزُ البريديُّ لا يُملأ: لا مدينةَ في الحساب، ولا رمزَ «عامّاً لعمّان» تحقّقنا منه عند بريد الأردن.
 
 **الإشعار (IPN)** — من مثالهم الرسميّ `ipn_receiver.php`: `POST` حقولُ نموذج، والجوابُ نصُّ `OK` (يُكتب في الموجّه)، والتوقيعُ `sha_sign`:
 احذف `sha_sign`/`SHASIGN`، رتّب المفاتيحَ نصّيّاً (حسّاساً لحالة الأحرف)، تخطَّ الفارغ، واجمع `"{k}={v}{العبارة}"` متتابعة، ثمّ SHA-512
@@ -30,7 +34,7 @@ import time
 from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl, quote, urlencode
 
 import httpx
 
@@ -42,7 +46,7 @@ from app.services.providers import credentials as credentials_service
 logger = logging.getLogger(__name__)
 
 API_BASE = "https://www.digistore24.com/api/call"
-ORDER_BASE = "https://www.digistore24.com/product"
+ORDER_BASE = "https://www.checkout-ds24.com/product"
 PARTNER_NAME = "Digistore24"
 CHARGE_CURRENCY = "USD"
 
@@ -98,6 +102,24 @@ def recalled(custom: str) -> dict[str, str] | None:
     if hit is None or time.monotonic() - hit[0] > _SEEN_TTL_SECONDS:
         return None
     return hit[1]
+
+
+def split_name(full_name: str) -> tuple[str, str]:
+    """**الاسمُ الأوّلُ وما بعده** — اسمُ الحساب حقلٌ واحد؛ فالكلمةُ الأولى اسمٌ أوّل والباقي اسمُ العائلة، واسمٌ بكلمةٍ واحدةٍ يترك الأخيرَ فارغاً
+    يكتبه الكبتن (لا اسمَ مخترعاً)."""
+    words = full_name.split()
+    if not words:
+        return "", ""
+    return words[0], " ".join(words[1:])
+
+
+def prefill(ref: str, customer: base.CheckoutCustomer) -> list[tuple[str, str]]:
+    """**معاملاتُ صفحة الطلب** — مرجعُ طلبنا، ثمّ ما يملأ خانات العميل مسبقاً **وما كان فارغاً لا يُرسل** (فلا تُمحى خانةٌ يكتبها هو).
+    **ولا هاتفَ ولا عنوانَ ولا لقب** (أمرُ المالك)."""
+    first, last = split_name(customer.full_name or "")
+    pairs = [("custom", ref), ("first_name", first), ("last_name", last),
+             ("email", customer.email or ""), ("country", (customer.country or "").upper())]
+    return [(key, value) for key, value in pairs if key == "custom" or value]
 
 
 def product_for(amount: Decimal) -> tuple[str, Decimal] | None:
@@ -192,10 +214,7 @@ class Digistore24Gateway:
         ref = customer.order_ref or ""
         if not ref:
             raise base.GatewayError("طلبٌ بلا مرجع")
-        # **ولا اسمَ ولا هاتفَ للدافع** — مرجعُ طلبنا وحدَه؛ والبريدُ إن وُجد يوفّر عليه كتابتَه
-        url = f"{ORDER_BASE}/{quote(product, safe='')}?custom={quote(ref, safe='')}"
-        if customer.email:
-            url += f"&email={quote(customer.email, safe='')}"
+        url = f"{ORDER_BASE}/{quote(product, safe='')}/?{urlencode(prefill(ref, customer))}"
         return base.Checkout(external_id=ref, checkout_url=url)
 
     async def check(self, external_id: str) -> base.GatewayEvent | None:

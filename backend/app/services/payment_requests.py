@@ -1009,7 +1009,8 @@ async def start_checkout(
         # **عميلٌ محفوظٌ رفضه الوسيط** (حُذف عنده أو تبدّل المفتاح) — يُنسى، **وتُفتح الصفحةُ بلا عميل** فلا يقف الدفعُ عليه
         await gateway_customers.forget(session, gateway, owner)
         bare = payment_gateways.CheckoutCustomer(
-            customer.full_name, customer.phone, customer.email, ip=customer.ip, order_ref=customer.order_ref
+            customer.full_name, customer.phone, customer.email, ip=customer.ip, order_ref=customer.order_ref,
+            country=customer.country,
         )
         checkout = await gateway.checkout(customer=bare, **opened)
     request.external_id = checkout.external_id

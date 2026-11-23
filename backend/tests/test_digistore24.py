@@ -169,8 +169,11 @@ async def test_signed_ipn_activates_once_and_a_resent_ipn_credits_nothing(
     assert opened.status_code == 201, opened.text
     request_id = opened.json()["request"]["id"]
     url = opened.json()["checkout_url"]
-    # **منتجُ الشهر بعرضه، ومرجعُ طلبنا وحدَه** — لا اسمَ ولا هاتف
-    assert url.startswith(f"https://www.digistore24.com/product/{PRODUCTS['monthly']}?custom=")
+    # **منتجُ الشهر بعرضه على نطاق صفحة الطلب، والعميلُ مملوءٌ مسبقاً من حسابه** — الاسمُ والدولة، **ولا هاتفَ ولا عنوانَ ولا لقب**
+    assert url.startswith(f"https://www.checkout-ds24.com/product/{PRODUCTS['monthly']}/?custom=")
+    query = parse_qs(urlsplit(url).query)
+    assert query["country"] == ["JO"] and query["first_name"][0]
+    assert not {"phone_no", "street", "city", "zipcode", "salutation", "title"} & set(query)
     custom = _custom(url)
     assert opened.json()["request"]["amount"] == "45.000"
 
@@ -302,7 +305,7 @@ async def test_each_fixed_amount_opens_its_own_product(
     captain = await approved_driver(client, session_factory, subscribed=False)
     opened = await _open(client, session_factory, captain["headers"], method_id, price=price, name=f"خطة {plan}")
     assert opened.status_code == 201, opened.text
-    assert f"/product/{PRODUCTS[plan]}?" in opened.json()["checkout_url"]
+    assert f"/product/{PRODUCTS[plan]}/?" in opened.json()["checkout_url"]
 
 
 # ------------------------------------------------------------------ الاسترداد
@@ -434,3 +437,26 @@ def test_missing_contract_values_keep_the_method_hidden() -> None:
     ):
         with pytest.raises(payment_gateways.GatewayUnavailable):
             digistore24.build_digistore24(values)
+
+
+# ------------------------------------------------------------------ ملءُ صفحة الطلب مسبقاً (أمرُ المالك ٢٠٢٦-١١-٢٣)
+
+
+def test_prefill_sends_name_email_country_and_nothing_else() -> None:
+    from app.services import payment_gateways
+    from app.services.payment_gateways import digistore24
+
+    customer = payment_gateways.CheckoutCustomer("سامي أحمد العلي", "+962790000000", "c@example.com", country="jo")
+    pairs = dict(digistore24.prefill("TX-ABC", customer))
+    assert pairs == {"custom": "TX-ABC", "first_name": "سامي", "last_name": "أحمد العلي", "email": "c@example.com", "country": "JO"}
+    # **الهاتفُ لا يخرج** وإن كان في بيانات الدافع
+    assert "+962790000000" not in pairs.values()
+
+
+def test_prefill_leaves_out_what_the_account_lacks() -> None:
+    from app.services import payment_gateways
+    from app.services.payment_gateways import digistore24
+
+    # اسمٌ بكلمةٍ واحدة وبلا بريد: الاسمُ الأخيرُ والبريدُ **لا يُرسلان** فيكتبهما الكبتن — لا قيمةَ مخترعة
+    pairs = dict(digistore24.prefill("TX-ABC", payment_gateways.CheckoutCustomer("سامي", "", None, country="JO")))
+    assert pairs == {"custom": "TX-ABC", "first_name": "سامي", "country": "JO"}

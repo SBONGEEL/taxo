@@ -114,6 +114,8 @@ class CheckoutCustomer:
     ip: str | None = None
     #: **مرجعُ الطلب عندنا** (`order_id` عند NOWPayments) — يُقرأ في لوحته فيُطابَق بطلبنا
     order_ref: str | None = None
+    #: **دولةُ حساب الدافع** (رمزُ ISO من حرفين) — Digistore24 يملأ بها خانةَ الدولة (أمرُ المالك ٢٠٢٦-١١-٢٣)
+    country: str | None = None
 
 
 class Gateway(Protocol):

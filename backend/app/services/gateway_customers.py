@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 
 from sqlalchemy import select
@@ -24,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 def _customer(owner: User) -> payment_gateways.CheckoutCustomer:
     return payment_gateways.CheckoutCustomer(
-        full_name=owner.name or "", phone=owner.phone or "", email=getattr(owner, "email", None) or None
+        full_name=owner.name or "", phone=owner.phone or "", email=getattr(owner, "email", None) or None,
+        country=getattr(getattr(owner, "country_code", None), "value", None),
     )
 
 
@@ -47,7 +49,7 @@ async def customer_for(session: AsyncSession, gateway: payment_gateways.Gateway,
     livemode = not bool(getattr(gateway, "test_mode", False))
     row = await _stored(session, owner, gateway.name, livemode)
     if row is not None:
-        return payment_gateways.CheckoutCustomer(customer.full_name, customer.phone, customer.email, row.external_id)
+        return dataclasses.replace(customer, gateway_id=row.external_id)
     try:
         external_id = await create(customer)
     except payment_gateways.GatewayError:
@@ -64,7 +66,7 @@ async def customer_for(session: AsyncSession, gateway: payment_gateways.Gateway,
         # **دفعةٌ متزامنةٌ حفظت عميلَها قبلنا** — يُستعمل المحفوظ
         row = await _stored(session, owner, gateway.name, livemode)
         external_id = row.external_id if row is not None else external_id
-    return payment_gateways.CheckoutCustomer(customer.full_name, customer.phone, customer.email, external_id)
+    return dataclasses.replace(customer, gateway_id=external_id)
 
 
 async def forget(session: AsyncSession, gateway: payment_gateways.Gateway, owner: User) -> None:
