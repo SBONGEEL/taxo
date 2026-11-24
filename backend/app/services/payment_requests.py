@@ -926,9 +926,13 @@ async def start_checkout(
     """
     from app.services import payment_gateways
 
+    method_integration, method_code = await _method_of(session, provider_id)
+    # **Digistore24 للأردنّ وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٤) — حسابٌ من ليبيا أو الجزائر يُردّ بسببه قبل أيِّ حارس
+    payment_gateways.require_market(method_integration, owner.country_code)
     # **العقدُ أوّلاً — فوضعُه يقرّر من يفتح الصفحة** (§٧٤-ط/٥): وضعُ التجربة لحسابات التجربة وحدَها، والحيُّ لغيرها
-    await require_enabled(session, owner.country_code, *(await _method_of(session, provider_id)), purpose=purpose)
+    await require_enabled(session, owner.country_code, method_integration, method_code, purpose=purpose)
     chosen = await available_provider(session, provider_id, owner.country_code)
+    payment_gateways.require_market(chosen.integration, owner.country_code)
     if chosen.integration is None:
         raise InvalidInput("هذه الطريقةُ تُدفع بطلبٍ يُعتمد لا من صفحة وسيط", field="provider_id")
     from app.core.i18n import current_language

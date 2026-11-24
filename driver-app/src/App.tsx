@@ -205,6 +205,12 @@ const CardPayT2Screen = lazy(() =>
     default: m.CardPayT2Screen,
   })),
 );
+// **«البطاقة وحدَها»** (أمرُ المالك ٢٠٢٦-١١-٢٤) — بابُ صفحة البيع، Digistore24 وحدَه وللأردنّ وحدَه؛ **بلا حارسٍ** فيقول لمن لم يدخل ما يفعل
+const CardPassT2Screen = lazy(() =>
+  import("@/screens/t2/CardPassT2").then((m) => ({
+    default: m.CardPassT2Screen,
+  })),
+);
 const PayRequestT2Screen = lazy(() =>
   import("@/screens/t2/PayRequestT2").then((m) => ({
     default: m.PayRequestT2Screen,
@@ -804,6 +810,7 @@ export default function App() {
                           }
                         />
                         <Route path="/redeem" element={<RedeemLink />} />
+                        <Route path="/card-pass" element={<CardPassT2Screen />} />
                         <Route
                           path="/wallet/card"
                           element={

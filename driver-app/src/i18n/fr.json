@@ -2083,5 +2083,12 @@
   "انتهت": "Expirée",
   "ملغاة": "Annulée",
   "لم تبدأ": "Pas encore valide",
-  "شراء بطاقات TAXO للبيع": "Achat de cartes TAXO à revendre"
+  "شراء بطاقات TAXO للبيع": "Achat de cartes TAXO à revendre",
+  "سجّل الدخول بحساب الكبتن، ثمّ افتح هذا الرابط من جديد.": "Connectez-vous avec votre compte capitaine, puis rouvrez ce lien.",
+  "هذه الخدمة غير متاحة في بلدك حالياً": "Ce service n’est pas disponible dans votre pays pour le moment",
+  "الدفع بالبطاقة غير متاح الآن — حاول لاحقاً.": "Le paiement par carte n’est pas disponible pour le moment — réessayez plus tard.",
+  "الباقة": "Forfait",
+  "يُفعَّل اشتراكُك فورَ اكتمال الدفع، ولا يُخصم شيءٌ إن لم يكتمل.": "Votre abonnement est activé dès que le paiement aboutit ; rien n’est débité s’il n’aboutit pas.",
+  "اختر الباقة": "Choisissez un forfait",
+  "صفحة البطاقة متوقّفة الآن — حاول بعد قليل.": "La page de paiement par carte est indisponible — réessayez dans un instant."
 }

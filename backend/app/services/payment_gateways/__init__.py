@@ -54,6 +54,28 @@ class GatewayUnavailable(AppError):
     message = "الدفعُ بهذه الطريقة غيرُ متاحٍ الآن — اختر طريقةً أخرى."
 
 
+class GatewayCountryUnavailable(AppError):
+    """**وسيطٌ لسوقٍ واحدٍ يُطلب من حسابٍ في غيره** — Digistore24 للأردنّ وحدَه (أمرُ المالك ٢٠٢٦-١١-٢٤، `design/OWNER-2026-11-24-DS24-CARD-ONLY-JO.md`).
+    **`403` لا `503`**: ليس عطلاً يزول بعد قليل، بل خدمةٌ لا تُقدَّم لهذا الحساب في بلده."""
+
+    status_code = 403
+    code = "payment_gateway_country_unavailable"
+    message = "هذه الخدمة غير متاحة في بلدك حالياً"
+
+
+#: **الوسطاءُ المحصورون في سوقٍ واحد** — والخادمُ يرفض الدفعَ بهم لحسابٍ دولتُه غيرُها، **قبل أيِّ حارسٍ آخر** فيُقال السببُ الحقيقيّ
+SINGLE_MARKET: dict[str, str] = {"digistore24": "JO"}
+
+
+def require_market(integration: str | None, country: object) -> None:
+    """**حسابٌ في غير سوق الوسيط لا يفتح دفعاً به** — ولو وُجد صفُّ طريقته في سوقٍ آخر أو اشتعل مفتاحٌ خطأً."""
+    market = SINGLE_MARKET.get(integration or "")
+    if market is None:
+        return
+    if str(getattr(country, "value", country) or "").upper() != market:
+        raise GatewayCountryUnavailable()
+
+
 class GatewayError(AppError):
     """**الوسيطُ ردّ بخطأ أو تعذّر الوصولُ إليه أو جاء جوابُه بشكلٍ لا يُقرأ** (`502`)."""
 

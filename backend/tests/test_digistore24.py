@@ -460,3 +460,47 @@ def test_prefill_leaves_out_what_the_account_lacks() -> None:
     # اسمٌ بكلمةٍ واحدة وبلا بريد: الاسمُ الأخيرُ والبريدُ **لا يُرسلان** فيكتبهما الكبتن — لا قيمةَ مخترعة
     pairs = dict(digistore24.prefill("TX-ABC", payment_gateways.CheckoutCustomer("سامي", "", None, country="JO")))
     assert pairs == {"custom": "TX-ABC", "first_name": "سامي", "country": "JO"}
+
+
+# ------------------------------------------------------------------ الأردنُّ وحدَه (أمرُ المالك ٢٠٢٦-١١-٢٤)
+
+
+@pytest.mark.parametrize("country", [CountryCode.DZ, CountryCode.LY])
+async def test_a_non_jordan_account_cannot_open_a_digistore24_payment(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch, country: CountryCode
+) -> None:
+    """**كبتنٌ دولةُ حسابه ليبيا أو الجزائر** يُردّ بـ`403` وبسببه، **ولا يُكتب طلبٌ ولا تُفتح صفحة** — ولو كان صفُّ الطريقة مفعَّلاً
+    والمفتاحُ مشتعلاً في الأردن."""
+    from app.models.user import User
+
+    monkeypatch.setattr(payment_requests, "DOUBLE_TAP_SECONDS", 0)
+    method_id = await _jordan(session_factory)
+    captain = await approved_driver(client, session_factory, subscribed=False)
+    plan_id = await ensure_plan(session_factory, country="JO", name="TAXO X30 — شهري", price="45")
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(captain["user_id"]))
+        user.country_code = country
+        await session.commit()
+    before = await _count_requests(session_factory)
+    refused = await client.post(
+        "/payment-requests/checkout",
+        json={"provider_id": str(method_id), "purpose": "subscription", "amount": "1", "plan_id": str(plan_id)},
+        headers=captain["headers"],
+    )
+    assert refused.status_code == 403, refused.text
+    assert refused.json()["code"] == "payment_gateway_country_unavailable"
+    assert await _count_requests(session_factory) == before
+
+
+def test_only_digistore24_is_held_to_one_market() -> None:
+    payment_gateways.require_market("digistore24", CountryCode.JO)
+    payment_gateways.require_market("whop", CountryCode.DZ)
+    payment_gateways.require_market(None, CountryCode.LY)
+    for country in (CountryCode.DZ, CountryCode.LY, "dz"):
+        with pytest.raises(payment_gateways.GatewayCountryUnavailable):
+            payment_gateways.require_market("digistore24", country)
+
+
+async def _count_requests(session_factory) -> int:
+    async with session_factory() as session:
+        return int(await session.scalar(select(func.count()).select_from(PaymentRequest)) or 0)
