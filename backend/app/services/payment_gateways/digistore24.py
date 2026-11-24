@@ -1,11 +1,11 @@
 """**Digistore24 — اشتراكُ الكبتن بالبطاقة في الأردن** (أمرا المالك ٢٠٢٦-١١-٢٣، `design/OWNER-2026-11-23-DIGISTORE24-LIVE.md`).
 
-**ما يجري**: ثلاثةُ منتجاتٍ عند Digistore24 بدفعةٍ واحدةٍ لا تتجدّد — واحدٌ لكلِّ مبلغٍ يدفعه الكبتنُ الآن (3 · 17 · 45 د.أ) بقيمته
+**ما يجري**: أربعةُ منتجاتٍ عند Digistore24 بدفعةٍ واحدةٍ لا تتجدّد — واحدٌ لكلِّ مبلغٍ يدفعه الكبتنُ الآن (3 · 17 · 45 · 60 د.أ) بقيمته
 بالدولار (**Digistore24 لا يقبل الدينار**) — وصفحةُ الطلب صفحتُهم المستضافة: **لا تمرّ بياناتُ البطاقة بخوادمنا**، وDigistore24 هو
 البائعُ المسجَّل والمالُ يصل حسابَه ثمّ حسابَ المالك. **ورسمُه على TAXO** (قرارُ المالك): البطاقةُ تُخصم قيمةَ المنتج وحدَها.
 
-**حارسُ السعر (قرارُ المالك)**: لا يُفتح دفعٌ إلا لمبلغٍ مربوطٍ بمنتج — ما يدفعه هذا الكبتنُ الآن بعد العروض يساوي 3 أو 17 أو 45 بالضبط؛
-**فانتهاءُ عرض «TAXO MAN 45» يُخفي الشهريَّ آليّاً** بدل أن يُخصم 63.50$ عن 60 د.أ، والجديدُ ذو الأسبوع المجّانيّ لا يُفتح له 24$.
+**حارسُ السعر (قرارُ المالك)**: لا يُفتح دفعٌ إلا لمبلغٍ مربوطٍ بمنتج — ما يدفعه هذا الكبتنُ الآن بعد العروض يساوي 3 أو 17 أو 45 أو 60 بالضبط؛
+**فمن يدفع 45 بعرض «TAXO MAN 45» يرى X30 (63.50$) ومن يدفع 60 يرى X30-FULL (84.50$)**، ولا يُخصم أحدُهما عن الآخر، والجديدُ ذو الأسبوع المجّانيّ لا يُفتح له 24$.
 
 **ورابطُ الصفحة لا نداءَ API لفتحه**: `https://www.checkout-ds24.com/product/<id>/?custom=<طلبنا>` — و`custom` يعود في الإشعار وفي صفحة الشكر.
 **ونطاقُه `checkout-ds24.com`** لا `digistore24.com`: Digistore24 يرفض الثاني لصفحة الطلب («Incorrect domain in the link»، CUSDM1 — قِيس
@@ -56,7 +56,13 @@ PRICE_MAP: dict[Decimal, tuple[str, Decimal]] = {
     Decimal("3.000"): ("daily", Decimal("4.25")),
     Decimal("17.000"): ("weekly", Decimal("24.00")),
     Decimal("45.000"): ("monthly", Decimal("63.50")),
+    #: **الشهرُ بسعره الكامل** (قرارُ المالك ٢٠٢٦-١١-٢٤، `design/OWNER-2026-11-24-X30-FULL-S21.md`): منتجٌ ثانٍ X30-FULL لمن يدفع 60 —
+    #: فكلُّ كبتنٍ يرى المنتجَ الذي يساوي ما يدفعه الآن وحدَه (بعرض «TAXO MAN 45» أو بدونه)، ولا يتغيّر سعرٌ ولا عرضٌ في اللوحة
+    Decimal("60.000"): ("monthly_full", Decimal("84.50")),
 }
+
+#: **مفاتيحُ المنتجات في العقد** — `product_<الخطّة>` لكلٍّ منها
+PLANS: tuple[str, ...] = ("daily", "weekly", "monthly", "monthly_full")
 
 #: **أحداثُ الإشعار** كما في مثالهم الرسميّ
 EVENT_PAYMENT = "on_payment"
@@ -286,8 +292,8 @@ class Digistore24Gateway:
     async def test_connection(self) -> str:
         await self._call("ping")
         mode = "تجربة" if self.test_mode else "حيّ"
-        missing = [plan for plan in ("daily", "weekly", "monthly") if not self.products.get(plan)]
-        tail = f" · منتجاتٌ ناقصة: {', '.join(missing)}" if missing else " · المنتجاتُ الثلاثة مضبوطة"
+        missing = [plan for plan in PLANS if not self.products.get(plan)]
+        tail = f" · منتجاتٌ ناقصة: {', '.join(missing)}" if missing else " · المنتجاتُ الأربعة مضبوطة"
         return f"الاتصالُ بـDigistore24 يعمل — الوضع: {mode}{tail}"
 
 
@@ -317,7 +323,7 @@ def build_digistore24(values: Mapping[str, Any]) -> Digistore24Gateway:
     key = str(values.get("api_key") or "").strip()
     passphrase = str(values.get("ipn_passphrase") or "").strip()
     products = {
-        plan: str(values.get(f"product_{plan}") or "").strip() for plan in ("daily", "weekly", "monthly")
+        plan: str(values.get(f"product_{plan}") or "").strip() for plan in PLANS
     }
     if not key or not passphrase or not any(products.values()):
         # **حتى يُدخل المالكُ المفتاحَ والعبارةَ ومنتجاً واحداً على الأقلّ تبقى الطريقةُ مخفيّة** — كعقدٍ غائب

@@ -652,7 +652,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
     # (الموقع ونسخة Play) قرارُ المالك من اللوحة. **والقيمُ من حساب Digistore24**: Settings ← Account access ← API keys · IPN
     ProviderKey.DIGISTORE24: ProviderSpec(
         key=ProviderKey.DIGISTORE24,
-        label="Digistore24 — اشتراكُ الكبتن بالبطاقة المصرفية (3 · 17 · 45 د.أ)",
+        label="Digistore24 — اشتراكُ الكبتن بالبطاقة المصرفية (3 · 17 · 45 · 60 د.أ)",
         fields=(
             ProviderField(key="api_key", label="مفتاحُ API — من Digistore24: Settings ← Account access ← API keys"),
             ProviderField(
@@ -662,6 +662,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(key="product_daily", label="معرّفُ منتج اليوميّ (3 د.أ = 4.25$)", secret=False, required=False),
             ProviderField(key="product_weekly", label="معرّفُ منتج الأسبوعيّ (17 د.أ = 24.00$)", secret=False, required=False),
             ProviderField(key="product_monthly", label="معرّفُ منتج الشهريّ بعرض «TAXO MAN 45» (45 د.أ = 63.50$)", secret=False, required=False),
+            ProviderField(key="product_monthly_full", label="معرّفُ منتج الشهريّ بسعره الكامل X30-FULL (60 د.أ = 84.50$)", secret=False, required=False),
             ProviderField(
                 kind="toggle", key="test_mode", label="وضع التجربة — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
                 secret=False, required=False,

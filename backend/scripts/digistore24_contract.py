@@ -10,8 +10,8 @@
 
 ## ما يفعله
 
-* **يقرأ من ملفّ الأسرار**: `DS24_MODE` (`test` أو `live`) · `DS24_API_KEY` · `DS24_IPN_PASSPHRASE` · ومعرّفاتِ المنتجات الثلاثة
-  (`DS24_PRODUCT_DAILY` · `DS24_PRODUCT_WEEKLY` · `DS24_PRODUCT_MONTHLY`، أرقامٌ بلا غيرها) — **ويقف إن غاب شيءٌ أو خالف شكلَه**،
+* **يقرأ من ملفّ الأسرار**: `DS24_MODE` (`test` أو `live`) · `DS24_API_KEY` · `DS24_IPN_PASSPHRASE` · ومعرّفاتِ المنتجات الأربعة
+  (`DS24_PRODUCT_DAILY` · `DS24_PRODUCT_WEEKLY` · `DS24_PRODUCT_MONTHLY` · `DS24_PRODUCT_MONTHLY_FULL`، أرقامٌ بلا غيرها) — **ويقف إن غاب شيءٌ أو خالف شكلَه**،
   **ولا يطبع منه حرفاً** إلّا معرّفاتِ المنتجات (ليست أسراراً: تظهر في رابط صفحة الدفع).
 * **وفي وضع التجربة يحصر العقدَ في كبتن التجربة** (`allowlist` = `TAXO_TEST_CAPTAIN_PHONE` من ملفّ حسابَي التجربة) — **ولا يُكتب عقدٌ تجريبيٌّ
   بلا قائمة سماح**: طريقةٌ تُعرض لكبتنٍ حقيقيٍّ في وضع التجربة تَعِده بدفعٍ لا يقع. **وفي الوضع الحيّ تُفرَّغ القائمة** إلّا إن طُلب إبقاؤها.
@@ -47,7 +47,10 @@ from app.services.providers import credentials as credentials_service  # noqa: E
 
 COUNTRY = CountryCode.JO
 METHOD_CODE = "digistore24_card"
-PRODUCTS = {"product_daily": "DS24_PRODUCT_DAILY", "product_weekly": "DS24_PRODUCT_WEEKLY", "product_monthly": "DS24_PRODUCT_MONTHLY"}
+PRODUCTS = {
+    "product_daily": "DS24_PRODUCT_DAILY", "product_weekly": "DS24_PRODUCT_WEEKLY", "product_monthly": "DS24_PRODUCT_MONTHLY",
+    "product_monthly_full": "DS24_PRODUCT_MONTHLY_FULL",
+}
 _PRODUCT_ID = re.compile(r"^\d{3,12}$")
 _PHONE = re.compile(r"^\+\d{8,15}$")
 

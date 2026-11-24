@@ -504,3 +504,19 @@ def test_only_digistore24_is_held_to_one_market() -> None:
 async def _count_requests(session_factory) -> int:
     async with session_factory() as session:
         return int(await session.scalar(select(func.count()).select_from(PaymentRequest)) or 0)
+
+
+# ------------------------------------------------------------------ الشهرُ بمنتجين (قرارُ المالك ٢٠٢٦-١١-٢٤)
+
+
+def test_monthly_full_maps_sixty_to_its_own_product_and_never_to_the_offer_one() -> None:
+    """**45 ⇐ X30 و60 ⇐ X30-FULL** — فلا يُخصم 63.50$ عن 60 ولا 84.50$ عن 45، ومنتجٌ غائبٌ يُخفي مبلغَه وحدَه."""
+    from app.services.payment_gateways.digistore24 import build_digistore24, product_for
+
+    assert product_for(Decimal("45")) == ("monthly", Decimal("63.50"))
+    assert product_for(Decimal("60.000")) == ("monthly_full", Decimal("84.50"))
+    full = build_digistore24({**_contract(), "product_monthly_full": "611060"})
+    assert [Decimal(a) for a in full.fixed_amounts] == [Decimal("3"), Decimal("17"), Decimal("45"), Decimal("60")]
+    assert full.amount_of("611060") == Decimal("60.000") and full.amount_of(PRODUCTS["monthly"]) == Decimal("45.000")
+    without = build_digistore24(_contract())
+    assert Decimal("60") not in [Decimal(a) for a in without.fixed_amounts]
