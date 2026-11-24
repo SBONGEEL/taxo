@@ -302,6 +302,8 @@ export function CardPayT2Screen() {
             <p className="t2-note">{tr("صفحة البطاقة متوقّفة الآن — حاول بعد قليل أو ادفع بكليك.")}</p>
           ) : null}
           {digistore ? <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p> : null}
+          {/* **الرمزُ البريديُّ يكتبه الكبتن** (قرارُ المالك ٢٠٢٦-١١-٢٤): صفحةُ Digistore24 تشترطه للأردن ولا مدينةَ في الحساب — فيُقال قبل فتحها */}
+          {digistore ? <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك")}</p> : null}
           <button type="button" className="t2-link" onClick={() => navigate(-1)}>
             {tr("تراجع")}
           </button>
