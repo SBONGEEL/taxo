@@ -4,6 +4,8 @@
  * يستدعيها أحد تُصدّق نفسها ثم تُكتشف خاطئةً حين تُستعمل أول مرة.
  */
 
+import type { CommitmentRule, CommitmentReportRow, DutyDayAdmin, LaunchCampaignAdmin, LaunchGrantRow, RiderPerks, PartnerCoupon, CaptainDiscounts } from "@/api/types";
+export type { CommitmentRule, CommitmentReportRow, DutyDayAdmin, LaunchCampaignAdmin, LaunchGrantRow, RiderPerks, PartnerCoupon, CaptainDiscounts };
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
@@ -3063,49 +3065,6 @@ export const putCrossLimits = (country: CountryCode, body: { daily_limit: string
 
 // ------------------------------------------------------------ نقاطُ الالتزام وحملةُ الإطلاق وعروضُ الركّاب (SPEC §١١٤)
 
-export interface CommitmentRule {
-  country_code: CountryCode;
-  is_enabled: boolean;
-  window_start: string;
-  window_end: string;
-  span_minutes: number;
-  max_break_minutes: number;
-  max_total_break_minutes: number;
-  points_per_day: number | null;
-  points_per_credit_unit: number | null;
-  credit_unit_value: string | null;
-  daily_points_cap: number | null;
-  monthly_points_cap: number | null;
-  points_expiry_days: number | null;
-  credit_expiry_days: number | null;
-  require_service_area: boolean;
-  max_accounts_per_device: number;
-}
-export interface CommitmentReportRow {
-  driver_id: string;
-  driver_name: string | null;
-  met: number;
-  disqualified: number;
-  not_met: number;
-  flagged: number;
-  points_balance: number;
-  credit_balance: string;
-}
-export interface DutyDayAdmin {
-  id: string;
-  driver_id: string;
-  day: string;
-  status: string;
-  online_minutes: number;
-  break_count: number;
-  longest_break_minutes: number;
-  total_break_minutes: number;
-  span_start: string | null;
-  span_end: string | null;
-  reason: string | null;
-  flags: string[];
-  rides_completed: number;
-}
 export const getCommitmentRule = (country: CountryCode) =>
   api.get<CommitmentRule>(`/admin/commitment/rule?country_code=${country}`);
 export const updateCommitmentRule = (country: CountryCode, payload: Record<string, unknown>) =>
@@ -3117,25 +3076,6 @@ export const getCommitmentFlags = (country: CountryCode) =>
 export const getCommitmentDriverDays = (driverId: string) =>
   api.get<DutyDayAdmin[]>(`/admin/commitment/drivers/${driverId}/days`);
 
-export interface LaunchCampaignAdmin {
-  enabled: boolean;
-  show_banner: boolean;
-  launch_date: string;
-  launch_at: string;
-  pre_launch_free_days: number;
-  post_launch_free_days: number;
-  zero_commission: boolean;
-  banner: string;
-  partner_notice: string;
-}
-export interface LaunchGrantRow {
-  driver_id: string;
-  driver_name: string | null;
-  kind: string;
-  starts_at: string;
-  ends_at: string;
-  has_subscription: boolean;
-}
 export const getLaunchCampaign = (country: CountryCode) =>
   api.get<LaunchCampaignAdmin>(`/admin/launch-campaign?country_code=${country}`);
 export const updateLaunchCampaign = (country: CountryCode, payload: Record<string, unknown>) =>
@@ -3143,31 +3083,6 @@ export const updateLaunchCampaign = (country: CountryCode, payload: Record<strin
 export const getLaunchGrants = (country: CountryCode) =>
   api.get<LaunchGrantRow[]>(`/admin/launch-campaign/grants?country_code=${country}`);
 
-export interface RiderPerks {
-  country_code: CountryCode;
-  free_cancel_seconds: number | null;
-  premium_after_rides: number | null;
-  premium_priority: boolean;
-}
-export interface PartnerCoupon {
-  id: string;
-  country_code: CountryCode;
-  shop_name: string;
-  shop_area: string | null;
-  title: string;
-  details: string | null;
-  coupon_code: string | null;
-  valid_from: string | null;
-  valid_until: string | null;
-  is_active: boolean;
-  sort_order: number;
-}
-export interface CaptainDiscounts {
-  month: string;
-  rides: { ride_id: string; completed_at: string | null; label: string; discount: string; fare: string | null; currency: string }[];
-  total: string;
-  count: number;
-}
 export const getRiderPerks = (country: CountryCode) =>
   api.get<RiderPerks>(`/admin/rider-offers/perks?country_code=${country}`);
 export const updateRiderPerks = (country: CountryCode, payload: Record<string, unknown>) =>

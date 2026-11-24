@@ -34,7 +34,7 @@ export function RiderOffersButton() {
   if (!hasAnything(data)) return null;
   return (
     <button type="button" className="t2-btn ghost" onClick={() => navigate("/offers")}>
-      <Icon name="local_offer" />
+      <Icon name="confirmation_number" />
       {tr("عروضي")}
     </button>
   );

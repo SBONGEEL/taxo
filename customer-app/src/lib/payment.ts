@@ -50,7 +50,8 @@ import { useSession } from "@/lib/session"; import { tr } from "@/lib/i18n";
  *  **والمشوارُ الثابتُ ثالثُها** (§٦٣-ج/٦): مالُ الراكب نفسِه لكنه دُفع مقدّماً مع الاشتراك، **وتكتبه المنصّةُ عند الاكتمال** —
  *  قرارُ شراءٍ لا قناةٌ تُختار في الرحلة (`PLATFORM_WRITTEN_METHODS` في الخلفية).
  */
-type PlatformWrittenMethod = "promo" | "share" | "commute";
+// **ورصيدُ اشتراك الكبتن** (§١١٤-ب) — لا يقع على دفعة رحلةٍ أصلاً، فلا يختاره راكب
+type PlatformWrittenMethod = "promo" | "share" | "commute" | "subscription_credit";
 
 /** ما يجوز لصاحب الحساب اختياره. */
 export type PayableMethod = Exclude<PaymentMethod, PlatformWrittenMethod>;

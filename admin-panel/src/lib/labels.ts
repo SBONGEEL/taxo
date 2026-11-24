@@ -85,6 +85,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   share: "خصم مشاركة",
   // **المشوارُ الثابت** (§٦٣-ج/٦) — مالُ الراكب دفعه مقدّماً مع اشتراكه، تكتبه المنصّةُ لكلِّ رحلةٍ تكتمل
   commute: "اشتراك المشوار",
+  // **رصيدُ الاشتراك من نقاط الالتزام** (§١١٤-ب) — يدفع اشتراك TAXO وحدَه
+  subscription_credit: "رصيد الاشتراك",
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
@@ -180,6 +182,7 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_in: "تحويل وارد من دولة أخرى",
   cross_transfer_fee: "رسم تحويل بين الدول",
   card_purchase: "شراء بطاقات TAXO للبيع (كبتن)",
+  rider_offer_share: "خصم عرض راكب (كبتن)",
 };
 
 /** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */

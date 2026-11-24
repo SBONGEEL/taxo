@@ -45,7 +45,9 @@ export type RideStatus =
 /** ومنها `promo` (12-ز): **قناةٌ لا يدفعها الراكب** — تُنشئها المنصةُ بقيمة
  *  خصم الكوبون فتظهر صفَّاً في الإيصال. لا تُعرض خياراً في شاشة الدفع. */
 export type PaymentMethod =
-  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute"
+  // **رصيدُ الاشتراك من نقاط الالتزام** (SPEC §١١٤-ب)
+  | "subscription_credit";
 /** و`voided` (§٦٤-ز): **دفعةٌ بدّل الراكبُ طريقتَها** قبل أن يُقِرّ أو يؤكّد الكبتن — صفٌّ باقٍ لا يشغل مبلغاً
  *  (`design/PAYMENTS-UNCONFIRMED.md` §٢-١)، **وليس «فاشلة»**: تلك حكمٌ على مالٍ لم يصل. */
 export type PaymentStatus =
@@ -841,7 +843,9 @@ export type WalletTransactionType =
   | "cross_transfer_in"
   | "cross_transfer_fee"
   // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
-  | "card_purchase";
+  | "card_purchase"
+  // **حصّةُ الكبتن من خصم عرض راكب** (SPEC §١١٤-د)
+  | "rider_offer_share";
 
 export interface WalletTransaction {
   id: string;
@@ -1720,4 +1724,23 @@ export interface DestinationChange {
   expires_in_seconds: number;
   created_at: string;
   decided_at: string | null;
+}
+
+// ------------------------------------------------------------ §١١٤ — نقاطُ الالتزام وحملةُ الإطلاق وعروضُ الركّاب
+
+export interface MyRiderOffers {
+  premium: boolean;
+  premium_after_rides: number | null;
+  completed_rides: number;
+  free_cancel_seconds: number | null;
+  offers: { kind: string; label: string; discount_type: string; discount_value: string; max_discount: string | null }[];
+  coupons: {
+    id: string;
+    shop_name: string;
+    shop_area: string | null;
+    title: string;
+    details: string | null;
+    coupon_code: string | null;
+    valid_until: string | null;
+  }[];
 }

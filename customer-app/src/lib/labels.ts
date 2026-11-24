@@ -81,6 +81,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   share: tr("خصم مشاركة"),
   // **المشوارُ الثابت** (§٦٣-ج/٦) — مالُه هو دفعه مقدّماً مع الاشتراك، **فلا يُقرأ «خصماً»**: سطرُ إيصالٍ يقول من أين دُفعت
   commute: tr("اشتراك المشوار"),
+  // **رصيدُ اشتراك الكبتن** (§١١٤-ب) — لا يقع في إيصال راكب، والمرآةُ كاملة
+  subscription_credit: tr("رصيد الاشتراك"),
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
@@ -144,6 +146,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_in: tr("تحويل وارد من دولة أخرى"),
   cross_transfer_fee: tr("رسم تحويل بين الدول"),
   card_purchase: tr("شراء بطاقات TAXO للبيع"),
+  rider_offer_share: tr("خصم عرض راكب"),
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

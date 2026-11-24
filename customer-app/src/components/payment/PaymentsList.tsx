@@ -39,6 +39,7 @@ const ICON: Record<PaymentMethod, string> = {
   share: "group",
   // **المشوارُ الثابت** (§٦٣-ج/٦) — أيقونةُ «اشتراكاتي» نفسُها
   commute: "event_repeat",
+  subscription_credit: "payments",
 };
 
 export function PaymentsList({ payments }: { payments: Payment[] }) {

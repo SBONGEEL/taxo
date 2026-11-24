@@ -488,7 +488,9 @@ export interface Withdrawal {
 // ------------------------------------------------------------ النزاعات
 
 export type PaymentMethod =
-  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute"
+  // **رصيدُ الاشتراك من نقاط الالتزام** (SPEC §١١٤-ب)
+  | "subscription_credit";
 /** و`voided` (§٦٤-ز): **دفعةٌ بدّل الراكبُ طريقتَها** قبل أن يُقِرّ أو يؤكّد الكبتن — صفٌّ باقٍ لا يشغل مبلغاً، **وليس «فاشلة»**. */
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded" | "voided";
@@ -1420,7 +1422,9 @@ export type WalletTransactionType =
   | "cross_transfer_in"
   | "cross_transfer_fee"
   // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
-  | "card_purchase";
+  | "card_purchase"
+  // **حصّةُ الكبتن من خصم عرض راكب** (SPEC §١١٤-د)
+  | "rider_offer_share";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -4253,4 +4257,101 @@ export interface CrossLimit {
   currency: Currency;
   daily_limit: string;
   monthly_limit: string;
+}
+
+// ------------------------------------------------------------ §١١٤ — نقاطُ الالتزام وحملةُ الإطلاق وعروضُ الركّاب
+
+export interface CommitmentRule {
+  country_code: CountryCode;
+  is_enabled: boolean;
+  window_start: string;
+  window_end: string;
+  span_minutes: number;
+  max_break_minutes: number;
+  max_total_break_minutes: number;
+  points_per_day: number | null;
+  points_per_credit_unit: number | null;
+  credit_unit_value: string | null;
+  daily_points_cap: number | null;
+  monthly_points_cap: number | null;
+  points_expiry_days: number | null;
+  credit_expiry_days: number | null;
+  require_service_area: boolean;
+  max_accounts_per_device: number;
+}
+
+export interface CommitmentReportRow {
+  driver_id: string;
+  driver_name: string | null;
+  met: number;
+  disqualified: number;
+  not_met: number;
+  flagged: number;
+  points_balance: number;
+  credit_balance: string;
+}
+
+export interface DutyDayAdmin {
+  id: string;
+  driver_id: string;
+  day: string;
+  status: string;
+  online_minutes: number;
+  break_count: number;
+  longest_break_minutes: number;
+  total_break_minutes: number;
+  span_start: string | null;
+  span_end: string | null;
+  reason: string | null;
+  flags: string[];
+  rides_completed: number;
+}
+
+export interface LaunchCampaignAdmin {
+  enabled: boolean;
+  show_banner: boolean;
+  launch_date: string;
+  launch_at: string;
+  pre_launch_free_days: number;
+  post_launch_free_days: number;
+  zero_commission: boolean;
+  banner: string;
+  partner_notice: string;
+}
+
+export interface LaunchGrantRow {
+  driver_id: string;
+  driver_name: string | null;
+  kind: string;
+  starts_at: string;
+  ends_at: string;
+  has_subscription: boolean;
+}
+
+export interface RiderPerks {
+  country_code: CountryCode;
+  free_cancel_seconds: number | null;
+  premium_after_rides: number | null;
+  premium_priority: boolean;
+}
+
+export interface PartnerCoupon {
+  id: string;
+  country_code: CountryCode;
+  shop_name: string;
+  shop_area: string | null;
+  title: string;
+  details: string | null;
+  coupon_code: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface CaptainDiscounts {
+  month: string;
+  rides: { ride_id: string; completed_at: string | null; label: string; discount: string; fare: string | null; currency: string }[];
+  total: string;
+  count: number;
 }

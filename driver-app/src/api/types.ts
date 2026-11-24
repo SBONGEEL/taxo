@@ -1916,3 +1916,57 @@ export interface WeeklyDigest {
   rating_average: number | null;
   rating_count: number;
 }
+
+// ------------------------------------------------------------ §١١٤ — نقاطُ الالتزام وحملةُ الإطلاق وعروضُ الركّاب
+
+export interface MyCommitment {
+  enabled: boolean;
+  window_start: string;
+  window_end: string;
+  span_minutes: number;
+  max_break_minutes: number;
+  max_total_break_minutes: number;
+  points_per_day: number | null;
+  points_per_credit_unit: number | null;
+  credit_unit_value: string | null;
+  currency: string;
+  points_balance: number;
+  credit_balance: string;
+  credit_value_of_points: string | null;
+  convertible_points: number;
+  today: {
+    state: "before_window" | "idle" | "running" | "met" | "broken" | "after_window";
+    elapsed_minutes: number;
+    online_minutes: number;
+    breaks_used_minutes: number;
+    break_count: number;
+    current_break_minutes: number;
+    remaining_minutes: number;
+    can_restart: boolean;
+    reason: string | null;
+  };
+  recent: { day: string; status: string; reason: string | null; online_minutes: number; total_break_minutes: number }[];
+}
+
+export interface MyLaunchCampaign {
+  enabled: boolean;
+  show_banner: boolean;
+  launch_date: string;
+  launch_at: string;
+  pre_launch_free_days: number;
+  post_launch_free_days: number;
+  zero_commission: boolean;
+  banner: string;
+  partner_notice: string;
+  status: "pre_launch" | "granted" | "ended" | "waiting" | null;
+  grant_starts_at: string | null;
+  grant_ends_at: string | null;
+  ack_required: boolean;
+}
+
+export interface MyOfferDiscounts {
+  month: string;
+  rides: { ride_id: string; completed_at: string | null; label: string; discount: string; fare: string | null; currency: string }[];
+  total: string;
+  count: number;
+}

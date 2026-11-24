@@ -30,7 +30,7 @@ import {
 import type { CountryCode, PromoCode, PromoKind } from "@/api/types";
 
 /** **أسماءُ أنواع العرض** (SPEC §١١٤-د) — كما تكتبها الخلفيّةُ في `rider_offers.KIND_LABEL` */
-const KIND_LABEL: Record<PromoKind, string> = { code: "رمز", launch: "خصم الافتتاح", first_ride: "أول رحلة", invite: "ادعُ صديقك" };
+const KIND_LABEL: Record<string, string> = { code: "رمز", launch: "خصم الافتتاح", first_ride: "أول رحلة", invite: "ادعُ صديقك" };
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DateInput, Field, Select } from "@/components/ui/Field";

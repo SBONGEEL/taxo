@@ -105,7 +105,7 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   cross_transfer_in: "swap_horiz",
   cross_transfer_fee: "swap_horiz",
   card_purchase: "confirmation_number",
-  rider_offer_share: "local_offer",
+  rider_offer_share: "percent",
 };
 
 export function WalletT2Screen() {
