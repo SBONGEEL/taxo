@@ -332,6 +332,8 @@ async def open_checkout(
         if payload.purpose is PaymentRequestPurpose.SUBSCRIPTION or payload.wallet is WalletOwnerType.DRIVER
         else "rider"
     )
+    # **Digistore24 للأردنّ وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٤) — أوّلَ الباب، فيُقال لحسابِ ليبيا أو الجزائر سببُه لا «مفتاحٌ مطفأ»
+    await payment_requests.require_market_of(session, payload.provider_id, user.country_code)
     # **نسخةُ Play لا تفتح ما مفتاحُه مطفأٌ لها** (Digistore24، أمرُ المالك ٢٠٢٦-١١-٢٣)
     await payment_requests.require_channel(session, user.country_code, payload.provider_id, payload.channel)
     # **نقرتان سريعتان صفحةٌ واحدة** (SPEC §٨٢-أ/٤)

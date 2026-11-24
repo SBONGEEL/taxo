@@ -229,6 +229,13 @@ async def _method_of(session: AsyncSession, provider_id: uuid.UUID) -> tuple[str
     return (row[0], row[1]) if row is not None else (None, None)
 
 
+async def require_market_of(session: AsyncSession, provider_id: uuid.UUID, country: CountryCode) -> None:
+    """**وسيطٌ لسوقٍ واحدٍ لا يُفتح لحسابٍ في غيره** (Digistore24 والأردن، أمرُ المالك ٢٠٢٦-١١-٢٤) — يُنادى أوّلَ باب الصفحة."""
+    from app.services import payment_gateways
+
+    payment_gateways.require_market((await _method_of(session, provider_id))[0], country)
+
+
 async def daily_total(session: AsyncSession, *, integration: str, country: CountryCode) -> Decimal:
     """**مجموعُ ما دُفع اليومَ بهذا الوسيط في هذا السوق** — يومُ البلد لا يومُ الخادم؛ المعتمدُ وما قال وسيطُه «دُفع»."""
     from sqlalchemy import func
