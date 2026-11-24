@@ -454,6 +454,8 @@ export function SubscriptionT2Screen() {
             onWallet={s.payFromWallet}
             onCard={s.payByCard}
             onCliq={s.payByCliq}
+            credit={s.credit}
+            onCredit={s.payFromCredit}
             bankCardFloor={
               // **أقلُّ دفعٍ بالبطاقة** (قرارُ المالك ٢٠٢٦-١١-١١) — خطّةٌ ثمنُها تحته لا زرَّ بطاقةٍ لها، ويُقال لماذا
               bankCard?.min_amount != null &&

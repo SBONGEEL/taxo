@@ -37,7 +37,7 @@ interface OnlineServicePlugin {
   degraded(): Promise<void>;
   stop(): Promise<void>;
   /** **إشاراتُ الجهاز** (§١٠٣ B/17 و25) — غلافٌ أقدمُ لا يعرفها فيرمي، ويُقرأ ذلك «لم يُقس» */
-  signals(): Promise<{ mock_location: boolean; rooted: boolean }>;
+  signals(): Promise<{ mock_location: boolean; rooted: boolean; emulator?: boolean }>;
 }
 
 const plugin = registerPlugin<OnlineServicePlugin>("OnlineService");
@@ -95,6 +95,6 @@ export const onlineService = {
 };
 
 /** **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25) — من المكوِّن نفسِه لا من تسجيلٍ ثانٍ له. */
-export function readDeviceSignals(): Promise<{ mock_location: boolean; rooted: boolean }> {
+export function readDeviceSignals(): Promise<{ mock_location: boolean; rooted: boolean; emulator?: boolean }> {
   return plugin.signals();
 }

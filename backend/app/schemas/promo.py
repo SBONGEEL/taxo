@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -50,11 +51,21 @@ class PromoCodeCreate(BaseModel):
     # رحلته (`referrals.apply_welcome_promo`)، ورمزٌ عامٌّ بنفسه يجعل الهديةَ
     # تُكتب من أيِّ راكبٍ رأى المنشور فتنفد الميزانيةُ على غير المدعوّين
     is_public: bool = True
+    # **عروضُ الركاب الآليّة** (§١١٤-د): `code` رمزٌ يُكتب كما كان؛ و`launch`/`first_ride`/`invite` تُطبَّق بلا رمز (خاصّةٌ دائماً).
+    # **و`bearer_after_free` يحكم بعد فترة الكبتن المجّانيّة وحدَها** — داخلها الكبتنُ يتحمّل إلزاماً (قاعدةُ المالك)
+    kind: Literal["code", "launch", "first_ride", "invite"] = "code"
+    bearer_after_free: Literal["company", "captain"] = "company"
+    points_per_ride: int | None = Field(default=None, ge=1, le=100000)
 
     @model_validator(mode="after")
     def _percent_needs_sense(self) -> PromoCodeCreate:
         if self.discount_type is PromoDiscountType.PERCENT and self.discount_value > 100:
             raise ValueError("النسبة لا تتجاوز ١٠٠٪")
+        if self.points_per_ride is not None and self.kind != "launch":
+            raise ValueError("نقاطُ الرحلة لعرض «خصم الافتتاح» وحدَه")
+        if self.kind != "code":
+            # **عرضٌ آليٌّ لا يُكتب رمزُه** — نشرُه يجعل الهديةَ لكلِّ من عرفه
+            self.is_public = False
         if (
             self.valid_from is not None
             and self.valid_until is not None
@@ -76,6 +87,8 @@ class PromoCodeUpdate(BaseModel):
     valid_from: datetime | None = None
     valid_until: datetime | None = None
     is_active: bool | None = None
+    bearer_after_free: Literal["company", "captain"] | None = None
+    points_per_ride: int | None = Field(default=None, ge=1, le=100000)
 
 
 class PromoCodeOut(BaseModel):
@@ -104,6 +117,9 @@ class PromoCodeOut(BaseModel):
     valid_until: datetime | None
     is_active: bool
     is_public: bool = True
+    kind: str = "code"
+    bearer_after_free: str = "company"
+    points_per_ride: int | None = None
     spent: Decimal
     committed: Decimal
     used_count: int

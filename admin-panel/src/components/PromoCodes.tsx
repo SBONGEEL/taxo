@@ -27,7 +27,10 @@ import {
   listPromoCodes,
   updatePromoCode,
 } from "@/api/endpoints";
-import type { CountryCode, PromoCode } from "@/api/types";
+import type { CountryCode, PromoCode, PromoKind } from "@/api/types";
+
+/** **أسماءُ أنواع العرض** (SPEC §١١٤-د) — كما تكتبها الخلفيّةُ في `rider_offers.KIND_LABEL` */
+const KIND_LABEL: Record<PromoKind, string> = { code: "رمز", launch: "خصم الافتتاح", first_ride: "أول رحلة", invite: "ادعُ صديقك" };
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DateInput, Field, Select } from "@/components/ui/Field";
@@ -181,6 +184,8 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                       <Badge tone={row.is_active ? "ok" : "muted"}>
                         {row.is_active ? "مفعّل" : "مطفأ"}
                         {row.is_public ? "" : " · خاصّ"}
+                        {row.kind && row.kind !== "code" ? ` · ${KIND_LABEL[row.kind]}` : ""}
+                        {row.bearer_after_free === "captain" ? " · يتحمّله الكبتن" : ""}
                       </Badge>
                     </td>
                     <td className="p-8">
@@ -260,6 +265,10 @@ function NewPromoModal({
   const [from, setFrom] = useState("");
   const [uses, setUses] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  // **نوعُ العرض ومن يتحمّله** (SPEC §١١٤-د) — «رمز» كما كان؛ والأنواعُ الثلاثةُ بلا رمزٍ تُطبَّق آليّاً ولا تجتمع
+  const [kind, setKind] = useState<PromoKind>("code");
+  const [bearer, setBearer] = useState<"company" | "captain">("company");
+  const [pointsPerRide, setPointsPerRide] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -372,6 +381,45 @@ function NewPromoModal({
         />
       </div>
 
+      <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-3">
+        <label className="text-12 text-ink">
+          نوع العرض
+          <select
+            className="mt-4 block w-full rounded-input border border-line bg-surface p-8"
+            value={kind}
+            onChange={(event) => setKind(event.target.value as PromoKind)}
+          >
+            <option value="code">رمزٌ يكتبه الراكب</option>
+            <option value="launch">خصم الافتتاح (بلا رمز)</option>
+            <option value="first_ride">أول رحلة (بلا رمز)</option>
+            <option value="invite">ادعُ صديقك (بلا رمز)</option>
+          </select>
+        </label>
+        <label className="text-12 text-ink">
+          من يتحمّل الخصم بعد فترة الكبتن المجّانية
+          <select
+            className="mt-4 block w-full rounded-input border border-line bg-surface p-8"
+            value={bearer}
+            onChange={(event) => setBearer(event.target.value as "company" | "captain")}
+          >
+            <option value="company">الشركة</option>
+            <option value="captain">الكبتن</option>
+          </select>
+        </label>
+        {kind === "launch" ? (
+          <Field
+            label="نقاط التزامٍ للكبتن عن كلّ رحلة (اختياري)"
+            dir="ltr"
+            inputMode="numeric"
+            value={pointsPerRide}
+            onChange={(event) => setPointsPerRide(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+        ) : null}
+      </div>
+      <p className="mt-6 text-11 text-muted">
+        وفي فترة الكبتن المجّانية (حملة الإطلاق) يتحمّل الكبتنُ الخصمَ إلزاماً، ويرى مقدارَه وصافيَه قبل القبول.
+      </p>
+
       <div className="mt-14">
         <ErrorNote message={error} />
       </div>
@@ -399,7 +447,10 @@ function NewPromoModal({
             total_usage_limit: uses ? Number(uses) : null,
             // ومنتصفُ الليل بتوقيت الجهاز يكفي هنا كما في «ينتهي»
             valid_from: from ? `${from}T00:00:00` : null,
-            is_public: visibility === "public",
+            is_public: visibility === "public" && kind === "code",
+            kind,
+            bearer_after_free: bearer,
+            points_per_ride: kind === "launch" && pointsPerRide ? Number(pointsPerRide) : null,
           })
             .then(onCreated)
             .catch((caught) => {

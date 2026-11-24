@@ -60,6 +60,7 @@ import "./t2.css";
 import "./payrequest.css"; import { tr } from "@/lib/i18n";
 import { phaseLabel } from "./PayDz";
 import { Icon } from "@/taxo2";
+import { RiderOffersButton } from "./RiderOffersT2";
 
 /** أيقونةُ كلِّ نوعٍ بمفردات اللوحة — **وما لم تُرسم أيقونتُه فبأيقونة المحفظة**. */
 const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
@@ -251,6 +252,7 @@ export function WalletT2Screen() {
                 {tr("نقاطي")}
               </button>
             ) : null}
+            <RiderOffersButton />
             {plansEnabled ? (
               <button type="button" className="t2-btn ghost" onClick={() => navigate("/plans")}>
                 <Icon name="card_membership" />

@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import GrowthManager, DbSession
-from app.core.exceptions import Conflict, NotFound
+from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.enums import AuditAction, CountryCode
 from app.models.promo import PromoCode
 from app.schemas.promo import PromoCodeCreate, PromoCodeOut, PromoCodeUpdate
@@ -50,6 +50,9 @@ async def _out(session, row: PromoCode) -> PromoCodeOut:
                 "valid_until",
                 "is_active",
                 "is_public",
+                "kind",
+                "bearer_after_free",
+                "points_per_ride",
             )
         },
         spent=await promo_service.spent(session, row.id),
@@ -118,6 +121,10 @@ async def update_promo_code(
         raise NotFound("رمز الخصم غير موجود")
 
     changes = payload.model_dump(exclude_unset=True)
+    if changes.get("bearer_after_free", "x") is None:
+        changes.pop("bearer_after_free")
+    if changes.get("points_per_ride") is not None and row.kind != "launch":
+        raise InvalidInput("نقاطُ الرحلة لعرض «خصم الافتتاح» وحدَه", field="points_per_ride")
     changed = [
         field for field, value in changes.items() if getattr(row, field) != value
     ]

@@ -123,6 +123,9 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "rides"
     __table_args__ = (
         CheckConstraint(
+            "discount_bearer IS NULL OR discount_bearer IN ('company', 'captain')", name="rides_discount_bearer"
+        ),
+        CheckConstraint(
             "distance_km >= 0 AND duration_min >= 0 AND estimated_fare >= 0 "
             "AND (final_fare IS NULL OR final_fare >= 0) "
             "AND (cancellation_fee IS NULL OR cancellation_fee >= 0)",
@@ -503,6 +506,9 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     )
     promo_value_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     promo_cap_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    # **من يتحمّل خصمَ العرض** (الترحيلة `0190`، §١١٤-د) — يُجمَّد عند قبول الكبتن: `captain` في فترته المجّانيّة إلزاماً
+    # أو بقرار العرض بعدها، و`company` كما كان كلُّ كوبون. فارغٌ = لا خصم
+    discount_bearer: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     stop_fee_at_ride: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, default=Decimal("0.000"), server_default="0"

@@ -63,6 +63,22 @@ final class DeviceSignals {
         return rootedBy(Build.TAGS, su);
     }
 
+    /** خالصةٌ ومختبَرة: <b>محاكٍ لا هاتف</b> (نقاطُ الالتزام §١١٤-ب) — بصماتُ البناء المعروفة لمحاكيات أندرويد. */
+    static boolean emulatorBy(String fingerprint, String hardware, String product, String model) {
+        String f = fingerprint == null ? "" : fingerprint.toLowerCase();
+        String h = hardware == null ? "" : hardware.toLowerCase();
+        String p = product == null ? "" : product.toLowerCase();
+        String m = model == null ? "" : model.toLowerCase();
+        return f.startsWith("generic") || f.contains("emulator") || f.contains("/sdk_gphone")
+            || h.contains("goldfish") || h.contains("ranchu") || h.contains("vbox")
+            || p.contains("sdk_gphone") || p.equals("sdk") || p.contains("emulator") || p.contains("simulator")
+            || m.contains("android sdk built for") || m.contains("emulator");
+    }
+
+    static boolean emulator() {
+        return emulatorBy(Build.FINGERPRINT, Build.HARDWARE, Build.PRODUCT, Build.MODEL);
+    }
+
     static boolean mockRecently(Context context) {
         long seen = context.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).getLong(MOCK_SEEN_AT, 0L);
         return mockRecently(seen, System.currentTimeMillis());

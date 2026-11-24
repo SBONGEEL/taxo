@@ -158,6 +158,25 @@ export function OfferT2({
               </span>
             </div>
           ) : null}
+          {/* **خصمُ عرض الراكب — قبل القبول** (§١١٤-د، أمرُ المالك ٢٤/١١): أنّ في الطلب خصماً، ومقدارُه، **وصافيك إن كنت تتحمّله** */}
+          {offer.discount ? (
+            <div className="t2-of-tags">
+              <span className="t2-of-tag" data-testid="offer-discount">
+                {offer.discount.captain_bears
+                  ? tr("{0}: خصم {1} {2} تتحمّله — صافيك تقريباً {3} {2}", {
+                      0: offer.discount.label,
+                      1: formatAmount(offer.discount.discount, ride.currency),
+                      2: currencyLabel,
+                      3: formatAmount(offer.discount.net_estimate, ride.currency),
+                    })
+                  : tr("{0}: خصم {1} {2} على الراكب — لا يُنقص أجرتك", {
+                      0: offer.discount.label,
+                      1: formatAmount(offer.discount.discount, ride.currency),
+                      2: currencyLabel,
+                    })}
+              </span>
+            </div>
+          ) : null}
           {/* **شاراتُ الطلب — بنصّها وشرطها من `OfferSheet` حرفاً**، وتُقرأ قبل القبول لا بعده */}
           <OfferTags offer={offer} currencyLabel={currencyLabel} />
           {/* **من يدفع رحلةً لشخصٍ آخر — يُقرأ قبل القبول** (§٦٣-ج/١): نقدٌ من الراكب الفعليّ، أو لا شيءَ يُقبض أصلاً.

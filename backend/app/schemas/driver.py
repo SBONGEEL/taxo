@@ -638,9 +638,15 @@ class DriverDeviceSignalsIn(BaseModel):
 
     mock_location: bool | None = None
     rooted: bool | None = None
+    #: **محاكٍ لا هاتف** — نقاطُ الالتزام وحدَها تُسقط به يومَها (§١١٤-ب)، ولا حجبَ للاستقبال
+    emulator: bool | None = None
 
     def measured(self) -> dict[str, bool]:
-        return {key: value for key, value in (("mock_location", self.mock_location), ("rooted", self.rooted)) if value is not None}
+        return {
+            key: value
+            for key, value in (("mock_location", self.mock_location), ("rooted", self.rooted), ("emulator", self.emulator))
+            if value is not None
+        }
 
 
 class DriverPermissionsIn(BaseModel):

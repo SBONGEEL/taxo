@@ -707,6 +707,11 @@ async def request_ride(
         from app.services import referrals as referrals_service
 
         await referrals_service.apply_welcome_promo(session, ride=ride, rider=rider)
+        # **عروضُ الركاب الآليّة** (§١١٤-د) — عرضٌ واحدٌ بلا تراكب، ولا تُفشل الطلب
+        if ride.promo_code_id is None:
+            from app.services import rider_offers
+
+            await rider_offers.auto_apply(session, ride=ride, rider=rider)
 
     # الإلحاقُ بالمجموعة لا `RideStop(ride=…)`: العلاقةُ أحاديةُ الاتجاه
     # (`Ride.stops` بلا `back_populates`)، والـcascade هو ما يكتب `ride_id`
@@ -845,6 +850,12 @@ async def _take(
     # اشتُري على صفر — وهما حالان لا يحملهما رقمٌ واحد.
     if driver.commission_percent_from_subscription is not None:
         ride.commission_percent_at_ride = driver.commission_percent_from_subscription
+
+    # **من يتحمّل خصمَ عرض الراكب يُجمَّد هنا** (§١١٤-د): ما رآه الكبتنُ في بطاقة العرض قبل القبول هو ما يقع
+    if ride.promo_code_id is not None:
+        from app.services import rider_offers
+
+        await rider_offers.freeze_bearer(session, ride=ride, driver=driver)
 
     # **رمزُ الرحلة** (§٦٢-ج/٥): لرحلةٍ نسائيةٍ في سوقٍ أشعل مفتاحَه — **يُولَّد عند القبول لا عند الطلب**، فلا رمزَ لرحلةٍ لم يقبلها
     # أحد، **وتحت قفل الصفّ نفسِه**. و`secrets` لا `random`: رمزٌ يُتوقَّع يُفرغ الشرطَ من معناه
@@ -1039,6 +1050,11 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
                     discounts.append(opened)
 
     await rounding.apply_to_ride(session, ride)
+
+    # **ما بعد عرض الراكب** (§١١٤-د): نقاطُ «خصم الافتتاح» للكبتن، واستحقاقُ الداعي بأوّل رحلةٍ لصديقه — **لا مال**
+    from app.services import rider_offers
+
+    await rider_offers.on_completed(session, ride)
 
     from app.services import payments as payments_service
 

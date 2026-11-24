@@ -251,21 +251,22 @@ async def publish_ride_offer(
     ride: Ride,
     distance_to_pickup_km: float,
     expires_in_seconds: int,
+    offer_discount: dict | None = None,
 ) -> None:
     """بطاقة الطلب الواردة للكبتن المعروض عليه وحده (SPEC القسم 12.3).
 
-    لا تحمل هوية الراكب: نقطة الانطلاق والمسافة إليها والسعر والمهلة فقط.
+    لا تحمل هوية الراكب: نقطة الانطلاق والمسافة إليها والسعر والمهلة فقط — **وخصمُ عرض الراكب إن وُجد، ومن يتحمّله، وصافي الكبتن
+    قبل أن يقبل** (§١١٤-د، أمرُ المالك ٢٤/١١).
     """
-    await publish(
-        redis,
-        user_channel(driver_user_id),
-        {
-            "type": RideEvent.RIDE_OFFER.value,
-            "ride": RideOut.from_ride(ride).model_dump(mode="json"),
-            "distance_to_pickup_km": distance_to_pickup_km,
-            "expires_in_seconds": expires_in_seconds,
-        },
-    )
+    frame = {
+        "type": RideEvent.RIDE_OFFER.value,
+        "ride": RideOut.from_ride(ride).model_dump(mode="json"),
+        "distance_to_pickup_km": distance_to_pickup_km,
+        "expires_in_seconds": expires_in_seconds,
+    }
+    if offer_discount is not None:
+        frame["offer_discount"] = offer_discount
+    await publish(redis, user_channel(driver_user_id), frame)
 
 
 async def publish_offer_expired(

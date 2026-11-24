@@ -58,6 +58,9 @@ function fareLineLabel(line: FareLine): string {
     // **خصمُ اشتراك الراكب** حين يتحمّله الكبتن (SPEC §٩٧/١٣) — سالبٌ كما كتبته الخلفية
     case "plan_discount":
       return tr("خصم الاشتراك");
+    // **خصمُ عرض الراكب** (SPEC §١١٤-د) — سالبٌ كما كتبته الخلفية
+    case "offer_discount":
+      return tr("خصم العرض");
   }
 }
 

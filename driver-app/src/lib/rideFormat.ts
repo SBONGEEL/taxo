@@ -66,6 +66,8 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   share: tr("خصم مشاركة"),
   // **المشوارُ الثابت** (§٦٣-ج/٦) — دفعه الراكبُ مقدّماً مع اشتراكه، ويُقيَّد للكبتن كأيِّ دفعةٍ تمرّ بالمنصة
   commute: tr("اشتراك المشوار"),
+  // **رصيدُ الاشتراك من نقاط الالتزام** (§١١٤-ب) — لا يُرى في دفعة رحلةٍ أبداً، والمرآةُ كاملة
+  subscription_credit: tr("رصيد الاشتراك"),
 };
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {

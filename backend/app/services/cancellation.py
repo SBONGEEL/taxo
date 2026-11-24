@@ -151,7 +151,11 @@ async def charge_for(
         return None
 
     policy = await settings_for(session, ride.country_code)
-    if await is_exempt_by_proximity(
+    # **«إلغاءٌ مجّانيٌّ خلال ثوانٍ من القبول»** (§١١٤-د/هـ) — ميزةُ راكبٍ غيرُ نقديّة، فارغةً مطفأة
+    from app.services import rider_offers
+
+    free_window = await rider_offers.free_cancel_applies(session, ride)
+    if free_window or await is_exempt_by_proximity(
         redis, ride=ride, driver_id=ride.driver_id, policy=policy
     ):
         # **ويُصفَّر على الرحلة أيضاً**: رقمٌ مجمَّدٌ بلا صفِّ تحصيلٍ هو بعينه

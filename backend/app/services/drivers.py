@@ -162,6 +162,10 @@ async def report_location(
     await route.capture(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading
     )
+    # **دقيقةُ الالتزام** (§١١٤-ب): من البثّ نفسِه — مطفأً لا يكتب شيئاً، ولا يُسقط البثَّ بسقوطه
+    from app.services import commitment
+
+    await commitment.touch(redis, driver_id=context.driver_id, country=context.country_code, lat=lat, lng=lng)
     await events.publish_driver_location(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading
     )
@@ -476,6 +480,12 @@ async def set_status(
     from app.services import audit
 
     driver.status = status
+    # **أوّلُ اعتمادٍ يُكتب مرّةً** (حملةُ الإطلاق §١١٤-ج): «قبل الإطلاق أم بعده» يُقرأ منه، فلا يمحوه تعليقٌ ثمّ إعادة
+    if status is DriverStatus.APPROVED and driver.first_approved_at is None:
+        from datetime import UTC as _UTC
+        from datetime import datetime as _datetime
+
+        driver.first_approved_at = _datetime.now(_UTC)
     details: dict[str, str] = {"status": status.value}
     if reason is not None:
         details["reason"] = reason

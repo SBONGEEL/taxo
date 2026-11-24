@@ -75,6 +75,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_in: tr("تحويل وارد من دولة أخرى"),
   cross_transfer_fee: tr("رسم تحويل بين الدول"),
   card_purchase: tr("شراء بطاقات TAXO للبيع"),
+  rider_offer_share: tr("خصم عرض راكب"),
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -129,6 +130,7 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   cross_transfer_in: ArrowLeftRight,
   cross_transfer_fee: ArrowLeftRight,
   card_purchase: TicketCheck,
+  rider_offer_share: Percent,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

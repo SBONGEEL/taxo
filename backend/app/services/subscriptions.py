@@ -462,8 +462,12 @@ async def _create(
     days: int | None = None,
     permanent: bool = False,
     over_permanent_ok: bool = False,
+    commission_override: Decimal | None = None,
+    starts_not_before: datetime | None = None,
 ) -> DriverSubscription:
     """يكتب صف الاشتراك — **يُستدعى وصفُّ الكبتن مقفول**.
+
+    **و`commission_override` و`starts_not_before` لحملة الإطلاق وحدَها** (§١١٤-ج): عمولةٌ مجمَّدةٌ صفراً، وبدايةٌ لا تسبق يومَ الإطلاق.
 
     **و«عدد أيام» و«سفير TAXO» من هنا وحدَه** (SPEC §١١١-د/٤): `days` يحلّ محلَّ مدّة الخطّة ويبدأ بعد التغطية القائمة (لا يضيع
     يوم)، و`permanent` صفٌّ يبدأ الآن وينتهي بعد `PERMANENT_SPAN`. **ولا شراءَ فوق الدائم** — إلا مالاً وصل فعلاً من مزوّد
@@ -495,6 +499,8 @@ async def _create(
         expires_at = starts_at + PERMANENT_SPAN
     else:
         starts_at = await coverage_until(session, driver.id) or _now()
+        if starts_not_before is not None and starts_at < starts_not_before:
+            starts_at = starts_not_before
         expires_at = starts_at + (
             timedelta(days=days) if days is not None else PLAN_DURATIONS[plan.duration_type]
         )
@@ -512,6 +518,8 @@ async def _create(
     # يُجمَّد فوقه يقع عليها كلِّها — **وشرطٌ في راوترٍ يُنسى في ثلاثة**.
     if offer is not None and offer.offer.commission_percent is not None:
         frozen_commission = offer.offer.commission_percent
+    if commission_override is not None:
+        frozen_commission = commission_override
 
     # **قاعدةٌ واحدةٌ للخصم في القنوات الأربع** (البند ٥٤، الفرع ج): ما تنازلنا
     # عنه هو **الفرقُ بين سعر الخطة وما دُفع فعلاً** — لا ما حسبه العرض. ففي

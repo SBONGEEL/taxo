@@ -109,6 +109,8 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.CROSS_TRANSFER_FEE,
     # **بطاقاتُ TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ بلا دائن، والمالُ إلى TAXO
     WalletTransactionType.CARD_PURCHASE,
+    # **حصّةُ الكبتن من خصمٍ يتحمّله** (§١١٤-د) — يردّ ما وصله صافياً من دفعة الخصم
+    WalletTransactionType.RIDER_OFFER_SHARE,
 )
 
 # `adjustment` يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص. **و`rounding` معه** (SPEC §٧٠-ج/٦، الترحيلة `0104`):

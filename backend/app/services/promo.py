@@ -387,6 +387,23 @@ async def apply_to_ride(
     return promo
 
 
+async def freeze(session: AsyncSession, *, ride: Ride, rider: User, promo: PromoCode) -> PromoCode:
+    """**عرضٌ آليٌّ بلا رمز** (§١١٤-د: الافتتاح · أول رحلة · ادعُ صديقك) — البابُ نفسُه: قفلُ صفّه، وحدودُه الثلاثة، وتجميدُ قاعدته."""
+    _refuse_test_rider(rider)
+    locked = await session.scalar(
+        select(PromoCode).where(PromoCode.id == promo.id, PromoCode.is_active.is_(True)).with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked is None:
+        raise PromoInvalid()
+    await _check_limits(session, locked, rider, fare=ride.estimated_fare)
+    ride.promo_code_id = locked.id
+    ride.promo_type_at_ride = locked.discount_type
+    ride.promo_value_at_ride = locked.discount_value
+    ride.promo_cap_at_ride = locked.max_discount
+    return locked
+
+
 async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
     """يُنشئ دفعةَ `promo` **معلَّقةً** لحظةَ الإنهاء — أو `None` بلا كوبون. **ويسوّيها `rides.complete_ride`** بـ`payments.settle`.
 
@@ -420,6 +437,14 @@ async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
         .where(PromoCode.id == ride.promo_code_id)
         .with_for_update()
     )
+
+    # **الكبتنُ يتحمّله** (§١١٤-د، قاعدةُ المالك ٢٤/١١): مجمَّدٌ عند القبول — الأجرةُ تنقص بسطرها `offer_discount` **ولا دفعةَ `promo`**:
+    # يقبض الكبتنُ الباقيَ، والعمولةُ على ما بقي، **ولا مالَ يخرج من TAXO** (سابقةُ خصم اشتراك الراكب §٩٧/١٣)
+    if ride.discount_bearer == "captain":
+        ride.final_fare = pricing.round_money(ride.final_fare - discount, ride.currency)
+        if ride.fare_lines is not None:
+            ride.fare_lines = [*ride.fare_lines, pricing.FareLine("offer_discount", -discount).as_json()]
+        return None
 
     payment = Payment(
         ride_id=ride.id,

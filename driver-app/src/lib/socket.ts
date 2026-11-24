@@ -23,7 +23,7 @@
 import { WS_URL, tokens } from "@/api/client";
 import { reportLocationOverRest, reportPointsOverRest } from "@/api/endpoints";
 import { onlineService } from "@/lib/online-service";
-import type { Ride } from "@/api/types";
+import type { OfferDiscount, Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
 import { demoSubscribe } from "@/demo/engine";
 import { demoActive } from "@/demo/mode";
@@ -36,6 +36,8 @@ export type DriverSocketEvent =
       ride: Ride;
       distance_to_pickup_km: number;
       expires_in_seconds: number;
+      /** **خصمُ عرض الراكب قبل القبول** (§١١٤-د) — مقدارُه ومن يتحمّله وصافيك؛ وغائبٌ بلا عرض */
+      offer_discount?: OfferDiscount;
     }
   | { type: "offer_expired"; ride_id: string }
   | {

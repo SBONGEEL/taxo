@@ -270,6 +270,10 @@ async def attach(
         # القاعدة لا في فحصٍ سابقٍ يمكن أن يُسبَق
         await session.rollback()
         raise ReferralNotAllowed("هذا الحساب مُحالٌ بالفعل") from exc
+    # **«ادعُ صديقك»** (§١١٤-د): الصديقُ يستحقّ رحلةً بخصمٍ لحظةَ الربط — مطفأً لا شيء
+    from app.services import rider_offers
+
+    await rider_offers.on_referral(session, referred=referred, referral_id=referral.id)
     return referral
 
 

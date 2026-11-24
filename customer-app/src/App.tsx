@@ -172,6 +172,7 @@ const NotificationsT2Screen = lazy(() =>
   })),
 );
 const LoyaltyT2 = lazy(() => import("@/screens/t2/LoyaltyT2").then((m) => ({ default: m.LoyaltyT2 })));
+const RiderOffersT2 = lazy(() => import("@/screens/t2/RiderOffersT2").then((m) => ({ default: m.RiderOffersT2 })));
 const PlansT2 = lazy(() => import("@/screens/t2/PlansT2").then((m) => ({ default: m.PlansT2 })));
 const SupportListT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ default: m.SupportListT2 })));
 const SupportThreadT2 = lazy(() => import("@/screens/t2/SupportT2").then((m) => ({ default: m.SupportThreadT2 })));
@@ -709,6 +710,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <LoyaltyT2 />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/offers"
+                        element={
+                          <Guarded>
+                            <RiderOffersT2 />
                           </Guarded>
                         }
                       />

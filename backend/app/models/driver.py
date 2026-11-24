@@ -189,6 +189,10 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # **«معتمد دون وثائق»** (أمرُ المالك ٢٠٢٦-١١-١٠، البند ١) — يراه المشرفون وحدَهم (`AdminDriverRow`، لا `DriverOut`).
     # يُكتب في `services/exceptional_approval.approve`، ويُمحى عند الاعتماد العاديّ (`drivers.approve` ⇐ `clear`).
     exceptional_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # **أوّلُ اعتماد** (الترحيلة `0190`، حملةُ الإطلاق §١١٤-ج): يُكتب مرّةً في `drivers.set_status` ولا يُمحى بتعليقٍ ولا بإعادة مراجعة
+    first_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # **إقرارُ «شريك الإطلاق»** (§١١٤-د): «خلال فترة الخدمة المجانية تتحمّل خصومات عروض الركاب كشريك TAXO للإطلاق»
+    launch_partner_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     exceptional_approved_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

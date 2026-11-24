@@ -947,7 +947,9 @@ export type FareLineKind =
   // **«سعر متفاوض عليه»** (SPEC §٩٢-ج): سطرٌ واحدٌ مكانَ أسطر الطريق — والانتظارُ والوقفاتُ فوقه
   | "negotiated"
   | "experiment"
-  | "plan_discount";
+  | "plan_discount"
+  // **خصمُ عرض الراكب حين يتحمّله الكبتن** (SPEC §١١٤-د) — سالبٌ داخل الأجرة، ولا صفَّ `promo` له
+  | "offer_discount";
 
 /** **العرضُ المقابلُ من الكبتن** (§٩٢-أ/٣) — من يعرض بلا رقمٍ ولا صورة قبل الإسناد، ومهلتُه بالثواني من الخلفية. */
 export interface NegotiationCounter {

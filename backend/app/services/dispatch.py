@@ -555,7 +555,13 @@ async def _ranked_candidates(
     )
     # **فئاتُ المركبة المقبولةُ من الحضور** (§٦٧-ج/٣ و§٩١-ب/٩): المدمجةُ ومن فوقها ممّن أُشعل فيه «الأعلى يأخذ الأدنى»؛ و`None` لا تصفية
     accepted_keys = await categories.presence_keys(session, ride.country_code, ride.vehicle_category)
-    for radius in (geo.SEARCH_RADIUS_KM, widest):
+    # **«راكب مميّز» بأولويّة المطابقة** (SPEC §١١٤-د/هـ): يبدأ بحثُه من الدائرة الواسعة فيُعرض على أكثرِ الكباتن من أوّل جولة —
+    # **والترتيبُ من الأقرب هو هو**، فلا يُعرض على بعيدٍ قبل قريب. ومطفأً (`premium_priority`) أو قبل عدد الرحلات لا يتغيّر شيء.
+    from app.services import rider_offers
+
+    rider = await session.get(User, ride.rider_id)
+    premium = rider is not None and await rider_offers.priority_for(session, rider)
+    for radius in (widest,) if premium else (geo.SEARCH_RADIUS_KM, widest):
         presences = [
             presence
             for presence in await geo.nearby(
@@ -835,12 +841,19 @@ async def pending_offer_frame(
 
     stored = await redis.get(driver_offer_km_key(driver.id))
     distance = float(stored) if stored is not None else 0.0
-    return {
+    frame = {
         "type": events.RideEvent.RIDE_OFFER.value,
         "ride": RideOut.from_ride(ride).model_dump(mode="json"),
         "distance_to_pickup_km": distance,
         "expires_in_seconds": int(remaining),
     }
+    # **وخصمُ العرض في الإطار المستعاد كما في المبثوث** (§١١٤-د) — بابان ينشران الشيءَ نفسَه لا يفترقان
+    from app.services import rider_offers
+
+    card = await rider_offers.offer_card(session, ride=ride, driver_id=driver.id)
+    if card is not None:
+        frame["offer_discount"] = card
+    return frame
 
 
 async def _offer_to(

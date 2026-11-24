@@ -304,3 +304,11 @@ from app.models.site_stats import (  # noqa: F401  — «الإحصاءات»
     SiteDownloadDaily,
     StatsImport,
 )
+from app.models.commitment import (  # noqa: F401  — نقاطُ الالتزام (§١١٤-ب)
+    CommitmentRule,
+    DriverDutyDay,
+    DriverPointsEntry,
+    SubscriptionCreditEntry,
+)
+from app.models.launch_campaign import LaunchCampaign, LaunchCampaignGrant  # noqa: F401  — حملةُ الإطلاق (§١١٤-ج)
+from app.models.rider_offer import PartnerCoupon, RiderOfferEntitlement, RiderPerks  # noqa: F401  — عروضُ الركاب (§١١٤-د)

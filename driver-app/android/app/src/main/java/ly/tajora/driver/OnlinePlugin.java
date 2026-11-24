@@ -57,6 +57,7 @@ public class OnlinePlugin extends Plugin {
         JSObject out = new JSObject();
         out.put("mock_location", DeviceSignals.mockRecently(getContext()));
         out.put("rooted", DeviceSignals.rooted());
+        out.put("emulator", DeviceSignals.emulator());
         call.resolve(out);
     }
 

@@ -471,6 +471,14 @@ export interface FareLine {
   quantity?: string | null;
 }
 
+/** **خصمُ عرض الراكب في إطار العرض** (§١١٤-د) — كما تحسبه الخلفيّة، والمبالغُ نصوصٌ عشريّة. */
+export interface OfferDiscount {
+  label: string;
+  discount: string;
+  captain_bears: boolean;
+  net_estimate: string;
+}
+
 export interface Ride {
   id: string;
   rider_id: string;
@@ -724,7 +732,9 @@ export type WalletTransactionType =
   | "cross_transfer_in"
   | "cross_transfer_fee"
   // **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (الترحيلة `0189`) — مدينٌ من محفظة الكبتن
-  | "card_purchase";
+  | "card_purchase"
+  // **حصّةُ الكبتن من خصم عرض راكب** (SPEC §١١٤-د)
+  | "rider_offer_share";
 
 export interface WalletTransaction {
   id: string;
@@ -853,7 +863,9 @@ export interface RecordedRoute {
 /** ومنها `promo` (12-ز): خصمُ كوبونٍ تدفعه الشركة — يُقيَّد للكبتن كأي دفعةٍ
  *  تمرّ بالمنصة، فيراه في كشفه لا في «تقبض الآن». */
 export type PaymentMethod =
-  "cash" | "wallet" | "card" | "cliq" | "promo" | "share" | "commute";
+  "cash" | "wallet" | "card" | "cliq" | "promo" | "share" | "commute"
+  // **رصيدُ الاشتراك من نقاط الالتزام** (SPEC §١١٤-ب) — يدفع الاشتراكَ وحدَه
+  | "subscription_credit";
 /** مرآةُ `PaymentStatus` في `app/models/enums.py` — **ستُّ قيمٍ منذ `voided`** (§٦٤-ز: دفعةٌ بدّل الراكبُ طريقتَها
  * قبل تأكيدك، فلا تنتظر منك شيئاً).
  *

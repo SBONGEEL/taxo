@@ -508,12 +508,15 @@ async def publish_ride_offer(
 
     # **السعرُ على البطاقة مقرَّبٌ بقاعدة السوق** (SPEC §٧٠-ج/٤) — ما سيُحفظ لو انتهت الرحلةُ على تقديرها
     shown = rounding.ride_display_fare(ride, ride.estimated_fare)
+    from app.services import rider_offers
+
     await events.publish_ride_offer(
         redis,
         driver_user_id=driver_user_id,
         ride=ride,
         distance_to_pickup_km=distance_to_pickup_km,
         expires_in_seconds=expires_in_seconds,
+        offer_discount=await rider_offers.offer_card_for_user(session, ride=ride, user_id=driver_user_id),
     )
 
     await _safe_notify(

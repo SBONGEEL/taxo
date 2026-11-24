@@ -50,6 +50,8 @@ from app.routers import (
     admin_price_experiments,
     admin_rider_plans,
     rider_plans,
+    admin_points_launch,
+    points_launch,
     admin_loyalty,
     loyalty,
     admin_map_community,
@@ -155,6 +157,8 @@ api_router.include_router(admin_driver_goals.router)
 api_router.include_router(admin_price_experiments.router)
 api_router.include_router(admin_rider_plans.router)
 api_router.include_router(rider_plans.router)
+api_router.include_router(admin_points_launch.router)
+api_router.include_router(points_launch.router)
 api_router.include_router(admin_loyalty.router)
 api_router.include_router(loyalty.router)
 api_router.include_router(guarantees.router)

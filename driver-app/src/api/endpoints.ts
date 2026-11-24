@@ -342,6 +342,8 @@ export const reportPermissions = (payload: { off: string[] }) => api.put<void>("
 export interface DeviceSignalsReport {
   mock_location?: boolean;
   rooted?: boolean;
+  /** **محاكٍ لا هاتف** (§١١٤-ب) — من الغلاف الجديد وحدَه؛ الأقدمُ لا يرسله */
+  emulator?: boolean;
 }
 export const reportDeviceSignals = (payload: DeviceSignalsReport) => api.put<void>("/drivers/me/device-signals", payload);
 
@@ -1195,3 +1197,68 @@ export const reportMapDisplayFailure = (reason: string) =>
 
 /** **قالبُ مربّعات الأماكن المفتوحة** — يطلبه المحرّكُ نفسُه بلا رأس دخول (`routers/map_community.py`) */
 export const openPlacesTiles = () => `${API_URL}/map/tiles/places/{z}/{x}/{y}.pbf`;
+
+// ------------------------------------------------------------ نقاطُ الالتزام وحملةُ الإطلاق وخصومُ العروض (§١١٤)
+
+/** **يومُ الالتزام الجاري ورصيدا النقاط والاشتراك** — كما تحسبه الخلفيّة، و`enabled: false` لا يُرسم شيء. */
+export interface MyCommitment {
+  enabled: boolean;
+  window_start: string;
+  window_end: string;
+  span_minutes: number;
+  max_break_minutes: number;
+  max_total_break_minutes: number;
+  points_per_day: number | null;
+  points_per_credit_unit: number | null;
+  credit_unit_value: string | null;
+  currency: string;
+  points_balance: number;
+  credit_balance: string;
+  credit_value_of_points: string | null;
+  convertible_points: number;
+  today: {
+    state: "before_window" | "idle" | "running" | "met" | "broken" | "after_window";
+    elapsed_minutes: number;
+    online_minutes: number;
+    breaks_used_minutes: number;
+    break_count: number;
+    current_break_minutes: number;
+    remaining_minutes: number;
+    can_restart: boolean;
+    reason: string | null;
+  };
+  recent: { day: string; status: string; reason: string | null; online_minutes: number; total_break_minutes: number }[];
+}
+export const getMyCommitment = () => api.get<MyCommitment>("/drivers/me/commitment");
+export const convertCommitmentPoints = (points: number) =>
+  api.post<{ points: number; amount: string; currency: string; credit_balance: string }>("/drivers/me/commitment/convert", { points });
+/** **الدفعُ من رصيد الاشتراك** — للباقة بثمنها كاملاً، ولا مالَ يخرج من المحفظة. */
+export const buySubscriptionWithCredit = (planId: string, idempotencyKey: string) =>
+  api.post<DriverSubscription>("/subscriptions/credit", { plan_id: planId, idempotency_key: idempotencyKey });
+
+export interface MyLaunchCampaign {
+  enabled: boolean;
+  show_banner: boolean;
+  launch_date: string;
+  launch_at: string;
+  pre_launch_free_days: number;
+  post_launch_free_days: number;
+  zero_commission: boolean;
+  banner: string;
+  partner_notice: string;
+  status: "pre_launch" | "granted" | "ended" | "waiting" | null;
+  grant_starts_at: string | null;
+  grant_ends_at: string | null;
+  ack_required: boolean;
+}
+export const getMyLaunchCampaign = () => api.get<MyLaunchCampaign>("/drivers/me/launch-campaign");
+export const acknowledgeLaunchPartner = () => api.post<{ acknowledged_at: string }>("/drivers/me/launch-campaign/ack");
+
+export interface MyOfferDiscounts {
+  month: string;
+  rides: { ride_id: string; completed_at: string | null; label: string; discount: string; fare: string | null; currency: string }[];
+  total: string;
+  count: number;
+}
+export const getMyOfferDiscounts = (month?: string) =>
+  api.get<MyOfferDiscounts>(month ? `/drivers/me/offer-discounts?month=${encodeURIComponent(month)}` : "/drivers/me/offer-discounts");

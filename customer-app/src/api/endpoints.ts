@@ -1142,3 +1142,22 @@ export const reportMapDisplayFailure = (reason: string) =>
 
 /** **قالبُ مربّعات الأماكن المفتوحة** — يطلبه المحرّكُ نفسُه بلا رأس دخول (`routers/map_community.py`) */
 export const openPlacesTiles = () => `${API_URL}/map/tiles/places/{z}/{x}/{y}.pbf`;
+
+/** **عروضُ الراكب** (SPEC §١١٤-د) — ما ينطبق عليه بلا رمز، وكوبوناتُ المحلّات الشريكة، وشارةُ «راكب مميّز». والقيمُ كما ضبطها المشرف. */
+export interface MyRiderOffers {
+  premium: boolean;
+  premium_after_rides: number | null;
+  completed_rides: number;
+  free_cancel_seconds: number | null;
+  offers: { kind: string; label: string; discount_type: string; discount_value: string; max_discount: string | null }[];
+  coupons: {
+    id: string;
+    shop_name: string;
+    shop_area: string | null;
+    title: string;
+    details: string | null;
+    coupon_code: string | null;
+    valid_until: string | null;
+  }[];
+}
+export const getMyRiderOffers = () => api.get<MyRiderOffers>("/rider-offers");

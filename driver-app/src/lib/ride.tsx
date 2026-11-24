@@ -39,7 +39,7 @@ import { dispatchTripComms } from "@/lib/trip-comms";
 import { presentNotice } from "@/components/PushNotices";
 
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
-import type { Coordinates, Ride } from "@/api/types";
+import type { Coordinates, OfferDiscount, Ride } from "@/api/types";
 import type { CliqTransfer } from "@/components/CliqTransferSheet";
 import { useRideActivity } from "@/lib/native-ios";
 import { type BroadcastMode, DriverSocket, type DriverSocketEvent } from "@/lib/socket";
@@ -67,6 +67,8 @@ export interface Offer {
   totalSeconds: number;
   /** **سعرُك المقابل** (§٩٢-أ/٣) بعد «سعر آخر» — والبطاقةُ تبقى بمهلة جواب الراكب بانتظاره */
   countered?: string;
+  /** **خصمُ عرض الراكب** (§١١٤-د) — يُقرأ قبل القبول */
+  discount?: OfferDiscount;
 }
 
 interface RideState {
@@ -130,6 +132,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
           distanceKm: event.distance_to_pickup_km,
           expiresAt: Date.now() + event.expires_in_seconds * 1_000,
           totalSeconds: event.expires_in_seconds,
+          discount: event.offer_discount,
         });
         // **النغمةُ تُكرَّر حتى ينتهي العدّاد** (§9.1) — **ولم تكن تُنادى من
         // أيِّ موضع** (قِيس 2026-08-30): الجدولُ مبنيٌّ منذ المرحلة ١٠

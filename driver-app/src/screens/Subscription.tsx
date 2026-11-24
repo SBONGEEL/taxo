@@ -35,6 +35,8 @@ import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import {
   buySubscription,
+  buySubscriptionWithCredit,
+  getMyCommitment,
   buySubscriptionWithCard,
   getMySubscription,
   getSubscriptionHistory,
@@ -56,7 +58,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, cn, formatAmount,
-  DISPLAY_LOCALE, newIdempotencyKey,
+  DISPLAY_LOCALE, isZeroAmount, newIdempotencyKey,
 } from "@/lib/utils";
 import { useGoBack } from "@/lib/back"; import { tr } from "@/lib/i18n";
 
@@ -238,6 +240,38 @@ export function useSubscriptionScreen() {
     }
   }
 
+  // **رصيدُ الاشتراك من نقاط الالتزام** (§١١٤-ب) — يُعرض زرُّه حيث الرصيدُ غيرُ صفر، **والكفايةُ تحكم بها الخلفيّة**
+  const [credit, setCredit] = useState<{ amount: string; currency: string } | null>(null);
+  useEffect(() => {
+    getMyCommitment()
+      .then((mine) => setCredit(isZeroAmount(mine.credit_balance) ? null : { amount: mine.credit_balance, currency: mine.currency }))
+      .catch(() => undefined);
+  }, []);
+
+  async function buyWithCredit(planId: string) {
+    setBuying(planId);
+    setError(null);
+    setDone(null);
+    try {
+      const key = buyKeys.current.get(`credit-${planId}`) ?? newIdempotencyKey(`credit-${planId.slice(0, 8)}`);
+      buyKeys.current.set(`credit-${planId}`, key);
+      await buySubscriptionWithCredit(planId, key);
+      buyKeys.current.delete(`credit-${planId}`);
+      await load();
+      setCredit(null);
+      setDone(tr("تم التجديد من رصيد الاشتراك ✓"));
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إتمام الشراء"));
+    } finally {
+      setBuying(null);
+    }
+  }
+
+  function payFromCredit(plan: SubscriptionPlan) {
+    setConfirming(null);
+    void buyWithCredit(plan.id);
+  }
+
   /** **أفعالُ ورقة التأكيد** — تُغلق الورقةَ ثمّ تنادي القناة، كما كانت في الورقة نفسِها. */
   function payFromWallet(plan: SubscriptionPlan) {
     setConfirming(null);
@@ -272,6 +306,8 @@ export function useSubscriptionScreen() {
     payFromWallet,
     payByCard,
     payByCliq,
+    credit,
+    payFromCredit,
   };
 }
 
@@ -571,6 +607,8 @@ export function ConfirmSubscriptionSheet({
   cardFirst = false,
   onCrypto,
   cryptoFirst = false,
+  credit = null,
+  onCredit,
 }: {
   plan: SubscriptionPlan;
   buying: string | null;
@@ -597,6 +635,9 @@ export function ConfirmSubscriptionSheet({
   onCrypto?: (plan: SubscriptionPlan) => void;
   /** **وأوّلاً** حيث رتّبه المالكُ كذلك (الأردن) — وإلا تحت الطرق القائمة */
   cryptoFirst?: boolean;
+  /** **رصيدُ الاشتراك** (§١١٤-ب) — غيرُ صفرٍ وحدَه يُرسم زرُّه؛ **وغيابُه يُبقي الورقةَ كما كانت حرفاً** */
+  credit?: { amount: string; currency: string } | null;
+  onCredit?: (plan: SubscriptionPlan) => void;
 }) {
   const cardViaGateway = !cardEnabled && gateway !== null && onPayRequest !== undefined;
   const bankCard = !cardEnabled && !cardViaGateway && onBankCard !== undefined;
@@ -666,6 +707,11 @@ export function ConfirmSubscriptionSheet({
                 {tr("ببطاقتك البنكيّة — يُفعَّل اشتراكُك فورَ اكتمال الدفع.")}
               </p>
             </>
+          ) : null}
+          {credit && onCredit ? (
+            <Button size="md" variant="secondary" disabled={buying !== null} onClick={() => onCredit(plan)}>
+              {tr("من رصيد الاشتراك ({0})", { 0: formatAmount(credit.amount, credit.currency) })}
+            </Button>
           ) : null}
           <Button
             size="md"

@@ -104,6 +104,8 @@ import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRid
 import { useRide } from "@/lib/ride";
 import { Icon, Wordmark } from "@/taxo2";
 import { YourCarT2 } from "@/screens/t2/YourCarT2";
+import { CommitmentCardT2, useCommitment } from "@/screens/t2/CommitmentT2";
+import { LaunchCampaignT2 } from "@/screens/t2/LaunchT2";
 import { RoadReportButton } from "@/components/map/RoadReportButton";
 
 import { countBookings, countCommutes, countRides, hoursClock } from "./count";
@@ -298,7 +300,9 @@ export function HomeT2Screen() {
   // **«يوجد تحديث» من Play وتقييمُ المتجر** (SPEC §١٠٣ A/8، A/9) — مفتاحاهما لدولته
   useNativeFlags(user?.country_code);
   // **إشاراتُ الجهاز للمشرف** (SPEC §١٠٣ B/17 و25) — بلاغٌ لا حجب، كلٌّ خلف مفتاحه
-  useDeviceSignals(user?.country_code);
+  // **ونقاطُ الالتزام تشترط الإشارات** (§١١٤-ب) — فتُرسل حين تكون مفعّلةً في بلده ولو أُطفئ مفتاحا البلاغ
+  const [commitment, reloadCommitment] = useCommitment();
+  useDeviceSignals(user?.country_code, commitment?.enabled === true);
   // **الشاشةُ مضاءةٌ أثناء الرحلة** (SPEC §١٠٣ B/16) — من القبول حتى الإنهاء، خلف مفتاحه
   useKeepAwake(useFeature(user?.country_code, "auto_night_keep_awake") && tracking);
   // **«في رحلة» للخدمة الأصليّة** (SPEC §١٠٣ B/15) — لا تقليلَ للإرسال أثناءها
@@ -632,6 +636,10 @@ export function HomeT2Screen() {
           onOpenStore={() => navigate("/account/garage/store")}
         />
       ) : null}
+
+      {/* **حملةُ الإطلاق ونقاطُ الالتزام** (§١١٤-ب/ج) — تحت «سيارتك» وفوق الخدمات؛ ومطفأتين لا شيء */}
+      {mode === "home" ? <LaunchCampaignT2 /> : null}
+      {mode === "home" ? <CommitmentCardT2 data={commitment} onChanged={reloadCommitment} /> : null}
 
       {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — فوق الخدمات حين يكون فيها شيءٌ وحدَه: عرضٌ ينتظر، أو حجزٌ قبله، **أو سؤالُ «هل أنت
           في الطريق؟»** وهو أوّلُها لأن الحجزَ يُسحب بعده بلا ردّ. ومطفأً أو فارغاً لا صفّ */}

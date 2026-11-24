@@ -90,6 +90,7 @@ celery_app = Celery(
         "app.tasks.quality",
         "app.tasks.pickup_spots",
         "app.tasks.driver_goals",
+        "app.tasks.points_launch",
         "app.tasks.loyalty",
         "app.tasks.bookings",
         "app.tasks.maintenance",
@@ -199,6 +200,15 @@ celery_app.conf.update(
         # **أهدافُ الكبتن** (البند ١٦) — كلَّ عشر دقائق، ومطفأً لا يصرف شيئاً
         "driver-goals-sweep": {
             "task": "app.tasks.driver_goals.sweep",
+            "schedule": 600.0,
+        },
+        # **نقاطُ الالتزام وحملةُ الإطلاق** (§١١٤) — كلَّ عشر دقائق، ومطفأتين لا تكتبان شيئاً
+        "commitment-sweep": {
+            "task": "app.tasks.points_launch.commitment_sweep",
+            "schedule": 600.0,
+        },
+        "launch-campaign-sweep": {
+            "task": "app.tasks.points_launch.campaign_sweep",
             "schedule": 600.0,
         },
         # **نقاطُ الولاء** (البند ١٤) — المكتملةُ تكسب كلَّ عشر دقائق، مطفأً لا شيء

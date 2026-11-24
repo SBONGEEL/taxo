@@ -45,6 +45,11 @@ class PromoCode(UUIDMixin, TimestampMixin, Base):
         # الآخر، والمطابقةُ بالرمز والدولة معاً فلا يُستعمل رمزُ الأردن في ليبيا
         UniqueConstraint("country_code", "code", name="uq_promo_codes_country_code"),
         CheckConstraint("discount_value > 0", name="promo_value_positive"),
+        CheckConstraint("kind IN ('code', 'launch', 'first_ride', 'invite')", name="promo_codes_kind"),
+        CheckConstraint("bearer_after_free IN ('company', 'captain')", name="promo_codes_bearer"),
+        CheckConstraint(
+            "points_per_ride IS NULL OR (points_per_ride > 0 AND kind = 'launch')", name="promo_codes_points_per_ride"
+        ),
         CheckConstraint("budget_total >= 0", name="promo_budget_not_negative"),
         CheckConstraint("per_user_limit > 0", name="promo_per_user_positive"),
         CheckConstraint(
@@ -98,6 +103,14 @@ class PromoCode(UUIDMixin, TimestampMixin, Base):
     is_public: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true"), default=True
     )
+    # **نوعُ العرض** (الترحيلة `0190`، §١١٤-د): `code` رمزٌ يكتبه الراكب كما كان؛ والثلاثةُ تُطبَّق وحدَها بلا رمز
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="code", server_default=text("'code'"))
+    # **من يتحمّل الخصمَ بعد فترة الكبتن المجّانيّة** — وفيها يتحمّله الكبتنُ إلزاماً (قرارُ المالك)
+    bearer_after_free: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="company", server_default=text("'company'")
+    )
+    # **نقاطُ الالتزام الإضافيّة للكبتن عن كلِّ رحلةٍ بخصم الافتتاح** — لا مال
+    points_per_ride: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
