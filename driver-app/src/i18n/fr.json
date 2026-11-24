@@ -2053,7 +2053,7 @@
   "أضف": "Ajouter",
   "هذا المبلغ لا يُدفع بالبطاقة الآن — ادفع بكليك أو من محفظتك.": "Ce montant ne peut pas être payé par carte pour le moment — payez par CliQ ou avec votre portefeuille.",
   "سيتم خصم القيمة من البطاقة بما يعادلها بالدولار": "Le montant sera débité de la carte en son équivalent en dollars",
-  "ستُسأل عن الرمز البريدي لمدينتك": "Le code postal de votre ville vous sera demandé",
+  "ستُسأل عن الرمز البريدي لمدينتك، واختر «شخص خاص»": "Le code postal de votre ville vous sera demandé — choisissez « Particulier »",
   "تعذّر الإلغاء — أعد المحاولة": "Annulation impossible — réessayez",
   "تم الدفع وتفعيل اشتراكك": "Paiement effectué, abonnement activé",
   "اشتراكك فعّال حتى {0}": "Votre abonnement est actif jusqu’au {0}",

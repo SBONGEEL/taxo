@@ -303,7 +303,7 @@ export function CardPayT2Screen() {
           ) : null}
           {digistore ? <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p> : null}
           {/* **الرمزُ البريديُّ يكتبه الكبتن** (قرارُ المالك ٢٠٢٦-١١-٢٤): صفحةُ Digistore24 تشترطه للأردن ولا مدينةَ في الحساب — فيُقال قبل فتحها */}
-          {digistore ? <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك")}</p> : null}
+          {digistore ? <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك، واختر «شخص خاص»")}</p> : null}
           <button type="button" className="t2-link" onClick={() => navigate(-1)}>
             {tr("تراجع")}
           </button>
