@@ -208,14 +208,16 @@ async def test_waiting_charge_is_unaffected_by_reading_it_twice(
         await rides_service.arrive_at_stop(session, row, stop_id)
         await session.commit()
 
+    # **لحظةٌ واحدةٌ مرجعاً للختم وللقراءة** (قِيس ٢٠٢٦-١١-٢٤، CI 45391603954): «الآن» ثانيةً بعد الكتابة يزيد الانتظارَ أجزاءَ ثانيةٍ
+    # على جهازٍ بطيء فيصير 0.701 — والاختبارُ يسأل «أتكتب القراءة؟» لا «كم مضى من الوقت»
+    now = datetime.now(UTC)
     async with session_factory() as session:
         stop = await session.get(RideStop, stop_id)
-        stop.arrived_at = datetime.now(UTC) - timedelta(minutes=10)
+        stop.arrived_at = now - timedelta(minutes=10)
         await session.commit()
 
     async with session_factory() as session:
         row = await rides_service.get_ride(session, ride["id"])
-        now = datetime.now(UTC)
         first = await rides_service.waiting_charge_for(session, row, now)
         second = await rides_service.waiting_charge_for(session, row, now)
 
