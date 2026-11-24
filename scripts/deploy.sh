@@ -559,7 +559,7 @@ say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 # غيرُ مدعومٍ في ssh ويندوز (قِيس: `getsockname failed: Not a socket`)، فالسبيلُ
 # **أمرٌ واحدٌ يُنتج أرشيفاً واحداً** يحمل الأربعةَ.
 say "  · الأربعةُ في اتصالٍ واحد…"
-ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT count(*) FROM driver_documents;' 2>/dev/null | tr -d ' \r\n' > \$W/docs.rows; { docker compose $COMPOSE_FILES run --rm --no-deps -T --entrypoint tar backend -czf - -C /app/var/documents . 2>/dev/null > \$W/documents.tar.gz || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
+ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT count(*) FROM driver_documents;' 2>/dev/null | tr -d ' \r\n' > \$W/docs.rows; { docker compose $COMPOSE_FILES run --rm --no-deps -T --entrypoint tar backend -czf - -C /app/var/documents . 2>/dev/null > \$W/documents.tar.gz || : > \$W/documents.absent; }; { docker compose $COMPOSE_FILES exec -T whatsapp-gateway tar -czf - -C /data . 2>/dev/null > \$W/wa_auth.tar.gz && [ -s \$W/wa_auth.tar.gz ] || { rm -f \$W/wa_auth.tar.gz; : > \$W/wa_auth.absent; }; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
 
 tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
 
@@ -681,6 +681,26 @@ documents_carry_files() {
 }
 if [ -f "$LOCAL/documents.tar.gz" ]; then
   check documents.tar.gz "الوثائق" documents_carry_files
+fi
+
+# **وجلسةُ واتساب سرٌّ لا يعيده السحب** (أمرُ المالك ٢٠٢٦-١١-٢٤ الثامن، البند ٣): رموزُ OTP تخرج من جلسةٍ مربوطةٍ
+# برقم الشركة، وتسكن **مجلَّداً مسمّى** (`taxo_wa_auth` على `/data` في `whatsapp-gateway`) لا مساراً على القرص —
+# **فلم تكن في أيِّ نسخةٍ قبل اليوم**، وضياعُها يعني ربطَ الرقم من جديد بهاتف المالك.
+#
+# **تُنسخ من الحاوية العاملة** (`exec … tar`)، وتسكن مع `.env` في مجلّد النسخ خارج git، **ولا يُطبع منها إلا عددُ
+# الأسماء**. **ويُقاس المحتوى لا وجودُ الأرشيف**: أرشيفٌ بلا `creds.json` جلسةٌ لا تُستعاد ⇒ يُسقط الرفع.
+# **وغيابُها لا يُسقط الرفع ويُقال بصوتٍ عالٍ**: بوّابةٌ متوقّفةٌ لا جلسةَ فيها تُنسخ، وإسقاطُ الرفع لأجلها
+# «بوّابةٌ تصيح حيث لا خطر».
+wa_session_present() {
+  local n
+  n=$(tar -tzf "$LOCAL/wa_auth.tar.gz" 2>/dev/null | grep -c 'creds\.json$' || true)
+  say "    (ملفُّ اعتماد الجلسة: ${n:-0} · مدخلات: $(tar -tzf "$LOCAL/wa_auth.tar.gz" 2>/dev/null | grep -vc '/$' || true))"
+  [ "${n:-0}" -ge 1 ]
+}
+if [ -f "$LOCAL/wa_auth.tar.gz" ]; then
+  check wa_auth.tar.gz "جلسة واتساب" wa_session_present
+else
+  say "  ⚠ جلسة واتساب — **لم تُنسخ**: حاويةُ whatsapp-gateway غيرُ عاملةٍ أو بلا جلسة (لا يُسقط الرفع)"
 fi
 
 [ "$FAIL" -eq 0 ] || die "النسخةُ لم تُحقَّق — **لا رفع**. قف واسأل المالك."
