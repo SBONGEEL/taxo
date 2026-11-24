@@ -1158,3 +1158,65 @@ async def test_the_decision_point_defaults_to_the_real_world() -> None:
 
     for function in (dispatch._eligible_levels, dispatch.eligible_driver_ids):
         assert inspect.signature(function).parameters["test"].default is False
+
+
+async def test_a_granted_offer_reaches_the_test_captain_alone_and_is_revoked(
+    client: AsyncClient, admin_headers: dict, jordan_settings: None, jordan_wallet: None, session_factory
+) -> None:
+    """**منحةٌ صريحةٌ تفتح العرضَ لكبتن التجربة وحدَه** (إذنُ المالك ٢٠٢٦-١١-٢٤ السادس، البند ٢) — ثمّ النزعُ يغلقه.
+
+    وبلا منحةٍ لا عرضَ له ولو كان الجمهورُ «الكلّ» (§٦٥-ج/٢)، **والنزعُ يرفض منحةَ كبتنٍ حقيقيّ**.
+    """
+    await enable_features(session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value)
+    plan_id = await ensure_plan(session_factory)
+    async with session_factory() as session:
+        offer = SubscriptionOffer(
+            country_code=CountryCode.JO,
+            name="TAXO MAN 45",
+            discount_type=DISCOUNT_MONEY_PERCENT,
+            discount_value=Decimal("25"),
+            audience=AUDIENCE_ALL,
+            is_active=True,
+        )
+        session.add(offer)
+        await session.commit()
+        offer_id = offer.id
+
+    tester = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-1002", subscribed=False)
+    real = await approved_driver(client, session_factory, DRIVER, plate_number="AMM-1001", subscribed=False)
+    await _mark_test(session_factory, tester["user_id"])
+
+    async def discount(driver_id) -> Decimal | None:
+        async with session_factory() as session:
+            driver = await session.get(Driver, uuid.UUID(str(driver_id)))
+            plan = await session.get(SubscriptionPlan, uuid.UUID(str(plan_id)))
+            resolved = await offers.resolve(session, driver=driver, plan=plan)
+            return None if resolved is None else resolved.amount
+
+    assert await discount(tester["driver_id"]) is None
+    real_before = await discount(real["driver_id"])
+    assert real_before is not None
+
+    async with session_factory() as session:
+        await offers.grant(
+            session, offer_id=offer_id, driver_id=uuid.UUID(str(tester["driver_id"])), actor_id=None, note="تجربة"  # type: ignore[arg-type]
+        )
+        await session.commit()
+    assert await discount(tester["driver_id"]) == real_before
+    assert await discount(real["driver_id"]) == real_before
+
+    # **والمنحُ لجمهورٍ محسوبٍ يبقى مرفوضاً لكبتنٍ حقيقيّ**، **والنزعُ كذلك**
+    async with session_factory() as session:
+        with pytest.raises(Exception, match="الجمهور اليدويِّ"):
+            await offers.grant(
+                session, offer_id=offer_id, driver_id=uuid.UUID(str(real["driver_id"])), actor_id=None, note="x"  # type: ignore[arg-type]
+            )
+    async with session_factory() as session:
+        with pytest.raises(Exception, match="كبتن التجربة وحدَه"):
+            await offers.revoke_test_grant(session, offer_id=offer_id, driver_id=uuid.UUID(str(real["driver_id"])))
+
+    async with session_factory() as session:
+        await offers.revoke_test_grant(session, offer_id=offer_id, driver_id=uuid.UUID(str(tester["driver_id"])))
+        await session.commit()
+    assert await discount(tester["driver_id"]) is None
+    assert await discount(real["driver_id"]) == real_before

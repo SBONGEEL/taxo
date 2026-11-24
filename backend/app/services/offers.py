@@ -185,8 +185,22 @@ async def resolve(
     # **ولا عرضَ لكبتن التجربة** (SPEC §٦٥-ج/٢): الخصمُ تنازلٌ يدفعه TAXO، **وعرضٌ بحدِّ استعمالٍ أو ميزانيةٍ يستهلكه
     # حسابُ التجربة من نصيب كبتنٍ حقيقيّ**. ويُتخطّى صامتاً — **ومن البابِ الواحد** الذي يقرؤه الشراءُ والشاشةُ معاً، فلا
     # تعرض الشاشةُ خصماً لا يقع
+    #
+    # **إلا منحةً صريحةً باسمه** (إذنُ المالك ٢٠٢٦-١١-٢٤ السادس، البند ٢): لاختبار منتجٍ بسعر العرض من زرّه، يُمنح كبتنُ التجربة
+    # عرضاً بعينه بأداة المنح والتدقيق ثمّ يُنزع. **فلا يرى إلا ما مُنحه** ولا يمسّه جمهورُ العرض المحسوب.
+    test_grants: set[uuid.UUID] | None = None
     if await test_accounts.is_test_driver(session, driver.id):
-        return None
+        test_grants = set(
+            (
+                await session.execute(
+                    select(SubscriptionOfferGrant.offer_id).where(
+                        SubscriptionOfferGrant.driver_id == driver.id
+                    )
+                )
+            ).scalars()
+        )
+        if not test_grants:
+            return None
 
     now = _now()
     rows = (
@@ -209,7 +223,10 @@ async def resolve(
     for offer in rows:
         if offer.plan_id is not None and offer.plan_id != plan.id:
             continue
-        if not await _is_eligible(session, offer, driver):
+        if test_grants is not None:
+            if offer.id not in test_grants:
+                continue
+        elif not await _is_eligible(session, offer, driver):
             continue
         if offer.max_uses_per_driver:
             used = await _uses_by_driver(
@@ -450,7 +467,10 @@ async def grant(
     فعل شيئاً لم يقع — وهو الشكلُ الذي يُقرأ «الميزةُ لا تعمل».
     """
     offer = await get_offer(session, offer_id)
-    if offer.audience != AUDIENCE_MANUAL:
+    # **وكبتنُ التجربة يُمنح أيَّ عرض** (إذنُ المالك ٢٠٢٦-١١-٢٤ السادس): منحتُه هي ما يفتح له العرضَ في `resolve`، لا الجمهور
+    if offer.audience != AUDIENCE_MANUAL and not await test_accounts.is_test_driver(
+        session, driver_id
+    ):
         raise InvalidInput("المنحُ اليدويُّ لعروض الجمهور اليدويِّ وحدَها")
 
     row = SubscriptionOfferGrant(
@@ -463,6 +483,29 @@ async def grant(
         await session.rollback()
         raise Conflict("هذا العرضُ ممنوحٌ لهذا الكبتن سلفاً") from exc
     return row
+
+
+async def revoke_test_grant(
+    session: AsyncSession, *, offer_id: uuid.UUID, driver_id: uuid.UUID
+) -> uuid.UUID:
+    """نزعُ منحةِ عرضٍ عن **كبتن تجربةٍ وحدَه** — ويعيد معرّفَها للتدقيق.
+
+    **ولا نزعَ لمنحة كبتنٍ حقيقيّ هنا**: منحتُه وعدٌ قيل له، ونزعُها قرارٌ لا يأخذه سكربت.
+    """
+    if not await test_accounts.is_test_driver(session, driver_id):
+        raise InvalidInput("النزعُ هنا لمنح كبتن التجربة وحدَه")
+    row = await session.scalar(
+        select(SubscriptionOfferGrant).where(
+            SubscriptionOfferGrant.offer_id == offer_id,
+            SubscriptionOfferGrant.driver_id == driver_id,
+        )
+    )
+    if row is None:
+        raise NotFound("لا منحةَ لهذا العرض باسم هذا الكبتن")
+    grant_id = row.id
+    await session.delete(row)
+    await session.flush()
+    return grant_id
 
 
 async def list_grants(
