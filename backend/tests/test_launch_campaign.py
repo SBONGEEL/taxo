@@ -19,7 +19,7 @@ from app.models.enums import CountryCode, PaymentMethod
 from app.models.launch_campaign import LaunchCampaignGrant
 from app.models.subscription import DriverSubscription
 from app.services import launch_campaign
-from tests.helpers import approved_driver, ensure_plan
+from tests.helpers import DRIVER, approved_driver, ensure_plan
 
 
 async def _campaign(client: AsyncClient, admin_headers: dict, **body) -> dict:
@@ -57,8 +57,11 @@ async def test_before_and_after_launch_grant_sixty_and_seven_days_with_zero_comm
     await ensure_plan(session_factory)
     launch = date.today() - timedelta(days=1)
     await _campaign(client, admin_headers, is_enabled=True, launch_date=launch.isoformat())
-    early = await approved_driver(client, session_factory)
-    late = await approved_driver(client, session_factory)
+    # **بلا اشتراكٍ مدفوع** — فالمنحةُ تبدأ من يومها لا بعد اشتراكٍ قائم
+    early = await approved_driver(client, session_factory, subscribed=False)
+    late = await approved_driver(
+        client, session_factory, {**DRIVER, "phone": "0792222299"}, plate_number="AMM-4243", subscribed=False
+    )
     async with session_factory() as session:
         start = await launch_campaign.launch_at(session, await launch_campaign.get(session, CountryCode.JO))
     await _approved_at(session_factory, early["driver_id"], start - timedelta(days=3))
@@ -102,7 +105,7 @@ async def test_two_concurrent_sweeps_grant_once(
     await ensure_plan(session_factory)
     launch = date.today() - timedelta(days=1)
     await _campaign(client, admin_headers, is_enabled=True, launch_date=launch.isoformat())
-    driver = await approved_driver(client, session_factory)
+    driver = await approved_driver(client, session_factory, subscribed=False)
     async with session_factory() as session:
         start = await launch_campaign.launch_at(session, await launch_campaign.get(session, CountryCode.JO))
     await _approved_at(session_factory, driver["driver_id"], start - timedelta(days=1))

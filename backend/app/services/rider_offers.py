@@ -63,7 +63,8 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-async def _active(session: AsyncSession, country: CountryCode, kind: str, *, for_update: bool = False) -> PromoCode | None:
+async def _active(session: AsyncSession, country: CountryCode, kind: str) -> PromoCode | None:
+    """**قراءةٌ بلا قفل** — والحدودُ والميزانيةُ يقفلها `promo.freeze` على صفِّ الرمز نفسِه."""
     now = _now()
     stmt = (
         select(PromoCode)
@@ -77,8 +78,6 @@ async def _active(session: AsyncSession, country: CountryCode, kind: str, *, for
         .order_by(PromoCode.created_at.desc())
         .limit(1)
     )
-    if for_update:
-        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     return await session.scalar(stmt)
 
 
@@ -289,10 +288,12 @@ async def perks(session: AsyncSession, country: CountryCode) -> RiderPerks:
 
     row = await session.scalar(select(RiderPerks).where(RiderPerks.country_code == country))
     if row is None:
-        row = RiderPerks(country_code=country)
-        session.add(row)
+        # **الصفُّ يُضاف داخل نقطة الحفظ لا قبلها**: `begin_nested` يدفع المعلَّقَ قبل أن يفتحها، فيسقط تكرارُ مسحين متزامنين
+        # خارجها ويُفسد المعاملةَ كلَّها (قِيس: `PendingRollbackError` في `test_two_concurrent_sweeps_grant_once`)
         try:
             async with session.begin_nested():
+                row = RiderPerks(country_code=country)
+                session.add(row)
                 await session.flush()
         except IntegrityError:
             row = await session.scalar(select(RiderPerks).where(RiderPerks.country_code == country))

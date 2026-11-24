@@ -374,13 +374,15 @@ async def _payment_mix(
         )
         .group_by(Payment.method)
     )
+    # **ورصيدُ الاشتراك ليس قناةَ رحلة** (§١١٤-ب): يدفع اشتراكَ الكبتن وحدَه، فلا دفعةَ رحلةٍ به ولا شريحةَ له في المزيج
+    outside = (*PLATFORM_WRITTEN_METHODS, PaymentMethod.SUBSCRIPTION_CREDIT)
     mix = {
         method.value: 0
         for method in PaymentMethod
-        if method not in PLATFORM_WRITTEN_METHODS
+        if method not in outside
     }
     for method, count in rows.all():
-        if method in PLATFORM_WRITTEN_METHODS:
+        if method in outside:
             continue
         mix[method.value] = int(count)
     return mix

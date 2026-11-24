@@ -61,6 +61,7 @@ from app.models.commitment import (
     DriverPointsEntry,
     SubscriptionCreditEntry,
 )
+from app.core.currency import STORAGE_STEP
 from app.models.device_login import DeviceLogin
 from app.models.driver import Driver
 from app.models.enums import AuditAction, CountryCode, Currency, PaymentMethod, RideStatus
@@ -73,7 +74,7 @@ EARN_KINDS = (POINTS_DAILY, POINTS_DISCOUNTED_RIDE, "adjustment")
 #: **عمرُ مفاتيح الدقائق في Redis** — يومُ أمس يُقيَّم بعد منتصف الليل، وهامشٌ لتعثّر المجدول
 _KEY_TTL = 4 * 24 * 3600
 #: **وحدةُ المال** — ثلاثُ خانات (§١)
-_MONEY = Decimal("0.001")
+_MONEY = STORAGE_STEP
 #: **ثبات**: مواضعُ مميَّزةٌ (تقريبُ ثلاث خاناتٍ ≈ ١١٠ م) لا تتجاوز هذا العدد في مدّةٍ كاملةٍ بلا رحلة ⇐ علَم
 _STATIONARY_POSITIONS = 3
 #: **خارج النطاق**: دقائقُ أكثرُ من هذا ⇐ علَم
@@ -114,10 +115,12 @@ async def get_rule(session: AsyncSession, country: CountryCode) -> CommitmentRul
     """**قاعدةُ الدولة — تُنشأ بافتراضاتها مطفأةً أوّلَ قراءة** (كإعدادات الدول الأخرى): لا «لا قاعدة» تُقرأ «مطفأ» بالصدفة."""
     rule = await session.scalar(select(CommitmentRule).where(CommitmentRule.country_code == country))
     if rule is None:
-        rule = CommitmentRule(country_code=country)
-        session.add(rule)
+        # **الصفُّ يُضاف داخل نقطة الحفظ لا قبلها**: `begin_nested` يدفع المعلَّقَ قبل أن يفتحها، فيسقط تكرارُ مسحين متزامنين
+        # خارجها ويُفسد المعاملةَ كلَّها (قِيس: `PendingRollbackError` في `test_two_concurrent_sweeps_grant_once`)
         try:
             async with session.begin_nested():
+                rule = CommitmentRule(country_code=country)
+                session.add(rule)
                 await session.flush()
         except IntegrityError:
             rule = await session.scalar(select(CommitmentRule).where(CommitmentRule.country_code == country))
@@ -256,6 +259,11 @@ async def touch(
         await pipe.execute()
     except Exception:  # noqa: BLE001 — البثُّ أهمُّ من دقيقة نقاط
         return
+
+
+async def _raw(redis: Redis, key: str) -> bytes | None:
+    """**البتّاتُ بايتاتٌ لا نصّ** — والعميلُ المشترك يفكّ الردودَ UTF-8 (`decode_responses=True`) فيسقط على `0xff`؛ فتُقرأ بلا فكّ."""
+    return await redis.execute_command("GET", key, NEVER_DECODE=True)
 
 
 def _bits(raw: bytes | None) -> list[bool]:
@@ -410,8 +418,9 @@ def progress(online: list[bool], shape: Shape, now_minute: int) -> Progress:
             if done.met:
                 return Progress(state="met", elapsed_minutes=shape.span, online_minutes=done.online_minutes,
                                 breaks_used_minutes=done.total_break, break_count=done.break_count)
+    # **الأقدمُ أوّلاً**: مدّةٌ بدأت مبكّراً ولم تنقطع أطولُ ممّا بعدها — والسببُ إن انقطع الكلُّ سببُ آخرِ بداية
     last_reason: str | None = None
-    for start in reversed(starts):
+    for start in starts:
         if start + shape.span <= stop:
             continue
         running = _scan(online, start, stop, shape)
@@ -432,7 +441,6 @@ def progress(online: list[bool], shape: Shape, now_minute: int) -> Progress:
                 remaining_minutes=shape.span - elapsed,
             )
         last_reason = running.reason
-        break
     can_restart = now_minute + shape.span <= shape.window_end
     if last_reason is not None:
         return Progress(state="broken", reason=last_reason, can_restart=can_restart, remaining_minutes=shape.span)
@@ -616,8 +624,8 @@ async def evaluate_driver_day(
     if exists is not None:
         return None
     shape = Shape.of(rule)
-    online = _bits(await redis.get(on_key(driver.id, day)))
-    outside = sum(_bits(await redis.get(out_key(driver.id, day))))
+    online = _bits(await _raw(redis, on_key(driver.id, day)))
+    outside = sum(_bits(await _raw(redis, out_key(driver.id, day))))
     positions = int(await redis.pfcount(pos_key(driver.id, day)) or 0)
     result = evaluate(online, shape)
     day_start, day_end = await _day_bounds(session, country, day)
@@ -981,7 +989,7 @@ async def driver_view(session: AsyncSession, redis: Redis, *, driver: Driver, us
     zone = ZoneInfo(await _zone_name(session, user.country_code))
     local = _now().astimezone(zone)
     shape = Shape.of(rule)
-    online = _bits(await redis.get(on_key(driver.id, local.date())))
+    online = _bits(await _raw(redis, on_key(driver.id, local.date())))
     today = progress(online, shape, local.hour * 60 + local.minute)
     balance = await points_balance(session, driver.id)
     credit = await credit_balance(session, driver.id)

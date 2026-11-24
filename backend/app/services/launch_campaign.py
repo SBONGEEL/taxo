@@ -43,10 +43,12 @@ async def get(session: AsyncSession, country: CountryCode) -> LaunchCampaign:
     """**حملةُ الدولة — تُنشأ بافتراضاتها مطفأةً أوّلَ قراءة.**"""
     row = await session.scalar(select(LaunchCampaign).where(LaunchCampaign.country_code == country))
     if row is None:
-        row = LaunchCampaign(country_code=country)
-        session.add(row)
+        # **الصفُّ يُضاف داخل نقطة الحفظ لا قبلها**: `begin_nested` يدفع المعلَّقَ قبل أن يفتحها، فيسقط تكرارُ مسحين متزامنين
+        # خارجها ويُفسد المعاملةَ كلَّها (قِيس: `PendingRollbackError` في `test_two_concurrent_sweeps_grant_once`)
         try:
             async with session.begin_nested():
+                row = LaunchCampaign(country_code=country)
+                session.add(row)
                 await session.flush()
         except IntegrityError:
             row = await session.scalar(select(LaunchCampaign).where(LaunchCampaign.country_code == country))

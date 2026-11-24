@@ -20,6 +20,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Time,
@@ -103,6 +104,8 @@ class DriverDutyDay(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("driver_id", "day", name="uq_driver_duty_days_driver_day"),
         CheckConstraint("status IN ('met', 'not_met', 'disqualified')", name="driver_duty_days_status"),
+        # **الكنسُ يقرأ أيّامَ دولةٍ بعينها** (`evaluate_country_day`، تقاريرُ اللوحة)
+        Index("ix_driver_duty_days_country_day", "country_code", "day"),
     )
 
     driver_id: Mapped[uuid.UUID] = mapped_column(

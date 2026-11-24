@@ -909,6 +909,7 @@ LEDGER_LABEL: dict[str, str] = {
     "withdrawal": "سحب",
     "refund": "استرداد",
     "subscription_payment": "اشتراك",
+    "rider_offer_share": "حصّةُ الكبتن من خصم عرض الراكب",
     "adjustment": "تسوية",
     "tip": "بقشيش مقبوض",
     "tip_payment": "بقشيش مدفوع",

@@ -37,6 +37,8 @@ COVERED_ELSEWHERE: dict[str, str] = {
     " `cashback:<السلسلة>` لا يُكتب مرّتين. فاختبارٌ «يسقط بحذف القفل» لا يُبنى بصدق (٢٠٢٦-١٠-٠٧)",
     "cliq_topups": "يحرسه `test_stage8_concurrency.py` — جوابان متزامنان"
     " من المزوّد على طلبٍ واحد",
+    "commitment": "«نقاط الالتزام» (§١١٤-ب) — يحرسه `test_commitment_points.py`: `test_two_concurrent_conversions_of_points_that_cover_one`"
+    " (ثلاثةُ تحويلاتٍ معاً لنقاطٍ تكفي واحداً ⇐ `Counter({200: 1, 409: 2})` ورصيدٌ واحد) و`test_two_concurrent_evaluations_of_one_day_write_one_row_and_one_award`",
     "deactivation": "طلبُ إلغاءِ تفعيلٍ لا يمسّ مالاً، وفريدُ الطلب القائم"
     " يمنع الثاني في القاعدة",
     "dispatch": "العرضُ يحرسه Redis بـ`NX` لا قفلُ صفّ — و"

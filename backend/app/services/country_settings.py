@@ -146,6 +146,9 @@ FALLBACKS: dict[str, tuple[type, Callable[[CountryCode], object]]] = {
 
 #: **جداولُ لكلِّ دولةٍ لا يُصنع لها صفٌّ هنا — بعلّتها**. والاختبارُ يُسقط جدولاً جديداً ليس هنا ولا في `FALLBACKS`.
 DECLARED: dict[str, str] = {
+    "commitment_rules": "«نقاط الالتزام» (§١١٤-ب): `commitment.get_rule` يكتب صفَّ الدولة مطفأً بلا قيمٍ أوّلَ قراءة، والقيمُ من اللوحة وحدَها",
+    "launch_campaigns": "حملةُ الإطلاق (§١١٤-ج): `launch_campaign.get` يكتب صفَّ الدولة مطفأً بافتراضاته أوّلَ قراءة",
+    "rider_perks": "مزايا الراكب (§١١٤-د): `rider_offers.perks` يكتب صفَّ الدولة مطفأً أوّلَ قراءة",
     "service_settings": "بابُ اللوحة يُرجع صفّاً لكلِّ دولةٍ بافتراضاته منذ §٦٣ (`list_service_settings`)",
     "payment_settings": "صفُّه شرطُ الدفع نفسِه، ومكتوبٌ للأسواق الثلاثة؛ وغيابُه يُحذَّر منه عند الإقلاع (`REQUIRED`)",
     "wallet_settings": "حدودُ التحويل والسحب — غيابُها رفضٌ لا افتراض (`seed_wallet_settings`)؛ ويُحذَّر منه عند الإقلاع (`REQUIRED`)",
