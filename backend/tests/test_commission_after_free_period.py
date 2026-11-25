@@ -178,7 +178,7 @@ async def test_the_window_counts_from_launch_even_when_his_grant_waits_behind_a_
     launch = date.today() - timedelta(days=10)
     await _launch_on(session_factory, launch)
     early = await approved_driver(client, session_factory)
-    late = await approved_driver(client, session_factory, SECOND_DRIVER)
+    late = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-5555")
     async with session_factory() as session:
         campaign = await launch_campaign.get(session, CountryCode.JO)
         campaign.is_enabled = True
