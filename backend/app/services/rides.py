@@ -763,7 +763,7 @@ async def accept_ride(
     المرحلة 7 تضيف شرط الاشتراك الساري.
     """
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     await dispatch.require_offer(redis, ride_id, driver.id)
     return await _take(session, ride_id, driver)
 
@@ -772,7 +772,7 @@ async def take_countered(session: AsyncSession, ride_id: uuid.UUID, driver: Driv
     """**قبولُ الراكب عرضَ الكبتن المقابل** (§٩٢-أ/٤) — القبولُ نفسُه (`_take`) **بسعر الكبتن**، والعرضُ أُخذ مرّةً قبله
     (`negotiation.take_counter`) فلا يُقبل مرّتين."""
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     return await _take(session, ride_id, driver, agreed=amount)
 
 
@@ -782,7 +782,7 @@ async def take_reserved(session: AsyncSession, ride_id: uuid.UUID, driver: Drive
     **والقبولُ نفسُه** (`_take`): القفلُ والعمولةُ المجمَّدةُ ورمزُ الرحلة — بلا شرط العرض وحدَه، فلا يفترق الطريقان.
     """
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     return await _take(session, ride_id, driver, reserved=True)
 
 

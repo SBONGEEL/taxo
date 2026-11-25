@@ -108,8 +108,8 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
           </h2>
           <p className="mt-4 text-11 leading-snug text-muted">
             <b className="text-ink">تتحمّلها الشركة</b> — الخصمُ لا يُنقص أرباح
-            الكبتن ولا عمولتَه: يُقيَّد دفعةً على الرحلة باسم المنصة، فيقبض
-            الكبتنُ أجرتَه كاملةً. والسقفُ يمنع تطبيقاً جديداً حين تنفد
+            الكابتن ولا عمولتَه: يُقيَّد دفعةً على الرحلة باسم المنصة، فيقبض
+            الكابتنُ أجرتَه كاملةً. والسقفُ يمنع تطبيقاً جديداً حين تنفد
             الميزانية، ولا يقطع رحلةً تحمل الرمز — فقد يتجاوزه «الملتزم» قليلاً.
           </p>
         </div>
@@ -185,7 +185,7 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                         {row.is_active ? "مفعّل" : "مطفأ"}
                         {row.is_public ? "" : " · خاصّ"}
                         {row.kind && row.kind !== "code" ? ` · ${KIND_LABEL[row.kind]}` : ""}
-                        {row.bearer_after_free === "captain" ? " · يتحمّله الكبتن" : ""}
+                        {row.bearer_after_free === "captain" ? " · يتحمّله الكابتن" : ""}
                       </Badge>
                     </td>
                     <td className="p-8">
@@ -396,19 +396,19 @@ function NewPromoModal({
           </select>
         </label>
         <label className="text-12 text-ink">
-          من يتحمّل الخصم بعد فترة الكبتن المجّانية
+          من يتحمّل الخصم بعد فترة الكابتن المجّانية
           <select
             className="mt-4 block w-full rounded-input border border-line bg-surface p-8"
             value={bearer}
             onChange={(event) => setBearer(event.target.value as "company" | "captain")}
           >
             <option value="company">الشركة</option>
-            <option value="captain">الكبتن</option>
+            <option value="captain">الكابتن</option>
           </select>
         </label>
         {kind === "launch" ? (
           <Field
-            label="نقاط التزامٍ للكبتن عن كلّ رحلة (اختياري)"
+            label="نقاط التزامٍ للكابتن عن كلّ رحلة (اختياري)"
             dir="ltr"
             inputMode="numeric"
             value={pointsPerRide}
@@ -417,7 +417,7 @@ function NewPromoModal({
         ) : null}
       </div>
       <p className="mt-6 text-11 text-muted">
-        وفي فترة الكبتن المجّانية (حملة الإطلاق) يتحمّل الكبتنُ الخصمَ إلزاماً، ويرى مقدارَه وصافيَه قبل القبول.
+        وفي فترة الكابتن المجّانية (حملة الإطلاق) يتحمّل الكابتنُ الخصمَ إلزاماً، ويرى مقدارَه وصافيَه قبل القبول.
       </p>
 
       <div className="mt-14">

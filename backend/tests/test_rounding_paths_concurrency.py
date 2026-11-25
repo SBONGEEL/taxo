@@ -210,7 +210,7 @@ async def test_a_refund_racing_the_completion_reverses_exactly_the_deferred_prep
                 WalletTransaction.type == WalletTransactionType.COMMISSION,
             )
         )
-    assert Decimal(net) == 0, f"بقي للكبتن من مقدَّمٍ رُدّ {net} (العمولة {commission})"
+    assert Decimal(net) == 0, f"بقي للكابتن من مقدَّمٍ رُدّ {net} (العمولة {commission})"
     assert Decimal(commission) in (Decimal("0"), Decimal("-0.788")), commission
 
 

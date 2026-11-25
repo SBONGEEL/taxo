@@ -72,7 +72,7 @@ async def rate(
 
     rater_type = rater_type_for(ride, rater)
     if tags and rater_type is not RatingRaterType.RIDER:
-        raise InvalidInput("الوسومُ لتقييم الكبتن وحدَه")
+        raise InvalidInput("الوسومُ لتقييم الكابتن وحدَه")
     rating = Rating(
         ride_id=ride.id,
         rater_type=rater_type,

@@ -337,7 +337,7 @@ function SettingsCard({ onSaved }: { onSaved: (message: string) => void }) {
         </div>
       </div>
       <div className="mt-12 flex flex-wrap items-center justify-between gap-10">
-        <Switch checked={enabled} onChange={setEnabled} label="أظهِرها للناس في تطبيقَي الراكب والكبتن" />
+        <Switch checked={enabled} onChange={setEnabled} label="أظهِرها للناس في تطبيقَي الراكب والكابتن" />
         <Button size="md" loading={busy} disabled={Boolean(rip) && !ripOk} onClick={() => void save()}>
           حفظ
         </Button>

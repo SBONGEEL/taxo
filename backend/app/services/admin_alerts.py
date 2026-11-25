@@ -103,12 +103,12 @@ CATEGORIES: dict[str, str] = {
 
 _KINDS: tuple[AlertKind, ...] = (
     AlertKind("rider_signup", "accounts", "account", "راكبٌ جديد", "ركّاب جدد"),
-    AlertKind("captain_signup", "accounts", "account", "كبتنٌ جديد", "كباتن جدد"),
-    AlertKind("documents_submitted", "accounts", "account", "وثائقُ كبتنٍ أُرسلت", "وثائقُ كباتن أُرسلت"),
+    AlertKind("captain_signup", "accounts", "account", "كابتنٌ جديد", "كباتن جدد"),
+    AlertKind("documents_submitted", "accounts", "account", "وثائقُ كابتنٍ أُرسلت", "وثائقُ كباتن أُرسلت"),
     # **كبتنٌ رفع كلَّ المطلوب** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — «أكمل وثائقه ويحتاج مراجعة»، ولا سيّما «المعتمدُ دون وثائق»
-    AlertKind("documents_completed", "accounts", "account", "كبتنٌ أكمل وثائقه — يحتاج مراجعة", "كباتن أكملوا وثائقهم — يحتاجون مراجعة"),
-    AlertKind("documents_approved", "accounts", "account", "وثائقُ كبتنٍ قُبلت", "وثائقُ كباتن قُبلت"),
-    AlertKind("documents_rejected", "accounts", "account", "وثائقُ كبتنٍ رُفضت", "وثائقُ كباتن رُفضت"),
+    AlertKind("documents_completed", "accounts", "account", "كابتنٌ أكمل وثائقه — يحتاج مراجعة", "كباتن أكملوا وثائقهم — يحتاجون مراجعة"),
+    AlertKind("documents_approved", "accounts", "account", "وثائقُ كابتنٍ قُبلت", "وثائقُ كباتن قُبلت"),
+    AlertKind("documents_rejected", "accounts", "account", "وثائقُ كابتنٍ رُفضت", "وثائقُ كباتن رُفضت"),
     AlertKind("payment_succeeded", "money", "money_in", "دفعةٌ ناجحة", "دفعات ناجحة"),
     AlertKind("wallet_topup", "money", "money_in", "شحنُ محفظة", "عمليات شحن"),
     AlertKind("subscription_purchased", "money", "money_in", "اشتراكٌ جديد", "اشتراكات جديدة"),
@@ -132,7 +132,7 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("transfer_duplicate", "money", "problem", "رقمُ تحويلٍ مكرَّر", "أرقامُ تحويلٍ مكرَّرة"),
     AlertKind("transfer_approved", "money", "money_in", "تحويلٌ اعتُمد", "تحويلات اعتُمدت"),
     AlertKind("transfer_rejected", "money", "money_out", "تحويلٌ رُفض", "تحويلات رُفضت"),
-    AlertKind("debt_cap_reached", "money", "problem", "كبتنٌ بلغ سقفَ الدَّين", "كباتن بلغوا سقفَ الدَّين"),
+    AlertKind("debt_cap_reached", "money", "problem", "كابتنٌ بلغ سقفَ الدَّين", "كباتن بلغوا سقفَ الدَّين"),
     AlertKind("ride_requested", "rides", "ride", "طلبُ رحلة", "طلبات رحلة", window=120),
     AlertKind("ride_accepted", "rides", "ride", "رحلةٌ قُبلت", "رحلات قُبلت", window=120),
     AlertKind("ride_completed", "rides", "ride", "رحلةٌ اكتملت", "رحلات اكتملت", window=120),
@@ -152,7 +152,7 @@ _KINDS: tuple[AlertKind, ...] = (
 CATALOG: dict[str, AlertKind] = {item.kind: item for item in _KINDS}
 
 METHOD_LABEL = {"cash": "نقداً", "cliq": "كليك", "card": "بطاقة", "wallet": "المحفظة"}
-CANCELLED_BY_LABEL = {"rider": "ألغاها الراكب", "driver": "ألغاها الكبتن", "no_driver": "لم يُعثر على كبتن"}
+CANCELLED_BY_LABEL = {"rider": "ألغاها الراكب", "driver": "ألغاها الكابتن", "no_driver": "لم يُعثر على كابتن"}
 COMPLAINT_SOURCE_LABEL = {"dispute": "نزاعٌ على دفعة", "chat": "بلاغٌ على رسالة", "photo": "بلاغٌ على صورة"}
 #: الرابطان اللذان يراقبهما `services/uptime.py` — **بما يقرؤه المالك** لا باسم المفتاح
 UPTIME_TARGET_LABEL = {"api": "الخادم (api.tajora.ly)", "app": "تطبيقُ الراكب (app.tajora.ly)"}
@@ -601,7 +601,7 @@ def tray_text(alert: AdminAlert) -> tuple[str, str]:
         if label:
             parts.append(label if docs == 1 else f"{docs} وثائق")
     if alert.kind == "feedback":
-        parts.append("من ضيف" if data.get("guest") else ("من كبتن" if data.get("app") == "driver" else "من راكب"))
+        parts.append("من ضيف" if data.get("guest") else ("من كابتن" if data.get("app") == "driver" else "من راكب"))
     if data.get("gateway"):
         parts.append(str(data["gateway"]).capitalize())
     if data.get("target") in UPTIME_TARGET_LABEL:
@@ -613,7 +613,7 @@ def tray_text(alert: AdminAlert) -> tuple[str, str]:
     if data.get("who") == "rider":
         parts.append("راكب")
     elif data.get("who") == "captain":
-        parts.append("كبتن")
+        parts.append("كابتن")
     body = " · ".join(parts) if parts else "افتح اللوحة للتفاصيل"
     return title, body
 

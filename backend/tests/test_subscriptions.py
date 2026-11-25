@@ -474,7 +474,7 @@ async def test_the_three_day_notice_fires_in_its_own_band(
     soon = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796660001", "name": "كبتنٌ يوشك"},
+        DRIVER | {"phone": "0796660001", "name": "كابتنٌ يوشك"},
         plate_number="AMM-6601",
         subscribed=False,
     )

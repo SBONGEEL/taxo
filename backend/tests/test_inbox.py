@@ -320,4 +320,4 @@ async def test_the_driver_is_not_told_the_riders_sentence(
 
     # ولا حدثَ يسقط من الخريطة بلا قرار: من أضاف حدثاً يقرّر نصَّه أو غيابَه
     missing = [e for e in RIDE_EVENT_TEXT if e not in DRIVER_RIDE_EVENT_TEXT]
-    assert not missing, f"أحداثٌ بلا قرارٍ للكبتن: {[e.value for e in missing]}"
+    assert not missing, f"أحداثٌ بلا قرارٍ للكابتن: {[e.value for e in missing]}"

@@ -67,7 +67,7 @@ const ACTION_LABEL: Record<Action, string> = {
 /** **ما يقع بعد كلِّ فعل** — يُقرأ قبل الضغط لا بعده (§٥ · §٨). */
 const ACTION_EFFECT: Record<Action, string> = {
   remind: "يصل الطرفَ المنتظَرَ تذكيرٌ الآن — ولا تتغيّر مواعيدُ الجدول (شرطُ الإتمام الآليّ).",
-  paid: "يُكتب ما يكتبه تأكيدُ الكبتن حرفاً، مؤكَّدةً بحكمك — وعلى إتمامٍ آليٍّ معترَضٍ عليه يُغلق الاعتراضَ بلا قيدٍ جديد.",
+  paid: "يُكتب ما يكتبه تأكيدُ الكابتن حرفاً، مؤكَّدةً بحكمك — وعلى إتمامٍ آليٍّ معترَضٍ عليه يُغلق الاعتراضَ بلا قيدٍ جديد.",
   unpaid: "لا قيدَ في الدفتر — تصير الدفعةُ «فاشلة» ويعود المبلغُ مستحقّاً على الراكب.",
   dispute: "تصير الدفعةُ نزاعاً، ويُسأل الطرفان بنصّهما. لا قيد.",
 };
@@ -237,7 +237,7 @@ function PartyLine({ kind, party }: { kind: "rider" | "driver"; party: QueuePart
     <>
       <span className={kind === "driver" ? "ad-party sub" : "ad-party"}>
         <span className="ad-party-name">
-          {kind === "driver" ? "الكبتن " : ""}
+          {kind === "driver" ? "الكابتن " : ""}
           {party.name}
         </span>
         {/* **طرفُ تجربة** (SPEC §٦٥-ج) — «لم يدفع» أو نزاعٌ على دفعة تجربةٍ يُحكم وهو معروف */}
@@ -265,18 +265,18 @@ function Trail({ row }: { row: UnconfirmedQueueRow }) {
   }
   if (row.dispute_reason) lines.push(`النزاع: ${row.dispute_reason}`);
   if (row.objection_reason) {
-    lines.push(`اعتراضُ الكبتن: ${row.objection_reason}${row.objected_at ? ` · ${digits(moment(row.objected_at))}` : ""}`);
+    lines.push(`اعتراضُ الكابتن: ${row.objection_reason}${row.objected_at ? ` · ${digits(moment(row.objected_at))}` : ""}`);
   }
   // **آخرُ ثلاثةٍ بأوقاتها** والعددان كاملين — الأثرُ الكاملُ طويلٌ في صفّ، والعددُ يقول كم وصل كلَّ طرف
   const recent = row.reminder_trail.slice(-3);
   return (
     <span className="ad-reason">
       <span className="ad-reason-main">
-        تذكيرات: الكبتن {digits(String(row.driver_reminders))} · الراكب {digits(String(row.rider_reminders))}
+        تذكيرات: الكابتن {digits(String(row.driver_reminders))} · الراكب {digits(String(row.rider_reminders))}
       </span>
       {recent.map((stamp) => (
         <span key={`${stamp.to}-${stamp.at}`} className="ad-reason-sub">
-          {stamp.to === "captain" ? "للكبتن" : "للراكب"} {digits(moment(stamp.at))}
+          {stamp.to === "captain" ? "للكابتن" : "للراكب"} {digits(moment(stamp.at))}
         </span>
       ))}
       {lines.map((line) => (
@@ -315,7 +315,7 @@ function ActionModal({
         ? remindUnconfirmed(row.payment_id, cleaned).then((out) =>
             out.sent_to.length === 0
               ? "لم يُرسل شيء — لا طرفَ ينتظره الآن"
-              : `أُرسل التذكيرُ إلى ${out.sent_to.map((side) => (side === "captain" ? "الكبتن" : "الراكب")).join(" و")}`,
+              : `أُرسل التذكيرُ إلى ${out.sent_to.map((side) => (side === "captain" ? "الكابتن" : "الراكب")).join(" و")}`,
           )
         : action === "dispute"
           ? disputeUnconfirmedPayment(row.payment_id, cleaned).then(() => "حُوّلت إلى نزاع — وسُئل الطرفان")
@@ -351,7 +351,7 @@ function ActionModal({
             </dd>
           </div>
           <div>
-            <dt>الراكب · الكبتن</dt>
+            <dt>الراكب · الكابتن</dt>
             <dd>
               {row.rider.name} · {row.driver?.name ?? "—"}
             </dd>

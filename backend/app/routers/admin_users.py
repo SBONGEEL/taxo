@@ -557,7 +557,7 @@ async def activate_driver(
     """
     driver = await _driver(session, driver_id)
     if driver.status is not DriverStatus.SUSPENDED:
-        raise InvalidInput("هذا الكبتن ليس موقوفاً")
+        raise InvalidInput("هذا الكابتن ليس موقوفاً")
 
     driver = await drivers_service.approve(session, driver=driver, actor=admin)
     await session.commit()
@@ -886,7 +886,7 @@ async def reject_driver(
 async def _driver(session, driver_id: uuid.UUID) -> Driver:
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     return driver
 
 
@@ -956,9 +956,9 @@ async def list_advances(
     session: DbSession,
     status: AdvanceStatus | None = None,
     driver_id: uuid.UUID | None = Query(
-        default=None, description="سلفُ كبتنٍ بعينه — للملفِّ الشخصيّ (§37)"
+        default=None, description="سلفُ كابتنٍ بعينه — للملفِّ الشخصيّ (§37)"
     ),
-    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكابتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminAdvanceOut]:
@@ -1015,7 +1015,7 @@ async def disburse_advance(
     """صرفٌ بموافقة مشرف — **البابُ الوحيد لما يتجاوز السقف** (القرار ٢)."""
     driver = await session.get(Driver, payload.driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     driver = await drivers_service.lock(session, driver)
     user = await session.get(User, driver.user_id)
     assert user is not None
@@ -1121,9 +1121,9 @@ async def list_driver_debts(
     session: DbSession,
     status: DriverDebtStatus | None = None,
     driver_id: uuid.UUID | None = Query(
-        default=None, description="مستحقّاتُ كبتنٍ بعينه — للملفِّ الشخصيّ (§37)"
+        default=None, description="مستحقّاتُ كابتنٍ بعينه — للملفِّ الشخصيّ (§37)"
     ),
-    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكابتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDebtOut]:

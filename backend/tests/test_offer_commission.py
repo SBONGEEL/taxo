@@ -27,7 +27,7 @@ from app.services import settings_service
 
 async def _driver(session) -> Driver:
     user = User(
-        name="كبتنُ القياس",
+        name="كابتنُ القياس",
         phone=f"+96279{uuid.uuid4().int % 10**7:07d}",
         role=UserRole.DRIVER,
         country_code=CountryCode.JO,

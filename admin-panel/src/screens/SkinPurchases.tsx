@@ -98,7 +98,7 @@ export function SkinPurchasesScreen() {
         <TableSearch
           value={search.text}
           onChange={search.setText}
-          placeholder="اسمُ الكبتن أو رقمُه…"
+          placeholder="اسمُ الكابتن أو رقمُه…"
         />
       </div>
 
@@ -133,7 +133,7 @@ export function SkinPurchasesScreen() {
         ) : (
           <EmptyNote
             title="لا مِلكيّةَ مسجَّلة"
-            hint="لم يشترِ كبتنٌ مركبةً بعد، ولم تُمنح هديةُ أوّلِ اشتراك."
+            hint="لم يشترِ كابتنٌ مركبةً بعد، ولم تُمنح هديةُ أوّلِ اشتراك."
           />
         )
       ) : null}
@@ -143,7 +143,7 @@ export function SkinPurchasesScreen() {
           <table className="w-full min-w-[46rem] text-13">
             <thead className="bg-surface-2 text-muted">
               <tr>
-                <Th>الكبتن</Th>
+                <Th>الكابتن</Th>
                 <Th>المركبة</Th>
                 <Th>المصدر</Th>
                 <Th>المبلغ</Th>

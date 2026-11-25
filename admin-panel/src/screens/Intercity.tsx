@@ -92,7 +92,7 @@ export function IntercityScreen() {
       <div className="ad-fac-note">
         <Icon name="info" />
         <span className="ad-fac-note-text">
-          لا تُعلن رحلةٌ على مسارٍ إلا في سوقٍ أشعل «بين المدن» من الإعدادات، ومن كبتنٍ مُنح تصريحاً من ملفّه في «السائقون
+          لا تُعلن رحلةٌ على مسارٍ إلا في سوقٍ أشعل «بين المدن» من الإعدادات، ومن كابتنٍ مُنح تصريحاً من ملفّه في «السائقون
           والوثائق» بعد فحص مركبته.
         </span>
         <NavLink to="/settings" className="ad-fac-note-link">
@@ -384,7 +384,7 @@ function RouteEditor({
             onChange={(next) => setPriceCar(next.replace(/[^0-9.]/g, ""))}
             currency={currencyOf(market)}
             error={carText !== "" && !PRICE_SHAPE.test(carText) ? "السعرُ رقمٌ بثلاث خاناتٍ عشريةٍ على الأكثر — مثل 12.000" : null}
-            hint="نقداً للكبتن عند الانطلاق — حين لا مقعدَ محجوزٌ بعد"
+            hint="نقداً للكابتن عند الانطلاق — حين لا مقعدَ محجوزٌ بعد"
           />
         </div>
 

@@ -30,7 +30,7 @@ export function DriverPermissions({ off, reportedAt }: { off?: string[] | null; 
     <ProfileSection
       title="أذونات الهاتف"
       icon="verified_user"
-      hint="ما أطفأه الكبتنُ من أذونات التطبيق الأساسيّة كما بلّغه مركزُ الأذونات — قراءةٌ لا قرار: لا يُحجب أحدٌ بها، والكبتنُ يرى التنبيهَ نفسَه ويصلحه بزرّ."
+      hint="ما أطفأه الكابتنُ من أذونات التطبيق الأساسيّة كما بلّغه مركزُ الأذونات — قراءةٌ لا قرار: لا يُحجب أحدٌ بها، والكابتنُ يرى التنبيهَ نفسَه ويصلحه بزرّ."
       badge={summary.tone === "warn" ? `${(off ?? []).length} مطفأ` : undefined}
       load={load}
     >

@@ -197,7 +197,7 @@ export function LoginScreen() {
             <Icon name="arrow_forward" />
           </button>
           <Wordmark size={26} />
-          <span className="cap-pill">{tr("كبتن")}</span>
+          <span className="cap-pill">{tr("كابتن")}</span>
         </div>
 
         <AuthTitle title={tr("جاهز للطريق؟")} sub={tr("ادخل لتبدأ استقبال الطلبات.")} />
@@ -255,7 +255,7 @@ export function LoginScreen() {
           {pending && !offer ? (
             <div className="t2-auth-banner t2-auth-banner--info" role="status">
               <Icon name="info" />
-              <span>{pending.reason === "registered" ? tr("هذا الرقمُ مسجّلٌ لديك في تطبيق الكبتن. أدخل كلمة مرورك — بلا رمز تحقّق.") : tr("لك حسابٌ بهذا الرقم في تطبيق Taxo. أدخل كلمة مرورك لتضيف ملفّ الكبتن إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
+              <span>{pending.reason === "registered" ? tr("هذا الرقمُ مسجّلٌ لديك في تطبيق الكابتن. أدخل كلمة مرورك — بلا رمز تحقّق.") : tr("لك حسابٌ بهذا الرقم في تطبيق Taxo. أدخل كلمة مرورك لتضيف ملفّ الكابتن إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
             </div>
           ) : null}
 
@@ -264,7 +264,7 @@ export function LoginScreen() {
               <Icon name="info" />
               <span>{tr("رقمُك مسجّلٌ في التطبيق الآخر. أضِف هذا الملفّ إلى حسابك نفسِه — رقمٌ واحد، ومحفظةٌ منفصلةٌ لكلِّ ملفّ.")}</span>
               <button type="button" className="t2-tlink accent" onClick={() => void addProfile()} disabled={busy}>
-                {tr("أضف ملفّ الكبتن إلى حسابي")}
+                {tr("أضف ملفّ الكابتن إلى حسابي")}
               </button>
             </div>
           ) : null}
@@ -326,7 +326,7 @@ export function LoginScreen() {
             <button type="button" className="cap-join" onClick={() => navigate("/register")}>
               <Icon name="person_add" className="cap-join-icon" />
               <span className="cap-join-main">
-                <span className="cap-join-title">{tr("كبتن جديد؟")}</span>
+                <span className="cap-join-title">{tr("كابتن جديد؟")}</span>
                 <span className="cap-join-sub">{tr("سجّل بياناتك، ثم مركبتك ووثائقك.")}</span>
               </span>
               <Icon name="arrow_back" className="cap-join-go" />

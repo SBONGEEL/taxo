@@ -50,7 +50,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
       <div className="t2-meter">
         <div>
           <p className="t2-meter-label">
-            {pause.kind === "arrival" ? tr("الكبتن ينتظرك عند نقطة الانطلاق") : tr("الكبتن واقفٌ بطلبك")}
+            {pause.kind === "arrival" ? tr("الكابتن ينتظرك عند نقطة الانطلاق") : tr("الكابتن واقفٌ بطلبك")}
           </p>
           {/* الوقتُ يُحسب هنا — والمالُ لا */}
           <p dir="ltr" className="t2-meter-clock">
@@ -72,7 +72,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
       {pause.over_max ? (
         <p className="t2-note warn">
           <Icon name="error" />
-          <span>{tr("تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن يُنهي الرحلة عند هذه النقطة.")}</span>
+          <span>{tr("تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكابتن أن يُنهي الرحلة عند هذه النقطة.")}</span>
         </p>
       ) : null}
     </div>

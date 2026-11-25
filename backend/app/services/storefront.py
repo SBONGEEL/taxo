@@ -198,7 +198,7 @@ def require_destination(
     ]
     missing = [role for role in seen if role not in roles]
     if missing:
-        who = "الكبتن" if UserRole.DRIVER in missing else "الراكب"
+        who = "الكابتن" if UserRole.DRIVER in missing else "الراكب"
         raise InvalidInput(
             f"المقصد «{destination}» ليس مبنيّاً في تطبيق {who} — "
             "وبلاطةٌ تُشعَل لمن لا شاشةَ له تقع على صفحةٍ مفقودة"

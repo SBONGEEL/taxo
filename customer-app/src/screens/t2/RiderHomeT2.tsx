@@ -153,10 +153,10 @@ export function shortArea(area: string): string {
 }
 
 export function nearbyLabel(count: number): string {
-  if (count === 1) return tr("كبتن حولك");
-  if (count === 2) return tr("كبتنان حولك");
+  if (count === 1) return tr("كابتن حولك");
+  if (count === 2) return tr("كابتنان حولك");
   if (count <= 10) return tr("كباتن حولك");
-  return tr("كبتناً حولك");
+  return tr("كابتناً حولك");
 }
 
 /** **الخريطةُ بطاقةً** — والعقدةُ هي هي في الحالين. **ولا زرَّ «توسيع»** كما رُسمت: **لمسةُ البطاقة تفتحها** (§٦١-د/و). */
@@ -351,14 +351,14 @@ export function RiderHomeT2({
       onPress: intercity ? () => navigate("/account/intercity") : onAskDestination,
     },
     ...(parcel && onParcel
-      ? [{ key: "parcel", big: true, name: tr("طرد"), sub: tr("أرسل غرضاً مع كبتن"), art: { img: "parcel" }, onPress: onParcel }]
+      ? [{ key: "parcel", big: true, name: tr("طرد"), sub: tr("أرسل غرضاً مع كابتن"), art: { img: "parcel" }, onPress: onParcel }]
       : []),
     ...(airport && onAirport ? [{ key: "airport", name: tr("المطار"), sub: tr("رحلتك إلى المطار"), art: { img: "airport" }, onPress: onAirport }] : []),
     ...(scheduled
       ? [{ key: "scheduled", name: tr("مجدولة"), sub: tr("رحلاتك المحجوزة"), art: { img: "scheduled" }, onPress: () => navigate("/account/bookings") }]
       : []),
     ...(women.enabled
-      ? [{ key: "women", name: tr("نسائية"), sub: tr("كبتنة لرحلتك"), art: { icon: "woman" }, onPress: openWomen, tone: "women" as const }]
+      ? [{ key: "women", name: tr("نسائية"), sub: tr("كابتنة لرحلتك"), art: { icon: "woman" }, onPress: openWomen, tone: "women" as const }]
       : []),
     ...(hourly && onHourly ? [{ key: "hourly", name: tr("بالساعة"), sub: tr("سيارة بالساعة"), art: { img: "hourly" }, onPress: onHourly }] : []),
     ...(fetchOn && onFetch ? [{ key: "fetch", name: tr("أغراضي"), sub: tr("نُحضر غرضك إليك"), art: { img: "fetch" }, onPress: onFetch }] : []),

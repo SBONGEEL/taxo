@@ -211,7 +211,7 @@ async def collect_from_balance(
                         idempotency_key=f"debt_part:{partial_key}",
                     )
                 except InsufficientBalance:  # pragma: no cover - سباقٌ نادر
-                    logger.warning("تعذّر التحصيلُ الجزئيّ لدَين الكبتن %s", driver.id)
+                    logger.warning("تعذّر التحصيلُ الجزئيّ لدَين الكابتن %s", driver.id)
                     break
                 debt.collected = as_money(debt.collected + part)
                 await session.flush()
@@ -230,7 +230,7 @@ async def collect_from_balance(
                 idempotency_key=f"debt_collect:{debt.id}",
             )
         except InsufficientBalance:  # pragma: no cover - سباقٌ نادر
-            logger.warning("تعذّر تحصيل دَين الكبتن %s — الرصيد لا يكفي", driver.id)
+            logger.warning("تعذّر تحصيل دَين الكابتن %s — الرصيد لا يكفي", driver.id)
             break
         await _close(session, debt)
         taken += remaining

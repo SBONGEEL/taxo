@@ -42,7 +42,7 @@ async def test_a_break_takes_the_driver_out_of_dispatch_until_the_clock_passes(c
     driver = await approved_driver(client, session_factory)
     await bring_online(client, driver)
     driver_id = uuid.UUID(str(driver["driver_id"]))
-    assert await _eligible(session_factory, driver_id), "الكبتنُ غيرُ مؤهَّلٍ أصلاً — الاختبارُ لا يقيس شيئاً"
+    assert await _eligible(session_factory, driver_id), "الكابتنُ غيرُ مؤهَّلٍ أصلاً — الاختبارُ لا يقيس شيئاً"
 
     started = await client.post("/drivers/me/break", json={"minutes": 15}, headers=driver["headers"])
     assert started.status_code == 200, started.text

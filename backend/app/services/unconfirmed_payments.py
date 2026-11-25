@@ -369,7 +369,7 @@ async def validate_hint(
     # **«يدفعها راكبُها/مستلمُها نقداً»** (§٦٣-ج/١ و٤): صفُّها يفتحه `open_payer_cash` — فلا طريقةَ يختارها الطالبُ غيرُ النقد
     if payer in (RidePayer.PASSENGER_CASH, RidePayer.RECIPIENT_CASH):
         if method != PaymentMethod.CASH:
-            raise PayerMethodMismatch("يدفع هذه الرحلةَ غيرُك نقداً للكبتن")
+            raise PayerMethodMismatch("يدفع هذه الرحلةَ غيرُك نقداً للكابتن")
         return None
     # **«يدفعها الطالب» لغيره بالمحفظة أو البطاقة وحدهما** — قاعدةُ `payments._require_payer_method` بعينها
     if for_other and method not in (PaymentMethod.WALLET, PaymentMethod.CARD):
@@ -493,7 +493,7 @@ async def change_method(
             "تُبدَّل طريقةُ الكاش وكليك وحدَهما — المحفظةُ والبطاقةُ تُحسمان لحظتَهما"
         )
     if ride.payer != RidePayer.REQUESTER.value:
-        raise PayerMethodMismatch("يدفع هذه الرحلةَ غيرُك نقداً للكبتن")
+        raise PayerMethodMismatch("يدفع هذه الرحلةَ غيرُك نقداً للكابتن")
     payments_service.require_transition(payment, PaymentStatus.VOIDED)
     if payment.status == PaymentStatus.DISPUTED:
         # **«سأدفع الآن» للكاش وحدَه** — نزاعُ كليك حوالةٌ قيل إنها خرجت، ولا يُدفع فوقها قبل حكم
@@ -972,8 +972,8 @@ def _rider_text(payment: Payment, ride: Ride, slot: int, limits: Thresholds) -> 
     cash = payment.method == PaymentMethod.CASH
     if slot <= 1 or slot >= len(limits.reminder_minutes):
         if cash:
-            return f"سلّمتَ الكبتن {money}؟", "أكّد ذلك كي تُغلق الرحلة"
-        return f"حوّلتَ للكبتن {money}؟", "أدخل مرجع الحوالة كي تُغلق الرحلة"
+            return f"سلّمتَ الكابتن {money}؟", "أكّد ذلك كي تُغلق الرحلة"
+        return f"حوّلتَ للكابتن {money}؟", "أدخل مرجع الحوالة كي تُغلق الرحلة"
     if slot == 2:
         return "دفعُ رحلتك غيرُ مؤكَّد", "لا يمكن طلبُ رحلةٍ جديدةٍ حتى يُحسم"
     minutes = _rider_minutes(payment, limits)
@@ -1662,7 +1662,7 @@ async def captain_dispute_notice(session: AsyncSession, payment: Payment) -> Not
     return Notice(
         ride.rider_id,
         DISPUTED_KIND,
-        "الكبتنُ يقول إنه لم يستلم المبلغ",
+        "الكابتنُ يقول إنه لم يستلم المبلغ",
         f"هل سلّمتَ {_money(payment.amount, payment.currency)}؟ افتح التطبيق لتردّ",
         payment.id,
         ride.id,

@@ -99,6 +99,6 @@ async def enroll(session: AsyncSession, *, user: User, app: ClientApp) -> User:
     await audit.record(
         session, actor=user, action=AuditAction.UPDATE, entity_type="user", entity_id=user.id,
         details={"action": "role_added", "role": target.value, "app": app.value,
-                 "reason": "أمرُ المالك ٢٠٢٦-١٠-٢٩: الرقمُ نفسُه راكباً وكبتناً (SPEC §21.6)"},
+                 "reason": "أمرُ المالك ٢٠٢٦-١٠-٢٩: الرقمُ نفسُه راكباً وكابتناً (SPEC §21.6)"},
     )
     return user

@@ -71,13 +71,13 @@ async def _plan(session: AsyncSession) -> SubscriptionPlan:
         .limit(1)
     )
     if plan is None:
-        raise ProvisionRefused("لا خطةَ اشتراكٍ فعّالةٌ في الأردن — وكبتنٌ بلا اشتراكٍ لا يصله عرض")
+        raise ProvisionRefused("لا خطةَ اشتراكٍ فعّالةٌ في الأردن — وكابتنٌ بلا اشتراكٍ لا يصله عرض")
     return plan
 
 
 async def _create(session: AsyncSession, role: UserRole, index: int, password_hash: str) -> User:
     phone = phone_of(role, index)
-    label = "كبتن" if role is UserRole.DRIVER else "راكب"
+    label = "كابتن" if role is UserRole.DRIVER else "راكب"
     user = await create_account(
         session,
         phone=phone,
@@ -97,7 +97,7 @@ async def _create(session: AsyncSession, role: UserRole, index: int, password_ha
 async def _make_captain(session: AsyncSession, user: User, index: int, plan: SubscriptionPlan) -> Driver:
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise ProvisionRefused("حسابُ كبتنٍ بلا صفِّ كبتن — يُوقَف")
+        raise ProvisionRefused("حسابُ كابتنٍ بلا صفِّ كابتن — يُوقَف")
     session.add(
         Vehicle(driver_id=driver.id, make="Toyota", model="Corolla", year=2020, color="أبيض",
                 plate_number=f"STR-{index:05d}", category=VehicleCategory.ECONOMY)
@@ -179,7 +179,7 @@ def main() -> int:
     except ProvisionRefused as exc:
         print(f"✗ {exc}")
         return 1
-    print(f"✓ أُنشئ {result['captains']} كبتناً و{result['riders']} راكباً · جلساتٌ: {result['tokens']}"
+    print(f"✓ أُنشئ {result['captains']} كابتناً و{result['riders']} راكباً · جلساتٌ: {result['tokens']}"
           + ("" if args.apply else " (معاينة — لم يُكتب شيء)"))
     return 0
 

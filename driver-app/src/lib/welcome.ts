@@ -29,7 +29,7 @@ export interface WelcomePoint {
   body: string;
 }
 
-export const WELCOME_TITLE = tr("أهلاً بك كبتناً في TAXO");
+export const WELCOME_TITLE = tr("أهلاً بك كابتناً في TAXO");
 
 export const WELCOME_LEAD =
   tr("حسابك مُعتمد — وهذا ما يعنيك قبل أول رحلة.");

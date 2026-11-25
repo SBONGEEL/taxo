@@ -25,7 +25,7 @@ const DEFER_TEXT: Record<string, string> = {
   unpaid_advance: "سلفةٌ غيرُ مسدَّدة",
   pending_money: "شحنٌ أو سحبٌ أو دفعُ بطاقةٍ لم يُحسم",
   rider_balance_changed: "رصيدُ الراكب تغيّر بعد موافقته على ضياعه",
-  driver_balance: "في محفظة الكبتن رصيدٌ لم يُسحب",
+  driver_balance: "في محفظة الكابتن رصيدٌ لم يُسحب",
 };
 
 export function PendingDeletions({ onError }: { onError: (message: string) => void }) {

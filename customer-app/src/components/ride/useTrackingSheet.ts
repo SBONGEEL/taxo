@@ -22,14 +22,14 @@ export interface CancelReason {
 
 /** أسبابُ الإلغاء كما في التصميم — والنصُّ الحرّ يصل الإدارة كما كُتب. */
 export const CANCEL_REASONS: CancelReason[] = [
-  { label: tr("الكبتن تأخر") },
+  { label: tr("الكابتن تأخر") },
   { label: tr("غيّرت رأيي") },
-  { label: tr("الكبتن ليس أنثى — عدم تطابق"), code: "gender_mismatch" },
+  { label: tr("الكابتن ليس أنثى — عدم تطابق"), code: "gender_mismatch" },
   { label: tr("عنوان الالتقاء خطأ") },
 ];
 
 /** **سببُ «عدم التطابق» لطلبٍ بتفضيل «ذكور»** (§٦٢-ب/٤٧) — الخلفيةُ تقبله للتفضيلين بلا رسوم، والمرسومُ نصُّ «إناث» وحدَه. */
-const MALE_MISMATCH_LABEL = tr("الكبتن ليس ذكراً — عدم تطابق");
+const MALE_MISMATCH_LABEL = tr("الكابتن ليس ذكراً — عدم تطابق");
 
 /** «أرسل تفاصيل رحلتك» (SPEC القسم 11.4) — نصٌّ يُرسل عبر ورقة مشاركة النظام.
  *
@@ -51,7 +51,7 @@ export async function shareRide(ride: Ride, live: string | null = null) {
     tr("أنا الآن في رحلة TAXO."),
     // **الرابطُ الحيّ أوّلاً** (البند ٧) — يتابع منه من ينتظرك السيارةَ على الخريطة حتى تصل
     live ? tr("تابع رحلتي مباشرةً: {0}", { 0: live }) : null,
-    ride.driver ? tr("الكبتن: {0}", { 0: ride.driver.name }) : null,
+    ride.driver ? tr("الكابتن: {0}", { 0: ride.driver.name }) : null,
     vehicle ? tr("المركبة: {0} {1} — لوحة {2}", { 0: vehicle.make, 1: vehicle.model, 2: vehicle.plate_number }) : null,
     tr("الوجهة: {0}", { 0: ride.dropoff_address ?? destination }),
   ].filter(Boolean);

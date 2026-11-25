@@ -29,7 +29,7 @@ import "@/t2/comms.css";
 
 const COLUMNS = "2fr 1fr 1fr 0.8fr 0.8fr 0.8fr";
 
-const SIDE_LABEL: Record<"rider" | "driver", string> = { rider: "الراكب", driver: "الكبتن" };
+const SIDE_LABEL: Record<"rider" | "driver", string> = { rider: "الراكب", driver: "الكابتن" };
 
 export function ChatReportsScreen() {
   const held = useMyPermissions();
@@ -82,7 +82,7 @@ export function ChatReportsScreen() {
             keyOf={(row) => row.id}
             empty={{
               title: status === "open" ? "لا بلاغاتٍ مفتوحة" : "لا بلاغات",
-              hint: "يصل البلاغُ حين يلمس راكبٌ أو كبتنٌ رسالةَ الطرف الآخر لمساً مطوّلاً ويختار سببه.",
+              hint: "يصل البلاغُ حين يلمس راكبٌ أو كابتنٌ رسالةَ الطرف الآخر لمساً مطوّلاً ويختار سببه.",
             }}
             render={(row) => (
               <>

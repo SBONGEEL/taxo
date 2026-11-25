@@ -149,7 +149,7 @@ FAMILIES: tuple[Family, ...] = (
         twins={CountryCode.LY: "+218990000652", CountryCode.DZ: "+213599000652"}, outside=True,
     ),
     Family("DZ_RIDER", UserRole.RIDER, "راكبُ تجربة الجزائر", CountryCode.DZ, "+213599000671"),
-    Family("DZ_CAPTAIN", UserRole.DRIVER, "كبتنُ تجربة الجزائر", CountryCode.DZ, "+213599000672"),
+    Family("DZ_CAPTAIN", UserRole.DRIVER, "كابتنُ تجربة الجزائر", CountryCode.DZ, "+213599000672"),
 )
 
 
@@ -241,7 +241,7 @@ async def _create(session: AsyncSession, item: Planned, password: str, twin_of: 
 async def _make_captain(session: AsyncSession, user: User) -> str:
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise ProvisionRefused("أُنشئ حسابُ كبتنٍ بلا صفِّ كبتن — يُوقَف ولا يُلتزم شيء")
+        raise ProvisionRefused("أُنشئ حسابُ كابتنٍ بلا صفِّ كابتن — يُوقَف ولا يُلتزم شيء")
     country = CountryCode(user.country_code)
     session.add(
         Vehicle(

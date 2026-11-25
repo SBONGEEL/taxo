@@ -39,7 +39,7 @@ from tests.helpers import (
     topup_wallet,
 )
 
-OTHER_DRIVER = DRIVER | {"phone": "0794444444", "name": "كبتن آخر", "plate": "AMM-7777"}
+OTHER_DRIVER = DRIVER | {"phone": "0794444444", "name": "كابتن آخر", "plate": "AMM-7777"}
 
 
 # --------------------------------------------------------------- أدواتٌ صغيرة

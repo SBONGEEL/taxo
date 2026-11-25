@@ -442,7 +442,7 @@ async def pay_via_provider(
 
     destination = (driver.cliq_alias or "").strip()
     if not destination:
-        raise InvalidInput("لا يوجد alias كليك لهذا الكبتن")
+        raise InvalidInput("لا يوجد alias كليك لهذا الكابتن")
 
     provider = await get_payout_provider(session, owner.country_code)
     state = await provider.send_payout(

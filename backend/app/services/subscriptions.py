@@ -377,7 +377,7 @@ async def _locked_driver(session: AsyncSession, driver_id: uuid.UUID) -> Driver:
         .execution_options(populate_existing=True)
     )
     if driver is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
-        raise NotFound("ملف الكبتن غير موجود")
+        raise NotFound("ملف الكابتن غير موجود")
     return driver
 
 
@@ -873,7 +873,7 @@ async def activate_paid_order(
         select(Driver).where(Driver.user_id == driver_user.id)
     )
     if driver is None:  # pragma: no cover - لا يُفتح الطلب أصلاً بلا كبتن
-        raise NotFound("ملف الكبتن غير موجود")
+        raise NotFound("ملف الكابتن غير موجود")
 
     locked = await _locked_driver(session, driver.id)
     existing = await _find_by_idempotency_key(session, idempotency_key)
@@ -1449,7 +1449,7 @@ async def cancel_for_driver(
     driver = await _locked_driver(session, driver_id)
     owner = await session.get(User, driver.user_id)
     if owner is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
-        raise NotFound("حساب الكبتن غير موجود")
+        raise NotFound("حساب الكابتن غير موجود")
 
     moment = _now()
     plan = await plan_cancellation(session, driver_id, now=moment)
@@ -1585,7 +1585,7 @@ async def revoke_permanent(
     driver = await _locked_driver(session, driver_id)
     owner = await session.get(User, driver.user_id)
     if owner is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
-        raise NotFound("حساب الكبتن غير موجود")
+        raise NotFound("حساب الكابتن غير موجود")
     row = await session.scalar(
         select(DriverSubscription)
         .where(
@@ -1598,7 +1598,7 @@ async def revoke_permanent(
         .execution_options(populate_existing=True)
     )
     if row is None:
-        raise NotFound("لا اشتراكَ دائمَ لهذا الكبتن")
+        raise NotFound("لا اشتراكَ دائمَ لهذا الكابتن")
 
     moment = _now()
     policy = await rounding.policy_for(session, owner.country_code)

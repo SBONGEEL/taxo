@@ -121,7 +121,7 @@ async def open_ticket(
                 raise InvalidInput("مضى على الرحلة أكثرُ من ٣٠ يوماً", field="ride_id")
         if kind == "lost_item":
             if not side_rider or driver_user_id is None:
-                raise InvalidInput("«نسيت شيئاً» للراكب في رحلةٍ لها كبتن", field="kind")
+                raise InvalidInput("«نسيت شيئاً» للراكب في رحلةٍ لها كابتن", field="kind")
             _no_phone(text)
     await _limit(redis, f"support:open:{user.id}", OPEN_PER_HOUR)
 

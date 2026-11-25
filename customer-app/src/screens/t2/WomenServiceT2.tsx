@@ -168,7 +168,7 @@ export function WomenServiceCardT2() {
           <span className="t2-wsvc-main">
             <span className="t2-wsvc-title">{tr("الخدمة النسائية")}</span>
             <span className="t2-wsvc-sub">
-              {women.available ? tr("نطابقك مع كبتنة فقط") : tr("تُعرض على من أعلنت أنها أنثى")}
+              {women.available ? tr("نطابقك مع كابتنة فقط") : tr("تُعرض على من أعلنت أنها أنثى")}
             </span>
           </span>
           {/* **حالٌ لا زرّ** (`Switch` بلا دور) — ومن لم تُعلن جنسَها لا حالَ لها: سهمٌ إلى الصفحة */}
@@ -220,7 +220,7 @@ export function WomenServiceT2Screen() {
           <Icon name="woman" fill />
         </span>
         <h2 className="t2-whero-title">{tr("رحلات بين نساء فقط.")}</h2>
-        <p className="t2-whero-body">{tr("كبتنة لراكبة، في كل رحلة تطلبينها من هذه الخدمة.")}</p>
+        <p className="t2-whero-body">{tr("كابتنة لراكبة، في كل رحلة تطلبينها من هذه الخدمة.")}</p>
       </section>
 
       {/* **ما يصدق اليوم وحدَه**: الكبتنةُ مختومةُ الجنس من هويتها بيد المشرف ووثائقُها معتمدة (`dispatch._eligible_levels`)، و«لا كبتنة»
@@ -228,11 +228,11 @@ export function WomenServiceT2Screen() {
       <ul className="t2-wpoints">
         <li>
           <Icon name="verified_user" fill />
-          {tr("كل الكبتنات موثّقات الهوية والوثائق.")}
+          {tr("كل الكابتنات موثّقات الهوية والوثائق.")}
         </li>
         <li>
           <Icon name="front_hand" fill />
-          {tr("إن لم تتوفر كبتنة نخبرك أولاً، ولا نرسل كبتناً دون موافقتك.")}
+          {tr("إن لم تتوفر كابتنة نخبرك أولاً، ولا نرسل كابتناً دون موافقتك.")}
         </li>
       </ul>
 
@@ -252,7 +252,7 @@ export function WomenServiceT2Screen() {
               aria-busy={saving}
               onClick={() => void save("any")}
             >
-              {saving ? tr("نحفظ…") : tr("إيقاف الخدمة — أقبل أي كبتن")}
+              {saving ? tr("نحفظ…") : tr("إيقاف الخدمة — أقبل أي كابتن")}
             </button>
           ) : (
             <button type="button" className="t2-wbtn" disabled={saving} aria-busy={saving} onClick={() => void save("female")}>

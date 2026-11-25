@@ -31,7 +31,7 @@ from tests.money_format import offenders
 
 ALGERIAN_RIDER = RIDER | {"phone": "0551234567", "country_code": "DZ", "name": "راكبٌ من الجزائر"}
 SECOND_ALGERIAN = RIDER | {"phone": "0552345678", "country_code": "DZ", "name": "راكبةٌ من وهران"}
-ALGERIAN_DRIVER = DRIVER | {"phone": "0661234567", "country_code": "DZ", "name": "كبتنٌ من الجزائر"}
+ALGERIAN_DRIVER = DRIVER | {"phone": "0661234567", "country_code": "DZ", "name": "كابتنٌ من الجزائر"}
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"receipt-one" * 20
 PNG_OTHER = b"\x89PNG\r\n\x1a\n" + b"receipt-two" * 20

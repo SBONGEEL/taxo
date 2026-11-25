@@ -232,7 +232,7 @@ export function WalletScreen() {
               «اشحن» فعلٌ يفعله، و«معلّق» خبرٌ يقرؤه ولا يفعل به شيئاً */}
           {Number(wallet.carrier_dues) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
+              {tr("مبلغٌ مستوفى لكابتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
               {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
 
             </p>

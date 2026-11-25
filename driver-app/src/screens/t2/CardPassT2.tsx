@@ -138,7 +138,7 @@ export function CardPassT2Screen() {
 
       {!user ? (
         <>
-          <p className="t2-note">{tr("سجّل الدخول بحساب الكبتن، ثمّ افتح هذا الرابط من جديد.")}</p>
+          <p className="t2-note">{tr("سجّل الدخول بحساب الكابتن، ثمّ افتح هذا الرابط من جديد.")}</p>
           <button type="button" className="t2-debt-cta" onClick={() => navigate("/login")}>
             {tr("دخول")}
           </button>

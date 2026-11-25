@@ -73,10 +73,10 @@ async def _apply(session: AsyncSession, phone: str, offer_name: str, revoke: boo
     if not user.is_test:
         raise OfferRefused("الحسابُ ليس موسوماً is_test — لا يُمنح شيئاً")
     if user.country_code is not COUNTRY:
-        raise OfferRefused("كبتنُ التجربة ليس في الأردن")
+        raise OfferRefused("كابتنُ التجربة ليس في الأردن")
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise OfferRefused("لا صفَّ كبتنٍ لهذا الحساب")
+        raise OfferRefused("لا صفَّ كابتنٍ لهذا الحساب")
     offers = (
         await session.execute(
             select(SubscriptionOffer).where(
@@ -99,7 +99,7 @@ async def _apply(session: AsyncSession, phone: str, offer_name: str, revoke: boo
             entity_id=grant_id,
             details={"driver_id": str(driver.id), "offer_id": str(offer.id), "reason": REASON, "test_account": True},
         )
-        return [f"نُزع «{offer.name}» عن كبتن التجربة (is_test)"]
+        return [f"نُزع «{offer.name}» عن كابتن التجربة (is_test)"]
     row = await offers_service.grant(
         session, offer_id=offer.id, driver_id=driver.id, actor_id=None, note=REASON  # type: ignore[arg-type]
     )
@@ -111,7 +111,7 @@ async def _apply(session: AsyncSession, phone: str, offer_name: str, revoke: boo
         entity_id=row.id,
         details={"driver_id": str(driver.id), "offer_id": str(offer.id), "reason": REASON, "test_account": True},
     )
-    return [f"مُنح «{offer.name}» لكبتن التجربة (is_test) وحدَه — جمهورُ العرض «{offer.audience}»"]
+    return [f"مُنح «{offer.name}» لكابتن التجربة (is_test) وحدَه — جمهورُ العرض «{offer.audience}»"]
 
 
 async def main_async(
@@ -128,7 +128,7 @@ async def main_async(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="منحُ عرضٍ لكبتن التجربة وحدَه أو نزعُه")
+    parser = argparse.ArgumentParser(description="منحُ عرضٍ لكابتن التجربة وحدَه أو نزعُه")
     parser.add_argument("--test-accounts", required=True, type=Path)
     parser.add_argument("--offer", required=True)
     action = parser.add_mutually_exclusive_group(required=True)

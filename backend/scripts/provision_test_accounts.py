@@ -131,7 +131,7 @@ _BACKEND_ROOT = Path(__file__).resolve().parents[1]
 _EPHEMERAL_ROOTS: tuple[Path, ...] = (Path("/tmp"), Path("/var/tmp"), Path("/dev/shm"))
 
 RIDER_NAME = "راكبُ التجربة"
-CAPTAIN_NAME = "كبتنُ التجربة"
+CAPTAIN_NAME = "كابتنُ التجربة"
 
 _VEHICLE = VehicleCreate(
     make="Toyota",
@@ -206,7 +206,7 @@ async def _plan(session: AsyncSession) -> SubscriptionPlan:
             if plan.duration_type is duration:
                 return plan
     raise ProvisionRefused(
-        "لا خطةَ اشتراكٍ فعّالةٌ في الأردن — وكبتنٌ بلا اشتراكٍ لا يصله عرض. يُوقَف قبل أن يُكتب شيء"
+        "لا خطةَ اشتراكٍ فعّالةٌ في الأردن — وكابتنٌ بلا اشتراكٍ لا يصله عرض. يُوقَف قبل أن يُكتب شيء"
     )
 
 
@@ -329,7 +329,7 @@ async def provision(
         )
         driver = await session.scalar(select(Driver).where(Driver.user_id == captain.id))
         if driver is None:
-            raise ProvisionRefused("أُنشئ حسابُ الكبتن بلا صفِّ كبتن — يُوقَف ولا يُلتزم شيء")
+            raise ProvisionRefused("أُنشئ حسابُ الكابتن بلا صفِّ كابتن — يُوقَف ولا يُلتزم شيء")
 
         # ── المركبة: حقولُ `VehicleCreate` وتطبيعُ بابها ──────────────────────
         session.add(

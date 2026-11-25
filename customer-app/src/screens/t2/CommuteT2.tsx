@@ -180,7 +180,7 @@ export function CommutePlanT2Screen() {
           <h2 className="t2-cm-done-title">{tr("اشتركتَ في مشوارك الثابت")}</h2>
           <p className="t2-cm-done-body">
             {tr("خُصم")}{" "}<b className="t2-num">{formatMoney(row.amount_paid, row.currency)}</b>{" "}{tr("من محفظتك لـ")}{ridesCount(row.rides_total)}{tr("، تبدأ")}{" "}
-{dayText(row.starts_on)}. <b>{tr("ونبحث لك الآن عن كبتنٍ معتمدٍ")}</b>{" "}{tr("يعرف طريقك — تجده في «اشتراكاتي» حين يعتمده.")}
+{dayText(row.starts_on)}. <b>{tr("ونبحث لك الآن عن كابتنٍ معتمدٍ")}</b>{" "}{tr("يعرف طريقك — تجده في «اشتراكاتي» حين يعتمده.")}
           </p>
         </div>
         <button
@@ -201,7 +201,7 @@ export function CommutePlanT2Screen() {
     <div className="t2 t2-page t2-cm pb-nav">
       <SubHeadT2 title={tr("مشوارٌ ثابت")} onBack={goBack} />
       <p className="t2-cm-lede">
-        {tr("مشوارُك اليوميُّ بسعرٍ مجمَّدٍ لشهرٍ كامل —")}{" "}<b>{tr("تدفعه مقدّماً من محفظتك")}</b>{tr("، ويعتمده كبتنٌ يعرف طريقك.")}
+        {tr("مشوارُك اليوميُّ بسعرٍ مجمَّدٍ لشهرٍ كامل —")}{" "}<b>{tr("تدفعه مقدّماً من محفظتك")}</b>{tr("، ويعتمده كابتنٌ يعرف طريقك.")}
       </p>
 
       {/* **بطاقةُ المسار في ورقة الطلب** (R06) — «من» و«إلى» زرّان يفتحان المنتقي نفسَه */}
@@ -485,11 +485,11 @@ export function CommutesT2Screen() {
         onOpenChange={(open) => {
           if (!open) close();
         }}
-        title={asking?.kind === "release" ? tr("استبدل الكبتن؟") : tr("ألغِ الاشتراك؟")}
+        title={asking?.kind === "release" ? tr("استبدل الكابتن؟") : tr("ألغِ الاشتراك؟")}
       >
         <p className="t2-drawer-text">
           {asking?.kind === "release"
-            ? tr("نفكّ {0} عن مشوارك، ويعود مفتوحاً لكبتنٍ معتمدٍ آخر — ورحلاتُك تُعرض على الكباتن حتى يعتمده غيرُه.", { 0: asking.row.captain_name ?? tr("كبتنَك") })
+            ? tr("نفكّ {0} عن مشوارك، ويعود مفتوحاً لكابتنٍ معتمدٍ آخر — ورحلاتُك تُعرض على الكباتن حتى يعتمده غيرُه.", { 0: asking.row.captain_name ?? tr("كابتنَك") })
             : tr("تُلغى رحلاتُك القادمة، ويعود ما لم يُستعمل رصيداً في محفظتك — لا نقداً.")}
         </p>
         <div className="t2-drawer-actions">
@@ -570,7 +570,7 @@ function CommuteCard({
       {active ? (
         <p className={row.captain_name ? "t2-cm-captain named" : "t2-cm-captain"}>
           <Icon name={row.captain_name ? "verified_user" : "search"} />
-          {row.captain_name ? tr("كبتنُك: {0}", { 0: row.captain_name }) : tr("نبحث لك عن كبتنٍ معتمد")}
+          {row.captain_name ? tr("كابتنُك: {0}", { 0: row.captain_name }) : tr("نبحث لك عن كابتنٍ معتمد")}
         </p>
       ) : null}
       {row.suspended_days.length > 0 ? (
@@ -586,7 +586,7 @@ function CommuteCard({
           </button>
           {row.captain_name ? (
             <button type="button" className="t2-tlink" disabled={locked} onClick={() => onAsk("release")}>
-              {tr("استبدل الكبتن")}
+              {tr("استبدل الكابتن")}
             </button>
           ) : null}
           <button type="button" className="t2-tlink destroy" disabled={locked} onClick={() => onAsk("cancel")}>

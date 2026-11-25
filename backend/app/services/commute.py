@@ -493,7 +493,7 @@ async def approve(session: AsyncSession, *, subscription_id: uuid.UUID, driver: 
     from app.services import subscriptions
 
     if driver.status != DriverStatus.APPROVED:
-        raise Conflict("حساب الكبتن غير معتمد بعد")
+        raise Conflict("حساب الكابتن غير معتمد بعد")
     if await subscriptions.current_subscription(session, driver.id) is None:
         raise Conflict("المشاويرُ الثابتةُ للكباتن المشتركين")
     row = await locked(session, subscription_id)
@@ -506,7 +506,7 @@ async def approve(session: AsyncSession, *, subscription_id: uuid.UUID, driver: 
     ):
         raise NotFound("الاشتراك غير موجود")
     if row.driver_id is not None and row.driver_id != driver.id:
-        raise Conflict("اعتمد هذا المشوارَ كبتنٌ آخر")
+        raise Conflict("اعتمد هذا المشوارَ كابتنٌ آخر")
     row.driver_id = driver.id
     await session.flush()
     return row

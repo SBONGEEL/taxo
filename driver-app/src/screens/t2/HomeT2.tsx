@@ -419,7 +419,7 @@ export function HomeT2Screen() {
             {unread > 0 ? <span className="t2-hm-bell-dot" /> : null}
           </button>
           <div className={womenMode ? "t2-hm-avatar women" : "t2-hm-avatar"} aria-hidden="true">
-            {(user?.name ?? tr("كبتن")).slice(0, 1)}
+            {(user?.name ?? tr("كابتن")).slice(0, 1)}
           </div>
         </div>
       ) : null}
@@ -942,7 +942,7 @@ function GoPill({
 /** **مدخلُ المشاوير الثابتة** (§٦٣-ج/٦) — صفُّ مدخل الحجوز نفسُه. **والعرضُ يسبق ما اعتمده**: العرضُ يأخذه غيرُه إن انتظر، وما
  *  اعتمده تصله رحلاتُه وحدَها. **والعددُ بالعربية** (`countCommutes`). */
 function CommuteEntryRow({ entry, onOpen }: { entry: CommuteEntry; onOpen: () => void }) {
-  const title = entry.offers > 0 ? tr("مشاويرُ ثابتةٌ تنتظر كبتناً") : tr("مشاويرُك الثابتة");
+  const title = entry.offers > 0 ? tr("مشاويرُ ثابتةٌ تنتظر كابتناً") : tr("مشاويرُك الثابتة");
   const sub =
     entry.offers > 0
       ? tr("{0} في سوقك — مدفوعةٌ مقدّماً لشهر", { 0: countCommutes(entry.offers) })

@@ -128,7 +128,7 @@ export function PublicTrackScreen() {
           />
           {/* **شريطٌ يتحرّك ولا يتقدّم** ما دام البحثُ جارياً — شريطُ R07 نفسُه */}
           {track.state === "searching" ? (
-            <div className="t2-trk-bar" role="progressbar" aria-label={tr("نبحث عن كبتن")} aria-busy="true">
+            <div className="t2-trk-bar" role="progressbar" aria-label={tr("نبحث عن كابتن")} aria-busy="true">
               <span />
             </div>
           ) : null}

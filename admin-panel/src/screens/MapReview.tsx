@@ -109,7 +109,7 @@ export function MapReviewScreen() {
         rows={reports}
         keyOf={(row) => row.id}
         height="auto"
-        empty={{ title: "لا بلاغاتٍ نشطة", hint: "يبلّغ الكبتنُ من خريطته بلمسة، ويظهر البلاغُ بتأكيد كبتنٍ ثانٍ أو بموافقتك." }}
+        empty={{ title: "لا بلاغاتٍ نشطة", hint: "يبلّغ الكابتنُ من خريطته بلمسة، ويظهر البلاغُ بتأكيد كابتنٍ ثانٍ أو بموافقتك." }}
         render={(row) => {
           const shown = row.approved || row.confirmations >= 2;
           return (

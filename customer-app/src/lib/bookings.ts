@@ -383,7 +383,7 @@ export function useMyCommutes() {
     cancel: (row: Commute) =>
       void run(row, () => cancelCommute(row.id), () => tr("أُلغي الاشتراك — وعاد ما لم يُستعمل رصيداً في محفظتك.")),
     release: (row: Commute) =>
-      void run(row, () => releaseCommuteCaptain(row.id), () => tr("فككنا الكبتن — ونبحث لك عن كبتنٍ معتمدٍ آخر.")),
+      void run(row, () => releaseCommuteCaptain(row.id), () => tr("فككنا الكابتن — ونبحث لك عن كابتنٍ معتمدٍ آخر.")),
   };
 }
 

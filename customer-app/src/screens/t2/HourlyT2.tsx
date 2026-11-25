@@ -19,8 +19,8 @@ import "./for-other.css";
 import "./hourly.css"; import { tr } from "@/lib/i18n";
 
 const PREPAY: Array<{ value: HourlyPrepay; icon: string; label: string; hint: string }> = [
-  { value: "wallet", icon: "account_balance_wallet", label: tr("من المحفظة عند البدء"), hint: tr("تُخصم كاملةً لحظةَ يبدأ الكبتن الرحلة") },
-  { value: "cash", icon: "payments", label: tr("نقداً للكبتن عند البدء"), hint: tr("تسلّمها له بيدك قبل الانطلاق") },
+  { value: "wallet", icon: "account_balance_wallet", label: tr("من المحفظة عند البدء"), hint: tr("تُخصم كاملةً لحظةَ يبدأ الكابتن الرحلة") },
+  { value: "cash", icon: "payments", label: tr("نقداً للكابتن عند البدء"), hint: tr("تسلّمها له بيدك قبل الانطلاق") },
 ];
 
 /** **كتلةُ الساعات في ورقة الطلب** — العدّادُ (١ إلى سقف السوق)، وسطرُ «8.000 للساعة شاملةً 15 كم»، والمجموعُ «لـ 3 ساعات»،
@@ -121,7 +121,7 @@ export function HourlySheetT2({
       </div>
       {/* **علّةُ غياب «+» المحطة** — سطرٌ قصيرٌ لا زرٌّ ميّتٌ بلا سبب */}
       <p className="t2-sheet-fine">
-        {tr("بلا محطاتٍ تُضاف — تقول وجهاتِك للكبتن في الطريق. وما زاد على الساعات يُدفع في النهاية كأيِّ رحلة.")}
+        {tr("بلا محطاتٍ تُضاف — تقول وجهاتِك للكابتن في الطريق. وما زاد على الساعات يُدفع في النهاية كأيِّ رحلة.")}
       </p>
     </>
   );
@@ -159,7 +159,7 @@ export function HourlyTrackT2({
             <Icon name={prepay === "cash" ? "payments" : "account_balance_wallet"} />
             <span>
               {prepay === "cash"
-                ? tr("تدفع الساعاتِ المحجوزة نقداً للكبتن عند البدء")
+                ? tr("تدفع الساعاتِ المحجوزة نقداً للكابتن عند البدء")
                 : tr("تُدفع الساعاتُ المحجوزة من محفظتك عند البدء")}
             </span>
           </div>

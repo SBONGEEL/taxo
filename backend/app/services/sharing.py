@@ -79,7 +79,7 @@ class SharingNotAllowedForGendered(AppError):
 
     status_code = 422
     code = "ride_sharing_gender_choice_required"
-    message = "طلبك يحدّد جنس الكبتن — المشاركة فيه اختيارٌ منفصل تختارينه بنفسك"
+    message = "طلبك يحدّد جنس الكابتن — المشاركة فيه اختيارٌ منفصل تختارينه بنفسك"
 
 
 async def settings_for(

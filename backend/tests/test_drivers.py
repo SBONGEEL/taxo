@@ -80,7 +80,7 @@ async def test_plate_number_is_unique(client: AsyncClient, driver_payload: dict)
         driver_payload
         | {
             "phone": "0918888888",
-            "name": "كبتن آخر",
+            "name": "كابتن آخر",
             "verification_token": mock_token("+218918888888"),
         },
     )

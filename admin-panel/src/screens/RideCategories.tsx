@@ -259,7 +259,7 @@ function CategoryCard({
           </h2>
           <p className="mt-3 text-11.5 leading-note text-muted">
             {row.is_builtin
-              ? "تتبع فئةَ المركبة كما اليوم — يأخذها كلُّ كبتنٍ مركبتُه من فئتها، ولا تُعدَّل من هنا."
+              ? "تتبع فئةَ المركبة كما اليوم — يأخذها كلُّ كابتنٍ مركبتُه من فئتها، ولا تُعدَّل من هنا."
               : `${row.description ?? "بلا وصف"} · ${digits(String(row.seats))} مقاعد · الترتيب ${digits(String(row.sort_order))}`}
           </p>
         </div>
@@ -447,7 +447,7 @@ function CategoryForm({
       </div>
       <div className="mt-12">
         <Checkbox checked={draft.serves_lower} onChange={() => set({ serves_lower: !draft.serves_lower })}>
-          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكبتنُ يقبل أو يرفض كأيِّ عرض
+          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكابتنُ يقبل أو يرفض كأيِّ عرض
         </Checkbox>
       </div>
       <h4 className="mb-6 mt-12 text-12 font-bold text-muted">أنواعُ الهيكل المسموحة (لا شيء = أيّ نوع)</h4>
@@ -536,12 +536,12 @@ function GuidanceForm({
       </div>
       <div className="mt-12">
         <Checkbox checked={draft.serves_lower} onChange={() => set({ serves_lower: !draft.serves_lower })}>
-          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكبتنُ يقبل أو يرفض كأيِّ عرض
+          كباتنُ هذه الفئة يأخذون طلباتِ الفئات الأدنى ترتيباً — مطفأٌ افتراضاً: الراكبُ يدفع سعرَ الأدنى، والكابتنُ يقبل أو يرفض كأيِّ عرض
         </Checkbox>
       </div>
       <div className="mt-8">
         <Checkbox checked={draft.taxi_licence} onChange={() => set({ taxi_licence: !draft.taxi_licence })}>
-          لا تُمنح لكبتنٍ قبل اعتماد «رخصة التاكسي» عنده — ويرى الكباتنُ صفَّ رفعها في وثائقهم ما دامت الفئةُ مشتعلة
+          لا تُمنح لكابتنٍ قبل اعتماد «رخصة التاكسي» عنده — ويرى الكباتنُ صفَّ رفعها في وثائقهم ما دامت الفئةُ مشتعلة
         </Checkbox>
       </div>
       <Button
@@ -669,7 +669,7 @@ function AccessPanel({ category, onError }: { category: RideCategory; onError: (
         <div className="flex flex-col gap-6">
           {rows.map((row) => (
             <div key={row.driver_id} className="flex flex-wrap items-center gap-8 text-12 text-ink">
-              <b>{row.driver_name ?? "كبتن"}</b>
+              <b>{row.driver_name ?? "كابتن"}</b>
               <span dir="ltr" className="text-muted">
                 {row.driver_phone}
               </span>
@@ -683,7 +683,7 @@ function AccessPanel({ category, onError }: { category: RideCategory; onError: (
         </div>
       )}
       <div className="mt-10 grid gap-10 md:grid-cols-2">
-        <Picker label="كبتن" placeholder="اسمٌ أو رقم هاتف" value={driver} onPick={setDriver} search={findDrivers} />
+        <Picker label="كابتن" placeholder="اسمٌ أو رقم هاتف" value={driver} onPick={setDriver} search={findDrivers} />
         <Field name="reason" label="السبب" value={reason} onChange={(event) => setReason(event.target.value)} />
       </div>
       <div className="mt-8 flex gap-8">

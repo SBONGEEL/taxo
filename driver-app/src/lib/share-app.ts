@@ -22,8 +22,8 @@ const LINK: Record<App, string> = {
 
 function message(app: App): { title: string; text: string } {
   return app === "rider"
-    ? { title: tr("TAXO — تطبيق الرحلات"), text: tr("جرّب TAXO: اطلب رحلتك، واعرف السعر قبل أن تؤكّد، وتابع كبتنك على الخريطة.") }
-    : { title: tr("TAXO Driver — تطبيق الكبتن"), text: tr("اعمل كبتناً مع TAXO: الأجرة أمامك قبل القبول، وأرباحك ومحفظتك في مكانٍ واحد.") };
+    ? { title: tr("TAXO — تطبيق الرحلات"), text: tr("جرّب TAXO: اطلب رحلتك، واعرف السعر قبل أن تؤكّد، وتابع كابتنك على الخريطة.") }
+    : { title: tr("TAXO Driver — تطبيق الكابتن"), text: tr("اعمل كابتناً مع TAXO: الأجرة أمامك قبل القبول، وأرباحك ومحفظتك في مكانٍ واحد.") };
 }
 
 export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";

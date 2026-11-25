@@ -62,7 +62,7 @@ function stateOf(booking: Booking): { text: string; tone: "plain" | "warn" | "li
   // سُلّم للتوزيع: الرحلةُ تقول الباقي
   switch (booking.ride_status) {
     case "no_driver_found":
-      return { text: tr("لم نجد كبتناً"), tone: "danger" };
+      return { text: tr("لم نجد كابتناً"), tone: "danger" };
     case "completed":
       return { text: tr("اكتملت"), tone: "ok" };
     case "cancelled_by_rider":
@@ -88,7 +88,7 @@ const CHIP: Record<ReturnType<typeof stateOf>["tone"], string> = {
 /** **أين رسمُ الضمان** — نصُّ كلِّ حالٍ ونبرتُه: المحفوظُ محايد، والواصلُ للكبتن حبر، والعائدُ إليه أخضر. */
 const GUARANTEE_FEE: Record<NonNullable<Booking["guarantee_state"]>, { text: string; tone: string }> = {
   held: { text: tr("محفوظ"), tone: "t2-bkg-fee" },
-  paid: { text: tr("دُفع للكبتن"), tone: "t2-bkg-fee paid" },
+  paid: { text: tr("دُفع للكابتن"), tone: "t2-bkg-fee paid" },
   refunded: { text: tr("رُدّ إلى محفظتك"), tone: "t2-bkg-fee ok" },
 };
 
@@ -98,8 +98,8 @@ function captainLine(booking: Booking): string | null {
   // (`guarantees.on_execute_without_captain`)، **ولا أحدَ يبحث** — والسطرُ فوق «لم نطلب رحلتك» يناقضه. **ولا بعد «أي كبتن»**:
   // يعود منتظراً والرسمُ مردودٌ حتى تطلبه الدورة، و«نبحث عن كبتنٍ يضمن حجزك» فوق «رُدّ إلى محفظتك» تناقضه كذلك
   if (booking.awaiting_choice || booking.guarantee_state === "refunded") return null;
-  if (booking.captain_name) return tr("كبتنُك: {0}", { 0: booking.captain_name });
-  return booking.status === "pending" ? tr("نبحث عن كبتنٍ يضمن حجزك") : null;
+  if (booking.captain_name) return tr("كابتنُك: {0}", { 0: booking.captain_name });
+  return booking.status === "pending" ? tr("نبحث عن كابتنٍ يضمن حجزك") : null;
 }
 
 function when(iso: string): string {

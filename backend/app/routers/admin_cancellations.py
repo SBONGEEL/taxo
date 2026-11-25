@@ -125,7 +125,7 @@ async def list_charges(
     status: CancellationChargeStatus | None = None,
     user_id: uuid.UUID | None = Query(
         default=None,
-        description="رسومُ شخصٍ بعينه — راكباً كان أو كبتناً (الملفُّ الشخصيّ §37)",
+        description="رسومُ شخصٍ بعينه — راكباً كان أو كابتناً (الملفُّ الشخصيّ §37)",
     ),
     q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),

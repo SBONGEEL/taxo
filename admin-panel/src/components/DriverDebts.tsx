@@ -109,7 +109,7 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
     <section className="card mt-16 p-16">
       <h2 className="mb-4 text-15 font-bold text-ink">مستحقّات الكباتن</h2>
       <p className="mb-12 text-12 text-muted">
-        عمولةُ رحلةٍ قبض الكبتنُ أجرتها بيده تبقى مستحقّةً عليه، وتُحصَّل
+        عمولةُ رحلةٍ قبض الكابتنُ أجرتها بيده تبقى مستحقّةً عليه، وتُحصَّل
         تلقائياً من أول أجرةٍ تدخل محفظته. وفوق سقف السوق يخرج من التوزيع حتى
         يبلغ المستحقُّ صفراً. والشطبُ اعترافٌ بالخسارة ويرفع الإيقاف.
       </p>
@@ -164,14 +164,14 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
           <TableSearch
             value={search.text}
             onChange={search.setText}
-            placeholder="اسمُ الكبتن أو رقمُه…"
+            placeholder="اسمُ الكابتن أو رقمُه…"
           />
         }
         searching={search.searching}
         noResults={NO_RESULTS}
         height="compact"
         columns="1.2fr 0.9fr 0.9fr 1fr 0.8fr 1.6fr"
-        headers={["الكبتن", "المبلغ", "المحصَّل", "المصدر", "الحالة", ""]}
+        headers={["الكابتن", "المبلغ", "المحصَّل", "المصدر", "الحالة", ""]}
         rows={rows}
         keyOf={(row) => row.id}
         empty={{ title: "لا مستحقّات", hint: "لم ينشأ مستحقٌّ بعد." }}

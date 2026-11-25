@@ -63,7 +63,7 @@ class DestinationChangeNotAllowed(Conflict):
 
 class DriverPositionUnknown(Conflict):
     code = "driver_position_unknown"
-    message = "تعذّر معرفةُ موضع الكبتن الآن — حاول بعد لحظات"
+    message = "تعذّر معرفةُ موضع الكابتن الآن — حاول بعد لحظات"
 
 
 class QuoteNoLongerValid(Conflict):

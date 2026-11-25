@@ -108,7 +108,7 @@ def _contract_values(secrets: dict[str, str], test_phone: str | None, *, keep_al
         raise ContractRefused("لا معرّفَ منتجٍ في الملفّ — يكفي واحد، ويُعرض زرُّ خطّته وحدَها")
     if mode == "test":
         if not test_phone or not _PHONE.match(test_phone):
-            raise ContractRefused("وضعُ التجربة بلا هاتف كبتن التجربة (TAXO_TEST_CAPTAIN_PHONE) — لا عقدَ تجريبيَّ بلا قائمة سماح")
+            raise ContractRefused("وضعُ التجربة بلا هاتف كابتن التجربة (TAXO_TEST_CAPTAIN_PHONE) — لا عقدَ تجريبيَّ بلا قائمة سماح")
         values["allowlist"] = test_phone
     elif not keep_allowlist:
         values["allowlist"] = ""
@@ -128,7 +128,7 @@ async def _apply(session: AsyncSession, *, mode: str, values: dict[str, object])
     products = " · ".join(f"{field.removeprefix('product_')}={values[field]}" for field in PRODUCTS if field in values)
     lines.append(f"المنتجات: {products}")
     allow = str(values.get("allowlist", "—"))
-    lines.append("قائمةُ السماح: " + ("كبتنُ التجربة وحدَه" if mode == "test" else ("فارغة — للجميع" if allow == "" else "تبقى كما هي")))
+    lines.append("قائمةُ السماح: " + ("كابتنُ التجربة وحدَه" if mode == "test" else ("فارغة — للجميع" if allow == "" else "تبقى كما هي")))
     await credentials_service.upsert(
         session,
         provider_key=ProviderKey.DIGISTORE24,

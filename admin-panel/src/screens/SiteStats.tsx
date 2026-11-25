@@ -17,7 +17,7 @@ import { DISPLAY_LOCALE, digits } from "@/lib/utils";
 
 const APPS: { key: StatsApp; label: string }[] = [
   { key: "rider", label: "تطبيق الراكب" },
-  { key: "driver", label: "تطبيق الكبتن" },
+  { key: "driver", label: "تطبيق الكابتن" },
 ];
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [

@@ -111,7 +111,7 @@ export const PAYMENT_STATUS_TONE: Record<PaymentStatus, Tone> = {
 /** **حالُ الصفّ في «المدفوعات غير المؤكدة»** — أسماءُ التصميم حرفاً (`design/PAYMENTS-UNCONFIRMED.md` §٥)، **خمسٌ من ستّ**:
  *  «رحلةٌ لم تُنهَ» لا تقع (الإنهاءُ الآليُّ لم يُبنَ، SPEC §٦٤-ز). */
 export const UNCONFIRMED_STATE_LABEL: Record<AdminUnconfirmedState, string> = {
-  awaiting_captain: "بانتظار الكبتن",
+  awaiting_captain: "بانتظار الكابتن",
   awaiting_rider: "بانتظار الراكب",
   cliq_no_reference: "كليك بلا مرجع",
   disputed: "نزاع",
@@ -157,10 +157,10 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   referral_bonus: "حافز إحالة",
   // **الحجزُ المضمون** (§٦٣-ج/٣) — **يُسمّى بجهته** كالأزواج أعلاه: حفظٌ من الراكب، ووصولٌ للكبتن، وردٌّ، وغرامةٌ وتعويضُها
   guarantee_hold: "رسم ضمان محفوظ",
-  guarantee_fee: "رسم ضمان للكبتن",
+  guarantee_fee: "رسم ضمان للكابتن",
   guarantee_refund: "ردّ رسم الضمان",
   guarantee_penalty: "غرامة اعتذار عن حجز مضمون",
-  guarantee_compensation: "تعويض اعتذار الكبتن",
+  guarantee_compensation: "تعويض اعتذار الكابتن",
   // **المشوارُ الثابت** (§٦٣-ج/٦) — **بجهته** كذلك: مقدَّمُ الراكب، وما عاد إليه، وحافزُ الكبتن المعتمد
   commute_prepay: "اشتراك المشوار الثابت",
   commute_credit: "رصيدُ أيامٍ لم تُستعمل",
@@ -181,8 +181,8 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   cross_transfer_out: "تحويل إلى دولة أخرى",
   cross_transfer_in: "تحويل وارد من دولة أخرى",
   cross_transfer_fee: "رسم تحويل بين الدول",
-  card_purchase: "شراء بطاقات TAXO للبيع (كبتن)",
-  rider_offer_share: "خصم عرض راكب (كبتن)",
+  card_purchase: "شراء بطاقات TAXO للبيع (كابتن)",
+  rider_offer_share: "خصم عرض راكب (كابتن)",
 };
 
 /** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */
@@ -207,7 +207,7 @@ export const SUBSCRIPTION_DURATION_LABEL: Record<
 
 export const CHARGE_STATUS_LABEL: Record<CancellationChargeStatus, string> = {
   pending: "لم يُحصَّل",
-  settled: "وصل الكبتن",
+  settled: "وصل الكابتن",
   waived: "أُعفي",
   written_off: "شُطب",
 };
@@ -282,7 +282,7 @@ export const TOPUP_STATUS_TONE: Record<TopupStatus, string> = {
  */
 export const SEARCH_KIND_LABEL: Record<SearchKind, string> = {
   user: "حساب",
-  driver: "كبتن",
+  driver: "كابتن",
   ride: "رحلة",
   claim: "مطالبة",
 };

@@ -275,7 +275,7 @@ async def test_declaring_cash_is_idempotent_and_writes_no_money(
 
     mine = (await client.get("/payments/me/unconfirmed", headers=rider["headers"])).json()
     assert [item["state"] for item in mine["items"]] == ["awaiting_captain"]
-    assert mine["items"][0]["captain_name"] == "كبتن الرحلات"
+    assert mine["items"][0]["captain_name"] == "كابتن الرحلات"
     awaiting = (
         await client.get("/drivers/me/payments/unconfirmed", headers=driver["headers"])
     ).json()
@@ -430,7 +430,7 @@ async def test_captain_can_say_unpaid_on_cash_and_the_rider_is_asked(
                 )
             )
         ).all()
-    assert [row.title for row in asked] == ["الكبتنُ يقول إنه لم يستلم المبلغ"]
+    assert [row.title for row in asked] == ["الكابتنُ يقول إنه لم يستلم المبلغ"]
     assert set(asked[0].data) == {"type", "payment_id", "ride_id"}
 
     # **والراكبُ يردّ «سلّمتُه»** — يُختم إقرارُه ولا تتغيّر الحال
@@ -466,7 +466,7 @@ async def test_reminders_follow_the_schedule_once_each_with_the_design_texts(
     first = await at(10)
     assert {(str(user), title, body) for user, title, body in first} == {
         (captain, "رحلةُ راكب بانتظار تأكيدك", "استلمتَ 8.000 د.أ؟"),
-        (rider["user_id"], "سلّمتَ الكبتن 8.000 د.أ؟", "أكّد ذلك كي تُغلق الرحلة"),
+        (rider["user_id"], "سلّمتَ الكابتن 8.000 د.أ؟", "أكّد ذلك كي تُغلق الرحلة"),
     }
     # **لا يتكرّر**: الموعدُ مختومٌ على الصفّ
     assert await at(11) == []
@@ -705,7 +705,7 @@ async def test_admin_queue_lists_oldest_first_and_its_actions_carry_a_reason(
 
     paid = await client.post(
         f"/admin/payments/unconfirmed/{old_payment.id}/resolve",
-        json={"outcome": "paid", "reason": "اتصلنا بالكبتن وأكّد الاستلام"},
+        json={"outcome": "paid", "reason": "اتصلنا بالكابتن وأكّد الاستلام"},
         headers=admin_headers,
     )
     assert paid.status_code == 200, paid.text
@@ -735,7 +735,7 @@ async def test_admin_queue_lists_oldest_first_and_its_actions_carry_a_reason(
             )
         ).all()
     assert [entry.details["action"] for entry in audits] == ["remind", "resolve", "resolve"]
-    assert audits[1].details["reason"] == "اتصلنا بالكبتن وأكّد الاستلام"
+    assert audits[1].details["reason"] == "اتصلنا بالكابتن وأكّد الاستلام"
 
 
 async def test_admin_can_turn_a_pending_payment_into_a_dispute(
@@ -902,7 +902,7 @@ async def test_the_captain_objects_within_the_window_and_no_entry_is_reversed(
     assert [row["state"] for row in rows] == ["auto_confirmed_objected"]
     pending_entry = await client.post(
         f"/admin/payments/unconfirmed/{payment.id}/resolve",
-        json={"outcome": "unpaid", "reason": "الكبتن لم يستلم المبلغ"},
+        json={"outcome": "unpaid", "reason": "الكابتن لم يستلم المبلغ"},
         headers=admin_headers,
     )
     assert pending_entry.status_code == 501

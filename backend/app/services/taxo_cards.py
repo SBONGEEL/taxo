@@ -289,7 +289,7 @@ async def create_batch(
         )) + 1
     currency = currency_for_country(country)
     if (kind == "captain") != (seller_driver_id is not None):
-        raise InvalidInput("دفعةُ الكبتن وحدَها لها بائعٌ كبتن", field="kind")
+        raise InvalidInput("دفعةُ الكابتن وحدَها لها بائعٌ كابتن", field="kind")
     batch = CardBatch(
         **({"id": batch_id} if batch_id is not None else {}),
         country_code=country,

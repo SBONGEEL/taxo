@@ -62,12 +62,12 @@ export function AmbassadorsScreen() {
 
       <Table
         toolbar={
-          <TableSearch value={search.text} onChange={search.setText} placeholder="اسمُ الكبتن أو رقمُه…" />
+          <TableSearch value={search.text} onChange={search.setText} placeholder="اسمُ الكابتن أو رقمُه…" />
         }
         searching={search.searching}
         noResults={NO_RESULTS}
         columns={COLUMNS}
-        headers={["الكبتن", "النوع", "البداية", "الانتهاء", "المبلغ", ""]}
+        headers={["الكابتن", "النوع", "البداية", "الانتهاء", "المبلغ", ""]}
         rows={rows}
         keyOf={(row) => row.subscription_id}
         empty={{
@@ -135,7 +135,7 @@ function RevokeModal({
   return (
     <Modal title={`نزعُ «سفير TAXO» عن ${row.name}`} onClose={onClose}>
       <p className="mb-14 text-12.5 leading-note text-muted">
-        يُلغى الاشتراكُ الدائمُ وحدَه بمسار الإلغاء — <b className="text-ink">ولا يُحذف صفٌّ</b>. ما دفعه الكبتنُ قبله يبقى يغطّيه،
+        يُلغى الاشتراكُ الدائمُ وحدَه بمسار الإلغاء — <b className="text-ink">ولا يُحذف صفٌّ</b>. ما دفعه الكابتنُ قبله يبقى يغطّيه،
         وإن لم يبقَ له اشتراكٌ خرج من الاستقبال. ويصله إشعار.
       </p>
       <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">

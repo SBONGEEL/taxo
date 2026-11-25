@@ -63,11 +63,11 @@ export function DriverGoals({ onError, isAdmin }: { onError: (message: string) =
   return (
     <section className="mt-24 rounded-card border border-line bg-surface p-16" aria-labelledby="driver-goals-title">
       <h2 id="driver-goals-title" className="text-15 font-bold text-ink">
-        أهداف الكبتن بمكافأة
+        أهداف الكابتن بمكافأة
       </h2>
       <p className="mt-4 text-11 leading-snug text-muted">
-        عددُ رحلاتٍ مكتملةٍ في مدّة، ومكافأةٌ تُصرف إلى محفظة الكبتن آليّاً حين يبلغه — مرّةً لكلِّ هدف، ولا تتجاوز المكافآتُ مجتمعةً سقفَ
-        الميزانيّة. يبدأ الهدفُ لحظةَ إنشائه. ويعمل حين يشتعل مفتاحُ «أهداف الكبتن بمكافأة» في الإعدادات.
+        عددُ رحلاتٍ مكتملةٍ في مدّة، ومكافأةٌ تُصرف إلى محفظة الكابتن آليّاً حين يبلغه — مرّةً لكلِّ هدف، ولا تتجاوز المكافآتُ مجتمعةً سقفَ
+        الميزانيّة. يبدأ الهدفُ لحظةَ إنشائه. ويعمل حين يشتعل مفتاحُ «أهداف الكابتن بمكافأة» في الإعدادات.
       </p>
       {isAdmin ? (
         <div className="mt-12 grid grid-cols-2 gap-10">
@@ -96,7 +96,7 @@ export function DriverGoals({ onError, isAdmin }: { onError: (message: string) =
               <Badge tone={goal.is_active ? "ok" : "muted"}>{goal.is_active ? "يعمل" : "موقوف"}</Badge>
               <span className="block text-11 text-muted">
                 {digits(String(goal.target))} رحلة · المكافأة {money(goal.reward_amount, currency)} · صُرف{" "}
-                {money(goal.spent, currency)} من {money(goal.budget_cap, currency)} لـ{digits(String(goal.awards))} كبتن ·
+                {money(goal.spent, currency)} من {money(goal.budget_cap, currency)} لـ{digits(String(goal.awards))} كابتن ·
                 حتى {moment(goal.ends_at)}
               </span>
             </span>

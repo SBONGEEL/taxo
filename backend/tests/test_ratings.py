@@ -52,7 +52,7 @@ async def test_rider_rating_updates_the_driver_average(
     driver = await _online_driver(client, session_factory)
     ride = await completed_ride(client, rider, driver)
 
-    response = await _rate(client, rider, ride["id"], 4, comment="كبتن ممتاز")
+    response = await _rate(client, rider, ride["id"], 4, comment="كابتن ممتاز")
     assert response.status_code == 201, response.text
     assert response.json()["rater_type"] == "rider"
     assert response.json()["stars"] == 4

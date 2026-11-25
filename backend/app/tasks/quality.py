@@ -49,5 +49,5 @@ async def _run(now: datetime | None = None) -> tuple[int, int]:
 @celery_app.task(name="app.tasks.quality.score_drivers")
 def score_drivers() -> tuple[int, int]:
     result = run_async(_run())
-    logger.info("درجةُ الجودة: %s كبتناً، و%s إنذاراً", *result)
+    logger.info("درجةُ الجودة: %s كابتناً، و%s إنذاراً", *result)
     return result

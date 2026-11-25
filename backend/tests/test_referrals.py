@@ -630,7 +630,7 @@ async def test_the_monthly_cap_records_the_referral_and_refuses_the_payment(
     await approved_driver(
         client, session_factory,
         SECOND_DRIVER | {"referral_code": code, "phone": "0795550001",
-                         "name": "كبتنٌ ثالث"},
+                         "name": "كابتنٌ ثالث"},
         plate_number="AMM-9104",
     )
 
@@ -669,7 +669,7 @@ async def test_two_referrals_paid_at_once_cannot_pass_one_referrers_cap(
     second = await approved_driver(
         client, session_factory,
         SECOND_DRIVER | {"referral_code": code, "phone": "0795550002",
-                         "name": "كبتنٌ رابع"},
+                         "name": "كابتنٌ رابع"},
         plate_number="AMM-9106",
     )
     ids = [

@@ -52,7 +52,7 @@ const RULE_FIELDS: { key: keyof CommitmentRule; label: string; clearable: boolea
   { key: "monthly_points_cap", label: "سقف شهريّ للنقاط", clearable: true },
   { key: "points_expiry_days", label: "صلاحيّة النقاط (أيام)", clearable: true },
   { key: "credit_expiry_days", label: "صلاحيّة الرصيد (أيام)", clearable: true },
-  { key: "max_accounts_per_device", label: "حسابات كبتن لكلّ جهاز", clearable: false },
+  { key: "max_accounts_per_device", label: "حسابات كابتن لكلّ جهاز", clearable: false },
 ];
 
 const STATUS_LABEL: Record<string, string> = { met: "تحقّق", not_met: "لم يتحقّق", disqualified: "أُسقط" };
@@ -157,7 +157,7 @@ function CommitmentSection({ onError, isAdmin }: { onError: (message: string) =>
         </div>
       ) : null}
 
-      <h3 className="mt-16 text-13 font-bold text-ink">تقرير الشهر لكلّ كبتن</h3>
+      <h3 className="mt-16 text-13 font-bold text-ink">تقرير الشهر لكلّ كابتن</h3>
       <ul className="mt-8 space-y-6">
         {report.map((row) => (
           <li key={row.driver_id} className="flex flex-wrap items-center justify-between gap-8 border-t border-line pt-6 text-12">
@@ -237,8 +237,8 @@ function LaunchSection({ onError, isAdmin }: { onError: (message: string) => voi
         {campaign ? <Badge tone={campaign.enabled ? "ok" : "muted"}>{campaign.enabled ? "مشتعلة" : "مطفأة"}</Badge> : null}
       </h2>
       <p className="mt-4 text-11 leading-snug text-muted">
-        كبتنٌ اعتُمد قبل الإطلاق: اشتراكٌ مجّانيٌّ من يوم الإطلاق. وبعده: من يوم اعتماده. بلا مالٍ، وبعمولة صفر إن اختير ذلك، ويُكتب كلُّ
-        منحٍ في السجلّ. وفي الفترة المجّانية يتحمّل الكبتنُ خصومَ عروض الركّاب بعد إقراره في التطبيق.
+        كابتنٌ اعتُمد قبل الإطلاق: اشتراكٌ مجّانيٌّ من يوم الإطلاق. وبعده: من يوم اعتماده. بلا مالٍ، وبعمولة صفر إن اختير ذلك، ويُكتب كلُّ
+        منحٍ في السجلّ. وفي الفترة المجّانية يتحمّل الكابتنُ خصومَ عروض الركّاب بعد إقراره في التطبيق.
       </p>
       {campaign ? (
         <>
@@ -277,7 +277,7 @@ function LaunchSection({ onError, isAdmin }: { onError: (message: string) => voi
           <li key={grant.driver_id}>
             {grant.driver_name ?? grant.driver_id.slice(0, 8)} · {grant.kind === "pre" ? "قبل الإطلاق" : "بعد الإطلاق"} ·{" "}
             {moment(grant.starts_at)} ← {moment(grant.ends_at)}
-            {grant.has_subscription ? "" : " · بلا اشتراك (مانعٌ عند الكبتن)"}
+            {grant.has_subscription ? "" : " · بلا اشتراك (مانعٌ عند الكابتن)"}
           </li>
         ))}
         {grants.length === 0 ? <li className="text-muted">لا منحَ بعد.</li> : null}
@@ -350,7 +350,7 @@ function RiderOffersSection({ onError, isAdmin }: { onError: (message: string) =
       </h2>
       <p className="mt-4 text-11 leading-snug text-muted">
         «خصم الافتتاح» و«أول رحلة» و«ادعُ صديقك» تُنشأ من «الكوبونات» بنوعها ومن يتحمّلها بعد الفترة المجّانية — وكلُّها مطفأةٌ حتى تُشعَل،
-        ولا يجتمع عرضان في رحلة. وفي فترة الكبتن المجّانية يتحمّل الكبتنُ الخصمَ إلزاماً. وتحت هذا: الإلغاءُ المجّانيّ وشارةُ «راكب مميّز»
+        ولا يجتمع عرضان في رحلة. وفي فترة الكابتن المجّانية يتحمّل الكابتنُ الخصمَ إلزاماً. وتحت هذا: الإلغاءُ المجّانيّ وشارةُ «راكب مميّز»
         وكوبوناتُ المحلّات (الخصمُ على المحلّ).
       </p>
       {perks ? (
@@ -414,9 +414,9 @@ function RiderOffersSection({ onError, isAdmin }: { onError: (message: string) =
         {coupons.length === 0 ? <li className="text-muted">لا كوبونات.</li> : null}
       </ul>
 
-      <h3 className="mt-16 text-13 font-bold text-ink">خصوم تحمّلها كبتن</h3>
+      <h3 className="mt-16 text-13 font-bold text-ink">خصوم تحمّلها كابتن</h3>
       <div className="mt-8 grid grid-cols-2 gap-10 md:grid-cols-3">
-        <Field name="cd_driver" label="معرّف الكبتن" dir="ltr" value={lookup.driver}
+        <Field name="cd_driver" label="معرّف الكابتن" dir="ltr" value={lookup.driver}
           onChange={(e) => setLookup({ ...lookup, driver: e.target.value.trim() })} />
         <Field name="cd_month" label="الشهر (YYYY-MM-01)" dir="ltr" value={lookup.month}
           onChange={(e) => setLookup({ ...lookup, month: e.target.value })} />

@@ -111,7 +111,7 @@ export function WomenNoCaptainT2({
             value: "widen" as const,
             icon: "search",
             title: tr("انتظري، نوسّع البحث"),
-            sub: tr("نبحث بين الكبتنات في دائرةٍ أوسع لدقائق أخرى"),
+            sub: tr("نبحث بين الكابتنات في دائرةٍ أوسع لدقائق أخرى"),
           },
         ]
       : []),
@@ -121,7 +121,7 @@ export function WomenNoCaptainT2({
             value: "later" as const,
             icon: "event_upcoming",
             title: tr("جدولي الرحلة لوقت لاحق"),
-            sub: tr("نبدأ البحث عن كبتنة قبل موعدك بعشر دقائق."),
+            sub: tr("نبدأ البحث عن كابتنة قبل موعدك بعشر دقائق."),
           },
         ]
       : []),
@@ -129,7 +129,7 @@ export function WomenNoCaptainT2({
       value: "anyCaptain",
       icon: "local_taxi",
       title: tr("اطلبي رحلة عادية"),
-      sub: tr("قد يكون السائق كبتناً رجلاً — لن نرسله إلا إن اخترتِ هذا."),
+      sub: tr("قد يكون السائق كابتناً رجلاً — لن نرسله إلا إن اخترتِ هذا."),
       warn: true,
     },
   ];
@@ -175,8 +175,8 @@ export function WomenNoCaptainT2({
           <Icon name="hourglass_top" />
         </span>
         <div>
-          <h3 className="t2-out-title">{tr("لا توجد كبتنة قريبة الآن")}</h3>
-          <p className="t2-wno-sub">{tr("بحثنا حولك ولم نجد كبتنةً متاحة. اختاري ما يناسبك:")}</p>
+          <h3 className="t2-out-title">{tr("لا توجد كابتنة قريبة الآن")}</h3>
+          <p className="t2-wno-sub">{tr("بحثنا حولك ولم نجد كابتنةً متاحة. اختاري ما يناسبك:")}</p>
         </div>
       </div>
       <div className="t2-wopts" role="radiogroup" aria-label={tr("اختاري ما يناسبك")}>
@@ -230,11 +230,11 @@ export function WomenPausedChoiceT2({
     <div className="t2-wpause" aria-busy={busy}>
       <p className="t2-wpause-line">
         <Icon name="woman" fill />
-        {tr("لم نطلب رحلتك — خدمةُ الكبتنات متوقّفةٌ الآن")}
+        {tr("لم نطلب رحلتك — خدمةُ الكابتنات متوقّفةٌ الآن")}
       </p>
       <div className="t2-wpause-actions">
         <button type="button" className="t2-cbtn is-grow t2-wpause-any" disabled={busy} onClick={onAnyCaptain}>
-          {tr("اطلبيها بأي كبتن")}
+          {tr("اطلبيها بأي كابتن")}
         </button>
         <button type="button" className="t2-cbtn is-grow soft" disabled={busy} onClick={onCancel}>
           {tr("ألغي الحجز")}
@@ -263,7 +263,7 @@ export function WomenApproachChipT2({
     return (
       <div className="t2 t2-trk-chip women">
         <Icon name="woman" fill />
-        {tr("وصلت الكبتنة")}
+        {tr("وصلت الكابتنة")}
       </div>
     );
   }
@@ -271,7 +271,7 @@ export function WomenApproachChipT2({
   return (
     <div className="t2 t2-trk-chip women">
       <Icon name="woman" fill />
-      {tr("الكبتنة على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
+      {tr("الكابتنة على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
       {minutes !== null ? tr(" · {0} د", { 0: minutes }) : ""}
     </div>
   );
@@ -279,7 +279,7 @@ export function WomenApproachChipT2({
 
 /** عنوانُ ورقة RW4 — مؤنّثاً كما رُسم. */
 export function womenApproachTitle(arrived: boolean): string {
-  return arrived ? tr("الكبتنة تنتظرك في نقطة الانطلاق") : tr("الكبتنة في الطريق إليك");
+  return arrived ? tr("الكابتنة تنتظرك في نقطة الانطلاق") : tr("الكابتنة في الطريق إليك");
 }
 
 /** **رمزُ الرحلة** (RW4، §٦٢-ج/٥) — بطاقةُ البرقوق كما رُسمت: «تطلبه منك الكبتنة قبل أن تركبي» وخاناتُه الأربع.
@@ -307,7 +307,7 @@ export function RideCodeCardT2({ ride }: { ride: Ride }) {
     <div className="t2-trk-code">
       <div className="t2-trk-code-main">
         <div className="t2-trk-code-title">{tr("رمز الرحلة")}</div>
-        <div className="t2-trk-code-sub">{tr("تطلبه منك الكبتنة قبل أن تركبي")}</div>
+        <div className="t2-trk-code-sub">{tr("تطلبه منك الكابتنة قبل أن تركبي")}</div>
       </div>
       <span className="t2-trk-code-num" dir="ltr" aria-label={tr("رمز الرحلة {0}", { 0: code.split("").join(" ") })}>
         {code}
@@ -339,7 +339,7 @@ export function WomenCaptainCardT2({ ride }: { ride: Ride }) {
               <span aria-hidden="true">·</span>
             </>
           ) : null}
-          {tr("كبتنة موثّقة")}
+          {tr("كابتنة موثّقة")}
         </div>
       </div>
       {vehicle ? (

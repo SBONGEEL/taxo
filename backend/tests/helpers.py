@@ -44,14 +44,14 @@ RIDER = {
 }
 DRIVER = {
     "phone": "0792222222",
-    "name": "كبتن الرحلات",
+    "name": "كابتن الرحلات",
     "password": "SuperSecret123",
     "country_code": "JO",
     "role": "driver",
 }
 OTHER_RIDER = RIDER | {"phone": "0793333333", "name": "راكب آخر"}
-SECOND_DRIVER = DRIVER | {"phone": "0794444444", "name": "كبتن ثانٍ"}
-THIRD_DRIVER = DRIVER | {"phone": "0795555555", "name": "كبتن ثالث"}
+SECOND_DRIVER = DRIVER | {"phone": "0794444444", "name": "كابتن ثانٍ"}
+THIRD_DRIVER = DRIVER | {"phone": "0795555555", "name": "كابتن ثالث"}
 
 # 1.000 + (10 × 0.500) + (20 × 0.100) = 8.000
 STUB_ROUTE = Route(distance_km=Decimal("10.000"), duration_min=Decimal("20.00"))
@@ -330,7 +330,7 @@ async def wait_for_offer(ride_id: str, driver_id: uuid.UUID | None = None) -> uu
             return None
         return offered
 
-    return await wait_until(_offered, message="لم يصل عرض الرحلة لأي كبتن")
+    return await wait_until(_offered, message="لم يصل عرض الرحلة لأي كابتن")
 
 
 async def _offer_or_gave_up(
@@ -361,9 +361,9 @@ async def _offer_or_gave_up(
         return None
 
     try:
-        return await wait_until(_seen, message="لم يصل عرض الرحلة لأي كبتن")
+        return await wait_until(_seen, message="لم يصل عرض الرحلة لأي كابتن")
     except AssertionError:
-        raise AssertionError(f"لم يصل عرض الرحلة لأي كبتن — والرحلةُ «{await _status()}»") from None
+        raise AssertionError(f"لم يصل عرض الرحلة لأي كابتن — والرحلةُ «{await _status()}»") from None
 
 
 async def wait_for_status(

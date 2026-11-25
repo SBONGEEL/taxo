@@ -113,7 +113,7 @@ async def parties(client: AsyncClient, session_factory) -> dict:
         {
             "phone": "+962795550190",
             "password": "Driver12345",
-            "name": "كبتنٌ آخر",
+            "name": "كابتنٌ آخر",
             "country_code": "JO",
             "role": "driver",
         },

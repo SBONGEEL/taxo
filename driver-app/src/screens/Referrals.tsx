@@ -206,7 +206,7 @@ export function ReferralsScreen() {
                         </span>
                         <div className="t2-ref-program-main">
                           <p className="t2-ref-program-title">
-                            {isDriver ? tr("سجّل كبتناً") : tr("سجّل راكباً")}
+                            {isDriver ? tr("سجّل كابتناً") : tr("سجّل راكباً")}
                           </p>
                           <p className="t2-ref-program-cond">
                             {isDriver
@@ -273,7 +273,7 @@ export function ReferralsScreen() {
                             {where.text}
                           </span>
                           <span className="t2-ref-row-kind">
-                            {isDriver ? tr("كبتن") : tr("راكب")}
+                            {isDriver ? tr("كابتن") : tr("راكب")}
                           </span>
                         </span>
                         {row.rewarded && row.reward_amount ? (

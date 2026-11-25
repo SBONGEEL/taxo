@@ -26,7 +26,7 @@ const PAGE = 50;
 
 const APP_LABEL: Record<string, string> = {
   rider: "تطبيق الراكب",
-  driver: "تطبيق الكبتن",
+  driver: "تطبيق الكابتن",
 };
 
 function Screenshot({ feedbackId }: { feedbackId: string }) {
@@ -148,7 +148,7 @@ export function FeedbackScreen() {
             options={[
               { key: "any", label: "الاثنان" },
               { key: "rider", label: "الراكب" },
-              { key: "driver", label: "الكبتن" },
+              { key: "driver", label: "الكابتن" },
             ]}
           />
         </div>

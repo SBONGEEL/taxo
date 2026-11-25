@@ -566,9 +566,9 @@ async def get_driver_stats(
     """
     ride = await rides_service.get_ride_for_party(session, ride_id, user)
     if ride.driver_id is None:
-        raise NotFound("لا كبتن لهذه الرحلة بعد")
+        raise NotFound("لا كابتن لهذه الرحلة بعد")
     if ride.status not in ACTIVE_DRIVER_STATUSES:
-        raise Conflict("انتهت الرحلة — بطاقة الكبتن تُقرأ أثناءها")
+        raise Conflict("انتهت الرحلة — بطاقة الكابتن تُقرأ أثناءها")
     return RideDriverStatsOut(
         completed_rides=await rides_service.completed_rides_of_driver(
             session, ride.driver_id
@@ -602,7 +602,7 @@ async def get_driver_photo(
     """
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
     if ride.driver_id is None:
-        raise NotFound("لا كبتن لهذه الرحلة بعد")
+        raise NotFound("لا كابتن لهذه الرحلة بعد")
     return await _driver_photo_response(session, ride)
 
 
@@ -813,7 +813,7 @@ async def counter_fare(
 ) -> CounterSentOut:
     """**«سعرٌ آخر»** (§٩٢-أ/٣) — من الكبتن المعروضةِ عليه رحلةُ «تفاوض» الآن، **ويصل الراكبَ بمهلة جوابه**."""
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     ride = await session.get(Ride, ride_id)
     if ride is None:
         raise NotFound("الرحلة غير موجودة")
@@ -988,7 +988,7 @@ async def refuse_parcel(
     if ride.ride_type != "parcel" or ride.status is not RideStatus.ARRIVED:
         raise Conflict("يُرفض الطردُ عند الاستلام وحدَه")
     ride = await rides_service.cancel_ride(
-        session, ride, by_role=UserRole.DRIVER, reason="رفض الكبتنُ الطردَ عند الاستلام",
+        session, ride, by_role=UserRole.DRIVER, reason="رفض الكابتنُ الطردَ عند الاستلام",
         reason_code=CancelReasonCode.PARCEL_REFUSED,
     )
     await session.commit()

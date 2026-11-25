@@ -77,7 +77,7 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
         <>
           {rows.length === 0 ? (
             <p className="ad-mini-empty">
-              لا مركبةَ مسجَّلةٌ بعد — ولا يُعتمد كبتنٌ بلا رخصةِ مركبةٍ مقبولة.
+              لا مركبةَ مسجَّلةٌ بعد — ولا يُعتمد كابتنٌ بلا رخصةِ مركبةٍ مقبولة.
             </p>
           ) : (
             <div className="flex flex-col gap-8">
@@ -251,7 +251,7 @@ export function SubscriptionSection({ driverId }: { driverId: string }) {
     <ProfileSection
       title="الاشتراك"
       icon="card_membership"
-      hint="لا يصل الكبتنَ عرضٌ بلا اشتراكٍ ساري — والتجديدُ صفٌّ جديدٌ يبدأ من نهاية ما قبله لا من اليوم."
+      hint="لا يصل الكابتنَ عرضٌ بلا اشتراكٍ ساري — والتجديدُ صفٌّ جديدٌ يبدأ من نهاية ما قبله لا من اليوم."
       load={load}
     >
       {(rows) => (
@@ -259,7 +259,7 @@ export function SubscriptionSection({ driverId }: { driverId: string }) {
           <MiniList
             rows={rows}
             keyOf={(row) => row.id}
-            empty="لا اشتراكَ لهذا الكبتن — ولا تصله عروضُ رحلات."
+            empty="لا اشتراكَ لهذا الكابتن — ولا تصله عروضُ رحلات."
             render={(row) => {
               const left = daysUntil(row.expires_at);
               return (
@@ -345,7 +345,7 @@ export function MoneyOwedSection({ driverId }: { driverId: string }) {
           <MiniList
             rows={debts}
             keyOf={(row) => row.id}
-            empty="لا مستحقَّ على هذا الكبتن."
+            empty="لا مستحقَّ على هذا الكابتن."
             render={(row) => (
               <MiniRow
                 title={money(row.amount, row.currency)}

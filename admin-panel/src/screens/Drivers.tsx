@@ -384,7 +384,7 @@ export function DriversScreen() {
   return (
     <Shell
       title="السائقون واعتماد الوثائق"
-      subtitle="لا يعمل كبتنٌ قبل المراجعة — والاعتماد يشترط رقماً مُثبتاً ومستنداتٍ مقبولة"
+      subtitle="لا يعمل كابتنٌ قبل المراجعة — والاعتماد يشترط رقماً مُثبتاً ومستنداتٍ مقبولة"
     >
       <div className="ad-filters">
         <Pills
@@ -429,7 +429,7 @@ export function DriversScreen() {
             <TableSearch
               value={search.text}
               onChange={search.setText}
-              placeholder="ابحث باسم الكبتن أو رقمه…"
+              placeholder="ابحث باسم الكابتن أو رقمه…"
             />
           }
           searching={search.searching}
@@ -922,7 +922,7 @@ function DriverDrawer({
             </>
           ) : (
             <p className="ad-box-hint">
-              الضبطُ لـ admin وحده — إعلانُ جنس الكبتن يقيّد أمان غيره
+              الضبطُ لـ admin وحده — إعلانُ جنس الكابتن يقيّد أمان غيره
               (القسم 13/8).
             </p>
           )}
@@ -1163,7 +1163,7 @@ function Inspection({
       <div className="ad-box">
         <p className="ad-box-state">{status}</p>
         <p className="ad-box-hint">
-          يراه الكبتن في «طلبك قيد المراجعة» ويصله إشعارٌ بالموعد. ولا يشترطه الاعتماد.
+          يراه الكابتن في «طلبك قيد المراجعة» ويصله إشعارٌ بالموعد. ولا يشترطه الاعتماد.
         </p>
         {canDecide ? (
           <div className="ad-box-fields">
@@ -1188,7 +1188,7 @@ function Inspection({
                 onClick={() =>
                   void run(
                     () => scheduleDriverInspection(row.driver_id, new Date(at).toISOString(), place.trim()),
-                    "حُدِّد موعدُ الفحص — وأُخبر الكبتن",
+                    "حُدِّد موعدُ الفحص — وأُخبر الكابتن",
                   )
                 }
               >
@@ -1436,7 +1436,7 @@ function IntercityPermitCard({ driverId, canDecide }: { driverId: string; canDec
       <h3 className="ad-dh">تصريح بين المدن</h3>
       <div className="ad-box">
         <p className="ad-box-hint">
-          لا يعلن الكبتنُ رحلةً بين المدن إلا بتصريحٍ سارٍ — يُمنح بعد فحص المركبة: 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ
+          لا يعلن الكابتنُ رحلةً بين المدن إلا بتصريحٍ سارٍ — يُمنح بعد فحص المركبة: 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ
           سارٍ. ويسقط وحدَه بانتهاء التأمين.
         </p>
 
@@ -1502,7 +1502,7 @@ function IntercityPermitCard({ driverId, canDecide }: { driverId: string; canDec
                   value={seats}
                   onChange={(event) => setSeats(event.target.value.replace(/[^0-9]/g, ""))}
                 />
-                <p className="ad-hint">من 4 إلى 8 — وهي أقصى ما يعرضه الكبتنُ في رحلته</p>
+                <p className="ad-hint">من 4 إلى 8 — وهي أقصى ما يعرضه الكابتنُ في رحلته</p>
               </div>
               <DateInput
                 label="التأمين ساري حتى"
@@ -1533,7 +1533,7 @@ function IntercityPermitCard({ driverId, canDecide }: { driverId: string; canDec
             </div>
           )
         ) : (
-          <p className="ad-box-hint">المنحُ والسحبُ لـ admin وحده — تصريحٌ يُعلن به الكبتنُ رحلاتٍ يدفع ركّابُها مقدّماً.</p>
+          <p className="ad-box-hint">المنحُ والسحبُ لـ admin وحده — تصريحٌ يُعلن به الكابتنُ رحلاتٍ يدفع ركّابُها مقدّماً.</p>
         )}
         <ErrorNote message={error} />
         <SuccessNote message={done} />

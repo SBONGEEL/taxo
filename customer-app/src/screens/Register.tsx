@@ -230,7 +230,7 @@ export function RegisterScreen() {
             name="name"
             autoComplete="name"
             value={name}
-            placeholder={tr("اسمك كما يظهر للكبتن")}
+            placeholder={tr("اسمك كما يظهر للكابتن")}
             invalid={Boolean(nameShort ?? errorOf("name"))}
             onBlur={() => setTouched(true)}
             onChange={(event) => setName(event.target.value)}
@@ -314,7 +314,7 @@ export function RegisterScreen() {
               onChange={(value) => setGender(gender === value ? null : value)}
             />
             {gender === "female" ? (
-              <AuthWomenNote>{tr("يتيح لكِ هذا طلب كبتنة عبر الخدمة النسائية، ويمكن تغييره من الحساب.")}</AuthWomenNote>
+              <AuthWomenNote>{tr("يتيح لكِ هذا طلب كابتنة عبر الخدمة النسائية، ويمكن تغييره من الحساب.")}</AuthWomenNote>
             ) : null}
           </AuthBlock>
         ) : null}

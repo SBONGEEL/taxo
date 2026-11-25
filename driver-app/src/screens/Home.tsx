@@ -633,7 +633,7 @@ export function HomeScreen() {
     <div className="relative h-full overflow-hidden bg-bg">
       {!tracking ? (
         <CaptainHome
-          name={user?.name ?? tr("كبتن")}
+          name={user?.name ?? tr("كابتن")}
           rating={
             profile && ratedAverage(profile.driver.rating_avg) ? Number(profile.driver.rating_avg).toFixed(1) : null
           }

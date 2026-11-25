@@ -124,7 +124,7 @@ async def test_a_person_is_never_matched_with_himself(client: AsyncClient, sessi
         anyone = await dispatch._eligible_levels(session, [driver_id], "economy")
         himself = await dispatch._eligible_levels(session, [driver_id], "economy", rider_user_id=uuid.UUID(captain["user_id"]))
         other = await dispatch._eligible_levels(session, [driver_id], "economy", rider_user_id=uuid.uuid4())
-    assert driver_id in anyone, "الكبتنُ غيرُ مؤهَّلٍ أصلاً — الاختبارُ لا يقيس شيئاً"
+    assert driver_id in anyone, "الكابتنُ غيرُ مؤهَّلٍ أصلاً — الاختبارُ لا يقيس شيئاً"
     assert driver_id not in himself
     assert driver_id in other
 

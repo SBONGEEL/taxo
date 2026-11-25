@@ -80,7 +80,7 @@ import { digits } from "@/lib/utils";
 
 const APP_LABEL: Record<ClientApp, string> = {
   rider: "الراكب",
-  driver: "الكبتن",
+  driver: "الكابتن",
   panel: "اللوحة",
 };
 
@@ -266,7 +266,7 @@ export function ErrorsScreen() {
           options={[
             { key: "all", label: "كل التطبيقات" },
             { key: "rider", label: "الراكب" },
-            { key: "driver", label: "الكبتن" },
+            { key: "driver", label: "الكابتن" },
             { key: "panel", label: "اللوحة" },
           ]}
         />

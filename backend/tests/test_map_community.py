@@ -67,7 +67,7 @@ async def test_a_road_report_needs_a_second_driver_or_the_admin(client: AsyncCli
     assert (await client.post("/map/road-reports", json=spot, headers=rider["headers"])).status_code == 403, "الراكبُ لا يبلّغ"
     made = (await client.post("/map/road-reports", json=spot, headers=first)).json()
     assert made["created"] is True and made["visible"] is False
-    assert (await client.get("/map/road-reports", headers=rider["headers"])).json() == [], "كبتنٌ واحدٌ لا يكفي"
+    assert (await client.get("/map/road-reports", headers=rider["headers"])).json() == [], "كابتنٌ واحدٌ لا يكفي"
     twice = (await client.post("/map/road-reports", json=spot, headers=first)).json()
     assert twice["counted"] is False and twice["confirmations"] == 1, "لا يؤكّد بلاغَه مرّتين"
     near = (await client.post("/map/road-reports", json=spot | {"lat": 31.9605}, headers=second)).json()
@@ -107,7 +107,7 @@ async def test_traffic_is_anonymous_and_needs_three_distinct_drivers(monkeypatch
         "لا هويّةَ في العيّنة"
     await traffic.aggregate(redis, CountryCode.JO, enabled=True)
     assert await redis.llen("traffic:raw:JO") == 0, "العيّناتُ تُمحى عند التجميع"
-    assert (await traffic.view(redis, CountryCode.JO))["features"] == [], "كبتنان ⇐ لا لون"
+    assert (await traffic.view(redis, CountryCode.JO))["features"] == [], "كابتنان ⇐ لا لون"
 
     await traffic.sample(redis, driver_id=drivers[2], country_code=CountryCode.JO, previous=(31.95, 35.9, now - 10),
                          lat=31.95, lng=35.9005, heading=90.0)

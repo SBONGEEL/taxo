@@ -46,7 +46,7 @@ FAR_AWAY = {"lat": 32.0060, "lng": 35.9106}
 SECOND_DRIVER = {
     "phone": "+962790000077",
     "password": "SecondCaptain1",
-    "name": "كبتنُ الرحلة الثانية",
+    "name": "كابتنُ الرحلة الثانية",
     "role": "driver",
     "country_code": "JO",
 }
@@ -460,7 +460,7 @@ async def test_waiving_closes_the_row_and_writes_no_ledger_entry(
 
     waived = await client.post(
         f"/admin/cancellation-charges/{charge.id}/waive",
-        json={"reason": "اعترض الراكب وأثبت أن الكبتن لم يتحرك"},
+        json={"reason": "اعترض الراكب وأثبت أن الكابتن لم يتحرك"},
         headers=admin_headers,
     )
     assert waived.status_code == 200, waived.text

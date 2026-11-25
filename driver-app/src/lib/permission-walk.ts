@@ -56,7 +56,7 @@ export const WALK: WalkStep[] = [
     key: "location",
     read: (s) => s.location,
     title: tr("الموقع"),
-    body: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق."),
+    body: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كابتن إلى نقطة الانطلاق."),
     kind: "dialog",
     cta: tr("اسمح بالموقع"),
     request: async () => {

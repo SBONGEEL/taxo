@@ -630,7 +630,7 @@ export function RegisterDocumentsScreen() {
               <p className="cap-after">
                 {missing.length > 0
                   ? tr("أكمل الوثائق الناقصة ليتفعّل الإرسال.")
-                  : tr("لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات.")}
+                  : tr("لا يُعتمد الكابتن قبل مراجعة الإدارة للمستندات.")}
               </p>
             </>
           )}

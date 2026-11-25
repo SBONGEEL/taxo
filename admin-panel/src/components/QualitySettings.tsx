@@ -59,14 +59,14 @@ export function QualitySettings({
   return (
     <section className="rounded-16 border border-line bg-surface p-18">
       <div className="mb-4 flex items-center justify-between gap-10">
-        <h2 className="text-14 font-bold text-ink">درجة جودة الكبتن</h2>
+        <h2 className="text-14 font-bold text-ink">درجة جودة الكابتن</h2>
         {row ? <Switch label="درجة الجودة" checked={enabled} disabled={disabled} onChange={setEnabled} /> : null}
       </div>
       <p className="mb-12 text-11 leading-snug text-muted">
-        درجةٌ من 0 إلى 100 لكلِّ كبتنٍ آخرَ 30 يوماً من خمسة مكوّنات بأوزانها أدناه، تُحسب كلَّ ليلة.{" "}
-        <b className="text-ink">والمفتاحُ يحكم أثرَها وحدَه</b>: حين يُشعل تقدّم الكبتنَ في ترتيب التوزيع بقدر «أمتار
+        درجةٌ من 0 إلى 100 لكلِّ كابتنٍ آخرَ 30 يوماً من خمسة مكوّنات بأوزانها أدناه، تُحسب كلَّ ليلة.{" "}
+        <b className="text-ink">والمفتاحُ يحكم أثرَها وحدَه</b>: حين يُشعل تقدّم الكابتنَ في ترتيب التوزيع بقدر «أمتار
         التقديم» × الدرجة ÷ 100 — <b className="text-ink">فالأقربُ يبقى الأوّلَ</b> بين المتباعدين — ويصل من دون العتبة
-        إشعارٌ بنصائح مرّةً في الأسبوع. والكبتنُ الجديدُ بلا بياناتٍ كافيةٍ لا يُعاقَب.
+        إشعارٌ بنصائح مرّةً في الأسبوع. والكابتنُ الجديدُ بلا بياناتٍ كافيةٍ لا يُعاقَب.
       </p>
       {row === null ? (
         <Spinner className="mx-auto" />

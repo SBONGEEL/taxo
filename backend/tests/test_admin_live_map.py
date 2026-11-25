@@ -148,7 +148,7 @@ async def test_rider_facing_paths_still_carry_no_identity(
     )
     assert nearby.status_code == 200, nearby.text
     seen = nearby.json()
-    assert seen, "الكبتن نفسه يجب أن يظهر للراكب — مجهَّلاً"
+    assert seen, "الكابتن نفسه يجب أن يظهر للراكب — مجهَّلاً"
     for row in seen:
         assert "name" not in row and "phone" not in row
         assert "driver_id" not in row and "plate_number" not in row

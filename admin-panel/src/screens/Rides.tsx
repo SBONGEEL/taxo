@@ -384,7 +384,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
         {ride.gender_preference !== "any" ? (
           <Badge tone="ink">
             طلبٌ مجنَّس ·{" "}
-            {ride.gender_preference === "female" ? "كبتنة" : "كبتن"}
+            {ride.gender_preference === "female" ? "كابتنة" : "كابتن"}
           </Badge>
         ) : null}
         {ride.cancel_reason_code === "gender_mismatch" ? (
@@ -492,7 +492,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
           <Row
             label="رسم الوقفات أثناء الرحلة"
             value={money(ride.pause_charge, ride.currency)}
-            hint="وقفاتٌ ضغطها الكبتن بعد الانطلاق (§5.10-ب)"
+            hint="وقفاتٌ ضغطها الكابتن بعد الانطلاق (§5.10-ب)"
           />
         ) : null}
         {/* **وفرقُ التقريب من سجلّه** (SPEC §٧٠-ج/٣ و٤) — داخلَ النهائيّة سطراً بذاته، **للكبتن أو عليه** ولا تمسّه العمولة.

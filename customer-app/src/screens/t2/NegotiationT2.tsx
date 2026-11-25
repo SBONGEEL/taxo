@@ -46,7 +46,7 @@ export function NegotiateBlockT2({
             {tr("تفاوض على السعر")}
           </span>
           <span className="t2-share-body">
-            {tr("يُعرض عرضُك على كبتنٍ واحدٍ في كلِّ مرّة — يقبله، أو يعرض سعراً آخر تقبله أو ترفضه.")}
+            {tr("يُعرض عرضُك على كابتنٍ واحدٍ في كلِّ مرّة — يقبله، أو يعرض سعراً آخر تقبله أو ترفضه.")}
           </span>
         </span>
         <Switch on={on} />
@@ -146,7 +146,7 @@ export function NegotiationTrackT2({ ride, onChanged }: { ride: Ride; onChanged:
           <Icon name="sell" />
           <div className="t2-callout-main">
             <div className="t2-callout-title">
-              {tr("{0} يعرض", { 0: counter.driver.name || tr("كبتن") })}{" "}{formatMoney(counter.amount, ride.currency)}
+              {tr("{0} يعرض", { 0: counter.driver.name || tr("كابتن") })}{" "}{formatMoney(counter.amount, ride.currency)}
             </div>
             <p className="t2-callout-body">
               {[counter.driver.vehicle, counter.driver.color].filter(Boolean).join(" · ")}
@@ -169,7 +169,7 @@ export function NegotiationTrackT2({ ride, onChanged }: { ride: Ride; onChanged:
                 disabled={busy}
                 onClick={() => void run(() => rejectCounter(ride.id))}
               >
-                {tr("ارفض — كبتنٌ آخر بعرضي")}
+                {tr("ارفض — كابتنٌ آخر بعرضي")}
               </button>
             </div>
           </div>

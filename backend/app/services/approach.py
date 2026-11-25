@@ -95,7 +95,7 @@ async def check(redis: Redis, *, driver_id: uuid.UUID, lat: float, lng: float) -
         await redis.delete(armed_key(driver_id))
         await _fire(redis, uuid.UUID(ride_id))
     except Exception:  # pragma: no cover - لا يُسقط بثَّ الموقع
-        logger.exception("تعذّر فحصُ «الكبتن يقترب» للكبتن %s", driver_id)
+        logger.exception("تعذّر فحصُ «الكابتن يقترب» للكابتن %s", driver_id)
 
 
 async def _fire(redis: Redis, ride_id: uuid.UUID) -> None:

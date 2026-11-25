@@ -20,5 +20,5 @@ async def _run() -> tuple[int, int]:
 @celery_app.task(name="app.tasks.driver_goals.sweep")
 def sweep() -> tuple[int, int]:
     result = run_async(_run())
-    logger.info("أهدافُ الكبتن: %s مكافأة، و%s تنبيهاً", *result)
+    logger.info("أهدافُ الكابتن: %s مكافأة، و%s تنبيهاً", *result)
     return result

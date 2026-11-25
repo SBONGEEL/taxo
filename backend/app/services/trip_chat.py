@@ -190,7 +190,7 @@ async def chat_enabled(session: AsyncSession, country: CountryCode) -> bool:
 
 
 #: **التطبيقان اللذان يحملان السطر** وتسميتُهما في رسالة الردّ — محادثةٌ بين راكبٍ وكبتنٍ تحفظ ما كتبه الاثنان
-_APP_LABELS = {PolicyApp.RIDER: "الراكب", PolicyApp.DRIVER: "الكبتن"}
+_APP_LABELS = {PolicyApp.RIDER: "الراكب", PolicyApp.DRIVER: "الكابتن"}
 
 
 async def require_published_line(session: AsyncSession, country: CountryCode, marker: str) -> None:

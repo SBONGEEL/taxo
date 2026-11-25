@@ -26,7 +26,7 @@ export function RoadReportButton({ position }: { position: Coordinates | null })
           ? tr("بلّغتَ عن هذا من قبل")
           : ack.visible
             ? tr("شكراً — البلاغُ ظاهرٌ الآن على الخريطة")
-            : tr("شكراً — يظهر حين يؤكّده كبتنٌ آخر"),
+            : tr("شكراً — يظهر حين يؤكّده كابتنٌ آخر"),
       );
     } catch {
       setNote(tr("تعذّر الإرسال"));

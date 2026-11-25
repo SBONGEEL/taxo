@@ -42,7 +42,7 @@ def _payload(phone: str) -> dict:
     return {
         "phone": phone,
         "password": "Driver12345",
-        "name": f"كبتن {phone[-4:]}",
+        "name": f"كابتن {phone[-4:]}",
         "country_code": "JO",
         "role": "driver",
     }

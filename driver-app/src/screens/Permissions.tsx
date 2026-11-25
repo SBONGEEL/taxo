@@ -99,7 +99,7 @@ export function PermissionsScreen() {
           <section className="t2-callout">
             <Icon name="info" fill className="muted" />
             <p className="t2-perm-msg">
-              {tr("هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا شيء هنا يُقرأ. افتحها من تطبيق الكبتن المثبَّت.")}
+              {tr("هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا شيء هنا يُقرأ. افتحها من تطبيق الكابتن المثبَّت.")}
 
             </p>
           </section>

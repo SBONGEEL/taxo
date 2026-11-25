@@ -73,7 +73,7 @@ export function ParcelOptionT2({
           {fetch ? tr("بيانات الغرض") : tr("بيانات الطرد")}
         </span>
         <span className="t2-share-body">
-          {fetch ? tr("اقرأ الشروط، واكتب الغرضَ ومن يسلّمه للكبتن.") : tr("اقرأ الشروط، واكتب المستلمَ ومن يدفع.")}
+          {fetch ? tr("اقرأ الشروط، واكتب الغرضَ ومن يسلّمه للكابتن.") : tr("اقرأ الشروط، واكتب المستلمَ ومن يدفع.")}
         </span>
       </span>
       <Icon name="chevron_left" className="t2-fo-open-go" />
@@ -156,7 +156,7 @@ export function ParcelSheetT2({
       value: "recipient_cash",
       icon: "payments",
       label: tr("المستلم يدفع نقداً عند التسليم"),
-      hint: tr("يسلّم الأجرةَ للكبتن بيده"),
+      hint: tr("يسلّم الأجرةَ للكابتن بيده"),
     },
   ];
 
@@ -207,7 +207,7 @@ export function ParcelSheetT2({
       {fetch ? (
         <p className="t2-note t2-pf-lead">
           <Icon name="inventory_2" />
-          {tr("يأخذ الكبتنُ غرضك من حيث تقول ويوصله إليك.")}
+          {tr("يأخذ الكابتنُ غرضك من حيث تقول ويوصله إليك.")}
         </p>
       ) : null}
 
@@ -257,7 +257,7 @@ export function ParcelSheetT2({
             />
           </AuthBlock>
           <div className="t2-pick-head">
-            <span className="t2-pick-title">{tr("من يسلّمه للكبتن؟")}</span>
+            <span className="t2-pick-title">{tr("من يسلّمه للكابتن؟")}</span>
           </div>
         </>
       ) : null}
@@ -267,7 +267,7 @@ export function ParcelSheetT2({
           value={name}
           maxLength={80}
           autoComplete="off"
-          placeholder={tr("الاسم كما يناديه الكبتن")}
+          placeholder={tr("الاسم كما يناديه الكابتن")}
           onChange={(event) => setName(event.target.value)}
         />
       </AuthBlock>
@@ -328,7 +328,7 @@ export function ParcelSheetT2({
       {/* **سطرُ الخصوصيّة** (أمرُ المالك ٢٠٢٦-١١-٢١) — وهو ما تفعله الخلفيةُ فعلاً: الرقمُ في أطوار القبول وحدَها (`PASSENGER_VISIBLE`) */}
       <p className="t2-note t2-fo-keep">
         <Icon name="visibility" />
-        {tr("يرى الكبتنُ الرقمَ أثناء هذا الطلب فقط، ويُخفى عنه بعد انتهائه.")}
+        {tr("يرى الكابتنُ الرقمَ أثناء هذا الطلب فقط، ويُخفى عنه بعد انتهائه.")}
       </p>
       <p className="t2-note t2-fo-keep">
         <Icon name="lock" />

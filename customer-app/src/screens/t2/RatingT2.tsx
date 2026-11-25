@@ -94,7 +94,7 @@ export function RatingT2Screen() {
     ),
   ];
   const payLabel = methods
-    .map((method) => (method === "cash" ? tr("كاش للكبتن") : PAYMENT_METHOD_LABEL[method]))
+    .map((method) => (method === "cash" ? tr("كاش للكابتن") : PAYMENT_METHOD_LABEL[method]))
     .join(" + ");
 
   /** سطورُ البطاقة — **تفصيلُ الأجرة كما جمّدته الخلفية** (§٦٢-د/٦): أسطرٌ مجموعُها الأجرةُ نفسُها، **وتحتها منفصلةً** ما ليس
@@ -192,7 +192,7 @@ export function RatingT2Screen() {
         </div>
       ) : null}
 
-      <div className="t2-r10-ask">{first ? tr("كيف كانت رحلتك مع {0}؟", { 0: first }) : tr("كيف كانت رحلتك مع الكبتن؟")}</div>
+      <div className="t2-r10-ask">{first ? tr("كيف كانت رحلتك مع {0}؟", { 0: first }) : tr("كيف كانت رحلتك مع الكابتن؟")}</div>
       <div className="t2-r10-stars" role="radiogroup" aria-label={tr("عدد النجوم")}>
         {[1, 2, 3, 4, 5].map((value) => (
           <button
@@ -243,12 +243,12 @@ export function RatingT2Screen() {
 
       {r.tip?.given ? (
         <p className="t2-r10-thanks">
-          {tr("شكرتَ الكبتن ببقشيش")}{" "}{formatMoney(r.tip.given.amount, r.tip.given.currency)}.
+          {tr("شكرتَ الكابتن ببقشيش")}{" "}{formatMoney(r.tip.given.amount, r.tip.given.currency)}.
         </p>
       ) : tipShown && r.tip ? (
         <div className="t2-r10-tip">
           <div className="t2-r10-tip-head">
-            <span className="t2-r10-tip-title">{tr("بقشيش للكبتن")}</span>
+            <span className="t2-r10-tip-title">{tr("بقشيش للكابتن")}</span>
             <span className="t2-r10-tip-note">{tr("يصله كاملاً")}</span>
           </div>
           <div className="t2-r10-tip-row">
@@ -275,7 +275,7 @@ export function RatingT2Screen() {
             ))}
           </div>
           {/* **ومن أين يُخصم يُقال** — كما في الشاشة القائمة: المحفظةُ قناتُه الوحيدة */}
-          <p className="t2-r10-tip-from">{tr("يُخصم من محفظتك ويصل الكبتن كاملاً — بلا أي خصم.")}</p>
+          <p className="t2-r10-tip-from">{tr("يُخصم من محفظتك ويصل الكابتن كاملاً — بلا أي خصم.")}</p>
           {r.chosenTip ? (
             <button
               type="button"

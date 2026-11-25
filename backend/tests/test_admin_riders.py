@@ -75,7 +75,7 @@ async def test_block_writes_an_audit_entry_with_its_reason(
 
     await client.post(
         f"/admin/users/{user_id}/block",
-        json={"reason": "احتيالٌ مثبت على كبتنين"},
+        json={"reason": "احتيالٌ مثبت على كابتنين"},
         headers=admin_headers,
     )
 

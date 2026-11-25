@@ -181,7 +181,7 @@ async def get_current_driver(
 ) -> Driver:
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise NotFound("ملف الكبتن غير موجود")
+        raise NotFound("ملف الكابتن غير موجود")
     return driver
 
 
@@ -226,7 +226,7 @@ async def broadcasting_driver(
             select(Driver).where(Driver.user_id == user_id)
         )
         if driver is None:
-            raise NotFound("ملف الكبتن غير موجود")
+            raise NotFound("ملف الكابتن غير موجود")
         return driver
 
     user = await get_current_user(session, credentials)
@@ -234,7 +234,7 @@ async def broadcasting_driver(
         raise PermissionDenied()
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise NotFound("ملف الكبتن غير موجود")
+        raise NotFound("ملف الكابتن غير موجود")
     return driver
 
 

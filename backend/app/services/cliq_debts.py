@@ -168,7 +168,7 @@ async def confirm_payment(
     test_accounts.require_real_money(owner, _NO_CLIQ_FOR_TEST)
     driver = await session.scalar(select(Driver).where(Driver.user_id == owner.id))
     if driver is None:  # pragma: no cover - مطالبةٌ بلا كبتن
-        raise NotFound("لا كبتن لهذه المطالبة")
+        raise NotFound("لا كابتن لهذه المطالبة")
 
     applied = await debts.apply_settlement(
         session, driver=driver, country=owner.country_code, amount=credited

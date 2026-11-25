@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="description" content="TAXO — تطبيق الكبتن" />
+    <meta name="description" content="TAXO — تطبيق الكابتن" />
     <meta name="theme-color" content="#0e1013" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -35,7 +35,7 @@
       rel="stylesheet"
     />
 
-    <title>TAXO — الكبتن</title>
+    <title>TAXO — الكابتن</title>
     <!-- **السِمة الوردية قبل أول إطار** (`DESIGN.md` §7.6): `index.css` وReact كلاهما
          في الحزمة المؤجَّلة، فبغير هذا السطر تُرسم الشاشةُ الترحيبية نهاريةً ثم
          تنقلب ليليةً — ومضةٌ في كل فتحة لمن اختار الليلي. ويقرأ نفس مفتاحَي
@@ -44,13 +44,13 @@
       (function () {
         try {
           var root = document.documentElement;
-          // **لا مبدّلَ سِمةٍ في تطبيق الكبتن**: ليليٌّ ثابتٌ بقرار
-          // `DESIGN.md` — كبتنٌ يعمل ساعاتٍ والشاشةُ في السيارة، وسِمةٌ تنقلب
+          // **لا مبدّلَ سِمةٍ في تطبيق الكابتن**: ليليٌّ ثابتٌ بقرار
+          // `DESIGN.md` — كابتنٌ يعمل ساعاتٍ والشاشةُ في السيارة، وسِمةٌ تنقلب
           // مع الغروب تُبيّض شاشتَه في نفق. و`class="dark"` مكتوبٌ على `<html>`
           // أصلاً، فلا يبقى إلا الوردية — **بمفتاحها الخاص بهذا التطبيق**
           if (localStorage.getItem("taxo.driver.pink.active") === "1")
             root.classList.add("pink");
-          // **واختيارُ الفاتح يُقرأ قبل أوّل رسم** (§٦٢/٨): الليليُّ افتراضٌ والكبتنُ يختار الفاتحَ من الإعدادات — وبغير هذا
+          // **واختيارُ الفاتح يُقرأ قبل أوّل رسم** (§٦٢/٨): الليليُّ افتراضٌ والكابتنُ يختار الفاتحَ من الإعدادات — وبغير هذا
           // السطر يُرسم إطارُ الإقلاع داكناً ثمّ ينقلب فاتحاً حين يُقلع React (`lib/theme.tsx` يقرأ المفتاحَ نفسَه)
           if (localStorage.getItem("taxo.driver.theme") === "light") {
             root.classList.remove("dark");
@@ -73,7 +73,7 @@
 
     <!-- **إطارُ الإقلاع = أوّلُ إطارٍ من الترحيب** (§٦٢/١ و/١٠): كانت هنا «الترحيبيةُ» القديمة (رسمُ TAXO وحلقتُه الدوّارة) تُرى
          قبل ترحيب TAXO 2.0 في كلِّ فتحة. وصار هنا ما يرسمه الترحيبُ في لحظته الأولى بعينه: خريطةُ عمّان تحت غطائها، **بمظهر
-         الكبتن من أوّل رسم** (السطرُ أعلاه)، والمسرحُ بالقياس نفسِه (`--boot-scale`) — فيحلّ الترحيبُ محلَّه حين يُركَّب بلا
+         الكابتن من أوّل رسم** (السطرُ أعلاه)، والمسرحُ بالقياس نفسِه (`--boot-scale`) — فيحلّ الترحيبُ محلَّه حين يُركَّب بلا
          قفزة (`lib/splash.ts` → `removeBootFrame`). والقيمُ نسخةٌ حرفيّةٌ من `welcome.css` و`taxo2/tokens.css` لأنهما في الحزمة
          المؤجَّلة — وهي الحالُ الوحيدةُ المسموحُ فيها بالنسخ. -->
     <style>
@@ -151,7 +151,7 @@
         <div class="bt-logo" aria-hidden="true">
           <div class="bt-xmark"><span><i></i></span><span><i></i></span></div>
           <div class="bt-word" dir="ltr">TA<span class="bt-xb"><span></span><span></span></span>O</div>
-          <span class="bt-badge">كبتن</span>
+          <span class="bt-badge">كابتن</span>
         </div>
       </div>
       <p class="bt-credit" dir="ltr">© OpenStreetMap</p>

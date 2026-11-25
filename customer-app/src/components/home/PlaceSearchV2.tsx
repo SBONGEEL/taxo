@@ -416,7 +416,7 @@ export function PlaceSearchV2({
                 >
                   <Icon name="timer" className="mark" />
                   <span className="t2-dest-main">
-                    <span className="t2-dest-title">{tr("بلا وجهة — تقولها للكبتن في الطريق")}</span>
+                    <span className="t2-dest-title">{tr("بلا وجهة — تقولها للكابتن في الطريق")}</span>
                   </span>
                 </button>
               ) : null}

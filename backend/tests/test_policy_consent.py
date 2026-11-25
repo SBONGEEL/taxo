@@ -186,7 +186,7 @@ async def test_driver_documents_do_not_satisfy_a_rider_registration(
         "/auth/register",
         json={
             "phone": "+962790000904",
-            "name": "وثائقُ كبتنٍ لراكب",
+            "name": "وثائقُ كابتنٍ لراكب",
             "password": "TaxoTest123",
             "country_code": "JO",
             "role": "rider",

@@ -163,13 +163,13 @@ function RequestsTab({
         headers={["صاحبها", "المبلغ", "الطريقة", "الغرض", "الطلب", "الحالة", ""]}
         rows={rows}
         keyOf={(row) => row.id}
-        empty={{ title: "لا طلبات", hint: "يظهر هنا كلُّ طلبِ دفعٍ من راكبٍ أو كبتن، من تقديمه حتى حسمه." }}
+        empty={{ title: "لا طلبات", hint: "يظهر هنا كلُّ طلبِ دفعٍ من راكبٍ أو كابتن، من تقديمه حتى حسمه." }}
         render={(row) => (
           <>
             <span className="min-w-0">
               <span className="block truncate text-11.5 text-ink">{row.user_name ?? "—"}</span>
               <span dir="ltr" className="block text-10.5 text-muted">
-                {row.user_phone ?? ""} · {row.owner_type === "driver" ? "كبتن" : "راكب"}
+                {row.user_phone ?? ""} · {row.owner_type === "driver" ? "كابتن" : "راكب"}
               </span>
             </span>
             <span>

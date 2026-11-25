@@ -229,7 +229,7 @@ export function MissionsLevels({
         <h2 className="mb-4 text-15 font-bold text-ink">الشارات</h2>
         <p className="mb-10 text-12 leading-relaxed text-muted">
           تقديرٌ إنسانيٌّ لما لا يُقاس — <b className="text-ink">ولا تدخل ترتيبَ
-          التوزيع بحال</b>. ومنحُها من صفحة الكبتن بسببٍ مكتوب يدخل سجلَّ التدقيق.
+          التوزيع بحال</b>. ومنحُها من صفحة الكابتن بسببٍ مكتوب يدخل سجلَّ التدقيق.
         </p>
         {isAdmin ? (
           <BadgeComposer onCreated={() => void load()} onError={onError} />
@@ -327,7 +327,7 @@ function LevelCard({
     <div className="rounded-13 border border-line p-12">
       <p className="text-13 font-bold text-ink">{LEVEL_LABEL[level]}</p>
       <p className="mt-2 text-11 text-muted">
-        {digits(String(count))} كبتناً
+        {digits(String(count))} كابتناً
       </p>
       <Field
         className="mt-8"

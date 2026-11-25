@@ -51,7 +51,7 @@ function refusal(row: Payment): string | null {
   if (row.status !== "confirmed")
     return "لا يُردّ إلا ما تأكّد قبضُه — هذه لم تُؤكَّد بعد";
   if (!REFUNDABLE.includes(row.method))
-    return "قبضه الكبتنُ بيده مباشرةً — لا تملك المنصّةُ ردَّه";
+    return "قبضه الكابتنُ بيده مباشرةً — لا تملك المنصّةُ ردَّه";
   return null;
 }
 
@@ -107,7 +107,7 @@ export function PaymentsScreen() {
           <TableSearch
             value={search.text}
             onChange={search.setText}
-            placeholder="اسمُ الراكب أو الكبتن، أو رقمُ أحدهما…"
+            placeholder="اسمُ الراكب أو الكابتن، أو رقمُ أحدهما…"
           />
         }
         searching={search.searching}
@@ -178,7 +178,7 @@ export function PaymentsScreen() {
               {open.method === "card"
                 ? "إلى البطاقة نفسِها عبر المزوّد — ولا قيدَ في دفتر الراكب، فمالُه لم يدخل رصيدَه."
                 : "إلى محفظة الراكب قيداً جديداً."}{" "}
-              ويُكتب على الكبتن قيدٌ مضادٌّ بصافي ما قُيّد له. والدفترُ لا يُعدَّل:
+              ويُكتب على الكابتن قيدٌ مضادٌّ بصافي ما قُيّد له. والدفترُ لا يُعدَّل:
               الردُّ قيدٌ لا محو.
             </p>
             <Field

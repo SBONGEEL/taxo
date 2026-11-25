@@ -49,7 +49,7 @@ async def test_rest_alone_keeps_a_driver_dispatchable(
     )
     assert nearby.status_code == 200, nearby.text
     assert len(nearby.json()) == 1, (
-        "كبتنٌ يبثّ عبر REST ولا يظهر للراكب — فالبديلُ طمأنينةٌ كاذبة"
+        "كابتنٌ يبثّ عبر REST ولا يظهر للراكب — فالبديلُ طمأنينةٌ كاذبة"
     )
 
     # ومفتاحُ الحضور موجود: هو ما يجعل موضعَه في الفهرس حيّاً لا بائتاً

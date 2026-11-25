@@ -84,11 +84,11 @@ const CTA: Record<PayableMethod, { label: string; note: string }> = {
   },
   cliq: {
     label: tr("ادفع بكليك"),
-    note: tr("تُحوّل على alias الكبتن ثم تُدخل رقم الحوالة — ويؤكد استلامها في تطبيقه."),
+    note: tr("تُحوّل على alias الكابتن ثم تُدخل رقم الحوالة — ويؤكد استلامها في تطبيقه."),
   },
   cash: {
     label: tr("سأدفع كاشاً"),
-    note: tr("سلّم المبلغ للكبتن — سيؤكد استلامه في تطبيقه."),
+    note: tr("سلّم المبلغ للكابتن — سيؤكد استلامه في تطبيقه."),
   },
 };
 
@@ -458,7 +458,7 @@ export function PaymentScreen() {
           <div className="t2-callout-main">
             <p className="t2-callout-title">{tr("مدفوعة من اشتراكك")}</p>
             <p className="t2-callout-body">
-              {tr("سعرُها المجمَّد دُفع مقدّماً مع اشتراكك في المشوار الثابت — لا شيءَ تدفعه هنا ولا للكبتن.")}
+              {tr("سعرُها المجمَّد دُفع مقدّماً مع اشتراكك في المشوار الثابت — لا شيءَ تدفعه هنا ولا للكابتن.")}
             </p>
           </div>
         </div>
@@ -489,10 +489,10 @@ export function PaymentScreen() {
                 <div className="t2-callout-main">
                   <p className="t2-callout-title">
                     {row.method === "cash"
-                      ? tr("سلّم {0} كاشاً للكبتن", { 0: formatMoney(row.amount, row.currency) })
+                      ? tr("سلّم {0} كاشاً للكابتن", { 0: formatMoney(row.amount, row.currency) })
                       : tr("{0} بقناة {1} بانتظار التأكيد", { 0: formatMoney(row.amount, row.currency), 1: PAYMENT_METHOD_LABEL[row.method] })}
                   </p>
-                  <p className="t2-callout-body">{tr("يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.")}</p>
+                  <p className="t2-callout-body">{tr("يكتمل دفعُ الرحلة حين يؤكد الكابتن استلامها في تطبيقه.")}</p>
                 </div>
               </div>
             ))}
@@ -507,11 +507,11 @@ export function PaymentScreen() {
           <Icon name="payments" />
           <div className="t2-callout-main">
             <p className="t2-callout-title">
-              {recipientCash ? tr("يدفعها المستلمُ نقداً للكبتن") : tr("يدفعها الراكبُ نقداً للكبتن")}
+              {recipientCash ? tr("يدفعها المستلمُ نقداً للكابتن") : tr("يدفعها الراكبُ نقداً للكابتن")}
             </p>
             <p className="t2-callout-body">
               {otherDue ? `${formatMoney(otherDue.amount, otherDue.currency)} — ` : ""}
-              {tr("لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها.")}
+              {tr("لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكابتن استلامها.")}
             </p>
           </div>
         </div>

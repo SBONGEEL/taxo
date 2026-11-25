@@ -79,7 +79,7 @@ async def test_the_offer_route_becomes_the_approach_without_a_second_call(
 
     mine = (await client.get(f"/rides/{ride['id']}/approach", headers=driver["headers"])).json()
     theirs = (await client.get(f"/rides/{ride['id']}/approach", headers=rider)).json()
-    assert mine["points"] == route["points"] and mine["steps"], "الكبتنُ يقرأ خطواتِه"
+    assert mine["points"] == route["points"] and mine["steps"], "الكابتنُ يقرأ خطواتِه"
     assert theirs["points"] == route["points"] and theirs["steps"] == [], "والراكبُ لا يقود"
     assert await _calls() == 1
 

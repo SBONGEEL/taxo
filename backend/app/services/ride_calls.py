@@ -109,7 +109,7 @@ class CallWindowClosed(Conflict):
     """**لا مكالمةَ خارج نافذة الرحلة** — قبل قبول الكبتن أو بعد انتهائها (§٦٦-أ/١)."""
 
     code = "call_window_closed"
-    message = "المكالمةُ متاحةٌ من قبول الكبتن حتى انتهاء الرحلة."
+    message = "المكالمةُ متاحةٌ من قبول الكابتن حتى انتهاء الرحلة."
 
 
 class CallBusy(Conflict):

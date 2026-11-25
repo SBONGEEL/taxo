@@ -49,7 +49,7 @@ async def _driver(client, session_factory, phone: str, plate: str) -> dict:
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": phone, "name": "كبتنُ التزامن"},
+        DRIVER | {"phone": phone, "name": "كابتنُ التزامن"},
         plate_number=plate,
         subscribed=False,
     )
@@ -87,7 +87,7 @@ async def test_two_requests_at_once_disburse_exactly_one(
 
     async with session_factory() as session:
         rows = list(await session.scalars(select(DriverAdvance)))
-        assert len(rows) == 1, "صفّان لكبتنٍ واحد — الفهرسُ الجزئيّ لم يحرس"
+        assert len(rows) == 1, "صفّان لكابتنٍ واحد — الفهرسُ الجزئيّ لم يحرس"
         credits = await session.scalar(
             select(func.count(WalletTransaction.id)).where(
                 WalletTransaction.owner_id == uuid.UUID(str(driver["user_id"])),

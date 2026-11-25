@@ -1720,7 +1720,7 @@ function ReportTab({ country, isAdmin, onError, onDone }: TabProps) {
         <ShopReport country={country} onError={onError} />
       </div>
       <div>
-        <p className="mb-8 text-13 font-semibold text-ink">المبيعات بحسب الكبتن</p>
+        <p className="mb-8 text-13 font-semibold text-ink">المبيعات بحسب الكابتن</p>
         <CaptainReport country={country} onError={onError} />
       </div>
       <InvoiceSellerCard country={country} onError={onError} onDone={onDone} />
@@ -1739,10 +1739,10 @@ function CaptainReport({ country, onError }: { country: CountryCode; onError: (m
   return (
     <Table
       columns="1.4fr 0.8fr 1fr 1.1fr 1.1fr"
-      headers={["الكبتن", "البطاقات", "استُعملت · لم تُستعمل", "القيمةُ الاسميّة", "ما دفعه"]}
+      headers={["الكابتن", "البطاقات", "استُعملت · لم تُستعمل", "القيمةُ الاسميّة", "ما دفعه"]}
       rows={rows}
       keyOf={(row) => row.driver_id}
-      empty={{ title: "لا مبيعاتِ كباتن بعد", hint: "يظهر هنا كلُّ كبتنٍ اشترى بطاقاتٍ ليبيعها — بعد ضبط خصم الكباتن وإشعال المفتاح." }}
+      empty={{ title: "لا مبيعاتِ كباتن بعد", hint: "يظهر هنا كلُّ كابتنٍ اشترى بطاقاتٍ ليبيعها — بعد ضبط خصم الكباتن وإشعال المفتاح." }}
       render={(row) => (
         <>
           <span className="min-w-0">
@@ -1806,7 +1806,7 @@ function CaptainDiscountCard({ country, isOwner, onError, onDone }: { country: C
         </span>
       </div>
       <p className="mt-6 text-11.5 text-muted">
-        يشتري الكبتنُ من تطبيقه دفعةً من محفظته بهذا الخصم، ويبيع كلَّ بطاقةٍ للراكب بقيمتها نقداً. لا يُفتح إلا بشرطين: هذا الخصمُ
+        يشتري الكابتنُ من تطبيقه دفعةً من محفظته بهذا الخصم، ويبيع كلَّ بطاقةٍ للراكب بقيمتها نقداً. لا يُفتح إلا بشرطين: هذا الخصمُ
         مضبوط، ومفتاحُ «بيعُ الكباتن لبطاقات TAXO» مشتعلٌ في «الإعدادات ← المفاتيح». السقفُ اليوميُّ والصلاحيةُ من إعدادات البيع أعلاه.
         والخصمُ يُجمَّد على كلِّ دفعة، فتغييرُه لا يمسّ ما بيع.
       </p>

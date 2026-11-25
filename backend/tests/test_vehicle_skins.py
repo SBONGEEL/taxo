@@ -287,7 +287,7 @@ async def test_the_blocked_reason_follows_the_contract_order(
         {
             "phone": "+962791700009",
             "password": "Driver12345",
-            "name": "كبتنٌ آخر",
+            "name": "كابتنٌ آخر",
             "country_code": "JO",
             "role": "driver",
         },
@@ -673,7 +673,7 @@ async def test_a_rare_skin_is_not_published_on_the_free_map(
     assert len(rows) == 2, rows
 
     shapes = {tuple(sorted(row.keys())) for row in rows}
-    assert len(shapes) == 1, "شكلان مختلفان للحمولة يفرّقان بين الكبتنين"
+    assert len(shapes) == 1, "شكلان مختلفان للحمولة يفرّقان بين الكابتنين"
     published = {row["skin"]["skin_id"] for row in rows}
     assert published == {str(fallback)}, "النادرةُ نُشرت — أو غاب حقلُها"
     assert all(row["skin"]["image_url"].endswith("/art/map") for row in rows)
@@ -715,7 +715,7 @@ async def test_the_ride_card_carries_the_real_skin_after_acceptance(
     response = await client.get(f"/rides/{ride['id']}", headers=rider["headers"])
     assert response.status_code == 200, response.text
     skin = response.json()["driver"]["skin"]
-    assert skin is not None, "بطاقةُ الكبتن بلا مركبة"
+    assert skin is not None, "بطاقةُ الكابتن بلا مركبة"
     assert skin["skin_id"] == str(rare)
     assert skin["scale_percent"] == 115
     assert skin["rotates"] is False

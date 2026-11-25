@@ -909,7 +909,7 @@ LEDGER_LABEL: dict[str, str] = {
     "withdrawal": "سحب",
     "refund": "استرداد",
     "subscription_payment": "اشتراك",
-    "rider_offer_share": "حصّةُ الكبتن من خصم عرض الراكب",
+    "rider_offer_share": "حصّةُ الكابتن من خصم عرض الراكب",
     "adjustment": "تسوية",
     "tip": "بقشيش مقبوض",
     "tip_payment": "بقشيش مدفوع",
@@ -920,10 +920,10 @@ LEDGER_LABEL: dict[str, str] = {
     "skin_purchase": "شراء زينة مركبة",
     "referral_bonus": "حافز إحالة",
     "guarantee_hold": "رسم ضمان محفوظ",
-    "guarantee_fee": "رسم ضمان للكبتن",
+    "guarantee_fee": "رسم ضمان للكابتن",
     "guarantee_refund": "ردّ رسم الضمان",
     "guarantee_penalty": "غرامة اعتذار عن حجز مضمون",
-    "guarantee_compensation": "تعويض اعتذار الكبتن",
+    "guarantee_compensation": "تعويض اعتذار الكابتن",
     "commute_prepay": "اشتراك المشوار الثابت",
     "commute_credit": "رصيدُ أيامٍ لم تُستعمل",
     "commute_incentive": "حافزُ المشوار الثابت",
@@ -944,7 +944,7 @@ LEDGER_LABEL: dict[str, str] = {
     "cross_transfer_in": "تحويل وارد من دولة أخرى",
     "cross_transfer_fee": "رسم تحويل بين الدول",
     # **ثمنُ بطاقات TAXO يشتريها الكبتنُ ليبيعها** (SPEC §١١٣-ب، `0189`) — مدينٌ من محفظة الكبتن
-    "card_purchase": "شراء بطاقات TAXO للبيع (كبتن)",
+    "card_purchase": "شراء بطاقات TAXO للبيع (كابتن)",
 }
 
 METHOD_LABEL: dict[str, str] = {
@@ -981,7 +981,7 @@ _STATUS_LABEL: dict[str, dict[str, str]] = {
     FinanceRowSource.DEBT.value: {"outstanding": "قائم", "settled": "سُدِّد", "written_off": "شُطب"},
     FinanceRowSource.CHARGE.value: {
         CancellationChargeStatus.PENDING.value: "لم يُحصَّل",
-        CancellationChargeStatus.SETTLED.value: "وصل الكبتن",
+        CancellationChargeStatus.SETTLED.value: "وصل الكابتن",
         CancellationChargeStatus.WAIVED.value: "أُعفي",
         CancellationChargeStatus.WRITTEN_OFF.value: "شُطب",
     },
@@ -989,7 +989,7 @@ _STATUS_LABEL: dict[str, dict[str, str]] = {
     FinanceRowSource.POSITION.value: {"confirmed": "الآن"},
 }
 
-ROLE_LABEL = {FinanceUserType.RIDER.value: "راكب", FinanceUserType.DRIVER.value: "كبتن"}
+ROLE_LABEL = {FinanceUserType.RIDER.value: "راكب", FinanceUserType.DRIVER.value: "كابتن"}
 
 
 def kind_label(source: str, kind: str) -> str:
@@ -1089,57 +1089,57 @@ _CATALOG: list[Metric] = [
         "captain_balances", "captains_owed", "المجموع",
         "مجموعُ أرصدة محافظ الكباتن الآن: كلُّ قيود `wallet_transactions` بمحفظة `driver` (موجبُها وسالبُها) لحسابات السوق، "
         "بلا حسابات التجربة — مالٌ يدين به TAXO لأصحابه.",
-        "كبتن", _plain(lambda s: _ledger(s, owner=WalletOwnerType.DRIVER, stock=True)),
+        "كابتن", _plain(lambda s: _ledger(s, owner=WalletOwnerType.DRIVER, stock=True)),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_balances_cliq", "captains_owed", "صرفٌ بكليك",
         "أرصدةُ الكباتن الذين في ملفّهم حسابُ كليك (`drivers.cliq_alias`) — قيودُ محافظهم كلُّها.",
-        "كبتن", _plain(lambda s: _captains_by_payout(s, cliq=True)),
+        "كابتن", _plain(lambda s: _captains_by_payout(s, cliq=True)),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_balances_other", "captains_owed", "صرفٌ بغير كليك",
         "أرصدةُ الكباتن بلا حسابِ كليك في ملفّهم — يُصرف لهم بحوالةٍ بنكية.",
-        "كبتن", _plain(lambda s: _captains_by_payout(s, cliq=False)),
+        "كابتن", _plain(lambda s: _captains_by_payout(s, cliq=False)),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_payable_now", "captains_owed", "يُصرف الآن",
-        "لكلِّ كبتن: ما طلب سحبَه ولم يُصرف (`withdrawal_requests` معلَّقاً أو معتمَداً) ومعه ما يستطيع طلبَه الآن — "
-        "الرصيدُ ناقصاً المحتجَز (`withdrawal_reserve_amount`) وما يحمله نقداً لكبتنٍ آخر، بقاعدة «المتاح للسحب» نفسِها. "
+        "لكلِّ كابتن: ما طلب سحبَه ولم يُصرف (`withdrawal_requests` معلَّقاً أو معتمَداً) ومعه ما يستطيع طلبَه الآن — "
+        "الرصيدُ ناقصاً المحتجَز (`withdrawal_reserve_amount`) وما يحمله نقداً لكابتنٍ آخر، بقاعدة «المتاح للسحب» نفسِها. "
         "والمحفظةُ المجمَّدة (`wallet_freezes`) لا يُصرف منها شيء. والحدُّ الأدنى للسحب لا يُقرأ هنا.",
-        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="payable_now", hold_days=ctx.hold_days),
+        "كابتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="payable_now", hold_days=ctx.hold_days),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_not_due", "captains_owed", "لم يحِن بعد",
-        "باقي الرصيد: المحتجَزُ بإعداد السوق (ويسقط عمّن أُلغي تفعيلُه) ورسومُ إلغاءٍ قبضها نقداً لكبتنٍ آخر ولم يحوّلها، "
+        "باقي الرصيد: المحتجَزُ بإعداد السوق (ويسقط عمّن أُلغي تفعيلُه) ورسومُ إلغاءٍ قبضها نقداً لكابتنٍ آخر ولم يحوّلها، "
         "ورصيدُ المحفظة المجمَّدة كلُّه.",
-        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="not_due", hold_days=ctx.hold_days),
+        "كابتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="not_due", hold_days=ctx.hold_days),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "captain_in_transit", "captains_owed", "قيد التحويل",
         "من «لم يحِن بعد»: أجرةُ رحلاتٍ دفعها الراكبُ عبر المنصّة (`ride_earning` ناقصاً عمولتَها على الرحلة نفسِها) لم تكمل مدّةَ السوق "
-        "(`wallet_settings.earnings_hold_days`) — في رصيد الكبتن ولا تُسحب بعد. وصفرُ الأيّام «فوري» فلا شيءَ هنا. "
+        "(`wallet_settings.earnings_hold_days`) — في رصيد الكابتن ولا تُسحب بعد. وصفرُ الأيّام «فوري» فلا شيءَ هنا. "
         "ومقصوصةٌ إلى الرصيد: ما خرج من المحفظة بعد الأجر خرج.",
-        "كبتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="in_transit", hold_days=ctx.hold_days),
+        "كابتن", lambda s, _side, ctx: _position_rows(s, ctx.reserve, part="in_transit", hold_days=ctx.hold_days),
         stock=True, sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     # ── ديونُ الكباتن — قائمٌ الآن
     Metric(
         "captain_debts", "captains_owing", "المجموع",
         "ما بقي من ديون العمولة القائمة الآن: `driver_debts.amount − collected` بحال `outstanding` في السوق — "
-        "عمولةُ رحلاتٍ قبض الكبتنُ مالَها بيده (كاش أو كليك).",
-        "كبتن", _plain(lambda s: _debts(s, outstanding=True)),
+        "عمولةُ رحلاتٍ قبض الكابتنُ مالَها بيده (كاش أو كليك).",
+        "كابتن", _plain(lambda s: _debts(s, outstanding=True)),
         stock=True, sides=DRIVERS, methods=_DIRECT_METHODS,
     ),
     Metric(
         "captain_debts_over_ceiling", "captains_owing", "فوق السقف",
         "ديونُ الكباتن الذين قائمُهم كلُّه أكبرُ من سقف السوق (`payment_settings.driver_debt_ceiling`، و`>` كالحجب نفسِه). "
         "وسوقٌ بلا سقفٍ لا أحدَ فيه فوقه.",
-        "كبتن", lambda s, _side, ctx: _debts(s, outstanding=True, drivers=_over_ceiling(s, ctx.ceiling)),
+        "كابتن", lambda s, _side, ctx: _debts(s, outstanding=True, drivers=_over_ceiling(s, ctx.ceiling)),
         stock=True, sides=DRIVERS, methods=_DIRECT_METHODS, warn=True,
     ),
     # ── أرصدةُ الركّاب
@@ -1152,7 +1152,7 @@ _CATALOG: list[Metric] = [
     # ── الشحن
     Metric(
         "topups", "topups", "المجموع",
-        "قيودُ `topup` في الفترة — للراكب والكبتن — بقناتها من صفِّ مصدرها (طلبُ شحنٍ يدويّ أو طلبُ مزوّد).",
+        "قيودُ `topup` في الفترة — للراكب والكابتن — بقناتها من صفِّ مصدرها (طلبُ شحنٍ يدويّ أو طلبُ مزوّد).",
         "شحنة", _plain(lambda s: _topups(s, None)),
         methods=frozenset({FinanceMethod.CLIQ, FinanceMethod.CARD, FinanceMethod.CASH}), statuses=LEDGER_STATUSES,
         default_side=FinanceUserType.RIDER,
@@ -1209,14 +1209,14 @@ _CATALOG: list[Metric] = [
     # ── العمولة
     Metric(
         "commission_collected", "commission", "المحصَّلة",
-        "قيودُ `commission` في الفترة (مدينةٌ على محفظة الكبتن، وتُعرض موجبة): عمولةُ رحلات المحفظة والبطاقة، "
-        "وما حُصِّل من رصيده لدَينٍ قديم. ولا يدخلها ما سدّده الكبتنُ بكليك خارج المحفظة — لا عمودَ يحمل مبلغَه الواصل.",
+        "قيودُ `commission` في الفترة (مدينةٌ على محفظة الكابتن، وتُعرض موجبة): عمولةُ رحلات المحفظة والبطاقة، "
+        "وما حُصِّل من رصيده لدَينٍ قديم. ولا يدخلها ما سدّده الكابتنُ بكليك خارج المحفظة — لا عمودَ يحمل مبلغَه الواصل.",
         "قيد", _plain(lambda s: _ledger(s, types=(WalletTransactionType.COMMISSION,), sign=-1)),
         sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
     Metric(
         "commission_refunded", "commission", "رُدّت مع الاسترداد",
-        "لكلِّ دفعةٍ صارت `refunded` في الفترة (بوقت آخر تعديلٍ لصفّها): `payments.amount` الذي عاد للراكب ناقصاً عكسَ أجر الكبتن "
+        "لكلِّ دفعةٍ صارت `refunded` في الفترة (بوقت آخر تعديلٍ لصفّها): `payments.amount` الذي عاد للراكب ناقصاً عكسَ أجر الكابتن "
         "(`adjustment` بمفتاح `refund-earning:`) — العمولةُ التي ردّها TAXO ولا قيدَ يسمّيها. سالبة.",
         "دفعة", _plain(_commission_returned),
         sides=DRIVERS,
@@ -1229,7 +1229,7 @@ _CATALOG: list[Metric] = [
     ),
     Metric(
         "commission_accrued_direct", "commission", "المستحقّة على الكاش وكليك",
-        "صفوفُ `driver_debts` المكتوبة في الفترة بمبلغها كاملاً — عمولةُ رحلاتٍ قبض الكبتنُ أجرتَها بيده، "
+        "صفوفُ `driver_debts` المكتوبة في الفترة بمبلغها كاملاً — عمولةُ رحلاتٍ قبض الكابتنُ أجرتَها بيده، "
         "حُصِّلت بعدها أم بقيت.",
         "رحلة", _plain(lambda s: _debts(s, outstanding=False)),
         sides=DRIVERS, methods=_DIRECT_METHODS,
@@ -1238,12 +1238,12 @@ _CATALOG: list[Metric] = [
     Metric(
         "fee_airport", "fees", "المطار",
         "رسمُ المطار داخل أجور الرحلات المكتملة في الفترة: `rides.captain_fees_at_ride` لرحلةٍ تمسّ مرفقاً وليست طرداً، "
-        "وسطرُ `airport_fee` من تفصيل الأجرة لطردٍ إلى مطار. يصل الكبتنَ كاملاً.",
+        "وسطرُ `airport_fee` من تفصيل الأجرة لطردٍ إلى مطار. يصل الكابتنَ كاملاً.",
         "رحلة", _side(lambda s, side: _ride_fee(s, side, part="airport_fee")),
     ),
     Metric(
         "fee_guarantee", "fees", "الضمان",
-        "قيودُ `guarantee_fee` في الفترة — رسمُ الحجز المضمون حين وصل الكبتنَ بعد رحلته (المحفوظُ المردودُ لا يدخلها).",
+        "قيودُ `guarantee_fee` في الفترة — رسمُ الحجز المضمون حين وصل الكابتنَ بعد رحلته (المحفوظُ المردودُ لا يدخلها).",
         "حجز", _plain(lambda s: _ledger(s, types=(WalletTransactionType.GUARANTEE_FEE,))),
         sides=DRIVERS, statuses=LEDGER_STATUSES,
     ),
@@ -1254,7 +1254,7 @@ _CATALOG: list[Metric] = [
     ),
     Metric(
         "fee_cancellation", "fees", "الإلغاء",
-        "رسومُ `ride_cancellation_charges` المكتوبة في الفترة بحال `settled` أو `pending` — ما وصل الكبتنَ وما يُطلب بعد؛ "
+        "رسومُ `ride_cancellation_charges` المكتوبة في الفترة بحال `settled` أو `pending` — ما وصل الكابتنَ وما يُطلب بعد؛ "
         "والتفصيلُ بالحال. والمُعفى والمشطوبُ في سطرهما لا هنا: لم يُحصَّلا ولن يُحصَّلا.",
         "رسم", _side(lambda s, side: _cancellation_charges(s, side, statuses=_CHARGES_DUE)),
         default_side=FinanceUserType.RIDER,
@@ -1298,7 +1298,7 @@ _CATALOG: list[Metric] = [
     ),
     Metric(
         "referral_bonuses", "discounts", "مكافآتُ الإحالة",
-        "قيودُ `referral_bonus` في الفترة — للراكب والكبتن، يتحمّلها TAXO.",
+        "قيودُ `referral_bonus` في الفترة — للراكب والكابتن، يتحمّلها TAXO.",
         "قيد", _plain(lambda s: _ledger(s, types=(WalletTransactionType.REFERRAL_BONUS,))),
         statuses=LEDGER_STATUSES,
     ),
@@ -1329,7 +1329,7 @@ _CATALOG: list[Metric] = [
     ),
     Metric(
         "adjustments", "refunds", "تصحيحاتُ المشرفين",
-        "قيودُ `adjustment` في الفترة بإشارتها — إلا عكسَ أجر الكبتن عند الاسترداد (البطاقةُ التالية). "
+        "قيودُ `adjustment` في الفترة بإشارتها — إلا عكسَ أجر الكابتن عند الاسترداد (البطاقةُ التالية). "
         "وكاتبُها اليومَ بابُ التصحيح في اللوحة وحدَه. والتفصيلُ: إضافةٌ وخصم.",
         "قيد",
         _plain(
@@ -1347,8 +1347,8 @@ _CATALOG: list[Metric] = [
         statuses=LEDGER_STATUSES, breakdown="sign",
     ),
     Metric(
-        "earning_reversals", "refunds", "عكسُ أجر الكبتن عند الاسترداد",
-        "قيودُ `adjustment` السالبة التي يكتبها ردُّ دفعةٍ على محفظة الكبتن (صافي ما قُيّد له) — بإشارتها.",
+        "earning_reversals", "refunds", "عكسُ أجر الكابتن عند الاسترداد",
+        "قيودُ `adjustment` السالبة التي يكتبها ردُّ دفعةٍ على محفظة الكابتن (صافي ما قُيّد له) — بإشارتها.",
         "قيد",
         _plain(
             lambda s: _ledger(
@@ -1366,7 +1366,7 @@ for _type in WalletTransactionType:
     _CATALOG.append(
         Metric(
             f"ledger.{_type.value}", "ledger", LEDGER_LABEL.get(_type.value, _type.value),
-            f"قيودُ `{_type.value}` في الفترة بإشارتها كما في الدفتر — للراكب والكبتن.",
+            f"قيودُ `{_type.value}` في الفترة بإشارتها كما في الدفتر — للراكب والكابتن.",
             "قيد",
             (lambda t: _plain(lambda s: _ledger(s, types=(t,))))(_type),
             statuses=LEDGER_STATUSES,

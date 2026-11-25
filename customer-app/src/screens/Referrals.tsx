@@ -175,7 +175,7 @@ export function ReferralsScreen() {
                         <Icon name={isDriver ? "local_taxi" : "person"} />
                       </span>
                       <div className="t2-prog-main">
-                        <p className="t2-prog-title">{isDriver ? tr("سجّل كبتناً") : tr("سجّل راكباً")}</p>
+                        <p className="t2-prog-title">{isDriver ? tr("سجّل كابتناً") : tr("سجّل راكباً")}</p>
                         <p className="t2-prog-cond">
                           {isDriver
                             ? tr("يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}", { 0: countOf(program.required_rides, RIDES, true) })
@@ -230,7 +230,7 @@ export function ReferralsScreen() {
                     </span>
                     <div className="t2-ref-main">
                       <p className={`t2-ref-stage ${where.tone}`}>{where.text}</p>
-                      <p className="t2-ref-who">{row.referral_type === "driver" ? tr("كبتن") : tr("راكب")}</p>
+                      <p className="t2-ref-who">{row.referral_type === "driver" ? tr("كابتن") : tr("راكب")}</p>
                     </div>
                     {row.rewarded && row.reward_amount ? (
                       <Amount value={row.reward_amount} currency={row.reward_currency ?? currency ?? ""} />

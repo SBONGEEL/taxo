@@ -86,7 +86,7 @@ async def main_async(*, write: bool, session_factory=SessionLocal) -> list[str]:
             await session.flush()
             await audit.record(session, actor=None, action=AuditAction.CREATE, entity_type="subscription_offer",
                                entity_id=offer.id, details={"country_code": COUNTRY.value, "name": OFFER_NAME, "reason": REASON})
-            lines.append(f"«{OFFER_NAME}»: ١٠٠٪ على الأسبوعيّة · للكبتن الجديد مرّةً · عمولةٌ صفر — يُنشأ")
+            lines.append(f"«{OFFER_NAME}»: ١٠٠٪ على الأسبوعيّة · للكابتن الجديد مرّةً · عمولةٌ صفر — يُنشأ")
         else:
             lines.append(f"«{OFFER_NAME}»: قائمٌ — لا يُمسّ")
         if write:

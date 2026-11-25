@@ -53,7 +53,7 @@ async def create(
 ) -> AppFeedback:
     """يكتب ملاحظةً — **والحدُّ قبل الملفّ**: من تجاوز نصيبَه لا يُكتب له شيءٌ على القرص."""
     if app not in APPS:
-        raise InvalidInput("التطبيقُ راكبٌ أو كبتن", field="app")
+        raise InvalidInput("التطبيقُ راكبٌ أو كابتن", field="app")
     text = (message or "").strip()
     if not text:
         raise InvalidInput("اكتب ملاحظتك", field="message")

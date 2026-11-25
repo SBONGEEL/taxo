@@ -76,14 +76,14 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
           <TableSearch
             value={search.text}
             onChange={search.setText}
-            placeholder="اسمُ الكبتن أو رقمُه…"
+            placeholder="اسمُ الكابتن أو رقمُه…"
           />
         }
         searching={search.searching}
         noResults={NO_RESULTS}
         height="compact"
         columns="1fr 0.9fr 0.9fr 0.8fr 0.9fr 1.6fr"
-        headers={["الكبتن", "المبلغ", "المتبقّي", "الحالة", "المهلة", ""]}
+        headers={["الكابتن", "المبلغ", "المتبقّي", "الحالة", "المهلة", ""]}
         rows={rows}
         keyOf={(row) => row.id}
         empty={{ title: "لا سلف", hint: "لم تُصرف سلفةٌ بعد." }}

@@ -69,28 +69,28 @@ logger = logging.getLogger(__name__)
 # وحده: `ride_offer` له دالته (أولوية عالية)، وأحداثُ انقطاع الكبتن تخص
 # شاشةً مفتوحة أثناء رحلة جارية.
 RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
-    RideEvent.DRIVER_ASSIGNED: ("تم قبول رحلتك", "الكبتن في طريقه إلى نقطة الانطلاق"),
-    RideEvent.DRIVER_ARRIVED: ("وصل الكبتن", "الكبتن بانتظارك في نقطة الانطلاق"),
+    RideEvent.DRIVER_ASSIGNED: ("تم قبول رحلتك", "الكابتن في طريقه إلى نقطة الانطلاق"),
+    RideEvent.DRIVER_ARRIVED: ("وصل الكابتن", "الكابتن بانتظارك في نقطة الانطلاق"),
     RideEvent.RIDE_STARTED: ("بدأت الرحلة", "رحلة موفقة"),
     RideEvent.RIDE_COMPLETED: ("انتهت الرحلة", "شاشة الدفع بانتظارك"),
     RideEvent.RIDE_CANCELLED: ("أُلغيت الرحلة", "تم إلغاء الرحلة"),
     RideEvent.NO_DRIVER_FOUND: (
-        "لم نجد كبتناً متاحاً",
-        "لم يقبل أي كبتن الطلب — حاول مرة أخرى",
+        "لم نجد كابتناً متاحاً",
+        "لم يقبل أي كابتن الطلب — حاول مرة أخرى",
     ),
     # المحطات الوسيطة (المرحلة 12-ب). و`stop_wait_exceeded` **ليس هنا**: نصُّه
     # يختلف بين الطرفين — الراكبُ يُقال له إن العدّاد صار يُحتسب، والكبتنُ إن
     # له مخرجاً — فبابُه `publish_stop_wait_exceeded` كما لانقضاء مهلة كليك
-    RideEvent.STOP_REACHED: ("وصل الكبتن إلى المحطة", "بانتظارك عند المحطة"),
+    RideEvent.STOP_REACHED: ("وصل الكابتن إلى المحطة", "بانتظارك عند المحطة"),
     RideEvent.STOP_RESUMED: ("استُؤنفت الرحلة", "في الطريق إلى الوجهة التالية"),
 }
 
 # **«أحضر غرضي» يقول للراكب ما يقع على غرضه** (SPEC §٧٢-ج/١: «إشعارٌ عند الاستلام وعند التسليم») — الراكبُ ليس عند نقطة الانطلاق
 # ليُقال له «الكبتن بانتظارك» ولا «رحلة موفقة»: **الاستلامُ هو بدءُ الرحلة، والتسليمُ انتهاؤها**. وما ليس هنا يُقال بنصّ الرحلة
 FETCH_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
-    RideEvent.DRIVER_ASSIGNED: ("قَبِل كبتنٌ طلبك", "في طريقه إلى مكان غرضك"),
-    RideEvent.DRIVER_ARRIVED: ("وصل الكبتن إلى مكان غرضك", "بانتظار من يسلّمه الغرض"),
-    RideEvent.RIDE_STARTED: ("استلم الكبتن غرضك", "في الطريق إليك"),
+    RideEvent.DRIVER_ASSIGNED: ("قَبِل كابتنٌ طلبك", "في طريقه إلى مكان غرضك"),
+    RideEvent.DRIVER_ARRIVED: ("وصل الكابتن إلى مكان غرضك", "بانتظار من يسلّمه الغرض"),
+    RideEvent.RIDE_STARTED: ("استلم الكابتن غرضك", "في الطريق إليك"),
     RideEvent.RIDE_COMPLETED: ("وصل غرضك", "شاشة الدفع بانتظارك"),
 }
 
@@ -310,7 +310,7 @@ async def _rich_driver_data(session: AsyncSession, ride: Ride) -> dict[str, str]
             )
         ).first()
     except Exception:  # pragma: no cover - يعتمد على عطل قاعدة
-        logger.exception("تعذّر جمعُ بطاقة الكبتن للإشعار الغنيّ %s", ride.id)
+        logger.exception("تعذّر جمعُ بطاقة الكابتن للإشعار الغنيّ %s", ride.id)
         return {}
     signed = create_push_photo_token(str(ride.id), str(ride.driver_id))
     data = {
@@ -666,7 +666,7 @@ async def publish_cliq_confirmation_expired(
         redis,
         user_id=rider_user_id,
         message=PushMessage(
-            title="لم يؤكّد الكبتن حوالتك",
+            title="لم يؤكّد الكابتن حوالتك",
             body=(
                 f"{amount_text(payment.amount, payment.currency)} {payment.currency.value} — "
                 "انتقلت الدفعة إلى الإدارة للفصل فيها."
@@ -881,7 +881,7 @@ async def publish_payment_confirmed(
         user_id=rider_id,
         message=PushMessage(
             title="اكتمل دفع رحلتك",
-            body="أكّد الكبتنُ استلام المبلغ — شكراً لك.",
+            body="أكّد الكابتنُ استلام المبلغ — شكراً لك.",
             data={
                 "type": "payment_confirmed",
                 "ride_id": str(payment.ride_id),
@@ -1175,8 +1175,8 @@ async def publish_booking_no_driver(
         redis,
         user_id=rider_id,
         message=PushMessage(
-            title="لم نجد كبتناً لحجزك",
-            body="لم يقبل أيُّ كبتنٍ رحلتَك المجدولة. جرّب الطلبَ الآن.",
+            title="لم نجد كابتناً لحجزك",
+            body="لم يقبل أيُّ كابتنٍ رحلتَك المجدولة. جرّب الطلبَ الآن.",
             data={
                 "type": "booking_no_driver",
                 "booking_id": str(booking_id),
@@ -1203,7 +1203,7 @@ async def publish_booking_women_paused(
         user_id=rider_id,
         message=PushMessage(
             title="لم نطلب رحلتك المجدولة",
-            body="خدمةُ الكبتنات متوقّفةٌ الآن. اختاري: رحلةٌ بأي كبتن، أو إلغاءُ الحجز بلا رسم.",
+            body="خدمةُ الكابتنات متوقّفةٌ الآن. اختاري: رحلةٌ بأي كابتن، أو إلغاءُ الحجز بلا رسم.",
             data={
                 "type": "booking_women_paused",
                 "booking_id": str(booking_id),
@@ -1233,7 +1233,7 @@ async def publish_booking_preference_dropped(
         user_id=rider_id,
         message=PushMessage(
             title="طُلبت رحلتك بلا تفضيل",
-            body="خدمةُ الكبتنات غير مفعّلة الآن، فطُلبت رحلتُك من أي كبتنٍ متاح.",
+            body="خدمةُ الكابتنات غير مفعّلة الآن، فطُلبت رحلتُك من أي كابتنٍ متاح.",
             data={
                 "type": "booking_preference_dropped",
                 "booking_id": str(booking_id),
@@ -1251,7 +1251,7 @@ async def publish_driver_approaching(session: AsyncSession, redis: Redis, ride: 
         redis,
         user_id=ride.rider_id,
         message=PushMessage(
-            title="كبتنُك يقترب",
+            title="كابتنُك يقترب",
             body="على وشك الوصول إلى نقطة الانطلاق — استعدّ.",
             data={"type": RideEvent.DRIVER_APPROACHING.value, "ride_id": str(ride.id)},
         ),
@@ -1273,7 +1273,7 @@ async def publish_driver_approved(
         user_id=user_id,
         message=PushMessage(
             title="اعتُمد حسابك",
-            body="أصبحتَ كبتناً في تاكسو — اشترك لتبدأ استقبال الطلبات.",
+            body="أصبحتَ كابتناً في تاكسو — اشترك لتبدأ استقبال الطلبات.",
             data={"type": "driver_approved"},
         ),
     )
@@ -1559,11 +1559,11 @@ async def publish_cancellation_carried(
     # محفظتك» أوّلاً يتوقف عندها
     body = (
         "شكراً لك — نقلتَ لزميلك مالَه. استلمتَ مع الأجرة مبلغاً مستوفىً "
-        "لكبتنٍ آخر، وحُوِّل من محفظتك إليه."
+        "لكابتنٍ آخر، وحُوِّل من محفظتك إليه."
         if transferred
         else (
             "شكراً لك — بيدك مالُ زميلك. استلمتَ مع الأجرة مبلغاً مستوفىً "
-            "لكبتنٍ آخر ولم يكفِ رصيدُك لتحويله، فاشحن محفظتك ليصله."
+            "لكابتنٍ آخر ولم يكفِ رصيدُك لتحويله، فاشحن محفظتك ليصله."
         )
     )
     await _safe_notify(
@@ -1571,7 +1571,7 @@ async def publish_cancellation_carried(
         redis,
         user_id=driver_user_id,
         message=PushMessage(
-            title="مبلغٌ مستوفى لكبتنٍ آخر",
+            title="مبلغٌ مستوفى لكابتنٍ آخر",
             body=body,
             data={
                 "type": "cancellation_carried",
@@ -1697,7 +1697,7 @@ DELETION_DEFER_TEXT: dict[str, str] = {
     "unpaid_advance": "سلفةٌ غيرُ مسدَّدة",
     "pending_money": "شحنٌ أو سحبٌ أو دفعُ بطاقةٍ لم يُحسم",
     "rider_balance_changed": "رصيدُ محفظة الراكب تغيّر بعد موافقته على ضياعه",
-    "driver_balance": "في محفظة الكبتن رصيدٌ لم يُسحب",
+    "driver_balance": "في محفظة الكابتن رصيدٌ لم يُسحب",
 }
 
 
@@ -1770,7 +1770,7 @@ async def publish_capacity_alert(
 
     parts: list[str] = []
     if captains >= alert_captains:
-        parts.append(f"{captains} كبتناً متّصلاً (العتبة {alert_captains})")
+        parts.append(f"{captains} كابتناً متّصلاً (العتبة {alert_captains})")
     if riders >= alert_riders:
         parts.append(f"{riders} راكباً متّصلاً (العتبة {alert_riders})")
     admins = (
@@ -1995,7 +1995,7 @@ async def publish_pause_limit_exceeded(
     """
     message = PushMessage(
         title="تجاوز الانتظار حدَّه",
-        body="العدّادُ ما زال يعمل — أبلغ الكبتن حين تجهز.",
+        body="العدّادُ ما زال يعمل — أبلغ الكابتن حين تجهز.",
         data={
             "type": "pause_limit_exceeded",
             "ride_id": str(ride_id),
@@ -2033,7 +2033,7 @@ async def publish_guarantee_accepted(
         user_id=rider_id,
         message=PushMessage(
             title="حجزُك مضمون",
-            body=f"الكبتن {captain_name} قبل حجزَك، ويؤكّد قبل الموعد بساعة.",
+            body=f"الكابتن {captain_name} قبل حجزَك، ويؤكّد قبل الموعد بساعة.",
             data={"type": "guarantee_accepted", "booking_id": str(booking_id)},
         ),
     )
@@ -2064,8 +2064,8 @@ async def publish_guarantee_reopened(
         redis,
         user_id=rider_id,
         message=PushMessage(
-            title="نبحث لك عن كبتنٍ آخر",
-            body="اعتذر كبتنُ حجزك المضمون. نبحث عن غيره، ويُردّ رسمُ الضمان إن لم نجد.",
+            title="نبحث لك عن كابتنٍ آخر",
+            body="اعتذر كابتنُ حجزك المضمون. نبحث عن غيره، ويُردّ رسمُ الضمان إن لم نجد.",
             data={"type": "guarantee_reopened", "booking_id": str(booking_id)},
         ),
     )
@@ -2095,7 +2095,7 @@ async def publish_guarantee_refunded(
         user_id=rider_id,
         message=PushMessage(
             title="رُدّ رسمُ الضمان",
-            body="لم نجد كبتناً يضمن حجزَك، فعاد الرسمُ إلى محفظتك. ونطلب لك سيارةً في موعدك كالمعتاد.",
+            body="لم نجد كابتناً يضمن حجزَك، فعاد الرسمُ إلى محفظتك. ونطلب لك سيارةً في موعدك كالمعتاد.",
             data={"type": "guarantee_refunded", "booking_id": str(booking_id)},
         ),
     )
@@ -2163,11 +2163,11 @@ async def publish_cashback_reminder(
 # المحادثةَ أو المكالمة (§٦٦-د/٢).
 
 #: **من الطرفِ الآخر** — العنوانُ وحدَه يقول من، والنصُّ لا يقول ماذا
-CHAT_PUSH_TITLE: dict[str, str] = {"driver": "رسالةٌ جديدة من الكبتن", "rider": "رسالةٌ جديدة من الراكب"}
+CHAT_PUSH_TITLE: dict[str, str] = {"driver": "رسالةٌ جديدة من الكابتن", "rider": "رسالةٌ جديدة من الراكب"}
 CHAT_PUSH_BODY = "افتح الرحلة لقراءتها"
-CALL_PUSH_TITLE: dict[str, str] = {"driver": "مكالمةٌ من الكبتن", "rider": "مكالمةٌ من الراكب"}
+CALL_PUSH_TITLE: dict[str, str] = {"driver": "مكالمةٌ من الكابتن", "rider": "مكالمةٌ من الراكب"}
 CALL_PUSH_BODY = "افتح التطبيق للرد"
-MISSED_CALL_TITLE: dict[str, str] = {"driver": "مكالمةٌ فائتة من الكبتن", "rider": "مكالمةٌ فائتة من الراكب"}
+MISSED_CALL_TITLE: dict[str, str] = {"driver": "مكالمةٌ فائتة من الكابتن", "rider": "مكالمةٌ فائتة من الراكب"}
 MISSED_CALL_BODY = "افتح الرحلة لتعاود الاتصال أو تراسل"
 
 
@@ -2366,7 +2366,7 @@ async def publish_goal_event(session: AsyncSession, redis: Redis, *, user_id: uu
 _SUPPORT_TEXT = {
     # (الحدث، النوع) ⇐ (العنوان، النصّ) — **جملٌ ثابتةٌ لها مفاتيحُ في `fr.json`** لا مؤلَّفةٌ من أجزاء
     "staff_reply": ("ردٌّ من فريق الدعم", "افتح الطلب لتقرأ الردّ."),
-    "party_reply": ("ردٌّ من الكبتن على غرضك المفقود", "افتح الطلب لتقرأ الردّ."),
+    "party_reply": ("ردٌّ من الكابتن على غرضك المفقود", "افتح الطلب لتقرأ الردّ."),
     "lost_item": ("راكبٌ يبحث عن غرضٍ نسيه في رحلتك", "افتح الطلب وأخبره إن وجدته — التواصلُ عبر التطبيق."),
     "resolved": ("حُسم طلبك", "افتح الطلب لترى القرار وسببه."),
     "rejected": ("أُغلق طلبك", "افتح الطلب لترى السبب."),

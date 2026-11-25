@@ -565,4 +565,4 @@ def rider_payload() -> dict:
 
 @pytest.fixture
 def driver_payload() -> dict:
-    return _signup("0917654321", "كبتن تجريبي", "LY", "driver")
+    return _signup("0917654321", "كابتن تجريبي", "LY", "driver")

@@ -58,7 +58,7 @@ from app.services.auth.base import create_account  # noqa: E402
 
 PHONE = "+962790001001"
 PASSWORD = os.environ["ROUND_CAPTAIN_PASSWORD"]
-NAME = "كبتنُ جولةِ القياس"
+NAME = "كابتنُ جولةِ القياس"
 #: **٣٥٫٠٠٠ لا رقمٌ مستدير**: أغلى مركبةٍ في الكتالوج + هامشٌ لمركبةٍ ثانية.
 #: يُعاد حسابُه من الكتالوج قبل الكتابة، ولا يُكتب رقماً في نصّ.
 FALLBACK_TOPUP = Decimal("35.000")
@@ -96,7 +96,7 @@ async def main() -> None:
 
         driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
         if driver is None:
-            raise SystemExit("أُنشئ الحسابُ بلا صفِّ كبتن — يُوقَف")
+            raise SystemExit("أُنشئ الحسابُ بلا صفِّ كابتن — يُوقَف")
 
         session.add(
             Vehicle(

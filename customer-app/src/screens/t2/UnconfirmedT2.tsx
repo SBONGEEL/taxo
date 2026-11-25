@@ -118,7 +118,7 @@ export function UnconfirmedT2Screen() {
       setDone(
         item.state === "disputed"
           ? tr("سُجّل إقرارُك — يصل فريقَ TAXO مع النزاع.")
-          : tr("سُجّل إقرارُك — بانتظار تأكيد الكبتن، ولا يلزمك شيء."),
+          : tr("سُجّل إقرارُك — بانتظار تأكيد الكابتن، ولا يلزمك شيء."),
       );
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : tr("تعذّر تسجيل الإقرار"));
@@ -227,7 +227,7 @@ function ItemCard({
       <p className="t2-uc-trip">
         <When iso={item.completed_at} today={today} dot />
         {route ? ` · ${route}` : ""}
-        {captain ? tr(" · الكبتن {0}", { 0: captain }) : ""}
+        {captain ? tr(" · الكابتن {0}", { 0: captain }) : ""}
       </p>
       {/* **المبلغُ كبيراً** (§٦) — كما أرسلته الخلفية، والعملةُ من رمزها */}
       <div className="t2-m-amount">
@@ -264,7 +264,7 @@ function ItemCard({
           <div className="t2-callout warn t2-uc-callout">
             <Icon name="gavel" />
             <div className="t2-callout-main">
-              <p className="t2-callout-title">{tr("لم يؤكّد الكبتنُ استلامَ المبلغ")}</p>
+              <p className="t2-callout-title">{tr("لم يؤكّد الكابتنُ استلامَ المبلغ")}</p>
               <p className="t2-callout-body">
                 {item.declared_at ? (
                   <>
@@ -312,7 +312,7 @@ function ItemCard({
             aria-busy={busy}
             onClick={onDeclare}
           >
-            <BusyLabel busy={busy}>{tr("سلّمتُ المبلغ للكبتن")}</BusyLabel>
+            <BusyLabel busy={busy}>{tr("سلّمتُ المبلغ للكابتن")}</BusyLabel>
           </button>
           <div className="t2-uc-acts pair">
             <button type="button" className="t2-button secondary" disabled={busy} onClick={onChange}>
@@ -333,7 +333,7 @@ const CHANGED: Record<PayableMethod, string> = {
   wallet: tr("دُفعت من محفظتك — اكتمل دفعُ الرحلة."),
   card: tr("دُفعت بالبطاقة — اكتمل دفعُ الرحلة."),
   cliq: tr("صار الدفعُ عبر كليك — حوّل ثمّ أدخل مرجع الحوالة."),
-  cash: tr("صار الدفعُ كاشاً — سلّم المبلغ للكبتن ثمّ أقِرّ بالتسليم."),
+  cash: tr("صار الدفعُ كاشاً — سلّم المبلغ للكابتن ثمّ أقِرّ بالتسليم."),
 };
 
 /** **«غيّر طريقة الدفع» و«سأدفع الآن»** (§٢-١ · §٦) — **بابٌ واحدٌ** (`POST /payments/{id}/change-method`) بحمل الدفع حرفاً.
@@ -477,7 +477,7 @@ function CopySheet({
       <p className="t2-m-sheet-sub">{tr("انسخ كلَّ سطرٍ ثمّ الصقه في تطبيق بنكك — والمرجعَ في ملاحظة الحوالة.")}</p>
       <dl className="t2-m-copies">
         <CopyRow
-          label={tr("الاسم المستعار للكبتن")}
+          label={tr("الاسم المستعار للكابتن")}
           value={item.cliq_alias ?? "—"}
           copied={copied === "alias"}
           onCopy={() => void copy(item.cliq_alias, "alias")}
@@ -501,7 +501,7 @@ function CopySheet({
           <Icon name="verified_user" />
           <div className="t2-callout-main">
             <p className="t2-callout-title">{tr("ستظهر في بنكك باسم:")}{" "}{item.captain_name}</p>
-            <p className="t2-callout-body">{tr("طابِق الاسمَ قبل أن ترسل — اسمٌ غيرُه يعني أن الحوالةَ لا تذهب إلى كبتن رحلتك.")}</p>
+            <p className="t2-callout-body">{tr("طابِق الاسمَ قبل أن ترسل — اسمٌ غيرُه يعني أن الحوالةَ لا تذهب إلى كابتن رحلتك.")}</p>
           </div>
         </div>
       ) : null}
@@ -562,16 +562,16 @@ export function UnconfirmedStripT2({
           <>{tr("دفعُ هذه الرحلة في نزاعٍ لدى فريق TAXO — يفصل فيه، ولا يلزمك شيء")}</>
         ) : first.method === "cash" && first.declared_at ? (
           <>
-            {tr("أقررتَ بالتسليم")}{" "}<When iso={first.declared_at} today={today} />{" "}{tr("— بانتظار تأكيد الكبتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
+            {tr("أقررتَ بالتسليم")}{" "}<When iso={first.declared_at} today={today} />{" "}{tr("— بانتظار تأكيد الكابتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
           </>
         ) : first.cliq_reference_at ? (
           <>
-            {tr("أدخلتَ مرجع الحوالة")}{" "}<When iso={first.cliq_reference_at} today={today} />{" "}{tr("— بانتظار تأكيد الكبتن.")}{" "}
+            {tr("أدخلتَ مرجع الحوالة")}{" "}<When iso={first.cliq_reference_at} today={today} />{" "}{tr("— بانتظار تأكيد الكابتن.")}{" "}
             <b>{tr("لا يلزمك شيء")}</b>
           </>
         ) : (
           <>
-            {tr("بانتظار تأكيد الكبتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
+            {tr("بانتظار تأكيد الكابتن.")}{" "}<b>{tr("لا يلزمك شيء")}</b>
           </>
         )}
       </span>

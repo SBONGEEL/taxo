@@ -1212,7 +1212,7 @@ async def test_a_granted_offer_reaches_the_test_captain_alone_and_is_revoked(
                 session, offer_id=offer_id, driver_id=uuid.UUID(str(real["driver_id"])), actor_id=None, note="x"  # type: ignore[arg-type]
             )
     async with session_factory() as session:
-        with pytest.raises(Exception, match="كبتن التجربة وحدَه"):
+        with pytest.raises(Exception, match="كابتن التجربة وحدَه"):
             await offers.revoke_test_grant(session, offer_id=offer_id, driver_id=uuid.UUID(str(real["driver_id"])))
 
     async with session_factory() as session:

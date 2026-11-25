@@ -39,7 +39,7 @@ from app.services.pricing import as_money
 TERMS: tuple[str, ...] = (
     "ممنوع: النقود والمجوهرات والأدوية والسوائل القابلة للاشتعال وكلُّ ما يخالف القانون.",
     "الحجم: ما يسعه صندوقُ السيارة.",
-    "للكبتن أن يرفض الطرد عند الاستلام إن شكّ فيه.",
+    "للكابتن أن يرفض الطرد عند الاستلام إن شكّ فيه.",
     "لا تعويضَ عن محتوى الطرد في هذه المرحلة.",
 )
 
@@ -112,7 +112,7 @@ async def prepare(
     if parcel.fetch:
         item = latin_digits(" ".join((parcel.item or "").split()))
         if len(item) < 2:
-            raise InvalidInput("صِف الغرضَ بكلماتٍ قليلة — ليعرفه الكبتنُ عند الاستلام")
+            raise InvalidInput("صِف الغرضَ بكلماتٍ قليلة — ليعرفه الكابتنُ عند الاستلام")
     try:
         phone = _normalize_any(parcel.recipient_phone, rider.country_code)
     except InvalidPhoneNumber as exc:

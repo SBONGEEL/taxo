@@ -75,7 +75,7 @@ class DocumentSettingsIn(BaseModel):
 async def _driver(session, driver_id: uuid.UUID) -> Driver:
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     return driver
 
 
@@ -176,7 +176,7 @@ async def request_documents(
         drivers = await exceptional_approval.flagged(session, country=payload.country_code)
     else:
         if not payload.driver_ids:
-            raise InvalidInput("اختر كبتناً أو «الكلّ»")
+            raise InvalidInput("اختر كابتناً أو «الكلّ»")
         drivers = list((await session.scalars(select(Driver).where(Driver.id.in_(payload.driver_ids)))).all())
     sent = await exceptional_approval.request_documents(session, redis, drivers=drivers, actor=admin)
     await session.commit()

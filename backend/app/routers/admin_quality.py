@@ -140,5 +140,5 @@ async def admin_driver_quality(driver_id: uuid.UUID, _staff: StaffUser, session:
         await session.execute(select(User.country_code).join(Driver, Driver.user_id == User.id).where(Driver.id == driver_id))
     ).first()
     if found is None:
-        raise NotFound("الكبتنُ غيرُ موجود")
+        raise NotFound("الكابتنُ غيرُ موجود")
     return await driver_quality(session, redis, driver_id=driver_id, country=found[0])

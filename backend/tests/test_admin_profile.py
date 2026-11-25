@@ -121,7 +121,7 @@ async def _past_subscription(session_factory, driver_id) -> None:
 OTHER_DRIVER = {
     **DRIVER,
     "phone": "+962790000933",
-    "name": "كبتنٌ آخرُ لا تخصّه هذه الصفوف",
+    "name": "كابتنٌ آخرُ لا تخصّه هذه الصفوف",
 }
 
 

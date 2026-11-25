@@ -278,7 +278,7 @@ async def test_both_parties_chat_and_the_push_never_carries_the_text(
     pushes = await pushes_to("fcm-rider")
     assert len(pushes) == 1
     push = pushes[0]
-    assert push["title"] == "رسالةٌ جديدة من الكبتن"
+    assert push["title"] == "رسالةٌ جديدة من الكابتن"
     assert "نخلات" not in push["title"] + push["body"] + json.dumps(push["data"], ensure_ascii=False)
     assert push["data"] == {"type": "chat_message", "ride_id": ride_id, "sender_role": "driver"}
 
@@ -559,7 +559,7 @@ async def test_reports_list_and_handling_are_audited(
     assert row["ride_id"] == ride_id and row["status"] == "open"
 
     handled = await client.post(
-        f"/admin/chat-reports/{row['id']}/handle", json={"note": "نُبّه الكبتن"}, headers=reader["headers"]
+        f"/admin/chat-reports/{row['id']}/handle", json={"note": "نُبّه الكابتن"}, headers=reader["headers"]
     )
     assert handled.status_code == 200, handled.text
     assert handled.json()["status"] == "handled" and handled.json()["handled_by_name"] == "قارئ المحادثات"
@@ -763,7 +763,7 @@ async def test_enabling_requires_the_published_privacy_line(
         json={"country_code": "JO", "feature_key": "trip_chat_enabled", "enabled": True},
         headers=admin_headers,
     )
-    assert half.status_code == 409 and half.json()["missing"] == ["الكبتن"]
+    assert half.status_code == 409 and half.json()["missing"] == ["الكابتن"]
 
     await _publish(client, admin_headers, "driver", f"سياسةٌ\n\n{trip_chat.CHAT_PRIVACY_MARKER}\n- ما نحفظه")
     for key in CHAT_FLAGS:

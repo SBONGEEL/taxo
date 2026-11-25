@@ -486,7 +486,7 @@ async def test_the_pro_rata_refund_rounds_up_in_the_captains_favour_and_is_journ
     assert preview.json()["lines"][0]["refund"] == "26.500"
 
     done = await client.post(
-        f"/admin/subscriptions/{row_id}/cancel", json={"reason": "إيقافٌ بطلب الكبتن"}, headers=admin_headers
+        f"/admin/subscriptions/{row_id}/cancel", json={"reason": "إيقافٌ بطلب الكابتن"}, headers=admin_headers
     )
     assert done.status_code == 200, done.text
     assert done.json()["total_refund"] == "26.500"

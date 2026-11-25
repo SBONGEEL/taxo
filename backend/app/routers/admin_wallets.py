@@ -434,7 +434,7 @@ async def payout_withdrawal(
     request = await withdrawals.get_request(session, request_id, for_update=True)
     driver = await session.get(Driver, request.driver_id)
     if driver is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
 
     owner = await _get_user(session, driver.user_id)
     request, state = await withdrawals.pay_via_provider(
@@ -460,7 +460,7 @@ async def mark_withdrawal_paid(
     request = await withdrawals.get_request(session, request_id, for_update=True)
     driver = await session.get(Driver, request.driver_id)
     if driver is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
 
     # محفظة الكبتن مفتاحها `user_id` لا `driver_id` — القيود على `users.id`
     owner = await _get_user(session, driver.user_id)

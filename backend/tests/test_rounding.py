@@ -658,7 +658,7 @@ async def test_a_refund_reverses_the_commission_that_was_written_not_a_recompute
     assert refunded.status_code == 200, refunded.text
     assert (await wallet_of(client, rider["headers"]))["balance"] == "20.000"
     assert await _captain_net(session_factory, ride["id"], driver["user_id"]) == 0, (
-        "الردُّ طرح عمولةً لم تُكتب — فبقي للكبتن مالٌ رُدّ"
+        "الردُّ طرح عمولةً لم تُكتب — فبقي للكابتن مالٌ رُدّ"
     )
 
     done = await _complete(client, ride, driver)

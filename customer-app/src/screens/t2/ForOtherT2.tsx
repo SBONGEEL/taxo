@@ -30,7 +30,7 @@ import "./for-other.css"; import { tr } from "@/lib/i18n";
  *  كذلك** (`ParcelT2`): «تدفع أنت» هي هي، و`recipient_cash` للطرد وحدَه. */
 export const PAYER_SHORT: Record<RidePayer, string> = {
   requester: tr("تدفع أنت"),
-  passenger_cash: tr("يدفع نقداً للكبتن"),
+  passenger_cash: tr("يدفع نقداً للكابتن"),
   recipient_cash: tr("يدفع المستلمُ نقداً"),
 };
 
@@ -77,7 +77,7 @@ export function ForOtherOptionT2({
           <Icon name="person" />
           {tr("لشخص آخر")}
         </span>
-        <span className="t2-share-body">{blockedBy ?? tr("اطلبها لغيرك — يصله الكبتنُ ويتصل به باسمه ورقمه.")}</span>
+        <span className="t2-share-body">{blockedBy ?? tr("اطلبها لغيرك — يصله الكابتنُ ويتصل به باسمه ورقمه.")}</span>
       </span>
       {blockedBy === null ? (
         <Icon name="chevron_left" className="t2-fo-open-go" />
@@ -208,7 +208,7 @@ export function ForOtherSheetT2({
       value: "passenger_cash",
       icon: "payments",
       label: tr("الراكب يدفع نقداً عند الوصول"),
-      hint: tr("يسلّم الأجرةَ للكبتن بيده"),
+      hint: tr("يسلّم الأجرةَ للكابتن بيده"),
       off: false,
     },
   ];
@@ -234,7 +234,7 @@ export function ForOtherSheetT2({
           value={name}
           maxLength={80}
           autoComplete="off"
-          placeholder={tr("الاسم كما يناديه الكبتن")}
+          placeholder={tr("الاسم كما يناديه الكابتن")}
           onChange={(event) => setName(event.target.value)}
         />
       </AuthBlock>
@@ -277,7 +277,7 @@ export function ForOtherSheetT2({
       {/* **سطرُ الخصوصيّة** (أمرُ المالك ٢٠٢٦-١١-٢١) — وهو ما تفعله الخلفيةُ فعلاً (`PASSENGER_VISIBLE`) */}
       <p className="t2-note t2-fo-keep">
         <Icon name="visibility" />
-        {tr("يرى الكبتنُ الرقمَ أثناء هذه الرحلة فقط، ويُخفى عنه بعد انتهائها.")}
+        {tr("يرى الكابتنُ الرقمَ أثناء هذه الرحلة فقط، ويُخفى عنه بعد انتهائها.")}
       </p>
       <p className="t2-note t2-fo-keep">
         <Icon name="lock" />

@@ -230,7 +230,7 @@ function DestinationSearchClassic({
           className="t2-dest-pin"
         >
           <Icon name="timer" />
-          <span className="t2-dest-pin-label">{tr("بلا وجهة — تقولها للكبتن في الطريق")}</span>
+          <span className="t2-dest-pin-label">{tr("بلا وجهة — تقولها للكابتن في الطريق")}</span>
           <Icon name="chevron_left" className="t2-chev" />
         </button>
       ) : null}

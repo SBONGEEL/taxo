@@ -224,7 +224,7 @@ export function OffersScreen() {
                 />
               ) : (
                 <Field
-                  label="مرات الاستعمال لكل كبتن (صفر = بلا حدّ)"
+                  label="مرات الاستعمال لكل كابتن (صفر = بلا حدّ)"
                   name="max_uses_per_driver"
                   dir="ltr"
                   inputMode="numeric"

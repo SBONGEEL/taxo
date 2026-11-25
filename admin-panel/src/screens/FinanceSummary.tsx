@@ -62,7 +62,7 @@ const PERIOD_LABEL: Record<FinancePeriod, string> = {
 
 const USER_TYPE_LABEL: Record<FinanceUserType, string> = {
   rider: "راكب",
-  driver: "كبتن",
+  driver: "كابتن",
 };
 
 const METHOD_LABEL: Record<FinanceMethod, string> = {

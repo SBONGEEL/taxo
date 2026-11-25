@@ -152,7 +152,7 @@ async def test_the_captain_sees_the_handover_after_accepting_the_rider_hears_pic
     assert done.json()["parcel_item"] is None and done.json()["recipient_name"] is None
 
     titles = [row.title for row in await inbox_of(session_factory, session["user"]["id"])]
-    assert "استلم الكبتن غرضك" in titles and "وصل غرضك" in titles
+    assert "استلم الكابتن غرضك" in titles and "وصل غرضك" in titles
     assert "بدأت الرحلة" not in titles
 
     async with session_factory() as db:

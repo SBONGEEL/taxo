@@ -76,14 +76,14 @@ export function OfferGrants({
       <div className="grid gap-14">
         <section>
           <h4 className="mb-6 text-12.5 font-bold text-ink">
-            ابحث عن الكبتن
+            ابحث عن الكابتن
           </h4>
           <Picker
             label="بالاسم أو الرقم"
             value={picked}
             onPick={setPicked}
             search={findDrivers}
-            emptyText="لا كبتنَ بهذا الاسم أو الرقم في هذا السوق."
+            emptyText="لا كابتنَ بهذا الاسم أو الرقم في هذا السوق."
           />
         </section>
 
@@ -126,7 +126,7 @@ export function OfferGrants({
             </Button>
             <p className="text-11 leading-note text-muted">
               المنحُ يجعل العرضَ منطبقاً عليه، ولا يمنحه خصماً بذاته: الخصمُ
-              يُحسب عند الشراء، فالحدُّ لكلِّ كبتن وسقفُ الميزانية والقفلُ تعمل
+              يُحسب عند الشراء، فالحدُّ لكلِّ كابتن وسقفُ الميزانية والقفلُ تعمل
               هناك كما لأيِّ جمهورٍ آخر.
             </p>
           </section>

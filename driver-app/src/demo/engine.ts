@@ -89,7 +89,7 @@ const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter 
 const user: User = {
   id: ME,
   phone: null,
-  name: tr("كبتن ضيف"),
+  name: tr("كابتن ضيف"),
   role: "driver",
   roles: ["driver"],
   country_code: COUNTRY,
@@ -424,7 +424,7 @@ const notifications = (): UserNotification[] => [
   {
     id: "demo-n-1",
     kind: "demo",
-    title: tr("مرحباً بك يا كبتن"),
+    title: tr("مرحباً بك يا كابتن"),
     body: tr("هذا وضعُ التجربة: الطلباتُ والأرباحُ للعرض."),
     data: null,
     read_at: notificationsRead ? now() : null,

@@ -54,7 +54,7 @@ function when(iso: string): string {
 function authorLabel(role: string, mine: "user" | "party"): string {
   if (role === "staff") return tr("فريق الدعم");
   if (role === mine) return tr("أنت");
-  return role === "party" ? tr("الكبتن") : tr("الراكب");
+  return role === "party" ? tr("الكابتن") : tr("الراكب");
 }
 
 function Head({ title }: { title: string }) {
@@ -250,7 +250,7 @@ export function ReportRideT2() {
       <Head title={kind === "lost_item" ? tr("نسيت شيئاً في السيارة") : tr("شكوى على هذه الرحلة")} />
       <div className="sp-body">
         {kind === "lost_item" ? (
-          <p className="sp-hint">{tr("صِف ما نسيته — يصل الكبتنَ وفريقَ الدعم، ويردّون عليك هنا بلا أرقام هواتف.")}</p>
+          <p className="sp-hint">{tr("صِف ما نسيته — يصل الكابتنَ وفريقَ الدعم، ويردّون عليك هنا بلا أرقام هواتف.")}</p>
         ) : (
           <div className="sp-chips" role="radiogroup" aria-label={tr("نوع الشكوى")}>
             {CATEGORIES.filter((item) => item.apps.includes(APP)).map((item) => (

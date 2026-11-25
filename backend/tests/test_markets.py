@@ -104,7 +104,7 @@ async def test_signing_up_in_a_closed_country_is_refused_before_anything_is_writ
     client: AsyncClient, session_factory
 ) -> None:
     await _set_open(session_factory, CountryCode.LY, False)
-    answer = await client.post("/auth/register", json=_signup("0917654321", "كبتن", "LY", "driver"))
+    answer = await client.post("/auth/register", json=_signup("0917654321", "كابتن", "LY", "driver"))
     assert answer.status_code == 403, answer.text
     assert answer.json()["code"] == "signup_closed"
     assert "ليبيا" in answer.json()["message"]

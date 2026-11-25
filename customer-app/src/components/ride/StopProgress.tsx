@@ -65,7 +65,7 @@ export function StopProgress({ ride }: { ride: Ride }) {
       {waiting ? (
         <div className="t2-meter">
           <div>
-            <p className="t2-meter-label">{tr("الكبتن واقفٌ عند المحطة")}{" "}{waiting.sequence}</p>
+            <p className="t2-meter-label">{tr("الكابتن واقفٌ عند المحطة")}{" "}{waiting.sequence}</p>
             {/* الوقتُ يُحسب هنا — والمالُ لا */}
             <p dir="ltr" className="t2-meter-clock">
               {elapsed(waiting.arrived_at!, now)}
@@ -86,7 +86,7 @@ export function StopProgress({ ride }: { ride: Ride }) {
       {waiting?.over_max_wait ? (
         <p className="t2-note warn">
           <Icon name="error" />
-          <span>{tr("تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء الرحلة هنا.")}</span>
+          <span>{tr("تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكابتن إنهاء الرحلة هنا.")}</span>
         </p>
       ) : null}
     </div>

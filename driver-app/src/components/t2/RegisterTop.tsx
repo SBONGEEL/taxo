@@ -19,7 +19,7 @@ export function RegisterTop({ step, onBack }: { step: 1 | 2 | 3; onBack?: () => 
             <Icon name="arrow_forward" />
           </button>
         ) : null}
-        <h1 className="cap-head-title">{tr("إنشاء حساب كبتن")}</h1>
+        <h1 className="cap-head-title">{tr("إنشاء حساب كابتن")}</h1>
       </div>
 
       <div className="cap-steps" role="list" aria-label={tr("خطوات إنشاء الحساب")}>

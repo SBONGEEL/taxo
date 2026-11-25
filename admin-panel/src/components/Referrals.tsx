@@ -187,7 +187,7 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
                         فمشرفٌ يقرأ مبلغين مختلفين على رمزٍ واحد يظنّه عطباً */}
                     <td className="p-8">
                       <Badge tone={row.referral_type === "driver" ? "ink" : "muted"}>
-                        {row.referral_type === "driver" ? "كبتن" : "راكب"}
+                        {row.referral_type === "driver" ? "كابتن" : "راكب"}
                       </Badge>
                       {row.referral_type === "driver" && row.female_verified ? (
                         <span className="mt-4 block text-11 text-ok">+ علاوة</span>

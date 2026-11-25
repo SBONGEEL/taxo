@@ -481,7 +481,7 @@ async def grant(
         await session.flush()
     except IntegrityError as exc:
         await session.rollback()
-        raise Conflict("هذا العرضُ ممنوحٌ لهذا الكبتن سلفاً") from exc
+        raise Conflict("هذا العرضُ ممنوحٌ لهذا الكابتن سلفاً") from exc
     return row
 
 
@@ -493,7 +493,7 @@ async def revoke_test_grant(
     **ولا نزعَ لمنحة كبتنٍ حقيقيّ هنا**: منحتُه وعدٌ قيل له، ونزعُها قرارٌ لا يأخذه سكربت.
     """
     if not await test_accounts.is_test_driver(session, driver_id):
-        raise InvalidInput("النزعُ هنا لمنح كبتن التجربة وحدَه")
+        raise InvalidInput("النزعُ هنا لمنح كابتن التجربة وحدَه")
     row = await session.scalar(
         select(SubscriptionOfferGrant).where(
             SubscriptionOfferGrant.offer_id == offer_id,
@@ -501,7 +501,7 @@ async def revoke_test_grant(
         )
     )
     if row is None:
-        raise NotFound("لا منحةَ لهذا العرض باسم هذا الكبتن")
+        raise NotFound("لا منحةَ لهذا العرض باسم هذا الكابتن")
     grant_id = row.id
     await session.delete(row)
     await session.flush()

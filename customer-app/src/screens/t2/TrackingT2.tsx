@@ -270,13 +270,13 @@ export function TrackingSheetT2({
             دقائقَه، ورقمٌ يُخمَّن هنا يفترق عمّا جُمِّد عليها */}
         {t.afterAccept
           ? hourly && ride.status === "arrived"
-            ? tr("الكبتن عندك — إلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
+            ? tr("الكابتن عندك — إلغاؤك بعد وصول الكابتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
             : hourly
-              ? tr("الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء، وإلغاؤك بعد وصوله يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
+              ? tr("الكابتن في طريقه إليك — قد تُطبَّق رسوم إلغاء، وإلغاؤك بعد وصوله يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")
               : ride.status === "arrived"
-                ? tr("الكبتن عندك — قد تُطبَّق رسوم إلغاء.")
-                : tr("الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء.")
-          : tr("سيتوقف البحث عن كبتن. متأكد؟")}
+                ? tr("الكابتن عندك — قد تُطبَّق رسوم إلغاء.")
+                : tr("الكابتن في طريقه إليك — قد تُطبَّق رسوم إلغاء.")
+          : tr("سيتوقف البحث عن كابتن. متأكد؟")}
       </p>
       {t.afterAccept ? (
         <div className="t2-trk-reasons">
@@ -330,7 +330,7 @@ export function TrackingSheetT2({
     const nearestMinutes = searchEta.minutes?.[ride.vehicle_category] ?? null;
     const price = ride.negotiation_offer ?? ride.rider_estimate;
     const fromFull = pickupName.full ?? tr("نقطة الانطلاق");
-    const toFull = hourly && noDestination(ride) ? tr("بلا وجهة — تقولها للكبتن") : (dropoffName.full ?? tr("الوجهة"));
+    const toFull = hourly && noDestination(ride) ? tr("بلا وجهة — تقولها للكابتن") : (dropoffName.full ?? tr("الوجهة"));
     const stop = (which: "from" | "to", label: string, full: string, short: string | null) => (
       <button
         type="button"
@@ -374,13 +374,13 @@ export function TrackingSheetT2({
               <b />
             </span>
             <div className="t2-srch-titles">
-              <h3 className="t2-srch-title">{tr("نبحث لك عن كبتن قريب")}</h3>
+              <h3 className="t2-srch-title">{tr("نبحث لك عن كابتن قريب")}</h3>
               {/* **«انتظري، نوسّع البحث» اختارته هي** (§٦٤-ج/٤-٣) — بلا عددٍ ولا نصفِ قطر؛ **والتفاوضُ يُعرض على واحدٍ في كلِّ مرّة** */}
               <p className="t2-srch-sub">
                 {ride.search_widened
-                  ? tr("نوسّع البحث بين الكبتنات…")
+                  ? tr("نوسّع البحث بين الكابتنات…")
                   : ride.negotiation_offer
-                    ? tr("نعرض عرضك على كبتنٍ واحدٍ في كلِّ مرّة")
+                    ? tr("نعرض عرضك على كابتنٍ واحدٍ في كلِّ مرّة")
                     : tr("نعرض طلبك على أقرب الكباتن")}
               </p>
             </div>
@@ -398,7 +398,7 @@ export function TrackingSheetT2({
             <span className="t2-srch-chip">
               <Icon name="schedule" />
               {nearestMinutes !== null
-                ? tr("أقرب كبتن على بُعد {0} د تقريباً", { 0: Math.max(1, Math.round(nearestMinutes)) })
+                ? tr("أقرب كابتن على بُعد {0} د تقريباً", { 0: Math.max(1, Math.round(nearestMinutes)) })
                 : tr("قد يستغرق دقيقتين")}
             </span>
           </div>
@@ -442,7 +442,7 @@ export function TrackingSheetT2({
           {t.women ? (
             <p className="t2-note">
               <Icon name="schedule" />
-              {tr("نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
+              {tr("نبحث عن كابتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.")}
             </p>
           ) : null}
           <ErrorNote message={t.error} className="t2-error" />
@@ -539,7 +539,7 @@ export function TrackingSheetT2({
             <Icon name="verified_user" fill />
             <div className="t2-callout-main">
               <div className="t2-callout-title">{tr("شاركي رحلتك مع من تثقين")}</div>
-              <p className="t2-callout-body">{tr("نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.")}</p>
+              <p className="t2-callout-body">{tr("نرسل اسم الكابتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.")}</p>
               <div className="t2-trk-hint-row">
                 <button
                   type="button"
@@ -619,13 +619,13 @@ export function TrackingSheetT2({
       {found ? (
         <p className="t2-found t2-phase" role="status">
           <Icon name="check_circle" fill />
-          {tr("تم العثور على كبتن")}
+          {tr("تم العثور على كابتن")}
         </p>
       ) : null}
       <div className="t2-trk-head2 t2-phase">
         <div className="t2-trk-head2-main">
           <div className="t2-trk-title2">
-            {womenRide ? womenApproachTitle(arrived) : arrived ? tr("الكبتن ينتظرك في نقطة الانطلاق") : tr("الكبتن في الطريق إليك")}
+            {womenRide ? womenApproachTitle(arrived) : arrived ? tr("الكابتن ينتظرك في نقطة الانطلاق") : tr("الكابتن في الطريق إليك")}
           </div>
           {vehicle ? (
             <div className="t2-trk-veh">
@@ -713,7 +713,7 @@ export function ApproachChipT2({
     return (
       <div className="t2 t2-trk-chip">
         <span className="t2-trk-chip-dot" aria-hidden="true" />
-        {tr("وصل الكبتن")}
+        {tr("وصل الكابتن")}
       </div>
     );
   }
@@ -721,7 +721,7 @@ export function ApproachChipT2({
   return (
     <div className="t2 t2-trk-chip">
       <span className="t2-trk-chip-dot" aria-hidden="true" />
-      {tr("الكبتن على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
+      {tr("الكابتن على بعد")}{" "}{formatDistance(distanceKm(driverPing, ride.pickup))}
       {minutes !== null ? tr(" · {0} د", { 0: minutes }) : ""}
     </div>
   );
@@ -753,7 +753,7 @@ export function TripCardT2({
           : parcel && ride.recipient_name
           ? tr("إلى: {0}", { 0: ride.recipient_name })
           : hourly && noDestination(ride)
-            ? tr("بلا وجهة — تقولها للكبتن")
+            ? tr("بلا وجهة — تقولها للكابتن")
             : (ride.dropoff_address ?? tr("وجهتك"))}
       </div>
       {progress ? (

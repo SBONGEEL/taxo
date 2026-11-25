@@ -215,7 +215,7 @@ async def test_confirmation_waits_for_the_captain_row_lock(
                        json={"category": "comfort"}, headers=admin_headers)
         )
         await asyncio.sleep(1.0)
-        assert not pending.done(), "التأكيدُ لم ينتظر قفلَ صفِّ الكبتن"
+        assert not pending.done(), "التأكيدُ لم ينتظر قفلَ صفِّ الكابتن"
         await holder.rollback()
     response = await asyncio.wait_for(pending, timeout=20)
     assert response.status_code == 200 and response.json()["category"] == "comfort"

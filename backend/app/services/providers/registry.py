@@ -584,7 +584,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ),
             ProviderField(
                 key="lyd_per_jod",
-                label="الأردن وحدَه: كم ديناراً ليبيّاً لكلِّ دينارٍ أردنيّ — مصدرُ السعر الواحد لاشتراك الكبتن بالبطاقة (فارغ في ليبيا)",
+                label="الأردن وحدَه: كم ديناراً ليبيّاً لكلِّ دينارٍ أردنيّ — مصدرُ السعر الواحد لاشتراك الكابتن بالبطاقة (فارغ في ليبيا)",
                 secret=False,
                 required=False,
             ),
@@ -612,7 +612,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
     ),
     ProviderKey.POLAR: ProviderSpec(
         key=ProviderKey.POLAR,
-        label="Polar — اشتراكُ الكبتن الشهريُّ بالبطاقة المصرفية",
+        label="Polar — اشتراكُ الكابتن الشهريُّ بالبطاقة المصرفية",
         fields=(
             ProviderField(key="api_key", label="رمزُ المنظّمة (Organization Access Token) — من لوحة Polar: Settings ← Access Tokens"),
             ProviderField(
@@ -652,7 +652,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
     # (الموقع ونسخة Play) قرارُ المالك من اللوحة. **والقيمُ من حساب Digistore24**: Settings ← Account access ← API keys · IPN
     ProviderKey.DIGISTORE24: ProviderSpec(
         key=ProviderKey.DIGISTORE24,
-        label="Digistore24 — اشتراكُ الكبتن بالبطاقة المصرفية (3 · 17 · 45 · 60 د.أ)",
+        label="Digistore24 — اشتراكُ الكابتن بالبطاقة المصرفية (3 · 17 · 45 · 60 د.أ)",
         fields=(
             ProviderField(key="api_key", label="مفتاحُ API — من Digistore24: Settings ← Account access ← API keys"),
             ProviderField(

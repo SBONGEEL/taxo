@@ -388,7 +388,7 @@ export function WalletT2Screen() {
             <p className="t2-wal-note">
               <Icon name="info" />
               <span>
-                {tr("مبلغٌ مستوفى لكبتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
+                {tr("مبلغٌ مستوفى لكابتنٍ آخر:")}{" "}{formatAmount(wallet.carrier_dues, wallet.currency)}{" "}
                 {currency}{" "}{tr("— استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما يكفي رصيدُها. اشحن المحفظة ليصله.")}
 
               </span>

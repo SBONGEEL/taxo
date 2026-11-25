@@ -125,7 +125,7 @@ async def app_links(session: AsyncSession) -> dict[str, dict[str, str]]:
 
 #: القيمُ الأولى — **تُكتب مرّةً عند أوّل قراءة، ولا تُعاد كتابتُها بعدها**.
 DEFAULTS: dict[str, Any] = {
-    "hero_title": "TAXO — تاكسي بالتطبيق للراكب والكبتن",
+    "hero_title": "TAXO — تاكسي بالتطبيق للراكب والكابتن",
     "hero_subtitle": (
         "اطلب رحلتك أو اقبل الطلبات من التطبيق نفسه — وعمولةٌ منخفضةٌ تُجمَّد لحظةَ اشتراكك."
     ),
@@ -135,7 +135,7 @@ DEFAULTS: dict[str, Any] = {
     "play_url_rider": play_url(RIDER_PACKAGE),
     "play_url_driver": play_url(DRIVER_PACKAGE),
     "seo_description": (
-        "TAXO — تاكسي بالتطبيق للراكب والكبتن في الأردن. اشتراكٌ للكبتن بنسبةٍ "
+        "TAXO — تاكسي بالتطبيق للراكب والكابتن في الأردن. اشتراكٌ للكابتن بنسبةٍ "
         "تُجمَّد ما دام سارياً، خدمة نسائية، ومحفظة ودفع بأكثر من طريقة."
     ),
 }

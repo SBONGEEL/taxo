@@ -16,13 +16,13 @@ from app.core.security import create_push_photo_token
 from app.services.push import PushMessage, channels
 from tests.helpers import DRIVER, accepted_ride, approved_driver, bring_online, rider_session
 
-RICH_DATA = {"driver_name": "كبتن", "plate": "12-34567", "vehicle": "تويوتا كامري أبيض", "photo_url": "https://x/p"}
+RICH_DATA = {"driver_name": "كابتن", "plate": "12-34567", "vehicle": "تويوتا كامري أبيض", "photo_url": "https://x/p"}
 
 
 def _assigned() -> PushMessage:
     return PushMessage(
         title="تم قبول رحلتك",
-        body="الكبتن في طريقه إلى نقطة الانطلاق",
+        body="الكابتن في طريقه إلى نقطة الانطلاق",
         data={"type": "driver_assigned", "ride_id": "r1"},
         native_data=dict(RICH_DATA),
     )

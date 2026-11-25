@@ -43,15 +43,15 @@ import { formatMoney } from "@/lib/utils"; import { tr } from "@/lib/i18n";
  * **والنطاقُ من الخلفية** (`/config` · `dispatch` — §٦٢-ب/٤٨): كان «10 كم بدل 7» مكتوباً هنا نسخةً من ثابتَي `geo` — **رقمان لشيءٍ
  * واحدٍ يفترقان أوّلَ تعديل**. **وقبل وصول الإعداد يُقال بلا رقم** — لا رقمَ يُخمَّن مكانه. */
 export function preferenceNote(preference: GenderPreference, dispatch: AppConfig["dispatch"] | undefined): string {
-  if (preference === "any") return tr("أي كبتن متاح — أسرع استجابة وأوسع نطاق.");
+  if (preference === "any") return tr("أي كابتن متاح — أسرع استجابة وأوسع نطاق.");
   if (preference === "female") {
     return dispatch
-      ? tr("سيبحث النظام عن كبتنات فقط، ضمن نطاق {0} كم بدل {1} — قد يطول الانتظار.", { 0: dispatch.gendered_max_search_radius_km, 1: dispatch.max_search_radius_km })
-      : tr("سيبحث النظام عن كبتنات فقط، في نطاقٍ أوسع — قد يطول الانتظار.");
+      ? tr("سيبحث النظام عن كابتنات فقط، ضمن نطاق {0} كم بدل {1} — قد يطول الانتظار.", { 0: dispatch.gendered_max_search_radius_km, 1: dispatch.max_search_radius_km })
+      : tr("سيبحث النظام عن كابتنات فقط، في نطاقٍ أوسع — قد يطول الانتظار.");
   }
   return dispatch
-    ? tr("سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق {0} كم.", { 0: dispatch.gendered_max_search_radius_km })
-    : tr("سيبحث النظام عن كبتنٍ رجل فقط، في نطاقٍ أوسع.");
+    ? tr("سيبحث النظام عن كابتنٍ رجل فقط، ضمن نطاق {0} كم.", { 0: dispatch.gendered_max_search_radius_km })
+    : tr("سيبحث النظام عن كابتنٍ رجل فقط، في نطاقٍ أوسع.");
 }
 
 /** «دقيقتان» لا «2 دقيقة» — **العربيةُ تعدّ بالمثنّى والجمع** (§17).
@@ -86,12 +86,12 @@ export function waitingNote(estimate: RideEstimate | null): string | null {
   const free = estimate.stop_free_minutes;
   const perMin = Number(estimate.stop_price_per_min);
   if (perMin <= 0)
-    return tr("يقف الكبتن عند كل محطة، ولا رسمَ على الانتظار في هذه السوق.");
+    return tr("يقف الكابتن عند كل محطة، ولا رسمَ على الانتظار في هذه السوق.");
   const price = formatMoney(estimate.stop_price_per_min, estimate.currency);
   const head =
     free > 0
-      ? tr("يقف الكبتن عند كل محطة، و{0} عند كل واحدة مجاناً", { 0: freeMinutes(free) })
-      : tr("يقف الكبتن عند كل محطة، والانتظار محسوبٌ من أول دقيقة");
+      ? tr("يقف الكابتن عند كل محطة، و{0} عند كل واحدة مجاناً", { 0: freeMinutes(free) })
+      : tr("يقف الكابتن عند كل محطة، والانتظار محسوبٌ من أول دقيقة");
   return tr("{0}، ثم {1} لكل دقيقة — يظهر عدّادُه أمامك أثناء الوقوف.", { 0: head, 1: price });
 }
 
@@ -432,7 +432,7 @@ export function useConfirmRide({
         : Number(balance) < Number(shownFare)
           ? forOther
             ? tr("رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً.")
-            : tr("رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن.")
+            : tr("رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكابتن.")
           : null;
 
   // **وفي الساعات: المحجوزُ كاملاً من المحفظة عند البدء أو لا يبدأ** (§٦٣-ج/٥، `hourly.prepay_on_start`) — **لا باقيَ نقداً**، فرصيدٌ
@@ -442,7 +442,7 @@ export function useConfirmRide({
     hourly?.prepay !== "wallet" || balance === null || shownFare === null
       ? null
       : Number(balance) < Number(shownFare)
-        ? tr("رصيدك لا يغطّي الساعاتِ المحجوزة — اشحن محفظتك قبل أن يبدأ الكبتن، أو ادفعها نقداً عند البدء.")
+        ? tr("رصيدك لا يغطّي الساعاتِ المحجوزة — اشحن محفظتك قبل أن يبدأ الكابتن، أو ادفعها نقداً عند البدء.")
         : null;
 
   return {

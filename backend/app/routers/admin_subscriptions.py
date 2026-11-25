@@ -43,7 +43,7 @@ async def list_subscriptions(
     subscription_status: SubscriptionStatus | None = None,
     driver_id: uuid.UUID | None = None,
     country_code: CountryCode | None = None,
-    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكابتن أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[SubscriptionOut]:
@@ -63,7 +63,7 @@ async def list_subscriptions(
 async def _driver_and_user(session, driver_id: uuid.UUID) -> tuple[Driver, User]:
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("ملف الكبتن غير موجود")
+        raise NotFound("ملف الكابتن غير موجود")
     user = await session.scalar(select(User).where(User.id == driver.user_id))
     return driver, user
 
@@ -141,7 +141,7 @@ async def list_gift_subscriptions(
     _admin: FinanceManager,
     session: DbSession,
     country_code: CountryCode | None = None,
-    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكابتن أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[GiftRowOut]:

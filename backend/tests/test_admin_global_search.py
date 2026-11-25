@@ -67,7 +67,7 @@ async def test_it_finds_a_rider_by_name_and_a_captain_by_phone(
     )
     assert by_phone.status_code == 200
     drivers = [hit for hit in by_phone.json()["hits"] if hit["kind"] == "driver"]
-    assert drivers, "لم يجد كبتناً بجزءٍ من رقمه"
+    assert drivers, "لم يجد كابتناً بجزءٍ من رقمه"
 
     # **٤) ومعرّفُ الكبتن `drivers.id` لا `users.id`** — وخلطُهما يفتح ملفَّ
     # إنسانٍ آخر، **ولا يصيح شيء** لأن كليهما UUID صالح

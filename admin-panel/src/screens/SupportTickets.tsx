@@ -44,11 +44,11 @@ const CATEGORY_LABEL: Record<ComplaintCategory, string> = {
 
 const ROLE_LABEL: Record<string, string> = {
   user: "صاحبُ الطلب",
-  party: "الكبتن",
+  party: "الكابتن",
   staff: "فريقُ الدعم",
 };
 
-const APP_LABEL: Record<string, string> = { rider: "الراكب", driver: "الكبتن" };
+const APP_LABEL: Record<string, string> = { rider: "الراكب", driver: "الكابتن" };
 
 function statusTone(status: TicketStatus): "warn" | "ok" | "muted" | "danger" {
   if (status === "open") return "warn";
@@ -143,7 +143,7 @@ function TicketDrawer({ ticketId, onClose, onChanged }: { ticketId: string; onCl
               ) : null}
               {data.against_name ? (
                 <div className="ad-kv-row">
-                  <span className="ad-kv-label">{data.kind === "lost_item" ? "الكبتن (طرفٌ في المحادثة)" : "الطرفُ الآخر"}</span>
+                  <span className="ad-kv-label">{data.kind === "lost_item" ? "الكابتن (طرفٌ في المحادثة)" : "الطرفُ الآخر"}</span>
                   <span className="ad-kv-value">{data.against_name}</span>
                 </div>
               ) : null}

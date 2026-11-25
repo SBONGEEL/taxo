@@ -77,7 +77,7 @@ async def test_driver_approval_requires_a_verified_phone(
         "/auth/register",
         json={
             "phone": "0791111222",
-            "name": "كبتن بلا تحقق",
+            "name": "كابتن بلا تحقق",
             "password": "SuperSecret123",
             "country_code": "JO",
             "role": "driver",
@@ -151,7 +151,7 @@ async def test_rejecting_a_driver_needs_no_verification(
         "/auth/register",
         json={
             "phone": "0791111333",
-            "name": "كبتن مرفوض",
+            "name": "كابتن مرفوض",
             "password": "SuperSecret123",
             "country_code": "JO",
             "role": "driver",

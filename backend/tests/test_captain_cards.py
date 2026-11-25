@@ -29,7 +29,7 @@ from tests.test_taxo_cards import card_market, card_pepper, redeem  # noqa: F401
 
 pytestmark = pytest.mark.asyncio
 
-SECOND_DRIVER = ALGERIAN_DRIVER | {"phone": "0662345678", "name": "كبتنٌ من وهران"}
+SECOND_DRIVER = ALGERIAN_DRIVER | {"phone": "0662345678", "name": "كابتنٌ من وهران"}
 
 
 async def _captain(client: AsyncClient, session_factory, payload: dict = ALGERIAN_DRIVER, *, funds: str = "5000") -> dict:

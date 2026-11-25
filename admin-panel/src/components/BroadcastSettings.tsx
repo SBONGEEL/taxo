@@ -30,7 +30,7 @@ const FIELDS: { key: keyof Settings; label: string; unit: string }[] = [
   { key: "move_meters", label: "قاعدةُ السكون — لا إرسالَ قبل أن يبتعد", unit: "متراً" },
   { key: "heartbeat_seconds", label: "نبضةُ «ما زلتُ متّصلاً»", unit: "ثانية" },
   // **إنذارُ السعة** (§٧٦/٢): متّصلون في اللحظة نفسِها يبلغون هذا ⇒ تنبيهٌ في «نظرة عامة» وإشعارٌ للمشرفين — **٧٠٪ من السعة الآمنة المقيسة**
-  { key: "alert_captains", label: "إنذارُ السعة — كباتنُ متّصلون معاً", unit: "كبتناً" },
+  { key: "alert_captains", label: "إنذارُ السعة — كباتنُ متّصلون معاً", unit: "كابتناً" },
   { key: "alert_riders", label: "إنذارُ السعة — ركّابٌ متّصلون معاً", unit: "راكباً" },
 ];
 
@@ -101,11 +101,11 @@ export function BroadcastSettings({ disabled, onError, onSaved }: {
   const live = row.live;
   return (
     <section className="rounded-16 border border-line bg-surface p-18">
-      <h2 className="mb-4 text-14 font-bold text-ink">بثُّ موقع الكبتن — لكلِّ الدول</h2>
+      <h2 className="mb-4 text-14 font-bold text-ink">بثُّ موقع الكابتن — لكلِّ الدول</h2>
       <p className="mb-12 text-11 leading-snug text-muted">
-        كم مرّةً يرسل تطبيقُ الكبتن موقعَه في كلِّ حال. <b className="text-ink">والآليُّ يغيّر فاصلَ المتاحين وحدَه</b> بعدد
+        كم مرّةً يرسل تطبيقُ الكابتن موقعَه في كلِّ حال. <b className="text-ink">والآليُّ يغيّر فاصلَ المتاحين وحدَه</b> بعدد
         المتّصلين، بلا تذبذب: يطول فوراً حين يعبر العددُ حدَّ درجته، ويقصر بعد خمس دقائق وعددٍ دونه بعشرة بالمئة.{" "}
-        <b className="text-ink">وما يُحفظ يصل كلَّ كبتنٍ متّصلٍ فوراً.</b>
+        <b className="text-ink">وما يُحفظ يصل كلَّ كابتنٍ متّصلٍ فوراً.</b>
       </p>
 
       <div className="mb-14 rounded-12 border border-line p-12 text-12 text-ink" data-broadcast-live>

@@ -141,10 +141,10 @@ async def test_closing_the_driver_socket_takes_him_off_the_map(
             await _receive(driver_ws)
             await driver_ws.send_json({"type": "location", **NEAR_PICKUP, "heading": 0})
             await wait_until(
-                _visible, message="لم يظهر الكبتن على الخريطة بعد بثّ موقعه"
+                _visible, message="لم يظهر الكابتن على الخريطة بعد بثّ موقعه"
             )
 
-    await wait_until(_gone, message="بقي الكبتن على الخريطة بعد إغلاق مقبسه")
+    await wait_until(_gone, message="بقي الكابتن على الخريطة بعد إغلاق مقبسه")
 
 
 # ------------------------------------------------------------ أحداث الرحلة

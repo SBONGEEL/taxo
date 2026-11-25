@@ -301,7 +301,7 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
       ) : null}
       {carried ? (
         <span className="t2-of-tag warn">
-          {tr("تحمل")}{" "}{formatAmount(ride.carried_cancellation_fee ?? "0", ride.currency)} {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
+          {tr("تحمل")}{" "}{formatAmount(ride.carried_cancellation_fee ?? "0", ride.currency)} {currencyLabel}{" "}{tr("لكابتنٍ آخر")}
         </span>
       ) : null}
     </div>

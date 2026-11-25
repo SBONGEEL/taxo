@@ -299,7 +299,7 @@ async def test_a_gender_mismatch_cancellation_still_costs_nothing(
 
     response = await client.post(
         f"/rides/{ride['id']}/cancel",
-        json={"reason": "الكبتن ليس أنثى", "reason_code": "gender_mismatch"},
+        json={"reason": "الكابتن ليس أنثى", "reason_code": "gender_mismatch"},
         headers=rider["headers"],
     )
     assert response.status_code == 200, response.text

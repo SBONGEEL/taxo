@@ -449,7 +449,7 @@ export function Welcome({
             className="cw-badge"
             style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: briefAnim("cw-bbadge") } : undefined}
           >
-            {i18nTr("كبتن")}
+            {i18nTr("كابتن")}
           </span>
         </div>
 
@@ -493,7 +493,7 @@ export function Welcome({
             </span>
             O
           </span>
-          <span className="cw-pill">{i18nTr("كبتن")}</span>
+          <span className="cw-pill">{i18nTr("كابتن")}</span>
           <span style={{ flex: 1 }} />
           {page === 1 ? (
             <button type="button" className="cw-textbtn" onClick={() => setPage(2)}>

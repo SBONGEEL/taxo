@@ -16,7 +16,7 @@ import { useSession } from "@/lib/session";
 
 const ROWS: Array<{ key: keyof GuestMode; label: string }> = [
   { key: "rider", label: "تطبيق الراكب" },
-  { key: "driver", label: "تطبيق الكبتن" },
+  { key: "driver", label: "تطبيق الكابتن" },
 ];
 
 export function GuestModeCard() {
@@ -34,7 +34,7 @@ export function GuestModeCard() {
     <section className="mb-18 rounded-16 border border-line bg-surface p-18" data-guest-mode>
       <h2 className="mb-4 text-16 font-bold text-ink">وضعُ الضيف — «تجربة كضيف»</h2>
       <p className="mb-12 text-11 leading-note text-muted">
-        يجرّب به المختبِرون ومراجعو المتجر كلَّ شيءٍ بلا رقم: كبتنٌ محاكى، ورصيدٌ للعرض، ولا رحلةَ ولا مالَ حقيقيّ ولا اتّصالَ بأحد.
+        يجرّب به المختبِرون ومراجعو المتجر كلَّ شيءٍ بلا رقم: كابتنٌ محاكى، ورصيدٌ للعرض، ولا رحلةَ ولا مالَ حقيقيّ ولا اتّصالَ بأحد.
         ملاحظاتُهم تصل «الملاحظات» موسومةً «ضيف»، وتُمحى بياناتُهم بعد ثلاثين يوماً.
       </p>
       <ErrorNote message={error} />

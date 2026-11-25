@@ -190,7 +190,7 @@ export function useCommuteBoard() {
     approve: (row: CommuteOffer) =>
       void run(row, () => approveCommute(row.id), tr("اعتمدتَ المشوار — تصلك رحلاتُه قبل موعدها حين تكون متصلاً ومتاحاً.")),
     release: (row: CommuteOffer) =>
-      void run(row, () => releaseCommute(row.id), tr("اعتذرتَ عن المشوار — عاد مفتوحاً لكبتنٍ معتمدٍ آخر.")),
+      void run(row, () => releaseCommute(row.id), tr("اعتذرتَ عن المشوار — عاد مفتوحاً لكابتنٍ معتمدٍ آخر.")),
   };
 }
 

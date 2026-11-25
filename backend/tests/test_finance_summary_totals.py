@@ -475,7 +475,7 @@ async def test_one_account_with_both_wallets_is_two_rows_not_one_captain(
     rows = (await drill(client, reader, "adjustments", "users"))["rows"]
     assert [(row["user_id"], row["role"], row["role_label"], row["amount"], row["driver_id"]) for row in rows] == [
         (both["user_id"], "rider", "راكب", "5.000", None),
-        (both["user_id"], "driver", "كبتن", "3.000", str(both["driver_id"])),
+        (both["user_id"], "driver", "كابتن", "3.000", str(both["driver_id"])),
     ]
 
 
@@ -615,7 +615,7 @@ async def test_guarantee_and_cancellation_fees(
     assert metric(body, "fee_cancellation")["count"] == 2
     assert sorted(
         (line["key"], line["label"], line["amount"]) for line in metric(body, "fee_cancellation")["breakdown"]
-    ) == [("pending", "لم يُحصَّل", "0.750"), ("settled", "وصل الكبتن", "0.750")]
+    ) == [("pending", "لم يُحصَّل", "0.750"), ("settled", "وصل الكابتن", "0.750")]
     assert amount(body, "fee_cancellation_forgiven") == Decimal("1.500")
     assert metric(body, "fee_cancellation_forgiven")["count"] == 2
     assert sorted(

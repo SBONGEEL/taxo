@@ -468,14 +468,14 @@ class OnlineAsCaptain(Conflict):
     قِيس على الإنتاج (الرحلة `6ae3413d`). والمطابقةُ مع نفسه ممنوعةٌ أصلاً، فهذا عن الحالة لا عن المطابقة."""
 
     code = "online_as_captain"
-    message = "أنت متّصلٌ كبتناً الآن — أوقف الاستقبال في تطبيق الكبتن ثمّ اطلب رحلتك"
+    message = "أنت متّصلٌ كابتناً الآن — أوقف الاستقبال في تطبيق الكابتن ثمّ اطلب رحلتك"
 
 
 class BreakNotAllowed(Conflict):
     """**الاستراحةُ المؤقّتة** (أمرُ المالك ٢٠/١١ الرابع، البند ٤٤) — للكبتن المتّصل بلا رحلةٍ جارية وحدَه."""
 
     code = "break_not_allowed"
-    message = "الاستراحةُ للكبتن المتّصل بلا رحلةٍ جارية"
+    message = "الاستراحةُ للكابتن المتّصل بلا رحلةٍ جارية"
 
 
 class RidingAsRider(Conflict):
@@ -537,7 +537,7 @@ class RideOfferExpired(Conflict):
     """لا يقبل الرحلةَ إلا الكبتنُ المعروضة عليه الآن، وضمن مهلته."""
 
     code = "ride_offer_expired"
-    message = "انتهت مهلة هذا الطلب أو عُرض على كبتن آخر"
+    message = "انتهت مهلة هذا الطلب أو عُرض على كابتن آخر"
 
 
 class FeatureDisabled(AppError):
@@ -685,7 +685,7 @@ class NoSubscriptionToCancel(Conflict):
     """
 
     code = "no_subscription_to_cancel"
-    message = "لا اشتراك ساري لهذا الكبتن"
+    message = "لا اشتراك ساري لهذا الكابتن"
 
 
 class RatingNotAllowed(Conflict):
@@ -731,7 +731,7 @@ class DocumentsIncomplete(Conflict):
     """اعتمادُ كبتنٍ قبل اعتماد مستنداته المطلوبة (SPEC القسم 13/2)."""
 
     code = "documents_incomplete"
-    message = "لا يُعتمد الكبتن قبل اعتماد مستنداته المطلوبة"
+    message = "لا يُعتمد الكابتن قبل اعتماد مستنداته المطلوبة"
 
 
 class InvalidTotpCode(InvalidCredentials):

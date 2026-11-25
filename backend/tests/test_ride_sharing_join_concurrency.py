@@ -157,7 +157,7 @@ async def test_two_riders_joining_at_once_fill_one_seat(session_factory, stage):
             )
         )
     assert seats == 1, "مقعدٌ ثانٍ واحد"
-    assert active == 2, "راكبان على الكبتن لا ثلاثة"
+    assert active == 2, "راكبان على الكابتن لا ثلاثة"
 
 
 async def test_a_join_racing_the_departure_loses(session_factory, stage):

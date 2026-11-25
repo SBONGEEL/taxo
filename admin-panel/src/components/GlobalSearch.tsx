@@ -114,7 +114,7 @@ export function GlobalSearch() {
         onPick={jump}
         search={search}
         placeholder="ابحث في اللوحة كلِّها — اسمٌ أو رقمٌ أو مرجع…"
-        emptyText="لا حسابَ ولا كبتنَ ولا رحلةَ ولا مطالبةَ بهذا النصّ."
+        emptyText="لا حسابَ ولا كابتنَ ولا رحلةَ ولا مطالبةَ بهذا النصّ."
         ariaLabel="البحث العامّ"
       />
     </div>

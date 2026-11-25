@@ -38,7 +38,7 @@ const MODES: { key: RoundingModeKey; label: string }[] = [
 const SURFACES: { key: keyof Pick<FareRoundingInput, "on_estimate" | "on_final" | "on_negotiation" | "on_cancellation">; label: string; hint: string }[] = [
   { key: "on_estimate", label: "تقديرُ الأجرة", hint: "ما يراه الراكبُ قبل الطلب وعدّادُ الرحلة" },
   { key: "on_final", label: "الأجرةُ النهائيّة", hint: "ما يُحصَّل عند الإنهاء — ويُجمَّد على الرحلة عند طلبها" },
-  { key: "on_negotiation", label: "أسعارُ التفاوض", hint: "عرضُ الراكب، وعرضُ الكبتن المقابل، والحدُّ الأدنى والخطوة" },
+  { key: "on_negotiation", label: "أسعارُ التفاوض", hint: "عرضُ الراكب، وعرضُ الكابتن المقابل، والحدُّ الأدنى والخطوة" },
   { key: "on_cancellation", label: "رسمُ الإلغاء", hint: "ما يُحصَّل من الراكب عند إلغاءٍ متأخّر" },
 ];
 

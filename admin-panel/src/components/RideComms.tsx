@@ -33,7 +33,7 @@ export const REPORT_REASON_LABEL: Record<ChatReportReason, string> = {
   other: "غير ذلك",
 };
 
-const SIDE_LABEL: Record<"rider" | "driver", string> = { rider: "الراكب", driver: "الكبتن" };
+const SIDE_LABEL: Record<"rider" | "driver", string> = { rider: "الراكب", driver: "الكابتن" };
 
 /** **المنعُ بنصّه** — ومعه أين تُمنح الصلاحية: لا «خطأ» عامّ يُقرأ عطباً. */
 export function TripChatsRefusal() {

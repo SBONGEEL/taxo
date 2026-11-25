@@ -153,7 +153,7 @@ async def test_rejecting_needs_a_written_reason(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796660013", "name": "كبتنُ الرفض"},
+        DRIVER | {"phone": "0796660013", "name": "كابتنُ الرفض"},
         plate_number="AMM-1313",
         subscribed=False,
     )

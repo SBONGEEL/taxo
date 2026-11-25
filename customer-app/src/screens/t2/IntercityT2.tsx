@@ -72,7 +72,7 @@ export function IntercityT2Screen() {
     <div className="t2 t2-page t2-ic pb-nav">
       <SubHeadT2 title={tr("بين المدن")} onBack={goBack} />
       <p className="t2-ic-lede">
-        {tr("رحلاتٌ بين المدن يعلنها كباتنُ بتصريحٍ بعد فحص مركباتهم.")}{" "}<b>{tr("احجز مقعداً من محفظتك")}</b>{tr("، أو السيارةَ كاملةً نقداً للكبتن — وتلتقيه في نقطة التجمّع.")}
+        {tr("رحلاتٌ بين المدن يعلنها كباتنُ بتصريحٍ بعد فحص مركباتهم.")}{" "}<b>{tr("احجز مقعداً من محفظتك")}</b>{tr("، أو السيارةَ كاملةً نقداً للكابتن — وتلتقيه في نقطة التجمّع.")}
 
       </p>
 
@@ -199,7 +199,7 @@ function BookSheet({
       ) : trip ? (
         <>
           <p className="t2-drawer-text">
-            {tripDay(trip.departs_at)}{" "}{tr("· الساعة")}{" "}<span dir="ltr">{tripClock(trip.departs_at)}</span>{" "}{tr("— تلتقي الكبتنَ في")}{" "}
+            {tripDay(trip.departs_at)}{" "}{tr("· الساعة")}{" "}<span dir="ltr">{tripClock(trip.departs_at)}</span>{" "}{tr("— تلتقي الكابتنَ في")}{" "}
             <b>{trip.route.from_point}</b>.
           </p>
 
@@ -233,9 +233,9 @@ function BookSheet({
                   <Icon name="directions_car" />
                 </span>
                 <span className="t2-cat-main">
-                  <span className="t2-cat-name">{tr("السيارةُ كاملة — نقداً للكبتن")}</span>
+                  <span className="t2-cat-name">{tr("السيارةُ كاملة — نقداً للكابتن")}</span>
                   <span className="t2-cat-hint">
-                    {formatMoney(trip.price_car, trip.currency)}{" "}{tr("تسلّمه للكبتن بيدك عند الانطلاق")}
+                    {formatMoney(trip.price_car, trip.currency)}{" "}{tr("تسلّمه للكابتن بيدك عند الانطلاق")}
                   </span>
                 </span>
               </button>
@@ -334,10 +334,10 @@ function BookedNote({ booked, onMine, onDone }: { booked: IntercityBooking; onMi
             </>
           ) : (
             <>
-              {tr("تدفع")}{" "}<b className="t2-num">{amount}</b>{" "}{tr("نقداً للكبتن عند الانطلاق.")}
+              {tr("تدفع")}{" "}<b className="t2-num">{amount}</b>{" "}{tr("نقداً للكابتن عند الانطلاق.")}
             </>
           )}{" "}
-          {tr("تلتقي الكبتنَ في")}{" "}<b>{trip.route.from_point}</b> {tripDay(trip.departs_at)}{" "}{tr("الساعة")}{" "}
+          {tr("تلتقي الكابتنَ في")}{" "}<b>{trip.route.from_point}</b> {tripDay(trip.departs_at)}{" "}{tr("الساعة")}{" "}
           <span dir="ltr">{tripClock(trip.departs_at)}</span>.
         </p>
       </div>
@@ -391,7 +391,7 @@ export function IntercityBookingsT2Screen() {
         <BlankT2
           icon="route"
           title={tr("لا حجوزاتِ بعد")}
-          hint={service ? tr("احجز مقعداً في رحلةٍ بين المدن يعلنها كبتنٌ بتصريح.") : undefined}
+          hint={service ? tr("احجز مقعداً في رحلةٍ بين المدن يعلنها كابتنٌ بتصريح.") : undefined}
         />
       ) : null}
 
@@ -487,7 +487,7 @@ function BookingCard({
         <span>{row.whole_car ? tr("السيارةُ كاملة") : seatsCount(row.seats)}</span>
         <span>
           <b className="t2-num">{formatMoney(row.amount, row.trip.currency)}</b> ·{" "}
-          {row.payment === "wallet" ? tr("من محفظتك") : tr("نقداً للكبتن")}
+          {row.payment === "wallet" ? tr("من محفظتك") : tr("نقداً للكابتن")}
         </span>
       </div>
       {why ? <p className="t2-ic-trip-note">{why}</p> : null}

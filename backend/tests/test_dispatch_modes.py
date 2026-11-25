@@ -195,7 +195,7 @@ async def test_cancelling_while_searching_folds_the_card_at_once(
     await wait_until(
         _folded,
         timeout=15.0,
-        message="البطاقةُ بقيت على شاشة الكبتن بعد إلغاء الراكب",
+        message="البطاقةُ بقيت على شاشة الكابتن بعد إلغاء الراكب",
     )
 
 

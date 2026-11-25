@@ -167,7 +167,7 @@ export function OfferSheet({
             {Number(offer.ride.carried_cancellation_fee ?? 0) > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-warn">
                 {tr("تحمل")}{" "}{formatAmount(offer.ride.carried_cancellation_fee ?? "0", offer.ride.currency)}{" "}
-                {currencyLabel}{" "}{tr("لكبتنٍ آخر")}
+                {currencyLabel}{" "}{tr("لكابتنٍ آخر")}
               </span>
             ) : null}
             <div className="text-23 font-bold text-ink">

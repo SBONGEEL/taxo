@@ -131,7 +131,7 @@ async def set_access(
         select(Driver).where(Driver.id == payload.driver_id).with_for_update().execution_options(populate_existing=True)
     )
     if driver is None:
-        raise NotFound("لا كبتنَ بهذا المعرّف")
+        raise NotFound("لا كابتنَ بهذا المعرّف")
     # **منحُ فئةٍ تشترط وثيقةً ينتظر اعتمادَها** (§٩١-ب/٧: «تاكسي المدينة» بعد رخصة التاكسي) — والنزعُ لا يُشترط له شيء
     if payload.granted and category.required_document:
         approved = await session.scalar(
@@ -143,7 +143,7 @@ async def set_access(
         )
         if approved is None:
             raise InvalidInput(
-                f"لا تُمنح «{category.name}» قبل اعتماد «{documents.label_for(DocumentType(category.required_document))}» عند الكبتن"
+                f"لا تُمنح «{category.name}» قبل اعتماد «{documents.label_for(DocumentType(category.required_document))}» عند الكابتن"
             )
     existing = await session.scalar(
         select(DriverCategoryAccess).where(
@@ -182,7 +182,7 @@ async def set_vehicle_attributes(
     **وتحكم الفئاتِ الجديدةَ وحدَها** — المدمجتان تتبعان فئةَ المركبة كما كانت."""
     vehicle = await session.scalar(select(Vehicle).where(Vehicle.id == vehicle_id, Vehicle.driver_id == driver_id))
     if vehicle is None:
-        raise NotFound("لا مركبةَ بهذا المعرّف لهذا الكبتن")
+        raise NotFound("لا مركبةَ بهذا المعرّف لهذا الكابتن")
     changed = audit.apply_changes(vehicle, {key: _plain(value) for key, value in payload.model_dump().items()})
     if changed:
         await audit.record(
@@ -205,7 +205,7 @@ async def _driver_vehicle(session, driver_id: uuid.UUID, vehicle_id: uuid.UUID) 
         )
     ).first()
     if row is None:
-        raise NotFound("لا مركبةَ بهذا المعرّف لهذا الكبتن")
+        raise NotFound("لا مركبةَ بهذا المعرّف لهذا الكابتن")
     return row[0], row[1]
 
 
@@ -230,7 +230,7 @@ async def set_vehicle_category(
     """
     driver = await session.scalar(select(Driver).where(Driver.id == driver_id))
     if driver is None:
-        raise NotFound("لا كبتنَ بهذا المعرّف")
+        raise NotFound("لا كابتنَ بهذا المعرّف")
     await drivers_service.lock(session, driver)
     vehicle, _country = await _driver_vehicle(session, driver_id, vehicle_id)
     before = {"category": vehicle.category, "confirmed": vehicle.category_confirmed_at is not None}

@@ -209,7 +209,7 @@ export function CommsProvider({
   toast: (title: string, body?: string) => void;
   children: ReactNode;
 }) {
-  const peerRole = side === "rider" ? tr("الكبتن") : tr("الراكب");
+  const peerRole = side === "rider" ? tr("الكابتن") : tr("الراكب");
   /** **«مكالمةٌ فائتة» بنصِّ إشعار الخادم حرفاً** (`MISSED_CALL_TITLE` · `MISSED_CALL_BODY`) — فبلاغُه على المقبس، إن وصل بعدها،
    *  يُطوى معها (`firstSighting`) ولا يُرسم مرّتين. */
   const missed = useCallback(

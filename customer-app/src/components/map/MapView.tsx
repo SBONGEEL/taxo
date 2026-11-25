@@ -889,7 +889,7 @@ const MapViewEngine = forwardRef<MapHandle, MapViewProps & { openMap: boolean }>
     if (!searchPulse.current) {
       searchPulse.current = new gl.Marker({
         // **ونهارُ TAXO 2.0 رادارُ اللوحة** (R07): ثلاثُ حلقاتٍ واسعةٍ بالجمر ونقطةُ الانطلاق في مركزها — والليلُ نبضتُه كما كانت
-        element: t2 ? t2RadarElement(tr("جارٍ البحث عن كبتن")) : pulseElement(tr("جارٍ البحث عن كبتن")),
+        element: t2 ? t2RadarElement(tr("جارٍ البحث عن كابتن")) : pulseElement(tr("جارٍ البحث عن كابتن")),
       })
         .setLngLat([pickup.lng, pickup.lat])
         .addTo(instance);

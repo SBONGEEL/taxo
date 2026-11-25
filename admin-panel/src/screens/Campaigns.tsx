@@ -444,7 +444,7 @@ function Composer({
               </option>
             ))}
           </select>
-          <p className="mt-6 text-11 leading-note text-muted">من كانت آخرُ رحلاته (راكباً أو كبتناً) فيها.</p>
+          <p className="mt-6 text-11 leading-note text-muted">من كانت آخرُ رحلاته (راكباً أو كابتناً) فيها.</p>
         </div>
       ) : null}
 

@@ -78,7 +78,7 @@ const ENTITY_LABEL: Record<string, string> = {
   notification_campaign: "حملة",
   push_test: "مِجَسّ إشعار",
   live_map: "الخريطة الحيّة",
-  driver_live: "موقعُ كبتنٍ حيّ",
+  driver_live: "موقعُ كابتنٍ حيّ",
 };
 
 const COLUMNS = "1fr 1fr 0.8fr 1.1fr 0.8fr 1.6fr";

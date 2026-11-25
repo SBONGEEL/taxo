@@ -26,7 +26,7 @@ import { moment } from "@/lib/format";
 
 type EmergencyFilter = "open" | "handled" | "all";
 
-const ROLE_LABEL: Record<string, string> = { rider: "الراكب", driver: "الكبتن" };
+const ROLE_LABEL: Record<string, string> = { rider: "الراكب", driver: "الكابتن" };
 const COUNTRY_LABEL: Record<string, string> = { JO: "الأردن", DZ: "الجزائر" };
 
 function mapLink(lat: number, lng: number): string {
@@ -220,7 +220,7 @@ function QuickRepliesCard() {
       </div>
       <div className="grid gap-10 sm:grid-cols-2">
         <label className="flex flex-col gap-4 text-12 text-muted">
-          ردود الكبتن
+          ردود الكابتن
           <textarea className="ad-input" rows={4} value={driver} onChange={(event) => setDriver(event.target.value)} />
         </label>
         <label className="flex flex-col gap-4 text-12 text-muted">
@@ -304,7 +304,7 @@ export function EmergenciesScreen() {
                   </p>
                   <Person label="من ضغط" name={row.reporter.name} phone={row.reporter.phone} />
                   {row.rider ? <Person label="الراكب" name={row.rider.name} phone={row.rider.phone} /> : null}
-                  {row.driver ? <Person label="الكبتن" name={row.driver.name} phone={row.driver.phone} /> : null}
+                  {row.driver ? <Person label="الكابتن" name={row.driver.name} phone={row.driver.phone} /> : null}
                   {row.plate_number ? (
                     <p className="ad-report-line">
                       اللوحة: <span dir="ltr">{row.plate_number}</span>

@@ -72,7 +72,7 @@ _PRICE_FIELDS: tuple[tuple[str, str], ...] = (
 )
 
 _DOC_LABEL = {PolicyDocType.PRIVACY_POLICY: "سياسةُ الخصوصية", PolicyDocType.TERMS_OF_USE: "الشروط"}
-_APP_LABEL = {PolicyApp.RIDER: "للراكب", PolicyApp.DRIVER: "للكبتن"}
+_APP_LABEL = {PolicyApp.RIDER: "للراكب", PolicyApp.DRIVER: "للكابتن"}
 
 
 def _now() -> datetime:

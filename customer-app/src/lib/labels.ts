@@ -16,15 +16,15 @@ import type {
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
   requested: tr("جارٍ إرسال الطلب"),
-  searching: tr("نبحث عن كبتن"),
-  accepted: tr("الكبتن في الطريق"),
-  arrived: tr("وصل الكبتن"),
+  searching: tr("نبحث عن كابتن"),
+  accepted: tr("الكابتن في الطريق"),
+  arrived: tr("وصل الكابتن"),
   at_stop: tr("وقوفٌ عند محطة"),
   in_progress: tr("الرحلة جارية"),
   completed: tr("انتهت الرحلة"),
   cancelled_by_rider: tr("ألغيتَ الرحلة"),
-  cancelled_by_driver: tr("ألغى الكبتن الرحلة"),
-  no_driver_found: tr("لم نجد كبتناً متاحاً"),
+  cancelled_by_driver: tr("ألغى الكابتن الرحلة"),
+  no_driver_found: tr("لم نجد كابتناً متاحاً"),
 };
 
 /** مرآةُ `ACTIVE_RIDER_STATUSES` في `models/ride.py` — و**نقصُها يُنهي رحلةً
@@ -109,7 +109,7 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // البقشيش (12-و): الراكبُ يرى `tip_payment` في كشفه، و`tip` لا يقع له —
   // لكنه في التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ في كشفٍ يوماً
   tip: tr("بقشيش وارد"),
-  tip_payment: tr("بقشيش للكبتن"),
+  tip_payment: tr("بقشيش للكابتن"),
   // **والستّةُ الباقيةُ تُسمّى وإن لم تقع للراكب** — للعلّة نفسِها
   // المكتوبة فوق: **لا تظهر سلسلةٌ خامٌ في كشفٍ يوماً**. وثلاثٌ منها
   // تخصّ الكبتن وحدَه، **وتُسمّى بلغة الراكب لا بلغة الدفتر**.
@@ -122,8 +122,8 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // **الحجزُ المضمون** (§٦٣-ج/٣) — الحفظُ والردُّ والتعويضُ تقع له، والاثنان الباقيان للكبتن ويُسمّيان للعلّة نفسِها
   guarantee_hold: tr("رسم حجز مضمون"),
   guarantee_refund: tr("ردّ رسم الضمان"),
-  guarantee_compensation: tr("تعويض اعتذار الكبتن"),
-  guarantee_fee: tr("رسم ضمان للكبتن"),
+  guarantee_compensation: tr("تعويض اعتذار الكابتن"),
+  guarantee_fee: tr("رسم ضمان للكابتن"),
   guarantee_penalty: tr("غرامة اعتذار"),
   // **المشوارُ الثابت** (§٦٣-ج/٦) — المقدَّمُ وما عاد منه يقعان له، والحافزُ للكبتن ويُسمّى للعلّة أعلاه
   commute_prepay: tr("اشتراك المشوار الثابت"),

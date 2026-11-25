@@ -250,7 +250,7 @@ export function RegisterScreen() {
           {riderHere ? (
             <div className="t2-auth-banner t2-auth-banner--info" role="status">
               <Icon name="info" />
-              <span>{tr("لك حسابٌ في تطبيق Taxo؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الكبتن إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
+              <span>{tr("لك حسابٌ في تطبيق Taxo؟ ادخل برقمه وكلمة مروره، ويُضاف ملفّ الكابتن إلى حسابك نفسِه — بلا رمز تحقّق.")}</span>
               <button type="button" className="t2-tlink accent" onClick={() => navigate("/login", { replace: true })}>
                 {tr("ادخل بحسابي")}
               </button>

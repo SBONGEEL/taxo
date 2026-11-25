@@ -208,7 +208,7 @@ export function SubscriptionsScreen() {
             <TableSearch
               value={search.text}
               onChange={search.setText}
-              placeholder="اسمُ الكبتن أو رقمُه…"
+              placeholder="اسمُ الكابتن أو رقمُه…"
             />
           }
           searching={search.searching}
@@ -361,7 +361,7 @@ function PlansPanel({
         keyOf={(plan) => plan.id}
         empty={{
           title: "لا باقات في هذه الدولة",
-          hint: "بلا باقةٍ لا يشتري كبتنٌ اشتراكاً — ولا يستقبل طلباً.",
+          hint: "بلا باقةٍ لا يشتري كابتنٌ اشتراكاً — ولا يستقبل طلباً.",
         }}
         render={(plan) => (
           <>
@@ -670,7 +670,7 @@ function RecordModal({
               />
             ) : mode === "permanent" ? (
               <p className="self-end text-11.5 leading-note text-muted">
-                دائمٌ يبدأ الآن ولا ينتهي، ولا يُخصم منه مالٌ بعدها — ويظهر للراكب والكبتن «سفير TAXO». النزعُ من «السفراء والمميّزون».
+                دائمٌ يبدأ الآن ولا ينتهي، ولا يُخصم منه مالٌ بعدها — ويظهر للراكب والكابتن «سفير TAXO». النزعُ من «السفراء والمميّزون».
               </p>
             ) : null}
           </div>
@@ -734,7 +734,7 @@ function RecordModal({
         </div>
 
         <p className="mt-10 text-11 leading-note text-muted">
-          والمحفظةُ والبطاقةُ ليستا هنا: يفتحهما الكبتن من تطبيقه ويشهد عليهما
+          والمحفظةُ والبطاقةُ ليستا هنا: يفتحهما الكابتن من تطبيقه ويشهد عليهما
           الدفترُ أو المزود، فلا شيء فيهما ينتظر إنساناً.
         </p>
 
@@ -763,7 +763,7 @@ function RecordModal({
               </div>
             ) : null}
             {preview.permanent_exists ? (
-              <p className="mt-8 text-11.5 text-danger">لهذا الكبتن اشتراكٌ دائمٌ ساري — لا يُسجَّل فوقه شيء.</p>
+              <p className="mt-8 text-11.5 text-danger">لهذا الكابتن اشتراكٌ دائمٌ ساري — لا يُسجَّل فوقه شيء.</p>
             ) : null}
           </div>
         ) : null}
@@ -890,7 +890,7 @@ function CancelModal({
       ) : (
         <>
           <p className="mb-14 text-12.5 leading-note text-muted">
-            الإلغاءُ فوريّ: يخرج الكبتنُ من التوزيع في اللحظة، وتسقط نسبةُ
+            الإلغاءُ فوريّ: يخرج الكابتنُ من التوزيع في اللحظة، وتسقط نسبةُ
             عمولته المجمَّدة فيخضع لنسبة سوقه. <b className="text-ink">ولا
             تُمسّ رحلةٌ جارية</b> — عمولتُها مجمَّدةٌ عليها منذ قبولها.
           </p>

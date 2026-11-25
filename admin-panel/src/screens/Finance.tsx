@@ -174,7 +174,7 @@ export function FinanceScreen() {
       <GuardBanner on={payoutStopped} title="صرفُ السحوبات موقوف">
         <b className="text-ink">المالُ لا يغادر</b> حتى يُستأنف من «الإعدادات».
         والطلباتُ تُقبل والاعتمادُ يمرّ كما كان، والطلبُ يبقى «معتمَداً» في
-        مكانه — والكبتنُ يقرأ ذلك على طلبه فلا يظنّه ضاع.
+        مكانه — والكابتنُ يقرأ ذلك على طلبه فلا يظنّه ضاع.
       </GuardBanner>
       <Pills
         value={tab}
@@ -203,7 +203,7 @@ export function FinanceScreen() {
             keyOf={(row) => row.id}
             empty={{
               title: "لا مطالبات معلّقة",
-              hint: "مطالبةُ كبتنٍ دفع اشتراكه بكليك تنتظر تأكيدك بعد أن يصل المال.",
+              hint: "مطالبةُ كابتنٍ دفع اشتراكه بكليك تنتظر تأكيدك بعد أن يصل المال.",
             }}
             render={(row) => (
               <>
@@ -241,18 +241,18 @@ export function FinanceScreen() {
               <TableSearch
                 value={withdrawalSearch.text}
                 onChange={withdrawalSearch.setText}
-                placeholder="اسمُ الكبتن أو رقمُه…"
+                placeholder="اسمُ الكابتن أو رقمُه…"
               />
             }
             searching={withdrawalSearch.searching}
             noResults={NO_RESULTS}
             columns="1.2fr 1fr 0.8fr 1fr 1fr 1.4fr"
-            headers={["الكبتن", "المبلغ", "القناة", "الطلب", "الحالة", ""]}
+            headers={["الكابتن", "المبلغ", "القناة", "الطلب", "الحالة", ""]}
             rows={withdrawals}
             keyOf={(row) => row.id}
             empty={{
               title: "لا طلبات سحب",
-              hint: "يظهر هنا كل طلبٍ من كبتن، من لحظة تقديمه حتى تحويله.",
+              hint: "يظهر هنا كل طلبٍ من كابتن، من لحظة تقديمه حتى تحويله.",
             }}
             render={(row) => (
               <>
@@ -450,7 +450,7 @@ export function FinanceScreen() {
       {tab === "cancellations" ? null : (
       <p className="mt-14 text-11.5 leading-note text-muted">
         الطلب المعلّق أو الموافَق عليه <b className="text-ink">يحجز</b> مبلغه من
-        رصيد الكبتن المتاح، وقيد السحب لا يُكتب في الدفتر إلا عند تسجيل التحويل.
+        رصيد الكابتن المتاح، وقيد السحب لا يُكتب في الدفتر إلا عند تسجيل التحويل.
         وتأكيدُ الشحنة هو ما يقيّد رصيد الراكب — فلا يُؤكَّد إلا بعد رؤية المال.
       </p>
       )}
@@ -736,7 +736,7 @@ function PayoutModal({
       >
         <h2 className="mb-4 text-16 font-bold text-ink">تسجيل التحويل</h2>
         <p className="mb-16 text-12 leading-note text-muted">
-          يُكتب الآن قيدُ السحب في دفتر الكبتن — وهذه هي اللحظة التي يتحرك فيها
+          يُكتب الآن قيدُ السحب في دفتر الكابتن — وهذه هي اللحظة التي يتحرك فيها
           المال. سجّله بعد أن تحوّل فعلاً، لا قبله.
         </p>
 
@@ -756,7 +756,7 @@ function PayoutModal({
                 {request.payout_account}
               </span>
             ) : (
-              <span className="block text-ink">يُسلَّم نقداً في المكتب بعد التحقّق من هويّة الكبتن</span>
+              <span className="block text-ink">يُسلَّم نقداً في المكتب بعد التحقّق من هويّة الكابتن</span>
             )}
             {request.payout_holder ? <span className="block text-ink">{request.payout_holder}</span> : null}
           </div>

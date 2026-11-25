@@ -77,10 +77,10 @@ async def _apply(session: AsyncSession, phone: str) -> list[str]:
     if not user.is_test:
         raise DayRefused("الحسابُ ليس موسوماً is_test — لا يُمنح شيئاً")
     if user.country_code is not COUNTRY:
-        raise DayRefused("كبتنُ التجربة ليس في الأردن")
+        raise DayRefused("كابتنُ التجربة ليس في الأردن")
     driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
     if driver is None:
-        raise DayRefused("لا صفَّ كبتنٍ لهذا الحساب")
+        raise DayRefused("لا صفَّ كابتنٍ لهذا الحساب")
     covered = await subscriptions_service.coverage_until(session, driver.id)
     if covered is not None:
         raise DayRefused(f"مغطّىً حتى {covered.isoformat(timespec='minutes')} — لا يومَ ثانياً فوق غطاءٍ قائم")
@@ -105,7 +105,7 @@ async def _apply(session: AsyncSession, phone: str) -> list[str]:
     )
     await session.flush()
     return [
-        f"كبتنُ التجربة (is_test) — خطّةُ «{plan.name}» اليوميّة بمبلغ {subscription.amount_paid}",
+        f"كابتنُ التجربة (is_test) — خطّةُ «{plan.name}» اليوميّة بمبلغ {subscription.amount_paid}",
         f"يبدأ {subscription.starts_at.isoformat(timespec='minutes')} وينتهي {subscription.expires_at.isoformat(timespec='minutes')}",
     ]
 
@@ -122,7 +122,7 @@ async def main_async(*, test_accounts: Path, write: bool, session_factory=Sessio
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="يومُ اشتراكٍ بصفرٍ لكبتن التجربة وحدَه")
+    parser = argparse.ArgumentParser(description="يومُ اشتراكٍ بصفرٍ لكابتن التجربة وحدَه")
     parser.add_argument("--test-accounts", required=True, type=Path)
     parser.add_argument("--apply", action="store_true", help="اكتب — وبلاها معاينةٌ تتراجع")
     args = parser.parse_args()

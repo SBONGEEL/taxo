@@ -196,7 +196,7 @@ function fareFor(category: string): string {
 
 const DRIVER = (category: string): RideDriver => ({
   id: CAPTAIN,
-  name: tr("سامر — كبتن تجريبي"),
+  name: tr("سامر — كابتن تجريبي"),
   rating_avg: "4.90",
   vehicle: { make: "Toyota", model: "Corolla", color: tr("أبيض"), plate_number: "00-00000", category },
   skin: null,
@@ -405,7 +405,7 @@ const notifications = (): UserNotification[] => [
     id: "demo-n-1",
     kind: "demo",
     title: tr("مرحباً بك في TAXO"),
-    body: tr("هذا وضعُ التجربة: الكبتنُ والرحلةُ والرصيدُ للعرض."),
+    body: tr("هذا وضعُ التجربة: الكابتنُ والرحلةُ والرصيدُ للعرض."),
     data: null,
     read_at: notificationsRead ? now() : null,
     created_at: ago(2),
@@ -733,7 +733,7 @@ export function demoRequest(
       open: true,
       can_call: false,
       unread: 0,
-      notice: tr("محادثةٌ تجريبيّة — الكبتنُ محاكى ولا يقرؤها أحد."),
+      notice: tr("محادثةٌ تجريبيّة — الكابتنُ محاكى ولا يقرؤها أحد."),
       max_chars: 300,
       messages: list.map((msg) => ({ id: msg.id, ride_id: m![1], sender_role: msg.mine ? "rider" : "driver", mine: msg.mine, body: msg.body, created_at: msg.created_at, read_at: null })),
       active_call: null,

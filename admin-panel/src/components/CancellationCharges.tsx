@@ -122,7 +122,7 @@ export function CancellationCharges({
                 <>
                   <span className="flex items-baseline gap-6">
                     <span className="min-w-0 truncate">
-                      {row.carrier_name ?? "كبتن"}
+                      {row.carrier_name ?? "كابتن"}
                     </span>
                     {/* **طرفُ تجربة** (SPEC §٦٥-ج) — رسمٌ يمسّه لا تتحمّله الشركةُ ويبقى هنا لإعفاءٍ باسم مشرف */}
                     <TestAccountBadge isTest={row.carrier_is_test} />
@@ -155,7 +155,7 @@ export function CancellationCharges({
               )}
             </span>
             <span className="flex items-baseline gap-6 text-12 text-ink">
-              <span className="min-w-0 truncate">{row.beneficiary_name ?? "كبتن"}</span>
+              <span className="min-w-0 truncate">{row.beneficiary_name ?? "كابتن"}</span>
               <TestAccountBadge isTest={row.beneficiary_is_test} />
             </span>
             <span className="flex items-center gap-6">
@@ -213,7 +213,7 @@ export function CancellationCharges({
       />
 
       <p className="mt-14 text-11.5 leading-note text-muted">
-        الرسمُ <b className="text-ink">تعويضٌ للكبتن الذي تحرّك</b>، والمنصّةُ
+        الرسمُ <b className="text-ink">تعويضٌ للكابتن الذي تحرّك</b>، والمنصّةُ
         تنقله ولا تملكه. والإعفاءُ والشطبُ <b className="text-ink">لا يكتبان
         قيداً في الدفتر</b>: لم يتحرك مالٌ في محفظة أحد، وقيدٌ يقول «سُدِّد»
         يجعل الكشفَ يكذب على الطرفين. ومن قبض الرسمَ نقداً يظهر هنا حاملاً —

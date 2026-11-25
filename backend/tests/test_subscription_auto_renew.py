@@ -168,7 +168,7 @@ async def test_a_second_cycle_does_not_announce_the_same_renewal(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796660015", "name": "كبتنُ الإعلان"},
+        DRIVER | {"phone": "0796660015", "name": "كابتنُ الإعلان"},
         plate_number="AMM-1515",
         subscribed=False,
     )
@@ -225,7 +225,7 @@ async def test_the_last_attempt_says_it_failed(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796660014", "name": "كبتنُ التجديد"},
+        DRIVER | {"phone": "0796660014", "name": "كابتنُ التجديد"},
         plate_number="AMM-1414",
         subscribed=False,
     )
@@ -244,4 +244,4 @@ async def test_the_last_attempt_says_it_failed(
                 UserNotification.kind == "subscription_renewal_failed",
             )
         )
-        assert len(list(rows)) == 1, "الفشلُ الأخير لم يُقل — والكبتن يظنّ نفسه مجدَّداً"
+        assert len(list(rows)) == 1, "الفشلُ الأخير لم يُقل — والكابتن يظنّ نفسه مجدَّداً"

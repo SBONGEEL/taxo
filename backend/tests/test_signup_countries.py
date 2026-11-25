@@ -92,7 +92,7 @@ async def test_a_stopped_market_refuses_signup_with_the_owner_text_before_anythi
     owner = await markets_owner(client, admin_headers)
     await client.put("/admin/markets/LY/signup-display", json={"display": "stopped"}, headers=owner["headers"])
     assert {e["country_code"]: e for e in (await client.get("/config")).json()["countries"]}["LY"]["signup"] == "stopped"
-    answer = await client.post("/auth/register", json=_signup("0917654321", "كبتن", "LY", "driver"))
+    answer = await client.post("/auth/register", json=_signup("0917654321", "كابتن", "LY", "driver"))
     assert answer.status_code == 403, answer.text
     assert answer.json()["code"] == "country_stopped"
     assert answer.json()["message"] == "خادم الدولة متوقف حالياً"
@@ -102,7 +102,7 @@ async def test_a_stopped_market_refuses_signup_with_the_owner_text_before_anythi
 
 async def test_a_soon_market_says_soon_in_the_country(client: AsyncClient, session_factory) -> None:
     await _set_open(session_factory, CountryCode.LY, False)
-    answer = await client.post("/auth/register", json=_signup("0917654321", "كبتن", "LY", "driver"))
+    answer = await client.post("/auth/register", json=_signup("0917654321", "كابتن", "LY", "driver"))
     assert answer.status_code == 403 and answer.json()["message"] == "قريباً في ليبيا"
 
 
@@ -213,7 +213,7 @@ async def test_a_visible_closed_market_never_creates_an_account(client: AsyncCli
     assert put.status_code == 200, put.text
     entry = {e["country_code"]: e for e in (await client.get("/config")).json()["countries"]}["LY"]
     assert entry["signup"] == "visible"
-    answer = await client.post("/auth/register", json=_signup("0917654322", "كبتن", "LY", "driver"))
+    answer = await client.post("/auth/register", json=_signup("0917654322", "كابتن", "LY", "driver"))
     assert answer.status_code == 403
     async with session_factory() as session:
         assert (await session.scalar(select(User).where(User.phone == "+218917654322"))) is None

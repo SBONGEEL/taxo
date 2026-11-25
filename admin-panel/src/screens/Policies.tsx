@@ -56,7 +56,7 @@ const DOC_LABEL: Record<PolicyDocType, string> = {
 
 const APP_LABEL: Record<PolicyApp, string> = {
   rider: "تطبيق الراكب",
-  driver: "تطبيق الكبتن",
+  driver: "تطبيق الكابتن",
 };
 
 const COLUMNS = "0.8fr 0.5fr 0.6fr 0.7fr 0.9fr 0.9fr";

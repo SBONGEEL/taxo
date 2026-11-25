@@ -142,7 +142,7 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
                   }
                 >
                   <option value="">اختر المحفظة…</option>
-                  <option value="driver">محفظة الكبتن — أرباحٌ وسلَفٌ وعمولة</option>
+                  <option value="driver">محفظة الكابتن — أرباحٌ وسلَفٌ وعمولة</option>
                   <option value="rider">محفظة الراكب — ما شحنه لرحلاته</option>
                 </Select>
               ) : null}

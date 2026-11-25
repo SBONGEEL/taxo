@@ -429,11 +429,11 @@ def _require_payer_method(ride: Ride, method: PaymentMethod) -> None:
     """
     # **والطرد** (§٦٣-ج/٤): المستلمُ نقداً ⇒ دفعتُه يفتحها الإنهاء؛ والمرسلُ عند الالتقاط ⇒ أيُّ قناة
     if ride.payer == RidePayer.RECIPIENT_CASH:
-        raise PayerMethodMismatch("يدفع هذا الطردَ مستلمُه نقداً للكبتن")
+        raise PayerMethodMismatch("يدفع هذا الطردَ مستلمُه نقداً للكابتن")
     if not ride.for_other:
         return
     if ride.payer == RidePayer.PASSENGER_CASH:
-        raise PayerMethodMismatch("يدفع هذه الرحلةَ راكبُها نقداً للكبتن")
+        raise PayerMethodMismatch("يدفع هذه الرحلةَ راكبُها نقداً للكابتن")
     if method not in (PaymentMethod.WALLET, PaymentMethod.CARD):
         raise PayerMethodMismatch("اخترتَ أن تدفع أنت — بالمحفظة أو البطاقة")
 
@@ -481,7 +481,7 @@ async def _require_cliq_alias(session: AsyncSession, ride: Ride) -> str:
     )
     cleaned = (alias or "").strip()
     if not cleaned:
-        raise InvalidInput("لم يضف الكبتن alias كليك — اختر قناة أخرى")
+        raise InvalidInput("لم يضف الكابتن alias كليك — اختر قناة أخرى")
     return cleaned
 
 
@@ -1071,7 +1071,7 @@ async def confirm_by_driver(
 
 
 # سببُ النزاع الآلي — نصٌّ ثابتٌ يميّزه فاصلُ النزاع عن نزاعٍ كتبه كبتن
-AUTO_DISPUTE_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكبتن"
+AUTO_DISPUTE_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكابتن"
 
 
 async def expired_cliq_payment_ids(session: AsyncSession) -> list[uuid.UUID]:
@@ -1264,7 +1264,7 @@ async def refund(
     """
     if payment.method not in REFUNDABLE_METHODS:
         raise InvalidPaymentTransition(
-            "الكاش وكليك يقبضهما الكبتن مباشرة — لا استرداد لهما من المنصة"
+            "الكاش وكليك يقبضهما الكابتن مباشرة — لا استرداد لهما من المنصة"
         )
     require_transition(payment, PaymentStatus.REFUNDED)
     if not reason.strip():

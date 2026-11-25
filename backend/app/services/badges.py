@@ -33,7 +33,7 @@ class BadgeNotFound(NotFound):
 
 class BadgeAlreadyGranted(Conflict):
     code = "badge_already_granted"
-    message = "الشارة ممنوحةٌ لهذا الكبتن"
+    message = "الشارة ممنوحةٌ لهذا الكابتن"
 
 
 async def list_badges(
@@ -100,7 +100,7 @@ async def grant(
 
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     badge = await session.get(Badge, badge_id)
     if badge is None:
         raise BadgeNotFound()

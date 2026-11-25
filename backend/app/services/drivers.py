@@ -55,7 +55,7 @@ class PresenceContext:
 async def presence_context(session: AsyncSession, driver: Driver) -> PresenceContext:
     """يتحقق من أهلية الظهور ويجمع ثوابتها."""
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
 
     country_code = await session.scalar(
         select(User.country_code).where(User.id == driver.user_id)

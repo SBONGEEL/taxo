@@ -70,7 +70,7 @@ export function Deactivations({ onError }: { onError: (message: string) => void 
     <section className="card mt-16 p-16">
       <h2 className="mb-4 text-15 font-bold text-ink">طلبات إلغاء التفعيل</h2>
       <p className="mb-12 text-12 text-muted">
-        الموافقة تُخرج الكبتن من التوزيع وتُطلق رصيده المحتجَز. والرفض يحتاج سبباً
+        الموافقة تُخرج الكابتن من التوزيع وتُطلق رصيده المحتجَز. والرفض يحتاج سبباً
         يقرؤه صاحبُ الطلب.
       </p>
 

@@ -71,10 +71,10 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
 };
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
-  requested: tr("بانتظار كبتن"),
-  searching: tr("نبحث عن كبتن"),
+  requested: tr("بانتظار كابتن"),
+  searching: tr("نبحث عن كابتن"),
   accepted: tr("مقبولة"),
-  arrived: tr("الكبتن وصل"),
+  arrived: tr("الكابتن وصل"),
   at_stop: tr("وقوفٌ عند محطة"),
   in_progress: tr("جارية"),
   completed: tr("مكتملة"),

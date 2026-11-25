@@ -70,8 +70,8 @@ export function RiderPlans({ onError, isAdmin }: { onError: (message: string) =>
       </h2>
       <p className="mt-4 max-w-prose text-11 leading-snug text-muted">
         يشتري الراكبُ الخطّةَ من محفظته، فيُخصم من كلِّ رحلةٍ يُنهيها نسبتُها بحدٍّ للرحلة وحدٍّ لكلِّ ثلاثين يوماً، ويرى ما وفّره وتاريخَ
-        انتهائه ويجدّد في أيّامه الثلاثة الأخيرة. ولا يجتمع خصمُ الاشتراك مع كوبون. «TAXO تتحمّله»: يقبض الكبتنُ أجرتَه كاملة.
-        «الكبتن يتحمّله»: تنقص الأجرةُ بالخصم فيقبض أقلّ. وتعمل حين يشتعل مفتاحُ «اشتراكات الركّاب» في الإعدادات.
+        انتهائه ويجدّد في أيّامه الثلاثة الأخيرة. ولا يجتمع خصمُ الاشتراك مع كوبون. «TAXO تتحمّله»: يقبض الكابتنُ أجرتَه كاملة.
+        «الكابتن يتحمّله»: تنقص الأجرةُ بالخصم فيقبض أقلّ. وتعمل حين يشتعل مفتاحُ «اشتراكات الركّاب» في الإعدادات.
       </p>
       {isAdmin ? (
         <div className="mt-12 grid grid-cols-2 gap-10 lg:grid-cols-4">
@@ -90,7 +90,7 @@ export function RiderPlans({ onError, isAdmin }: { onError: (message: string) =>
               onChange={(e) => setBearer(e.target.value === "captain" ? "captain" : "taxo")}
             >
               <option value="taxo">TAXO</option>
-              <option value="captain">الكبتن</option>
+              <option value="captain">الكابتن</option>
             </select>
           </label>
           <Field name="plan_terms" label="الشروط (اختياري)" value={terms} onChange={(e) => setTerms(e.target.value)} />
@@ -110,7 +110,7 @@ export function RiderPlans({ onError, isAdmin }: { onError: (message: string) =>
               <span className="block text-11 text-muted">
                 {money(plan.price, currency)} لـ{digits(String(plan.days))} يوماً · خصم <span dir="ltr">{digits(plan.discount_percent)}</span>
                 ٪ حتى {money(plan.per_ride_cap, currency)} للرحلة و{money(plan.monthly_cap, currency)} لكلِّ 30 يوماً ·{" "}
-                {plan.bearer === "taxo" ? "TAXO تتحمّله" : "الكبتن يتحمّله"}
+                {plan.bearer === "taxo" ? "TAXO تتحمّله" : "الكابتن يتحمّله"}
               </span>
               <span className="block text-11 text-muted">
                 مشتركون الآن {digits(String(plan.active_subscribers))} · الإيراد {money(plan.revenue, currency)} · الخصم المصروف{" "}

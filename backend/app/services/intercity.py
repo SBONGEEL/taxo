@@ -118,7 +118,7 @@ async def post_trip(
 ) -> IntercityTrip:
     await require_enabled(session, user.country_code)
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     permit = await valid_permit(session, driver.id)
     if permit is None:
         raise NoPermit()

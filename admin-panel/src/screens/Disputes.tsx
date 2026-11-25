@@ -41,7 +41,7 @@ import { cn, digits,
 } from "@/lib/utils";
 
 /** نصُّ السبب الذي تكتبه المهمة الدورية — مطابقٌ لـ`AUTO_DISPUTE_REASON`. */
-const AUTO_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكبتن";
+const AUTO_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكابتن";
 
 function when(iso: string | null): string {
   if (!iso) return "—";
@@ -76,7 +76,7 @@ export function DisputesScreen() {
   return (
     <Shell
       title="النزاعات والدعم"
-      subtitle="حوالاتُ كليك التي لم تُؤكَّد — بقول الكبتن أو بانقضاء المهلة"
+      subtitle="حوالاتُ كليك التي لم تُؤكَّد — بقول الكابتن أو بانقضاء المهلة"
     >
       <ErrorNote message={error} />
       <SuccessNote message={done} />
@@ -87,7 +87,7 @@ export function DisputesScreen() {
             <TableSearch
               value={search.text}
               onChange={search.setText}
-              placeholder="اسمُ الراكب أو الكبتن، أو رقمُ أحدهما…"
+              placeholder="اسمُ الراكب أو الكابتن، أو رقمُ أحدهما…"
             />
           }
           searching={search.searching}
@@ -98,7 +98,7 @@ export function DisputesScreen() {
           keyOf={(row) => row.id}
           empty={{
             title: "لا نزاعات مفتوحة",
-            hint: "يظهر هنا كل نزاعٍ ينتظر قراراً — من كبتن أو من انقضاء مهلة.",
+            hint: "يظهر هنا كل نزاعٍ ينتظر قراراً — من كابتن أو من انقضاء مهلة.",
           }}
           render={(row) => (
             <>
@@ -110,10 +110,10 @@ export function DisputesScreen() {
                 <span className="ad-reason-main">{row.dispute_reason ?? "—"}</span>
                 {row.dispute_reason === AUTO_REASON ? (
                   <span className="ad-reason-sub">
-                    آليّ — لم يتّهم أحدٌ أحداً، الكبتن لم يردّ حتى انقضت المهلة
+                    آليّ — لم يتّهم أحدٌ أحداً، الكابتن لم يردّ حتى انقضت المهلة
                   </span>
                 ) : (
-                  <span className="ad-reason-sub">من الكبتن</span>
+                  <span className="ad-reason-sub">من الكابتن</span>
                 )}
               </span>
               <span dir="ltr" className="ad-ltr ad-tone-muted">
@@ -167,7 +167,7 @@ function ResolveModal({
       .then(() =>
         onResolved(
           resolution === "paid"
-            ? "فُصل لصالح الكبتن — الدفعة مؤكدة"
+            ? "فُصل لصالح الكابتن — الدفعة مؤكدة"
             : "فُصل بأن المال لم يصل — الدفعة فاشلة",
         ),
       )
@@ -185,7 +185,7 @@ function ResolveModal({
 
         <dl className="ad-resolve-dl">
           <Row label="المبلغ" value={digits(payment.amount)} />
-          <Row label="alias الكبتن" value={payment.cliq_alias ?? "—"} ltr />
+          <Row label="alias الكابتن" value={payment.cliq_alias ?? "—"} ltr />
           <Row label="مرجع TAXO" value={payment.cliq_reference ?? "—"} ltr />
           <Row
             label="المرجع الذي أدخله الراكب"
@@ -196,8 +196,8 @@ function ResolveModal({
 
         <p className="ad-resolve-reason">
           {payment.dispute_reason === AUTO_REASON
-            ? "فُتح آلياً بانقضاء المهلة: لم ينفِ الكبتن وصول المال، بل لم يردّ. اسأله قبل أن تحكم."
-            : `سببُ الكبتن: ${payment.dispute_reason ?? "—"}`}
+            ? "فُتح آلياً بانقضاء المهلة: لم ينفِ الكابتن وصول المال، بل لم يردّ. اسأله قبل أن تحكم."
+            : `سببُ الكابتن: ${payment.dispute_reason ?? "—"}`}
         </p>
 
         <Field
@@ -218,7 +218,7 @@ function ResolveModal({
             disabled={busy !== null}
             onClick={() => decide("paid")}
           >
-            وصل المال — لصالح الكبتن
+            وصل المال — لصالح الكابتن
           </Button>
           <Button
             size="md"

@@ -36,7 +36,7 @@ export function EtaAccuracyScreen() {
   }, [country, days]);
 
   return (
-    <Shell title="دقّة وقت الوصول" subtitle="ما قيل للراكب والكبتن مقابل ما وقع — لكلِّ اقترابٍ إلى الراكب">
+    <Shell title="دقّة وقت الوصول" subtitle="ما قيل للراكب والكابتن مقابل ما وقع — لكلِّ اقترابٍ إلى الراكب">
       <ErrorNote message={error} />
       <Segmented<EtaWindow>
         label="المدى"
@@ -58,7 +58,7 @@ export function EtaAccuracyScreen() {
         <div className="ad-reports-empty">
           <p className="ad-empty-title">لا قياسَ بعد.</p>
           <p className="mt-6 text-11 leading-note text-muted">
-            يُقاس كلُّ اقترابٍ حين يضغط الكبتنُ «وصلت»، ما دام «وقت الوصول» مشتعلاً في هذه الدولة.
+            يُقاس كلُّ اقترابٍ حين يضغط الكابتنُ «وصلت»، ما دام «وقت الوصول» مشتعلاً في هذه الدولة.
           </p>
         </div>
       ) : (

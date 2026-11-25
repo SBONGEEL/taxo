@@ -75,7 +75,7 @@ async def test_everything_goes_to_zero_by_marked_entries_and_subscriptions_stay(
             (row.id, row.status, row.expires_at) for row in await session.scalars(select(DriverSubscription))
         )
         entries_before = await session.scalar(select(func.count()).select_from(WalletTransaction))
-    assert subscriptions_before, "كبتنٌ مشتركٌ واحدٌ على الأقلّ — وإلا لم يُقس أن الاشتراكَ لا يُمسّ"
+    assert subscriptions_before, "كابتنٌ مشتركٌ واحدٌ على الأقلّ — وإلا لم يُقس أن الاشتراكَ لا يُمسّ"
     balances_before = await _balances(session_factory)
     nonzero_before = {key for key, value in balances_before.items() if value != 0}
     assert len(nonzero_before) >= 3

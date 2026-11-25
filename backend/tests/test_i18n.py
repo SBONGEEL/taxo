@@ -107,7 +107,7 @@ async def test_the_account_language_is_written_at_signup_login_and_from_settings
 async def test_a_notification_is_written_in_its_owner_language(client: AsyncClient, session_factory) -> None:
     rider = await register(client, RIDER)
     user_id = uuid.UUID(rider["user"]["id"])
-    message = PushMessage(title="اكتمل دفع رحلتك", body="أكّد الكبتنُ استلام المبلغ — شكراً لك.")
+    message = PushMessage(title="اكتمل دفع رحلتك", body="أكّد الكابتنُ استلام المبلغ — شكراً لك.")
     async with session_factory() as session:
         arabic = await notifications.in_language_of(session, user_id, message)
         assert arabic is message
@@ -117,7 +117,7 @@ async def test_a_notification_is_written_in_its_owner_language(client: AsyncClie
     async with session_factory() as session:
         french = await notifications.in_language_of(session, user_id, message)
     assert french.title == FR["اكتمل دفع رحلتك"]
-    assert french.body == FR["أكّد الكبتنُ استلام المبلغ — شكراً لك."]
+    assert french.body == FR["أكّد الكابتنُ استلام المبلغ — شكراً لك."]
 
 
 async def test_the_code_message_template_is_french_for_a_french_request(session_factory) -> None:

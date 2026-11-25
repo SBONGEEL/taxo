@@ -110,7 +110,7 @@ export function CommutesT2Screen() {
             {/* **العروضُ خلف المفتاح** — ومطفأً لا قسمَ يقول «لا عروض» عن خدمةٍ لا تعمل */}
             {enabled ? (
               <section>
-                <div className="t2-section">{tr("مشاويرُ تنتظر كبتناً")}</div>
+                <div className="t2-section">{tr("مشاويرُ تنتظر كابتناً")}</div>
                 {lists.offers.length === 0 ? (
                   <p className="t2-empty">{tr("لا مشاويرَ تنتظر الآن. تظهر هنا اشتراكاتُ الركّاب في سوقك حين لا يعتمدها أحد.")}</p>
                 ) : (

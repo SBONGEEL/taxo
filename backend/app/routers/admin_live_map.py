@@ -94,7 +94,7 @@ async def driver_live_ride(
     """
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     if driver.current_ride_id is None:
         return None
 

@@ -82,7 +82,7 @@ export function ChatRoomsScreen() {
           <Field
             label="بحث"
             name="room_search"
-            placeholder="اسمُ الراكب أو الكبتن، أو أوّلُ رقم الرحلة"
+            placeholder="اسمُ الراكب أو الكابتن، أو أوّلُ رقم الرحلة"
             value={query}
             maxLength={80}
             onChange={(event) => setQuery(event.target.value)}
@@ -90,12 +90,12 @@ export function ChatRoomsScreen() {
           <ErrorNote message={error} />
           <Table
             columns={COLUMNS}
-            headers={["الراكب", "الكبتن", "الرسائل", "آخر رسالة", "الرحلة", "البلاغات"]}
+            headers={["الراكب", "الكابتن", "الرسائل", "آخر رسالة", "الرحلة", "البلاغات"]}
             rows={rows}
             keyOf={(row) => row.ride_id}
             empty={{
               title: applied ? "لا غرفةَ تطابق البحث" : scope === "reported" ? "لا غرفةَ فيها بلاغٌ مفتوح" : "لا محادثاتٍ بعد",
-              hint: "تظهر الغرفةُ هنا حين يرسل الراكبُ أو الكبتن أوّلَ رسالةٍ في رحلة.",
+              hint: "تظهر الغرفةُ هنا حين يرسل الراكبُ أو الكابتن أوّلَ رسالةٍ في رحلة.",
             }}
             render={(row) => (
               <>

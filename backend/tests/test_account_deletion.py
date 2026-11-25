@@ -349,7 +349,7 @@ async def test_a_suspended_driver_comes_back_suspended(
     client: AsyncClient, session_factory
 ) -> None:
     """**الاستعادةُ لا تفتح باباً أغلقه مشرف** — من كان موقوفاً يعود موقوفاً."""
-    suspended = DRIVER | {"phone": "0796660121", "name": "كبتنٌ موقوف"}
+    suspended = DRIVER | {"phone": "0796660121", "name": "كابتنٌ موقوف"}
     driver = await approved_driver(
         client,
         session_factory,
@@ -406,7 +406,7 @@ async def test_anonymizing_a_rider_erases_what_identifies_and_keeps_the_records(
     await add_route_points(session_factory, ride["id"], [(31.9601, 35.9107), (31.9612, 35.9119)])
     rated = await client.post(
         f"/rides/{ride['id']}/ratings",
-        json={"stars": 5, "comment": "كبتنٌ لطيف"},
+        json={"stars": 5, "comment": "كابتنٌ لطيف"},
         headers=rider["headers"],
     )
     assert rated.status_code == 201, rated.text

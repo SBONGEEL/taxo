@@ -23,7 +23,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 async def driver_activity(driver_id: uuid.UUID, _staff: StaffUser, session: DbSession) -> DriverActivityOut:
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     owner = await session.get(User, driver.user_id)
     assert owner is not None
     today = datetime.now(UTC).astimezone(await _zone(session, owner.country_code)).date()

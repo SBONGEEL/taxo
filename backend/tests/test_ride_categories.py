@@ -222,7 +222,7 @@ async def test_a_grant_waits_for_the_captain_row_lock(client: AsyncClient, sessi
                        headers=admin_headers)
         )
         await asyncio.sleep(1.0)
-        assert not pending.done(), "المنحُ لم ينتظر قفلَ صفِّ الكبتن"
+        assert not pending.done(), "المنحُ لم ينتظر قفلَ صفِّ الكابتن"
         await holder.rollback()
     response = await asyncio.wait_for(pending, timeout=20)
     assert response.status_code == 200 and response.json()[0]["granted"] is True

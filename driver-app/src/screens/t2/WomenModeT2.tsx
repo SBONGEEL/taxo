@@ -38,7 +38,7 @@ import "./women.css"; import { tr } from "@/lib/i18n";
 /** **الخياراتُ الثلاثةُ القائمة** بترتيب اللوحة («راكبات فقط» أوّلاً) — **وكلُّ سطرٍ يصف المطابقةَ في الاتجاهين كما تقع** (الوضعُ أ). */
 const OPTIONS: { value: GenderPreference; title: string; sub: string }[] = [
   { value: "female", title: tr("الراكبات فقط"), sub: tr("لا تصلك إلا طلبات الراكبات.") },
-  { value: "any", title: tr("الجميع"), sub: tr("يصلك كل راكبٍ يقبل تفضيلُه كبتنة.") },
+  { value: "any", title: tr("الجميع"), sub: tr("يصلك كل راكبٍ يقبل تفضيلُه كابتنة.") },
   { value: "male", title: tr("الرجال فقط"), sub: tr("لا يصلك إلا الركّاب الرجال.") },
 ];
 
@@ -103,7 +103,7 @@ export function WomenModeT2Screen() {
         <Condition
           ok={stamped}
           title={tr("هويتك موثّقة")}
-          wait={tr("يثبّته المشرف من هويتك — وقبله لا تصلك طلبات من طلبت كبتنة.")}
+          wait={tr("يثبّته المشرف من هويتك — وقبله لا تصلك طلبات من طلبت كابتنة.")}
         />
         {profile ? (
           <Condition

@@ -400,7 +400,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 onChange={(event) => c.setShareGendered(event.target.checked)}
               />
               <span className="t2-share-body">
-                {tr("طلبكِ يحدّد جنس الكبتن. أوافق على أن تشاركني الرحلةَ")}{" "}<b>{tr("راكبةٌ أخرى")}</b>{" "}{tr("— ولن يُضاف راكبٌ من غير ذلك.")}
+                {tr("طلبكِ يحدّد جنس الكابتن. أوافق على أن تشاركني الرحلةَ")}{" "}<b>{tr("راكبةٌ أخرى")}</b>{" "}{tr("— ولن يُضاف راكبٌ من غير ذلك.")}
               </span>
             </label>
           ) : null}
@@ -468,7 +468,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                   {/* **بلا رقم**: لا بابَ عامٌّ ينشر الرسمَ قبل الحجز — **والمبلغُ المجمَّدُ يظهر على الحجز نفسِه** في «رحلاتي
                       المجدولة». ورقمٌ يُكتب هنا من عندنا يفترق عن إعداد السوق أوّلَ تعديل */}
                   <span className="t2-share-body">
-                    {tr("كبتنٌ يُحجز لك مسبقاً ويؤكّد قبل موعدك بساعة. رسمُ الضمان من محفظتك، يُردّ إن لم نجد كبتناً أو تأخّر.")}
+                    {tr("كابتنٌ يُحجز لك مسبقاً ويؤكّد قبل موعدك بساعة. رسمُ الضمان من محفظتك، يُردّ إن لم نجد كابتناً أو تأخّر.")}
                   </span>
                   {c.guaranteeFits ? null : (
                     <span className="t2-guarantee-why">{tr("يُطلب قبل موعده بساعتين على الأقل — اختر موعداً أبعد.")}</span>
@@ -478,7 +478,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               </button>
             ) : null}
             <p className="t2-sheet-fine">
-              {tr("نبدأ البحث عن كبتنٍ قبل موعدك بعشر دقائق.")}{" "}<b>{tr("والسعر يُحسب عند التنفيذ")}</b>{" "}{tr("— الرقمُ أعلاه تقديرُ اليوم.")}
+              {tr("نبدأ البحث عن كابتنٍ قبل موعدك بعشر دقائق.")}{" "}<b>{tr("والسعر يُحسب عند التنفيذ")}</b>{" "}{tr("— الرقمُ أعلاه تقديرُ اليوم.")}
             </p>
             <div className="t2-schedule-row">
               <button
@@ -578,7 +578,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                       : bargaining
                         ? tr("تفاوض")
                       : women
-                        ? tr("اطلبي كبتنة")
+                        ? tr("اطلبي كابتنة")
                         : tr("اطلب {0}", { 0: VEHICLE_LABEL[c.category] })}
             </span>
             {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
@@ -655,7 +655,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           <span className="t2-route-label">{c.hourlyMode ? tr("إلى · اختياريّة") : tr("إلى")}</span>
           <span className="t2-route-value">
             {noDestination
-              ? tr("بلا وجهة — تقولها للكبتن")
+              ? tr("بلا وجهة — تقولها للكابتن")
               : v2
                 ? oneLine(dropoffAddress) || tr("الوجهة المحددة")
                 : (dropoffAddress ?? tr("الوجهة المحددة"))}
@@ -723,13 +723,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                         {on ? (
                           <>
                             {eta?.[option] ? " · " : null}
-                            {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
+                            {women ? tr("كابتنة موثّقة") : VEHICLE_HINT[option]}
                           </>
                         ) : null}
                       </span>
                     ) : (
                       <span className="t2-cat-hint">
-                        {women ? tr("كبتنة موثّقة") : VEHICLE_HINT[option]}
+                        {women ? tr("كابتنة موثّقة") : VEHICLE_HINT[option]}
                         {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
                         {/* **و«غير متاح قريباً»** (§٩١-ب/٨) — لا كبتنَ منها قريب الآن؛ **والفئةُ تبقى مطلوبة**: البحثُ يتّسع بعد الدائرة الأولى */}
                         {available && !available.includes(option)
@@ -764,7 +764,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           إليه شيء (§14). وللفئة المختارة وحدَها، **وحيث المفتاحُ مشتعلٌ في سوقه** */}
       {airport && c.estimate?.airport_fee && !c.loading ? (
         <p className="t2-sheet-fine">
-          {tr("يشمل رسمَ المطار")}{" "}{formatMoney(c.estimate.airport_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
+          {tr("يشمل رسمَ المطار")}{" "}{formatMoney(c.estimate.airport_fee, c.estimate.currency)}{" "}{tr("للكابتن")}
         </p>
       ) : null}
       {/* **«تسعيرة المناطق الوعرة»** (SPEC §٧٤-أ/٥) — **داخلَ السعر أعلاه** كرسم المطار: يُقال قبل الطلب كي يعرف الراكبُ لمَ زاد،
@@ -777,7 +777,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
       {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
         <p className="t2-sheet-fine">
-          {tr("يشمل رسمَ")}{" "}{c.parcelFetch ? tr("التوصيل") : tr("الطرد")} {formatMoney(c.estimate.parcel_fee, c.estimate.currency)}{" "}{tr("للكبتن")}
+          {tr("يشمل رسمَ")}{" "}{c.parcelFetch ? tr("التوصيل") : tr("الطرد")} {formatMoney(c.estimate.parcel_fee, c.estimate.currency)}{" "}{tr("للكابتن")}
         </p>
       ) : null}
 
@@ -791,8 +791,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
       {c.women.available ? (
         <div className={women ? "t2-pref women" : "t2-pref"}>
-          <div className="t2-pref-title">{tr("تفضيل الكبتن")}</div>
-          <div className="t2-seg" role="radiogroup" aria-label={tr("تفضيل الكبتن")}>
+          <div className="t2-pref-title">{tr("تفضيل الكابتن")}</div>
+          <div className="t2-seg" role="radiogroup" aria-label={tr("تفضيل الكابتن")}>
             {PREFERENCES.map((option) => (
               <button
                 key={option.value}
@@ -825,13 +825,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         <div className="t2-callout warn" role="status">
           <Icon name="error" fill />
           <div className="t2-callout-main">
-            <div className="t2-callout-title">{tr("خدمة الكبتنات غير مفعّلة في بلدك الآن")}</div>
+            <div className="t2-callout-title">{tr("خدمة الكابتنات غير مفعّلة في بلدك الآن")}</div>
             <p className="t2-callout-body">
-              {tr("في حسابك تفضيلٌ محفوظ بطلب كبتنة، ولا يمكن تنفيذه هنا — فتُرفض كل رحلة. أعِد التفضيل إلى «أي كبتن» لتتمكّني من الطلب، ويبقى بإمكانك تغييره متى عادت الخدمة.")}
+              {tr("في حسابك تفضيلٌ محفوظ بطلب كابتنة، ولا يمكن تنفيذه هنا — فتُرفض كل رحلة. أعِد التفضيل إلى «أي كابتن» لتتمكّني من الطلب، ويبقى بإمكانك تغييره متى عادت الخدمة.")}
 
             </p>
             <button type="button" className="t2-button secondary t2-callout-action" onClick={onClearPreference}>
-              {tr("اقبل أي كبتن")}
+              {tr("اقبل أي كابتن")}
             </button>
           </div>
         </div>
@@ -893,7 +893,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           ينشر دقائقَه، فيُقال بلا رقمٍ لا برقمٍ يُخمَّن */}
       {c.hourlyMode ? (
         <p className="t2-sheet-fine center">
-          {tr("ما زاد على الساعات أو كيلومتراتها يُحسب في النهاية بالتعرفة العاديّة. وإلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")}
+          {tr("ما زاد على الساعات أو كيلومتراتها يُحسب في النهاية بالتعرفة العاديّة. وإلغاؤك بعد وصول الكابتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة.")}
 
         </p>
       ) : (
@@ -931,7 +931,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           fetch={c.parcelFetch}
           summary={{
             from: oneLine(pickupAddress ?? props.pickupLine) || tr("نقطة الانطلاق المحددة"),
-            to: noDestination ? tr("بلا وجهة — تقولها للكبتن") : oneLine(dropoffAddress) || tr("الوجهة المحددة"),
+            to: noDestination ? tr("بلا وجهة — تقولها للكابتن") : oneLine(dropoffAddress) || tr("الوجهة المحددة"),
             fare: c.shownFare === null ? null : v2 ? v2Money(c.shownFare) : formatMoney(c.shownFare, currency),
             payment: c.payMethod ? PAYMENT_METHOD_LABEL[c.payMethod.method] : null,
           }}

@@ -83,7 +83,7 @@ export function CliqPanel({
     >
       <h2 className="t2-m-cliq-title sm">{tr("الدفع عبر كليك")}</h2>
       <p className="t2-m-cliq-text sm">
-        {tr("حوّل")}{" "}{formatMoney(charge.amount, charge.currency)}{" "}{tr("إلى alias الكبتن، ثم أدخل مرجع الحوالة.")}
+        {tr("حوّل")}{" "}{formatMoney(charge.amount, charge.currency)}{" "}{tr("إلى alias الكابتن، ثم أدخل مرجع الحوالة.")}
 
       </p>
 
@@ -91,7 +91,7 @@ export function CliqPanel({
 
       <dl className="t2-m-copies">
         <CopyRow
-          label={tr("alias الكبتن")}
+          label={tr("alias الكابتن")}
           value={charge.alias}
           copied={copied === "alias"}
           onCopy={() => copy(charge.alias, "alias")}
@@ -117,12 +117,12 @@ export function CliqPanel({
         <div className="t2-callout t2-m-callout">
           <Icon name="hourglass_top" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">{tr("أرسلنا مرجعك للكبتن — بانتظار تأكيده")}</p>
+            <p className="t2-callout-title">{tr("أرسلنا مرجعك للكابتن — بانتظار تأكيده")}</p>
             <p dir="ltr" className="t2-callout-body t2-m-ref">
               {charge.transfer_reference}
             </p>
             <p className="t2-callout-body">
-              {tr("المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكبتنَ سيفتح نزاعاً تفصل فيه الإدارة.")}
+              {tr("المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكابتنَ سيفتح نزاعاً تفصل فيه الإدارة.")}
 
             </p>
           </div>
@@ -154,7 +154,7 @@ export function CliqPanel({
             aria-busy={busy}
             onClick={submit}
           >
-            <BusyLabel busy={busy}>{tr("حوّلتُ — أرسل المرجع للكبتن")}</BusyLabel>
+            <BusyLabel busy={busy}>{tr("حوّلتُ — أرسل المرجع للكابتن")}</BusyLabel>
           </button>
         </>
       )}

@@ -68,7 +68,7 @@ class GuaranteeUnavailable(FeatureDisabled):
 
 class GuaranteeTaken(Conflict):
     code = "guarantee_taken"
-    message = "قبل هذا الحجزَ كبتنٌ آخر"
+    message = "قبل هذا الحجزَ كابتنٌ آخر"
 
 
 class GuaranteeNotYours(Conflict):
@@ -201,7 +201,7 @@ async def _locked(session: AsyncSession, booking_id: uuid.UUID) -> RideBooking:
 
 async def _eligible(session: AsyncSession, driver: Driver) -> None:
     if driver.status != DriverStatus.APPROVED:
-        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+        raise PermissionDenied("حساب الكابتن غير معتمد بعد")
     if driver.guarantee_banned_until is not None and driver.guarantee_banned_until > _now():
         raise GuaranteeBanned()
     if await subscriptions.current_subscription(session, driver.id) is None:

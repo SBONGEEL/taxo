@@ -49,7 +49,7 @@ _ROLES: dict[ClientApp, frozenset[UserRole]] = {
 # مسجَّلةٌ في هذا المشروع (الفخُّ الثاني في «الحسابات الخمسة»)
 _WHERE: dict[UserRole, str] = {
     UserRole.RIDER: "هذا حسابُ راكب — ادخل من تطبيق تكسي الراكب",
-    UserRole.DRIVER: "هذا حسابُ كبتن — ادخل من تطبيق الكبتن",
+    UserRole.DRIVER: "هذا حسابُ كابتن — ادخل من تطبيق الكابتن",
     UserRole.ADMIN: "هذا حسابٌ إداري — ادخل من لوحة التشغيل",
     UserRole.SUPPORT: "هذا حسابُ دعم — ادخل من لوحة التشغيل",
     UserRole.OWNER: "هذا حسابُ المالك — ادخل من لوحة التشغيل",

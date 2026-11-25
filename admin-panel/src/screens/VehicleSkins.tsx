@@ -400,7 +400,7 @@ export function VehicleSkinsScreen() {
                     setDraft({ ...draft, level_required: e.target.value })
                   }
                 >
-                  <option value="">بلا شرط — يبلغها كلُّ كبتن</option>
+                  <option value="">بلا شرط — يبلغها كلُّ كابتن</option>
                   {DRIVER_LEVELS.filter((level) => level > 0).map((level) => (
                     <option key={level} value={String(level)}>
                       المستوى {level} فما فوق

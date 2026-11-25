@@ -223,7 +223,7 @@ async def test_a_subscription_still_running_does_not_qualify(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796661511", "name": "كبتنُ اشتراكٍ جديد"},
+        DRIVER | {"phone": "0796661511", "name": "كابتنُ اشتراكٍ جديد"},
         plate_number="AMM-1511",
         subscribed=False,
     )
@@ -276,7 +276,7 @@ async def test_a_daily_subscription_does_not_qualify(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796661501", "name": "كبتنُ اليومي"},
+        DRIVER | {"phone": "0796661501", "name": "كابتنُ اليومي"},
         plate_number="AMM-1501",
         subscribed=False,
     )
@@ -296,7 +296,7 @@ async def test_the_feature_is_not_offered_where_it_is_off(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661502", "name": "كبتنُ سوقٍ بلا سلف"},
+        payload=DRIVER | {"phone": "0796661502", "name": "كابتنُ سوقٍ بلا سلف"},
         plate_number="AMM-1502",
     )
     state = await _state(client, driver)
@@ -322,7 +322,7 @@ async def test_the_cap_is_the_daily_price_and_grows_only_with_repayment(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661503", "name": "كبتنُ السقف"},
+        payload=DRIVER | {"phone": "0796661503", "name": "كابتنُ السقف"},
         plate_number="AMM-1503",
     )
 
@@ -355,7 +355,7 @@ async def test_the_admin_override_lowers_and_zero_bars(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661504", "name": "كبتنُ التخصيص"},
+        payload=DRIVER | {"phone": "0796661504", "name": "كابتنُ التخصيص"},
         plate_number="AMM-1504",
     )
 
@@ -384,7 +384,7 @@ async def test_above_the_cap_needs_an_admin(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661505", "name": "كبتنُ التجاوز"},
+        payload=DRIVER | {"phone": "0796661505", "name": "كابتنُ التجاوز"},
         plate_number="AMM-1505",
     )
 
@@ -456,7 +456,7 @@ async def test_a_wallet_ride_repays_and_a_cash_ride_does_not(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796661506", "name": "كبتنُ الاقتطاع"},
+        DRIVER | {"phone": "0796661506", "name": "كابتنُ الاقتطاع"},
         plate_number="AMM-1506",
     )
     await _qualify(session_factory, driver["driver_id"])
@@ -516,7 +516,7 @@ async def test_repaying_in_full_clears_the_block_in_the_same_path(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661507", "name": "كبتنُ السداد"},
+        payload=DRIVER | {"phone": "0796661507", "name": "كابتنُ السداد"},
         plate_number="AMM-1507",
     )
     await client.post(
@@ -576,7 +576,7 @@ async def test_an_overdue_advance_blocks_dispatch_and_daily_plans(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661508", "name": "كبتنُ الإيقاف"},
+        payload=DRIVER | {"phone": "0796661508", "name": "كابتنُ الإيقاف"},
         plate_number="AMM-1508",
     )
     from tests.helpers import subscribe_driver
@@ -634,7 +634,7 @@ async def test_a_debt_blocks_closing_the_account(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661509", "name": "كبتنُ الإغلاق"},
+        payload=DRIVER | {"phone": "0796661509", "name": "كابتنُ الإغلاق"},
         plate_number="AMM-1509",
     )
     await client.post(
@@ -666,7 +666,7 @@ async def test_writing_off_needs_a_reason_and_lifts_the_block(
     driver = await _ready_driver(
         client,
         session_factory,
-        payload=DRIVER | {"phone": "0796661510", "name": "كبتنُ الشطب"},
+        payload=DRIVER | {"phone": "0796661510", "name": "كابتنُ الشطب"},
         plate_number="AMM-1510",
     )
     taken = (
@@ -837,7 +837,7 @@ async def test_a_deduction_while_the_door_is_shut_leaves_a_visible_line(
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796661508", "name": "كبتنُ البابِ المغلق"},
+        DRIVER | {"phone": "0796661508", "name": "كابتنُ البابِ المغلق"},
         plate_number="AMM-1508",
     )
     await _qualify(session_factory, driver["driver_id"])

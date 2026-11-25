@@ -46,7 +46,7 @@ const MODE_EFFECT: Record<string, string> = {
  * وجودَ له يُقرأ عملاً وهو لا شيء**، و`services` الجديدُ لم يكن له زرّ. */
 const SECTIONS: { key: string; label: string }[] = [
   { key: "rider", label: "للراكب — كيف يعمل" },
-  { key: "captain", label: "للكبتن — لماذا تقود مع TAXO" },
+  { key: "captain", label: "للكابتن — لماذا تقود مع TAXO" },
   { key: "women", label: "الخدمة النسائية" },
   { key: "trust", label: "الأمان" },
   { key: "services", label: "الخدمات الجديدة" },
@@ -266,7 +266,7 @@ export function SiteScreen() {
           </div>
           <div className="mt-8">
             <Field
-              label="رابط الكبتن على Google Play"
+              label="رابط الكابتن على Google Play"
               name="play_url_driver"
               value={valueOf("play_url_driver")}
               maxLength={300}

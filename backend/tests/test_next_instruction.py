@@ -108,7 +108,7 @@ async def test_the_rider_never_receives_the_steps(
 
     mine = await _route(client, driver["headers"], ride["id"])
     theirs = await _route(client, rider, ride["id"])
-    assert mine["steps"], "الكبتنُ يجب أن يراها"
+    assert mine["steps"], "الكابتنُ يجب أن يراها"
     assert theirs["steps"] == [], "والراكبُ لا"
     # والخطُّ نفسُه يصل الاثنين — فما اختلف هو الحمولةُ الزائدة وحدَها
     assert theirs["points"] == mine["points"]

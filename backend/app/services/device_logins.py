@@ -42,7 +42,7 @@ def _new_secret() -> str:
 
 def _app(app: str) -> str:
     if app not in APPS:
-        raise InvalidInput("الدخولُ بالبصمة لتطبيقَي الراكب والكبتن وحدَهما", field="app")
+        raise InvalidInput("الدخولُ بالبصمة لتطبيقَي الراكب والكابتن وحدَهما", field="app")
     return app
 
 

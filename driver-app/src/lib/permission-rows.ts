@@ -57,7 +57,7 @@ export const ROWS: Row[] = [
     key: "location",
     read: (status) => status.location,
     label: tr("الموقع"),
-    why: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق."),
+    why: tr("بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كابتن إلى نقطة الانطلاق."),
     severity: "blocking",
     open: exact("location", openAppSettings),
   },

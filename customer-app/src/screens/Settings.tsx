@@ -189,7 +189,7 @@ export function SettingsScreen() {
         <Toggle
           icon="volume_up"
           title={tr("أصوات التطبيق")}
-          hint={tr("نغماتٌ قصيرة عند قبول الكبتن ووصوله واكتمال الدفع.")}
+          hint={tr("نغماتٌ قصيرة عند قبول الكابتن ووصوله واكتمال الدفع.")}
           on={sounds}
           onToggle={() => {
             const next = !sounds;

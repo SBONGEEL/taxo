@@ -60,9 +60,9 @@ export function rideActivity(
     const who = [ride.driver.name, car].filter(Boolean).join(" · ");
     switch (ride.status) {
       case "accepted":
-        return { title: tr("الكبتن في الطريق إليك"), detail: who, plate, step: 1 };
+        return { title: tr("الكابتن في الطريق إليك"), detail: who, plate, step: 1 };
       case "arrived":
-        return { title: tr("وصل الكبتن"), detail: who, plate, step: 2 };
+        return { title: tr("وصل الكابتن"), detail: who, plate, step: 2 };
       case "in_progress":
       case "at_stop":
         return { title: tr("في الرحلة"), detail: ride.dropoff_address ?? who, plate, step: 3 };

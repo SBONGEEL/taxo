@@ -480,4 +480,4 @@ async def test_going_offline_removes_the_driver_from_the_map(
         )
         return response.json() == []
 
-    await wait_until(_empty, message="بقي الكبتن على الخريطة بعد خروجه")
+    await wait_until(_empty, message="بقي الكابتن على الخريطة بعد خروجه")

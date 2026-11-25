@@ -51,7 +51,7 @@ import { digits } from "@/lib/utils";
 
 const APP_LABEL: Record<ClientApp, string> = {
   rider: "تطبيق الراكب",
-  driver: "تطبيق الكبتن",
+  driver: "تطبيق الكابتن",
   panel: "غلاف المشرف",
 };
 

@@ -91,7 +91,7 @@ def test_android_without_lifetime_or_channel_is_as_before() -> None:
 def _ring() -> PushMessage:
     """**الرنينُ كما يبنيه `notifications.publish_incoming_call`** — وعمرُه للجهاز الراسم وحدَه."""
     return PushMessage(
-        title="مكالمةٌ من الكبتن",
+        title="مكالمةٌ من الكابتن",
         body="افتح التطبيق للرد",
         data={"type": "incoming_call", "ride_id": "r", "call_id": "c", "caller_role": "driver", "recording": "false"},
         high_priority=True,
@@ -108,7 +108,7 @@ def test_a_native_ring_reaches_the_app_as_data_alone() -> None:
     assert set(wire) == {"token", "data", "android"}
     assert wire["android"] == {"priority": "high", "ttl": "30s"}
     # **نصُّ الدرج في `data`** — الخدمةُ ترسمه كما كان النظامُ يرسمه
-    assert wire["data"]["title"] == "مكالمةٌ من الكبتن" and wire["data"]["body"] == "افتح التطبيق للرد"
+    assert wire["data"]["title"] == "مكالمةٌ من الكابتن" and wire["data"]["body"] == "افتح التطبيق للرد"
     assert wire["data"]["expires_in_seconds"] == "30" and wire["data"]["call_id"] == "c"
 
 
@@ -118,7 +118,7 @@ def test_below_the_third_set_the_ring_is_todays_notification() -> None:
         shaped = channels.for_level(_ring(), level)
         assert shaped is not None and not shaped.data_only
         wire = _provider()._payload("tok", shaped)["message"]
-        assert wire["notification"] == {"title": "مكالمةٌ من الكبتن", "body": "افتح التطبيق للرد"}
+        assert wire["notification"] == {"title": "مكالمةٌ من الكابتن", "body": "افتح التطبيق للرد"}
         assert wire["android"] == {"priority": "high"}
         assert set(wire["data"]) == {"type", "ride_id", "call_id", "caller_role", "recording"}
 

@@ -31,12 +31,12 @@ export function rideLiveLine(ride: Ride | null, approachMinutes: number | null):
       return {
         title:
           approachMinutes != null && approachMinutes > 0
-            ? tr("الكبتن في الطريق — يصل خلال {0} د", { 0: digits(approachMinutes) })
-            : tr("الكبتن في الطريق إليك"),
+            ? tr("الكابتن في الطريق — يصل خلال {0} د", { 0: digits(approachMinutes) })
+            : tr("الكابتن في الطريق إليك"),
         text: who,
       };
     case "arrived":
-      return { title: tr("الكبتن وصل إلى نقطة الانطلاق"), text: who };
+      return { title: tr("الكابتن وصل إلى نقطة الانطلاق"), text: who };
     case "in_progress":
       return { title: tr("في الرحلة — إلى وجهتك"), text: who };
     case "at_stop":

@@ -278,7 +278,7 @@ async def driver_socket(
 
         driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
         if driver is None:
-            await websocket.close(code=WS_FORBIDDEN, reason="ملف الكبتن غير موجود")
+            await websocket.close(code=WS_FORBIDDEN, reason="ملف الكابتن غير موجود")
             return
 
         try:

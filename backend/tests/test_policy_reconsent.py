@@ -228,7 +228,7 @@ async def test_the_captain_app_does_not_ask_a_rider(
     client: AsyncClient, session_factory, jordan_settings
 ) -> None:
     headers = await _rider(client, [])
-    await _publish(session_factory, "خصوصيةُ الكبتن.", reconsent=True, app=PolicyApp.DRIVER)
+    await _publish(session_factory, "خصوصيةُ الكابتن.", reconsent=True, app=PolicyApp.DRIVER)
     assert await _pending(client, headers, app="driver") == []
     assert await _pending(client, headers, app="rider") == []
 

@@ -148,7 +148,7 @@ async def test_cancelling_refunds_the_unused_days_as_a_new_ledger_entry(
 
     done = await client.post(
         f"/admin/subscriptions/{row_id}/cancel",
-        json={"reason": "طلبَ الكبتنُ الإيقافَ وسُوّي معه"},
+        json={"reason": "طلبَ الكابتنُ الإيقافَ وسُوّي معه"},
         headers=admin_headers,
     )
     assert done.status_code == 200, done.text
@@ -169,7 +169,7 @@ async def test_cancelling_refunds_the_unused_days_as_a_new_ledger_entry(
         assert entry is not None and entry.amount == promised
         row = await session.scalar(select(DriverSubscription))
         assert row.status is SubscriptionStatus.CANCELLED
-        assert row.cancel_reason == "طلبَ الكبتنُ الإيقافَ وسُوّي معه"
+        assert row.cancel_reason == "طلبَ الكابتنُ الإيقافَ وسُوّي معه"
         assert row.cancelled_at is not None and row.cancelled_by is not None
         assert row.refund_transaction_id == entry.id
         # **والنسبةُ المجمَّدة سقطت** — مخرجُ الانتهاء نفسُه

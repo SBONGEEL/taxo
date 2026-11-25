@@ -60,7 +60,7 @@ export function payerScope(ride: { for_other: boolean; payer: RidePayer }): Ride
 /** **سطرُ الدافع على الرحلة الجارية** — يقول لصاحب الحساب ما عليه بعد الرحلة قبل أن تنتهي. **وقنواتُ الطالب من دولته**
  *  (`methodsPhrase`) لا «بالمحفظة أو البطاقة» ثابتةً — ليبيا بلا بطاقة (أمرُ المالك ٢٢/١١). */
 export function payerLine(payer: RidePayer, country: CountryConfig | null | undefined): string {
-  if (payer === "passenger_cash") return tr("يدفع الراكبُ نقداً للكبتن");
+  if (payer === "passenger_cash") return tr("يدفع الراكبُ نقداً للكابتن");
   if (payer === "recipient_cash") return tr("يدفع المستلمُ نقداً عند التسليم");
   const phrase = methodsPhrase(country, REQUESTER_METHODS);
   return phrase ? tr("تدفع أنت بعد الرحلة — {0}", { 0: phrase }) : tr("تدفع أنت بعد الرحلة");
@@ -106,9 +106,9 @@ export async function shareTrackLink(url: string): Promise<"shared" | "copied" |
 
 /** **حالُ الرحلة لمن يتابعها** — جملةٌ لكلِّ حال، ولا رقمَ ولا وقتَ لا مصدرَ له. */
 export const PUBLIC_STATE_LINE: Record<PublicTrack["state"], string> = {
-  searching: tr("نبحث عن كبتن…"),
-  coming: tr("الكبتن في الطريق"),
-  arrived: tr("الكبتن وصل"),
+  searching: tr("نبحث عن كابتن…"),
+  coming: tr("الكابتن في الطريق"),
+  arrived: tr("الكابتن وصل"),
   riding: tr("في الطريق إلى الوجهة"),
   ended: tr("انتهت الرحلة"),
 };

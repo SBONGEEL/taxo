@@ -68,9 +68,9 @@ export interface PaymentChannel {
 /** الترتيب مقصود: المحفظة أولاً وكليك ثانياً (SPEC القسم 6.2). */
 export const PAYMENT_CHANNELS: PaymentChannel[] = [
   { method: "wallet", feature: "wallet_enabled", hint: tr("خصمٌ فوري من رصيدك") },
-  { method: "cliq", feature: "cliq_enabled", hint: tr("حوّل على alias الكبتن") },
+  { method: "cliq", feature: "cliq_enabled", hint: tr("حوّل على alias الكابتن") },
   { method: "card", feature: "card_enabled", hint: tr("بطاقة أو محفظة الهاتف") },
-  { method: "cash", hint: tr("سلّم المبلغ للكبتن") },
+  { method: "cash", hint: tr("سلّم المبلغ للكابتن") },
 ];
 
 /** قنواتُ هذه الدولة وحدها — والقناةُ الغائبةُ لا تُرسم معطّلةً بل تختفي. */

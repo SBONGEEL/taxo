@@ -61,7 +61,7 @@ const LEDGER_CAP = 8;
 
 const ROLE_LABEL: Record<string, string> = {
   rider: "راكب",
-  driver: "كبتن",
+  driver: "كابتن",
   admin: "مشرف",
   support: "دعم",
   owner: "المالك",
@@ -123,7 +123,7 @@ export function AccountSection({
               <Badge tone="warn">موقوفٌ بحملة تأكيد الأرقام</Badge>
             ) : null}
             {/* **دورُ الراكب محظورٌ وحدَه** (SPEC §21.6) — والكبتنُ في الحساب نفسِه يعمل */}
-            {user.rider_blocked_at ? <Badge tone="danger">الراكبُ موقوف — الكبتنُ يعمل</Badge> : null}
+            {user.rider_blocked_at ? <Badge tone="danger">الراكبُ موقوف — الكابتنُ يعمل</Badge> : null}
             {/* **حسابُ تجربة** (SPEC §٦٥-ج) — وسمٌ يُقرأ ولا يُكتب من هنا */}
             <TestAccountBadge isTest={user.is_test} />
             {user.roles.map((role) => (
@@ -204,7 +204,7 @@ export function WalletSection({
             {isFrozen ? (
               <p className="ad-sec-badges">
                 <Badge tone="warn">
-                  {side === "driver" ? "محفظةُ الكبتن مجمّدة" : "محفظةٌ مجمّدة"}
+                  {side === "driver" ? "محفظةُ الكابتن مجمّدة" : "محفظةٌ مجمّدة"}
                 </Badge>
               </p>
             ) : null}
@@ -237,7 +237,7 @@ export function WalletSection({
                     isFrozen ? "ad-btn-secondary" : "ad-btn-warn",
                   )}
                 >
-                  {isFrozen ? "رفع التجميد" : "تجميد محفظة الكبتن"}
+                  {isFrozen ? "رفع التجميد" : "تجميد محفظة الكابتن"}
                 </button>
               </div>
             ) : null}
@@ -300,7 +300,7 @@ export function RidesSection({
   );
   return (
     <ProfileSection
-      title={side === "rider" ? "آخرُ رحلاته راكباً" : "آخرُ رحلاته كبتناً"}
+      title={side === "rider" ? "آخرُ رحلاته راكباً" : "آخرُ رحلاته كابتناً"}
       icon="history"
       load={load}
     >
@@ -633,7 +633,7 @@ function Controls({
               </Button>
             ) : (
               <Button size="sm" variant="secondary" disabled={busy || reason.trim().length < 3}
-                onClick={() => void run(() => blockRiderRole(user.id, reason.trim()), "أُوقف الراكبُ وحدَه — الكبتنُ يعمل.")}>
+                onClick={() => void run(() => blockRiderRole(user.id, reason.trim()), "أُوقف الراكبُ وحدَه — الكابتنُ يعمل.")}>
                 أوقف الراكب وحدَه
               </Button>
             )

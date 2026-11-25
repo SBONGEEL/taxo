@@ -588,7 +588,7 @@ async def _signals_reason(driver: Driver, day_start: datetime | None = None) -> 
     if "mock_location" not in signals or measured_at is None or (
         day_start is not None and measured_at < day_start - timedelta(days=1)
     ):
-        return "لم تصل إشاراتُ الجهاز — النقاطُ من تطبيق الكبتن المثبَّت على هاتفٍ حقيقيّ"
+        return "لم تصل إشاراتُ الجهاز — النقاطُ من تطبيق الكابتن المثبَّت على هاتفٍ حقيقيّ"
     if signals.get("emulator") is True:
         return "التطبيقُ يعمل على محاكٍ لا على هاتفٍ حقيقيّ"
     if signals.get("mock_location") is True:
@@ -604,7 +604,7 @@ async def _shared_device_reason(session: AsyncSession, driver: Driver, limit: in
         )
     )
     if accounts and accounts > limit:
-        return "هذا الجهازُ دخل منه أكثرُ من حساب كبتن — النقاطُ لحسابٍ واحدٍ في الجهاز"
+        return "هذا الجهازُ دخل منه أكثرُ من حساب كابتن — النقاطُ لحسابٍ واحدٍ في الجهاز"
     return None
 
 
@@ -1077,7 +1077,7 @@ async def report(session: AsyncSession, *, country: CountryCode, month: date) ->
 async def driver_days(session: AsyncSession, *, driver_id: uuid.UUID, limit: int = 62) -> list[DriverDutyDay]:
     driver = await session.get(Driver, driver_id)
     if driver is None:
-        raise NotFound("الكبتن غير موجود")
+        raise NotFound("الكابتن غير موجود")
     return list(
         (
             await session.execute(
