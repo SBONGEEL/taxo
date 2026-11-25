@@ -3,6 +3,6 @@
      أندرويد يدمج موارد النكهة فوق `main`، فما هنا يستبدل ما هناك وما سكت
      عنه يبقى. **وملفٌّ كاملٌ منسوخٌ يفترق أوّلَ تعديلٍ في الأصل.** -->
 <resources>
-    <string name="app_name">TAXO كبتن تجريبي</string>
-    <string name="title_activity_main">TAXO كبتن تجريبي</string>
+    <string name="app_name">TAXO Driver تجريبي</string>
+    <string name="title_activity_main">TAXO Driver تجريبي</string>
 </resources>

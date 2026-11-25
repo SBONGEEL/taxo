@@ -89,7 +89,7 @@
         </activity>
 
         <!-- **خدمةُ الاستقبال** (2026-08-21): تبقي العمليةَ حيّةً ما دام
-             الكبتنُ مستقبِلاً، فلا يسقط مقبسُه بعد ثوانٍ من إرسال التطبيق إلى
+             الكابتنُ مستقبِلاً، فلا يسقط مقبسُه بعد ثوانٍ من إرسال التطبيق إلى
              الخلفية — وهو مقيسٌ على S21: أقلُّ من ٣٠ ثانية ثم `is_online=false`.
              و`stopWithTask=false` كي يبلغَها `onTaskRemoved` فتوقف نفسَها
              **وتزيل إشعارَها**، فلا يبقى سطرٌ يقول «تستقبل» ولا مقبسَ خلفه. -->
@@ -149,7 +149,7 @@
             android:name=".OnlineTileService"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="TAXO كبتن"
+            android:label="TAXO Driver"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
@@ -166,11 +166,11 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_earnings_info" />
         </receiver>
-        <!-- **ودجةُ الكبتن الجديدة** وتنبيهُ نهاية الاستراحة (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — كلاهما خلف مفتاحه -->
+        <!-- **ودجةُ الكابتن الجديدة** وتنبيهُ نهاية الاستراحة (أمرُ المالك ٢٠/١١ الرابع، SPEC §١١٠) — كلاهما خلف مفتاحه -->
         <receiver
             android:name=".DriverWidget"
             android:exported="false"
-            android:label="TAXO كبتن">
+            android:label="TAXO Driver">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="ly.tajora.LAUNCHER_CHANGED" />
@@ -201,8 +201,8 @@
                 <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
-        <!-- **ودجاتُ الكبتن الخمس** (أمرُ المالك ٢٠/١١ الثامن) — **مطفأةٌ هنا**، ويُظهرها `TaxoWidgets.sync` في المنتقي حين يشتعل
-             `driver_widgets_plus` لبلد الكبتن ومفتاحُ بياناتها؛ فمن لم يُشعَل له شيءٌ لا يرى ودجةً جديدة -->
+        <!-- **ودجاتُ الكابتن الخمس** (أمرُ المالك ٢٠/١١ الثامن) — **مطفأةٌ هنا**، ويُظهرها `TaxoWidgets.sync` في المنتقي حين يشتعل
+             `driver_widgets_plus` لبلد الكابتن ومفتاحُ بياناتها؛ فمن لم يُشعَل له شيءٌ لا يرى ودجةً جديدة -->
         <receiver
             android:name=".TaxoWidgets$Status"
             android:enabled="false"
@@ -269,11 +269,11 @@
 
     <!-- الموقع: دقيقٌ وتقريبيٌّ معاً — أندرويد 12+ يعطي المستخدمَ خيارَ
          «تقريبي» ولو طلبتَ الدقيق، وطلبُ الدقيق وحدَه يترك من اختاره بلا
-         موقعٍ إطلاقاً. والكبتنُ موقعُه هو الخدمة. -->
+         موقعٍ إطلاقاً. والكابتنُ موقعُه هو الخدمة. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- **الموقعُ في الخلفية — للكبتن وحدَه** (تطبيقُ الراكب لا يطلبه ولا يحتاجه).
+    <!-- **الموقعُ في الخلفية — للكابتن وحدَه** (تطبيقُ الراكب لا يطلبه ولا يحتاجه).
          وثلاثةُ أشياءَ يجب أن تُقال عنه بصراحة:
          ١. أندرويد 10+ **لا يمنحه من داخل التطبيق**: أقصى ما يستطيعه الحوارُ
             هو «أثناء الاستخدام»، و«السماح طوال الوقت» يُختار يدوياً من إعدادات
@@ -286,7 +286,7 @@
     <!-- **إذنا الخدمة الأمامية**: الأولُ عامٌّ منذ أندرويد 9، والثاني
          **يشترطه أندرويد 14 لكلِّ نوعٍ على حدة** — وبغيره يرمي النظامُ
          استثناءً لحظةَ `startForeground` لا عند التثبيت، أي **على جهاز
-         الكبتن لا في البناء**. -->
+         الكابتن لا في البناء**. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
@@ -295,7 +295,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- **بطاقةُ طلبٍ تُقرأ والتطبيقُ مغلق** (قرارُ المالك 2026-08-30).
-         **وهي وظيفةٌ أساسيّةٌ معلَنة** لا زينة: كبتنٌ يقود ولا يجوز أن يُطلب
+         **وهي وظيفةٌ أساسيّةٌ معلَنة** لا زينة: كابتنٌ يقود ولا يجوز أن يُطلب
          منه فتحُ تطبيقٍ ليعرف أنّ ثمّة عملاً — وهذا هو التعليلُ الذي يُقدَّم
          لمراجعة Play، مكتوباً **قبل الرفع لا بعد الرفض**.
          **ومن لم يمنحه لا يبقى بلا طريق**: `OfferAlert` ينتقل إلى إشعارٍ
@@ -308,7 +308,7 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- **إعفاءُ التوفير ليس إذناً بل شرطُ بقاءٍ للخدمة**: بدونه يُوقف
-         النظامُ بثَّ الموقع بعد دقائق، **فيبدو الكبتنُ متصلاً وهو غائب** —
+         النظامُ بثَّ الموقع بعد دقائق، **فيبدو الكابتنُ متصلاً وهو غائب** —
          وذاك أخطرُ من انقطاعٍ ظاهر. ولا يُطلب إلا من شاشة الأذونات. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 

@@ -45,7 +45,7 @@
         },
         "driver-app": {
           "shellUrl": "https://driver.tajora.ly",
-          "appName": "TAXO كبتن"
+          "appName": "TAXO Driver"
         },
         "admin-panel": {
           "shellUrl": "https://admin.tajora.ly",
@@ -66,7 +66,7 @@
         },
         "driver-app": {
           "shellUrl": "https://dev-driver.tajora.ly",
-          "appName": "TAXO كبتن تجريبي"
+          "appName": "TAXO Driver تجريبي"
         },
         "admin-panel": {
           "shellUrl": "https://dev-admin.tajora.ly",
@@ -88,7 +88,7 @@
         },
         "driver-app": {
           "shellUrl": "https://dz-driver.tajora.ly",
-          "appName": "TAXO كبتن DZ"
+          "appName": "TAXO Driver DZ"
         },
         "admin-panel": {
           "shellUrl": "https://dz-admin.tajora.ly",

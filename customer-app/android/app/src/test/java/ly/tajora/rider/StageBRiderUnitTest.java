@@ -9,7 +9,7 @@ public class StageBRiderUnitTest {
 
     @Test
     public void liveNoticeNeedsATitle() {
-        assertEquals(true, RideLivePlugin.drawable("الكبتن في الطريق إليك"));
+        assertEquals(true, RideLivePlugin.drawable("الكابتن في الطريق إليك"));
         assertEquals(false, RideLivePlugin.drawable("   "));
         assertEquals(false, RideLivePlugin.drawable(null));
     }

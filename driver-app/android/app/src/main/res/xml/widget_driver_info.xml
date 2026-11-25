@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- **ودجةُ الكبتن** (٢٠/١١ الرابع) — تتحدّث حين يتغيّر الحال لا بمؤقّت (updatePeriodMillis=0)؛ صغيرةٌ ومتوسّطةٌ وكبيرةٌ بالتحجيم -->
+<!-- **ودجةُ الكابتن** (٢٠/١١ الرابع) — تتحدّث حين يتغيّر الحال لا بمؤقّت (updatePeriodMillis=0)؛ صغيرةٌ ومتوسّطةٌ وكبيرةٌ بالتحجيم -->
 <!-- على تصميم ودجات TAXO (أمرُ المالك ٢١/١١) — المعاينةُ هي التخطيطُ نفسُه -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"

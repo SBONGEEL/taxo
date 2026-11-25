@@ -24,7 +24,7 @@ public class RideNoticeProbe extends BroadcastReceiver {
         data.put("rich", "1");
         data.put("ride_id", "00000000-0000-4000-8000-000000000012");
         data.put("title", "تم قبول رحلتك");
-        data.put("body", "الكبتن في طريقه إلى نقطة الانطلاق");
+        data.put("body", "الكابتن في طريقه إلى نقطة الانطلاق");
         data.put("driver_name", "أحمد");
         data.put("plate", "12-34567");
         data.put("vehicle", "تويوتا كامري أبيض");

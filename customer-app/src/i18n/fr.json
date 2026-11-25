@@ -1716,7 +1716,6 @@
   "افتح «الإشعارات»": "Ouvrez « Notifications »",
   "فعّل «السماح بالإشعارات»": "Activez « Autoriser les notifications »",
   "افتح «إعدادات متقدّمة» أو «الظهور فوق التطبيقات»": "Ouvrez « Paramètres avancés » ou « Affichage par-dessus les autres applis »",
-  "فعّل TAXO كابتن": "Activez TAXO Capitaine",
   "افتح «البطارية»": "Ouvrez « Batterie »",
   "اختر «غير مقيّد» أو «بلا قيود»": "Choisissez « Non restreinte » ou « Sans restriction »",
   "افتح «البطارية» أو «إدارة التطبيقات»": "Ouvrez « Batterie » ou « Gestion des applis »",
@@ -1876,5 +1875,6 @@
   "أول {0} مجاناً": "Gratuit pendant {0}",
   "أكمل {0} من {1}": "{0} sur {1} effectuées",
   "يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}": "Son compte est approuvé, il achète un abonnement et effectue {0}",
-  "يُكمل {0}": "Effectue {0}"
+  "يُكمل {0}": "Effectue {0}",
+  "فعّل تطبيق TAXO": "Activez l’application TAXO"
 }

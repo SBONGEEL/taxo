@@ -50,8 +50,8 @@ final class TaxoChannels {
         if (manager == null) return;
         int high = NotificationManager.IMPORTANCE_HIGH;
         create(context, manager, ACCEPTED, "قبول الرحلة", high, R.raw.taxo_accepted);
-        create(context, manager, APPROACHING, "اقتراب الكبتن", high, R.raw.taxo_approaching);
-        create(context, manager, ARRIVED, "وصول الكبتن", high, R.raw.taxo_arrived);
+        create(context, manager, APPROACHING, "اقتراب الكابتن", high, R.raw.taxo_approaching);
+        create(context, manager, ARRIVED, "وصول الكابتن", high, R.raw.taxo_arrived);
         create(context, manager, STARTED, "بدء الرحلة", high, R.raw.taxo_started);
         create(context, manager, ENDED, "انتهاء الرحلة", high, R.raw.taxo_ended);
         create(context, manager, PAYMENT, "الدفع والشحن", high, R.raw.taxo_payment);
@@ -61,8 +61,8 @@ final class TaxoChannels {
         int[] arrived = {R.raw.taxo_captain_arrived_1, R.raw.taxo_captain_arrived_2, R.raw.taxo_captain_arrived_3};
         // «اقتراب الكبتن» بصوت «قُبلت» في المجموعة الثانية — لا صوتَ اقترابٍ فيها
         createToned(context, manager, ACCEPTED, "قبول الرحلة", tones(new int[] {R.raw.taxo2_accepted_1, R.raw.taxo2_accepted_2, R.raw.taxo2_accepted_3, R.raw.taxo2_accepted_4, R.raw.taxo2_accepted_5}, update));
-        createToned(context, manager, APPROACHING, "اقتراب الكبتن", tones(new int[] {R.raw.taxo2_accepted_1, R.raw.taxo2_accepted_2, R.raw.taxo2_accepted_3, R.raw.taxo2_accepted_4, R.raw.taxo2_accepted_5}, update));
-        createToned(context, manager, ARRIVED, "وصول الكبتن", tones(new int[] {R.raw.taxo2_captain_arrived_1, R.raw.taxo2_captain_arrived_2, R.raw.taxo2_captain_arrived_3, R.raw.taxo2_captain_arrived_4, R.raw.taxo2_captain_arrived_5}, arrived));
+        createToned(context, manager, APPROACHING, "اقتراب الكابتن", tones(new int[] {R.raw.taxo2_accepted_1, R.raw.taxo2_accepted_2, R.raw.taxo2_accepted_3, R.raw.taxo2_accepted_4, R.raw.taxo2_accepted_5}, update));
+        createToned(context, manager, ARRIVED, "وصول الكابتن", tones(new int[] {R.raw.taxo2_captain_arrived_1, R.raw.taxo2_captain_arrived_2, R.raw.taxo2_captain_arrived_3, R.raw.taxo2_captain_arrived_4, R.raw.taxo2_captain_arrived_5}, arrived));
         createToned(context, manager, STARTED, "بدء الرحلة", tones(new int[] {R.raw.taxo2_started_1, R.raw.taxo2_started_2, R.raw.taxo2_started_3, R.raw.taxo2_started_4, R.raw.taxo2_started_5}, update));
         createToned(context, manager, ENDED, "انتهاء الرحلة", tones(new int[] {R.raw.taxo2_ended_1, R.raw.taxo2_ended_2, R.raw.taxo2_ended_3, R.raw.taxo2_ended_4, R.raw.taxo2_ended_5}, update));
         createToned(context, manager, PAYMENT, "الدفع والشحن", tones(new int[] {R.raw.taxo2_payment_1, R.raw.taxo2_payment_2, R.raw.taxo2_payment_3, R.raw.taxo2_payment_4, R.raw.taxo2_payment_5}, update));
@@ -97,7 +97,7 @@ final class TaxoChannels {
         if (manager.getNotificationChannel(CALL) != null) return;
         NotificationChannel channel = new NotificationChannel(
                 CALL, "المكالمات الواردة", NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription("مكالمةُ الكبتن أثناء الرحلة — ترنّ والتطبيقُ مغلق.");
+        channel.setDescription("مكالمةُ الكابتن أثناء الرحلة — ترنّ والتطبيقُ مغلق.");
         channel.enableVibration(true);
         channel.setVibrationPattern(new long[] {0, 350, 200, 350});
         channel.setSound(sound(context, R.raw.taxo_call), new AudioAttributes.Builder()
