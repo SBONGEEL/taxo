@@ -44,6 +44,15 @@ public class CallMessagingService extends MessagingService {
                 // **لا يُسقط رسمُ الرنين ما بعده**: الرسالةُ تمضي إلى الملحق كما تمضي اليوم، والمكالمةُ تُرى حين يُفتح التطبيق
             }
         }
+        // **الطلبُ الوارد والتطبيقُ غائب** (أمرُ المالك ٢٠٢٦-١١-٢٦) — بياناتٌ وحدَها لجهازٍ بلّغ بقناة «بيب بيب» (المجموعةُ السادسة)،
+        // **ترسمه الحزمةُ ورقةً أو فقاعةً أو ملءَ شاشةٍ وترنّ حتى قبولٍ أو رفضٍ أو انقضاء**؛ والتطبيقُ أمامه يرى البطاقةَ من مقبسه
+        if ("ride_offer".equals(type) && remoteMessage.getNotification() == null && !CallAlert.appInFront(this)) {
+            try {
+                OfferAlert.showFromPush(this, data, remoteMessage.getSentTime());
+            } catch (RuntimeException failed) {
+                // **لا يُسقط رسمُ الطلب ما بعده** — الرسالةُ تمضي إلى الملحق، والمقبسُ يحمل الطلبَ إن كان حيّاً
+            }
+        }
         super.onMessageReceived(remoteMessage);
     }
 }

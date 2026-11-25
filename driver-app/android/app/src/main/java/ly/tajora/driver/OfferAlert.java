@@ -15,6 +15,8 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.Settings;
 
+import java.util.Map;
+
 /**
  * <b>أيُّ الأربع تُستعمل الآن</b> — وقاعدةُ التصميم: «أوّلُ طريقةٍ متاحةٍ
  * تُستعمل، والبقيّةُ تُلغى، فلا يستقبل السائقُ البلاغَ نفسَه مرّتين».
@@ -58,6 +60,14 @@ public final class OfferAlert {
      * منبّه</b> — فبقاؤها سطرٌ زائدٌ في الإعدادات، وحذفُها طلبٌ يصل همساً.
      */
     public static final String CHANNEL_ID = "taxo.offer.v2";
+    /**
+     * <b>قناةُ الطلب الثالثة — «TAXO بيب بيب» على مجرى المنبّه</b> (أمرُ المالك ٢٠٢٦-١١-٢٦). <b>معرّفٌ جديدٌ لا تعديلُ القديمة</b>:
+     * صوتُ قناةٍ قائمةٍ لا يتغيّر (أندرويد)، و{@code taxo.offer.v2} صوتُها {@code taxo_request}. <b>ووجودُها شاهدٌ</b> يبلّغ به
+     * الويبُ الخادمَ ({@code src/lib/push.ts → channelSet} = 6) فيصله الطلبُ بياناتٍ ترسمها {@link #showFromPush}.
+     */
+    public static final String CHANNEL_V3 = "taxo.offer.v3";
+    /** <b>أختُها لمن أطفأ «رنين الطلب حتى في الوضع الصامت»</b> — الصوتُ نفسُه على مجرى الرنين، فيسكت حيث يسكت الهاتف ويهتزّ. */
+    public static final String CHANNEL_V3_QUIET = "taxo.offer.v3.quiet";
     public static final int NOTIFICATION_ID = 4202;
 
     private static final String PREFS = "taxo.offer.presence";
@@ -91,13 +101,33 @@ public final class OfferAlert {
         context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).edit().putString("tone", tone).apply();
     }
 
-    /** القناةُ التي يُرسم عليها الطلبُ الآن — <b>قناةُ النغمة إن وُجدت، وإلا الافتراضيّة</b>: قناةٌ غائبةٌ تُسقط الإشعارَ همساً. */
+    /** <b>القناةُ التي يُرسم عليها الطلبُ الآن — «بيب بيب» لكلِّ طلب</b> (أمرُ المالك ٢٠٢٦-١١-٢٦): لا تتبع «نغمة الإشعارات»، والمجرى
+     *  بإعداد «حتى في الوضع الصامت». <b>وقناةٌ غائبةٌ تُسقط الإشعارَ همساً</b>، فتُنشأ قبل أن تُعاد. */
     static String channelFor(Context context) {
-        String tone = context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).getString("tone", null);
-        if (tone == null || !(tone.startsWith("s1_") || tone.startsWith("s2_")) || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return CHANNEL_ID;
-        NotificationManager manager = context.getSystemService(NotificationManager.class);
-        String id = CHANNEL_ID + "." + tone;
-        return manager != null && manager.getNotificationChannel(id) != null ? id : CHANNEL_ID;
+        ensureChannel(context);
+        return silentRing(context) ? CHANNEL_V3 : CHANNEL_V3_QUIET;
+    }
+
+    /** <b>«رنين الطلب حتى في الوضع الصامت» — مشتعلٌ افتراضاً</b> (أمرُ المالك ٢٠٢٦-١١-٢٦)، والكبتنُ يطفئه من الإعدادات. */
+    static boolean silentRing(Context context) {
+        return context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).getBoolean("silent_ring", true);
+    }
+
+    public static void setSilentRing(Context context, boolean on) {
+        context.getSharedPreferences(TONE_PREFS, Context.MODE_PRIVATE).edit().putBoolean("silent_ring", on).apply();
+    }
+
+    private static final String LABEL_PREFS = "taxo.offer.labels";
+
+    /** <b>تسمياتُ العملة والفئة بلغة التطبيق</b> — يكتبها الويبُ عند الاتّصال، فيرسم {@link #showFromPush} ما يرسمه الويبُ حرفاً. */
+    public static void setLabels(Context context, Map<String, String> labels) {
+        SharedPreferences.Editor edit = context.getSharedPreferences(LABEL_PREFS, Context.MODE_PRIVATE).edit();
+        for (Map.Entry<String, String> entry : labels.entrySet()) edit.putString(entry.getKey(), entry.getValue());
+        edit.apply();
+    }
+
+    private static String label(Context context, String key, String fallback) {
+        return context.getSharedPreferences(LABEL_PREFS, Context.MODE_PRIVATE).getString(key, fallback);
     }
 
     /** <b>قناةُ طلبٍ لكلِّ نغمة</b> — على مجرى المنبّه كأختها الافتراضيّة، فترنّ والهاتفُ صامت. */
@@ -126,11 +156,16 @@ public final class OfferAlert {
         }
     }
 
-    /** ينشئ القناةَ إن لم تكن — <b>وإنشاؤها مرّةً واحدةً بحكم النظام</b>. */
+    /** ينشئ القنواتِ إن لم تكن — <b>وإنشاؤها مرّةً واحدةً بحكم النظام</b>. */
     public static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (manager == null || manager.getNotificationChannel(CHANNEL_ID) != null) return;
+        if (manager == null) return;
+        createBeep(context, manager, CHANNEL_V3, "طلبات الرحلات",
+                "«TAXO بيب بيب» — تصيح ولو كان الهاتفُ صامتاً.", AudioAttributes.USAGE_ALARM);
+        createBeep(context, manager, CHANNEL_V3_QUIET, "طلبات الرحلات · تتبع الوضع الصامت",
+                "«TAXO بيب بيب» — تسكت حيث يسكت الهاتف وتهتزّ.", AudioAttributes.USAGE_NOTIFICATION_RINGTONE);
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) return;
 
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, "طلبات الرحلات", NotificationManager.IMPORTANCE_HIGH);
@@ -150,6 +185,69 @@ public final class OfferAlert {
                         .build());
         manager.createNotificationChannel(channel);
     }
+
+    private static void createBeep(Context context, NotificationManager manager, String id, String name, String description, int usage) {
+        if (manager.getNotificationChannel(id) != null) return;
+        NotificationChannel channel = new NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription(description);
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[] {0, 350, 200, 350});
+        channel.enableLights(true);
+        channel.setShowBadge(true);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.setSound(TaxoChannels.sound(context, R.raw.taxo_offer_beep), new AudioAttributes.Builder()
+                .setUsage(usage)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        manager.createNotificationChannel(channel);
+    }
+
+    /**
+     * <b>الطلبُ من الإشعار نفسِه — والتطبيقُ في الخلفية أو مغلقٌ أو الشاشةُ مقفلة</b> (أمرُ المالك ٢٠٢٦-١١-٢٦).
+     *
+     * <p><b>العلّةُ مقيسة</b>: كان الطلبُ يصل الغائبَ إشعاراً يرسمه النظامُ بقناته — <b>يرنّ مرّةً ثانيتين بـ{@code taxo_request}
+     * ولا يتكرّر ولا يملأ الشاشة</b>؛ والطريقُ المكرَّرُ (الورقةُ والفقاعةُ وملءُ الشاشة) <b>لا يبلغه إلا الويب</b> من مقبسه، والويبُ
+     * يُخنق في الخلفية ويموت مع التطبيق. فالخادمُ يرسله لهذا الجهاز بياناتٍ وحدَها ({@code channels.py → CHANNELS_V6})، <b>وهذا يرسمه</b>.
+     *
+     * <p><b>ولا يرنّ والكبتنُ غيرُ متّصل</b>: «متّصل» يكتبه الويبُ عند الاتّصال ويمحوه موتُ خدمة الموقع ({@link OnlineService#onDestroy}).
+     */
+    public static void showFromPush(Context context, Map<String, String> data, long sentAt) {
+        if (!context.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).getBoolean("online", false)) return;
+        int seconds;
+        try {
+            seconds = Integer.parseInt(value(data, "expires_in_seconds", "0"));
+        } catch (NumberFormatException bad) {
+            seconds = 0;
+        }
+        // **عمرُ الطريق يُطرح** — رسالةٌ تأخّرت لا تعدّ ثوانيَ مضت
+        if (sentAt > 0) seconds -= (int) Math.max(0, (System.currentTimeMillis() - sentAt) / 1000L);
+        if (seconds <= 0) return;
+        String currency = value(data, "currency", "");
+        String amount = value(data, "amount", "");
+        // **الدينارُ الجزائريُّ بلا كسور** كما يرسمه الويب (`formatAmount`)
+        if ("DZD".equals(currency) && amount.contains(".")) amount = amount.substring(0, amount.indexOf('.'));
+        String category = value(data, "category", "");
+        String distance = value(data, "distance_to_pickup_km", "");
+        show(context, new OfferData(
+                data.get("ride_id"),
+                amount,
+                label(context, "currency." + currency, currency),
+                "",
+                label(context, "category." + category, category),
+                distance.isEmpty() ? "" : distance + " " + label(context, "km", "كم"),
+                value(data, "pickup", ""),
+                value(data, "drop", ""),
+                seconds));
+    }
+
+    private static String value(Map<String, String> data, String key, String fallback) {
+        String found = data.get(key);
+        return found == null ? fallback : found;
+    }
+
+    /** <b>الطلبُ الظاهرُ الآن</b> — فلا يُعاد رسمُه ولا تُعاد نغمتُه حين يصل من الطريقين (المقبس والإشعار). */
+    private static String shownRide;
+    private static long shownUntil;
 
     public static boolean canUseFullScreen(Context context) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -179,7 +277,10 @@ public final class OfferAlert {
      */
     public static boolean show(Context context, OfferData offer) {
         ensureChannel(context);
+        if (!offer.rideId.isEmpty() && offer.rideId.equals(shownRide) && SystemClock.elapsedRealtime() < shownUntil) return true;
         hide(context);
+        shownRide = offer.rideId;
+        shownUntil = SystemClock.elapsedRealtime() + offer.seconds * 1000L;
         // **نبضُ فقاعة الحال** (§١٠٣ A/1) — إن كانت ظاهرة؛ ولا شيءَ إن لم تكن
         StatusBubble.pulse();
         // **الطلبُ منطوقاً** (§١٠٣ B/14) — مفتاحُ السوق واختيارُ الكبتن معاً، وبعد الرنّة الأولى
@@ -260,6 +361,7 @@ public final class OfferAlert {
 
     /** يطوي كلَّ ما قد يكون ظاهراً — <b>الثلاثةَ معاً ونغمتَها</b>، فلا يبقى أثر. */
     public static void hide(Context context) {
+        shownRide = null;
         OfferSpeech.stop();
         OfferTone.stop();
         OfferBubble.hide(context);

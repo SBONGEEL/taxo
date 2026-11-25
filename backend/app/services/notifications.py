@@ -538,6 +538,12 @@ async def publish_ride_offer(
                 "currency": ride.currency.value,
                 "distance_to_pickup_km": str(distance_to_pickup_km),
             },
+            # **لما ترسمه الحزمةُ من الإشعار وحدَه** (المجموعةُ السادسة، `channels.for_level`) — الفئةُ والطريقُ كما يرسمها المقبس
+            native_data={
+                "category": str(getattr(ride.vehicle_category, "value", ride.vehicle_category) or ""),
+                "pickup": ride.pickup_address or "",
+                "drop": ride.dropoff_address or "",
+            },
             high_priority=True,
             # **قناةُ الطلبات لا القناةُ الافتراضية** (قرارُ المالك 2026-08-30):
             # صوتُها على **مجرى المنبّه** فتصيح ولو كان الهاتفُ صامتاً، واهتزازُها

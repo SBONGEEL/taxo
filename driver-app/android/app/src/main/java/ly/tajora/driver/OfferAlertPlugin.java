@@ -48,6 +48,50 @@ public class OfferAlertPlugin extends Plugin {
         call.resolve();
     }
 
+    /** <b>«رنين الطلب حتى في الوضع الصامت»</b> — <b>والحزمةُ مصدرُه</b>: هي التي ترنّ والويبُ نائم. */
+    @PluginMethod
+    public void setSilentRing(PluginCall call) {
+        OfferAlert.setSilentRing(getContext(), Boolean.TRUE.equals(call.getBoolean("enabled", true)));
+        call.resolve();
+    }
+
+    /** <b>«جرّب النغمة»</b> — دورةٌ بالمجرى الذي سيرنّ به الطلب. */
+    @PluginMethod
+    public void testTone(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("sounding", OfferTone.test(getContext()));
+        call.resolve(out);
+    }
+
+    /** <b>نغمةُ الطلب والتطبيقُ أمام الكبتن</b> — بالحزمة لا بالويب، فتصيح والهاتفُ صامتٌ كما تصيح في الخلفية. */
+    @PluginMethod
+    public void ring(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("sounding", OfferTone.start(getContext(), call.getInt("seconds", 60)));
+        call.resolve(out);
+    }
+
+    @PluginMethod
+    public void stopRing(PluginCall call) {
+        OfferTone.stop();
+        call.resolve();
+    }
+
+    /** <b>تسمياتُ العملة والفئة</b> لما ترسمه الحزمةُ من الإشعار وحدَه ({@link OfferAlert#showFromPush}). */
+    @PluginMethod
+    public void setLabels(PluginCall call) {
+        JSObject labels = call.getObject("labels", new JSObject());
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        java.util.Iterator<String> keys = labels.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            String value = labels.getString(key);
+            if (value != null) out.put(key, value);
+        }
+        OfferAlert.setLabels(getContext(), out);
+        call.resolve();
+    }
+
     @PluginMethod
     public void status(PluginCall call) {
         Context context = getContext();
@@ -72,13 +116,14 @@ public class OfferAlertPlugin extends Plugin {
         if (manager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             OfferAlert.ensureChannel(context);
             android.app.NotificationChannel channel =
-                    manager.getNotificationChannel(OfferAlert.CHANNEL_ID);
+                    manager.getNotificationChannel(OfferAlert.channelFor(context));
             channelOn = channel != null
                     && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
         }
         // **قناةُ الطلبات وحدَها**: مفتاحُ الإشعارات العامُّ قد يكون مفتوحاً
         // وقناةُ الطلبات مطفأةً بيد المستخدم — <b>وهو صمتٌ لا يفسّره شيء</b>
         out.put("offerChannel", channelOn);
+        out.put("silentRing", OfferAlert.silentRing(context));
 
         // **ولا يُدَّعى شيءٌ عن إعدادات المصنّع** — انظر توثيق الصنف
         out.put("manufacturerSettingsKnown", false);

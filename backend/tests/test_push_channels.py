@@ -294,7 +294,31 @@ def test_the_chosen_tone_is_a_channel_of_its_own_for_the_fourth_set_only() -> No
     # **والعامُّ بلا قناةٍ يبقى بلا قناة**
     general = PushMessage(title="t", body="b", data={"type": "campaign"})
     assert channels.for_level(general, channels.CHANNELS_V4, "s1_2").android_channel_id is None
-    assert channels.level_of(4) == channels.CHANNELS_V4 and channels.level_of(9) == channels.CHANNELS_V5  # الخامسةُ (§١٠٣/12) فوقها
+    assert channels.level_of(4) == channels.CHANNELS_V4 and channels.level_of(5) == channels.CHANNELS_V5
+    assert channels.level_of(9) == channels.CHANNELS_V6  # السادسةُ («بيب بيب»، ٢٦/١١) فوقهما
+
+
+def test_the_sixth_set_gets_the_offer_as_data_for_the_app_to_ring() -> None:
+    """**الطلبُ للسادسة بياناتٍ وحدَها على قناة «بيب بيب»** — ترسمه الحزمةُ وترنّه حتى قبولٍ أو رفضٍ أو انقضاء؛ وما دونها كما كان."""
+    from app.services.push import PushMessage, channels
+
+    offer = PushMessage(
+        title="طلب رحلة جديد",
+        body="b",
+        data={"type": "ride_offer", "ride_id": "r1", "expires_in_seconds": "20"},
+        native_data={"category": "economy", "pickup": "p", "drop": "d"},
+        high_priority=True,
+    )
+    sixth = channels.for_level(offer, channels.CHANNELS_V6, "s1_2")
+    assert sixth.data_only and sixth.android_channel_id == "taxo.offer.v3" and sixth.high_priority
+    assert sixth.data["category"] == "economy" and sixth.data["title"] == "طلب رحلة جديد" and sixth.data["ride_id"] == "r1"
+    # **والرابعةُ والخامسةُ كما كانتا حرفاً** — إشعارٌ يرسمه النظامُ على قناة النغمة
+    for level in (channels.CHANNELS_V4, channels.CHANNELS_V5):
+        shaped = channels.for_level(offer, level, None)
+        assert not shaped.data_only and shaped.android_channel_id == "taxo.offer.v2" and "category" not in shaped.data
+    # **وما ليس طلباً في السادسة كما هو في الرابعة**
+    ended = PushMessage(title="t", body="b", data={"type": "ride_completed"})
+    assert channels.for_level(ended, channels.CHANNELS_V6, "s1_2") == channels.for_level(ended, channels.CHANNELS_V4, "s1_2")
 
 
 async def test_the_tone_is_saved_per_user_and_default_is_null(client, session_factory) -> None:

@@ -29,6 +29,7 @@ import {
   hideOfferAlert,
   maybeAskForOverlay,
   showOfferAlert,
+  setOfferLabels,
 } from "@/lib/offer-alert";
 import { onlineService } from "@/lib/online-service";
 import { digits, formatAmount } from "@/lib/utils";
@@ -265,6 +266,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
         // **الخدمةُ تبدأ مع الاستقبال لا مع فتح التطبيق** (شرطُ المالك): لا
         // إشعارَ دائمٌ لكبتنٍ غيرِ عامل
         onlineService.start();
+        // **تسمياتُ ما ترسمه الحزمةُ من الإشعار وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٦) — العملاتُ والفئاتُ و«كم» بلغة التطبيق
+        setOfferLabels({
+          ...Object.fromEntries((["JOD", "LYD", "DZD"] as const).map((code) => [`currency.${code}`, CURRENCY_LABEL[code]])),
+          ...Object.fromEntries(Object.keys(CATEGORY_LABEL).map((key) => [`category.${key}`, CATEGORY_LABEL[key as keyof typeof CATEGORY_LABEL]])),
+          km: tr("كم"),
+        });
         // **وإذنُ النافذة العائمة يُطلب هنا لا عند الباب** (قرارُ المالك
         // 2026-08-30): «تُطلب عند أول استقبال طلبات، وبسطرٍ يقول ما تفعله».
         // **ومرّةً واحدةً لا في كلِّ اتصال**: من رفضه لا يُساق إلى إعدادات

@@ -10,6 +10,7 @@
  */
 
 import { Capacitor, registerPlugin } from "@capacitor/core"; import { tr } from "@/lib/i18n";
+import { registerNativeOfferRing } from "@/lib/sound";
 
 export interface PermissionStatus {
   notifications: boolean;
@@ -20,6 +21,8 @@ export interface PermissionStatus {
   batteryUnrestricted: boolean;
   /** قناةُ الطلبات وحدَها — قد تُطفأ والمفتاحُ العامُّ مفتوح. */
   offerChannel: boolean;
+  /** **«رنين الطلب حتى في الوضع الصامت»** — مشتعلٌ افتراضاً؛ وغيابُه حزمةٌ أقدمُ لا تعرفه. */
+  silentRing?: boolean;
   /** **دائماً `false`**: لا API يقرأ إعدادات المصنّع، ولا يُدَّعى خلافُ ذلك. */
   manufacturerSettingsKnown: boolean;
 }
@@ -59,6 +62,12 @@ interface OfferAlertPlugin {
   hide(): Promise<void>;
   /** **«نغمة الإشعارات»** — غلافٌ أقدمُ لا يعرفها فيُبتلع خطؤه */
   setTone(options: { tone: string }): Promise<void>;
+  /** **«بيب بيب» من الحزمة** (أمرُ المالك ٢٠٢٦-١١-٢٦) — غلافٌ أقدمُ لا يعرفها فيُبتلع خطؤها ويرنّ الويب */
+  ring(options: { seconds: number }): Promise<{ sounding?: boolean }>;
+  stopRing(): Promise<void>;
+  testTone(): Promise<{ sounding?: boolean }>;
+  setSilentRing(options: { enabled: boolean }): Promise<void>;
+  setLabels(options: { labels: Record<string, string> }): Promise<void>;
   setSession(options: {
     apiBase: string | null;
     accessToken: string | null;
@@ -66,6 +75,11 @@ interface OfferAlertPlugin {
 }
 
 const plugin = registerPlugin<OfferAlertPlugin>("OfferAlert");
+
+// **نغمةُ الطلب أمام الكبتن من الحزمة** — تُسجَّل هنا لا في `sound.ts`، فلا يستورد الصوتُ الجسرَ ولا تقوم حلقة
+if (Capacitor.getPlatform() === "android") {
+  registerNativeOfferRing({ start: () => ringNatively(90), stop: stopNativeRing });
+}
 
 export function alertsAvailable(): boolean {
   return Capacitor.isNativePlatform();
@@ -118,6 +132,34 @@ export async function setNativeSession(
 ): Promise<void> {
   if (!alertsAvailable()) return;
   await plugin.setSession({ apiBase, accessToken }).catch(() => undefined);
+}
+
+/** **نغمةُ الطلب والتطبيقُ أمام الكبتن — من الحزمة** (أمرُ المالك ٢٠٢٦-١١-٢٦): على مجرى المنبّه فتصيح والهاتفُ صامت، **كما تصيح
+ *  في الخلفية**. و`false` حزمةٌ أقدمُ أو متصفّح — فيرنّ الويبُ كما كان. */
+export async function ringNatively(seconds: number): Promise<boolean> {
+  if (!alertsAvailable()) return false;
+  const result = await plugin.ring({ seconds }).catch(() => undefined);
+  return result?.sounding === true;
+}
+
+export function stopNativeRing(): void {
+  if (alertsAvailable()) void plugin.stopRing().catch(() => undefined);
+}
+
+/** **«جرّب النغمة»** — بالمجرى الذي سيرنّ به الطلب؛ و`false` حيث لا حزمةَ تعرفه. */
+export async function testOfferTone(): Promise<boolean> {
+  if (!alertsAvailable()) return false;
+  const result = await plugin.testTone().catch(() => undefined);
+  return result?.sounding === true;
+}
+
+export async function setSilentRing(enabled: boolean): Promise<void> {
+  if (alertsAvailable()) await plugin.setSilentRing({ enabled }).catch(() => undefined);
+}
+
+/** **تسمياتُ ما ترسمه الحزمةُ من الإشعار وحدَه** — العملةُ والفئةُ و«كم» بلغة التطبيق، فلا ترسم رموزاً خاماً. */
+export function setOfferLabels(labels: Record<string, string>): void {
+  if (alertsAvailable()) void plugin.setLabels({ labels }).catch(() => undefined);
 }
 
 export async function hideOfferAlert(): Promise<void> {

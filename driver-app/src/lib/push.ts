@@ -105,6 +105,9 @@ const CHANNELS_V2 = ["taxo.offer.v2", "taxo.ended", "taxo.payment", "taxo.genera
 const CALL_CHANNEL = "taxo.call";
 /** شاهدُ المجموعة الرابعة — قناةُ «انتهت الرحلة» بالنغمة الأولى، وهي في الغلافين */
 const TONE_CHANNEL = "taxo.ended.s1_1";
+/** **شاهدُ المجموعة السادسة — قناةُ «بيب بيب»** (أمرُ المالك ٢٠٢٦-١١-٢٦): الحزمةُ التي تنشئها ترسم الطلبَ من الإشعار وحدَه
+ *  (`OfferAlert.showFromPush`)، **فالخادمُ يرسله إليها بياناتٍ وحدَها** ترنّ حتى قبولٍ أو رفضٍ أو انقضاء */
+const BEEP_CHANNEL = "taxo.offer.v3";
 
 /** **ما أجاب به `channelSet` آخرَ مرّة** — وهو ما يُرسَل مع رمز الجهاز (`session.tsx`). */
 let reported: number | undefined;
@@ -121,7 +124,7 @@ export async function channelSet(): Promise<number | undefined> {
     const present = new Set(channels.map((channel) => channel.id));
     if (!CHANNELS_V2.every((id) => present.has(id))) return undefined;
     // **والرابعة: قناةٌ لكلِّ نغمة** («نغمة الإشعارات»، ج/١) — وهي فوق الثالثة في الحزمة نفسِها
-    reported = present.has(TONE_CHANNEL) ? 4 : present.has(CALL_CHANNEL) ? 3 : 2;
+    reported = present.has(BEEP_CHANNEL) ? 6 : present.has(TONE_CHANNEL) ? 4 : present.has(CALL_CHANNEL) ? 3 : 2;
     return reported;
   } catch {
     return undefined;

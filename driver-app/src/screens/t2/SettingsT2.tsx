@@ -26,10 +26,10 @@ import { DisplaySettings } from "@/components/DisplaySettings";
 import { NotificationTones, TONES_FLAG } from "@/components/NotificationTones";
 import { offerSpeechChosen, setOfferSpeech } from "@/lib/launcher";
 import { useTheme } from "@/lib/theme";
-import { setNativeOfferTone } from "@/lib/offer-alert";
+import { alertsAvailable, permissionStatus, setNativeOfferTone, setSilentRing, testOfferTone } from "@/lib/offer-alert";
 import { setOfferAlways } from "@/lib/sound";
 import { hasCliqPayout } from "@/lib/payout";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { TestMarketSection } from "@/components/t2/TestMarket";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -51,6 +51,47 @@ import { useFeature } from "@/lib/config";
 import { AddWidgetCard } from "@/components/t2/AddWidgetCard";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */
+/** **«رنين الطلب حتى في الوضع الصامت» و«جرّب النغمة»** (أمرُ المالك ٢٠٢٦-١١-٢٦) — **في التطبيق المثبَّت وحدَه**: الحزمةُ هي التي ترنّ
+ *  على مجرى المنبّه، والمتصفّحُ لا يملك ذلك فلا يُعرض فيه مفتاحٌ لا يفعل شيئاً. **والحزمةُ مصدرُ الحال** (مشتعلٌ افتراضاً)، تُسأل عند الفتح. */
+function SilentRingRows() {
+  const [silentRing, setSilentRingState] = useState<boolean | null>(null);
+  const [testing, setTesting] = useState(false);
+  useEffect(() => {
+    if (!alertsAvailable()) return;
+    void permissionStatus().then((status) => setSilentRingState(status?.silentRing ?? null));
+  }, []);
+  if (!alertsAvailable() || silentRing === null) return null;
+  return (
+    <>
+      <Toggle
+        icon="notifications_active"
+        title={tr("رنين الطلب حتى في الوضع الصامت")}
+        hint={tr("وأنت متّصل يرنّ الطلبُ ولو كان الهاتفُ صامتاً أو على الاهتزاز. أطفئه ليتبع الطلبُ وضعَ هاتفك.")}
+        on={silentRing}
+        onToggle={() => {
+          const next = !silentRing;
+          setSilentRingState(next);
+          void setSilentRing(next);
+        }}
+      />
+      <button
+        type="button"
+        className="t2-srow"
+        disabled={testing}
+        onClick={() => {
+          setTesting(true);
+          void testOfferTone().finally(() => window.setTimeout(() => setTesting(false), 7_000));
+        }}
+      >
+        <Icon name="volume_up" className="t2-srow-icon" />
+        <span className="t2-srow-main">
+          <span className="t2-srow-title">{tr("جرّب النغمة")}</span>
+        </span>
+      </button>
+    </>
+  );
+}
+
 function Toggle({
   icon,
   title,
@@ -257,7 +298,7 @@ export function SettingsT2Screen() {
         {tonesOn ? (
           <NotificationTones
             applyNative={applyDriverTone}
-            note={tr("طلبُ الرحلة يرنّ دائماً وأنت متّصل بالنغمة التي تختارها — و«اهتزاز فقط» لبقيّة الإشعارات.")}
+            note={tr("طلبُ الرحلة يرنّ دائماً وأنت متّصل بنغمة «TAXO بيب بيب» — والنغمةُ التي تختارها لبقيّة الإشعارات.")}
           />
         ) : (
           <Toggle
@@ -268,6 +309,7 @@ export function SettingsT2Screen() {
             onToggle={toggleOfferSound}
           />
         )}
+        <SilentRingRows />
         {speechReady ? (
           <Toggle
             icon="record_voice_over"

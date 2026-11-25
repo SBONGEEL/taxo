@@ -62,7 +62,9 @@ export type Cue =
 const FILES: Record<Cue, string> = {
   // **الطلبُ الوارد — الأهمُّ والأطول**: ٢٫٢ ث بالضبط، فتوقيتُ تكراره كما كان
   // (طولُه + ١٢٠ م.ث). وأعلى من البقية بـ٢ ديسيبل في ملفّه نفسِه (−٢٠ LUFS)
-  offer: "sounds/request.mp3",
+  // **«TAXO بيب بيب» لكلِّ طلب** (أمرُ المالك ٢٠٢٦-١١-٢٦) — الخيارُ ٥ من الثانية مرفوعاً ٢٫٥ dB بلا تشويه (−11.6 LUFS)، ولا تتبعه
+  // «نغمة الإشعارات»: الطلبُ صوتٌ واحدٌ يعرفه الكبتنُ بلا نظر. وطولُه ٦٫٤ ث، والتكرارُ يقرأ طولَه من الملفّ (`durationOf`)
+  offer: "sounds/offer-beep.mp3",
   rideStarted: "sounds/started.mp3",
   // **الإنهاءُ غيرُ التحصيل** (قرارُ المالك 2026-08-30): هذه لانتهاء العمل،
   // و`collected` لوصول المال — **ونغمةٌ واحدةٌ لحدثين تجعل الكبتنَ يظنّ أنه
@@ -340,11 +342,30 @@ let loopRun = 0;
  * التنبيه الأصليّ — أيرنّ هو أم لا — **ورفضٌ يقع أثناء الانتظار يُبقيها صامتة**:
  * كلُّ إيقافٍ بعد `offerLoopToken()` يُبطل البدءَ الذي طلبه.
  */
+/** **من يرنّ الطلبَ بدل الويب** — الحزمةُ على مجرى المنبّه (`offer-alert.ts → ringNatively`)، تسجّله حين تُحمَّل. */
+let nativeRing: { start: () => Promise<boolean>; stop: () => void } | null = null;
+export function registerNativeOfferRing(ring: { start: () => Promise<boolean>; stop: () => void }): void {
+  nativeRing = ring;
+}
+
 export function startOfferLoop(since?: number): void {
   if (since !== undefined && since !== loopRun) return;
   stopOfferLoop();
-  if (!unlocked || !allowed("offer")) return;
+  if (!allowed("offer")) return;
   const run = loopRun;
+  // **الحزمةُ أوّلاً** (أمرُ المالك ٢٠٢٦-١١-٢٦): تصيح والهاتفُ صامتٌ والكبتنُ أمام التطبيق كما تصيح في الخلفية — **وحزمةٌ أقدمُ
+  // أو متصفّحٌ يرنّ فيهما الويبُ كما كان**
+  if (nativeRing) {
+    void nativeRing.start().then((sounding) => {
+      if (!sounding && run === loopRun) webOfferLoop(run);
+    });
+    return;
+  }
+  webOfferLoop(run);
+}
+
+function webOfferLoop(run: number): void {
+  if (!unlocked) return;
   void load("offer").then((buffer) => {
     if (!buffer || run !== loopRun) return;
     // **والاهتزازُ يقع داخل `play`** — فلا نداءَ ثانٍ هنا
@@ -361,6 +382,7 @@ export function offerLoopToken(): number {
 /** يوقف الحلقةَ **ونغمتَها الجاريةَ معها** — بخفوتٍ ٣٠ م.ث لا قطعٍ يُسمع نقرة. */
 export function stopOfferLoop(): void {
   loopRun += 1;
+  nativeRing?.stop();
   if (loopTimer !== null) {
     window.clearInterval(loopTimer);
     loopTimer = null;
@@ -405,6 +427,7 @@ export function setTone(next: RingTone): void {
 
 /** **أيُّ ملفٍّ تعزفه النغمةُ** — ما ليس في `TONED` يبقى ملفَّه هو، فالمكالمةُ والخطأُ والمنعطفُ لا تتغيّر */
 function fileOf(cue: Cue, chosen: RingTone = tone): string {
+  if (cue === "offer") return FILES.offer;
   // **الطلبُ يرنّ دائماً والكبتنُ متّصل** (قرارُ المالك): «اهتزاز فقط» لا يُسكته، فيرنّ بالافتراضيّ الجديد
   if (chosen === "vibrate" && OFFER_CUES.has(cue)) chosen = NEW_DEFAULT;
   const n = chosen.startsWith("s1_") || chosen.startsWith("s2_") ? chosen.slice(3) : null;

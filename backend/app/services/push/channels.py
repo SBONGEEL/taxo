@@ -91,10 +91,19 @@ CHANNELS_V5 = 5
 RICH_KINDS: frozenset[str] = frozenset({"driver_assigned", "driver_approaching", "driver_arrived"})
 
 
+#: **المجموعةُ السادسة: الطلبُ يرسمه الكبتنُ بنفسه ويرنّه «TAXO بيب بيب»** (أمرُ المالك ٢٠٢٦-١١-٢٦) — الحزمةُ التي تنشئ قناةَ
+#: `taxo.offer.v3` تحمل `OfferAlert.showFromPush`، **فوجودُها شاهدٌ على الراسم**. **والعلّةُ مقيسة**: الطلبُ كان يصل الغائبَ إشعاراً
+#: يرسمه النظامُ — **يرنّ مرّةً ثانيتين ولا يتكرّر ولا يملأ الشاشة**؛ والطريقُ المكرَّرُ كان لا يبلغه إلا الويبُ من مقبسه
+CHANNELS_V6 = 6
+OFFER_V3 = "taxo.offer.v3"
+
+
 def level_of(push_channels: int | None) -> int:
     """المجموعةُ التي يُرسَل بها — **ما دون الثانية أقدمُ كلُّه**، فلا يُخترع لها وسط. **وما فوق الرابعة رابعةٌ**
     حتى تُعرَّف خامسة: حزمةٌ أحدثُ من هذا الخادم تحمل ما تحمله الرابعةُ على الأقلّ."""
     value = push_channels or 0
+    if value >= CHANNELS_V6:
+        return CHANNELS_V6
     if value >= CHANNELS_V5:
         return CHANNELS_V5
     if value >= CHANNELS_V4:
@@ -135,6 +144,16 @@ def for_level(message: PushMessage, level: int, tone: str | None = None, rich: b
         )
     if kind in NATIVE_ONLY_KINDS:
         return None
+    # **الطلبُ للسادسة بياناتٍ وحدَها** — ترسمه الحزمةُ ورقةً أو فقاعةً أو ملءَ شاشةٍ **وترنّ «بيب بيب» حتى قبولٍ أو رفضٍ أو انقضاء**،
+    # ولا تتبع «نغمة الإشعارات»: الطلبُ صوتٌ واحد. ونصُّ الدرج معه لمن لا يرسم إلا الدرج
+    if level >= CHANNELS_V6 and kind == "ride_offer":
+        tray = {"title": message.title, "body": message.body} if message.title else {}
+        return replace(
+            message,
+            data={**message.data, **message.native_data, **tray},
+            data_only=True,
+            android_channel_id=OFFER_V3,
+        )
     if level < CHANNELS_V2:
         return message
     shaped = replace(message, android_channel_id=EVENT_CHANNELS_V2.get(kind))
