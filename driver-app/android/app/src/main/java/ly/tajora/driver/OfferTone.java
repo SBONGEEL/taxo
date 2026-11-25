@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.util.Log;
 
 /**
  * <b>نغمةُ الطلب — «TAXO بيب بيب» وحدَها، مكرَّرةً ومعها اهتزازٌ مكرَّر</b> (أمرُ المالك ٢٠٢٦-١١-٢٦).
@@ -27,6 +28,8 @@ import android.os.Vibrator;
  */
 final class OfferTone {
 
+    /** **سطرٌ في السجلّ لكلِّ بدءٍ وإيقاف** — يقيسه محاكي CI (`android-emulator-films.sh`، §١١٥) بلا صوت: المجرى والمهلةُ والإيقاف */
+    static final String TAG = "TaxoOfferTone";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final Runnable EXPIRE = OfferTone::stop;
     /** <b>نبضةُ القناة نفسُها</b> (350/200/350) ثمّ سكونٌ قصير — <b>وتتكرّر</b> من أوّلها ما دامت النغمة. */
@@ -44,6 +47,7 @@ final class OfferTone {
         MAIN.postDelayed(EXPIRE, Math.max(1, seconds) * 1000L);
         if (!loud && quietPhone(context)) {
             // **الكبتنُ أطفأ «حتى في الصامت» وهاتفُه صامت** — يهتزّ ولا يصيح، وهو ما اختاره
+            Log.i(TAG, "start vibrate-only seconds=" + seconds);
             return true;
         }
         MediaPlayer next = new MediaPlayer();
@@ -57,8 +61,10 @@ final class OfferTone {
             next.setLooping(true);
             next.prepare();
             next.start();
+            Log.i(TAG, "start usage=" + (loud ? "alarm" : "ringtone") + " seconds=" + seconds);
         } catch (Exception failed) {
             // **ولا يسقط العرضُ لأن صوتَه سقط** — والويبُ يرنّ مكانه (`sounding=false`)
+            Log.w(TAG, "start failed " + failed.getClass().getSimpleName());
             next.release();
             return vibrator != null;
         }
@@ -94,6 +100,7 @@ final class OfferTone {
 
     static synchronized void stop() {
         MAIN.removeCallbacks(EXPIRE);
+        if (player != null || vibrator != null) Log.i(TAG, "stop playing=" + (player != null && isPlaying()));
         if (vibrator != null) {
             vibrator.cancel();
             vibrator = null;
@@ -106,5 +113,14 @@ final class OfferTone {
         }
         player.release();
         player = null;
+    }
+
+    /** **أيعزف الآن؟** — للمسبار وللسجلّ، والمشغّلُ المحرَّرُ لا يعزف */
+    static synchronized boolean isPlaying() {
+        try {
+            return player != null && player.isPlaying();
+        } catch (IllegalStateException released) {
+            return false;
+        }
     }
 }

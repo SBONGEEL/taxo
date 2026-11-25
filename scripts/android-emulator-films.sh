@@ -98,6 +98,65 @@ adb shell am crash "$PKG" >>"$LOG" 2>&1; sleep 3
 adb shell cat "/data/data/$PKG/shared_prefs/taxo_native_crash.xml" > "$OUT/native-crash.xml" 2>&1
 if grep -q 'name="name"' "$OUT/native-crash.xml"; then say "✓ حُفظ التعطّلُ الأصليّ: $(grep -o 'name="name">[^<]*' "$OUT/native-crash.xml" | head -1)"; else say "✗ لم يُحفظ التعطّلُ الأصليّ"; fi
 
+# ٧) «TAXO بيب بيب» في كلِّ حال (SPEC §١١٥، أمرُ المالك ٢٦/١١) — **يُقاس من سجلّ `TaxoOfferTone` ومن dumpsys لا من الصورة**
+#    (المحاكي بلا صوت). الطلبُ بمسبار `push` كما يصل من FCM بياناتٍ وحدَها، **من خيطٍ عامل**؛ وكلُّ حالٍ سطرُ ✓ أو ✗.
+adb shell am force-stop "$PKG"
+adb shell "echo '$PREFS' > /data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+adb shell chown "$OWNER:$OWNER" "/data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard
+tonelog() { adb logcat -d -s TaxoOfferTone:I 2>/dev/null | tr -d '\r'; }
+playing() { adb logcat -c; probe --es mode playing; sleep 1; tonelog | grep -q "probe playing=true"; }
+expect() { # expect <الحال> <نمطُ السجلّ>
+  if tonelog | grep -qE "$2"; then say "✓ بيب: $1 — $(tonelog | grep -E "$2" | tail -1 | sed 's/.*TaxoOfferTone: //')"; else say "✗ بيب: $1 (لا «$2» في السجلّ)"; tonelog | tail -5 >> "$LOG"; fi
+}
+ring() { adb logcat -c; probe --es mode push --es ride_id "$1" --ei timeout "${2:-12}"; sleep 3; }
+
+# أ) الواجهة
+adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1; sleep 7
+ring beep-front 12; expect "الواجهة" "start usage=alarm"
+# ب) الرفضُ أو القبولُ يوقفها فوراً (`hide` — ما تناديه الأزرارُ الثلاثة)
+adb logcat -c; probe --es mode hide; sleep 1; expect "الرفضُ يوقفها" "stop playing=true"
+playing && say "✗ بيب: ما زالت تعزف بعد الرفض" || say "✓ بيب: صامتةٌ بعد الرفض"
+# ج) الخلفية — وتتكرّر بعد طول الملفّ (6.4 ث)، وتسكت عند الانقضاء
+adb shell input keyevent KEYCODE_HOME; sleep 4
+ring beep-back 12; expect "الخلفية" "start usage=alarm"
+sleep 6; playing && say "✓ بيب: تتكرّر بعد ٩ ثوانٍ" || say "✗ بيب: سكتت قبل الانقضاء"
+sleep 5; adb logcat -c; sleep 1; playing && say "✗ بيب: تعزف بعد الانقضاء" || say "✓ بيب: سكتت عند الانقضاء"
+# د) التطبيقُ مغلق — العمليّةُ ميتة (`am kill` كسحبه من الحديثة، لا «إيقاف إجباريّ» يمنع FCM نفسَه)
+adb shell am kill "$PKG"; sleep 2
+[ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ] && say "✓ العمليّةُ ميتة قبل الطلب" || say "· العمليّةُ ما زالت حيّة"
+ring beep-closed 10; expect "التطبيقُ مغلق" "start usage=alarm"
+adb logcat -c; probe --es mode hide; sleep 1
+# هـ) الشاشةُ مقفلة — ملءُ الشاشة بصوت قناة `taxo.offer.v3` مكرَّراً (FLAG_INSISTENT)
+adb shell input keyevent KEYCODE_SLEEP; sleep 2
+ring beep-locked 10
+adb shell dumpsys notification --noredact > "$OUT/beep-locked-notification.txt" 2>&1
+if grep -q "channel=taxo.offer.v3\b\|taxo.offer.v3 " "$OUT/beep-locked-notification.txt"; then say "✓ بيب: الشاشةُ مقفلة — إشعارُ ملء الشاشة على taxo.offer.v3"; else say "✗ بيب: الشاشةُ مقفلة — لا إشعارَ على taxo.offer.v3"; fi
+grep -m3 -E "fullscreenIntent|flags=0x|mSound|sound=" "$OUT/beep-locked-notification.txt" >> "$LOG" || true
+adb shell dumpsys audio > "$OUT/beep-locked-audio.txt" 2>&1
+grep -iE "usage=USAGE_ALARM" "$OUT/beep-locked-audio.txt" | head -3 >> "$LOG" || true
+adb logcat -c; probe --es mode hide; sleep 1
+adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; sleep 2
+# و) الوضعُ الصامت — «حتى في الصامت» مشتعلٌ افتراضاً ⇐ مجرى المنبّه يرنّ
+adb shell cmd audio set-ringer-mode SILENT >>"$LOG" 2>&1 || adb shell cmd audio set-ringer-mode silent >>"$LOG" 2>&1 || true
+adb shell dumpsys audio | grep -m1 -i "ringer mode" | sed 's/^ */الرنين: /' >> "$LOG"
+adb shell input keyevent KEYCODE_HOME; sleep 2
+ring beep-silent 10; expect "الوضعُ الصامت" "start usage=alarm"
+adb logcat -c; probe --es mode hide; sleep 1
+# ز) وأطفأه الكبتن ⇐ يهتزّ ولا يصيح في الصامت
+probe --es mode silent_ring --ez on false; sleep 1
+ring beep-silent-off 10; expect "الصامتُ والإعدادُ مطفأ" "start vibrate-only"
+adb logcat -c; probe --es mode hide; sleep 1
+probe --es mode silent_ring --ez on true
+adb shell cmd audio set-ringer-mode NORMAL >>"$LOG" 2>&1 || adb shell cmd audio set-ringer-mode normal >>"$LOG" 2>&1 || true
+# ح) غيرُ متّصل ⇐ لا رنينَ أبداً
+OFF="${PREFS/name=\"online\" value=\"true\"/name=\"online\" value=\"false\"}"
+adb shell am force-stop "$PKG"
+adb shell "echo '$OFF' > /data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+adb shell chown "$OWNER:$OWNER" "/data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+ring beep-offline 10; expect "غيرُ متّصل لا يرنّ" "push skipped: offline"
+tonelog | grep -q "start usage" && say "✗ بيب: رنّ وهو غيرُ متّصل" || true
+
 adb logcat -d -t 2000 > "$OUT/logcat.txt" 2>&1
 grep -nE "FATAL|AndroidRuntime" "$OUT/logcat.txt" | head -20 >> "$LOG" || true
 say "انتهى — $(ls "$OUT"/*.mp4 2>/dev/null | wc -l) فيديو"

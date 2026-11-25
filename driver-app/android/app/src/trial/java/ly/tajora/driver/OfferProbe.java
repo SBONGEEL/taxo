@@ -26,8 +26,33 @@ public class OfferProbe extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!ACTION.equals(intent.getAction())) return;
-        if ("hide".equals(intent.getStringExtra("mode"))) {
+        String mode = intent.getStringExtra("mode");
+        if ("hide".equals(mode)) {
             OfferAlert.hide(context);
+            return;
+        }
+        // **«بيب بيب» (§١١٥)**: الطلبُ كما يصل من FCM بياناتٍ وحدَها — **من خيطٍ عاملٍ كخيط FCM**، فيُمسك عرضٌ لا يعود إلى الخيط الرئيسيّ
+        if ("push".equals(mode)) {
+            java.util.Map<String, String> m = new java.util.HashMap<>();
+            m.put("type", "ride_offer");
+            m.put("ride_id", intent.getStringExtra("ride_id") == null ? "probe-push" : intent.getStringExtra("ride_id"));
+            m.put("expires_in_seconds", String.valueOf(intent.getIntExtra("timeout", 12)));
+            m.put("amount", "2.750");
+            m.put("currency", "JOD");
+            m.put("distance_to_pickup_km", "1.2");
+            m.put("category", "economy");
+            m.put("pickup", "الدوار السابع، عمّان");
+            m.put("drop", "مجمّع رغدان، وسط البلد");
+            Context app = context.getApplicationContext();
+            new Thread(() -> OfferAlert.showFromPush(app, m, System.currentTimeMillis())).start();
+            return;
+        }
+        if ("silent_ring".equals(mode)) {
+            OfferAlert.setSilentRing(context, intent.getBooleanExtra("on", true));
+            return;
+        }
+        if ("playing".equals(mode)) {
+            android.util.Log.i(OfferTone.TAG, "probe playing=" + OfferTone.isPlaying());
             return;
         }
         // **وإجبارُ السطح للقياس وحدَه** (`--es force sheet|bubble|full`):

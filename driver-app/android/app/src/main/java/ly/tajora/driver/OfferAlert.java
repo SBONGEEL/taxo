@@ -11,6 +11,8 @@ import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.Settings;
@@ -212,7 +214,10 @@ public final class OfferAlert {
      * <p><b>ولا يرنّ والكبتنُ غيرُ متّصل</b>: «متّصل» يكتبه الويبُ عند الاتّصال ويمحوه موتُ خدمة الموقع ({@link OnlineService#onDestroy}).
      */
     public static void showFromPush(Context context, Map<String, String> data, long sentAt) {
-        if (!context.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).getBoolean("online", false)) return;
+        if (!context.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).getBoolean("online", false)) {
+            android.util.Log.i(OfferTone.TAG, "push skipped: offline");
+            return;
+        }
         int seconds;
         try {
             seconds = Integer.parseInt(value(data, "expires_in_seconds", "0"));
@@ -228,8 +233,8 @@ public final class OfferAlert {
         if ("DZD".equals(currency) && amount.contains(".")) amount = amount.substring(0, amount.indexOf('.'));
         String category = value(data, "category", "");
         String distance = value(data, "distance_to_pickup_km", "");
-        show(context, new OfferData(
-                data.get("ride_id"),
+        OfferData offer = new OfferData(
+                value(data, "ride_id", ""),
                 amount,
                 label(context, "currency." + currency, currency),
                 "",
@@ -237,7 +242,11 @@ public final class OfferAlert {
                 distance.isEmpty() ? "" : distance + " " + label(context, "km", "كم"),
                 value(data, "pickup", ""),
                 value(data, "drop", ""),
-                seconds));
+                seconds);
+        // **على الخيط الرئيسيّ لا خيطِ FCM** (قِيس قبل الشحن ٢٦/١١): الورقةُ والفقاعةُ نافذتان لا تُضافان إلا من خيطٍ له حلقة،
+        // و`onMessageReceived` يجري على خيطٍ عامل — فكان العرضُ يسقط صامتاً في `try` المتّصل. والمسبارُ يناديها من خيطٍ عامل ليمسكه
+        Context app = context.getApplicationContext();
+        new Handler(Looper.getMainLooper()).post(() -> show(app, offer));
     }
 
     private static String value(Map<String, String> data, String key, String fallback) {
