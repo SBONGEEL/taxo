@@ -780,7 +780,7 @@ async def record_manual(
         # **سببُ المنح إلزاميٌّ للدائم** (أمرُ المالك ٢٠٢٦-١١-٢٥): النزعُ يطلب سبباً، **والمنحُ الذي لا ينتهي أولى** — يُكتب في
         # `reference` فيقرؤه التدقيقُ وصفحةُ «السفراء والمميّزون» معاً، ولا عمودَ جديد
         if permanent and len((reference or "").strip()) < 3:
-            raise InvalidInput("اكتب سببَ منح «سفير TAXO» (٣ أحرفٍ على الأقلّ)", field="reference")
+            raise InvalidInput("اكتب سببَ منح «سفير TAXO» (3 أحرفٍ على الأقلّ)", field="reference")
 
     locked = await _locked_driver(session, driver.id)
     require_purchasable(locked)
