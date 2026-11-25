@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import time
 import uuid
 from dataclasses import dataclass
 
@@ -41,6 +44,66 @@ class VersionVerdict:
 
 
 #: **لا سجلَّ = لا تدخّل.** والغيابُ هنا يعطّل الحجبَ لا التطبيق.
+#: **غلافُ الراكب بمفتاح الرفع القديم** (أمرُ المالك ٢٠٢٦-١١-٢٦، SPEC §١١٦) — صفحةُ التحميل خدمت حتى ١٩/١٠ حزماً موقَّعةً
+#: بمفتاح الرفع (`3B:DC…`) وآخرُها **772**؛ وبعدها حزمُ Play بتوقيعه. **وأندرويد لا يثبّت حزمةً فوق أخرى بمفتاحٍ آخر**،
+#: فصاحبُ 772 لا يتحدّث من Play ولا من الموقع — **وزرُّ «حمّل الآن» الذي يفتح الموقعَ يقوده إلى تثبيتٍ يُرفض**.
+#: **وكلُّ ما على Play للراكب أعلى من 772** (الإنتاج 1452 · beta 932)، **إلا 496 في المسار الداخليّ** لمختبِرينا وحدَهم —
+#: والرسالةُ عليه صحيحةٌ وإن لم تلزم: الحذفُ ثمّ Play يعطيه الإنتاج. **والكبتنُ لا يُمسّ**: مفتاحُه في الموقع مفتاحُ Play منذ ١٩/١٠،
+#: ولا سؤالَ من غلاف كبتن ≤ 772 في السجلّ (٢٦/١١).
+OLD_KEY_LAST_RIDER_BUILD = 772
+RIDER_PLAY_URL = "https://play.google.com/store/apps/details?id=ly.tajora.rider"
+#: **النصُّ يُرسم في نافذة 772 كما هو** — عنوانُها «تحديثٌ جديدٌ متاح» وزرّاها «حمّل الآن» و«لاحقاً» من شيفرتها هي لا من هنا
+OLD_KEY_NOTES = (
+    "نسختك من TAXO قديمة ولا تتحدّث تلقائياً.\n"
+    "لتحصل على آخر نسخة: احذف التطبيق مرّة واحدة، ثم ثبّت TAXO من Google Play بزرّ «حمّل الآن».\n"
+    "حسابك ومحفظتك ورحلاتك محفوظة كما هي — فقط سجّل الدخول من جديد."
+)
+
+
+def old_key_shell(app: ClientApp, platform: ReleasePlatform, build: int | None) -> bool:
+    """**أهذا غلافُ راكبٍ لا يتحدّث من Play؟** — بلا رقمٍ = لا (لا رسالةَ بالظنّ)."""
+    return (
+        app == ClientApp.RIDER
+        and platform == ReleasePlatform.ANDROID
+        and build is not None
+        and 0 < build <= OLD_KEY_LAST_RIDER_BUILD
+    )
+
+
+#: **القياسُ** (أمرُ المالك: «كم راكباً رآها، وكم انتقل إلى نسخة Play خلال ٧ أيام») — السؤالُ بلا جلسة، **فالجهازُ عنوانُه
+#: مختوماً** (HMAC بسرّ الخادم، لا عنوانٌ صريح)، ويُمحى بعد ٣٠ يوماً. **وهو تقريبٌ ويُقال كذلك**: شبكةُ الهاتف تبدّل عنوانَه،
+#: فالانتقالُ يُعدّ حين يسأل **العنوانُ نفسُه** بعدها بغلافٍ من Play — فيُنقص ولا يزيد.
+OLD_KEY_SEEN = "taxo:oldkey:seen"
+OLD_KEY_MOVED = "taxo:oldkey:moved"
+OLD_KEY_ASKS = "taxo:oldkey:asks"
+OLD_KEY_TTL_SECONDS = 30 * 24 * 3600
+
+
+def _device_mark(ip: str, secret: str) -> str:
+    return hmac.new(secret.encode(), f"oldkey:{ip}".encode(), hashlib.sha256).hexdigest()[:20]
+
+
+async def note_old_key_audience(
+    redis, *, ip: str, secret: str, app: ClientApp, platform: ReleasePlatform, build: int | None
+) -> None:
+    """يُعدّ من رأى الرسالة ومن عاد بعدها بغلافٍ من Play — **ولا يُسقط السؤالَ إن سقط هو**."""
+    if app != ClientApp.RIDER or platform != ReleasePlatform.ANDROID or build is None or not ip:
+        return
+    mark = _device_mark(ip, secret)
+    now = str(int(time.time()))
+    try:
+        if old_key_shell(app, platform, build):
+            await redis.hsetnx(OLD_KEY_SEEN, mark, now)
+            await redis.incr(OLD_KEY_ASKS)
+            for key in (OLD_KEY_SEEN, OLD_KEY_ASKS):
+                await redis.expire(key, OLD_KEY_TTL_SECONDS)
+        elif build > OLD_KEY_LAST_RIDER_BUILD and await redis.hexists(OLD_KEY_SEEN, mark):
+            await redis.hsetnx(OLD_KEY_MOVED, mark, now)
+            await redis.expire(OLD_KEY_MOVED, OLD_KEY_TTL_SECONDS)
+    except Exception:  # noqa: BLE001 — عدّادٌ لا يُسقط بابَ الإقلاع
+        return
+
+
 NO_POLICY = VersionVerdict(
     state="ok",
     latest_build=None,
@@ -101,6 +164,19 @@ async def verdict_for(
     **والظنُّ لا يقفل باباً**.
     """
     release = await current(session, app, platform, source)
+    # **غلافُ المفتاح القديم: رسالةٌ اختياريّةٌ في كلِّ فتحٍ إلى Play** (SPEC §١١٦) — `reminder_hours = 0` يكتمها في الفتح نفسِه
+    # بعد «لاحقاً» ويعيدها في الفتح التالي (شيفرةُ 772: «لاحقاً» يكتم حتى `الآن + الساعات`). **ولا تُقفل أحداً**: لا `forced`
+    # ولو كان حدُّ اللوحة فوقه — فالقفلُ يقود إلى زرٍّ لا يُثبَّت ما ينزّله
+    if old_key_shell(app, platform, build):
+        return VersionVerdict(
+            state="optional",
+            latest_build=release.build if release else None,
+            min_supported_build=release.min_supported_build if release else None,
+            download_url=RIDER_PLAY_URL,
+            release_notes=OLD_KEY_NOTES,
+            reminder_hours=0,
+            open_map=False,
+        )
     if release is None:
         return NO_POLICY
 

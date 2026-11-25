@@ -33,7 +33,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.currency import currency_for_country
-from app.core.deps import DbSession, RedisDep
+from app.core.deps import ClientIP, DbSession, RedisDep
 from app.models.enums import (
     ClientApp,
     CountryCode,
@@ -159,6 +159,8 @@ async def landing(
 @router.get("/app-version", response_model=AppVersionOut)
 async def app_version(
     session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
     app: ClientApp,
     build: int | None = None,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
@@ -181,6 +183,11 @@ async def app_version(
     """
     verdict = await releases_service.verdict_for(
         session, app=app, build=build, platform=platform, source=source
+    )
+    # **عدُّ من رأى رسالةَ المفتاح القديم ومن انتقل** (SPEC §١١٦) — عنوانٌ مختوم، ولا يُسقط الجوابَ إن سقط
+    await releases_service.note_old_key_audience(
+        redis, ip=ip, secret=settings.jwt_secret,
+        app=app, platform=platform, build=build,
     )
     return AppVersionOut(
         state=verdict.state,

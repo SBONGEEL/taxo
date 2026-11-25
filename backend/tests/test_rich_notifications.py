@@ -52,7 +52,9 @@ def test_rich_without_card_falls_back_to_system_drawing() -> None:
 
 def test_level_five_is_recognised() -> None:
     assert channels.level_of(5) == channels.CHANNELS_V5
-    assert channels.level_of(9) == channels.CHANNELS_V5
+    assert channels.level_of(9) == channels.CHANNELS_V6
+    # **والسادسةُ تحمل الغنيَّ كالخامسة** — «بيب بيب» لا يُسقط إشعارَ الكبتن الغنيّ
+    assert channels.for_level(_assigned(), channels.CHANNELS_V6, "s1_2", rich=True).data.get("rich") == "1"
     assert channels.level_of(4) == channels.CHANNELS_V4
 
 

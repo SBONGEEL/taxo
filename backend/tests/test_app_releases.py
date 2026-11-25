@@ -126,6 +126,12 @@ async def _version(
     return response.json()
 
 
+@pytest.fixture(autouse=True)
+def _no_old_key_rule(monkeypatch):
+    """**قاعدةُ غلاف المفتاح القديم (§١١٦) تُقاس في ملفّها** — وهنا أرقامٌ صغيرةٌ تقيس الحدَّ والرابط من اللوحة وحدَهما."""
+    monkeypatch.setattr(releases_service, "OLD_KEY_LAST_RIDER_BUILD", 0)
+
+
 # ------------------------------------------------------------- بابُ الإقلاع
 
 

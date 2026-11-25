@@ -234,7 +234,8 @@ async def notify_user(
     tone = await _chosen_tone(session, user_id) if any(level >= channels.CHANNELS_V4 for level in groups) else None
     rich = (
         await _rich_enabled(session, user_id)
-        if channels.CHANNELS_V5 in groups and message.data.get("type") in channels.RICH_KINDS
+        # **«الخامسةُ فما فوقها» لا «الخامسةُ حرفاً»** (٢٦/١١): السادسةُ («بيب بيب») تحمل الغنيَّ كذلك، وكانت تفقده بالمساواة
+        if any(level >= channels.CHANNELS_V5 for level in groups) and message.data.get("type") in channels.RICH_KINDS
         else False
     )
     sent: list[PushResult] = []
