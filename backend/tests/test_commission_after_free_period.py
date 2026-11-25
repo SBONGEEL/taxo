@@ -135,7 +135,14 @@ async def test_during_his_grant_nothing_and_after_it_four_percent_once_per_ride(
     ride, (count, total) = await _paid_ride(client, admin_headers, session_factory, driver, "0791000003")
     assert ride.commission_percent_at_ride == Decimal("4.00")
     expected = (ride.final_fare * Decimal("0.04")).quantize(Decimal("0.001"))
-    assert count == 1, f"قيودُ العمولة للرحلة {count} لا واحد"
+    if count != 1:
+        # **تشخيصٌ يُطبع مع السقوط**: دفعاتُ الرحلة وقيودُها كما كُتبت — فلا يُخمَّن أين ضاعت العمولة
+        from app.models.payment import Payment
+
+        async with session_factory() as session:
+            pays = (await session.execute(select(Payment.method, Payment.amount, Payment.status).where(Payment.ride_id == ride.id))).all()
+            txs = (await session.execute(select(WalletTransaction.type, WalletTransaction.amount).where(WalletTransaction.ride_id == ride.id))).all()
+        raise AssertionError(f"قيودُ العمولة للرحلة {count} لا واحد · الأجرة {ride.final_fare} · الدفعات {pays} · القيود {txs}")
     assert Decimal(total) == expected, f"العمولةُ {total} لا {expected} (٤٪ من {ride.final_fare})"
 
 
