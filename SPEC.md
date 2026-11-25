@@ -13578,7 +13578,7 @@ payment as crypto in my NOWPayments account» — **مشتعلاً لكلِّ ك
    - **كما بُني (٢٠٢٦-١١-٢١)**: `POST /admin/subscriptions` يأخذ `days`/`permanent` ويُسبق بـ`POST /admin/subscriptions/preview` (من–إلى،
      والمبلغُ المقترَح تلميحاً، و`permanent_exists`) فلا يُسجَّل شيءٌ قبل «مراجعة». **والمبلغُ مكتوبٌ إلزاماً** في الهديّة (٠ صريحٌ لا افتراض).
      والمفتاحُ `subscription_gifts` لكلِّ دولة (مطفأً افتراضاً) يُغلق «عدد أيام» و«دائم» معاً، والدائمُ للمالك وحدَه (٤٠٣ لغيره). `GET
-     /admin/subscriptions/gifts` يغذّي صفحة «السفراء والمميّزون»، و`POST /admin/subscriptions/ambassadors/{id}/revoke` ينزع بسببٍ ≥٣ ويُبقي
+     /admin/subscriptions/gifts` يغذّي صفحة «السفراء والمميّزون»، و`POST /admin/subscriptions/ambassadors/{id}/revoke` ينزع بسببٍ ≥٣ (**والمنحُ الدائمُ يطلب سبباً ≥٣ في `reference` أيضاً** — أمرُ المالك ٢٠٢٦-١١-٢٥) ويُبقي
      الأيّامَ المدفوعة. والإشعارُ نوعُه `subscription_gift` و`data.kind` = `days`/`permanent`/`revoked`. الاختبار `test_gift_days_ambassador.py`.
 5. **«شحن ببطاقة TAXO» — مفتاحُ دولةٍ واحد** (أمرُ المالك ٢٠٢٦-١١-٢١): `taxo_cards_enabled` لكلِّ دولة يفتح البابَ كلَّه — زرُّ المحفظة
    في التطبيقين (`/wallet/card`)، وطريقةُ `purchase_code` في ورقة الشحن، و`POST /wallet/cards/redeem` (٤٠٣ `feature_disabled` حين يُطفأ).

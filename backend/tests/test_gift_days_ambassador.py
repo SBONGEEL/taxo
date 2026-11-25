@@ -182,7 +182,12 @@ async def test_permanent_is_owner_only_never_expires_and_blocks_buying(
     plan = await _plan(session_factory)
     driver = await approved_driver(client, session_factory, DRIVER, subscribed=False)
     grant = {"driver_id": str(driver["driver_id"]), "plan_id": str(plan.id), "method": "cash",
-             "permanent": True, "amount_paid": "0"}
+             "permanent": True, "amount_paid": "0", "reference": "سفيرُ الحملة"}
+
+    # **بلا سببٍ لا منح** — والنزعُ يطلبه أصلاً
+    no_reason = await client.post("/admin/subscriptions", json=grant | {"reference": "  "}, headers=await _owner(session_factory))
+    assert no_reason.status_code == 422 and no_reason.json()["field"] == "reference", no_reason.text
+    assert await _rows(session_factory, driver["driver_id"]) == []
 
     by_admin = await client.post("/admin/subscriptions", json=grant, headers=admin_headers)
     assert by_admin.status_code == 403, by_admin.text
@@ -227,7 +232,7 @@ async def test_two_permanent_grants_at_once_write_one_row(
     driver = await approved_driver(client, session_factory, DRIVER, subscribed=False)
     owner = await _owner(session_factory)
     grant = {"driver_id": str(driver["driver_id"]), "plan_id": str(plan.id), "method": "cash",
-             "permanent": True, "amount_paid": "0"}
+             "permanent": True, "amount_paid": "0", "reference": "سفيرُ الحملة"}
 
     responses = await asyncio.wait_for(
         asyncio.gather(*(client.post("/admin/subscriptions", json=grant, headers=owner) for _ in range(2))),
@@ -250,6 +255,7 @@ async def test_revoking_cancels_only_the_permanent_row_and_keeps_paid_days(
     owner = await _owner(session_factory)
     granted = await client.post("/admin/subscriptions", json={
         "driver_id": str(driver["driver_id"]), "plan_id": str(plan.id), "method": "cash", "permanent": True, "amount_paid": "0",
+        "reference": "سفيرُ الحملة",
     }, headers=owner)
     assert granted.status_code == 201, granted.text
 

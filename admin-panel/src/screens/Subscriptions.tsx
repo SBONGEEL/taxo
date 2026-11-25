@@ -572,7 +572,9 @@ function RecordModal({
   const daysValid = mode !== "days" || (Number.isInteger(daysValue) && (daysValue ?? 0) >= 1 && (daysValue ?? 0) <= 365);
   // **المبلغُ إلزاميٌّ صراحةً مع الأيّام والدائم** (صفرٌ للهديّة) — لا يُفترض من الباقة
   const amountReady = !gift || amount.trim() !== "";
-  const ready = driver !== null && planId !== "" && daysValid && amountReady;
+  // **وسببُ المنح إلزاميٌّ للدائم** (أمرُ المالك ٢٠٢٦-١١-٢٥) — يُكتب في «المرجع» ويُرى في التدقيق وفي «السفراء والمميّزون»
+  const reasonReady = mode !== "permanent" || reference.trim().length >= 3;
+  const ready = driver !== null && planId !== "" && daysValid && amountReady && reasonReady;
   const stale = () => setPreview(null);
 
   // **المعتمدون وحدهم**: عدُّ الأيام يبدأ فوراً، فبيعُه لمن ينتظر الموافقة
@@ -724,7 +726,7 @@ function RecordModal({
           />
 
           <Field
-            label="المرجع (إيصال الكاش أو حوالة كليك)"
+            label={mode === "permanent" ? "سبب المنح (إلزاميّ)" : "المرجع (إيصال الكاش أو حوالة كليك)"}
             value={reference}
             maxLength={120}
             onChange={(event) => setReference(event.target.value)}
