@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, RIDES } from "@/lib/arabic-count";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -54,9 +55,7 @@ function stageOf(row: ReferralStage): { text: string; tone: string } {
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: tr("أكمل {0} من {1} رحلات", { 0: digits(String(row.rides_done)), 1: digits(
-        String(row.rides_required),
-      ) }),
+      text: tr("أكمل {0} من {1}", { 0: digits(String(row.rides_done)), 1: countOf(row.rides_required, RIDES, true) }),
       tone: "muted",
     };
   }
@@ -211,12 +210,8 @@ export function ReferralsScreen() {
                           </p>
                           <p className="t2-ref-program-cond">
                             {isDriver
-                              ? tr("يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0} رحلات", { 0: digits(
-                                  String(program.required_rides),
-                                ) })
-                              : tr("يُكمل {0} رحلات", { 0: digits(
-                                  String(program.required_rides),
-                                ) })}
+                              ? tr("يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}", { 0: countOf(program.required_rides, RIDES, true) })
+                              : tr("يُكمل {0}", { 0: countOf(program.required_rides, RIDES, true) })}
                           </p>
                           {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** —
                               ورقمان منفصلان يُقرأ ثانيهما بديلاً عن الأول */}

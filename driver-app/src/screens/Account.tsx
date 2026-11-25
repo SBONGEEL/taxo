@@ -14,6 +14,7 @@
  */
 
 import { REQUIRED_DOCUMENTS } from "@/lib/documents";
+import { countOf, DAYS } from "@/lib/arabic-count";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -123,7 +124,7 @@ export function AccountScreen() {
     : subscription.is_active && subscription.ambassador
       ? tr("دائم · سفير TAXO")
       : subscription.is_active
-      ? tr("ساري · باقٍ {0} يوماً", { 0: digits(String(subscription.days_remaining)) })
+      ? tr("ساري · باقٍ {0}", { 0: countOf(subscription.days_remaining, DAYS) })
       : subscription.coverage_until
         ? tr("منتهٍ — جدّد للعودة للتوزيع")
         : tr("لا اشتراك — اشترك للبدء");

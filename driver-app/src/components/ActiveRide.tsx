@@ -15,6 +15,7 @@
  */
 
 import { Fragment, useEffect, useState } from "react";
+import { countOf, MINUTES } from "@/lib/arabic-count";
 import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
@@ -496,7 +497,7 @@ function PauseStrip({
         <span className="ms-auto text-12.5 font-bold text-ink">
           {billing
             ? `${formatAmount(ride.pause_charge, ride.currency)} ${currencyLabel}`
-            : tr("مهلة {0} دقائق", { 0: digits(String(free)) })}
+            : tr("مهلة {0}", { 0: countOf(free, MINUTES) })}
         </span>
       </div>
       {pause.over_max ? (

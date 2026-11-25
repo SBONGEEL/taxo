@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, MINUTES } from "@/lib/arabic-count";
 
 import { ApiError } from "@/api/client";
 import { estimateRide, getWallet, validatePromo } from "@/api/endpoints";
@@ -64,8 +65,7 @@ export function preferenceNote(preference: GenderPreference, dispatch: AppConfig
 export function freeMinutes(count: number): string {
   if (count === 1) return tr("الدقيقة الأولى");
   if (count === 2) return tr("أول دقيقتين");
-  if (count <= 10) return tr("أول {0} دقائق", { 0: count });
-  return tr("أول {0} دقيقة", { 0: count });
+  return tr("أول {0}", { 0: countOf(count, MINUTES, true) });
 }
 
 /** ما سيدفعه لو انتظر — **بالأرقام، وقبل أن يقبل السعر** (§5.10).

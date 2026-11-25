@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { countOf, DAYS } from "@/lib/arabic-count";
 
 import { AUTO_ACCEPT_KM, autoAcceptEnabled } from "@/lib/driving-prefs";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -455,7 +456,7 @@ export function useHomeScreen() {
     ? null
     : covered
       ? tr("اشتراكك ساري{0}", { 0: subscription.days_remaining <= 5
-            ? tr(" — يتبقّى {0} أيام", { 0: digits(String(subscription.days_remaining)) })
+            ? tr(" — يتبقّى {0}", { 0: countOf(subscription.days_remaining, DAYS) })
             : "" }
 
 )

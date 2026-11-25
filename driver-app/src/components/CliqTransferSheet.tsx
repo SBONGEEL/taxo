@@ -18,10 +18,11 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, HOURS, MINUTES } from "@/lib/arabic-count";
 
 import { ApiError } from "@/api/client";
 import { confirmPayment } from "@/api/endpoints";
-import { digits, formatAmount } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/money.css"; import { tr } from "@/lib/i18n";
@@ -48,8 +49,8 @@ interface Props {
 /** ما بقي من المهلة نصّاً — «٦ ساعات» أو «٤٠ دقيقة»، ولا ثوانيَ في الأخير. */
 function remainingLabel(minutes: number): string {
   if (minutes <= 0) return tr("انقضت المهلة");
-  if (minutes < 60) return tr("{0} دقيقة", { 0: digits(String(minutes)) });
-  return tr("{0} ساعة", { 0: digits(String(Math.floor(minutes / 60))) });
+  if (minutes < 60) return countOf(minutes, MINUTES);
+  return countOf(Math.floor(minutes / 60), HOURS);
 }
 
 export function CliqTransferSheet({

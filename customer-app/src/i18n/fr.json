@@ -1866,5 +1866,15 @@
   "تدفع أنت بعد الرحلة — {0}": "Vous payez après la course — {0}",
   "تدفع أنت بعد الرحلة": "Vous payez après la course",
   "ادفع بكليك": "Payer par CliQ",
-  "شراء بطاقات TAXO للبيع": "Achat de cartes TAXO à revendre"
+  "شراء بطاقات TAXO للبيع": "Achat de cartes TAXO à revendre",
+  "ينقصك {0} هذه السنة لتصير {1}": "Encore {0} cette année pour passer {1}",
+  "صلاحيّةُ {0} تنتهي في {1}": "{0} expirent le {1}",
+  "كلُّ {0} = ": "Chaque {0} = ",
+  "بعد {0} مكتملة — أكملت {1}": "Après {0} terminées — vous en avez fait {1}",
+  "خلال {0} من الطلب": "Dans les {0} suivant la demande",
+  "أول {0}": "Pendant {0}",
+  "أول {0} مجاناً": "Gratuit pendant {0}",
+  "أكمل {0} من {1}": "{0} sur {1} effectuées",
+  "يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}": "Son compte est approuvé, il achète un abonnement et effectue {0}",
+  "يُكمل {0}": "Effectue {0}"
 }

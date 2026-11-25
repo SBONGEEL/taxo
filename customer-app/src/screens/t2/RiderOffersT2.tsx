@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, MINUTES, RIDES } from "@/lib/arabic-count";
 import { useNavigate } from "react-router-dom";
 
 import { getMyRiderOffers, type MyRiderOffers } from "@/api/endpoints";
@@ -66,8 +67,8 @@ export function RiderOffersT2() {
               <div className="sp-card">
                 <span className="sp-label">{tr("راكب مميّز")}</span>
                 <p className="sp-hint">
-                  {tr("بعد {0} رحلة مكتملة — أكملت {1}", {
-                    0: digits(String(data.premium_after_rides)),
+                  {tr("بعد {0} مكتملة — أكملت {1}", {
+                    0: countOf(data.premium_after_rides, RIDES, true),
                     1: digits(String(data.completed_rides)),
                   })}
                 </p>
@@ -77,7 +78,7 @@ export function RiderOffersT2() {
               <div className="sp-card">
                 <span className="sp-label">{tr("إلغاءٌ مجّانيّ")}</span>
                 <p className="sp-hint">
-                  {tr("خلال {0} دقيقة من الطلب", { 0: digits(String(Math.round(data.free_cancel_seconds / 60))) })}
+                  {tr("خلال {0} من الطلب", { 0: countOf(Math.round(data.free_cancel_seconds / 60), MINUTES, true) })}
                 </p>
               </div>
             ) : null}

@@ -23,6 +23,7 @@ from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.exceptions import (
     Conflict,
     FeatureDisabled,
@@ -439,7 +440,7 @@ async def confirm(session: AsyncSession, *, booking_id: uuid.UUID, driver: Drive
     row = await settings_for(session, booking.country_code)
     confirm_minutes = row.guarantee_confirm_minutes if row is not None else 60
     if _now() < booking.scheduled_at - timedelta(minutes=confirm_minutes):
-        raise Conflict(f"التأكيدُ قبل الموعد بـ{confirm_minutes} دقيقة")
+        raise Conflict(f"التأكيدُ قبل الموعد بـ{count_of(confirm_minutes, 'minute', after=True)}")
     try:
         ride = await bookings_service.create_ride_for(session, booking)
     except UnconfirmedPaymentBlocked as blocked:

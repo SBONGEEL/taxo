@@ -2090,5 +2090,19 @@
   "الباقة": "Forfait",
   "يُفعَّل اشتراكُك فورَ اكتمال الدفع، ولا يُخصم شيءٌ إن لم يكتمل.": "Votre abonnement est activé dès que le paiement aboutit ; rien n’est débité s’il n’aboutit pas.",
   "اختر الباقة": "Choisissez un forfait",
-  "صفحة البطاقة متوقّفة الآن — حاول بعد قليل.": "La page de paiement par carte est indisponible — réessayez dans un instant."
+  "صفحة البطاقة متوقّفة الآن — حاول بعد قليل.": "La page de paiement par carte est indisponible — réessayez dans un instant.",
+  " والمهلةُ {0}.": " Le délai est de {0}.",
+  " — يتبقّى {0}": " — il reste {0}",
+  "أكمل {0} أيضاً": "Effectuez encore {0}",
+  "اشتراكك ساري — يتبقّى {0}": "Votre abonnement est actif — il reste {0}",
+  "اشتراكك ساري — ينتهي خلال أقل من يوم": "Votre abonnement est actif — expire dans moins d’un jour",
+  "ساري · باقٍ {0}": "Actif · reste {0}",
+  "عند نقطة الالتقاط منذ {0}": "Au point de prise en charge depuis {0}",
+  "مهلة {0}": "Délai de {0}",
+  "حوّل {0} إلى رصيد اشتراك": "Convertir {0} en crédit d’abonnement",
+  "اليومُ يُحتسب إن عملت {0} متّصلةً بين {1} و{2}.": "La journée compte si vous travaillez {0} d’affilée entre {1} et {2}.",
+  "الاستراحةُ الواحدة {0} على الأكثر، ومجموعُها {1}، ولا تُؤخذ دفعةً واحدة.": "Une pause dure au plus {0}, leur total {1}, et elles ne se prennent pas d’un seul bloc.",
+  "أكمل {0} من {1}": "{0} sur {1} effectuées",
+  "يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}": "Son compte est approuvé, il achète un abonnement et effectue {0}",
+  "يُكمل {0}": "Effectue {0}"
 }

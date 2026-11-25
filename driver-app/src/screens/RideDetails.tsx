@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { countOf, MINUTES } from "@/lib/arabic-count";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -254,7 +255,7 @@ export function RideDetailsScreen() {
             />
             <Row
               label={tr("المدّة المقدّرة")}
-              value={tr("{0} دقيقة", { 0: trimDistance(ride.duration_min) })}
+              value={countOf(trimDistance(ride.duration_min), MINUTES)}
             />
             {/* **ما وقف لأجله يُسمّى في تفصيله** (§5.10 و§5.10-ب/و): الكبتنُ يقرأ هنا لماذا صار النهائيُّ غيرَ المقدَّر، فلا يظنّ
                 نقصاً ولا يسأل الدعم. **قيمٌ تُقرأ لا تُحسب** (§14)، **وصفرٌ لا يُرسم** */}

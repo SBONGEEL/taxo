@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { countOf, DAYS } from "@/lib/arabic-count";
 
 import { ApiError } from "@/api/client";
 import { getAdvanceState, repayAdvance, requestAdvance } from "@/api/endpoints";
@@ -300,7 +301,7 @@ export function AdvancesScreen() {
                   ? tr("، ويبقى لك منها {0} {1} على الأقل.", { 0: formatAmount(state.min_kept_amount, state.currency), 1: currency })
                   : "."}
                 {state.term_days
-                  ? tr(" والمهلةُ {0} يوماً.", { 0: digits(String(state.term_days)) })
+                  ? tr(" والمهلةُ {0}.", { 0: countOf(state.term_days, DAYS) })
                   : ""}
               </p>
             </div>

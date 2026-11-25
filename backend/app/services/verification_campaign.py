@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.enums import (
     CountryCode,
@@ -74,8 +75,8 @@ LIVE_STATUSES = (
 #: يحمل قيماً خاماً في `data`، **و`title`/`body` للنظام حين يكون التطبيق
 #: مغلقاً** — وهما وحدَهما المستثنيان.
 REMINDER_TEXTS: tuple[str, ...] = (
-    "أكّد رقم هاتفك ليبقى حسابك فعّالاً. لديك {days} يوماً.",
-    "بقي {days} أيام لتأكيد رقمك. بعدها يُوقَف حسابك حتى تؤكّده.",
+    "أكّد رقم هاتفك ليبقى حسابك فعّالاً. لديك {days}.",
+    "بقي {days} لتأكيد رقمك. بعدها يُوقَف حسابك حتى تؤكّده.",
     "غداً يُوقَف حسابك إن لم تؤكّد رقمك.",
 )
 
@@ -390,7 +391,7 @@ async def _remind(
             Outgoing(
                 user_id=row.user_id,
                 title="أكّد رقم هاتفك",
-                body=REMINDER_TEXTS[index].format(days=remaining),
+                body=REMINDER_TEXTS[index].format(days=count_of(remaining, "day")),
                 data={
                     "type": "verification_campaign_reminder",
                     "reminder": str(index + 1),

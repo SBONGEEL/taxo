@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.exceptions import AppError, InvalidInput
 from app.models.driver import Driver
 from app.models.enums import AuditAction, CountryCode, DriverStatus, PaymentMethod, SubscriptionDurationType
@@ -28,7 +29,7 @@ from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 
 #: **نصُّ اللافتة كما كتبه المالك** — والأرقامُ منها تُقرأ من الحملة لا تُكتب هنا
-BANNER = "سجّل قبل الإطلاق واحصل على {pre} يوماً مجاناً بدون عمولة — بعد الإطلاق {post} أيام فقط"
+BANNER = "سجّل قبل الإطلاق واحصل على {pre} مجاناً بدون عمولة — بعد الإطلاق {post} فقط"
 #: **إشعارُ «شريك الإطلاق» بنصّ المالك** — يُقرّ به الكبتنُ مرّةً
 PARTNER_NOTICE = "خلال فترة الخدمة المجانية تتحمّل خصومات عروض الركاب كشريك TAXO للإطلاق"
 REFERENCE = "حملةُ الإطلاق — اشتراكٌ مجّانيٌّ بلا عمولة"
@@ -318,7 +319,7 @@ async def view(session: AsyncSession, country: CountryCode, driver: Driver | Non
         pre_launch_free_days=campaign.pre_launch_free_days,
         post_launch_free_days=campaign.post_launch_free_days,
         zero_commission=bool(campaign.zero_commission),
-        banner=BANNER.format(pre=campaign.pre_launch_free_days, post=campaign.post_launch_free_days),
+        banner=BANNER.format(pre=count_of(campaign.pre_launch_free_days, "day", after=True), post=count_of(campaign.post_launch_free_days, "day")),
         partner_notice=PARTNER_NOTICE if bears else "",
         status=status,
         grant_starts_at=starts,

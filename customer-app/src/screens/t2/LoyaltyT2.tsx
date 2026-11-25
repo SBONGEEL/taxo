@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, POINTS } from "@/lib/arabic-count";
 
 import { getMyLoyalty, redeemLoyalty, type MyLoyalty } from "@/api/endpoints";
 import { useGoBack } from "@/lib/back";
@@ -59,14 +60,14 @@ export function LoyaltyT2() {
               </span>
               <span className="sp-hint">
                 {data.next_tier && data.to_next !== null
-                  ? tr("{0} نقطة أخرى هذه السنة وتصير {1}", { 0: digits(String(data.to_next)), 1: tr(TIER[data.next_tier]) })
+                  ? tr("ينقصك {0} هذه السنة لتصير {1}", { 0: countOf(data.to_next, POINTS), 1: tr(TIER[data.next_tier]) })
                   : tr("أعلى مستوى")}
                 {data.bonus_percent ? ` · ${tr("تكسب {0}٪ زيادة", { 0: digits(String(data.bonus_percent)) })}` : ""}
               </span>
               {data.expiring_at && data.expiring_points ? (
                 <span className="sp-hint">
-                  {tr("{0} نقطة تنتهي في {1}", {
-                    0: digits(String(data.expiring_points)),
+                  {tr("صلاحيّةُ {0} تنتهي في {1}", {
+                    0: countOf(data.expiring_points, POINTS, true),
                     1: new Date(data.expiring_at).toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }),
                   })}
                 </span>
@@ -75,7 +76,7 @@ export function LoyaltyT2() {
             {data.redeem_points && data.redeem_value ? (
               <div className="sp-card">
                 <span className="sp-hint">
-                  {tr("كلُّ {0} نقطة = ", { 0: digits(String(data.redeem_points)) })}
+                  {tr("كلُّ {0} = ", { 0: countOf(data.redeem_points, POINTS, true) })}
                   <span dir="ltr">{formatAmount(data.redeem_value, data.currency)}</span> {currencyLabel(data.currency)}{" "}
                   {tr("في محفظتك، تدفع به رحلاتك")}
                 </span>

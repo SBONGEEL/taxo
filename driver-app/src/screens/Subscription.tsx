@@ -30,6 +30,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { countOf, DAYS } from "@/lib/arabic-count";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -414,7 +415,7 @@ export function SubscriptionScreen() {
             <p className="mt-6 text-12.5 font-semibold text-ink">
               {subscription.days_remaining <= 1
                 ? tr("ينتهي خلال أقل من يوم")
-                : tr("باقٍ {0} يوماً", { 0: digits(String(subscription.days_remaining)) })}
+                : tr("باقٍ {0}", { 0: countOf(subscription.days_remaining, DAYS) })}
             </p>
           ) : null}
         </section>

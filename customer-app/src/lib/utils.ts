@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { countOf, HOURS, MINUTES } from "@/lib/arabic-count";
 import { extendTailwindMerge } from "tailwind-merge"; import { language, tr } from "@/lib/i18n";
 
 // prettier-ignore
@@ -173,10 +174,10 @@ export function formatDuration(minutes: string | number | null | undefined) {
   if (minutes === null || minutes === undefined || minutes === "") return "—";
   const value = Math.round(Number(minutes));
   if (!Number.isFinite(value)) return "—";
-  if (value < 60) return tr("{0} دقيقة", { 0: value });
+  if (value < 60) return countOf(value, MINUTES);
   const hours = Math.floor(value / 60);
   const rest = value % 60;
-  return rest ? tr("{0} س {1} د", { 0: hours, 1: rest }) : tr("{0} ساعة", { 0: hours });
+  return rest ? tr("{0} س {1} د", { 0: hours, 1: rest }) : countOf(hours, HOURS);
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {

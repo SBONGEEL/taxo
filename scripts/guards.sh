@@ -66,6 +66,8 @@ run "check:enum-coverage"   node tools/check-enum-coverage.mjs
 run "check:ios"             node tools/check-ios.mjs
 # **العربيّةُ لا تتغيّر بالترجمة** (SPEC §٧٣-هـ المرحلة ٥) — جردُ نصوص التطبيقين قبل اللفّ بـ`tr()`
 run "check:arabic-frozen"  node tools/check-arabic-frozen.mjs
+# **ولا عددَ في القالب قبل معدوده** (أمرُ المالك ٢٠٢٦-١١-٢٥: «يتبقّى 1 أيام» على هاتف كبتن) — `countOf` من `lib/arabic-count.ts`
+run "check:arabic-count"   node tools/check-arabic-count.mjs
 # **ووعدُ إضافةٍ أصليّةٍ لا يطفو بلا ماسك** (بلاغُ الإصدار 496، 2026-10-11): غلافٌ أقدمُ بلا الإضافة يرفضه فيصل تقاريرَ الأعطال
 run "check:native-calls"   node tools/check-native-calls.mjs
 # **ولا هوكَ بعد return مبكّر** (٢٠٢٦-١١-١٨): هوكاتُ §١٠٣ تحت «if (settling) return» أسقطت رئيسيّةَ الكبتن لحظةَ كلِّ تحصيل

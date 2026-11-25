@@ -23,6 +23,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.exceptions import Conflict, FeatureDisabled, InsufficientBalance, InvalidInput, NotFound
 from app.models.booking import RideBooking
 from app.models.driver import Driver
@@ -235,7 +236,7 @@ async def suspend(session: AsyncSession, *, subscription_id: uuid.UUID, rider: U
     if day in days or not (row.weekdays & (1 << day.weekday())) or not row.starts_on <= day <= row.ends_on:
         raise InvalidInput("هذا اليومُ ليس من أيام مشوارك")
     if len(days) >= cap:
-        raise Conflict(f"أقصى التعليق {cap} أيام")
+        raise Conflict(f"أقصى التعليق {count_of(cap, 'day')}")
     days.add(day)
     row.suspended_days = sorted(d.isoformat() for d in days)
     # **يُرحَّل إلى أوّل يومٍ من أيامه بعد آخر يوم** — فلا يخسر الراكبُ رحلةً دفعها

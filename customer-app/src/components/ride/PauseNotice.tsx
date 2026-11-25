@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, MINUTES } from "@/lib/arabic-count";
 
 import type { Ride } from "@/api/types";
 import { currencyLabel, formatAmount } from "@/lib/utils";
@@ -59,7 +60,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
         <div className="t2-meter-money">
           {/* **والمهلةُ تُقال قبل أن تنتهي لا بعدها**: راكبٌ يرى صفراً ولا يعرف
               لماذا يظنّ العدّادَ معطوباً، ثم يفاجئه رقمٌ بعد دقيقة */}
-          <p className="t2-meter-label">{billing ? tr("رسم الانتظار حتى الآن") : tr("أول {0} دقائق مجاناً", { 0: free })}</p>
+          <p className="t2-meter-label">{billing ? tr("رسم الانتظار حتى الآن") : tr("أول {0} مجاناً", { 0: countOf(free, MINUTES, true) })}</p>
           <p className="t2-meter-amount">
             <span dir="ltr" className="t2-num">
               {formatAmount(ride.pause_charge, ride.currency)}

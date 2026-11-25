@@ -20,6 +20,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.currency import currency_for_country
 from app.core.exceptions import Conflict, FeatureDisabled, InsufficientBalance, InvalidInput, NotFound, PermissionDenied
 from app.models.commission import CommissionSetting
@@ -128,7 +129,7 @@ async def post_trip(
         raise InvalidInput(f"المقاعدُ من 1 إلى {permit.seats}، وأقلُّ ما تنطلق به لا يزيد عليها")
     hours = await deadline_hours(session, user.country_code)
     if departs_at <= _now() + timedelta(hours=hours):
-        raise InvalidInput(f"تُعلَن الرحلةُ قبل موعدها بأكثرَ من {hours} ساعة")
+        raise InvalidInput(f"تُعلَن الرحلةُ قبل موعدها بأكثرَ من {count_of(hours, 'hour', after=True)}")
     trip = IntercityTrip(
         route_id=route.id,
         driver_id=driver.id,
@@ -206,7 +207,7 @@ async def cancel_trip(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driv
     route = await session.get(IntercityRoute, trip.route_id)
     hours = await deadline_hours(session, route.country_code)
     if _now() > trip.departs_at - timedelta(hours=hours):
-        raise Conflict(f"فات موعدُ الإلغاء ({hours} ساعة قبل الانطلاق) — راجع الدعم")
+        raise Conflict(f"فات موعدُ الإلغاء ({count_of(hours, 'hour')} قبل الانطلاق) — راجع الدعم")
     riders = await _refund_all(session, trip)
     trip.status = "cancelled"
     trip.cancelled_at = _now()

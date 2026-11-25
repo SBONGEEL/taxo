@@ -12,6 +12,7 @@
  * **لا رقمَ مخترع**: ما لم يصل لا يُرسم، ولا سعرَ هنا.
  */
 import { useEffect, useState } from "react";
+import { countOf, DAYS } from "@/lib/arabic-count";
 
 import { getSkinStore } from "@/api/endpoints";
 import type { Rarity, Vehicle, VehicleSkin } from "@/api/types";
@@ -148,7 +149,7 @@ export function YourCarT2({
               ? tr("دائم · سفير TAXO")
               : covered
               ? daysRemaining !== null && daysRemaining <= 5
-                ? tr("اشتراكك ساري — يتبقّى {0} أيام", { 0: digits(String(daysRemaining)) })
+                ? (daysRemaining < 1 ? tr("اشتراكك ساري — ينتهي خلال أقل من يوم") : tr("اشتراكك ساري — يتبقّى {0}", { 0: countOf(daysRemaining, DAYS) }))
                 : tr("اشتراكك ساري")
               : tr("لا اشتراك ساري")}
           </span>

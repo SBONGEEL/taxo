@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, DAYS } from "@/lib/arabic-count";
 
 import { getMyPlans, subscribePlan, type MyPlans } from "@/api/endpoints";
 import { useGoBack } from "@/lib/back";
@@ -72,7 +73,7 @@ export function PlansT2() {
               <div key={plan.id} className="sp-card">
                 <span className="sp-label">{plan.name}</span>
                 <span className="sp-said">
-                  <Money value={plan.price} currency={data.currency} /> · {tr("{0} يوماً", { 0: digits(String(plan.days)) })}
+                  <Money value={plan.price} currency={data.currency} /> · {countOf(plan.days, DAYS)}
                 </span>
                 <span className="sp-hint">
                   {tr("خصم {0}٪ على كلِّ رحلة", { 0: digits(plan.discount_percent) })} · {tr("حتى")}{" "}

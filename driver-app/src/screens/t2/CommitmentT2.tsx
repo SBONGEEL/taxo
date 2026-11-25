@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { countOf, HOURS, MINUTES, POINTS } from "@/lib/arabic-count";
 
 import { convertCommitmentPoints, getMyCommitment, type MyCommitment } from "@/api/endpoints";
 import { tr } from "@/lib/i18n";
@@ -69,7 +70,7 @@ export function CommitmentCardT2({ data, onChanged }: { data: MyCommitment | nul
   };
 
   return (
-    <section className="t2-wal-break" id="commitment" aria-labelledby="commitment-title" data-testid="commitment-card">
+    <section className="t2-wal-break t2-hm-card" id="commitment" aria-labelledby="commitment-title" data-testid="commitment-card">
       <h2 id="commitment-title" className="t2-wal-line" style={{ fontWeight: 700 }}>
         <span>{tr("نقاط الالتزام")}</span>
         <span dir="ltr">{digits(String(data.points_balance))}</span>
@@ -113,7 +114,7 @@ export function CommitmentCardT2({ data, onChanged }: { data: MyCommitment | nul
         <button type="button" className="t2-hm-row" disabled={busy} onClick={() => void convert()}>
           <span className="t2-hm-row-main">
             <span className="t2-hm-row-title">
-              {tr("حوّل {0} نقطة إلى رصيد اشتراك", { 0: digits(String(convertible)) })}
+              {tr("حوّل {0} إلى رصيد اشتراك", { 0: countOf(convertible, POINTS) })}
             </span>
           </span>
         </button>
@@ -125,16 +126,16 @@ export function CommitmentCardT2({ data, onChanged }: { data: MyCommitment | nul
       {rulesOpen ? (
         <ul className="t2-wal-hint" data-testid="commitment-rules">
           <li>
-            {tr("اليومُ يُحتسب إن عملت {0} ساعات متّصلةً بين {1} و{2}.", {
-              0: digits(String(data.span_minutes / 60)),
+            {tr("اليومُ يُحتسب إن عملت {0} متّصلةً بين {1} و{2}.", {
+              0: countOf(data.span_minutes / 60, HOURS),
               1: clock(data.window_start),
               2: clock(data.window_end),
             })}
           </li>
           <li>
-            {tr("الاستراحةُ الواحدة {0} دقيقةً على الأكثر، ومجموعُها {1} دقيقة، ولا تُؤخذ دفعةً واحدة.", {
-              0: digits(String(data.max_break_minutes)),
-              1: digits(String(data.max_total_break_minutes)),
+            {tr("الاستراحةُ الواحدة {0} على الأكثر، ومجموعُها {1}، ولا تُؤخذ دفعةً واحدة.", {
+              0: countOf(data.max_break_minutes, MINUTES),
+              1: countOf(data.max_total_break_minutes, MINUTES),
             })}
           </li>
           <li>{tr("يُحتسب اليومُ ولو لم تصلك رحلة.")}</li>

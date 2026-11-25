@@ -49,6 +49,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select as _select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.arabic_count import count_of
 from app.core.i18n import translate
 
 from app.models.driver import Driver, DriverDocument
@@ -803,7 +804,7 @@ async def publish_document_expiring(
         user_id=driver_user_id,
         message=PushMessage(
             title="مستندك يقترب من الانتهاء",
-            body=f"{label}: تنتهي بعد {days_left} يوماً — ويُعلَّق حسابك يومها",
+            body=f"{label}: تنتهي بعد {count_of(days_left, 'day', after=True)} — ويُعلَّق حسابك يومها",
             data={
                 "type": DocumentEvent.DOCUMENT_EXPIRING.value,
                 "document_id": str(document_id),
@@ -914,9 +915,9 @@ async def publish_subscription_event(
     title, body = SUBSCRIPTION_EVENT_TEXT[event]
     if hours_left is not None:
         remaining = (
-            f"يتبقى أقل من {hours_left // 24} أيام"
+            f"يتبقى أقل من {count_of(hours_left // 24, 'day', after=True)}"
             if hours_left >= 48
-            else f"يتبقى أقل من {hours_left} ساعة"
+            else f"يتبقى أقل من {count_of(hours_left, 'hour', after=True)}"
         )
         body = f"{remaining} — {body}"
     await _safe_notify(
@@ -2135,11 +2136,11 @@ async def publish_cashback_reminder(
 ) -> None:
     """تذكيرُ الاسترداد الأسبوعي (§٦٣-ج/٨) — **عن الأيام لا عن المال** (نصُّ المالك): صباحاً · مساءً · وقبل أن تفوته."""
     if kind == "warning":
-        title, body = "أيامُك على وشك أن تضيع", f"لم تركب اليوم بعد — رحلةٌ واحدةٌ تحفظ أيامك ({days_done})، وبقي لك {days_left}."
+        title, body = "أيامُك على وشك أن تضيع", f"لم تركب اليوم بعد — رحلةٌ واحدةٌ تحفظ أيامك ({days_done})، وبقي لك {count_of(days_left, 'day')}."
     elif kind == "evening":
-        title, body = "لا تُطفئ نارك", f"رحلةٌ اليومَ تُبقي سلسلتك حيّة — بقي لك {days_left} أيام."
+        title, body = "لا تُطفئ نارك", f"رحلةٌ اليومَ تُبقي سلسلتك حيّة — بقي لك {count_of(days_left, 'day')}."
     else:
-        title, body = "يومٌ جديدٌ في سلسلتك", f"أنجزتَ {days_done} أيام، وبقي لك {days_left}."
+        title, body = "يومٌ جديدٌ في سلسلتك", f"أنجزتَ {count_of(days_done, 'day', after=True)}، وبقي لك {count_of(days_left, 'day')}."
     await _safe_notify(
         session,
         redis,

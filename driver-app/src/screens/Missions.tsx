@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { countOf, RIDES } from "@/lib/arabic-count";
 import { Award, Target } from "lucide-react";
 
 import { ApiError } from "@/api/client";
@@ -36,7 +37,7 @@ export function nextStep(items: MissionProgress[]): string | null {
     return tr("ارفع تقييمك إلى {0}", { 0: digits(pending.target) });
   }
   const left = Number(pending.target) - Number(pending.value);
-  return tr("أكمل {0} رحلات أخرى", { 0: digits(String(left)) });
+  return tr("أكمل {0} أيضاً", { 0: countOf(left, RIDES, true) });
 }
 
 export function MissionsScreen() {

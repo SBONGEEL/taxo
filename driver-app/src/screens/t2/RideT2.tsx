@@ -31,6 +31,7 @@
  */
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { countOf, MINUTES } from "@/lib/arabic-count";
 
 import type { Coordinates, GenderPreference, Ride } from "@/api/types";
 import { type CancelReason, useActiveRide, useElapsedMinutes } from "@/components/ActiveRide";
@@ -552,7 +553,7 @@ function PickupWaitT2({ ride, position }: { ride: Ride; position: Coordinates | 
   if (since === null || (ride.status !== "accepted" && ride.status !== "arrived")) return null;
   return (
     <div className="t2-rd-wait" role="timer" aria-live="off">
-      <span>{tr("عند نقطة الالتقاط منذ {0} دقيقة", { 0: digits(String(minutes)) })}</span>
+      <span>{tr("عند نقطة الالتقاط منذ {0}", { 0: countOf(minutes, MINUTES, true) })}</span>
     </div>
   );
 }
@@ -607,9 +608,9 @@ function PauseT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
     <div className={`t2-rd-strip${pause.over_max ? " warn" : ""}`}>
       <div className="t2-rd-strip-row">
         <span className="t2-rd-strip-label">{pause.kind === "arrival" ? tr("بانتظار الراكب") : tr("وقفة")}</span>
-        <span className="t2-rd-strip-min">{digits(String(minutes))}{" "}{tr("دقيقة")}</span>
+        <span className="t2-rd-strip-min">{countOf(minutes, MINUTES)}</span>
         <span className="t2-rd-strip-end">
-          {billing ? `${digits(ride.pause_charge)} ${currencyLabel}` : tr("مهلة {0} دقائق", { 0: digits(String(free)) })}
+          {billing ? `${digits(ride.pause_charge)} ${currencyLabel}` : tr("مهلة {0}", { 0: countOf(free, MINUTES) })}
         </span>
       </div>
       {pause.over_max ? (
