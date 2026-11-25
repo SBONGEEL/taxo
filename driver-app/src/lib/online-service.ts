@@ -51,8 +51,26 @@ function call(name: "degraded" | "stop"): void {
   );
 }
 
-/** **رمزُ الحضور يُطلب مرةً لكلِّ اتصال** — ويُنسى مع الفصل. */
-let cached: string | null = null;
+/** **رمزُ الحضور يُطلب مرةً لكلِّ اتصال** — ويُنسى مع الفصل.
+ *
+ * **وهو وعدٌ مشتركٌ لا قيمة** (عطبٌ مقيسٌ على الإنتاج ٢٠٢٦-١١-٢٥): المقبسُ (`socket.ts`) والرحلةُ (`ride.tsx`) يناديان `start`
+ * **في اللحظة نفسِها** عند الاتصال، وكان كلٌّ منهما يرى `cached` فارغاً فيطلب رمزاً — **والإصدارُ الثاني يُبطل الأوّل**
+ * (`presence_token.issue`). فكانت الخدمةُ الأماميّةُ تحتفظ أحياناً بالرمز **المُبطَل**، فيُردّ كلُّ بثٍّ من الخلفيّة ٤٠١،
+ * **ويسقط حضورُ الكبتن بعد دقيقةٍ من مغادرة التطبيق** والفقاعةُ ظاهرةٌ والمفتاحُ «متّصل» — فلا يصله طلب. والوعدُ المشتركُ
+ * يجعل النداءين طلباً واحداً ورمزاً واحداً. */
+let pending: Promise<string> | null = null;
+
+function presenceToken(): Promise<string> {
+  if (!pending) {
+    const request = issuePresenceToken().then((out) => out.token);
+    pending = request;
+    // **فشلٌ لا يُخبَّأ**: النبضةُ التاليةُ تطلب من جديد
+    request.catch(() => {
+      if (pending === request) pending = null;
+    });
+  }
+  return pending;
+}
 
 export const onlineService = {
   /** **العنوانُ من `api/client` لا من ثابتٍ هنا**: حزمةٌ تُبنى لهدفٍ وتبثّ
@@ -73,10 +91,10 @@ export const onlineService = {
     if (!Capacitor.isNativePlatform() || demoActive()) return;
     void (async () => {
       try {
-        if (!cached) cached = (await issuePresenceToken()).token;
+        const token = await presenceToken();
         await plugin.start({
           endpoint: locationBroadcastUrl(),
-          token: cached,
+          token,
           ...(intervalSeconds ? { interval_seconds: Math.round(intervalSeconds) } : {}),
           // **نبضةُ اللوحة ومسافةُ الحركة** (§١٠٣ B/15) — إرسالٌ أقلُّ والكبتنُ واقف، ولا أقلَّ من النبضة
           ...(heartbeatSeconds ? { heartbeat_seconds: Math.round(heartbeatSeconds) } : {}),
@@ -89,7 +107,7 @@ export const onlineService = {
   },
   degraded: () => call("degraded"),
   stop: () => {
-    cached = null;
+    pending = null;
     call("stop");
   },
 };
