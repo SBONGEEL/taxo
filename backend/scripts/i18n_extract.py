@@ -36,6 +36,8 @@ WHOLE_FILES = (
     # **أسماءُ طرق الدفع والخطط وأسبابُ حسم الدفعة** (SPEC §٧٦-ع/٢) — تُرسم بلغة الطلب
     "core/data_names.py",
     "services/payment_reasons.py",
+    # **صيغُ العدد مع معدوده** (أمرُ المالك ٢٠٢٦-١١-٢٥) — تُرسم داخل قوالبَ مترجَمة، فتُترجم هي أيضاً
+    "core/arabic_count.py",
 )
 WHOLE_DIRS = ("services/push",)
 LOGGER = {"debug", "info", "warning", "error", "exception", "critical", "log"}

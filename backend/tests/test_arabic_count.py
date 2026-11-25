@@ -50,3 +50,16 @@ def test_the_templates_carry_the_counted_word_not_the_number() -> None:
     banner = launch_campaign.BANNER.format(pre=count_of(60, "day", after=True), post=count_of(7, "day"))
     assert banner == "سجّل قبل الإطلاق واحصل على 60 يوماً مجاناً بدون عمولة — بعد الإطلاق 7 أيام فقط"
     assert verification_campaign.REMINDER_TEXTS[1].format(days=count_of(1, "day")).startswith("بقي يوم واحد لتأكيد رقمك")
+
+
+def test_count_forms_reach_french_inside_a_translated_template() -> None:
+    """**الصيغةُ تُترجم داخل قالبٍ مترجَم** — وقالبُ الصيغة موضعُه رقمٌ وحدَه فلا يبتلع جملةً تنتهي بمعدود."""
+    from app.core.i18n import translate
+
+    template = "رحلةٌ اليومَ تُبقي سلسلتك حيّة — بقي لك {0}."
+    expected = {1: "1 jour", 2: "2 jours", 3: "3 jours", 11: "11 jours", 100: "100 jours"}
+    for n, days in expected.items():
+        text = template.replace("{0}", count_of(n, "day"))
+        assert translate(text, "fr") == f"Une course aujourd’hui garde votre série en vie — il vous reste {days}."
+        assert translate(text, "ar") == text
+    assert translate("اشتراك تجريبي لمدة يوم", "fr") == "اشتراك تجريبي لمدة يوم"

@@ -19,11 +19,15 @@ from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 
+from app.core.arabic_count import UNITS as COUNT_UNITS
+
 LANGUAGES = ("ar", "fr")
 DEFAULT = "ar"
 _current: ContextVar[str] = ContextVar("request_language", default=DEFAULT)
 _FR_FILE = Path(__file__).resolve().parents[1] / "i18n" / "fr.json"
 _SLOT = re.compile(r"\{(\d+)\}")
+#: صيغُ العدد مع معدوده — موضعُها رقمٌ وحدَه (أدناه في `_dictionary`)
+_COUNT_FORMS = frozenset(form for forms in COUNT_UNITS.values() for form in forms)
 _AR = re.compile("[؀-ۿ]")
 
 
@@ -51,9 +55,12 @@ def _dictionary() -> tuple[dict[str, str], list[tuple[re.Pattern[str], str]]]:
     patterns: list[tuple[re.Pattern[str], str]] = []
     for ar, fr in raw.items():
         if _SLOT.search(ar):
-            # **أطولُ القوالب أوّلاً** (أدناه) — فقالبٌ أعمُّ لا يبتلع ما هو أخصُّ منه
+            # **أطولُ القوالب أوّلاً** (أدناه) — فقالبٌ أعمُّ لا يبتلع ما هو أخصُّ منه.
+            # **وصيغُ العدد** («{0} أيام» · `core/arabic_count.py`) موضعُها **رقمٌ وحدَه**: قالبٌ بطول كلمةٍ واحدةٍ لا يبتلع جملةً عربيّةً
+            # تنتهي بـ«يوم» فيُخرجها نصفَ عربيّةٍ ونصفَ فرنسيّة
+            slot = r"-?\d+(?:\.\d+)?" if ar in _COUNT_FORMS else ".+?"
             regex = "".join(
-                f"(?P<s{piece[1:-1]}>.+?)" if _SLOT.fullmatch(piece) else re.escape(piece)
+                f"(?P<s{piece[1:-1]}>{slot})" if _SLOT.fullmatch(piece) else re.escape(piece)
                 for piece in re.split(r"(\{\d+\})", ar)
                 if piece
             )
