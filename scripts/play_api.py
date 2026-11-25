@@ -463,13 +463,19 @@ def universal(version_code: str, outdir: str) -> int:
     for pkg in APPS:
         key, label, name = SITE_FILE[pkg]
         state = play_state(token, pkg)
-        if vc not in state["tracks"].values() and vc > state["max"]:
-            raise SystemExit(f"✗ {pkg}: الرمزُ {vc} ليس على Play (أعلاه {state['max']})")
-        cert, download_id = play_signing_cert(token, pkg, vc)
+        # **لكلِّ تطبيقٍ رمزُه** (٢٠٢٦-١١-٢٦: الكبتنُ 1534 على الإنتاج والراكبُ 1452): الرمزُ المطلوبُ إن كان لهذا التطبيق على Play،
+        # **وإلا فأعلى رمزٍ له على مساراته لا يعلو المطلوب** — فلا يُسقط تطبيقٌ لم يُرفع تحديثَ الآخر، ولا تُخدم حزمةٌ ليست على Play
+        codes = sorted(c for c in state["tracks"].values() if c <= vc)
+        if not codes:
+            raise SystemExit(f"✗ {pkg}: لا رمزَ على Play لا يعلو {vc} (مساراته {state['tracks']})")
+        pkg_vc = vc if vc in state["tracks"].values() else codes[-1]
+        if pkg_vc != vc:
+            print(f"· {pkg}: {vc} ليس له على Play — يُخدم أعلى ما له لا يعلوه: {pkg_vc}")
+        cert, download_id = play_signing_cert(token, pkg, pkg_vc)
         if not download_id:
-            raise SystemExit(f"✗ {pkg} {vc}: لا «حزمةَ شاملة» يولّدها Play لهذا الرمز")
+            raise SystemExit(f"✗ {pkg} {pkg_vc}: لا «حزمةَ شاملة» يولّدها Play لهذا الرمز")
         req = urllib.request.Request(
-            f"{API}/{pkg}/generatedApks/{vc}/downloads/{urllib.parse.quote(download_id, safe='')}:download?alt=media",
+            f"{API}/{pkg}/generatedApks/{pkg_vc}/downloads/{urllib.parse.quote(download_id, safe='')}:download?alt=media",
             headers={"Authorization": f"Bearer {token}"})
         part = out / f"{name}.part"
         with urllib.request.urlopen(req, timeout=600) as r, open(part, "wb") as f:
@@ -477,17 +483,17 @@ def universal(version_code: str, outdir: str) -> int:
                 f.write(chunk)
         # **يُقاس ما نزل قبل أن يُسمّى** — الملفُّ لا يأخذ اسمَه حتى تطابق شهادتُه ومعرّفُه ورمزُه
         got_cert, badge = apk_cert(str(part)), apk_badging(str(part))
-        if got_cert != PLAY_CERT[pkg] or badge["package"] != pkg or int(badge["version_code"] or 0) != vc:
+        if got_cert != PLAY_CERT[pkg] or badge["package"] != pkg or int(badge["version_code"] or 0) != pkg_vc:
             part.unlink()
             raise SystemExit(f"✗ {pkg}: ما نزل لا يطابق — شهادة {got_cert[:23]}… · {badge}")
         part.replace(out / name)
         data = (out / name).read_bytes()
-        print(f"✓ {name}: {pkg} {vc} · بتوقيع Play {got_cert[:23]}… · {len(data)} بايت")
+        print(f"✓ {name}: {pkg} {pkg_vc} · بتوقيع Play {got_cert[:23]}… · {len(data)} بايت")
         entries.append({
             "key": key, "label": label, "file": name, "size_bytes": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
             "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "package": pkg, "version_name": badge["version_name"], "version_code": str(vc),
+            "package": pkg, "version_name": badge["version_name"], "version_code": str(pkg_vc),
             "signed_by": "google-play", "signer_sha256": got_cert,
         })
     # **النسبُ إيداعٌ ووسم** كما في `tools/apk-manifest.mjs`: الإيداعُ الذي عددُ إيداعاته = الرمز (هكذا يُشتقّ الرمز)، والوسمُ من البيئة
