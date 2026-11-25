@@ -19,7 +19,7 @@ from app.models.enums import CountryCode, PaymentMethod
 from app.models.launch_campaign import LaunchCampaignGrant
 from app.models.subscription import DriverSubscription
 from app.services import launch_campaign
-from tests.helpers import DRIVER, approved_driver, ensure_plan
+from tests.helpers import DRIVER, approved_driver, enable_features, ensure_plan
 
 #: **هذه الوحدةُ تقيس افتراضاتِ الحملة** — فلا يُثبَّت يومُ الإطلاق في الماضي (`conftest._launched_market`)
 CAMPAIGN_DEFAULTS = True
@@ -95,7 +95,11 @@ async def test_before_and_after_launch_grant_sixty_and_seven_days_with_zero_comm
         assert sub.amount_paid == Decimal("0.000") and sub.commission_percent_at_purchase == Decimal("0")
 
     mine = (await client.get("/drivers/me/launch-campaign", headers=early["headers"])).json()
-    assert mine["status"] == "granted" and mine["ack_required"] is True
+    # **قاعدةُ «يتحمّل الكبتنُ الخصم» مطفأة** (أمرُ المالك الحادي عشر) ⇐ لا إقرارَ ولا نصَّ «شريك الإطلاق» والحملةُ مشتعلة
+    assert mine["status"] == "granted" and mine["ack_required"] is False and mine["partner_notice"] == ""
+    await enable_features(session_factory, "launch_captain_bears_discounts")
+    mine = (await client.get("/drivers/me/launch-campaign", headers=early["headers"])).json()
+    assert mine["status"] == "granted" and mine["ack_required"] is True and mine["partner_notice"]
     ack = await client.post("/drivers/me/launch-campaign/ack", headers=early["headers"])
     assert ack.status_code == 200
     mine = (await client.get("/drivers/me/launch-campaign", headers=early["headers"])).json()

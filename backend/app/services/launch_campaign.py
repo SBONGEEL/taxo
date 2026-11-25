@@ -278,11 +278,17 @@ class CampaignView:
 
 
 async def view(session: AsyncSession, country: CountryCode, driver: Driver | None = None) -> CampaignView:
+    from app.models.enums import FeatureKey
+    from app.services import settings_service
+
     campaign = await get(session, country)
     start = await launch_at(session, campaign)
     status = None
     starts = ends = None
     ack = False
+    # **إقرارُ «شريك الإطلاق» ونصُّه مع قاعدته وحدَها** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — الحملةُ مشتعلةٌ وقاعدةُ «يتحمّل الكبتنُ
+    # الخصم» مطفأة: **لا يُطلب من كبتنٍ أن يوافق على ما لا يقع**، ولا يُعرض عليه وعدٌ لم تُنشر شروطه
+    bears = await settings_service.is_feature_enabled(session, country, FeatureKey.LAUNCH_CAPTAIN_BEARS_DISCOUNTS)
     if driver is not None and campaign.is_enabled:
         grant = await session.scalar(select(LaunchCampaignGrant).where(LaunchCampaignGrant.driver_id == driver.id))
         now = _now()
@@ -293,7 +299,7 @@ async def view(session: AsyncSession, country: CountryCode, driver: Driver | Non
             status = "pre_launch"
         else:
             status = "waiting"
-        ack = driver.launch_partner_ack_at is None
+        ack = bears and driver.launch_partner_ack_at is None
     return CampaignView(
         enabled=bool(campaign.is_enabled),
         show_banner=bool(campaign.show_banner),
@@ -303,7 +309,7 @@ async def view(session: AsyncSession, country: CountryCode, driver: Driver | Non
         post_launch_free_days=campaign.post_launch_free_days,
         zero_commission=bool(campaign.zero_commission),
         banner=BANNER.format(pre=campaign.pre_launch_free_days, post=campaign.post_launch_free_days),
-        partner_notice=PARTNER_NOTICE,
+        partner_notice=PARTNER_NOTICE if bears else "",
         status=status,
         grant_starts_at=starts,
         grant_ends_at=ends,

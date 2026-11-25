@@ -81,7 +81,8 @@ async def test_after_the_free_period_the_company_bears_the_first_ride_discount(
 async def test_in_the_free_period_the_captain_bears_it_and_the_fare_itself_drops(
     client: AsyncClient, jordan_settings: None, admin_headers: dict, session_factory
 ) -> None:
-    await enable_features(session_factory, "promo_codes_enabled")
+    # **والقاعدةُ بمفتاحها** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — منفصلةٌ عن إشعال الحملة
+    await enable_features(session_factory, "promo_codes_enabled", "launch_captain_bears_discounts")
     await _first_ride_offer(session_factory)
     # **قبل الإطلاق والكبتنُ معتمَد** ⇐ في فترته المجّانية
     campaign = await client.patch(
@@ -119,3 +120,31 @@ async def test_a_second_ride_gets_no_first_ride_offer(client: AsyncClient, jorda
     async with session_factory() as session:
         row = await session.get(Ride, second["id"])
         assert row.promo_code_id is None
+
+
+async def test_the_campaign_on_and_the_captain_rule_off_leaves_the_discount_on_the_company(
+    client: AsyncClient, jordan_settings: None, admin_headers: dict, session_factory
+) -> None:
+    """**أمرُ المالك الحادي عشر (٢٠٢٦-١١-٢٥)**: الحملةُ تُشعَل **وقاعدةُ «يتحمّل الكبتنُ الخصم» مطفأةٌ حتى ينشر الشروط** — فإشعالُ الحملة
+    وحدَه لا يُحمِّل كبتناً في فترته المجّانية خصماً: الدافعُ ما اختاره العرض، والأجرةُ لا سطرَ «خصم عرض» فيها."""
+    await enable_features(session_factory, "promo_codes_enabled")
+    await _first_ride_offer(session_factory)
+    campaign = await client.patch(
+        "/admin/launch-campaign",
+        params={"country_code": "JO"},
+        json={"is_enabled": True, "launch_date": (date.today() + timedelta(days=30)).isoformat()},
+        headers=admin_headers,
+    )
+    assert campaign.status_code == 200, campaign.text
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    rider = await rider_session(client)
+
+    ride = await _ride(client, rider["headers"], driver)
+    async with session_factory() as session:
+        row = await session.get(Ride, ride["id"])
+        assert row.discount_bearer == "company"
+    assert all(line["kind"] != "offer_discount" for line in ride["fare_lines"])
+    mine = (await client.get("/drivers/me/launch-campaign", headers=driver["headers"])).json()
+    assert mine["enabled"] is True and mine["status"] == "pre_launch"
+    assert mine["ack_required"] is False and mine["partner_notice"] == ""

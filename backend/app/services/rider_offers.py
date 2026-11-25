@@ -143,11 +143,16 @@ async def auto_apply(session: AsyncSession, *, ride: Ride, rider: User) -> Promo
 
 
 async def bearer_for(session: AsyncSession, *, ride: Ride, driver: Driver) -> str | None:
-    from app.services import launch_campaign
+    from app.models.enums import FeatureKey
+    from app.services import launch_campaign, settings_service
 
     if ride.promo_code_id is None:
         return None
-    if await launch_campaign.in_free_period(session, driver):
+    # **الكبتنُ يتحمّل في فترته المجّانية بمفتاحها وحدَه** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥): الحملةُ مشتعلةٌ والقاعدةُ مطفأةٌ حتى
+    # ينشر المالكُ شروطها — **فإشعالُ الحملة لا يُحمِّل كبتناً خصماً**، ويبقى الدافعُ ما اختاره العرضُ كما قبلها
+    if await launch_campaign.in_free_period(session, driver) and await settings_service.is_feature_enabled(
+        session, ride.country_code, FeatureKey.LAUNCH_CAPTAIN_BEARS_DISCOUNTS
+    ):
         return BEARER_CAPTAIN
     promo = await session.get(PromoCode, ride.promo_code_id)
     return promo.bearer_after_free if promo is not None else BEARER_COMPANY
