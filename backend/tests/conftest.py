@@ -167,6 +167,28 @@ async def _clean_state() -> AsyncIterator[None]:
 
 
 @pytest.fixture(autouse=True)
+async def _launched_market(_clean_state, request) -> None:
+    """**عالمُ الاختبار سوقٌ أُطلق** (أمرُ المالك العاشر ٢٠٢٦-١١-٢٥).
+
+    **العمولةُ لا تُحصَّل قبل يوم الإطلاق** (`launch_campaign.commission_free`)، ويومُ الإطلاق الافتراضيُّ ٢٠٢٧-٠١-٠١ — فلولا هذا
+    لصارت كلُّ رحلةٍ في الاختبارات بصفر عمولةٍ **إلى ذلك اليوم ثمّ انقلبت وحدَها بعده**: قيمةٌ من العالم الحقيقيِّ يقرؤها اختبارٌ
+    لا يملكها. **فيُثبَّت التاريخُ في الماضي، والحملةُ مطفأةٌ بلا منح** ⇐ العمولةُ كما كانت تُقاس قبل القاعدة.
+    والوحدةُ التي تقيس الافتراضاتَ أو ما قبل الإطلاق تكتب `CAMPAIGN_DEFAULTS = True` فلا يُكتب شيء.
+    """
+    if getattr(request.module, "CAMPAIGN_DEFAULTS", False):
+        return
+    from datetime import date
+
+    from app.models.enums import CountryCode
+    from app.models.launch_campaign import LaunchCampaign
+
+    async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        for country in CountryCode:
+            session.add(LaunchCampaign(country_code=country, launch_date=date(2026, 1, 1)))
+        await session.commit()
+
+
+@pytest.fixture(autouse=True)
 async def phone_verification(_clean_state) -> None:
     """عقد تحقُّقٍ وهمي في كل اختبار — لأن التسجيل يشترط إثبات الرقم.
 

@@ -21,6 +21,9 @@ from app.models.subscription import DriverSubscription
 from app.services import launch_campaign
 from tests.helpers import DRIVER, approved_driver, ensure_plan
 
+#: **هذه الوحدةُ تقيس افتراضاتِ الحملة** — فلا يُثبَّت يومُ الإطلاق في الماضي (`conftest._launched_market`)
+CAMPAIGN_DEFAULTS = True
+
 
 async def _campaign(client: AsyncClient, admin_headers: dict, **body) -> dict:
     response = await client.patch("/admin/launch-campaign", params={"country_code": "JO"}, json=body, headers=admin_headers)

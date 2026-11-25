@@ -159,6 +159,11 @@ async def commission_percent_of_driver(
     **و`None` في العمود تعني «لا اشتراكَ ساري»** فتبقى نسبةُ السوق،
     **وصفرٌ يعني اشتراكاً اشتُري على صفر** — وهما حالان لا يحملهما رقمٌ واحد.
     """
+    # **الفترةُ المجّانيّة تعلو على كلِّ نسبة** (أمرُ المالك العاشر ٢٠٢٦-١١-٢٥): قبل الإطلاق، أو والمنحةُ سارية ⇐ صفر
+    from app.services import launch_campaign
+
+    if await launch_campaign.commission_free(session, driver):
+        return Decimal("0.00")
     if driver.commission_percent_from_subscription is not None:
         return driver.commission_percent_from_subscription
     return await commission_percent_for(session, country_code)

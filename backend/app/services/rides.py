@@ -848,8 +848,12 @@ async def _take(
     #
     # **و`None` تعني «لا اشتراكَ ساري»** فتبقى نسبةُ السوق، وصفرٌ يعني اشتراكاً
     # اشتُري على صفر — وهما حالان لا يحملهما رقمٌ واحد.
-    if driver.commission_percent_from_subscription is not None:
-        ride.commission_percent_at_ride = driver.commission_percent_from_subscription
+    #
+    # **والفترةُ المجّانيّة تعلو عليهما** (أمرُ المالك العاشر ٢٠٢٦-١١-٢٥): قبل الإطلاق أو والمنحةُ ساريةٌ ⇐ صفر — **فالدالّةُ
+    # الواحدةُ تُقرأ هنا** (`commission_percent_of_driver`) لا العمود، وإلا بقي كبتنُ ما قبل الإطلاق على نسبة السوق.
+    ride.commission_percent_at_ride = await settings_service.commission_percent_of_driver(
+        session, driver, driver_user.country_code
+    )
 
     # **من يتحمّل خصمَ عرض الراكب يُجمَّد هنا** (§١١٤-د): ما رآه الكبتنُ في بطاقة العرض قبل القبول هو ما يقع
     if ride.promo_code_id is not None:

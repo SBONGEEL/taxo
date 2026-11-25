@@ -116,6 +116,29 @@ async def in_free_period(session: AsyncSession, driver: Driver, now: datetime | 
     return await active_grant(session, driver.id, moment) is not None
 
 
+async def commission_free(session: AsyncSession, driver: Driver, now: datetime | None = None) -> bool:
+    """**أيُعفى هذا الكبتنُ من العمولة الآن؟** (أمرُ المالك العاشر ٢٠٢٦-١١-٢٥، SPEC §١١٤-ج)
+
+    العمولةُ **بعد انتهاء فترة كلِّ كبتنٍ وحدَه** لا قبلها — فيُعفى إن كانت الحملةُ تقول «بصفر عمولة» (`zero_commission`) **و**:
+    * **قبل منتصف ليل الإطلاق** — كلُّ كبتنٍ (ولو كانت الحملةُ مطفأة: «لا يُحصَّل من كبتنٍ شيءٌ قبل الإطلاق» قرارُ المالك نفسُه،
+      والإشعالُ لا يحكم إلا المنحَ واللافتة)؛
+    * **أو منحتُه ساريةٌ الآن** — ٦٠ يوماً لمن سبق الإطلاق، و٧ لمن اعتُمد بعده.
+
+    **ولمَ لا يكفي اشتراكُ المنحة وحدَه** (عمولتُه مجمَّدةٌ صفراً): قبل الإطلاق لا منحةَ أصلاً، والكبتنُ الذي اشترى اشتراكاً مدفوعاً
+    يحمل نسبةَ السوق مجمَّدة — **فبلا هذا الفحص يُحصَّل ٤٪ من كباتن ما قبل الإطلاق** لحظةَ تُرفع العمولة.
+    """
+    moment = now or _now()
+    country = await session.scalar(select(User.country_code).where(User.id == driver.user_id))
+    if country is None:
+        return False
+    campaign = await get(session, country)
+    if not campaign.zero_commission:
+        return False
+    if moment < await launch_at(session, campaign):
+        return True
+    return await active_grant(session, driver.id, moment) is not None
+
+
 async def _plan_for(session: AsyncSession, country: CountryCode) -> SubscriptionPlan | None:
     """**خطّةٌ تحمل الصفّ** — الشهريّةُ الفعّالة، والمدّةُ من الحملة لا منها (`days`)."""
     return await session.scalar(
