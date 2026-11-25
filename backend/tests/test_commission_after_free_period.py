@@ -16,6 +16,7 @@ from decimal import Decimal
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
+from app.models.debt import DriverDebt
 from app.models.driver import Driver
 from app.models.enums import CountryCode, WalletTransactionType
 from app.models.launch_campaign import LaunchCampaign, LaunchCampaignGrant
@@ -67,14 +68,21 @@ async def _paid_ride(
     assert paid.status_code == 201, paid.text
     async with session_factory() as session:
         stored = await session.get(Ride, uuid.UUID(ride["id"]))
-        entries = (
+        # **العمولةُ تُكتب قيداً من محفظته، أو دَيناً حين لا يغطّيها رصيدُه المتاح** (`payments._charge_commission`) — والدَّينُ يُحصَّل
+        # من الرصيد في المعاملة نفسِها. فـ«مرّةً لكلِّ رحلة» = قيودُ العمولة **ودُيونُها** معاً، لا أحدُهما.
+        ledger = (
             await session.execute(
-                select(func.count(), func.coalesce(func.sum(WalletTransaction.amount), 0)).where(
+                select(func.count(), func.coalesce(func.sum(-WalletTransaction.amount), 0)).where(
                     WalletTransaction.ride_id == stored.id, WalletTransaction.type == WalletTransactionType.COMMISSION
                 )
             )
         ).one()
-    return stored, entries
+        owed = (
+            await session.execute(
+                select(func.count(), func.coalesce(func.sum(DriverDebt.amount), 0)).where(DriverDebt.ride_id == stored.id)
+            )
+        ).one()
+    return stored, (ledger[0] + owed[0], Decimal(ledger[1]) + Decimal(owed[1]))
 
 
 async def _frozen_on_subscription(session_factory, driver_id) -> Decimal | None:
@@ -96,7 +104,7 @@ async def test_before_launch_no_captain_pays_commission_even_on_a_four_percent_s
 
     ride, (count, total) = await _paid_ride(client, admin_headers, session_factory, driver, "0791000001")
     assert ride.commission_percent_at_ride == Decimal("0.00"), "رحلةُ ما قبل الإطلاق جُمّدت بعمولة"
-    assert (count, Decimal(total)) == (0, 0), "قيدُ عمولةٍ في الدفتر قبل الإطلاق"
+    assert (count, Decimal(total)) == (0, 0), "عمولةٌ (قيدٌ أو دَين) قبل الإطلاق"
 
 
 async def test_during_his_grant_nothing_and_after_it_four_percent_once_per_ride(
@@ -126,7 +134,7 @@ async def test_during_his_grant_nothing_and_after_it_four_percent_once_per_ride(
     assert Decimal(me["commission_percent"]) == Decimal("4"), "انقضت فترتُه وشاشتُه ما زالت تقول صفراً"
     ride, (count, total) = await _paid_ride(client, admin_headers, session_factory, driver, "0791000003")
     assert ride.commission_percent_at_ride == Decimal("4.00")
-    expected = -(ride.final_fare * Decimal("0.04")).quantize(Decimal("0.001"))
+    expected = (ride.final_fare * Decimal("0.04")).quantize(Decimal("0.001"))
     assert count == 1, f"قيودُ العمولة للرحلة {count} لا واحد"
     assert Decimal(total) == expected, f"العمولةُ {total} لا {expected} (٤٪ من {ride.final_fare})"
 

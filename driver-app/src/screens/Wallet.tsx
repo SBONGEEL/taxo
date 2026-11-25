@@ -250,7 +250,7 @@ export function WalletScreen() {
             </p>
           ) : Number(profile?.commission_percent ?? 0) === 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
-              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— صفر عمولة ما دام اشتراكك سارياً.")}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— لا عمولة على رحلاتك الآن.")}
 
             </p>
           ) : (

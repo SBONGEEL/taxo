@@ -413,7 +413,7 @@ export function WalletT2Screen() {
             </p>
           ) : Number(w.profile?.commission_percent ?? 0) === 0 ? (
             <p className="t2-wal-fine">
-              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— صفر عمولة ما دام اشتراكك سارياً.")}
+              {tr("عمولة TAXO هذا الشهر:")}{" "}{digits(zeroAmount(wallet.currency))} {currency}{" "}{tr("— لا عمولة على رحلاتك الآن.")}
 
             </p>
           ) : (
