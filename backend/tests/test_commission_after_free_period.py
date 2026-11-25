@@ -24,6 +24,7 @@ from app.models.ride import Ride
 from app.models.wallet import WalletTransaction
 from tests.helpers import (
     RIDER,
+    SECOND_DRIVER,
     approved_driver,
     bring_online,
     completed_ride,
@@ -118,6 +119,8 @@ async def test_during_his_grant_nothing_and_after_it_four_percent_once_per_ride(
         row = await session.get(Driver, driver["driver_id"])
         # **بلا اشتراكٍ مجمَّد** — فما يُقاس قاعدةُ الفترة لا وعدُ الاشتراك
         row.commission_percent_from_subscription = None
+        # **كبتنُ ما قبل الإطلاق** — ونافذتُه الستّون انقضت أمس، فما يحكم بعدها منحتُه وحدَها
+        row.first_approved_at = datetime.now(UTC) - timedelta(days=70)
         await session.commit()
 
     # **منحتُه ساريةٌ يوماً آخر** ⇐ صفر
@@ -163,3 +166,38 @@ async def test_the_campaign_without_zero_commission_charges_from_day_one(
         campaign.zero_commission = False
         await session.flush()
         assert await launch_campaign.commission_free(session, row) is False
+
+
+async def test_the_window_counts_from_launch_even_when_his_grant_waits_behind_a_paid_subscription(
+    client: AsyncClient, admin_headers: dict, jordan_settings: None, session_factory
+) -> None:
+    """**قِيس على الإنتاج ٢٠٢٦-١١-٢٥**: منحةُ الكبتن تُلحق بعد اشتراكه المدفوع، فتبدأ في فبراير لمن اشترى شهراً في ديسمبر — **ولا يُحصَّل منه
+    شيءٌ بين ١/١ وبدئها**: ٦٠ يوماً من الإطلاق لمن سبقه، و٧ من اعتماده لمن بعده، **بلا منحةٍ مكتوبةٍ بعد**."""
+    from app.services import launch_campaign
+
+    launch = date.today() - timedelta(days=10)
+    await _launch_on(session_factory, launch)
+    early = await approved_driver(client, session_factory)
+    late = await approved_driver(client, session_factory, SECOND_DRIVER)
+    async with session_factory() as session:
+        campaign = await launch_campaign.get(session, CountryCode.JO)
+        campaign.is_enabled = True
+        start = await launch_campaign.launch_at(session, campaign)
+        before = await session.get(Driver, early["driver_id"])
+        before.first_approved_at = start - timedelta(days=3)
+        after = await session.get(Driver, late["driver_id"])
+        after.first_approved_at = datetime.now(UTC) - timedelta(days=2)
+        await session.commit()
+    async with session_factory() as session:
+        before = await session.get(Driver, early["driver_id"])
+        after = await session.get(Driver, late["driver_id"])
+        assert await launch_campaign.commission_free(session, before) is True, "عمولةٌ في أيّامه الستّين لأنّ منحتَه لم تبدأ"
+        assert await launch_campaign.commission_free(session, before, now=start + timedelta(days=59)) is True
+        assert await launch_campaign.commission_free(session, before, now=start + timedelta(days=60, minutes=1)) is False
+        assert await launch_campaign.commission_free(session, after) is True, "عمولةٌ في أيّامه السبعة"
+        assert await launch_campaign.commission_free(session, after, now=after.first_approved_at + timedelta(days=7, minutes=1)) is False
+        # **والحملةُ مطفأةً بعد الإطلاق لا نافذةَ لها** — كما لا منحَ لها
+        campaign = await launch_campaign.get(session, CountryCode.JO)
+        campaign.is_enabled = False
+        await session.flush()
+        assert await launch_campaign.commission_free(session, before) is False

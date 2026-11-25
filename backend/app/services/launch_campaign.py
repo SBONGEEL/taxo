@@ -134,9 +134,19 @@ async def commission_free(session: AsyncSession, driver: Driver, now: datetime |
     campaign = await get(session, country)
     if not campaign.zero_commission:
         return False
-    if moment < await launch_at(session, campaign):
+    start = await launch_at(session, campaign)
+    if moment < start:
         return True
-    return await active_grant(session, driver.id, moment) is not None
+    if await active_grant(session, driver.id, moment) is not None:
+        return True
+    # **والنافذةُ نفسُها لا موعدُ المنحة** (قِيس على الإنتاج ٢٠٢٦-١١-٢٥): المنحةُ اشتراكٌ يُلحق **بعد** ما دفعه الكبتنُ (`starts_not_before`)،
+    # فكبتنٌ اشترى شهراً في ديسمبر تبدأ منحتُه في فبراير — **وبلا هذا يُحصَّل منه ٤٪ من ١/١ حتى تبدأ**، وقولُ المالك «٦٠ يوماً بصفر عمولة
+    # تبدأ ١/١/٢٠٢٧» و«٧ أيام لمن بعده». فالإعفاءُ من يوم الإطلاق (أو الاعتماد بعده) بطول فترته، **والمنحةُ فوقه لا تنقصه**
+    if not campaign.is_enabled or driver.first_approved_at is None:
+        return False
+    if driver.first_approved_at < start:
+        return moment < start + timedelta(days=campaign.pre_launch_free_days)
+    return moment < driver.first_approved_at + timedelta(days=campaign.post_launch_free_days)
 
 
 async def _plan_for(session: AsyncSession, country: CountryCode) -> SubscriptionPlan | None:
