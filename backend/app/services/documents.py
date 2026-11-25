@@ -521,3 +521,75 @@ async def review(
     )
     await session.flush()
     return document
+
+
+async def accept_all(
+    session: AsyncSession,
+    *,
+    driver_id: uuid.UUID,
+    actor: User,
+    document_ids: list[uuid.UUID],
+    expires: dict[uuid.UUID, date] | None = None,
+) -> tuple[list[DriverDocument], list[str], list[str]]:
+    """**«قبول جميع الوثائق»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — يقبل **ما ينتظر المراجعةَ ممّا رآه المشرف** بنقرةٍ واحدة.
+
+    * **يَسِم الوثائقَ مقبولةً ولا يعتمد الحساب** — الاعتمادُ (العاديّ أو «اعتماد كامل») قرارٌ منفصلٌ بزرٍّ منفصل.
+    * **ما رآه المشرفُ لا ما في القاعدة الآن**: `document_ids` قائمةُ ما عُرض في التأكيد — فوثيقةٌ رُفعت بين العرض والنقر **لا تُقبل
+      بلا نظر**، وتبقى في «ما بقي».
+    * **المرفوضةُ والناقصةُ لا تُقبل** — وتعود أسماؤها (`remaining`) ليقرأ المشرفُ ما بقي.
+    * **كلُّ وثيقةٍ تمرّ بـ`review` نفسِه** (قفلُ صفِّها وقيدُ تدقيقها)، **وقيدٌ جامعٌ بالقائمة واسم المشرف** فوقها.
+
+    يعيد (المقبولةَ، أسماءَ ما بقي، مساراتِ الصور السابقة المتقاعدة) — والـcommit وحذفُ الملفّات والإشعارُ للراوتر.
+    """
+    wanted = set(document_ids)
+    pending = (
+        await session.scalars(
+            select(DriverDocument).where(
+                DriverDocument.driver_id == driver_id,
+                DriverDocument.review_status == DocumentReviewStatus.PENDING,
+            )
+        )
+    ).all()
+    accepted: list[DriverDocument] = []
+    retiring: list[str] = []
+    for row in pending:
+        if row.id not in wanted:
+            continue
+        if row.live_file_path is not None:
+            retiring.append(row.live_file_path)
+        accepted.append(
+            # **وتاريخُ الانتهاء الذي صحّحه المشرفُ في المعاينة** يُرسل معها كما في القبول وثيقةً وثيقة
+            await review(
+                session, driver_id=driver_id, document_id=row.id, actor=actor, approved=True,
+                expires_on=(expires or {}).get(row.id),
+            )
+        )
+    rejected = (
+        await session.scalars(
+            select(DriverDocument.doc_type).where(
+                DriverDocument.driver_id == driver_id,
+                DriverDocument.review_status == DocumentReviewStatus.REJECTED,
+            )
+        )
+    ).all()
+    still_pending = [row.doc_type for row in pending if row.id not in wanted]
+    missing = [item for item in await awaiting_upload(session, driver_id) if item not in rejected]
+    remaining = (
+        [f"{label_for(item)} (مرفوضة)" for item in rejected]
+        + [f"{label_for(item)} (لم تُرفع)" for item in missing]
+        + [f"{label_for(item)} (رُفعت بعد العرض — راجِعها)" for item in still_pending]
+    )
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.UPDATE,
+        entity_type="driver_documents_accept_all",
+        entity_id=driver_id,
+        details={
+            "accepted": [row.doc_type.value for row in accepted],
+            "remaining": [item.value for item in [*rejected, *missing, *still_pending]],
+        },
+    )
+    await session.flush()
+    # **اعتُمدت الجديدة ⇐ تتقاعد السابقة** (`review` يمحو `live_file_path`) — فكلُّ سابقةٍ جُمعت هنا يحذف الراوترُ ملفَّها بعد الـcommit
+    return accepted, remaining, retiring

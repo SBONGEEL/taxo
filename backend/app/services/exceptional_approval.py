@@ -164,6 +164,44 @@ def clear(driver: Driver) -> None:
     driver.deadline_warning_stage = 0
 
 
+async def complete(session: AsyncSession, *, driver: Driver, actor: User) -> Driver:
+    """**«اعتماد كامل»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — الكبتنُ «المعتمدُ دون وثائق» قُبلت وثائقُه المطلوبةُ كلُّها.
+
+    **العطبُ الذي بُني له**: الاعتمادُ العاديُّ (`drivers.approve`) يزيل الوسم — لكنّ هذا الكبتنَ **معتمدٌ أصلاً**، فاللوحةُ لا تعرض
+    «اعتماد» لمعتمَد، **ولم يبقَ إلا «تجميد» و«تمديد»**: وثائقُه كاملةٌ ووسمُه ومهلتُه وتذكيراتُه باقية. **فهذا بابُه**:
+    * **لا يقبل وثائقَ بنفسه** — يشترط أن تكون المطلوبةُ كلُّها مقبولة («قبول جميع الوثائق» أو المراجعةُ وثيقةً وثيقة)، ويسمّي ما لم يُقبل؛
+    * **يزيل الوسمَ ويلغي المهلةَ والتذكيراتِ** (`clear` + إطفاءُ التذكير) — **فلا تجميدَ آليّاً معلَّق**: الدورةُ (`sweep`) لا ترى إلا الموسومين؛
+    * **مجمَّدٌ لا يُعتمد من هنا** — «إلغاء التجميد» قرارٌ آخرُ بسببٍ مكتوب؛
+    * **قيدُ تدقيقٍ باسم المشرف** والمهلةُ التي أُلغيت.
+    """
+    from app.core.exceptions import DocumentsIncomplete
+    from app.services import documents
+    from app.services import drivers as drivers_service
+
+    await drivers_service.lock(session, driver)
+    if driver.exceptional_approved_at is None:
+        raise InvalidInput("هذا الحسابُ ليس «معتمداً دون وثائق»")
+    if driver.status is DriverStatus.SUSPENDED:
+        raise InvalidInput("الحسابُ مجمَّد — ألغِ التجميدَ أوّلاً بسببٍ مكتوب، ثمّ «اعتماد كامل»")
+    missing = await documents.missing_required(session, driver.id)
+    if missing:
+        names = "، ".join(documents.label_for(item) for item in missing)
+        raise DocumentsIncomplete(f"وثائقُ مطلوبةٌ لم تُقبل بعد: {names}")
+    deadline = driver.documents_deadline_at
+    clear(driver)
+    driver.document_reminders_enabled = False
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.UPDATE,
+        entity_type="driver_full_approval",
+        entity_id=driver.id,
+        details={"cancelled_deadline": deadline.isoformat() if deadline else None, "reminders": False},
+    )
+    await session.flush()
+    return driver
+
+
 async def freeze(session: AsyncSession, *, driver: Driver, actor: User | None, reason: str | None, automatic: bool = False) -> Driver:
     from app.services import drivers as drivers_service
 

@@ -513,6 +513,12 @@ async def upload_my_document(
         reader=file,
         expires_on=expires_on,
     )
+    # **«أكمل وثائقه ويحتاج مراجعة»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — إشعارُ المشرفين في اللوحة حين لا يبقى على الكبتن ما يرفعه.
+    # **يُسلَّم بعد الالتزام وحدَه** (`ship_after_commit`): رفعٌ رُجع عنه لا يُشعِر بشيء
+    if doc_type in await documents_service.required_for(session, driver.id) and not await documents_service.awaiting_upload(session, driver.id):
+        from app.services import alert_capture
+
+        alert_capture.ship_after_commit(session, "documents_completed", "driver", driver.id)
     await session.commit()
     await session.refresh(result.document)
     await session.refresh(driver)

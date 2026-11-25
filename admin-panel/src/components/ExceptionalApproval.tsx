@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
   approveDriverExceptional,
+  completeDriverApproval,
   freezeDriver,
   getDocumentSettings,
   getDriverExceptional,
@@ -48,6 +49,12 @@ function daysLeft(iso: string | null): number | null {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
+/** **«اعتماد كامل»** بصلاحيّة الاعتماد العاديّ (`users.manage`) — هو حارسُه نفسُه: المطلوبُ كلُّه مقبول */
+export function useCanApprove(): boolean {
+  const held = useMyPermissions();
+  return held?.has("users.manage") ?? false;
+}
+
 export function useCanExceptional(): boolean {
   const held = useMyPermissions();
   return held?.has(EXCEPTIONAL_PERMISSION) ?? false;
@@ -73,6 +80,7 @@ export function ExceptionalCard({
   onChanged: (message: string) => void;
 }) {
   const canAct = useCanExceptional();
+  const canApprove = useCanApprove();
   const [data, setData] = useState<DriverExceptional | null>(null);
   const [reason, setReason] = useState("");
   const [extend, setExtend] = useState("7");
@@ -144,10 +152,35 @@ export function ExceptionalCard({
         </dl>
       ) : null}
       <p className="text-12.5 text-ink">
-        {data.missing_documents.length > 0
-          ? `ينقصه: ${data.missing_documents.join(" · ")}`
-          : "لا وثيقةَ مطلوبةً ناقصة."}
+        {data.missing_documents.length === 0
+          ? "لا وثيقةَ مطلوبةً ناقصة — كلُّها مقبولة."
+          : (data.awaiting_upload ?? []).length === 0
+            ? `رفع كلَّ وثائقه، وتنتظر قبولك: ${data.missing_documents.join(" · ")} — راجِعها في «الوثائق» أدناه.`
+            : `ينقصه: ${data.missing_documents.join(" · ")}`}
       </p>
+
+      {/* **«اعتماد كامل»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥): المعتمدُ دون وثائق **معتمدٌ أصلاً**، فلا يظهر له «اعتماد» العاديّ —
+          وكان لا يبقى إلا «تجميد» و«تمديد» وقد اكتملت وثائقه. **يزيل الوسمَ والمهلةَ والتذكيراتِ وأيَّ تجميدٍ آليٍّ معلَّق**، ويُدقَّق باسمك */}
+      {data.exceptional && data.status === "approved" && canApprove ? (
+        <div className="flex flex-wrap items-center gap-8">
+          <Button
+            size="sm"
+            disabled={busy || data.missing_documents.length > 0}
+            onClick={() =>
+              void run(
+                () => completeDriverApproval(driverId),
+                "اعتُمد اعتماداً كاملاً — زال «معتمد دون وثائق» وأُلغيت المهلةُ والتذكيرات",
+                true,
+              )
+            }
+          >
+            اعتماد كامل
+          </Button>
+          {data.missing_documents.length > 0 ? (
+            <span className="text-12 text-muted">يُفعَّل حين تُقبل الوثائقُ المطلوبةُ كلُّها.</span>
+          ) : null}
+        </div>
+      ) : null}
 
       {canAct ? (
         <>

@@ -64,7 +64,8 @@ async def _paid_ride(
     await topup_wallet(client, admin_headers, rider["user"]["id"], "50.000")
     await bring_online(client, driver)
     ride = await completed_ride(client, rider["headers"], driver)
-    paid = await pay_ride(client, rider["headers"], ride["id"], "wallet")
+    # **مفتاحٌ لكلِّ رحلة**: المفتاحُ الافتراضيُّ واحد، فدفعةُ الرحلة الثانية كانت تُعيد الأولى ولا تُنشأ (قِيس: «الدفعات []»)
+    paid = await pay_ride(client, rider["headers"], ride["id"], "wallet", key=f"pay-{phone}")
     assert paid.status_code == 201, paid.text
     async with session_factory() as session:
         stored = await session.get(Ride, uuid.UUID(ride["id"]))

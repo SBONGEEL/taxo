@@ -17,10 +17,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Query, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
 from app.core.deps import (
@@ -743,6 +744,48 @@ async def review_driver_document(
         session, redis, driver_user_id=driver.user_id, document=document
     )
     return DriverDocumentOut.model_validate(document)
+
+
+class AcceptAllIn(BaseModel):
+    #: **ما عُرض على المشرف في التأكيد** — لا «كلُّ ما ينتظر الآن»: وثيقةٌ رُفعت بعد العرض لا تُقبل بلا نظر
+    document_ids: list[uuid.UUID] = Field(min_length=1, max_length=20)
+    #: تاريخُ الانتهاء الذي صحّحه المشرفُ لكلِّ وثيقة — اختياريّ
+    expires: dict[uuid.UUID, date] = {}
+
+
+class AcceptAllOut(BaseModel):
+    accepted: list[DriverDocumentOut]
+    #: **ما بقي** بأسمائه وسببه — مرفوضةٌ أو لم تُرفع أو رُفعت بعد العرض
+    remaining: list[str]
+
+
+@router.post("/drivers/{driver_id}/documents/accept-all", response_model=AcceptAllOut)
+async def accept_all_driver_documents(
+    driver_id: uuid.UUID,
+    payload: AcceptAllIn,
+    admin: UsersManager,
+    session: DbSession,
+    redis: RedisDep,
+) -> AcceptAllOut:
+    """**«قبول جميع الوثائق»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — يقبل ما ينتظر المراجعةَ ممّا عرضه التأكيد.
+
+    **لا يعتمد الحساب**: الاعتمادُ (أو «اعتماد كامل» للمعتمد دون وثائق) زرٌّ منفصلٌ وقرارٌ منفصل. وبصلاحيّة المراجعة نفسِها
+    (`users.manage`)، وكلُّ وثيقةٍ تمرّ بـ`documents.review` بقفلها وقيدها، وقيدٌ جامعٌ بالقائمة واسم المشرف.
+    """
+    driver = await _driver(session, driver_id)
+    accepted, remaining, retiring = await documents_service.accept_all(
+        session, driver_id=driver_id, actor=admin, document_ids=payload.document_ids, expires=payload.expires
+    )
+    await session.commit()
+    for path in retiring:
+        await storage.delete(path)
+    out = []
+    for document in accepted:
+        await session.refresh(document)
+        # بعد الـ commit كما تفرض قاعدة البثّ — إشعارٌ لكلِّ وثيقةٍ قُبلت كما في المراجعة وثيقةً وثيقة
+        await notifications.publish_document_review(session, redis, driver_user_id=driver.user_id, document=document)
+        out.append(DriverDocumentOut.model_validate(document))
+    return AcceptAllOut(accepted=out, remaining=remaining)
 
 
 @router.post("/drivers/{driver_id}/approve", response_model=DriverOut)

@@ -387,6 +387,14 @@ export interface DriverExceptional {
   reminders_enabled: boolean;
   reminded_at: string | null;
   missing_documents: string[];
+  /** **ما لم يُرفع بعد** — فارغٌ و`missing_documents` غيرُ فارغ = رفع كلَّ شيءٍ وينتظر قبولَ المشرف */
+  awaiting_upload: string[];
+}
+
+/** «قبول جميع الوثائق» (أمرُ المالك الحادي عشر) — المقبولةُ وما بقي بأسمائه وسببه */
+export interface AcceptAllResult {
+  accepted: DriverDocument[];
+  remaining: string[];
 }
 
 /** إعداداتُ متابعة الوثائق لكلِّ دولة (البندان ١ و٢). */
@@ -434,6 +442,8 @@ export interface DriverDocument {
 export interface DriverDocuments {
   documents: DriverDocument[];
   missing_required: DocumentType[];
+  /** ما لم يرفعه الكبتنُ بعد — يُذكر للمشرف في تأكيد «قبول جميع الوثائق» */
+  awaiting_upload: DocumentType[];
 }
 
 // ------------------------------------------------------------ المالية

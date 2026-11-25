@@ -16,7 +16,7 @@ import type {
   RiderPlan,
   PriceExperiment,
   DriverGoal, FacebookPost, FacebookPostRequest, FacebookReport, SiteStatsReport } from "@/api/types";
-import type { DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
+import type { AcceptAllResult, DocumentSettings, DocumentSettingsInput, DriverExceptional, ExpiringDocumentRow } from "@/api/types";
 import type { EmergencyRow, SupportContacts } from "@/api/types";
 import type { DriverQuality, QualitySetting } from "@/api/types";
 import type { AdminTicketDetail, AdminTicketPage, TicketStats } from "@/api/types";
@@ -585,6 +585,14 @@ export const getDriverExceptional = (driverId: string) =>
 
 export const approveDriverExceptional = (driverId: string, reason: string) =>
   api.post<DriverExceptional>(`/admin/drivers/${driverId}/approve-exceptional`, { reason });
+
+/** **«اعتماد كامل»** (أمرُ المالك الحادي عشر) — يزيل «معتمد دون وثائق» ومهلتَه وتذكيراته؛ يشترط قبولَ المطلوب كلِّه */
+export const completeDriverApproval = (driverId: string) =>
+  api.post<DriverExceptional>(`/admin/drivers/${driverId}/complete-approval`, {});
+
+/** **«قبول جميع الوثائق»** — يقبل ما عُرض في التأكيد وحدَه، **ولا يعتمد الحساب** */
+export const acceptAllDriverDocuments = (driverId: string, documentIds: string[], expires: Record<string, string>) =>
+  api.post<AcceptAllResult>(`/admin/drivers/${driverId}/documents/accept-all`, { document_ids: documentIds, expires });
 
 export const freezeDriver = (driverId: string, reason: string) =>
   api.post<DriverExceptional>(`/admin/drivers/${driverId}/freeze`, { reason });

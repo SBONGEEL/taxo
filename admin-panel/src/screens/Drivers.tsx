@@ -51,6 +51,7 @@ import {
   passDriverInspection,
   rejectDriver,
   reviewDocument,
+  acceptAllDriverDocuments,
   revokeIntercityPermit,
   scheduleDriverInspection,
   setAdvanceCap,
@@ -636,6 +637,8 @@ function DriverDrawer({
    * آمنة**» — والأمانُ هنا أن يكون القرارُ على ورقةٍ رُئيت.
    */
   const [seen, setSeen] = useState<Set<string>>(new Set());
+  // **ما بقي بعد «قبول جميع الوثائق»** — مرفوضةٌ أو لم تُرفع، بنصِّ الخلفيّة
+  const [acceptRemaining, setAcceptRemaining] = useState<string[] | null>(null);
   // **العارض** (البند ٠): وثائقُ هذا الكبتن كلُّها مجموعةٌ واحدة — التالي والسابق بينها
   const media = useMediaCache();
   const [viewing, setViewing] = useState<number | null>(null);
@@ -732,28 +735,25 @@ function DriverDrawer({
         />
 
         <h3 className="ad-dh">الوثائق</h3>
-        <BulkApprove
+        <AcceptAll
           docs={docs}
+          items={mediaItems}
+          cache={media}
           seen={seen}
           canDecide={canDecide}
           busy={busy}
-          onApprove={(ids) =>
+          remaining={acceptRemaining}
+          onView={setViewing}
+          onAccept={(ids) =>
             void runStay(async () => {
-              // **واحدةً بعد أخرى لا معاً**: `Promise.all` يرسل خمسةَ نداءاتٍ
-              // تتسابق على صفِّ الكبتن نفسِه — و`drivers_service.lock` يقفله،
-              // **فأربعةٌ منها تنتظر قفلاً ثمّ تُعيد حساب الحال من قراءةٍ
-              // قديمة**. والتسلسلُ يجعل كلَّ بتّةٍ ترى ما قبلها.
-              for (const id of ids) {
-                await reviewDocument(
-                  row.driver_id,
-                  id,
-                  true,
-                  undefined,
-                  expiry[id] ?? undefined,
-                );
-              }
+              // **نداءٌ واحدٌ لا نداءٌ لكلِّ وثيقة** (أمرُ المالك الحادي عشر): الخلفيّةُ تقبلها واحدةً بعد أخرى تحت قفل كلٍّ منها،
+              // **وتكتب قيدَ تدقيقٍ جامعاً باسم المشرف وقائمة الوثائق** — وتعيد ما بقي بأسمائه
+              const picked: Record<string, string> = {};
+              for (const id of ids) if (expiry[id]) picked[id] = expiry[id];
+              const answer = await acceptAllDriverDocuments(row.driver_id, ids, picked);
+              setAcceptRemaining(answer.remaining);
               await load();
-            }, approvedMessage(ids.length, pendingIds(docs).length))
+            }, `قُبلت ${ids.length} ${ids.length === 1 ? "وثيقة" : "وثائق"} — والحسابُ لم يُعتمد بهذا الزرّ`)
           }
         />
         {docs === null ? (
@@ -1024,66 +1024,98 @@ function DriverDrawer({
 }
 
 
-/** الفعلُ الجماعيُّ الوحيدُ في هذه الشاشة — **ولا يظهر إلا حين يفيد**.
+/** **«قبول جميع الوثائق»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — الفعلُ الجماعيُّ الوحيدُ في هذه الشاشة.
  *
- * **زرٌّ لوثيقةٍ واحدةٍ ليس فعلاً جماعياً**: هو زرُّها نفسُه بمكانٍ ثانٍ،
- * **وزرّان لفعلٍ واحدٍ يجعلان المشرفَ يسأل أيُّهما يفعل ماذا**. فالحدُّ اثنتان.
- *
- * **ولا فعلَ جماعيَّ على رفض**: الرفضُ يحتاج **سبباً لكلِّ ورقة** يصل صاحبَها
- * في الإشعار، **وسببٌ واحدٌ لخمسِ أوراقٍ سببٌ لا يخصّ واحدةً منها** — ومن
- * قرأه لم يعرف ما يصلح في ورقته. وهذا هو «حيث تكون آمنة» بحرفه.
+ * * **يَسِم الوثائقَ مقبولةً ولا يعتمد الحساب** — «اعتماد» (أو «اعتماد كامل» للمعتمد دون وثائق) زرٌّ منفصلٌ وقرارٌ منفصل، ويُقال ذلك على الزرّ.
+ * * **تأكيدٌ قبله يسرد ما سيُقبل باسمه ومصغَّرته** — والنقرُ على المصغَّرة يفتحها في العارض؛ وما لم يُفتح بعد يُوسم «لم تُعايَن».
+ * * **المرفوضةُ والناقصةُ لا يقبلها**، وتُسمّى في التأكيد وبعده (`remaining` من الخلفيّة).
+ * * **ولا فعلَ جماعيَّ على رفض**: الرفضُ يحتاج **سبباً لكلِّ ورقة** يصل صاحبَها — وسببٌ واحدٌ لخمسِ أوراقٍ لا يخصّ واحدةً منها.
  */
-function BulkApprove({
+function AcceptAll({
   docs,
+  items,
+  cache,
   seen,
   canDecide,
   busy,
-  onApprove,
+  remaining,
+  onView,
+  onAccept,
 }: {
   docs: DriverDocuments | null;
+  items: MediaItem[];
+  cache: MediaCache;
   seen: Set<string>;
   canDecide: boolean;
   busy: boolean;
-  onApprove: (ids: string[]) => void;
+  remaining: string[] | null;
+  onView: (index: number) => void;
+  onAccept: (ids: string[]) => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
   if (!canDecide || docs === null) return null;
-  const ready = pendingIds(docs).filter((id) => seen.has(id));
-  if (ready.length < 2) return null;
+  const pending = docs.documents
+    .map((document, index) => ({ document, index }))
+    .filter(({ document }) => document.review_status === "pending");
+  const rejected = docs.documents
+    .filter((document) => document.review_status === "rejected")
+    .map((document) => `${DOC_LABEL[document.doc_type]} (مرفوضة)`);
+  const missing = (docs.awaiting_upload ?? [])
+    .filter((type) => !docs.documents.some((document) => document.doc_type === type && document.review_status === "rejected"))
+    .map((type) => `${DOC_LABEL[type]} (لم تُرفع)`);
+  const left = [...rejected, ...missing];
 
-  const rest = pendingIds(docs).length - ready.length;
+  if (pending.length === 0) {
+    return remaining && remaining.length > 0 ? (
+      <p className="ad-bulk-note">ما بقي بعد القبول: {remaining.join(" · ")}</p>
+    ) : null;
+  }
+
+  if (!confirming) {
+    return (
+      <div className="ad-bulk">
+        <button type="button" disabled={busy} onClick={() => setConfirming(true)} className="ad-btn ad-btn-sm ad-btn-ok">
+          قبول جميع الوثائق ({pending.length})
+        </button>
+        <p className="ad-bulk-note">يقبل الوثائقَ وحدَها بعد مراجعتك — ولا يعتمد الحساب؛ الاعتمادُ زرٌّ منفصل.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="ad-bulk">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onApprove(ready)}
-        className="ad-btn ad-btn-sm ad-btn-ok"
-      >
-        اعتمِد ما عاينتَه ({ready.length})
-      </button>
+    <div className="ad-bulk ad-box" role="group" aria-label="تأكيد قبول جميع الوثائق">
+      <p className="ad-box-state">ستُقبل هذه الوثائق ({pending.length}):</p>
+      <ul className="ad-mini-reset">
+        {pending.map(({ document, index }) => (
+          <li key={document.id} className="ad-doc-top">
+            <MediaThumb cache={cache} item={items[index]} onOpen={() => onView(index)} />
+            <span className="ad-doc-title">{DOC_LABEL[document.doc_type]}</span>
+            {seen.has(document.id) ? null : <Badge tone="warn">لم تُعايَن</Badge>}
+          </li>
+        ))}
+      </ul>
       <p className="ad-bulk-note">
-        {rest > 0
-          ? `ويبقى ${rest} لم تُفتح ورقتُها — ولا يُعتمد ما لا يُرى.`
-          : "وكلُّ ما ينتظر قد عُوين."}
+        {left.length > 0 ? `لا يقبلها هذا الزرّ ويبقى: ${left.join(" · ")}` : "ولا يبقى بعدها مرفوضٌ ولا ناقص."}
+        {" "}والحسابُ لا يُعتمد بهذا الزرّ.
       </p>
+      <div className="ad-doc-actions">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setConfirming(false);
+            onAccept(pending.map(({ document }) => document.id));
+          }}
+          className="ad-btn ad-btn-sm ad-btn-ok"
+        >
+          نعم، اقبل {pending.length}
+        </button>
+        <button type="button" disabled={busy} onClick={() => setConfirming(false)} className="ad-btn ad-btn-sm ad-btn-secondary">
+          إلغاء
+        </button>
+      </div>
     </div>
   );
-}
-
-/** الوثائقُ المنتظِرةُ بمعرّفاتها — **بيتٌ واحدٌ يقرؤه الزرُّ والرسالة**. */
-function pendingIds(docs: DriverDocuments | null): string[] {
-  return (docs?.documents ?? [])
-    .filter((document) => document.review_status === "pending")
-    .map((document) => document.id);
-}
-
-/** **يقول ماذا وقع بالضبط** (§39٫١٢٫٥) — والعددُ لاتينيٌّ بحكم `${}`. */
-function approvedMessage(done: number, before: number): string {
-  const rest = before - done;
-  return rest > 0
-    ? `اعتُمدت ${done} وثائق ممّا عاينتَه — ويبقى ${rest} لم تُفتح ورقتُها`
-    : `اعتُمدت ${done} وثائق — ولم يبقَ منتظِر`;
 }
 
 /** **فحصُ المركبة** (§61-ط/٥) — موعدٌ ومكانٌ يراهما الكبتن في «طلبك قيد المراجعة»، و«اجتاز الفحص».

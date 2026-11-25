@@ -105,6 +105,8 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("rider_signup", "accounts", "account", "راكبٌ جديد", "ركّاب جدد"),
     AlertKind("captain_signup", "accounts", "account", "كبتنٌ جديد", "كباتن جدد"),
     AlertKind("documents_submitted", "accounts", "account", "وثائقُ كبتنٍ أُرسلت", "وثائقُ كباتن أُرسلت"),
+    # **كبتنٌ رفع كلَّ المطلوب** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — «أكمل وثائقه ويحتاج مراجعة»، ولا سيّما «المعتمدُ دون وثائق»
+    AlertKind("documents_completed", "accounts", "account", "كبتنٌ أكمل وثائقه — يحتاج مراجعة", "كباتن أكملوا وثائقهم — يحتاجون مراجعة"),
     AlertKind("documents_approved", "accounts", "account", "وثائقُ كبتنٍ قُبلت", "وثائقُ كباتن قُبلت"),
     AlertKind("documents_rejected", "accounts", "account", "وثائقُ كبتنٍ رُفضت", "وثائقُ كباتن رُفضت"),
     AlertKind("payment_succeeded", "money", "money_in", "دفعةٌ ناجحة", "دفعات ناجحة"),

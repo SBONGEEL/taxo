@@ -13,7 +13,7 @@ from fastapi import APIRouter, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.core.deps import DbSession, ExceptionalManager, RedisDep, StaffUser
+from app.core.deps import DbSession, ExceptionalManager, RedisDep, StaffUser, UsersManager
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DocumentType, DriverStatus
@@ -51,6 +51,8 @@ class ExceptionalOut(BaseModel):
     reminders_enabled: bool
     reminded_at: datetime | None
     missing_documents: list[str]
+    #: **ما لم يُرفع بعد** — فارغٌ و`missing_documents` غيرُ فارغ = «رفع كلَّ شيءٍ وينتظر قبولَ المشرف» (أمرُ المالك الحادي عشر)
+    awaiting_upload: list[str] = []
 
 
 class RequestedOut(BaseModel):
@@ -91,6 +93,7 @@ async def _out(session, driver: Driver) -> ExceptionalOut:
         reminders_enabled=driver.document_reminders_enabled,
         reminded_at=driver.document_reminded_at,
         missing_documents=[documents.label_for(item) for item in missing],
+        awaiting_upload=[documents.label_for(item) for item in await documents.awaiting_upload(session, driver.id)],
     )
 
 
@@ -111,6 +114,20 @@ async def approve_exceptional(
     await session.refresh(driver)
     if not was_approved:
         await notifications.publish_driver_approved(session, redis, user_id=driver.user_id)
+    return await _out(session, driver)
+
+
+@router.post("/drivers/{driver_id}/complete-approval", response_model=ExceptionalOut)
+async def complete_approval(driver_id: uuid.UUID, session: DbSession, admin: UsersManager) -> ExceptionalOut:
+    """**«اعتماد كامل»** (أمرُ المالك الحادي عشر ٢٠٢٦-١١-٢٥) — «المعتمدُ دون وثائق» قُبلت وثائقُه المطلوبةُ كلُّها.
+
+    **بصلاحيّة الاعتماد العاديّ** (`users.manage`) لا الاستثنائيّ: هو الاعتمادُ العاديُّ بحارسه نفسِه (المطلوبُ كلُّه مقبول) لحسابٍ
+    معتمدٍ أصلاً — يزيل الوسمَ والمهلةَ والتذكيرات. **ولا إشعارَ «اعتُمدت»**: الكبتنُ يعمل من قبلُ، ولم يتغيّر عليه شيء.
+    """
+    driver = await _driver(session, driver_id)
+    await exceptional_approval.complete(session, driver=driver, actor=admin)
+    await session.commit()
+    await session.refresh(driver)
     return await _out(session, driver)
 
 
