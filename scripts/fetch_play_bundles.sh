@@ -8,7 +8,7 @@ H=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json")
 RUN=$(curl -fsS "${H[@]}" "$API/actions/workflows/ci.yml/runs?branch=$TAG&per_page=5" | python3 -c '
 import json,sys
 runs=json.load(sys.stdin)["workflow_runs"]
-print(" ".join(f"{r[\"id\"]}:{r[\"status\"]}:{r[\"conclusion\"]}" for r in runs))')
+print(" ".join("%s:%s:%s" % (r["id"], r["status"], r["conclusion"]) for r in runs))')
 echo "runs: $RUN"
 ID=$(echo "$RUN" | tr " " "\n" | grep ":completed:success" | head -1 | cut -d: -f1 || true)
 [ -n "$ID" ] || { echo "✗ لا تشغيلَ ناجحٌ بعد للوسم $TAG"; exit 2; }
