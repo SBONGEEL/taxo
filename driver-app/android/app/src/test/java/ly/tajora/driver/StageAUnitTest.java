@@ -29,4 +29,13 @@ public class StageAUnitTest {
         assertTrue(StatusBubble.inDismissZone(1600f, 2000));
         assertFalse(StatusBubble.inDismissZone(1900f, 0));
     }
+
+    /** رمزُ حضورٍ ميت (٤٠١ ثلاثاً متتالية) يكفّ البثَّ حتى يصل رمزٌ جديد — ٦٤١ نداءً ضائعاً من جهازٍ واحدٍ قِيست على الإنتاج ٢٦/١١ */
+    @Test
+    public void aDeadPresenceTokenStopsBeingSent() {
+        assertTrue(OnlineService.tokenAlive(0));
+        assertTrue(OnlineService.tokenAlive(OnlineService.DEAD_TOKEN_AFTER - 1));
+        assertFalse(OnlineService.tokenAlive(OnlineService.DEAD_TOKEN_AFTER));
+        assertFalse(OnlineService.tokenAlive(641));
+    }
 }

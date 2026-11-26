@@ -91,6 +91,18 @@ public class OnlineService extends Service {
     private String endpoint = null;
     private String token = null;
 
+    /** <b>رمزٌ ميتٌ لا يُعاد إرسالُه طوالَ الليل</b> (قِيس على الإنتاج ٢٠٢٦-١١-٢٦: ٦٤١ ردّاً ٤٠١ من جهازٍ واحدٍ في خمس ساعات،
+     *  نداءٌ كلَّ ~٢٧ ثانية). الرمزُ يُبطله الخادمُ حين يُصدر غيرَه أو يُنهي الاستقبال — <b>ولا يعود حيّاً بالتكرار</b>. فبعد
+     *  {@link #DEAD_TOKEN_AFTER} ردودٍ ٤٠١ متتالية بالرمز نفسِه يكفّ البثّ <b>حتى يسلّم الويبُ رمزاً جديداً</b>؛ والإشعارُ «منقطع»
+     *  يقع كما كان بالصمت نفسِه، فالكبتنُ يُخبَر ولا تُستنزف بطاريّتُه. والعدُّ يُصفَّر بأيِّ ٢٠٤ أو رمزٍ جديد. */
+    static final int DEAD_TOKEN_AFTER = 3;
+    private volatile int unauthorized = 0;
+
+    /** خالصٌ ومختبَر: أيُبثّ بهذا الرمز؟ */
+    static boolean tokenAlive(int consecutiveUnauthorized) {
+        return consecutiveUnauthorized < DEAD_TOKEN_AFTER;
+    }
+
     /** <b>فاصلُ البثّ الفعّال</b> (SPEC §١٠٣ المرحلة A/3): {@link #BROADCAST_MS} افتراضاً، <b>وفاصلُ «المتاح» من لوحة البثّ</b> حين
      *  يشتعل {@code native_location} — يصل من الويب مع كلِّ نبضة ({@code interval_ms})، فتغييرُ اللوحة أو طورُها المتكيّف يبلغ الخدمة. */
     private long intervalMs = BROADCAST_MS;
@@ -194,7 +206,11 @@ public class OnlineService extends Service {
             String url = intent.getStringExtra("endpoint");
             String bearer = intent.getStringExtra("token");
             if (url != null) endpoint = url;
-            if (bearer != null) token = bearer;
+            if (bearer != null) {
+                // **رمزٌ جديدٌ يُحيي البثّ** — والرمزُ نفسُه يعود مع كلِّ نبضةٍ من الويب فلا يصفّر عدَّ الميت
+                if (!bearer.equals(token)) unauthorized = 0;
+                token = bearer;
+            }
             if (intent.hasExtra("heartbeat_ms")) heartbeatMs = intent.getLongExtra("heartbeat_ms", 0L);
             if (intent.hasExtra("move_meters")) moveMeters = intent.getIntExtra("move_meters", 30);
             if (intent.hasExtra("interval_ms")) {
@@ -273,7 +289,7 @@ public class OnlineService extends Service {
 
     private void broadcast() {
         try {
-            if (endpoint != null && token != null) {
+            if (endpoint != null && token != null && tokenAlive(unauthorized)) {
                 Location fix = lastKnownFix();
                 DeviceSignals.noteFix(this, fix);
                 if (fix != null && wantsToSend(fix)) {
@@ -342,6 +358,9 @@ public class OnlineService extends Service {
                 // الشكلُ السادس: معيارُ نجاحٍ يقيس غيرَ ما يدّعي
                 if (code >= 200 && code < 300) {
                     lastPing = SystemClock.elapsedRealtime();
+                    unauthorized = 0;
+                } else if (code == HttpURLConnection.HTTP_UNAUTHORIZED && bearer.equals(token)) {
+                    unauthorized++;
                 }
             } catch (Exception ignored) {
                 // شبكةٌ ساقطة — والصمتُ نفسُه هو ما يقلب الإشعار بعد ٩٠ ثانية
