@@ -101,7 +101,7 @@ async def test_choice_mode_follows_the_captain_switch_and_the_country_default(
     # **افتراضُ الدولة يحكم من لم يختر** — وصريحُ الاختيار يبقى
     await _set_mode(client, admin_headers, serves_lower_choice_default=False)
     assert await _eligible(session_factory, comfort["driver_id"], "economy")
-    second = await approved_driver(client, session_factory, SECOND_DRIVER, category="comfort")
+    second = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-4343", category="comfort")
     assert not await _eligible(session_factory, second["driver_id"], "economy")
 
     # **والعودةُ إلى ب تشمل الجميع ولو أطفأ مفتاحَه**
@@ -115,7 +115,7 @@ async def test_same_category_first_adds_the_margin_to_higher_captains_only(
     client: AsyncClient, session_factory, admin_headers: dict
 ) -> None:
     economy = await approved_driver(client, session_factory, DRIVER)
-    comfort = await approved_driver(client, session_factory, SECOND_DRIVER, category="comfort")
+    comfort = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-4343", category="comfort")
     await _comfort_row(session_factory)
     ids = [uuid.UUID(str(economy["driver_id"])), uuid.UUID(str(comfort["driver_id"]))]
 
