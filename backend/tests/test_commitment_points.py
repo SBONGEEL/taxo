@@ -116,6 +116,14 @@ def test_hours_are_counted_in_arabic() -> None:
     assert late.met is False and "10 ساعات" in (late.reason or "")
 
 
+def test_no_span_left_today_is_said_not_invited() -> None:
+    """بعد آخر بدايةٍ تتّسع لها النافذة لا يُقال «اتّصل لتبدأ» — يُقال إن اليومَ انتهى ومتى يبدأ الغد (فحصُ المالك ٢٦/١١)."""
+    early = commitment.progress(_day(), SHAPE, 13 * H)
+    assert early.state == "idle" and early.can_restart is True
+    late = commitment.progress(_day(), SHAPE, 15 * H)
+    assert late.state == "after_window" and "10 ساعات" in late.reason and "07:00" in late.reason
+
+
 # ===================================================================== القاعدةُ واللوحة
 
 

@@ -459,6 +459,15 @@ def progress(online: list[bool], shape: Shape, now_minute: int) -> Progress:
     can_restart = now_minute + shape.span <= shape.window_end
     if last_reason is not None:
         return Progress(state="broken", reason=last_reason, can_restart=can_restart, remaining_minutes=shape.span)
+    if not can_restart:
+        # **لا تُدعى إلى ما لا يتحقّق** (فحصُ المالك ٢٦/١١): بعد آخر بدايةٍ تتّسع لها النافذة كانت البطاقةُ تقول «اتّصل لتبدأ مدّةَ اليوم»
+        # — وكلُّ اتّصالٍ بعدها لا يبلغ المدّة. فيومُ النقاط انتهى وإن بقيت النافذةُ مفتوحة، ويُقال متى يبدأ التالي
+        start = f"{shape.window_start // 60:02d}:{shape.window_start % 60:02d}"
+        return Progress(
+            state="after_window",
+            reason=f"لم يعد في نافذة اليوم متّسعٌ لمدّة {_hours(shape.span)} — تبدأ مدّتُك غداً من {start}",
+            remaining_minutes=shape.span,
+        )
     return Progress(state="idle", can_restart=can_restart, remaining_minutes=shape.span)
 
 
