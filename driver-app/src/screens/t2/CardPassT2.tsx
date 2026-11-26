@@ -25,7 +25,7 @@ import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
 import { formatAmount } from "@/lib/utils";
 import { Icon, Wordmark } from "@/taxo2";
-import { DIGISTORE24, cardFits, payChannel } from "@/screens/t2/CardPayT2";
+import { DIGISTORE24, FREEMIUS, cardFits, payChannel } from "@/screens/t2/CardPayT2";
 
 import "./t2.css";
 import "./fields.css";
@@ -73,8 +73,13 @@ export function CardPassT2Screen() {
       .then(([body, rows]) => {
         if (!alive) return;
         setCurrency(body.currency);
-        // **صفُّ Digistore24 وحدَه** — لا بطاقةَ أخرى ولا غيرُها؛ وإن غاب قيل «غيرُ متاح» ولم يُعرض بديل
-        setMethod(body.methods.find((row) => row.code === DIGISTORE24 && row.gateway) ?? null);
+        // **البوّابةُ المختارة وحدَها** — Freemius في نسخة الموقع إن اختيرت (أمرُ المالك ٢٠٢٦-١١-٢٦)، وإلا Digistore24؛ لا بطاقةَ أخرى
+        // ولا غيرُها، وإن غابتا قيل «غيرُ متاح» ولم يُعرض بديل. **والخادمُ لا يعرض إلا واحدةً للموقع** («بوابة الدفع بالبطاقة»)
+        setMethod(
+          body.methods.find((row) => row.code === FREEMIUS && row.gateway && payChannel() === "web") ??
+            body.methods.find((row) => row.code === DIGISTORE24 && row.gateway) ??
+            null,
+        );
         setPlans(rows);
       })
       .catch((caught: unknown) => {
@@ -214,7 +219,11 @@ export function CardPassT2Screen() {
           </button>
           {method.down ? <p className="t2-note">{tr("صفحة البطاقة متوقّفة الآن — حاول بعد قليل.")}</p> : null}
           <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p>
-          <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك، واختر «شخص خاص»")}</p>
+          {method.code === FREEMIUS ? (
+            <p className="t2-cardpay-fine">{tr("أبقِ بريدك في صفحة الدفع كما هو — به يُفعَّل اشتراكك")}</p>
+          ) : (
+            <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك، واختر «شخص خاص»")}</p>
+          )}
         </>
       )}
     </div>

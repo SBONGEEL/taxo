@@ -443,9 +443,11 @@ async def gateway_webhook(
     headers = {k.lower(): v for k, v in request.headers.items()}
     ids: list[str] | None = None
     signed = False
+    verified = None
     for gateway in gateways:
         try:
             ids = gateway.webhook_ids(headers, body)
+            verified = gateway
             # **«موقَّعٌ» لمن يُقيَّد بإشعاره** (Chargily) — وSofizPay يُتحقَّق من توقيعه (§٨٧/٥) **ويوقظ ولا يشهد**: الفحصُ المباشرُ يحسم
             signed = bool(getattr(gateway, "confirms_by_webhook", False))
             break
@@ -463,6 +465,12 @@ async def gateway_webhook(
     if not signed:
         background.add_task(_settle_webhook_in_background, integration, list(ids))
         return {"ok": True, "queued": len(ids)}
+    if integration == "freemius":
+        # **Freemius لا يحمل مرجعَنا** — تُربط كلُّ دفعةٍ بطلبها أوّلاً (بريدُ الدافع ومبلغُ خطّته، `freemius_link.bind`)، وما لا طلبَ له
+        # يُسجَّل ويُجاب بنجاح (لا يُعاد إشعارٌ لن يجد طلباً)
+        from app.services import freemius_link
+
+        ids = [eid for eid in ids if await freemius_link.bind(session, verified, eid) is not None]
     applied = await _settle_webhook_ids(session, redis, integration, ids, signed=signed)
     if integration == "digistore24":
         # **Digistore24 يقرأ الجوابَ نصّاً**: `OK` وحدَه نجاح، وما عداه يُعاد (مثالُهم الرسميّ `ipn_receiver.php`)
@@ -496,7 +504,7 @@ async def _settle_webhook_ids(session, redis, integration: str, ids: list[str], 
         if settled:
             applied += 1
             owners.append(row.user_id)
-            if integration == "digistore24" and row.status is PaymentRequestStatus.APPROVED and row.subscription_id is not None:
+            if integration in ("digistore24", "freemius") and row.status is PaymentRequestStatus.APPROVED and row.subscription_id is not None:
                 paid.append((row.user_id, row.id, row.subscription_id))
     await session.commit()
     for user_id, request_id, subscription_id in paid:

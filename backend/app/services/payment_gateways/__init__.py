@@ -64,7 +64,7 @@ class GatewayCountryUnavailable(AppError):
 
 
 #: **الوسطاءُ المحصورون في سوقٍ واحد** — والخادمُ يرفض الدفعَ بهم لحسابٍ دولتُه غيرُها، **قبل أيِّ حارسٍ آخر** فيُقال السببُ الحقيقيّ
-SINGLE_MARKET: dict[str, str] = {"digistore24": "JO"}
+SINGLE_MARKET: dict[str, str] = {"digistore24": "JO", "freemius": "JO"}
 
 
 def require_market(integration: str | None, country: object) -> None:
@@ -174,6 +174,7 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.chargily import build_chargily
     from app.services.payment_gateways.digistore24 import build_digistore24
     from app.services.payment_gateways.dpay import build_dpay
+    from app.services.payment_gateways.freemius import build_freemius
     from app.services.payment_gateways.moonpay import build_moonpay
     from app.services.payment_gateways.nowpay import build_nowpay
     from app.services.payment_gateways.polar import build_polar
@@ -181,13 +182,14 @@ def _builders() -> dict[str, Callable[[Mapping[str, Any]], Gateway]]:
     from app.services.payment_gateways.whop import build_whop
 
     return {"chargily": build_chargily, "sofizpay": build_sofizpay, "nowpay": build_nowpay, "whop": build_whop,
-            "moonpay": build_moonpay, "polar": build_polar, "dpay": build_dpay, "digistore24": build_digistore24}
+            "moonpay": build_moonpay, "polar": build_polar, "dpay": build_dpay, "digistore24": build_digistore24,
+            "freemius": build_freemius}
 
 
 #: **اسمُ الوسيط كما يراه الدافع** (§٧٦-ع/٢) — «ادفع عبر Chargily» لا «صفحة الوسيط»
 DISPLAY_NAMES: dict[str, str] = {"chargily": "Chargily", "sofizpay": "SofizPay", "nowpay": "البطاقة المصرفية", "whop": "البطاقة المصرفية",
                                 "moonpay": "MoonPay Commerce", "polar": "البطاقة المصرفية", "dpay": "Dpay",
-                                "digistore24": "البطاقة المصرفية"}
+                                "digistore24": "البطاقة المصرفية", "freemius": "البطاقة المصرفية"}
 
 #: **اسمُ المحوِّل ⇐ عقدُه في صفحة العقود** — والوسيطُ في صفِّ الطريقة يُعرف بهذا الاسم (`integration`)
 PROVIDER_KEYS: dict[str, ProviderKey] = {
@@ -199,6 +201,7 @@ PROVIDER_KEYS: dict[str, ProviderKey] = {
     "polar": ProviderKey.POLAR,
     "dpay": ProviderKey.DPAY,
     "digistore24": ProviderKey.DIGISTORE24,
+    "freemius": ProviderKey.FREEMIUS,
 }
 
 #: **من يحمل رسومَ الوسيط** — ما يقبله كلُّ وسيطٍ بوثائقه؛ وSofizPay لا يوثّق تحميلَها على المشتري فيبقى على TAXO
@@ -218,6 +221,8 @@ FEE_BEARERS: dict[str, frozenset[str]] = {
     "dpay": frozenset({"user"}),
     # **Digistore24**: رسمُه على TAXO (قرارُ المالك ٢٠٢٦-١١-٢٣) — **والبطاقةُ تُخصم ثمنَ المنتج وحدَه**
     "digistore24": frozenset({"taxo"}),
+    # **Freemius**: رسمُه على TAXO (أمرُ المالك ٢٠٢٦-١١-٢٦) — **والبطاقةُ تُخصم ثمنَ الخطّة وحدَه**
+    "freemius": frozenset({"taxo"}),
 }
 
 #: **وسيطٌ بمفتاح تشغيلٍ خاصٍّ به لكلِّ دولة** (أمرُ المالك ٢٠٢٦-١١-١١) — يعمل وإن كان «نظامُ الدفع الجديد» مطفأً في السوق، **فلا يتغيّر
@@ -235,6 +240,8 @@ OWN_SWITCH: dict[str, FeatureKey] = {
     "dpay": FeatureKey.DPAY_SUBSCRIPTION_ENABLED,
     # **وDigistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — مفتاحاه (الموقع · Play) في `METHOD_SWITCHES`؛ وهذا عضويّتُه في «ذوي المفتاح الخاصّ» وحدَها
     "digistore24": FeatureKey.DIGISTORE24_CARD_ENABLED,
+    # **وFreemius** (أمرُ المالك ٢٠٢٦-١١-٢٦) — بوّابةٌ احتياطيّة، **مفتاحُ الموقع وحدَه**
+    "freemius": FeatureKey.FREEMIUS_CARD_ENABLED,
 }
 SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "nowpay": frozenset({CountryCode.JO}),
@@ -244,6 +251,7 @@ SWITCH_COUNTRIES: dict[str, frozenset[CountryCode]] = {
     "dpay": frozenset({CountryCode.LY, CountryCode.JO}),
     # **الأردنُ وحدَه** — ليبيا والجزائرُ مطفأتان بأمر المالك، فلا يُشعَل فيهما المفتاحُ ولو ضُغط
     "digistore24": frozenset({CountryCode.JO}),
+    "freemius": frozenset({CountryCode.JO}),
 }
 #: **مفتاحٌ بدولٍ أضيقَ من دول وسيطه** — شحنُ الراكب ودفعُ الرحلة عبر Dpay ليبيا وحدَها، والاشتراكُ ليبيا والأردن (البطاقةُ الدوليّة)
 KEY_COUNTRIES: dict[str, frozenset[CountryCode]] = {
@@ -265,7 +273,7 @@ PURPOSE_SWITCHES: dict[str, dict[str, tuple[str, tuple[FeatureKey, ...]]]] = {
     },
 }
 #: **وسيطٌ للكبتن وحدَه** — لا يُعرض للراكب ولا يُفتح له (يُسأل في العرض وفي الفتح)
-DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar", "digistore24"})
+DRIVERS_ONLY: frozenset[str] = frozenset({"nowpay", "polar", "digistore24", "freemius"})
 #: **مفتاحٌ ⇐ وسيطُه** — فيُعرف من المفتاح أيُّ الدول مقفلة
 #: **طرقُ وسيطٍ واحدٍ بجمهورٍ ومفاتيحَ لكلٍّ منها** (Whop، أمرُ المالك ٢٠٢٦-١١-١٣) — كودُ صفِّ الطريقة ⇐ (جمهورُها، مفاتيحُها: **يكفي
 #: أحدُها مشتعلاً**). صفّان لوسيطٍ واحدٍ بعقدٍ واحدٍ وإشعارٍ واحد، **ولكلٍّ حدّاه في اللوحة**: الكبتنُ (الاشتراكُ والمستحقّات) والراكبُ
@@ -279,6 +287,8 @@ METHOD_SWITCHES: dict[str, tuple[str, tuple[FeatureKey, ...]]] = {
     # **Digistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — طريقةٌ واحدةٌ بمفتاحين: الموقعُ ونسخةُ Play؛ **تُعرض إن اشتعل أحدُهما، وتُفتح بمفتاح قناتها
     # وحدَه** (`require_channel`) — فنسخةُ Play لا تفتح الدفعَ ومفتاحُها مطفأ ولو اشتعل مفتاحُ الموقع
     "digistore24_card": ("driver", (FeatureKey.DIGISTORE24_CARD_ENABLED, FeatureKey.DIGISTORE24_CARD_PLAY_ENABLED)),
+    # **Freemius** (أمرُ المالك ٢٠٢٦-١١-٢٦) — مفتاحٌ واحدٌ لنسخة الموقع؛ **ونسخةُ Play لا تفتحه أبداً** (`CHANNEL_SWITCHES` بلا «play»)
+    "freemius_card": ("driver", (FeatureKey.FREEMIUS_CARD_ENABLED,)),
 }
 #: **وسيطُ كلِّ طريقةٍ ذاتِ مفاتيح** — فيُعرف من المفتاح أيُّ الدول مقفلة (كان «whop» لكلِّها حين لم يكن غيرُه)
 METHOD_INTEGRATION: dict[str, str] = {
@@ -287,11 +297,17 @@ METHOD_INTEGRATION: dict[str, str] = {
     "moonpay_driver": "moonpay",
     "moonpay_rider": "moonpay",
     "digistore24_card": "digistore24",
+    "freemius_card": "freemius",
 }
 #: **مفتاحُ كلِّ قناةٍ لطريقةٍ تُفرّق بين نسخة الموقع ونسخة Play** — القناةُ يعلنها التطبيق (`PaymentCheckoutIn.channel`) والخادمُ يقفل بها
 CHANNEL_SWITCHES: dict[str, dict[str, FeatureKey]] = {
     "digistore24": {"web": FeatureKey.DIGISTORE24_CARD_ENABLED, "play": FeatureKey.DIGISTORE24_CARD_PLAY_ENABLED},
+    # **Freemius للموقع وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٦: «website build only, never in the Play build») — «play» غائبةٌ فتُردّ
+    "freemius": {"web": FeatureKey.FREEMIUS_CARD_ENABLED},
 }
+#: **«بوابة الدفع بالبطاقة» لنسخة الموقع** (أمرُ المالك ٢٠٢٦-١١-٢٦) — واحدةٌ مشتعلةٌ على الأكثر في كلِّ دولة: إشعالُ أحدها يُطفئ
+#: الآخرَ في الخادم (`settings_service.set_flag`)، **فلا يرى الكبتنُ إلا المختارة** ولو أُشعل مفتاحٌ من غير بابها
+CARD_GATEWAY_FLAGS: tuple[FeatureKey, ...] = (FeatureKey.DIGISTORE24_CARD_ENABLED, FeatureKey.FREEMIUS_CARD_ENABLED)
 SWITCH_OWNER: dict[str, str] = {key.value: integration for integration, key in OWN_SWITCH.items()}
 SWITCH_OWNER.update(
     {key.value: METHOD_INTEGRATION[code] for code, (_aud, keys) in METHOD_SWITCHES.items() for key in keys}

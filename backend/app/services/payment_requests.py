@@ -215,7 +215,8 @@ async def require_channel(session: AsyncSession, country: CountryCode, provider_
         return
     key = table.get(channel)
     if key is None:
-        raise InvalidInput("قناةٌ غيرُ معروفة", field="channel")
+        # **قناةٌ لا مفتاحَ لها لهذا الوسيط** — Freemius لنسخة الموقع وحدَها (أمرُ المالك ٢٠٢٦-١١-٢٦): نسخةُ Play تُردّ ولو اشتعل مفتاحُ الموقع
+        raise FeatureDisabled("الدفعُ بالبطاقة المصرفية غيرُ متاحٍ في هذه النسخة الآن")
     if not payment_gateways.switch_allowed(key.value, CountryCode(country)) or not await settings_service.is_feature_enabled(
         session, country, key
     ):

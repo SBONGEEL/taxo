@@ -132,6 +132,15 @@ async def set_flag(
     }
     if reason:
         details["reason"] = reason
+    # **«بوابة الدفع بالبطاقة»: واحدةٌ على الأكثر** (أمرُ المالك ٢٠٢٦-١١-٢٦) — إشعالُ بوّابةٍ يُطفئ الأخرى في الدولة نفسِها، **بقيد تدقيقٍ
+    # لكلٍّ منهما** (هذا الباب نفسُه)، فلا يرى الكبتنُ بوّابتين ولو أُشعل مفتاحٌ من غير بابها
+    if enabled and key in {gate.value for gate in payment_gateways.CARD_GATEWAY_FLAGS}:
+        for other in payment_gateways.CARD_GATEWAY_FLAGS:
+            if other.value != key:
+                await set_flag(
+                    session, country_code=country_code, feature_key=other, enabled=False, actor=actor,
+                    reason=f"بوابة الدفع بالبطاقة: اختير {key}",
+                )
     await audit.record(
         session,
         actor=actor,
