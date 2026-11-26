@@ -102,6 +102,7 @@ async def test_choice_mode_follows_the_captain_switch_and_the_country_default(
     await _set_mode(client, admin_headers, serves_lower_choice_default=False)
     assert await _eligible(session_factory, comfort["driver_id"], "economy")
     second = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-4343", category="comfort")
+    await bring_online(client, second)
     assert not await _eligible(session_factory, second["driver_id"], "economy")
 
     # **والعودةُ إلى ب تشمل الجميع ولو أطفأ مفتاحَه**
