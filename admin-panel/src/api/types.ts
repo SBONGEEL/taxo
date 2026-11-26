@@ -2326,7 +2326,18 @@ export interface DispatchSetting {
   destination_daily_uses: number;
   /** والانحرافُ المقبولُ عن الطريق المباشر إلى الوجهة، بالمئة. */
   destination_detour_percent: number;
+  /** **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠): `off` كما كان · `choice` النمط أ «باختيار الكابتن» · `mandatory` النمط ب «إلزامي للجميع» */
+  serves_lower_mode: ServesLowerMode;
+  /** افتراضُ مفتاح الكابتن في النمط أ */
+  serves_lower_choice_default: boolean;
+  /** `same_first` كابتنُ الفئة المطلوبة أوّلاً عند التقارب · `nearest` الأقربُ أيّاً كانت فئتُه */
+  serves_lower_order: ServesLowerOrder;
+  /** ما يُعدّ «تقارباً» بالأمتار */
+  serves_lower_margin_meters: number;
 }
+
+export type ServesLowerMode = "off" | "choice" | "mandatory";
+export type ServesLowerOrder = "same_first" | "nearest";
 
 /** **درجةٌ في جدول الطور الآليّ** (§٧٥-ج) — «حتى هذا العدد ⇒ هذا الفاصل»، والأخيرةُ بلا حدّ. */
 export interface BroadcastStep {

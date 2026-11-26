@@ -44,7 +44,7 @@ import { WomenModeRowT2 } from "./WomenModeT2";
 import { BubbleSettingsT2 } from "@/components/t2/BubbleSettingsT2";
 import "@/taxo2";
 import "./t2.css"; import { LANGUAGE_NAME, language, setLanguage, tr } from "@/lib/i18n";
-import { updateMyLanguage } from "@/api/endpoints";
+import { getServesLower, setServesLower, updateMyLanguage, type ServesLower } from "@/api/endpoints";
 import { useShellAllows } from "@/lib/shell-features";
 import { Icon } from "@/taxo2";
 import { useFeature } from "@/lib/config";
@@ -88,6 +88,43 @@ function SilentRingRows() {
           <span className="t2-srow-title">{tr("جرّب النغمة")}</span>
         </span>
       </button>
+    </>
+  );
+}
+
+/** **«استقبل طلبات الاقتصادي أيضاً»** (SPEC §١٢٠/١) — **في النمط أ وحدَه** («باختيار الكابتن»)، مفتاحٌ لكلِّ فئةٍ أدنى تصلح لها مركبتُه.
+ *  وفي النمط ب (إلزامي) أو مطفأً لا يُرسم شيء: الاختيارُ ليس بيده. والنمطُ يُقرأ من الخلفية عند فتح الشاشة، فيسري تبديلُ اللوحة بلا إصدار. */
+function ServesLowerRows() {
+  const [state, setState] = useState<ServesLower | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    void getServesLower()
+      .then(setState)
+      .catch(() => setState(null));
+  }, []);
+  if (state === null || state.mode !== "choice" || state.choices.length === 0) return null;
+  return (
+    <>
+      {state.choices.map((choice) => (
+        <Toggle
+          key={choice.key}
+          icon="swap_horiz"
+          title={tr("استقبل طلبات {0} أيضاً", { 0: choice.name })}
+          hint={tr("بأجرة {0} كما سُعّرت للراكب، وتظهر الفئةُ والأجرة على بطاقة الطلب قبل القبول.", { 0: choice.name })}
+          on={choice.enabled}
+          disabled={saving !== null}
+          onToggle={() => {
+            setSaving(choice.key);
+            setError(null);
+            void setServesLower(choice.key, !choice.enabled)
+              .then(setState)
+              .catch(() => setError(tr("تعذّر حفظ الاختيار")))
+              .finally(() => setSaving(null));
+          }}
+        />
+      ))}
+      {error ? <ErrorNote message={error} /> : null}
     </>
   );
 }
@@ -243,6 +280,8 @@ export function SettingsT2Screen() {
             setAutoAcceptState(!autoAccept);
           }}
         />
+        {/* **«الأعلى يأخذ الأدنى» باختيار الكابتن** (§١٢٠/١) — يظهر في النمط أ وحدَه */}
+        <ServesLowerRows />
         {/* **«طلبات المطار»** (§٦٣-ج/٢) — مفتاحٌ على ملفّه حيث «المطار» مشتعلٌ في سوقه، و«قريباً» حيث لا */}
         {airport ? (
           <Toggle

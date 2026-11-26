@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Integer, UniqueConstraint, text
+from sqlalchemy import Boolean, CheckConstraint, Integer, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -50,6 +50,14 @@ class DispatchSetting(UUIDMixin, TimestampMixin, Base):
     destination_detour_percent: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("30")
     )
+    #: **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠، الترحيلة `0192`): `off` كما كان · `choice` النمط أ · `mandatory` النمط ب
+    serves_lower_mode: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'off'"))
+    #: افتراضُ مفتاح الكابتن في النمط أ — مشتعلٌ بنصّ القرار
+    serves_lower_choice_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    #: `same_first` كابتنُ الفئة المطلوبة أوّلاً عند التقارب · `nearest` الأقربُ أيّاً كانت فئتُه
+    serves_lower_order: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'same_first'"))
+    #: ما يُعدّ «تقارباً» في `same_first` — يُضاف إلى مسافة كابتن الفئة الأعلى عند الترتيب
+    serves_lower_margin_meters: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("500"))
 
     __table_args__ = (
         UniqueConstraint("country_code", name="dispatch_settings_country"),
@@ -74,6 +82,15 @@ class DispatchSetting(UUIDMixin, TimestampMixin, Base):
         CheckConstraint(
             "destination_daily_uses BETWEEN 0 AND 10",
             name="dispatch_destination_uses_range",
+        ),
+        CheckConstraint(
+            "serves_lower_mode IN ('off', 'choice', 'mandatory')", name="dispatch_serves_lower_mode_valid"
+        ),
+        CheckConstraint(
+            "serves_lower_order IN ('same_first', 'nearest')", name="dispatch_serves_lower_order_valid"
+        ),
+        CheckConstraint(
+            "serves_lower_margin_meters BETWEEN 0 AND 5000", name="dispatch_serves_lower_margin_range"
         ),
         CheckConstraint(
             "destination_detour_percent BETWEEN 5 AND 100",

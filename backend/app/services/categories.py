@@ -10,9 +10,10 @@
 
 from __future__ import annotations
 
+import uuid
 from decimal import Decimal
 
-from sqlalchemy import and_, exists, false, or_, select
+from sqlalchemy import and_, exists, false, func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -110,9 +111,20 @@ def _vehicle_meets(category: RideCategory) -> ColumnElement[bool]:
 _BUILTIN_RANK: dict[str, int] = {VehicleCategory.ECONOMY.value: 0, VehicleCategory.COMFORT.value: 1}
 
 
+async def _serves_lower_rules(session: AsyncSession, country: CountryCode):
+    """**نمطُ «الأعلى يأخذ الأدنى» للدولة** (SPEC §١٢٠) — من `dispatch_settings`، ويُقرأ في كلِّ طلبٍ فيسري التبديلُ فوراً."""
+    from app.services import dispatch_settings
+
+    return await dispatch_settings.rules_for(session, country)
+
+
 async def takers(session: AsyncSession, country: CountryCode | None, key: str) -> list[str]:
-    """**فئاتُ من يأخذ طلبَ `key`** (§٩١-ب/٩): الفئةُ نفسُها، **وكلُّ فئةٍ أعلى ترتيباً أُشعل فيها «الأعلى يأخذ الأدنى»**.
-    والإعدادُ مطفأٌ في كلِّ صفٍّ افتراضاً — فالجوابُ `[key]` وحدَه، والتوزيعُ كما كان حرفاً."""
+    """**فئاتُ من يأخذ طلبَ `key`** (§٩١-ب/٩، §١٢٠): الفئةُ نفسُها، ثمّ الأعلى ترتيباً بحسب نمط الدولة:
+
+    - **`off`** (كما كان): الفئةُ الأعلى التي أُشعل فيها علمُها `serves_lower` وحدَها — والعلمُ مطفأٌ افتراضاً فالجوابُ `[key]`.
+    - **`mandatory`** (النمط ب) **و`choice`** (النمط أ): **كلُّ فئةٍ مفعّلةٍ أعلى ترتيباً**؛ واختيارُ الكابتن في النمط أ شرطٌ على صفِّه
+      في `driver_clause`، لا هنا — فالخريطةُ و«غير متاح قريباً» يعرفان من يمكن أن يأخذ.
+    """
     if country is None:
         return [key]
     rows = await for_country(session, country)
@@ -121,7 +133,60 @@ async def takers(session: AsyncSession, country: CountryCode | None, key: str) -
     rank = own.sort_order if own is not None else _BUILTIN_RANK.get(key)
     if rank is None:
         return [key]
-    return [key] + [row.key for row in rows if row.key != key and row.serves_lower and row.sort_order > rank]
+    mode = (await _serves_lower_rules(session, country)).serves_lower_mode
+    if mode == "off":
+        return [key] + [row.key for row in rows if row.key != key and row.serves_lower and row.sort_order > rank]
+    return [key] + [row.key for row in rows if row.key != key and row.is_active and row.sort_order > rank]
+
+
+def _prefers(key: str, default: bool) -> ColumnElement[bool]:
+    """**مفتاحُ الكابتن في النمط أ** — اختيارُه الصريحُ لفئة `key`، والغائبُ يأخذ افتراضَ الدولة."""
+    return func.coalesce(Driver.serves_lower_prefs[key].as_boolean(), true() if default else false())
+
+
+async def higher_penalties(
+    session: AsyncSession, country: CountryCode | None, key: str, driver_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """**«كابتنُ الفئة المطلوبة أوّلاً عند التقارب»** (§١٢٠/٣): أمتارٌ تُضاف إلى مسافة كلِّ مرشَّحٍ ليس من فئة الطلب عند الترتيب.
+
+    فكابتنُ الفئة الأعلى يُعرض عليه أوّلاً **حين يكون أقربَ بأكثرَ من الهامش** (الأقربُ المناسب)، وإلّا بعد كابتن الفئة نفسِها —
+    **ويبقى في القائمة** فيُعرض عليه إن لم يقبل ذاك في وقته. و`nearest` أو الهامشُ صفراً أو النمطُ مطفأً ⇐ لا شيءَ يُضاف.
+    """
+    if country is None or len(driver_ids) < 2:
+        return {}
+    rules = await _serves_lower_rules(session, country)
+    if (
+        rules.serves_lower_mode == "off"
+        or rules.serves_lower_order != "same_first"
+        or rules.serves_lower_margin_meters <= 0
+    ):
+        return {}
+    own = await _own_clause(session, country, key)
+    same = set(await session.scalars(select(Driver.id).where(Driver.id.in_(driver_ids), own)))
+    return {driver_id: rules.serves_lower_margin_meters for driver_id in driver_ids if driver_id not in same}
+
+
+async def lower_choices(session: AsyncSession, driver: Driver, country: CountryCode) -> tuple[str, bool, list[tuple[str, str, bool]]]:
+    """**ما يعرضه مفتاحُ الكابتن** (§١٢٠/١): النمط، وافتراضُه، و`(المفتاح، الاسم، مشتعل؟)` لكلِّ فئةٍ مفعّلةٍ أدنى تصلح لها مركبتُه
+    — أي كلُّ فئةٍ يأخذ هو طلباتِها بصفته من فئةٍ أعلى (`takers`)، لا فئتُه نفسُها."""
+    rules = await _serves_lower_rules(session, country)
+    by_key = {row.key: row for row in await for_country(session, country)}
+    choices: list[tuple[str, str, bool]] = []
+    # **الفئاتُ التي تُطلب في السوق** (`requestable_keys`) — والمدمجةُ بلا صفٍّ باسمها الافتراضيّ (`public_face`)
+    for key in await requestable_keys(session, country):
+        row = public_face(key, by_key.get(key))
+        takers_of = await takers(session, country, row.key)
+        if len(takers_of) < 2:
+            continue
+        own = await _own_clause(session, country, row.key)
+        if await session.scalar(select(exists().where(Driver.id == driver.id, own))):
+            continue  # فئتُه نفسُها — طلباتُها تصله أصلاً
+        higher = [await _own_clause(session, country, taker) for taker in takers_of[1:]]
+        if not await session.scalar(select(exists().where(Driver.id == driver.id, or_(*higher)))):
+            continue
+        enabled = (driver.serves_lower_prefs or {}).get(row.key, rules.serves_lower_choice_default)
+        choices.append((row.key, row.name, bool(enabled)))
+    return rules.serves_lower_mode, rules.serves_lower_choice_default, choices
 
 
 async def presence_keys(session: AsyncSession, country: CountryCode | None, key: str) -> frozenset[str] | None:
@@ -138,7 +203,15 @@ async def driver_clause(session: AsyncSession, country: CountryCode | None, key:
     **وكبتنُ فئةٍ أعلى أُشعل فيها «الأعلى يأخذ الأدنى» يأخذها أيضاً** (`takers`)."""
     keys = await takers(session, country, key)
     clauses = [await _own_clause(session, country, taker) for taker in keys]
-    return clauses[0] if len(clauses) == 1 else or_(*clauses)
+    if len(clauses) == 1:
+        return clauses[0]
+    # **النمط أ** (§١٢٠/١): كابتنُ الفئة الأعلى يأخذها **ما لم يُطفئ مفتاحَها** — وافتراضُ المفتاح من الدولة
+    if country is not None:
+        rules = await _serves_lower_rules(session, country)
+        if rules.serves_lower_mode == "choice":
+            allowed = _prefers(key, rules.serves_lower_choice_default)
+            clauses = [clauses[0]] + [and_(clause, allowed) for clause in clauses[1:]]
+    return or_(*clauses)
 
 
 async def _own_clause(session: AsyncSession, country: CountryCode | None, key: str) -> ColumnElement[bool]:

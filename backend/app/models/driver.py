@@ -69,6 +69,10 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # **إشاراتُ الجهاز** (SPEC §١٠٣ B/17 و25): `{"mock_location": bool, "rooted": bool}` بالمقيس وحدَه — **بلاغٌ للمشرف لا حجب**.
     # `null` لم يُبلَّغ قطّ، **ومفتاحٌ غائبٌ «لم يُقس» لا «لا»**
     device_signals: Mapped[dict[str, bool] | None] = mapped_column(JSONB, nullable=True)
+    #: **اختياراتُ «الأعلى يأخذ الأدنى» في النمط أ** (SPEC §١٢٠، الترحيلة `0192`): `{"economy": false}` — والغائبُ يأخذ افتراضَ الدولة
+    serves_lower_prefs: Mapped[dict[str, bool]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     device_signals_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # `use_alter`: بين الجدولين مرجع متبادل (rides.driver_id هنا وهناك)،
     # فيُنشأ هذا القيد بعد الجدولين لا معهما

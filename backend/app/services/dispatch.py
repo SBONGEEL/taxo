@@ -622,11 +622,18 @@ async def _ranked_candidates(
             if len(ranked) > 1
             else {}
         )
-        if discounts or boosts:
+        # **«كابتنُ الفئة المطلوبة أوّلاً عند التقارب»** (SPEC §١٢٠/٣) — أمتارٌ تُضاف لمن ليس من فئة الطلب، وفارغةٌ مطفأة
+        penalties = await categories.higher_penalties(
+            session, ride.country_code, ride.vehicle_category, [p.driver_id for p in ranked]
+        )
+        if discounts or boosts or penalties:
             ranked.sort(
                 key=lambda p: (
                     p.driver_id in silent,
-                    p.distance_km * 1000 - discounts.get(levels[p.driver_id], 0) - boosts.get(p.driver_id, 0),
+                    p.distance_km * 1000
+                    - discounts.get(levels[p.driver_id], 0)
+                    - boosts.get(p.driver_id, 0)
+                    + penalties.get(p.driver_id, 0),
                     # **والمسافةُ الحقيقيةُ فاصلٌ ثانٍ**: متساويان في المؤثِّرة
                     # يُرتَّبان بالأقرب فعلاً، فلا يقرّر ترتيبُ ريدِس بينهما
                     p.distance_km,

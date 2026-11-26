@@ -73,6 +73,8 @@ import type { PaymentOrderKey,
   AdvanceSetting,
   CountryCode,
   DispatchMode,
+  ServesLowerMode,
+  ServesLowerOrder,
   DispatchSetting,
   NegotiationSetting,
   RideCategory,
@@ -4036,6 +4038,11 @@ function DispatchForm({
   const [batch, setBatch] = useState(String(row?.broadcast_batch_size ?? 4));
   const [destUses, setDestUses] = useState(String(row?.destination_daily_uses ?? 2));
   const [detour, setDetour] = useState(String(row?.destination_detour_percent ?? 30));
+  // **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠) — والغائبُ مطفأٌ كما توزّع الخلفيةُ سوقاً بلا صفّ
+  const [lowerMode, setLowerMode] = useState<ServesLowerMode>(row?.serves_lower_mode ?? "off");
+  const [lowerDefault, setLowerDefault] = useState(row?.serves_lower_choice_default ?? true);
+  const [lowerOrder, setLowerOrder] = useState<ServesLowerOrder>(row?.serves_lower_order ?? "same_first");
+  const [lowerMargin, setLowerMargin] = useState(String(row?.serves_lower_margin_meters ?? 500));
   const [busy, setBusy] = useState(false);
 
   const digits = (value: string) => value.replace(/[^0-9]/g, "");
@@ -4113,6 +4120,55 @@ function DispatchForm({
           onChange={(event) => setDetour(digits(event.target.value))}
         />
       </div>
+      <div className="mt-10 grid grid-cols-2 gap-10">
+        <Select
+          name="serves_lower_mode"
+          label="«الأعلى يأخذ الأدنى»"
+          value={lowerMode}
+          disabled={disabled}
+          onChange={(event) => setLowerMode(event.target.value as ServesLowerMode)}
+        >
+          <option value="off">مطفأ — كلُّ كابتنٍ يأخذ فئته وحدها</option>
+          <option value="mandatory">ب — إلزامي للجميع</option>
+          <option value="choice">أ — باختيار الكابتن</option>
+        </Select>
+        <Select
+          name="serves_lower_choice_default"
+          label="مفتاح الكابتن في النمط أ — افتراضاً"
+          value={lowerDefault ? "on" : "off"}
+          disabled={disabled || lowerMode !== "choice"}
+          onChange={(event) => setLowerDefault(event.target.value === "on")}
+        >
+          <option value="on">مشتعل — يستقبل حتى يطفئه</option>
+          <option value="off">مطفأ — لا يستقبل حتى يشعله</option>
+        </Select>
+        <Select
+          name="serves_lower_order"
+          label="ترتيب العرض"
+          value={lowerOrder}
+          disabled={disabled || lowerMode === "off"}
+          onChange={(event) => setLowerOrder(event.target.value as ServesLowerOrder)}
+        >
+          <option value="same_first">كابتن الفئة المطلوبة أوّلاً عند التقارب</option>
+          <option value="nearest">الأقرب أيّاً كانت فئته</option>
+        </Select>
+        <Field
+          name="serves_lower_margin_meters"
+          label="ما يُعدّ تقارباً (متر)"
+          dir="ltr"
+          inputMode="numeric"
+          value={lowerMargin}
+          disabled={disabled || lowerMode === "off" || lowerOrder !== "same_first"}
+          onChange={(event) => setLowerMargin(digits(event.target.value))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        «الأعلى يأخذ الأدنى»: كابتنُ الفئة الأعلى (مريحة مثلاً) يستقبل طلباتِ الفئات الأدنى (اقتصادي) <b>بأجرة الفئة المطلوبة</b> كما
+        سُعّرت للراكب، وبطاقةُ الطلب تُظهر الفئةَ والأجرةَ قبل القبول. <b>ب — إلزامي</b>: لكلِّ كابتنٍ أعلى، ومفتاحُه مخفيّ.{" "}
+        <b>أ — باختيار الكابتن</b>: يظهر له مفتاحُ «استقبل طلبات الاقتصادي أيضاً» لكلِّ فئةٍ أدنى تصلح لها مركبتُه، بالافتراض
+        المختار، ويطفئه متى شاء. والترتيبُ «الفئة المطلوبة أوّلاً»: لا يُقدَّم الأعلى إلا إن كان أقربَ بأكثرَ من هذه الأمتار، وإلا عُرض عليه
+        بعد كابتن الفئة نفسِها إن لم يقبل في وقته. <b>يسري التبديلُ على الطلب التالي فوراً بلا إصدار تطبيق، ويُسجَّل في سجلّ التدقيق.</b>
+      </p>
       <p className="mt-6 text-11 leading-note text-muted">
         «وجهتي»: يضع الكابتنُ وجهةً (لأربع ساعات) فلا تصله إلا طلباتٌ تقرّبه منها، ولا يزيد طريقُه إليها عبر الراكب على الطريق المباشر
         بأكثر من هذه النسبة (وكيلومترٌ واحدٌ حدّاً أدنى). صفرُ مرّاتٍ يطفئها في هذه الدولة، والإلغاءُ لا يردّ مرّة. من 0 إلى 10، والانحرافُ
@@ -4141,6 +4197,10 @@ function DispatchForm({
             broadcast_batch_size: Number(batch),
             destination_daily_uses: Number(destUses),
             destination_detour_percent: Number(detour),
+            serves_lower_mode: lowerMode,
+            serves_lower_choice_default: lowerDefault,
+            serves_lower_order: lowerOrder,
+            serves_lower_margin_meters: Number(lowerMargin),
           })
             .then(() =>
               onSaved(

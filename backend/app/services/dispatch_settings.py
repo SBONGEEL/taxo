@@ -43,6 +43,11 @@ class DispatchRules:
     #: **«وجهتي»** (البند ١٥) — مرّاتُ اليوم (`0` مطفأة) والانحرافُ المقبولُ بالمئة
     destination_daily_uses: int = 2
     destination_detour_percent: int = 30
+    #: **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠) — والغائبُ مطفأٌ كما كان
+    serves_lower_mode: str = "off"
+    serves_lower_choice_default: bool = True
+    serves_lower_order: str = "same_first"
+    serves_lower_margin_meters: int = 500
 
 
 #: **الافتراضيُّ يُقرأ من هنا لا من القاعدة**: سوقٌ بلا صفٍّ يوزّع كسوقٍ بصفّ.
@@ -72,4 +77,8 @@ async def rules_for(session: AsyncSession, country: CountryCode) -> DispatchRule
         broadcast_batch_size=row.broadcast_batch_size,
         destination_daily_uses=row.destination_daily_uses,
         destination_detour_percent=row.destination_detour_percent,
+        serves_lower_mode=row.serves_lower_mode,
+        serves_lower_choice_default=row.serves_lower_choice_default,
+        serves_lower_order=row.serves_lower_order,
+        serves_lower_margin_meters=row.serves_lower_margin_meters,
     )

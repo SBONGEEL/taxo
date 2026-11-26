@@ -311,6 +311,21 @@ class PromoDiscountType(StrEnum):
     FIXED = "fixed"
 
 
+class ServesLowerMode(StrEnum):
+    """**«الأعلى يأخذ الأدنى» لكلِّ دولة** (SPEC §١٢٠، قرارُ المالك ٢٠٢٦-١١-٢٦) — `dispatch_settings.serves_lower_mode`."""
+
+    OFF = "off"
+    CHOICE = "choice"  # النمط أ «باختيار الكابتن»
+    MANDATORY = "mandatory"  # النمط ب «إلزامي للجميع»
+
+
+class ServesLowerOrder(StrEnum):
+    """**ترتيبُ العرض حين يأخذ الأعلى الأدنى** (§١٢٠/٣) — `same_first` كابتنُ الفئة المطلوبة أوّلاً عند التقارب، `nearest` الأقرب."""
+
+    SAME_FIRST = "same_first"
+    NEAREST = "nearest"
+
+
 class DispatchMode(StrEnum):
     """كيف يُعرض الطلبُ على الكباتن (SPEC §5.3، قرارُ المالك 2026-08-30).
 

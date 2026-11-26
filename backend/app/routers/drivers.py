@@ -67,6 +67,7 @@ from app.schemas.debt import (
 )
 from app.schemas.wallet import EarningsOut
 from app.core.currency import currency_for_country
+from app.services import categories as categories_service
 from app.services import presence_token
 from app.services import (
     advances as advances_service,
@@ -86,6 +87,54 @@ from app.services import (
 )
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
+
+
+class ServesLowerChoice(BaseModel):
+    key: str
+    name: str
+    enabled: bool
+
+
+class ServesLowerOut(BaseModel):
+    """**«الأعلى يأخذ الأدنى» كما يراه الكابتن** (SPEC §١٢٠/١): النمطُ يحكم ظهورَ المفتاح — `choice` يُظهره، وغيرُه يُخفيه."""
+
+    mode: str
+    choices: list[ServesLowerChoice]
+
+
+class ServesLowerUpdate(BaseModel):
+    key: str
+    enabled: bool
+
+
+async def _serves_lower_out(session, driver, user) -> ServesLowerOut:
+    mode, _default, choices = await categories_service.lower_choices(session, driver, user.country_code)
+    return ServesLowerOut(
+        mode=mode, choices=[ServesLowerChoice(key=key, name=name, enabled=on) for key, name, on in choices]
+    )
+
+
+@router.get("/me/serves-lower", response_model=ServesLowerOut)
+async def get_my_serves_lower(driver: CurrentDriver, user: CurrentUser, session: DbSession) -> ServesLowerOut:
+    """**مفاتيحُ «استقبل طلبات الاقتصادي أيضاً»** — لكلِّ فئةٍ أدنى تصلح لها مركبتُه، بحالها الآن."""
+    return await _serves_lower_out(session, driver, user)
+
+
+@router.put("/me/serves-lower", response_model=ServesLowerOut)
+async def set_my_serves_lower(
+    payload: ServesLowerUpdate, driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> ServesLowerOut:
+    """**يطفئه الكابتنُ متى شاء ويُعيده** (§١٢٠/١) — **في النمط أ وحدَه**: في ب الاستقبالُ إلزاميّ، ومطفأً لا معنى له.
+    ويسري على الطلب التالي (`categories.driver_clause` يقرأ الصفَّ في كلِّ توزيع)."""
+    mode, _default, choices = await categories_service.lower_choices(session, driver, user.country_code)
+    if mode != "choice":
+        raise InvalidInput("استقبالُ طلبات الفئات الأدنى لا يُختار الآن في بلدك", field="key")
+    if payload.key not in {key for key, _name, _on in choices}:
+        raise InvalidInput("فئةٌ لا تصلح لها مركبتُك", field="key")
+    driver.serves_lower_prefs = {**(driver.serves_lower_prefs or {}), payload.key: payload.enabled}
+    await session.commit()
+    await session.refresh(driver)
+    return await _serves_lower_out(session, driver, user)
 
 
 @router.get("/me", response_model=DriverProfileOut)

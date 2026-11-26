@@ -1215,3 +1215,12 @@ export const acknowledgeLaunchPartner = () => api.post<{ acknowledged_at: string
 
 export const getMyOfferDiscounts = (month?: string) =>
   api.get<MyOfferDiscounts>(month ? `/drivers/me/offer-discounts?month=${encodeURIComponent(month)}` : "/drivers/me/offer-discounts");
+
+/** **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠) — النمطُ يحكم ظهورَ المفتاح: `choice` يُظهره، وغيرُه يُخفيه. */
+export interface ServesLower {
+  mode: "off" | "choice" | "mandatory";
+  choices: { key: string; name: string; enabled: boolean }[];
+}
+export const getServesLower = () => api.get<ServesLower>("/drivers/me/serves-lower");
+export const setServesLower = (key: string, enabled: boolean) =>
+  api.put<ServesLower>("/drivers/me/serves-lower", { key, enabled });

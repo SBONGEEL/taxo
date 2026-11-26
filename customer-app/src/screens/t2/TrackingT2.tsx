@@ -490,6 +490,8 @@ export function TrackingSheetT2({
               {vehicle ? (
                 <div className="t2-trk-dmeta">
                   {vehicle.make} {vehicle.model} · <span dir="ltr">{vehicle.plate_number}</span>
+                  {/* **فئةُ مركبة الكابتن الفعليّة حين تعلو فئةَ الطلب** («الأعلى يأخذ الأدنى»، SPEC §١٢٠/٢) — والأجرةُ أجرةُ ما طُلب */}
+                  {vehicle.category !== ride.vehicle_category ? ` · ${VEHICLE_LABEL[vehicle.category]}` : null}
                 </div>
               ) : null}
             </div>

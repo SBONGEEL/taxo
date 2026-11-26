@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 from app.core.i18n import translate
 from app.models.enums import (
+    ServesLowerMode,
+    ServesLowerOrder,
     DispatchMode,
     CommissionAppliesTo,
     CountryCode,
@@ -448,6 +450,10 @@ class DispatchSettingOut(BaseModel):
     broadcast_batch_size: int
     destination_daily_uses: int
     destination_detour_percent: int
+    serves_lower_mode: ServesLowerMode = ServesLowerMode.OFF
+    serves_lower_choice_default: bool = True
+    serves_lower_order: ServesLowerOrder = ServesLowerOrder.SAME_FIRST
+    serves_lower_margin_meters: int = 500
 
 
 class NegotiationSettingOut(BaseModel):
@@ -492,3 +498,8 @@ class DispatchSettingUpdate(BaseModel):
     #: **«وجهتي»** (البند ١٥) — `0` يطفئها في السوق
     destination_daily_uses: int | None = Field(default=None, ge=0, le=10)
     destination_detour_percent: int | None = Field(default=None, ge=5, le=100)
+    #: **«الأعلى يأخذ الأدنى»** (SPEC §١٢٠) — النمطُ وافتراضُ مفتاح الكابتن وقاعدةُ الترتيب، **ويسري على الطلب التالي فوراً**
+    serves_lower_mode: ServesLowerMode | None = None
+    serves_lower_choice_default: bool | None = None
+    serves_lower_order: ServesLowerOrder | None = None
+    serves_lower_margin_meters: int | None = Field(default=None, ge=0, le=5000)
