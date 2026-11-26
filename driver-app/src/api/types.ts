@@ -1929,7 +1929,7 @@ export interface MyCommitment {
   points_per_day: number | null;
   points_per_credit_unit: number | null;
   credit_unit_value: string | null;
-  currency: string;
+  currency: Currency;
   points_balance: number;
   credit_balance: string;
   credit_value_of_points: string | null;

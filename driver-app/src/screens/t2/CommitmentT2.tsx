@@ -10,6 +10,7 @@ import { countOf, HOURS, MINUTES, POINTS } from "@/lib/arabic-count";
 import { convertCommitmentPoints, getMyCommitment, type MyCommitment } from "@/api/endpoints";
 import { tr } from "@/lib/i18n";
 import { digits, formatAmount } from "@/lib/utils";
+import { CURRENCY_LABEL } from "@/lib/rideFormat";
 
 function hm(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -108,7 +109,7 @@ export function CommitmentCardT2({ data, onChanged }: { data: MyCommitment | nul
       ) : null}
       <div className="t2-wal-line">
         <span>{tr("رصيد الاشتراك")}</span>
-        <span>{formatAmount(data.credit_balance, data.currency)}</span>
+        <span>{formatAmount(data.credit_balance, data.currency)} {CURRENCY_LABEL[data.currency]}</span>
       </div>
       {convertible > 0 && data.credit_value_of_points ? (
         <button type="button" className="t2-hm-row" disabled={busy} onClick={() => void convert()}>
