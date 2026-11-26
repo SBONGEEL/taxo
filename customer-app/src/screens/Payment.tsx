@@ -518,7 +518,7 @@ export function PaymentScreen() {
       ) : null}
 
       {/* صفحة دفع كليك داخل التطبيق (SPEC القسم 6.2 — المرحلة 9) */}
-      {state?.cliq_charge ? <CliqPanel charge={state.cliq_charge} onSubmitted={setState} /> : null}
+      {state?.cliq_charge ? <CliqPanel charge={state.cliq_charge} /> : null}
 
       {state && state.payments.length > 0 ? <PaymentsList payments={state.payments} /> : null}
 

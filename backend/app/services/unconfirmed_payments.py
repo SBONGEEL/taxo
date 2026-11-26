@@ -774,6 +774,9 @@ async def rider_items(
 
 
 def _rider_state(payment: Payment) -> str:
+    """**وحالُ الراكب كما كانت** — وبعد SPEC §١١٧ لا زرَّ إقرارٍ في الواجهة الجديدة، **فـ`awaiting_you` معناها «ادفع للكابتن»**
+    ويرفعها تأكيدُ الكابتن. **وحجبُ الطلب بعد مهلته قاعدةُ مالٍ قائمةٌ لا تُمسّ** (شرطُ المالك: لا تغييرَ لقواعد المال)؛ والإقرارُ
+    من نسخةٍ أقدم يرفعه كما كان."""
     if payment.status == PaymentStatus.DISPUTED:
         return "disputed"
     if payment.method == PaymentMethod.CASH:
@@ -882,7 +885,8 @@ def _captain_start(payment: Payment, ride: Ride) -> datetime | None:
     إقراره** ولا إنذار. **وحجبُ التوزيع يبقى على نهاية الرحلة** (`unconfirmed_rules.captain_clock`) — هذه مواعيدُ لا حدود.
     """
     if payment.method == PaymentMethod.CLIQ:
-        return payment.cliq_reference_at
+        # **وبلا مرجعٍ فنهايةُ الرحلة** (§١١٧/٤): الواجهةُ الجديدةُ لا تطلب مرجعاً، فساعةٌ تنتظره لا تبدأ أبداً ولا يُذكَّر أحد
+        return payment.cliq_reference_at or ride.completed_at
     return payment.declared_at or ride.completed_at
 
 
@@ -896,7 +900,8 @@ def warning_lead_minutes(limits: Thresholds) -> int:
 
 
 def _awaits_captain(payment: Payment) -> bool:
-    return payment.method == PaymentMethod.CASH or payment.cliq_reference_at is not None
+    """**التأكيدُ بيد الكابتن من نهاية الرحلة** (§١١٧/٤) — كاشاً أو كليك، بمرجعٍ أو بغيره."""
+    return payment.method in (PaymentMethod.CASH, PaymentMethod.CLIQ)
 
 
 def _awaits_rider(payment: Payment, ride: Ride) -> bool:
@@ -951,8 +956,9 @@ async def _captain_text(
             f"{after} يُعدّ المبلغُ مستلَماً كما أقرّ الراكب",
             "إن لم تستلمه فاضغط «لم يدفع» الآن",
         )
-    if payment.method == PaymentMethod.CLIQ:
-        expires = payment.cliq_confirmation_expires_at or sent_at
+    # **مهلةُ النزاع الآليّ لكليك تبدأ بالمرجع وحدَه** (`payments.submit_cliq_reference`) — وبلا مرجعٍ لا نزاعَ آليّاً يُوعد به
+    if payment.method == PaymentMethod.CLIQ and payment.cliq_confirmation_expires_at is not None:
+        expires = payment.cliq_confirmation_expires_at
         after = _after(round((expires - sent_at).total_seconds() / 60))
         return (
             f"{after} تصير الحوالةُ نزاعاً لدى فريق TAXO",
@@ -971,18 +977,19 @@ def _rider_text(payment: Payment, ride: Ride, slot: int, limits: Thresholds) -> 
     money = _money(payment.amount, payment.currency)
     cash = payment.method == PaymentMethod.CASH
     if slot <= 1 or slot >= len(limits.reminder_minutes):
+        # **«ادفع» لا «أكّد»** (SPEC §١١٧/١): الكابتنُ وحدَه يؤكّد، فلا يُدعى الراكبُ إلى زرٍّ نُزع من واجهته
         if cash:
-            return f"سلّمتَ الكابتن {money}؟", "أكّد ذلك كي تُغلق الرحلة"
-        return f"حوّلتَ للكابتن {money}؟", "أدخل مرجع الحوالة كي تُغلق الرحلة"
+            return f"ادفع للكابتن {money} نقداً", "يؤكّد الكابتنُ الاستلام فتُغلق الرحلة"
+        return f"حوّل للكابتن {money} عبر كليك", "يؤكّد الكابتنُ الاستلام فتُغلق الرحلة"
     if slot == 2:
         return "دفعُ رحلتك غيرُ مؤكَّد", "لا يمكن طلبُ رحلةٍ جديدةٍ حتى يُحسم"
     minutes = _rider_minutes(payment, limits)
     after = _after(ESCALATION_HOURS * 60 - minutes[3])
     return (
         f"{after} تُحال رحلتُك إلى فريق TAXO",
-        "أكّد تسليم المبلغ أو غيّر طريقة الدفع"
+        "ادفع للكابتن نقداً أو غيّر طريقة الدفع"
         if cash
-        else "أدخل مرجع الحوالة أو غيّر طريقة الدفع",
+        else "حوّل للكابتن عبر كليك أو غيّر طريقة الدفع",
     )
 
 
@@ -1614,11 +1621,8 @@ async def admin_dispute(
     # **«يُسأل الطرفان بنصّهما»** (§٥) — **ونصُّ كليك حوالةٌ لا تسليم** (كما في `_rider_text`): من حوّل من بنكه يُسأل «حوّلتَ؟»
     # ومرجعُه إن لم يُدخله، والكبتنُ «وصلتك؟» لا «استلمتَ؟»
     if payment.method == PaymentMethod.CLIQ:
-        rider_body = (
-            f"هل حوّلتَ {money}؟ افتح التطبيق لتردّ"
-            if payment.cliq_transfer_reference is not None
-            else f"هل حوّلتَ {money}؟ أدخل مرجع الحوالة أو افتح التطبيق لتردّ"
-        )
+        # **ولا «أدخل مرجع الحوالة»** (SPEC §١١٧/١): حقلُه نُزع من الواجهة الجديدة
+        rider_body = f"هل حوّلتَ {money}؟ افتح التطبيق لتردّ"
         captain_body = f"هل وصلتك حوالةُ {money}؟ افتح التطبيق لتردّ"
     else:
         rider_body = f"هل سلّمتَ {money}؟ افتح التطبيق لتردّ"

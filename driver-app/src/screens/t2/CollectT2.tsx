@@ -12,6 +12,10 @@
  * (التصحيحات §١) · **«تُضاف 3.750 د.أ كاملة إلى أرباحك»**: مبلغٌ يُطرح منه شيءٌ أو وعدٌ مطلق — والسطرُ القائمُ الذي يقول أين
  * المالُ في موضعه · **«لم أستلم المبلغ — افتح نزاعاً»**: النزاعُ على كليك وحدها (`Dispute.tsx`)، **ولا نزاعَ على كاش** · اسمُ الراكب.
  *
+ * **«تم الاستلام» و«لم أستلم المبلغ»** (SPEC §١١٧/٣، قرارُ المالك ٢٠٢٦-١١-٢٦): الكابتنُ وحدَه يؤكّد، **بالطلب نفسِه**
+ * (`POST /payments/{id}/confirm`) — فالرحلةُ تُغلق وتُسجَّل كما كانت. **و«لم أستلم المبلغ» بلاغٌ للدعم** (`POST /support/tickets`
+ * بنوع `support` ومعرّفِ الرحلة) **لا يغيّر مالاً بذاته**: لا نزاعَ يُفتح ولا دفعةَ تُلغى، والفريقُ يقرأ ويتواصل.
+ *
  * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١): نقدُ الراكب الفعليّ دفعةُ كاشٍ تفتحها الخلفيةُ عند الإنهاء — **فيمرّ بالتأكيد القائم كما هو**؛
  * **ودفعُ صاحب الطلب لا يُقبض هنا**، فيُقال «لا تستلم شيئاً» ما دامت دفعتُه لم تصل.
  *
@@ -24,7 +28,7 @@
 import { useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { confirmPayment } from "@/api/endpoints";
+import { confirmPayment, openTicket } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { refreshAfterConfirm } from "@/lib/attention";
@@ -51,6 +55,10 @@ export function CollectT2Screen({
   const rate = useRateRider(ride, onDone);
   // **دفعةٌ أُكّدت لا تُؤكَّد ثانيةً** إن سقط التقييمُ بعدها — فالضغطةُ التاليةُ ترسل التقييمَ وحدَه
   const [confirmedId, setConfirmedId] = useState<string | null>(null);
+  // **بلاغُ «لم أستلم المبلغ»** — مغلقٌ ثمّ مفتوحٌ بملاحظةٍ اختياريّة ثمّ مُرسَل
+  const [report, setReport] = useState<"closed" | "open" | "sent">("closed");
+  const [reportNote, setReportNote] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   if (!state) {
     return (
@@ -142,7 +150,26 @@ export function CollectT2Screen({
             : tr("لم يختر الراكب طريقة الدفع بعد — ستظهر الدفعة هنا وفي سجل رحلاتك.")) +
     (commission > 0 ? tr(" والعمولة تُخصم من رصيد محفظتك، لا من هذا المبلغ.") : "");
 
-  const working = busy || rate.busy;
+  async function sendReport() {
+    if (!pending) return;
+    setReporting(true);
+    setError(null);
+    try {
+      const lines = [
+        tr("لم أستلم المبلغ"),
+        tr("المبلغ: {0} {1} · {2}", { 0: formatAmount(pending.amount, pending.currency), 1: currencyLabel, 2: METHOD_LABEL[pending.method] }),
+        reportNote.trim(),
+      ].filter(Boolean);
+      await openTicket({ app: "driver", kind: "support", body: lines.join(" · "), ride_id: ride.id }, null);
+      setReport("sent");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : tr("تعذّر إرسال البلاغ"));
+    } finally {
+      setReporting(false);
+    }
+  }
+
+  const working = busy || rate.busy || reporting;
   const message = error ?? rate.error;
 
   return (
@@ -248,11 +275,37 @@ export function CollectT2Screen({
         </p>
       ) : null}
 
+      {/* **«لم أستلم المبلغ»** — بلاغٌ للدعم لا يغيّر مالاً (§١١٧/٣)، والتأكيدُ يبقى متاحاً إن وصل المالُ بعده */}
+      {pending && pending.id !== confirmedId ? (
+        report === "sent" ? (
+          <p className="t2-co-note">
+            <Icon name="support_agent" />
+            <span>{tr("أرسلنا بلاغك لفريق TAXO وسيتواصل معك. وإن وصلك المبلغ بعدُ فاضغط «تم الاستلام».")}</span>
+          </p>
+        ) : report === "open" ? (
+          <div className="t2-co-report">
+            <textarea
+              className="t2-input"
+              rows={2}
+              maxLength={500}
+              value={reportNote}
+              placeholder={tr("ملاحظة للدعم (اختياري)")}
+              onChange={(event) => setReportNote(event.target.value)}
+            />
+            <button type="button" className="t2-button secondary" onClick={() => void sendReport()} disabled={working}>
+              {reporting ? <Spinner /> : tr("أرسل البلاغ للدعم")}
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="t2-co-link" onClick={() => setReport("open")} disabled={working}>
+            {tr("لم أستلم المبلغ")}
+          </button>
+        )
+      ) : null}
+
       <button type="button" className="t2-co-btn" onClick={() => void finish()} disabled={working}>
         {pending && pending.id !== confirmedId
-          ? pending.method === "cliq"
-            ? tr("وصلتني الحوالة")
-            : tr("استلمتُ {0} {1}", { 0: formatAmount(pending.amount, pending.currency), 1: currencyLabel })
+          ? tr("تم الاستلام")
           : rate.stars > 0
             ? tr("إرسال التقييم")
             : tr("إنهاء")}

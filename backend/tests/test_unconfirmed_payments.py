@@ -466,7 +466,7 @@ async def test_reminders_follow_the_schedule_once_each_with_the_design_texts(
     first = await at(10)
     assert {(str(user), title, body) for user, title, body in first} == {
         (captain, "رحلةُ راكب بانتظار تأكيدك", "استلمتَ 8.000 د.أ؟"),
-        (rider["user_id"], "سلّمتَ الكابتن 8.000 د.أ؟", "أكّد ذلك كي تُغلق الرحلة"),
+        (rider["user_id"], "ادفع للكابتن 8.000 د.أ نقداً", "يؤكّد الكابتنُ الاستلام فتُغلق الرحلة"),
     }
     # **لا يتكرّر**: الموعدُ مختومٌ على الصفّ
     assert await at(11) == []
@@ -486,6 +486,31 @@ async def test_reminders_follow_the_schedule_once_each_with_the_design_texts(
         row = await session.get(Payment, payment.id)
         assert (row.driver_reminders, row.rider_reminders) == (4, 4)
 
+
+
+async def test_a_cliq_payment_without_a_reference_reminds_the_captain_from_the_ride_end(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**الكابتنُ وحدَه يؤكّد** (SPEC §١١٧/٤): الواجهةُ الجديدةُ لا تطلب مرجعاً، **فساعةُ الكابتن على كليك تبدأ بنهاية الرحلة** —
+    وكانت تنتظر مرجعاً لا يأتي فلا يُذكَّر أحد. **وبطاقةُ كليك تحمل اسمَ الكابتن كما سُجّل** (§١١٧/٢)."""
+    await enable_features(session_factory, FLAG, "cliq_enabled")
+    rider = await _rider(client)
+    driver = await _online_driver(client, session_factory)
+    await set_cliq_alias(session_factory, driver["driver_id"], "ZAID.JO")
+    _requested, ride = await completed_with(client, rider["headers"], driver, "cliq")
+    payment = (await rows_of(session_factory, ride["id"]))[0]
+    assert payment.cliq_reference_at is None
+
+    state = (await client.get(f"/rides/{ride['id']}/payments", headers=rider["headers"])).json()
+    assert state["cliq_charge"]["captain_name"] == "كابتن الرحلات"
+
+    async with session_factory() as session:
+        ended = (await session.get(Ride, payment.ride_id)).completed_at
+        notices = await service.remind_one(session, payment.id, now=ended + timedelta(minutes=10))
+        await session.commit()
+    assert (driver["user_id"], "رحلةُ راكب بانتظار تأكيدك", "استلمتَ 8.000 د.أ؟") in {
+        (str(notice.user_id), notice.title, notice.body) for notice in notices
+    }
 
 async def shift_declaration(session_factory, payment_id: uuid.UUID, *, minutes: int) -> None:
     """يُرجع إقرارَ الراكب إلى الوراء — **ساعةُ الكبتن تبدأ منه** (`_captain_start`)."""
@@ -1224,7 +1249,7 @@ async def test_admin_dispute_on_cliq_asks_about_a_transfer_not_a_handover(
             )
         ).all()
     assert {(str(user), body) for user, body in asked} == {
-        (rider["user_id"], "هل حوّلتَ 8.000 د.أ؟ أدخل مرجع الحوالة أو افتح التطبيق لتردّ"),
+        (rider["user_id"], "هل حوّلتَ 8.000 د.أ؟ افتح التطبيق لتردّ"),
         (driver["user_id"], "هل وصلتك حوالةُ 8.000 د.أ؟ افتح التطبيق لتردّ"),
     }
 

@@ -12,8 +12,13 @@
  * 6.5). فبعد إرساله تتحول الشاشة إلى «بانتظار تأكيد الكبتن» ولا يبقى حقلٌ
  * يُكتب فيه — والخطأ في الرقم يعالجه نزاعُ الكبتن وفصلُ الإدارة (13.4).
  *
- * ولا زرَّ «تم الدفع» هنا: المال يذهب إلى alias الكبتن مباشرةً ولا يمر
- * بالمنصة، فلا أحد عندنا يشهد عليه — والتأكيد قولُ الكبتن وحده (القسم 6).
+ * ولا زرَّ «تم الدفع» هنا: المال يذهب إلى alias الكابتن مباشرةً ولا يمر
+ * بالمنصة، فلا أحد عندنا يشهد عليه — والتأكيد قولُ الكابتن وحده (القسم 6).
+ *
+ * **ولا حقلَ مرجعٍ بعد ٢٠٢٦-١١-٢٦** (SPEC §١١٧، قرارُ المالك): «حوّلتُ — أرسل المرجع» كان خطوةً بيد الراكب، **والكابتنُ وحدَه
+ * يؤكّد بـ«تم الاستلام»**. فالبطاقةُ: الاسمُ المستعارُ واسمُ الكابتن كما سُجّل، و«حوّل المبلغ من تطبيق بنكك عبر كليك»، والمبلغُ
+ * الدقيقُ بزرّ نسخه. **وبابُ المرجع في الخلفية باقٍ للنسخ الأقدم** (`submitCliqReference`) ولا تناديه هذه الشاشة؛ ومرجعٌ أُرسل من
+ * نسخةٍ أقدم يُعرض كما هو.
  *
  * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R19b`): بطاقةٌ بيضاءُ بزاوية R10 — الرمزُ، ثمّ ما يُنسخ، ثمّ «افتح تطبيق البنك»، ثمّ
  * المرجعُ بحقل R03 وسببُ خطئه تحته.
@@ -27,27 +32,16 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-import { ApiError } from "@/api/client";
-import { submitCliqReference } from "@/api/endpoints";
-import type { CliqCharge, RidePayments } from "@/api/types";
+import type { CliqCharge } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
 import { useFeature } from "@/lib/config";
 import { UNCONFIRMED_FLAG } from "@/lib/payment";
 import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
-import { AuthBlock, AuthInput, Icon } from "@/taxo2";
-import { BusyLabel } from "@/screens/t2/MoneyT2"; import { tr } from "@/lib/i18n";
+import { Icon } from "@/taxo2";
+import { tr } from "@/lib/i18n";
 
-export function CliqPanel({
-  charge,
-  onSubmitted,
-}: {
-  charge: CliqCharge;
-  onSubmitted: (state: RidePayments) => void;
-}) {
-  const [reference, setReference] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+export function CliqPanel({ charge }: { charge: CliqCharge }) {
   const [copied, setCopied] = useState<string | null>(null);
   // **الرمزُ المخمَّن خارجَ المسار الجديد** (§٤-٢) — والسوقُ المطفأُ يرى الشاشةَ كما كانت
   const { user } = useSession();
@@ -61,19 +55,6 @@ export function CliqPanel({
     window.setTimeout(() => setCopied(null), 2_000);
   }
 
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      onSubmitted(await submitCliqReference(charge.payment_id, reference.trim()));
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : tr("تعذّر تسجيل مرجع الحوالة"),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <motion.section
@@ -82,10 +63,7 @@ export function CliqPanel({
       className="t2-m-card t2-m-gap"
     >
       <h2 className="t2-m-cliq-title sm">{tr("الدفع عبر كليك")}</h2>
-      <p className="t2-m-cliq-text sm">
-        {tr("حوّل")}{" "}{formatMoney(charge.amount, charge.currency)}{" "}{tr("إلى alias الكابتن، ثم أدخل مرجع الحوالة.")}
-
-      </p>
+      <p className="t2-m-cliq-text sm">{tr("حوّل المبلغ من تطبيق بنكك عبر كليك")}</p>
 
       {guessedQrRemoved ? null : <QrCode payload={charge.qr_payload} size={180} />}
 
@@ -102,62 +80,44 @@ export function CliqPanel({
           copied={copied === "reference"}
           onCopy={() => copy(charge.reference, "reference")}
         />
-        <div className="t2-m-copy">
-          <dt>{tr("المبلغ")}</dt>
-          <dd>{formatMoney(charge.amount, charge.currency)}</dd>
-        </div>
+        {/* **المبلغُ الدقيقُ بزرّ نسخه** (§١١٧/٢) — كما أرسلته الخلفيةُ بخاناته، ويُرسم بعملته بجانبه */}
+        <CopyRow
+          label={tr("المبلغ بالضبط ({0})", { 0: formatMoney(charge.amount, charge.currency) })}
+          value={charge.amount}
+          copied={copied === "amount"}
+          onCopy={() => copy(charge.amount, "amount")}
+        />
       </dl>
+
+      {/* **اسمُ الكابتن كما سُجّل** — يطابقه الراكبُ باسم المستفيد في بنكه قبل أن يرسل */}
+      {charge.captain_name ? (
+        <div className="t2-callout t2-m-callout">
+          <Icon name="verified_user" />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">{tr("ستظهر في بنكك باسم:")}{" "}{charge.captain_name}</p>
+            <p className="t2-callout-body">{tr("طابِق الاسمَ قبل أن ترسل — اسمٌ غيرُه يعني أن الحوالةَ لا تذهب إلى كابتن رحلتك.")}</p>
+          </div>
+        </div>
+      ) : null}
 
       <a href={charge.deep_link} className="t2-button secondary t2-m-open">
         <Icon name="open_in_new" />
         {tr("افتح تطبيق البنك")}
       </a>
 
-      {submitted ? (
-        <div className="t2-callout t2-m-callout">
-          <Icon name="hourglass_top" />
-          <div className="t2-callout-main">
-            <p className="t2-callout-title">{tr("أرسلنا مرجعك للكابتن — بانتظار تأكيده")}</p>
+      {/* **الكابتنُ وحدَه يؤكّد** (§١١٧/١) — لا زرَّ بيد الراكب؛ ومرجعٌ أرسلته نسخةٌ أقدم يُعرض كما هو */}
+      <div className="t2-callout t2-m-callout">
+        <Icon name="hourglass_top" />
+        <div className="t2-callout-main">
+          <p className="t2-callout-title">{tr("بعد التحويل يؤكّد الكابتنُ الاستلام")}</p>
+          {submitted ? (
             <p dir="ltr" className="t2-callout-body t2-m-ref">
               {charge.transfer_reference}
             </p>
-            <p className="t2-callout-body">
-              {tr("المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكابتنَ سيفتح نزاعاً تفصل فيه الإدارة.")}
-
-            </p>
-          </div>
+          ) : null}
+          <p className="t2-callout-body">{tr("تُغلق الرحلةُ حين يضغط الكابتنُ «تم الاستلام». وإن لم تصله الحوالةُ يتواصل معك فريقُ TAXO.")}</p>
         </div>
-      ) : (
-        <>
-          <div className="t2-m-dash" aria-hidden="true" />
-          {/* **سببُ الخطأ تحت حقله** (§٦٢/٢٠) — والتلميحُ مكانَه حين لا خطأ */}
-          <AuthBlock
-            label={tr("مرجع الحوالة من تطبيق بنكك")}
-            htmlFor="cliq-reference"
-            error={error}
-            hint={tr("يُسجَّل مرةً واحدة ولا يُعدَّل — تأكّد منه قبل الإرسال.")}
-          >
-            <AuthInput
-              id="cliq-reference"
-              dir="ltr"
-              autoComplete="off"
-              value={reference}
-              invalid={Boolean(error)}
-              onChange={(event) => setReference(event.target.value)}
-              placeholder="FT24…"
-            />
-          </AuthBlock>
-          <button
-            type="button"
-            className="t2-button primary t2-m-cta t2-m-field-gap"
-            disabled={busy || reference.trim().length < 3}
-            aria-busy={busy}
-            onClick={submit}
-          >
-            <BusyLabel busy={busy}>{tr("حوّلتُ — أرسل المرجع للكابتن")}</BusyLabel>
-          </button>
-        </>
-      )}
+      </div>
     </motion.section>
   );
 }

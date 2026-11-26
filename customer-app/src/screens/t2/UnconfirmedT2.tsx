@@ -193,7 +193,6 @@ export function UnconfirmedT2Screen() {
         <CopySheet
           item={copying}
           onClose={() => setCopying(null)}
-          onReference={() => navigate(`/rides/${copying.ride_id}/pay`)}
         />
       ) : null}
     </div>
@@ -288,40 +287,23 @@ function ItemCard({
           </div>
         </>
       ) : item.method === "cliq" ? (
-        // **كليك: المرجعُ إلزاميٌّ ومنه تبدأ ساعةُ الكبتن** (§٢-٤) — الإدخالُ في شاشة الدفع القائمة، والنسخُ هنا (§٤-٢/١)
+        // **كليك: لا مرجعَ يُطلب** (SPEC §١١٧/١) — الراكبُ يحوّل والكابتنُ وحدَه يؤكّد؛ النسخُ هنا (§٤-٢/١)
         <div className="t2-uc-acts">
-          <button type="button" className="t2-button action t2-m-cta" onClick={onPay}>
-            {tr("أدخل مرجع الحوالة")}
+          <p className="t2-uc-note">{tr("حوّل المبلغ من تطبيق بنكك عبر كليك — والكابتنُ يؤكّد الاستلام.")}</p>
+          <button type="button" className="t2-button action t2-m-cta" onClick={onCopy}>
+            {tr("انسخ بيانات التحويل")}
           </button>
-          <div className="t2-uc-acts pair">
-            <button type="button" className="t2-button secondary" onClick={onCopy}>
-              {tr("انسخ بيانات التحويل")}
-            </button>
-            <button type="button" className="t2-button secondary" onClick={onChange}>
-              {tr("غيّر طريقة الدفع")}
-            </button>
-          </div>
+          <button type="button" className="t2-button secondary" onClick={onChange}>
+            {tr("غيّر طريقة الدفع")}
+          </button>
         </div>
       ) : (
-        // **الكاش** (§٢-٣): الراكبُ يقرّ بما خرج من يده — «لم أسلّمه بعد» يفتح الدفعَ القائم
+        // **الكاش** (SPEC §١١٧/٢): «ادفع للكابتن نقداً» — **ولا «سلّمتُ المبلغ»**: الكابتنُ وحدَه يؤكّد بـ«تم الاستلام»
         <div className="t2-uc-acts">
-          <button
-            type="button"
-            className="t2-button action t2-m-cta"
-            disabled={busy}
-            aria-busy={busy}
-            onClick={onDeclare}
-          >
-            <BusyLabel busy={busy}>{tr("سلّمتُ المبلغ للكابتن")}</BusyLabel>
+          <p className="t2-uc-note">{tr("ادفع للكابتن نقداً — والكابتنُ يؤكّد الاستلام.")}</p>
+          <button type="button" className="t2-button secondary" disabled={busy} onClick={onChange}>
+            {tr("غيّر طريقة الدفع")}
           </button>
-          <div className="t2-uc-acts pair">
-            <button type="button" className="t2-button secondary" disabled={busy} onClick={onChange}>
-              {tr("غيّر طريقة الدفع")}
-            </button>
-            <button type="button" className="t2-button secondary" disabled={busy} onClick={onPay}>
-              {tr("لم أسلّمه بعد")}
-            </button>
-          </div>
         </div>
       )}
     </section>
@@ -444,11 +426,9 @@ function ChangeMethodSheet({
 function CopySheet({
   item,
   onClose,
-  onReference,
 }: {
   item: RiderUnconfirmedItem;
   onClose: () => void;
-  onReference: () => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -464,10 +444,7 @@ function CopySheet({
       onClose={onClose}
       footer={
         <div className="t2-m-foot">
-          <button type="button" className="t2-button action t2-m-cta" onClick={onReference}>
-            {tr("حوّلتُ — أدخل مرجع الحوالة")}
-          </button>
-          <button type="button" className="t2-m-link" onClick={onClose}>
+          <button type="button" className="t2-button action t2-m-cta" onClick={onClose}>
             {tr("إغلاق")}
           </button>
         </div>

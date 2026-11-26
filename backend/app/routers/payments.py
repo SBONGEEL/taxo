@@ -11,13 +11,16 @@ import uuid
 from collections.abc import Sequence
 
 from fastapi import APIRouter, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import amount_text
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.models.enums import PaymentMethod, PaymentStatus
+from app.models.driver import Driver
 from app.models.payment import Payment
 from app.models.ride import Ride
+from app.models.user import User
 from app.schemas.payment import (
     CardOrderOut,
     CliqChargeOut,
@@ -50,7 +53,7 @@ from app.services import (
 router = APIRouter(tags=["payments"])
 
 
-def _cliq_charge_out(payments: Sequence[Payment]) -> CliqChargeOut | None:
+def _cliq_charge_out(payments: Sequence[Payment], captain_name: str | None = None) -> CliqChargeOut | None:
     """رمز كليك ورابطه لدفعةٍ ما زالت تنتظر الحوالة (SPEC القسم 6.2).
 
     `pending` وحدها: بعد تأكيد الكبتن أو نزاعه لم يعد للرمز ما يفعله، وعرضُه
@@ -75,6 +78,7 @@ def _cliq_charge_out(payments: Sequence[Payment]) -> CliqChargeOut | None:
     return CliqChargeOut(
         payment_id=pending.id,
         alias=charge.alias,
+        captain_name=captain_name,
         reference=charge.reference,
         amount=charge.amount,
         currency=charge.currency,
@@ -82,6 +86,17 @@ def _cliq_charge_out(payments: Sequence[Payment]) -> CliqChargeOut | None:
         deep_link=charge.deep_link,
         transfer_reference=pending.cliq_transfer_reference,
         transfer_reference_at=pending.cliq_reference_at,
+    )
+
+
+async def _captain_name(session: AsyncSession, ride: Ride, entries: Sequence[Payment]) -> str | None:
+    """**اسمُ كابتن الرحلة لبطاقة كليك وحدَها** (§١١٧/٢) — يُقرأ حين تنتظر دفعةُ كليكٍ الحوالةَ، ولا استعلامَ لغيرها."""
+    if ride.driver_id is None or not any(
+        entry.method == PaymentMethod.CLIQ and entry.status == PaymentStatus.PENDING for entry in entries
+    ):
+        return None
+    return await session.scalar(
+        select(User.name).join(Driver, Driver.user_id == User.id).where(Driver.id == ride.driver_id)
     )
 
 
@@ -103,7 +118,7 @@ async def _ride_payments_out(session: AsyncSession, ride: Ride) -> RidePaymentsO
             chargeable=settlement.chargeable_of(ride), payments=entries
         ),
         cancellation_debt=await cancellation.debt_of(session, ride.rider_id),
-        cliq_charge=_cliq_charge_out(entries),
+        cliq_charge=_cliq_charge_out(entries, await _captain_name(session, ride, entries)),
         card_order=(
             CardOrderOut.model_validate(open_order) if open_order is not None else None
         ),

@@ -1185,6 +1185,24 @@ button.t2-rd-chip { cursor: pointer; }
   cursor: pointer;
 }
 .t2-co-btn:disabled { opacity: 0.5; cursor: default; }
+/* **«لم أستلم المبلغ»** (SPEC §١١٧/٣) — رابطٌ هادئٌ فوق الزرّ الكبير، وبلاغُه في مكانه */
+.t2-co-link {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.t2-co-link:disabled { opacity: 0.5; cursor: default; }
+.t2-co-report { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
 .t2-co-skip {
   display: block;
   width: 100%;

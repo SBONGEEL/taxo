@@ -708,6 +708,8 @@ export interface Payment {
 export interface CliqCharge {
   payment_id: string;
   alias: string;
+  /** اسمُ الكابتن كما سُجّل (§١١٧/٢) */
+  captain_name: string | null;
   reference: string;
   amount: string;
   currency: Currency;

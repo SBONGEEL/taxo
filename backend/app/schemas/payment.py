@@ -143,6 +143,8 @@ class CliqChargeOut(BaseModel):
 
     payment_id: uuid.UUID
     alias: str
+    #: **اسمُ الكابتن كما سُجّل** (§١١٧/٢) — يطابقه الراكبُ باسم المستفيد في بنكه قبل أن يرسل
+    captain_name: str | None = None
     reference: str
     amount: Decimal
     currency: Currency
