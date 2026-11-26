@@ -2107,5 +2107,11 @@
   "رنين الطلب حتى في الوضع الصامت": "Sonnerie des demandes même en mode silencieux",
   "وأنت متّصل يرنّ الطلبُ ولو كان الهاتفُ صامتاً أو على الاهتزاز. أطفئه ليتبع الطلبُ وضعَ هاتفك.": "En ligne, la demande sonne même si le téléphone est en silencieux ou en vibreur. Désactivez-le pour suivre le mode de votre téléphone.",
   "جرّب النغمة": "Tester la sonnerie",
-  "فعّل تطبيق TAXO": "Activez l’application TAXO"
+  "فعّل تطبيق TAXO": "Activez l’application TAXO",
+  "أرسل البلاغ للدعم": "Envoyer le signalement au support",
+  "أرسلنا بلاغك لفريق TAXO وسيتواصل معك. وإن وصلك المبلغ بعدُ فاضغط «تم الاستلام».": "Votre signalement a été envoyé à l’équipe TAXO, qui vous contactera. Si vous recevez le montant ensuite, appuyez sur « Reçu ».",
+  "المبلغ: {0} {1} · {2}": "Montant : {0} {1} · {2}",
+  "تم الاستلام": "Reçu",
+  "لم أستلم المبلغ": "Je n’ai pas reçu le montant",
+  "ملاحظة للدعم (اختياري)": "Note pour le support (facultatif)"
 }

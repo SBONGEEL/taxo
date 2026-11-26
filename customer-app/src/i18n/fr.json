@@ -1876,5 +1876,10 @@
   "أكمل {0} من {1}": "{0} sur {1} effectuées",
   "يُعتمد حسابه ويشتري اشتراكاً ويُكمل {0}": "Son compte est approuvé, il achète un abonnement et effectue {0}",
   "يُكمل {0}": "Effectue {0}",
-  "فعّل تطبيق TAXO": "Activez l’application TAXO"
+  "فعّل تطبيق TAXO": "Activez l’application TAXO",
+  "حوّل المبلغ من تطبيق بنكك عبر كليك": "Transférez le montant depuis votre application bancaire via CliQ",
+  "بعد التحويل يؤكّد الكابتنُ الاستلام": "Après le virement, le capitaine confirme la réception",
+  "تُغلق الرحلةُ حين يضغط الكابتنُ «تم الاستلام». وإن لم تصله الحوالةُ يتواصل معك فريقُ TAXO.": "La course se clôture quand le capitaine appuie sur « Reçu ». S’il ne reçoit pas le virement, l’équipe TAXO vous contactera.",
+  "حوّل المبلغ من تطبيق بنكك عبر كليك — والكابتنُ يؤكّد الاستلام.": "Transférez le montant depuis votre application bancaire via CliQ — le capitaine confirme la réception.",
+  "ادفع للكابتن نقداً — والكابتنُ يؤكّد الاستلام.": "Payez le capitaine en espèces — il confirme la réception."
 }
