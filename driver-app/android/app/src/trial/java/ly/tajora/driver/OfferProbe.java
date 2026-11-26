@@ -55,6 +55,26 @@ public class OfferProbe extends BroadcastReceiver {
             android.util.Log.i(OfferTone.TAG, "probe playing=" + OfferTone.isPlaying());
             return;
         }
+        // **حالُ «متّصل» من داخل العمليّة** — `force-stop` لكتابة الملفّ يضع الحزمةَ في «موقوفة» فلا يبلغها البثُّ أصلاً (قِيس في CI)
+        if ("online".equals(mode)) {
+            context.getSharedPreferences(LauncherPlugin.PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean("online", intent.getBooleanExtra("on", true)).commit();
+            android.util.Log.i(OfferTone.TAG, "probe online=" + intent.getBooleanExtra("on", true));
+            return;
+        }
+        // **وضعُ الرنين من داخل التطبيق** — `cmd audio set-ringer-mode` لا يغيّره على المحاكي (قِيس: «الصامت» نجح لأن المنبّه يرنّ في كلِّ وضع).
+        // «اهتزاز» لا «صامت»: لا يحتاج إذنَ «عدم الإزعاج»، و`quietPhone` يعدّ كلَّ ما ليس «عاديّاً» هادئاً
+        if ("ringer".equals(mode)) {
+            android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+            try {
+                audio.setRingerMode("vibrate".equals(intent.getStringExtra("to"))
+                        ? android.media.AudioManager.RINGER_MODE_VIBRATE : android.media.AudioManager.RINGER_MODE_NORMAL);
+            } catch (Exception refused) {
+                android.util.Log.w(OfferTone.TAG, "probe ringer refused " + refused.getClass().getSimpleName());
+            }
+            android.util.Log.i(OfferTone.TAG, "probe ringer=" + audio.getRingerMode());
+            return;
+        }
         // **وإجبارُ السطح للقياس وحدَه** (`--es force sheet|bubble|full`):
         // الفرقُ بين «ورقة» و«فقاعة» يقوم على قربِ العهد بالتطبيق، **وانتظارُ
         // دقيقتين بين كلِّ قياسٍ وآخرَ يجعل القياسَ لا يقع** — والإجبارُ في

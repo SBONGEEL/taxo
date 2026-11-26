@@ -138,8 +138,9 @@ grep -iE "usage=USAGE_ALARM" "$OUT/beep-locked-audio.txt" | head -3 >> "$LOG" ||
 adb logcat -c; probe --es mode hide; sleep 1
 adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; sleep 2
 # و) الوضعُ الصامت — «حتى في الصامت» مشتعلٌ افتراضاً ⇐ مجرى المنبّه يرنّ
-adb shell cmd audio set-ringer-mode SILENT >>"$LOG" 2>&1 || adb shell cmd audio set-ringer-mode silent >>"$LOG" 2>&1 || true
-adb shell dumpsys audio | grep -m1 -i "ringer mode" | sed 's/^ */الرنين: /' >> "$LOG"
+# **من داخل التطبيق** (`ringer`): `cmd audio set-ringer-mode` لا يغيّر الوضعَ على المحاكي — قِيس 2026-11-26، والمنبّهُ يرنّ في كلِّ وضعٍ فستر ذلك
+adb logcat -c; probe --es mode ringer --es to vibrate; sleep 1
+tonelog | grep -q "probe ringer=1" && say "✓ الهاتفُ على الاهتزاز" || say "✗ لم يصر الهاتفُ على الاهتزاز ($(tonelog | grep 'probe ringer' | tail -1 | sed 's/.*TaxoOfferTone: //'))"
 adb shell input keyevent KEYCODE_HOME; sleep 2
 ring beep-silent 10; expect "الوضعُ الصامت" "start usage=alarm"
 adb logcat -c; probe --es mode hide; sleep 1
@@ -148,14 +149,13 @@ probe --es mode silent_ring --ez on false; sleep 1
 ring beep-silent-off 10; expect "الصامتُ والإعدادُ مطفأ" "start vibrate-only"
 adb logcat -c; probe --es mode hide; sleep 1
 probe --es mode silent_ring --ez on true
-adb shell cmd audio set-ringer-mode NORMAL >>"$LOG" 2>&1 || adb shell cmd audio set-ringer-mode normal >>"$LOG" 2>&1 || true
+probe --es mode ringer --es to normal; sleep 1
 # ح) غيرُ متّصل ⇐ لا رنينَ أبداً
-OFF="${PREFS/name=\"online\" value=\"true\"/name=\"online\" value=\"false\"}"
-adb shell am force-stop "$PKG"
-adb shell "echo '$OFF' > /data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
-adb shell chown "$OWNER:$OWNER" "/data/data/$PKG/shared_prefs/taxo_launcher.xml" >>"$LOG" 2>&1
+# **من داخل العمليّة** (`online`): `force-stop` لكتابة الملفّ يجعل الحزمةَ «موقوفة» فلا يبلغها البثُّ أصلاً — قِيس 2026-11-26
+probe --es mode online --ez on false; sleep 1
 ring beep-offline 10; expect "غيرُ متّصل لا يرنّ" "push skipped: offline"
 tonelog | grep -q "start usage" && say "✗ بيب: رنّ وهو غيرُ متّصل" || true
+probe --es mode online --ez on true
 
 adb logcat -d -t 2000 > "$OUT/logcat.txt" 2>&1
 grep -nE "FATAL|AndroidRuntime" "$OUT/logcat.txt" | head -20 >> "$LOG" || true
