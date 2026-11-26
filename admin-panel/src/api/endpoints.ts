@@ -2083,6 +2083,8 @@ export const createRelease = (body: {
   reminder_hours: number;
   open_map_min_build: number | null;
   confirm_min_supported_build?: number;
+  country_min_builds?: Record<string, number>;
+  confirm_country_min_builds?: Record<string, number>;
 }) => api.post<AppRelease>("/admin/releases", body);
 
 export const updateRelease = (
@@ -2097,6 +2099,8 @@ export const updateRelease = (
     reminder_hours: number;
     open_map_min_build: number | null;
     confirm_min_supported_build?: number;
+    country_min_builds?: Record<string, number>;
+    confirm_country_min_builds?: Record<string, number>;
   },
 ) => api.put<AppRelease>(`/admin/releases/${releaseId}`, body);
 
@@ -2118,12 +2122,15 @@ export const getAppVersion = (
   platform: "android" | "ios",
   /** **المتجرُ الذي ثبّت الحزمة** (٢٠/١١ السابع) — `null` لـPlay والموقع وكلِّ غلافٍ قديم: **فلا يُرسل، والسؤالُ ما كان حرفاً**. */
   source: string | null = null,
+  /** **آخرُ سوقٍ عرفه التطبيق** (SPEC §43، ٢٠٢٦-١١-٢٦) — يختار حدَّ تلك الدولة في اللوحة؛ `null` = الحدُّ العامّ. */
+  country: string | null = null,
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
     query: {
       ...(build === null ? { app, platform } : { app, build, platform }),
       ...(source === null ? {} : { source }),
+      ...(country === null ? {} : { country }),
     },
   });
 

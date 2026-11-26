@@ -777,12 +777,15 @@ export const getAppVersion = (
   platform: "android" | "ios",
   /** **المتجرُ الذي ثبّت الحزمة** (٢٠/١١ السابع) — `null` لـPlay والموقع وكلِّ غلافٍ قديم: **فلا يُرسل، والسؤالُ ما كان حرفاً**. */
   source: string | null = null,
+  /** **آخرُ سوقٍ عرفه التطبيق** (SPEC §43، ٢٠٢٦-١١-٢٦) — يختار حدَّ تلك الدولة في اللوحة؛ `null` = الحدُّ العامّ. */
+  country: string | null = null,
 ) =>
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
     query: {
       ...(build === null ? { app, platform } : { app, build, platform }),
       ...(source === null ? {} : { source }),
+      ...(country === null ? {} : { country }),
     },
   });
 

@@ -665,3 +665,121 @@ async def test_the_first_store_row_asks_twice_even_after_play(
         client, admin_headers, confirm=False, source="galaxy", build=400, min_supported_build=400, download_url=GALAXY
     )
     assert refused.status_code == 422, refused.text
+
+
+# ------------------------------------------- حدُّ كلِّ دولة و«في كلِّ فتح» (SPEC §43، ٢٠٢٦-١١-٢٦)
+
+
+async def _version_in(client: AsyncClient, app: str, build: int, country: str | None) -> dict:
+    params: dict[str, Any] = {"app": app, "build": build}
+    if country is not None:
+        params["country"] = country
+    response = await client.get("/public/app-version", params=params)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_a_country_limit_governs_that_country_alone(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**حدُّ الأردن يقفل في الأردن وحدَه** — وليبيا ومن لا تُعرف دولتُه بالحدِّ العامّ."""
+    created = await _create(
+        client,
+        admin_headers,
+        build=400,
+        min_supported_build=380,
+        country_min_builds={"jo": 400},
+        confirm_country_min_builds={"JO": 400},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["country_min_builds"] == {"JO": 400}
+
+    jordan = await _version_in(client, "rider", 390, "JO")
+    assert jordan["state"] == "forced"
+    assert jordan["min_supported_build"] == 400
+    assert (await _version_in(client, "rider", 390, "LY"))["state"] == "optional"
+    assert (await _version_in(client, "rider", 390, None))["state"] == "optional"
+    # **وصاحبُ الإصدار نفسِه لا يُقفل في أيِّ دولة**
+    assert (await _version_in(client, "rider", 400, "JO"))["state"] == "ok"
+
+
+async def test_raising_a_country_limit_needs_its_number_typed_again(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**يستأذن مرّتين لكلِّ دولةٍ يرتفع حدُّها** — كالحدِّ العامِّ بحرفه."""
+    assert (
+        await _create(client, admin_headers, build=400, min_supported_build=380)
+    ).status_code == 201
+
+    refused = await _create(
+        client, admin_headers, build=401, min_supported_build=380, country_min_builds={"JO": 401}
+    )
+    assert refused.status_code == 422, refused.text
+    assert "JO" in refused.json()["message"] and "401" in refused.json()["message"]
+
+    accepted = await _create(
+        client,
+        admin_headers,
+        build=401,
+        min_supported_build=380,
+        country_min_builds={"JO": 401},
+        confirm_country_min_builds={"JO": 401},
+    )
+    assert accepted.status_code == 201, accepted.text
+
+
+async def test_a_country_limit_that_falls_asks_nothing(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**حدٌّ ينزل لا يقفل أحداً** — فلا ورقةَ إذن."""
+    created = await _create(
+        client,
+        admin_headers,
+        build=400,
+        min_supported_build=380,
+        country_min_builds={"JO": 400},
+        confirm_country_min_builds={"JO": 400},
+    )
+    edited = await client.put(
+        f"/admin/releases/{created.json()['id']}",
+        json=_body(build=400, min_supported_build=380, country_min_builds={"JO": 390}),
+        headers=admin_headers,
+    )
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["country_min_builds"] == {"JO": 390}
+
+
+async def test_a_country_limit_never_passes_the_release(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    refused = await _create(
+        client,
+        admin_headers,
+        build=400,
+        min_supported_build=380,
+        country_min_builds={"JO": 401},
+        confirm_country_min_builds={"JO": 401},
+    )
+    assert refused.status_code == 422, refused.text
+
+
+async def test_a_country_code_is_two_latin_letters(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    refused = await _create(
+        client, admin_headers, build=400, min_supported_build=380, country_min_builds={"JOR": 1}
+    )
+    assert refused.status_code == 422, refused.text
+
+
+async def test_zero_hours_means_every_open(
+    client: AsyncClient, admin_headers: dict, links
+) -> None:
+    """**0 = «في كلِّ فتح»** — «لاحقاً» يكتم الفتحَ نفسَه، والبوّابةُ تعيده في الإقلاع التالي."""
+    created = await _create(
+        client, admin_headers, build=400, min_supported_build=1, reminder_hours=0
+    )
+    assert created.status_code == 201, created.text
+    body = await _version_in(client, "rider", 390, "JO")
+    assert body["state"] == "optional"
+    assert body["reminder_hours"] == 0

@@ -2493,6 +2493,8 @@ export interface AppRelease {
   reminder_hours: number;
   /** **أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة** — فارغٌ = لا غلاف (SPEC §١٠٥/٥). */
   open_map_min_build: number | null;
+  /** **حدٌّ أدنى لكلِّ دولة** يحلّ محلَّ العامِّ فيها (SPEC §43، ٢٠٢٦-١١-٢٦) — `{"JO": 1573}`؛ فارغٌ = العامُّ في كلِّ الدول. */
+  country_min_builds: Record<string, number>;
   /** **أهذا هو الصفُّ الحاكم؟** — محسوبٌ في الخلفية لا بفرزِ صفحةٍ مقصوصة. */
   is_current: boolean;
   created_at: string;

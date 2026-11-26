@@ -156,6 +156,7 @@ async def verdict_for(
     build: int | None,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
     source: ReleaseSource = ReleaseSource.DEFAULT,
+    country: str | None = None,
 ) -> VersionVerdict:
     """ماذا يفعل التطبيقُ عند الإقلاع.
 
@@ -180,9 +181,10 @@ async def verdict_for(
     if release is None:
         return NO_POLICY
 
+    minimum = effective_minimum(release, country)
     if build is None or build >= release.build:
         state = "ok"
-    elif build < release.min_supported_build:
+    elif build < minimum:
         state = "forced"
     else:
         state = "optional"
@@ -190,12 +192,32 @@ async def verdict_for(
     return VersionVerdict(
         state=state,
         latest_build=release.build,
-        min_supported_build=release.min_supported_build,
+        min_supported_build=minimum,
         download_url=release.download_url,
         release_notes=release.release_notes,
         reminder_hours=release.reminder_hours,
         open_map=open_map_allowed(release, build),
     )
+
+
+def effective_minimum(release: AppRelease, country: str | None) -> int:
+    """**حدُّ هذه الدولة إن كُتب، وإلا العامّ** (SPEC §43، ٢٠٢٦-١١-٢٦).
+
+    **والدولةُ قولُ التطبيق** (آخرُ سوقٍ عرفه): من لا تُعرف دولتُه — قبل أوّلِ دخول — **يُحكم بالحدِّ العامّ**،
+    فلا يُقفل أحدٌ بحدِّ دولةٍ لم يُعرف أنه منها.
+    """
+    limits = release.country_min_builds or {}
+    if country and country.upper() in limits:
+        return int(limits[country.upper()])
+    return release.min_supported_build
+
+
+def _check_country_limits(build: int, limits: dict[str, int]) -> None:
+    for code, value in sorted(limits.items()):
+        if value > build:
+            raise InvalidInput(
+                f"حدُّ {code} فوق رقم الإصدار — يُقفل صاحبُ أحدث حزمةٍ هناك بلا مخرج."
+            )
 
 
 def open_map_allowed(release: AppRelease, build: int | None) -> bool:
@@ -266,6 +288,8 @@ async def _require_second_permission(
     confirmation: int | None,
     release_id: uuid.UUID | None = None,
     source: ReleaseSource = ReleaseSource.DEFAULT,
+    country_min_builds: dict[str, int] | None = None,
+    country_confirmation: dict[str, int] | None = None,
 ) -> None:
     """**الإذنُ الثاني حين يرتفع الحدُّ فعلاً** (§39٫٨: «يستأذن مرّتين»).
 
@@ -288,6 +312,15 @@ async def _require_second_permission(
         return
 
     standing = 0 if live is None else live.min_supported_build
+    # **وحدُّ الدولة يستأذن كالعامّ** (٢٠٢٦-١١-٢٦): القائمُ فيها حدُّها المكتوب أو العامُّ القائم، **والإقرارُ رقمُها مكتوباً ثانيةً**
+    standing_by_country = {} if live is None else (live.country_min_builds or {})
+    confirmed = country_confirmation or {}
+    for code, value in sorted((country_min_builds or {}).items()):
+        if value > standing_by_country.get(code, standing) and confirmed.get(code) != value:
+            raise InvalidInput(
+                f"رفعُ حدِّ {code} يقفل التطبيقَ هناك على كلِّ من حزمتُه أقلُّ من "
+                f"{value} — أعِد كتابة الرقم لتأكيده."
+            )
     if min_supported_build <= standing:
         return
     if confirmation != min_supported_build:
@@ -310,12 +343,16 @@ async def create(
     confirmation: int | None,
     open_map_min_build: int | None = None,
     source: ReleaseSource = ReleaseSource.DEFAULT,
+    country_min_builds: dict[str, int] | None = None,
+    country_confirmation: dict[str, int] | None = None,
 ) -> AppRelease:
     """يضيف إصداراً — **بعد أن يطرق رابطَه ويستأذن مرّتين**."""
     if min_supported_build > build:
         raise InvalidInput(
             "الحدُّ الأدنى فوق رقم الإصدار — يُقفل صاحبُ أحدث حزمةٍ بلا مخرج."
         )
+    limits = dict(country_min_builds or {})
+    _check_country_limits(build, limits)
     exists = await session.scalar(
         select(AppRelease).where(
             AppRelease.app == app,
@@ -337,6 +374,8 @@ async def create(
         min_supported_build=min_supported_build,
         confirmation=confirmation,
         source=source,
+        country_min_builds=limits,
+        country_confirmation=country_confirmation,
     )
     await check_download_url(download_url)
 
@@ -350,6 +389,7 @@ async def create(
         release_notes=release_notes,
         reminder_hours=reminder_hours,
         open_map_min_build=open_map_min_build,
+        country_min_builds=limits,
     )
     session.add(release)
     await session.flush()
@@ -373,6 +413,8 @@ async def update(
     reminder_hours: int,
     confirmation: int | None,
     open_map_min_build: int | None = None,
+    country_min_builds: dict[str, int] | None = None,
+    country_confirmation: dict[str, int] | None = None,
 ) -> dict[str, dict[str, object]]:
     """يعدّل صفّاً قائماً — **ولا يُعدَّل رقمُ الإصدار ولا تطبيقُه ولا نظامُه**.
 
@@ -386,6 +428,8 @@ async def update(
         raise InvalidInput(
             "الحدُّ الأدنى فوق رقم الإصدار — يُقفل صاحبُ أحدث حزمةٍ بلا مخرج."
         )
+    limits = dict(country_min_builds or {})
+    _check_country_limits(release.build, limits)
     await _require_second_permission(
         session,
         app=release.app,
@@ -395,6 +439,8 @@ async def update(
         confirmation=confirmation,
         release_id=release.id,
         source=release.source,
+        country_min_builds=limits,
+        country_confirmation=country_confirmation,
     )
     if download_url != release.download_url:
         await check_download_url(download_url)
@@ -406,6 +452,7 @@ async def update(
         ("release_notes", release_notes),
         ("reminder_hours", reminder_hours),
         ("open_map_min_build", open_map_min_build),
+        ("country_min_builds", limits),
     ):
         before = getattr(release, field)
         if before != value:

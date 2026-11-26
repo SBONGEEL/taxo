@@ -700,3 +700,46 @@ async def test_0191_skips_a_value_that_would_overflow_its_column() -> None:
     assert revision == "0191"
     assert bodies == {"شاهدٌ ممتلئ": full, "شاهدٌ يتّسع": "يا كابتن"}
 
+
+
+async def test_0193_country_limits_and_every_open_round_trip() -> None:
+    """**`0193` تضيف حدَّ كلِّ دولة وتقبل «في كلِّ فتح» (0)، ونزولُها يعيد القيدَ القديم** — مقيسٌ قبلها لا مقروء.
+    **وصفٌّ بـ0 لا يُسقط النزول**: يصير ساعةً (أقصرَ كتمٍ كان مسموحاً). **ولا جدولَ مالٍ هنا.**"""
+    config = alembic_config()
+    insert = (
+        "INSERT INTO app_releases (id, app, build, min_supported_build, download_url, release_notes, reminder_hours) "
+        "VALUES (gen_random_uuid(), 'driver', 9193, 1, 'https://example.test/a', 'n', :hours)"
+    )
+
+    async def columns() -> set[str]:
+        async with engine.begin() as conn:
+            found = await conn.run_sync(lambda sync: inspect(sync).get_columns("app_releases"))
+        return {c["name"] for c in found}
+
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text(insert), {"hours": 0})
+        await engine.dispose()
+        await asyncio.to_thread(command.downgrade, config, "0192")
+        await engine.dispose()
+        assert "country_min_builds" not in await columns()
+        async with engine.begin() as conn:
+            hours = await conn.scalar(text("SELECT reminder_hours FROM app_releases WHERE build = 9193"))
+        assert hours == 1
+        with pytest.raises(Exception, match="reminder"):
+            async with engine.begin() as conn:
+                await conn.execute(text(insert.replace("9193", "9194")), {"hours": 0})
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0193")
+        await engine.dispose()
+        assert "country_min_builds" in await columns()
+        async with engine.begin() as conn:
+            await conn.execute(text(insert.replace("9193", "9195")), {"hours": 0})
+            limits = await conn.scalar(text("SELECT country_min_builds FROM app_releases WHERE build = 9195"))
+        assert limits == {}
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM app_releases WHERE build IN (9193, 9194, 9195)"))
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()

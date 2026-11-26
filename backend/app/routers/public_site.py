@@ -28,7 +28,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -165,6 +167,7 @@ async def app_version(
     build: int | None = None,
     platform: ReleasePlatform = ReleasePlatform.ANDROID,
     source: ReleaseSource = ReleaseSource.DEFAULT,
+    country: Annotated[str | None, Query(pattern=r"^[A-Za-z]{2}$")] = None,
 ) -> AppVersionOut:
     """ماذا يفعل التطبيقُ عند الإقلاع — **البند ٨ (§39٫٨، §43)**.
 
@@ -180,9 +183,12 @@ async def app_version(
 
     **و`platform` أندرويد افتراضاً** (2026-10-12): كلُّ صفٍّ قبله أندرويد، والبوّابةُ
     ترسل نظامَها منذه — **وحزمةُ iOS لا يحكمها رقمُ أندرويد**.
+
+    **و`country` اختياريةٌ كذلك** (٢٠٢٦-١١-٢٦): آخرُ سوقٍ عرفه التطبيق — **يختار حدَّ تلك الدولة إن كُتب في اللوحة**،
+    وغيابُها يعني الحدَّ العامّ. فلا تُقفل دولةٌ بحدِّ أخرى، ولا يُقفل من لا تُعرف دولتُه.
     """
     verdict = await releases_service.verdict_for(
-        session, app=app, build=build, platform=platform, source=source
+        session, app=app, build=build, platform=platform, source=source, country=country
     )
     # **عدُّ من رأى رسالةَ المفتاح القديم ومن انتقل** (SPEC §١١٦) — عنوانٌ مختوم، ولا يُسقط الجوابَ إن سقط
     await releases_service.note_old_key_audience(

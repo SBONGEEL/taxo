@@ -92,7 +92,17 @@ interface Draft {
   hours: string;
   /** أدنى غلافٍ للخريطة المفتوحة — فارغٌ = لا غلاف */
   openMap: string;
+  /** **حدُّ كلِّ دولة** — فارغٌ = الحدُّ العامّ فيها (SPEC §43، ٢٠٢٦-١١-٢٦) */
+  countries: Record<string, string>;
 }
+
+/** **الأسواقُ التي يُكتب لها حدٌّ بعينه** — ما يُكتب لها يحلّ محلَّ «أدنى إصدارٍ مقبول» فيها وحدَها، فيصير التحديثُ إلزاميّاً
+ *  في سوقٍ ويبقى اختياريّاً في غيره. والتطبيقُ يرسل آخرَ سوقٍ عرفه، ومن لا تُعرف دولتُه يُحكم بالحدِّ العامّ. */
+const MARKETS: Array<[string, string]> = [
+  ["JO", "الأردن"],
+  ["LY", "ليبيا"],
+  ["DZ", "الجزائر"],
+];
 
 const EMPTY: Draft = {
   app: "rider",
@@ -104,6 +114,7 @@ const EMPTY: Draft = {
   notes: "",
   hours: "24",
   openMap: "",
+  countries: {},
 };
 
 export function ReleasesScreen() {
@@ -114,6 +125,7 @@ export function ReleasesScreen() {
   const [removing, setRemoving] = useState<AppRelease | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState("");
+  const [typedCountries, setTypedCountries] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const form = useFormError();
@@ -174,9 +186,19 @@ export function ReleasesScreen() {
       notes: row.release_notes,
       hours: String(row.reminder_hours),
       openMap: row.open_map_min_build === null ? "" : String(row.open_map_min_build),
+      countries: Object.fromEntries(
+        Object.entries(row.country_min_builds ?? {}).map(([code, value]) => [code, String(value)]),
+      ),
     });
   }
   const rises = Number(draft.min) > standing;
+  /** **الدولُ التي يرتفع حدُّها** — القائمُ فيها حدُّها في الصفِّ الحاكم أو العامُّ القائم؛ ولكلٍّ منها إذنٌ ثانٍ كالعامّ */
+  const governingRow = governing(draft.app, draft.platform, draft.source);
+  const countryRises = MARKETS.map(([code]) => code).filter(
+    (code) =>
+      (draft.countries[code] ?? "").length > 0 &&
+      Number(draft.countries[code]) > (governingRow?.country_min_builds?.[code] ?? standing),
+  );
   const ready =
     draft.build.length > 0 &&
     draft.min.length > 0 &&
@@ -187,14 +209,15 @@ export function ReleasesScreen() {
     form.setMessage(null);
     setDone(null);
     setTyped("");
-    if (rises) {
+    setTypedCountries({});
+    if (rises || countryRises.length > 0) {
       setConfirming(true);
       return;
     }
     void save();
   }
 
-  async function save(confirmation?: number) {
+  async function save(confirmation?: number, countryConfirmation?: Record<string, number>) {
     setBusy(true);
     form.setMessage(null);
     const body = {
@@ -205,8 +228,14 @@ export function ReleasesScreen() {
       min_supported_build: Number(draft.min),
       download_url: draft.url.trim(),
       release_notes: draft.notes.trim(),
-      reminder_hours: Number(draft.hours || "24"),
+      reminder_hours: Number(draft.hours === "" ? "24" : draft.hours),
       open_map_min_build: draft.openMap ? Number(draft.openMap) : null,
+      country_min_builds: Object.fromEntries(
+        Object.entries(draft.countries)
+          .filter(([, value]) => value.length > 0)
+          .map(([code, value]) => [code, Number(value)]),
+      ),
+      ...(countryConfirmation === undefined ? {} : { confirm_country_min_builds: countryConfirmation }),
       ...(confirmation === undefined
         ? {}
         : { confirm_min_supported_build: confirmation }),
@@ -382,7 +411,7 @@ export function ReleasesScreen() {
                 }
               />
               <Field
-                label="كتمُ التنبيه الاختياريّ (ساعة)"
+                label="كتمُ التنبيه الاختياريّ (ساعة) — 0: في كلِّ فتح"
                 name="reminder_hours"
                 dir="ltr"
                 inputMode="numeric"
@@ -394,6 +423,30 @@ export function ReleasesScreen() {
                   })
                 }
               />
+              <div className="col-span-2">
+                <div className="grid grid-cols-3 gap-10">
+                  {MARKETS.map(([code, label]) => (
+                    <Field
+                      key={code}
+                      label={`أدنى إصدارٍ في ${label} — فارغٌ: العامّ`}
+                      name={`country_min_builds.${code}`}
+                      dir="ltr"
+                      inputMode="numeric"
+                      value={draft.countries[code] ?? ""}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          countries: { ...draft.countries, [code]: event.target.value.replace(/\D/g, "") },
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+                <p className="mt-4 text-11.5 text-muted">
+                  حدُّ الدولة يحلّ محلَّ «أدنى إصدارٍ مقبول» فيها وحدَها: ما دونه شاشةُ تحديثٍ لا تُغلق هناك، وما بينه وبين رقم الإصدار
+                  تنبيهٌ يُغلق. والتطبيقُ يرسل آخرَ سوقٍ عرفه؛ ومن لم يدخل بعدُ يُحكم بالحدِّ العامّ.
+                </p>
+              </div>
               <div className="col-span-2">
                 <Field
                   label="أدنى غلافٍ تُرسم فيه الخريطةُ المفتوحة — فارغٌ: لا غلاف"
@@ -506,9 +559,12 @@ export function ReleasesScreen() {
               </span>
               <span className="text-12.5 text-ink" dir="ltr">
                 {digits(String(row.min_supported_build))}
+                {Object.entries(row.country_min_builds ?? {}).map(([code, value]) => (
+                  <span key={code} className="block text-11 text-muted">{`${code} ≥ ${digits(String(value))}`}</span>
+                ))}
               </span>
               <span className="text-11.5 text-muted">
-                {digits(String(row.reminder_hours))} ساعة
+                {row.reminder_hours === 0 ? "في كلِّ فتح" : `${digits(String(row.reminder_hours))} ساعة`}
               </span>
               <span className="truncate text-11.5 text-muted">
                 {row.release_notes}
@@ -552,16 +608,38 @@ export function ReleasesScreen() {
               <h2 className="text-16 font-bold text-ink">
                 تأكيدُ حدٍّ يوقف المستخدمين
               </h2>
+              {rises ? (
               <p className="mt-9 text-12.5 leading-note text-ink">
                 كلُّ من حزمتُه أقلُّ من <b dir="ltr">{draft.min}</b> في{" "}
                 <b>{APP_LABEL[draft.app]}</b> على{" "}
                 <b>{PLATFORM_LABEL[draft.platform]}</b> لن يفتح التطبيقَ حتى
                 يحمّل النسخة الجديدة من الرابط أعلاه.
               </p>
+              ) : null}
+              {countryRises.map((code) => (
+                <p key={code} className="mt-9 text-12.5 leading-note text-ink">
+                  {`في ${MARKETS.find(([c]) => c === code)?.[1] ?? code}: كلُّ من حزمتُه أقلُّ من ${draft.countries[code]} لن يفتح التطبيقَ حتى يحدّثه.`}
+                </p>
+              ))}
               <p className="mt-8 text-11.5 leading-note text-muted">
                 أعِد كتابة الرقم لتأكيده — ورقمٌ خاطئٌ هنا يوقف الجميع دفعةً
                 واحدة.
               </p>
+              {countryRises.map((code) => (
+                <div key={code} className="mt-12">
+                  <Field
+                    label={`أعِد كتابة حدِّ ${MARKETS.find(([c]) => c === code)?.[1] ?? code}`}
+                    name={`confirm_country_min_builds.${code}`}
+                    dir="ltr"
+                    inputMode="numeric"
+                    value={typedCountries[code] ?? ""}
+                    onChange={(event) =>
+                      setTypedCountries({ ...typedCountries, [code]: event.target.value.replace(/\D/g, "") })
+                    }
+                  />
+                </div>
+              ))}
+              {rises ? (
               <div className="mt-12">
                 <Field
                   label="أعِد كتابة الحدّ"
@@ -574,11 +652,23 @@ export function ReleasesScreen() {
                   }
                 />
               </div>
+              ) : null}
               <div className="mt-16 flex gap-10">
                 <Button
                   size="md"
-                  disabled={busy || typed !== draft.min}
-                  onClick={() => void save(Number(typed))}
+                  disabled={
+                    busy ||
+                    (rises && typed !== draft.min) ||
+                    countryRises.some((code) => (typedCountries[code] ?? "") !== draft.countries[code])
+                  }
+                  onClick={() =>
+                    void save(
+                      rises ? Number(typed) : undefined,
+                      countryRises.length > 0
+                        ? Object.fromEntries(countryRises.map((code) => [code, Number(typedCountries[code])]))
+                        : undefined,
+                    )
+                  }
                 >
                   أوقفهم وأكمل
                 </Button>

@@ -74,6 +74,28 @@ export type ReleaseSource = "default" | "galaxy" | "huawei" | "xiaomi" | "oppo" 
 /** **متى يعود التنبيهُ الاختياريُّ** — لحظةٌ لا راية، فالمدّةُ تُضبط من اللوحة. */
 const SNOOZE_KEY = "taxo.update.snoozed_until";
 
+/** **سوقُ التطبيق لإقلاعٍ قادم** (SPEC §43، ٢٠٢٦-١١-٢٦) — حدُّ اللوحة لكلِّ دولة: البوّابةُ تسأل قبل أن تُعرف الدولة،
+ *  فيُرسل آخرُ سوقٍ عرفه التطبيق (`setUpdateCountry`)، **وغيابُه الحدُّ العامّ** — فلا يُقفل أحدٌ بحدِّ دولةٍ لم يُعرف أنه منها.
+ *  واللوحةُ لا تكتبه. */
+const COUNTRY_KEY = "taxo.update.country";
+
+export function setUpdateCountry(country: string): void {
+  try {
+    localStorage.setItem(COUNTRY_KEY, country);
+  } catch {
+    // تخزينٌ محجوب — يبقى الحدُّ العامّ
+  }
+}
+
+function lastCountry(): string | null {
+  try {
+    const value = localStorage.getItem(COUNTRY_KEY);
+    return value && /^[A-Z]{2}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 /** **كم يُنتظر الحكمُ قبل رسم التطبيق على الهاتف** — سؤالٌ عامٌّ بلا جلسةٍ يجيب
  *  في أعشار الثانية، **وشبكةٌ أبطأُ من هذا لا تحبس أحداً**. */
 const WAIT_MS = 2000;
@@ -235,7 +257,7 @@ async function ask(app: UpdateApp): Promise<AppVersion | null> {
   storeSource = await sourceOf();
 
   try {
-    return await getAppVersion(app, build, platform, storeSource === "default" ? null : storeSource);
+    return await getAppVersion(app, build, platform, storeSource === "default" ? null : storeSource, lastCountry());
   } catch {
     return null;
   }
@@ -391,7 +413,7 @@ function Notice({
             onClick={updateClick(false)}
             className="flex-1 rounded-14 bg-accent px-14 py-11 text-center text-12.5 font-bold text-accent-ink"
           >
-            {tr("حمّل الآن")}
+            {tr("حدّث الآن")}
           </a>
           <button
             type="button"

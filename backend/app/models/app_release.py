@@ -44,6 +44,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -85,7 +86,7 @@ class AppRelease(Base):
             "min_supported_build > 0", name="ck_app_releases_min_positive"
         ),
         CheckConstraint(
-            f"reminder_hours >= 1 AND reminder_hours <= {MAX_REMINDER_HOURS}",
+            f"reminder_hours >= 0 AND reminder_hours <= {MAX_REMINDER_HOURS}",
             name="ck_app_releases_reminder_range",
         ),
     )
@@ -125,7 +126,14 @@ class AppRelease(Base):
     download_url: Mapped[str] = mapped_column(String(500), nullable=False)
     #: «ما الجديد» بالعربية — يقرؤه صاحبُ الهاتف لا نحن.
     release_notes: Mapped[str] = mapped_column(Text, nullable=False)
-    #: كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **مضبوطٌ من اللوحة** (§39٫٨).
+    #: **حدٌّ أدنى لكلِّ دولة** (SPEC §43، ٢٠٢٦-١١-٢٦): `{"JO": 1573}` يحلّ محلَّ `min_supported_build` **في تلك الدولة وحدَها** —
+    #: فيصير التحديثُ إلزاميّاً في سوقٍ ويبقى اختياريّاً في غيره. **والدولةُ تأتي من التطبيق** (آخرُ سوقٍ عرفه، محفوظةً لإقلاعٍ قادم)،
+    #: ومن لا تُعرف دولتُه يُحكم بالحدِّ العامّ. وكلُّ قيمةٍ لا تتجاوز `build` (تُفحص في الخدمة)، كالحدِّ العامِّ بقيده.
+    country_min_builds: Mapped[dict[str, int]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
+    #: كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **مضبوطٌ من اللوحة** (§39٫٨). **و0 = «في كلِّ فتح»**: «لاحقاً» يكتمه في الفتح نفسِه
+    #: ويعود في الإقلاع التالي (٢٠٢٦-١١-٢٦، مسلكُ غلاف 772 بعينه).
     reminder_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=24, server_default="24"
     )

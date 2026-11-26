@@ -45,6 +45,7 @@ def _out(release: AppRelease, *, is_current: bool) -> AppReleaseOut:
         release_notes=release.release_notes,
         reminder_hours=release.reminder_hours,
         open_map_min_build=release.open_map_min_build,
+        country_min_builds=dict(release.country_min_builds or {}),
         is_current=is_current,
         created_at=release.created_at,
         updated_at=release.updated_at,
@@ -104,6 +105,8 @@ async def create_release(
         reminder_hours=payload.reminder_hours,
         confirmation=payload.confirm_min_supported_build,
         open_map_min_build=payload.open_map_min_build,
+        country_min_builds=payload.country_min_builds,
+        country_confirmation=payload.confirm_country_min_builds,
     )
     await audit.record(
         session,
@@ -146,6 +149,8 @@ async def update_release(
         reminder_hours=payload.reminder_hours,
         confirmation=payload.confirm_min_supported_build,
         open_map_min_build=payload.open_map_min_build,
+        country_min_builds=payload.country_min_builds,
+        country_confirmation=payload.confirm_country_min_builds,
     )
     await audit.record(
         session,
