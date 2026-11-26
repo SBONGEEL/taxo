@@ -107,6 +107,15 @@ def test_progress_reports_hours_breaks_and_time_left() -> None:
     assert broken.state == "broken" and broken.can_restart is True
 
 
+def test_hours_are_counted_in_arabic() -> None:
+    """«مدّةُ 10 ساعات» لا «10 ساعة» — وكانت تُقرأ في سجلّ الكابتن (فحصُ المالك ٢٦/١١)."""
+    assert [commitment._hours(m) for m in (60, 120, 180, 600, 660, 90)] == [
+        "ساعة", "ساعتين", "3 ساعات", "10 ساعات", "11 ساعةً", "1:30 ساعة",
+    ]
+    late = commitment.evaluate(_day((15 * H, 23 * H)), SHAPE)
+    assert late.met is False and "10 ساعات" in (late.reason or "")
+
+
 # ===================================================================== القاعدةُ واللوحة
 
 
@@ -302,3 +311,26 @@ async def test_the_daily_cap_trims_an_award(
         points = await session.scalar(select(func.sum(DriverPointsEntry.points)).where(
             DriverPointsEntry.driver_id == driver["driver_id"]))
     assert points == cap
+
+
+async def test_outside_the_service_area_shows_a_reason_live(
+    client: AsyncClient, admin_headers: dict, jordan_settings: None, session_factory, monkeypatch
+) -> None:
+    """**خارج نطاق الخدمة ⇐ سببٌ ظاهرٌ في البطاقة** (أمرُ المالك ٢٦/١١): كانت دقائقُ الخارج تُقرأ «استراحة» بلا سبب. **والحسابُ كما هو**:
+    الدقائقُ لا تُحسب، وتُقرأ داخلَ النطاق كما كانت؛ والعودةُ إلى الداخل تُزيل السبب."""
+    driver = await _ready_driver(client, session_factory, admin_headers, require_service_area=True)
+    noon = datetime.combine(datetime.now(AMMAN).date(), time(12, 0), AMMAN)
+    monkeypatch.setattr(commitment, "_now", lambda: noon.astimezone(UTC))
+    redis = get_redis_client()
+    await _fill(driver["driver_id"], noon.date(), (10 * H, 11 * H + 50))
+    for minute in (11 * H + 59, 12 * H):
+        await redis.setbit(commitment.out_key(uuid.UUID(str(driver["driver_id"])), noon.date()), minute, 1)
+
+    today = (await client.get("/drivers/me/commitment", headers=driver["headers"])).json()["today"]
+    assert today["state"] == "running" and today["reason"] == commitment.OUT_OF_AREA_REASON
+    assert today["online_minutes"] == 110
+
+    await _fill(driver["driver_id"], noon.date(), (11 * H + 59, 12 * H + 1))
+    back = (await client.get("/drivers/me/commitment", headers=driver["headers"])).json()["today"]
+    assert back["reason"] is None
+

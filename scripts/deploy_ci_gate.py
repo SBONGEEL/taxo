@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import http.client
 import json
 import os
 import re
@@ -346,6 +347,19 @@ class GitHub:
         self.opener = urllib.request.build_opener(_NoRedirect)
 
     def _get(self, path: str) -> bytes:
+        """**قراءةٌ انقطعت تُعاد لا تُقرأ حكماً** (قِيس ٢٠٢٦-١١-٢٦ مرّتين في الرفع 19): قائمةُ التشغيلات ~٤٩٠KB انقطعت قبل آخرها
+        (`IncompleteRead`) فخرجت البوّابةُ «لا تشغيلَ لهذا الدفع» والتشغيلُ أخضرُ مُصلَح. **ثلاثُ محاولاتٍ ثمّ يُرفع الخطأ كما هو** — فلا
+        يصير الانقطاعُ مروراً أبداً، وإنما يكفّ عن أن يكون حكماً كاذباً."""
+        for attempt in range(3):
+            try:
+                return self._get_once(path)
+            except (http.client.IncompleteRead, ConnectionResetError, TimeoutError):
+                if attempt == 2:
+                    raise
+                time.sleep(3 * (attempt + 1))
+        raise AssertionError("unreachable")
+
+    def _get_once(self, path: str) -> bytes:
         request = urllib.request.Request(self.base + path, headers=self.headers)
         try:
             with self.opener.open(request, timeout=60) as response:

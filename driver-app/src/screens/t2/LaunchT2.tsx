@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { countOf, DAYS, HOURS, MINUTES } from "@/lib/arabic-count";
+import { countOf, DAYS, HOURS, MINUTES, type CountUnit } from "@/lib/arabic-count";
 
 import { acknowledgeLaunchPartner, getMyLaunchCampaign, type MyLaunchCampaign } from "@/api/endpoints";
 import { tr } from "@/lib/i18n";
@@ -25,7 +25,13 @@ function left(target: number, now: number): string {
   const days = Math.floor(ms / 86_400_000);
   const hours = Math.floor((ms % 86_400_000) / 3_600_000);
   const minutes = Math.floor((ms % 3_600_000) / 60_000);
-  return [countOf(days, DAYS), countOf(hours, HOURS), countOf(minutes, MINUTES)].join(" · ");
+  // **«الإطلاق بعد يومين» لا «بعد يومان»، ولا «0 ساعة»** (فحصُ المالك ٢٦/١١): الأصفارُ تسقط، والدقائقُ وحدَها تبقى إن لم يبقَ غيرُها،
+  // **والأوّلُ مجرورٌ ببعد** (`after`)
+  const parts: [number, CountUnit][] = [[days, DAYS], [hours, HOURS], [minutes, MINUTES]];
+  const shown = parts.filter(([value]) => value > 0);
+  return (shown.length ? shown : [parts[2]])
+    .map(([value, unit], index) => countOf(value, unit, index === 0))
+    .join(" · ");
 }
 
 export function LaunchCampaignT2() {

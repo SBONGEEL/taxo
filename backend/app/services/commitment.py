@@ -96,6 +96,10 @@ def on_key(driver_id: uuid.UUID, day: date) -> str:
     return f"duty:on:{driver_id}:{day:%Y%m%d}"
 
 
+#: **ما يراه الكابتن وهو يبثّ من خارج نطاق الخدمة** — والدقائقُ لا تُحسب حتى يعود
+OUT_OF_AREA_REASON = "أنت خارج نطاق الخدمة — دقائقُك الآن لا تُحسب حتى تعود"
+
+
 def out_key(driver_id: uuid.UUID, day: date) -> str:
     return f"duty:out:{driver_id}:{day:%Y%m%d}"
 
@@ -315,10 +319,21 @@ class Shape:
 
 
 def _hours(minutes: int) -> str:
+    """**المعدودُ بعدده** (فحصُ المالك ٢٦/١١: كان الكابتن يقرأ «مدّةُ 10 ساعة»). مواضعُه كلُّها مجرورةٌ أو مفعول («مدّةُ ساعتين»،
+    «تجاوزت ساعتين») فالمثنّى بالياء: ١ «ساعة» · ٢ «ساعتين» · ٣–١٠ «N ساعات» · ١١ فما فوق «N ساعةً» — والكسرُ «1:30 ساعة»."""
     hours, rest = divmod(minutes, 60)
-    if rest == 0:
-        return f"{hours} ساعة" if hours != 1 else "ساعة"
-    return f"{hours}:{rest:02d} ساعة"
+    if rest:
+        return f"{hours}:{rest:02d} ساعة"
+    if hours == 1:
+        return "ساعة"
+    if hours == 2:
+        return "ساعتين"
+    tail = hours % 100
+    if 3 <= tail <= 10:
+        return f"{hours} ساعات"
+    if tail >= 11:
+        return f"{hours} ساعةً"
+    return f"{hours} ساعة"
 
 
 def _scan(online: list[bool], start: int, stop: int, shape: Shape) -> SpanResult:
@@ -990,7 +1005,15 @@ async def driver_view(session: AsyncSession, redis: Redis, *, driver: Driver, us
     local = _now().astimezone(zone)
     shape = Shape.of(rule)
     online = _bits(await _raw(redis, on_key(driver.id, local.date())))
-    today = progress(online, shape, local.hour * 60 + local.minute)
+    now_minute = local.hour * 60 + local.minute
+    today = progress(online, shape, now_minute)
+    # **خارج نطاق الخدمة الآن ⇐ سببٌ ظاهرٌ للكابتن** (أمرُ المالك ٢٦/١١): دقائقُ الخارج لا تُحسب (`touch`) فكانت تُقرأ «استراحة» بلا سبب،
+    # والعلَمُ عند المشرف وحدَه. فإن كانت آخرُ دقيقتين بثٌّ خارج النطاق لا داخله قيل ذلك صريحاً — **ولا يتغيّر الحسابُ ولا الحكم**
+    if rule.require_service_area and today.state in ("running", "broken", "idle") and today.reason is None:
+        outside = _bits(await _raw(redis, out_key(driver.id, local.date())))
+        recent_minutes = [m for m in (now_minute, now_minute - 1) if 0 <= m < len(outside)]
+        if any(outside[m] for m in recent_minutes) and not any(online[m] for m in recent_minutes if m < len(online)):
+            today.reason = OUT_OF_AREA_REASON
     balance = await points_balance(session, driver.id)
     credit = await credit_balance(session, driver.id)
     currency = currency_for_country(user.country_code)
