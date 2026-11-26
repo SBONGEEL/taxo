@@ -9,6 +9,10 @@
 **والأعمدةُ تُقرأ من القاعدة نفسِها** (`information_schema`): كلُّ عمودِ نصٍّ أو `jsonb` في الجداول المسمّاة — فعمودٌ يُضاف غداً يبلغه
 التشغيلُ ولا يُنسى. **والعدُّ يُطبع** لكلِّ جدولٍ وعمود في سجلّ الرفع.
 
+**وما يتجاوز حدَّ عموده بعد الاستبدال يُترك كما هو ويُعدّ** (عطبٌ مقيسٌ على الإنتاج ٢٠٢٦-١١-٢٦، الرفع 18 مرّتين): حملةٌ مُرسَلةٌ نصُّها
+٥٠٠ حرفٍ بالضبط في `notification_campaigns.body` (`varchar(500)`) فصار ٥٠١ — **فسقطت الترحيلةُ كلُّها** بـ«value too long» وعادت
+القاعدةُ إلى `0190` في معاملتها. **فلا تقصيرَ لنصٍّ ولا توسيعَ لعمود**: صفٌّ لا يتّسع يُتجاوز، والعددُ يُطبع.
+
 **والنزولُ لا يعكس**: «كابتن» كانت تُكتب قبل هذا في مواضع، فالعكسُ الآليُّ يُفسد ما كان صحيحاً — **فهو بلا فعلٍ بقصد**، والنسخةُ قبل الرفع طريقُ الرجوع.
 """
 
@@ -44,14 +48,14 @@ def upgrade() -> None:
     bind = op.get_bind()
     columns = bind.execute(
         sa.text(
-            "SELECT table_name, column_name, data_type FROM information_schema.columns "
+            "SELECT table_name, column_name, data_type, character_maximum_length FROM information_schema.columns "
             "WHERE table_schema = current_schema() AND table_name = ANY(:tables) "
             "AND data_type IN ('text', 'character varying', 'jsonb', 'json')"
         ),
         {"tables": list(TABLES)},
     ).all()
     total = 0
-    for table, column, data_type in columns:
+    for table, column, data_type, max_length in columns:
         if data_type in ("jsonb", "json"):
             cast = data_type
             sql = (
@@ -60,6 +64,16 @@ def upgrade() -> None:
             )
         else:
             sql = f'UPDATE "{table}" SET "{column}" = replace("{column}", :old, :new) WHERE "{column}" LIKE :like'
+            if max_length is not None:
+                # **ما لا يتّسع يُترك** — ويُعدّ أدناه
+                fits = f'char_length(replace("{column}", :old, :new)) <= {int(max_length)}'
+                skipped = bind.execute(
+                    sa.text(f'SELECT count(*) FROM "{table}" WHERE "{column}" LIKE :like AND NOT ({fits})'),
+                    {"old": OLD, "new": NEW, "like": f"%{OLD}%"},
+                ).scalar_one()
+                if skipped:
+                    print(f"0191: {table}.{column} — {skipped} صفّاً لا يتّسع لـ«{NEW}» فتُرك")
+                sql += f" AND {fits}"
         changed = bind.execute(sa.text(sql), {"old": OLD, "new": NEW, "like": f"%{OLD}%"}).rowcount
         if changed:
             total += changed

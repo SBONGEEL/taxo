@@ -659,3 +659,44 @@ async def test_0184_lights_home_cars_everywhere_and_keeps_an_admin_row() -> None
     assert up == {"JO": True, "LY": True, "DZ": False}
     assert down == 0
     assert witness == 1
+
+
+async def test_0191_skips_a_value_that_would_overflow_its_column() -> None:
+    """**ما لا يتّسع لـ«كابتن» يُترك ولا تسقط الترحيلةُ كلُّها** (عطبٌ مقيسٌ على الإنتاج ٢٦/١١، الرفع 18 مرّتين): حملةٌ مُرسَلةٌ نصُّها
+    ٥٠٠ حرفٍ بالضبط في `varchar(500)` — **فـ«value too long» أعاد القاعدةَ إلى `0190`**. وصفٌّ يتّسع بجانبه يُستبدل كما يجب."""
+    config = alembic_config()
+    full = ("كبتن " + "ا" * 495)[:500]
+    assert len(full) == 500
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0190")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO notification_campaigns (id, title, body, audience, status, sent_count, widgets_only, created_at, updated_at) "
+                    "VALUES (gen_random_uuid(), 'شاهدٌ ممتلئ', :full, 'all_drivers', 'sent', 0, false, now(), now()), "
+                    "(gen_random_uuid(), 'شاهدٌ يتّسع', 'يا كبتن', 'all_drivers', 'sent', 0, false, now(), now())"
+                ),
+                {"full": full},
+            )
+        await asyncio.to_thread(command.upgrade, config, "0191")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            bodies = dict(
+                (
+                    await conn.execute(
+                        text("SELECT title, body FROM notification_campaigns WHERE title IN ('شاهدٌ ممتلئ', 'شاهدٌ يتّسع')")
+                    )
+                ).all()
+            )
+            revision = await conn.run_sync(lambda c: MigrationContext.configure(c).get_current_revision())
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM notification_campaigns WHERE title IN ('شاهدٌ ممتلئ', 'شاهدٌ يتّسع')"))
+        await engine.dispose()
+
+    assert revision == "0191"
+    assert bodies == {"شاهدٌ ممتلئ": full, "شاهدٌ يتّسع": "يا كابتن"}
+
