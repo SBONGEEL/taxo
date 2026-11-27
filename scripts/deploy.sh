@@ -8,8 +8,8 @@
 #
 #   ١ الإعلان   — كم التزاماً · ترحيلة؟ · جدولُ مال؟ · **طريقُ الرجوع**
 #   ٢ الدفعُ وCI — شجرةٌ نظيفة · مسحُ سرّ · دفعٌ · CI أخضرُ على استنساخٍ نظيف
-#   ٣ النسخة    — القاعدةُ و`.env` والوثائقُ **وما لا يعيده السحب**، خارج
-#                 الخادم، **تُفتح ويُقاس محتواها**
+#   ٣ النسخة    — القاعدةُ و`.env` والوثائقُ **وما لا يعيده السحب**، **تُبنى وتُقاس
+#                 على الخادم وتُحكم هنا**، والحاسوبُ بعد الرفع (قرارُ المالك ٢٠٢٦-١١-٢٧)
 #   ٤ الرفع     — **الخادمُ يسحب من GitHub** نفسَ إيداعِ CI · أمرٌ واحد · ترحيلة
 #   ٥ التحقّق   — إيداعٌ · ترحيلةٌ · أربعةُ أعمدةٍ للثلاثة · متصفّحٌ · سجلّ
 #
@@ -558,17 +558,55 @@ say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 # أعاق — **والحلُّ أن نطرق أقلَّ لا أن نفتح البابَ أوسع**. و`ControlMaster`
 # غيرُ مدعومٍ في ssh ويندوز (قِيس: `getsockname failed: Not a socket`)، فالسبيلُ
 # **أمرٌ واحدٌ يُنتج أرشيفاً واحداً** يحمل الأربعةَ.
-say "  · الأربعةُ في اتصالٍ واحد…"
-ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT count(*) FROM driver_documents;' 2>/dev/null | tr -d ' \r\n' > \$W/docs.rows; { docker compose $COMPOSE_FILES run --rm --no-deps -T --entrypoint tar backend -czf - -C /app/var/documents . 2>/dev/null > \$W/documents.tar.gz || : > \$W/documents.absent; }; { docker compose $COMPOSE_FILES exec -T whatsapp-gateway tar -czf - -C /data . 2>/dev/null > \$W/wa_auth.tar.gz && [ -s \$W/wa_auth.tar.gz ] || { rm -f \$W/wa_auth.tar.gz; : > \$W/wa_auth.absent; }; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
+#
+# **النسخةُ تُبنى وتُحقَّق على الخادم أوّلاً، والرفعُ لا ينتظر الحاسوب** (قرارُ المالك ٢٠٢٦-١١-٢٧، الخيار B —
+# `design/OWNER-2026-11-27-BACKUP.md`). كانت الأربعةُ تُبثّ إلى الحاسوب في اتصالٍ واحدٍ والرفعُ ينتظرها،
+# **وكان `ssh_try … > bundle.tar` يُلحِق كلَّ إعادةٍ خلف البثِّ المقطوع** (التوجيهُ على الدالّة كلِّها فالملفُّ يُفتح مرّةً):
+# قِيس ٢٠٢٦-١١-٢٧ ملفٌّ من ٦٧٠ MB — أرشيفٌ مقطوعٌ عند ٤٧٢ يليه أرشيفٌ كامل — ورفعُ 1573 في هذه البوّابة ساعةً ونصفاً.
+#
+# **والبوّابةُ لم تخفّ**: الأربعةُ نفسُها بالأوامر نفسِها (`scripts/backup-on-server.sh`)، تُقاس هناك (`backup-metrics.sh`)
+# **ويُحكم عليها هنا بالعتبات نفسِها** (`backup-judge.sh`) وزادت خاتمةُ التفريغ — **ولا سحبَ ولا ترحيلةَ قبل أن تخضرّ**.
+# **والمهمّةُ تعمل على الخادم منفصلةً** (`setsid nohup` وقفلٌ هناك) فلا يقتلها انقطاعُ ssh، ويُقرأ حالُها بقراءاتٍ قصيرة.
+# **والرجوعُ في البوّابتين ٤ و٥ من نسخة الخادم**، والحاسوبُ ينزّلها بعد الرفع (`scripts/backup-fetch.sh` — يُكمل ولا يبدأ من الصفر).
+SRV_ROOT="${TAXO_SERVER_BACKUPS:-/home/taxo/backups}"
+SRV="$SRV_ROOT/$STAMP"
+say "  · تُبنى على الخادم في $SRV…"
+JOB="$(mktemp)"
+{ printf "IGNORE_B64_EMBED='%s'\n" "$(base64 -w0 < .gitignore)"; cat scripts/backup-metrics.sh scripts/backup-on-server.sh; } > "$JOB"
+STARTED=0
+for _n in 1 2 3; do
+  _OUT="$(_ssh "mkdir -p $SRV_ROOT && chmod 700 $SRV_ROOT && cat > $SRV_ROOT/.job-$STAMP.tmp && mv -f $SRV_ROOT/.job-$STAMP.tmp $SRV_ROOT/.job-$STAMP.sh && (setsid nohup bash $SRV_ROOT/.job-$STAMP.sh $REMOTE '$SRV_ROOT' '$STAMP' '$COMPOSE_FILES' > $SRV_ROOT/$STAMP.log 2>&1 < /dev/null &) && echo STARTED" < "$JOB" 2>/dev/null || true)"
+  case "$_OUT" in *STARTED*) STARTED=1; break ;; esac
+  say "    (لم يُعرف أن المهمّةَ بدأت — إعادةٌ $_n/3 بعد ٣٥ ثانية؛ والقفلُ هناك يمنع اثنتين)" >&2
+  sleep 35
+done
+rm -f "$JOB"
+[ "$STARTED" -eq 1 ] || die "تعذّر بدءُ النسخة على الخادم — لا رفع."
 
-tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
+say "  · تُقاس هناك… (قراءةٌ كلَّ ٣٠ ثانية)"
+_BK_START=$(date +%s)
+_BK_DEADLINE=$(( _BK_START + ${TAXO_BACKUP_WAIT_MINUTES:-120} * 60 ))
+SRV_STATUS=""
+while :; do
+  sleep 30
+  SRV_STATUS="$(SSH_TRY_LIMIT=60 ssh_try "cat $SRV_ROOT/$STAMP.status 2>/dev/null || echo STATUS=NONE" 2>/dev/null | tr -d '\r' || true)"
+  _BK_ST="$(printf '%s\n' "$SRV_STATUS" | sed -n 's/^STATUS=//p' | head -1)"
+  if [ "$_BK_ST" = "DONE" ]; then break; fi
+  if [ "$_BK_ST" = "FAIL" ]; then
+    die "النسخةُ على الخادم سقطت: $(printf '%s\n' "$SRV_STATUS" | sed -n 's/^REASON=//p' | head -1) — **لا رفع**. السجلّ: $SRV_ROOT/$STAMP.log"
+  fi
+  if [ "$_BK_ST" = "NONE" ] && [ $(( $(date +%s) - _BK_START )) -gt 180 ]; then
+    die "لا حالَ للنسخة على الخادم بعد ثلاث دقائق — لم تبدأ؟ **لا رفع**. السجلّ: $SRV_ROOT/$STAMP.log"
+  fi
+  if [ "$(date +%s)" -ge "$_BK_DEADLINE" ]; then
+    die "لم تتمّ النسخةُ على الخادم في ${TAXO_BACKUP_WAIT_MINUTES:-120} دقيقة — **لا رفع**. السجلّ: $SRV_ROOT/$STAMP.log"
+  fi
+done
+printf '%s\n' "$SRV_STATUS" | grep -v '^STATUS=' > "$LOCAL/server-verify.txt" || true
 
-RAW_N="$(tr -d ' 
-' < "$LOCAL/raw.count" 2>/dev/null || echo 0)"
-UNTRACKED_N="$(tr -d ' 
-' < "$LOCAL/untracked.count" 2>/dev/null || echo 0)"
-say "    ما خارج الشجرة: $(tr -d '
-' < "$LOCAL/outside.list" 2>/dev/null)"
+RAW_N="$(sed -n 's/^raw_count=//p' "$LOCAL/server-verify.txt" | tr -d ' ')"; RAW_N="${RAW_N:-0}"
+UNTRACKED_N="$(sed -n 's/^untracked_count=//p' "$LOCAL/server-verify.txt" | tr -d ' ')"; UNTRACKED_N="${UNTRACKED_N:-0}"
+say "    ما خارج الشجرة: $(sed -n 's/^outside_list=//p' "$LOCAL/server-verify.txt")"
 # **وتُعلَن التصفيةُ بأثرها لا بوقوعها**: `--exclude-from` على ملفٍّ فارغٍ
 # **ينجح ولا يستبعد شيئاً** — وقعت مقيسةً، ولم يكشفها إلا رقمٌ مطبوع.
 if [ "${RAW_N:-0}" = "0" ]; then
@@ -583,36 +621,17 @@ else
 fi
 
 say "══ ٤) التحقّق — نسخةٌ لم تُفتح ليست نسخة"
+#
+# ── **الدروسُ كما كُتبت حين كانت الفحوصُ هنا** (تبقى درساً؛ والفحوصُ نفسُها انتقلت إلى `backup-metrics.sh` و`backup-judge.sh`) ──
 # **ولكلِّ ملفٍّ سؤالٌ عن محتواه لا عن حجمه.** الحجمُ وكيلٌ فاسدٌ في الاتجاهين:
 # قِيس هنا أنه يرفض تفريغاً سليماً صغيراً، وهو أيضاً يقبل أرشيفاً سليمَ الغلاف
 # يحمل رسالةَ خطأٍ بدل البيانات. **فالحجمُ يكشف الفراغَ وحدَه، والمحتوى يحكم.**
-FAIL=0
-check() { # اسمُ الملف · وصفٌ · أمرُ فحصِ المحتوى
-  local file="$LOCAL/$1" label="$2"; shift 2
-  if [ ! -s "$file" ]; then say "  ✗ $label — غائبٌ أو فارغ"; FAIL=1; return; fi
-  if ! gzip -t "$file" 2>/dev/null; then say "  ✗ $label — لا يُفتح"; FAIL=1; return; fi
-  if ! "$@" >/dev/null 2>&1; then
-    say "  ✗ $label — يُفتح ومحتواه ليس ما نتوقّع"; FAIL=1; return
-  fi
-  say "  ✓ $label — يُفتح ومحتواه صحيح ($(wc -c < "$file" | tr -d " ") بايت)"
-}
-
 # **ولا `grep -q` في أنبوبٍ تحت `pipefail`** — وهذا وقع مقيساً 2026-08-21:
 # `grep -q` يخرج عند أول تطابق، فيتلقّى `gzip` إشارةَ SIGPIPE ويعود بـ141،
 # و`pipefail` يجعل الأنبوبَ كلَّه فاشلاً — **فرُفضت نسخةٌ سليمةٌ فيها ٥٧ جدولاً**.
 # وأخطرُ ما فيه أنه **سباق**: مع مخرجٍ صغيرٍ ينتهي المُنتِجُ قبل أن يخرج `grep`
 # فيمرّ، ومع مخرجٍ كبيرٍ يسقط. فحارسٌ حكمُه يتبدّل بحجم ما يقرأ ليس حارساً.
 # و`grep -c` يقرأ حتى النهاية، فلا إشارةَ ولا سباق.
-sql_is_a_dump() {
-  local header tables
-  header=$(gzip -dc "$LOCAL/taxo.sql.gz" | grep -c "PostgreSQL database dump" || true)
-  tables=$(gzip -dc "$LOCAL/taxo.sql.gz" | grep -c "^CREATE TABLE" || true)
-  say "    (ترويسة: ${header:-0} · جداول: ${tables:-0})"
-  [ "${header:-0}" -ge 1 ] && [ "${tables:-0}" -ge 20 ]
-}
-
-tar_holds() { [ "$(tar -tzf "$1" 2>/dev/null | grep -c "$2" || true)" -ge 1 ]; }
-
 # **ويُقاس المحتوى لا اسمُ المدخل** (2026-08-22): الفحصُ القديم كان
 # `tar_holds … '\.env$'` — **ووصلةٌ رمزيةٌ مدخلٌ اسمُه `.env`**، فمرّ أرشيفٌ
 # لا سرَّ فيه ووُصف «محتواه صحيح». **فالاسمُ يقول إن الشيءَ مذكور، والمحتوى
@@ -620,15 +639,6 @@ tar_holds() { [ "$(tar -tzf "$1" 2>/dev/null | grep -c "$2" || true)" -ge 1 ]; }
 #
 # **والعتبةُ أسطرٌ لا بايتات**: أرشيفٌ فيه وصلةٌ يزن مئةَ بايتٍ ويقرأه من يعدّ
 # الأحجامَ سليماً.
-env_carries_secrets() {
-  local lines
-  lines=$(gzip -dc "$LOCAL/env.tar.gz" 2>/dev/null | tar -xO 2>/dev/null | grep -cE '^[A-Z][A-Z0-9_]+=.' || true)
-  say "    (أسطرُ إعدادٍ حقيقية: ${lines:-0})"
-  [ "${lines:-0}" -ge 5 ]
-}
-
-check taxo.sql.gz "القاعدة" sql_is_a_dump
-check env.tar.gz  "الأسرار" env_carries_secrets
 # **وما خارج الشجرة يُقاس بما لا يُعاد بناؤه، لا بأنه غيرُ فارغ** (قرارُ
 # المالك 2026-08-22): القائمةُ محسوبةٌ (`docker compose config` + هدفُ كلِّ
 # وصلة) **ولا مسارَ فيها مكتوبٌ بيد** — لكنّ حسابَها قد يضيق يوماً بتغيُّرِ
@@ -638,18 +648,6 @@ check env.tar.gz  "الأسرار" env_carries_secrets
 # **إعادةَ بناء النفق يدوياً** — وأربعةُ نطاقاتٍ تسقط حتى يفعل إنسانٌ ذلك.
 # **فيُسمَّيان في الفحص لا في الجمع**: القائمةُ تُحسب، **والحدُّ الأدنى
 # يُشترط**.
-outside_carries_the_tunnel() {
-  local names
-  names=$(tar -tzf "$LOCAL/outside.tar.gz" 2>/dev/null | grep -cE 'cloudflared/.*\.json$|tunnel-id$' || true)
-  say "    (بيانُ النفق ومعرِّفُه: ${names:-0} من ٢)"
-  [ "${names:-0}" -ge 2 ]
-}
-if [ -f "$LOCAL/outside.tar.gz" ]; then
-  check outside.tar.gz "ما خارج الشجرة" outside_carries_the_tunnel
-fi
-if [ -f "$LOCAL/untracked.tar.gz" ]; then
-  check untracked.tar.gz "غيرُ المتتبَّع" tar_holds "$LOCAL/untracked.tar.gz" "."
-fi
 # **ووثائقُ الكباتن كانت تُنسخ من مسارِ مضيفٍ فارغ — والفحصُ يُخضِّره**
 # (عطبٌ قِيس ٢٠٢٦-٠٩-٠٥، وعاش منذ بُنيت هذه البوّابة).
 #
@@ -668,21 +666,8 @@ fi
 # وجدولٌ فيه صفوفٌ **يُسقط الرفع**. **وصفرٌ في الطرفين حالٌ صحيحة** — تركيبٌ
 # جديدٌ لا وثيقةَ فيه، **وحارسٌ يقرأ بلوغَ الحالِ الصحيحةِ فشلاً أسوأُ من
 # غيابه**.
-documents_carry_files() {
-  local files rows
-  files=$(tar -tzf "$LOCAL/documents.tar.gz" 2>/dev/null | grep -vc '/$' || true)
-  rows=$(tr -d ' \r\n' < "$LOCAL/docs.rows" 2>/dev/null || echo "")
-  say "    (ملفّاتٌ في الأرشيف: ${files:-0} · وصفوفُ driver_documents: ${rows:-<لم يُقرأ>})"
   # **رأسُ الجدولِ غيرُ مقروءٍ ⇒ لا يُقاس ⇒ لا يُخضَّر** — «غيابُ أداة القياس
   # يوقف ولا يُقرأ سلامة».
-  [ -n "$rows" ] || return 1
-  [ "$rows" -eq 0 ] && return 0
-  [ "${files:-0}" -ge 1 ]
-}
-if [ -f "$LOCAL/documents.tar.gz" ]; then
-  check documents.tar.gz "الوثائق" documents_carry_files
-fi
-
 # **وجلسةُ واتساب سرٌّ لا يعيده السحب** (أمرُ المالك ٢٠٢٦-١١-٢٤ الثامن، البند ٣): رموزُ OTP تخرج من جلسةٍ مربوطةٍ
 # برقم الشركة، وتسكن **مجلَّداً مسمّى** (`taxo_wa_auth` على `/data` في `whatsapp-gateway`) لا مساراً على القرص —
 # **فلم تكن في أيِّ نسخةٍ قبل اليوم**، وضياعُها يعني ربطَ الرقم من جديد بهاتف المالك.
@@ -691,21 +676,15 @@ fi
 # الأسماء**. **ويُقاس المحتوى لا وجودُ الأرشيف**: أرشيفٌ بلا `creds.json` جلسةٌ لا تُستعاد ⇒ يُسقط الرفع.
 # **وغيابُها لا يُسقط الرفع ويُقال بصوتٍ عالٍ**: بوّابةٌ متوقّفةٌ لا جلسةَ فيها تُنسخ، وإسقاطُ الرفع لأجلها
 # «بوّابةٌ تصيح حيث لا خطر».
-wa_session_present() {
-  local n
-  n=$(tar -tzf "$LOCAL/wa_auth.tar.gz" 2>/dev/null | grep -c 'creds\.json$' || true)
-  say "    (ملفُّ اعتماد الجلسة: ${n:-0} · مدخلات: $(tar -tzf "$LOCAL/wa_auth.tar.gz" 2>/dev/null | grep -vc '/$' || true))"
-  [ "${n:-0}" -ge 1 ]
-}
-if [ -f "$LOCAL/wa_auth.tar.gz" ]; then
-  check wa_auth.tar.gz "جلسة واتساب" wa_session_present
-else
-  say "  ⚠ جلسة واتساب — **لم تُنسخ**: حاويةُ whatsapp-gateway غيرُ عاملةٍ أو بلا جلسة (لا يُسقط الرفع)"
-fi
+# **ولكلِّ ملفٍّ سؤالٌ عن محتواه لا عن حجمه** — والأسئلةُ كلُّها في `scripts/backup-judge.sh` بعتباتها التي كانت هنا
+# (القاعدةُ ترويسةً وعشرين جدولاً **وخاتمةَ تفريغ** · `.env` بأسطرٍ حقيقيّةٍ لا وصلة · بيانُ النفق ومعرِّفُه · الوثائقُ مقابل صفوفها ·
+# جلسةُ واتساب)، **تُقاس على الخادم وتُحكم هنا** — ودروسُها (`grep -c` لا `-q` تحت pipefail، والمحتوى لا اسمُ المدخل) في
+# `scripts/backup-metrics.sh` حيث صار القياس.
+bash scripts/backup-judge.sh < "$LOCAL/server-verify.txt" \
+  || die "النسخةُ لم تُحقَّق — **لا رفع**. قف واسأل المالك. (وما بُني على الخادم في $SRV لم يُمسّ)"
 
-[ "$FAIL" -eq 0 ] || die "النسخةُ لم تُحقَّق — **لا رفع**. قف واسأل المالك."
-
-say "  ⇒ النسخةُ المحقَّقة: $LOCAL"
+say "  ⇒ النسخةُ المحقَّقة على الخادم: $SRV (المجلّدُ 700 والملفّاتُ 600، خارج كلِّ مسارٍ مخدوم)"
+say "    والحاسوبُ بعد الرفع: bash scripts/backup-fetch.sh $STAMP"
 
 say "══ ٥) الرفع"
 
@@ -769,8 +748,8 @@ PULL="$(_ssh "cd $REMOTE && \
 # مُطبَّقاً هنا. **والفراغُ لا يُقرأ نجاحاً**: `case` يسقط إلى `*)` فيُوقِف ويقول لماذا.
 case "$PULL" in
   OK*)   say "  ✓ ${PULL#OK } — أُزيح ما تصادم وحُفظت الرقعةُ في ~/taxo-aside-$STAMP" ;;
-  FAILED*) die "تعذّر سحبُ ${HEAD_SHA:0:8} — **أُعيدت الشجرةُ في النفَس نفسِه**، والنسخةُ في $LOCAL" ;;
-  *)     die "انقطع السحبُ ولم يصل جوابُه — **يُقاس الخادمُ قبل أيِّ إعادة**. والنسخةُ في $LOCAL" ;;
+  FAILED*) die "تعذّر سحبُ ${HEAD_SHA:0:8} — **أُعيدت الشجرةُ في النفَس نفسِه**، والنسخةُ في $SRV على الخادم" ;;
+  *)     die "انقطع السحبُ ولم يصل جوابُه — **يُقاس الخادمُ قبل أيِّ إعادة**. والنسخةُ في $SRV على الخادم" ;;
 esac
 
 # ── بروفةُ صورة الخلفية — **قبل بناء الواجهات وقبل أيِّ حاوية** (٢٠٢٦-٠٩-٢٩) ──
@@ -791,7 +770,7 @@ if _ssh "cd $REMOTE && bash scripts/rehearse-backend.sh ${HEAD_SHA:0:12}" > "$RE
   say "  ✓ $(grep '^REHEARSE_OK ' "$REHEARSE_LOG" | head -1)"
 else
   grep -vE '^#[0-9]+ ' "$REHEARSE_LOG" | tail -n 15
-  die "بروفةُ صورة الخلفية سقطت — **لم تُمسّ حاويةٌ ولم تُبنَ واجهة**. الأثرُ أعلاه وكاملاً في $REHEARSE_LOG · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL"
+  die "بروفةُ صورة الخلفية سقطت — **لم تُمسّ حاويةٌ ولم تُبنَ واجهة**. الأثرُ أعلاه وكاملاً في $REHEARSE_LOG · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $SRV على الخادم"
 fi
 
 # ── بناءُ الواجهات الثلاث **على الخادم** — البوّابةُ الرابعةُ تبني ما تخدمه ──
@@ -953,10 +932,10 @@ case "$BUILT" in
   "")  # **لا حكمَ على صمت** — تُقرأ الحالُ من الخادم نفسِه
        say "  · لم يصل حكمُ البناء — تُقرأ الحالُ من الخادم لا تُفترض:"
        ssh_try "ls -1 /tmp/taxo-build/ 2>/dev/null; echo '── آخرُ سطرٍ في كلِّ سجلّ ──'; for f in /tmp/taxo-build/*.log; do echo \"\$f: \$(tail -1 \"\$f\")\"; done" || true
-       die "انقطع جوابُ البناء ولم يُعرف حكمُه — **يُوقَف ولا يُفترض**. الأثرُ أعلاه · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
+       die "انقطع جوابُ البناء ولم يُعرف حكمُه — **يُوقَف ولا يُفترض**. الأثرُ أعلاه · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $SRV على الخادم" ;;
   *)   say "  ✗ $BUILT"
        ssh_try "cat /tmp/taxo-build/fails 2>/dev/null; for f in /tmp/taxo-build/*.log; do echo \"──── \$f ────\"; tail -25 \"\$f\"; done" || true
-       die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. **والأثرُ أعلاه** · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
+       die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. **والأثرُ أعلاه** · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $SRV على الخادم" ;;
 esac
 
 
@@ -1052,7 +1031,7 @@ RESULT="$(_ssh "cd $REMOTE && \
   echo \"SHA=\$(git rev-parse HEAD)\" && \
   echo \"DB=\$(docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' | tr -d '\r ')\" && \
   echo \"BAD=\$(docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' | tr '\n' ',')\"" | tr -d '\r')" \
-  || die "تعذّرت الترحيلةُ أو إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+  || die "تعذّرت الترحيلةُ أو إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $SRV على الخادم"
 
 SERVER_NOW="$(printf '%s' "$RESULT" | sed -n 's/^SHA=//p')"
 DB_HEAD="$(printf '%s' "$RESULT" | sed -n 's/^DB=//p')"
@@ -1061,10 +1040,10 @@ BAD="$(printf '%s' "$RESULT" | sed -n 's/^BAD=//p' | tr -d ',')"
 # ═══════════════════ ٦) التحقّق ═══════════════════
 # **الرفعُ لم يتمّ حتى تخضرَّ كلُّها.**
 say "══ ٦) التحقّق"
-[ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند ${SERVER_NOW:-<مجهول>} لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
+[ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند ${SERVER_NOW:-<مجهول>} لا $HEAD_SHA — يُوقَف. والنسخةُ في $SRV على الخادم"
 say "  ✓ إيداعُ الخادم = إيداعُ CI (${SERVER_NOW:0:8})"
 
-[ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة (${DB_HEAD:-<مجهول>}) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف. والنسخةُ في $LOCAL"
+[ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة (${DB_HEAD:-<مجهول>}) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف. والنسخةُ في $SRV على الخادم"
 say "  ✓ الترحيلةُ على القاعدة = رأسُ الشجرة ($DB_HEAD)"
 
 [ -z "$BAD" ] && say "  ✓ كلُّ الحاويات تعمل" || die "حاوياتٌ ليست تعمل: $BAD"
@@ -1120,7 +1099,7 @@ for _p in privacy terms driver-privacy driver-terms \
           delete-account delete-account-en delete-account-fr; do
   _len="$(edge_get "$EDGE/$_p" | wc -c | tr -d ' ')"
   [ "${_len:-0}" -gt 4000 ] \
-    || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $LOCAL"
+    || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $SRV على الخادم"
 done
 say "  ✓ الحافّة: صفحاتُ السياسة الثماني والعشرون وصفحاتُ الحذف الثلاث تبلغ ملفّاتِها"
 
@@ -1151,9 +1130,9 @@ EOF
   _baked="$(edge_get "$EDGE/$_page" | { grep -o 'data-policy-version="[0-9]*"' || true; } | head -1 | tr -cd '0-9')"
   _live="$(edge_get "$EDGE/api/policy?doc_type=$_doc&app=$_app${_cc:+&country=$_cc}" | { grep -o '"version":[0-9]*' || true; } | head -1 | tr -cd '0-9')"
   [ -n "$_baked" ] && [ -n "$_live" ] \
-    || die "تعذّر قياسُ نسخةِ $_page (مخبوز='${_baked:-—}' حيّ='${_live:-—}') — **ولا يُقرأ صمتُه سلامة**. والنسخةُ في $LOCAL"
+    || die "تعذّر قياسُ نسخةِ $_page (مخبوز='${_baked:-—}' حيّ='${_live:-—}') — **ولا يُقرأ صمتُه سلامة**. والنسخةُ في $SRV على الخادم"
   [ "$_baked" = "$_live" ] \
-    || die "$_page مخبوزةٌ على v$_baked والمنشورُ v$_live — **صفحةٌ قانونيةٌ بلِيت**. أعِد بناءَ الموقع. والنسخةُ في $LOCAL"
+    || die "$_page مخبوزةٌ على v$_baked والمنشورُ v$_live — **صفحةٌ قانونيةٌ بلِيت**. أعِد بناءَ الموقع. والنسخةُ في $SRV على الخادم"
 done
 say "  ✓ الحافّة: نسخةُ كلِّ صفحةِ سياسةٍ = المنشورُ في القاعدة"
 
@@ -1169,18 +1148,30 @@ ERRS="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backen
 if [ "${ERRS:-0}" != "0" ]; then
   say "  ⚠ السجلُّ فيه $ERRS سطرَ خطأ — تُقرأ قبل أن يُعلَن التمام:"
   _ssh "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -iE 'traceback|ERROR|CRITICAL' | head -10"
-  die "لا يُعلَن تمامٌ وفي السجلِّ أخطاء — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+  die "لا يُعلَن تمامٌ وفي السجلِّ أخطاء — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $SRV على الخادم"
 fi
 say "  ✓ السجلّ: صفرُ أخطاءٍ في ثلاث دقائق"
 
 say ""
 say "✓ رُفع بعد نسخةٍ محقَّقة، وخضّرت البوّاباتُ الستُّ كلُّها."
-say "  النسخة : $LOCAL"
+say "  النسخة : $SRV — على الخادم، محقَّقةٌ قبل الرفع"
 say "  وقتُها : $STAMP (UTC)"
-say "  حجمُها : $(du -sh "$LOCAL" | cut -f1)"
+say "  حجمُها : $(sed -n 's/^bundle_bytes=//p' "$LOCAL/server-verify.txt") بايت · sha256 $(sed -n 's/^bundle_sha256=//p' "$LOCAL/server-verify.txt" | cut -c1-16)…"
 say ""
 say "  **يُذكر هذا الثلاثيُّ في تقرير الرفع** (قاعدةُ CLAUDE.md الأولى)."
 say ""
 say "  **وما لا يقيسه هذا الباب** — يُقال ولا يُقرأ سكوتُه ضماناً:"
 say "  · **مسارٌ حيٌّ من متصفحٍ** لا \`curl\` — شرطٌ بشريٌّ في البوّابة الخامسة"
 say "  · **الأعمدةُ الأربعةُ للثلاثة** — تُقاس بـ\`check:served\` و\`check-apk\` محلياً"
+
+# ═══════════════════ ٧) نسخةُ الحاسوب — بعد الرفع ═══════════════════
+# **والرفعُ تمّ قبلها ولا ينتظرها** (قرارُ المالك ٢٠٢٦-١١-٢٧، الخيار B): تُكمَل من حيث انقطعت، وتُطابَق بـsha256، ويُعاد عليها الحكم.
+# **وسقوطُها لا يُسقط الرفع** — نسخةُ الخادم المحقَّقة باقية، ولا يُحذف شيء، ويُعاد التنزيلُ وحدَه لاحقاً.
+say ""
+say "══ ٧) نسخةُ الحاسوب — بعد الرفع"
+sleep "$_SSH_GAP"
+if TAXO_SSH="$SSH" TAXO_DEPLOY_HOST="$HOST" TAXO_SERVER_BACKUPS="$SRV_ROOT" bash scripts/backup-fetch.sh "$STAMP" "$LOCAL"; then
+  say "  ✓ النسخةُ على الحاسوب أيضاً: $LOCAL"
+else
+  say "  ⚠ **لم تكتمل نسخةُ الحاسوب** — والرفعُ تمّ ونسخةُ الخادم المحقَّقة باقيةٌ في $SRV. الإكمال: bash scripts/backup-fetch.sh $STAMP"
+fi
