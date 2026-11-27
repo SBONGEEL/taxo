@@ -86,6 +86,9 @@ run "deploy-ci-gate"        bash scripts/tests/deploy-ci-gate.test.sh
 # **ولا يموت المشغّلُ صامتاً** (٢٠٢٦-١١-١٧): رفعُ ١٦/١١ مات بعد «الصحّة عبر النفق» بلا سطر — إسنادٌ من `$(curl …|…)` ساقطٍ تحت
 # `pipefail` يقتل قبل `die`. يُقاس السلوكُ في الاتجاهين (الشكلُ يموت صامتاً بلا الحارس، ويُسمّى به) — بلا شبكة.
 run "deploy-silent-exit"    bash scripts/tests/deploy-silent-exit.test.sh
+# **والنسخةُ على الخادم أوّلاً والحاسوبُ بعد الرفع** (قرارُ المالك ٢٠٢٦-١١-٢٧): انقطاعٌ يُكمَل من موضعه لا من الصفر، وsha256 مخالفٌ
+# لا يُعلَّم ولا يُحذف، والاستبقاءُ لا يمسّ ما لم يصل الحاسوب، والحَكَمُ يُسقط ما كانت البوّابةُ الرابعةُ تُسقطه — بلا شبكة.
+run "backup-fetch"          bash scripts/tests/backup-fetch.test.sh
 run "permissions-plugin"    node tools/check-permissions-plugin.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
