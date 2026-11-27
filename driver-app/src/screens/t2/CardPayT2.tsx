@@ -23,6 +23,7 @@ import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { legalPages, openLegal } from "@/lib/legal";
 import { goToCheckout, openedRequest } from "@/lib/pay-return";
+import { PaymentEmailNote, emailRequired } from "@/screens/t2/PayDz";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, formatAmount } from "@/lib/utils";
 import { Icon, Wordmark } from "@/taxo2";
@@ -111,6 +112,8 @@ export function CardPayT2Screen() {
   const [currency, setCurrency] = useState<keyof typeof CURRENCY_LABEL | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // **بريدٌ يشترطه الوسيط وحسابُ الكابتن بلا بريد** (Freemius) — حقلُه هنا مرّةً ثمّ يتابع الدفعُ نفسُه؛ لا نصَّ «حدّث التطبيق» (قِيس ٢٠٢٦-١١-٢٧)
+  const [needEmail, setNeedEmail] = useState(false);
   const { profile } = useDriver();
   const features = useCountryConfig(profile?.user?.country_code)?.features;
 
@@ -158,7 +161,8 @@ export function CardPayT2Screen() {
       });
       goToCheckout(opened.request.id, opened.checkout_url);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
+      if (emailRequired(caught)) setNeedEmail(true);
+      else setError(caught instanceof ApiError ? caught.message : tr("تعذّر فتح صفحة الدفع — أعد المحاولة"));
       setBusy(false);
     }
   }
@@ -198,6 +202,14 @@ export function CardPayT2Screen() {
           <Icon name="error" fill />
           {error}
         </p>
+      ) : null}
+      {needEmail ? (
+        <PaymentEmailNote
+          onSaved={() => {
+            setNeedEmail(false);
+            void pay();
+          }}
+        />
       ) : null}
 
       {!handoff ? (
