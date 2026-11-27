@@ -167,7 +167,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **فيسبوكُ لوكيلٍ آخر**: `FACEBOOK-AGENT.md` §٨، و`FACEBOOK-REQUESTS.md` أوّلَ كلِّ جلسة.
 
-**الهاتف** `design/OWNER-2026-11-22-SECOND.md` · **الخزنة:** كلُّ سرٍّ يتغيّر ⇐ `scripts/vault_put.py` و«أضفت إلى الخزنة: [الاسم]» · **النسخ:** الخادمُ فالحاسوب `design/OWNER-2026-11-27-BACKUP.md` · **Docker وWSL** يُغلقان حين لا يلزمان `design/OWNER-2026-11-27-DOCKER-WSL.md`.
+**الهاتف** `design/OWNER-2026-11-22-SECOND.md` · **الخزنة:** كلُّ سرٍّ يتغيّر ⇐ `scripts/vault_put.py` و«أضفت إلى الخزنة: [الاسم]» · **النسخ:** الخادمُ فالحاسوب `design/OWNER-2026-11-27-BACKUP.md` · **Docker وWSL** يُغلقان بعد كلِّ خطوة `design/OWNER-2026-11-27-DOCKER-WSL.md`.
 
 ## الملفّاتُ الخمسةُ المنقولة — شروطُها ملزِمةٌ لا «عند الحاجة»
 

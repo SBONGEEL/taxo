@@ -17,7 +17,27 @@
   **وحاوياتُ التطوير (`taxo-app`) تبدأ وحدَها مع Docker** بسياسة إعادة التشغيل — قِيس ٢٠٢٦-١١-٢٧: بدأت `taxo-backend` و`taxo-customer-app`
   مع Docker للاختبار، **وكتبت الثانيةُ `customer-app/package-lock.json` في الشجرة الرئيسيّة** (أُعيد من git). فتُوقَف فور بدء Docker إن لم تلزم.
 - **WSL**: `wsl --shutdown` حين لا يحتاجه عمل، بعد الفحوص الثلاثة: (١) لا أمرَ ولا رفعَ ولا تنزيلَ نسخةٍ ولا اختبارَ يعتمد عليه؛
-  (٢) لا وكيلَ آخرَ ولا أداةَ للمالك تستعمله (جلسةُ tmux ‏`miqat` قائمة ⇐ لا إغلاق)؛ (٣) جلسةُ الوكيل نفسُه لا تحتاجه — **ومستودعُ TAXO وأدواتُ
-  الرفع في WSL**، فما دام عملٌ في المستودع جارياً أو قريباً يبقى، ويُغلق Docker وحدَه.
+  (٢) لا وكيلَ آخرَ ولا جلسةَ تستعمله (Fawri · Miqat · iOS · **أيُّ جلسة tmux يعمل فيها claude**) — وإلا يُترك ويُمضى؛ (٣) جلسةُ الوكيل نفسُه
+  لا تتوقّف به. **ومن الأمر الثاني (أدناه): المستودعُ في WSL لا يُبقيه مفتوحاً بين الخطوات** — يُغلق بعد كلِّ خطوة Docker متى لم يجرِ
+  فيه رفعٌ ولا تنزيلُ نسخةٍ ولا إيداعٌ ولا اختبارٌ ولا سكربت، ويُعاد حين تحتاجه الخطوةُ التالية.
 - **ولا إغلاقَ وسطَ رفعٍ أو نسخةٍ أو خطوةِ قاعدةٍ أو إيداع.**
 - **وكلُّ تقريرٍ يذكر ما أُغلق وما أُعيد فتحُه.**
+
+## الأمرُ الثاني حرفاً (٢٠٢٦-١١-٢٧ ‏~14:00Z) — يعلو على ما قبله حيث يختلفان
+
+> 1. Check the tmux session "miqat" inside WSL: is the claude program running in it right now?
+> 2. If it is empty (only a shell prompt, no claude running): close that tmux session.
+> 3. If claude is running in it: do not touch it, keep WSL as it is, and tell me.
+> 4. TAXO too: when TAXO work does not need WSL at that moment (no deploy, backup download, commit, test or script running in it), shut WSL down (wsl --shutdown) after each Docker step, the same way you close Docker. Start it again only when the next TAXO step needs it.
+> 5. Before every WSL shutdown, check that no other agent or session is using WSL (Fawri, Miqat, iOS, any running tmux session with claude). If anything is using it, leave WSL running and continue.
+> 6. Never shut WSL down in the middle of a deploy, a backup, a database step or a commit, and never if your own session or tools would stop because of it.
+> 7. Update your memory and CLAUDE.md with this rule.
+> Conditions: do not close anything else, and do not touch the folder D:\prj\miqat. Mention in each report what you closed and reopened.
+
+### ما نُفّذ
+
+- **جلسةُ `miqat` فُحصت ١٤:٠٢Z فكانت فارغة**: آخرُ ما فيها `Trust D:\prj\miqat? [y/N] [remote-control exited: 0]` ثمّ مِحثُّ bash بلا ابن —
+  `claude.exe remote-control` خرج عند سؤال الثقة ولم يعمل. **فأُغلقت** (`tmux kill-session -t miqat`) بعد إعادة الفحص في الأمر نفسِه.
+  ولم يُمسّ `D:\prj\miqat`، ولا بناءُ Gradle الجاري له على ويندوز، ولا جلساتُ claude الأخرى.
+- **وفحصُ ما قبل كلِّ إغلاق**: `tmux list-sessions` وما يجري في كلِّ لوحة (`pane_current_command` وأبناؤه)؛ و`ps` داخل WSL لكلِّ ما ليس
+  من النظام؛ وعمليّاتُ `wsl.exe` على ويندوز وآباؤها — **عمليّةُ `wsl.exe` لغير هذا الوكيل ⇐ لا إغلاق**.
