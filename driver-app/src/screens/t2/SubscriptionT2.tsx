@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { bankCardMethod, cardFits, cryptoMethod, digistoreOnHere } from "@/screens/t2/CardPayT2";
+import { bankCardMethod, cardFits, cryptoMethod, digistoreOnHere, freemiusOnHere } from "@/screens/t2/CardPayT2";
 
 import { listPaymentMethods } from "@/api/endpoints";
 import type { PayMethod, SubscriptionDuration, SubscriptionPlan } from "@/api/types";
@@ -146,19 +146,21 @@ export function SubscriptionT2Screen() {
   const countryOrder = useCountryConfig(profile?.user?.country_code)?.payment_method_order;
   // **وDigistore24 بمفتاح نسخته** (أمرُ المالك ٢٠٢٦-١١-٢٣) — الموقعُ بمفتاحه، ونسخةُ Play بمفتاحها المستقلّ
   const digistoreOn = digistoreOnHere(bankCardFeatures);
+  // **وFreemius** (أمرُ المالك ٢٠٢٦-١١-٢٦) — البوّابةُ الاحتياطيّة، لنسخة الموقع وحدَها
+  const freemiusOn = freemiusOnHere(bankCardFeatures);
   const bankCardOn = bankCardFeatures?.nowpay_card_enabled === true || bankCardFeatures?.whop_card_enabled === true ||
-    bankCardFeatures?.polar_card_enabled === true || dpaySub || digistoreOn;
+    bankCardFeatures?.polar_card_enabled === true || dpaySub || digistoreOn || freemiusOn;
   const [bankCard, setBankCard] = useState<PayMethod | null>(null);
   useEffect(() => {
     if (!bankCardOn) return;
     let alive = true;
     listPaymentMethods("subscription")
-      .then((body) => alive && setBankCard(bankCardMethod(body.methods, digistoreOn)))
+      .then((body) => alive && setBankCard(bankCardMethod(body.methods, digistoreOn, freemiusOn)))
       .catch(() => alive && setBankCard(null));
     return () => {
       alive = false;
     };
-  }, [bankCardOn, digistoreOn]);
+  }, [bankCardOn, digistoreOn, freemiusOn]);
   // **الدفعُ بالعملات الرقميّة** (MoonPay Commerce، أمرُ المالك ٢٠٢٦-١١-١٤) — بمفتاحه في سوقه، وأوّلاً حيث رتّبه المالك
   const cryptoOn = bankCardFeatures?.moonpay_driver_enabled === true;
   const cryptoOnTop = useCountryConfig(profile?.user?.country_code)?.crypto_first === true;

@@ -347,9 +347,23 @@ async def _push_async(payload: list[str]) -> None:
 
 
 async def settle() -> None:
-    """**ينتظر ما سُلِّم ولم يصل بعد** — للاختبارات وحدَها: التسليمُ لا يُنتظر في التطبيق، والاختبارُ يقرأ القائمةَ بعده."""
-    while _PENDING:
-        await asyncio.gather(*list(_PENDING), return_exceptions=True)
+    """**ينتظر ما سُلِّم ولم يصل بعد** — للاختبارات وحدَها: التسليمُ لا يُنتظر في التطبيق، والاختبارُ يقرأ القائمةَ بعده.
+
+    **ويُنتظر ما في هذه الحلقة وحدَه، ويُسقط ما انتهى**: مهمّةٌ من حلقةِ اختبارٍ سابقٍ أُغلقت قبل أن يجري نداءُ إسقاطها
+    تبقى في المجموعة منتهيةً أبداً، و`gather` عليها يعود في الحال — **فكانت الحلقةُ تدور بلا نهاية** (قِيس ٢٠٢٦-١١-٢٧:
+    اختبارُ الدفع المكرَّر في `test_freemius.py` دار ٣٥ دقيقةً على المعالج بعد ٢١ اختباراً).
+    """
+    loop = asyncio.get_running_loop()
+    while True:
+        live = []
+        for task in list(_PENDING):
+            if task.done() or task.get_loop() is not loop:
+                _PENDING.discard(task)
+            else:
+                live.append(task)
+        if not live:
+            return
+        await asyncio.gather(*live, return_exceptions=True)
 
 
 _sync_client: Any = None

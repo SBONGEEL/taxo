@@ -75,3 +75,13 @@
   color: var(--t2-muted);
   text-align: center;
 }
+/* رابطُ «الشروط والسياسات» — صغيرٌ عاديٌّ بلون السطر الخفيف، لا زرٌّ ولا تمييز (قرارُ المالك ٢٠٢٦-١١-٢٧) */
+.t2-cardpay-terms {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

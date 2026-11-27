@@ -67,6 +67,7 @@ const DEMO_FEATURES: Record<string, boolean> = {
   polar_card_enabled: false,
   digistore24_card_enabled: false,
   digistore24_card_play_enabled: false,
+  freemius_card_enabled: false,
   taxo_cards_captain_sales: false,
   moonpay_driver_enabled: false,
 };

@@ -21,6 +21,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { legalPages, openLegal } from "@/lib/legal";
 import { goToCheckout, openedRequest } from "@/lib/pay-return";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, formatAmount } from "@/lib/utils";
@@ -29,7 +30,7 @@ import { Icon, Wordmark } from "@/taxo2";
 import "./fields.css";
 import "./money.css";
 import "./cardpay.css";
-import { tr } from "@/lib/i18n";
+import { language, tr } from "@/lib/i18n";
 
 /** **ما تحمله الشاشةُ التي فتحتها** — الغرضُ والمبلغُ كما حسبته الخلفية، والخطّةُ للاشتراك */
 export interface CardPayHandoff {
@@ -42,16 +43,33 @@ export interface CardPayHandoff {
 }
 
 /** **طريقةُ البطاقة المصرفية من طرق السوق** — هي وحدَها تحمل عملةَ خصمٍ أخرى */
-export function bankCardMethod(methods: PayMethod[] | null | undefined, digistoreOn = true): PayMethod | null {
+export function bankCardMethod(methods: PayMethod[] | null | undefined, digistoreOn = true, freemiusOn = false): PayMethod | null {
   // **Whop أوّلاً حين يُعرض** (أمرُ المالك ٢٠٢٦-١١-١٣: طريقةُ الأردن الأساسيّة) — وإلا أيُّ وسيطِ بطاقةٍ مصرفيّةٍ في السوق
   // **وDigistore24 بمفتاح نسخته وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٣): الخادمُ يعرضه إن اشتعل مفتاحُ الموقع أو Play، **ونسخةُ Play لا ترسمه
   // ومفتاحُها مطفأ** — فلا يُذكر الدفعُ بالبطاقة فيها قبل موافقة Google
-  const cards = methods?.filter((row) => row.gateway && row.charge_currency && !row.crypto && (digistoreOn || row.code !== DIGISTORE24)) ?? [];
+  // **وFreemius بمفتاح الموقع وحدَه** (أمرُ المالك ٢٠٢٦-١١-٢٦) — لا يُرسم في نسخة Play أبداً، ولا في «المستحقّات» (اشتراكٌ وحدَه)
+  const cards =
+    methods?.filter(
+      (row) =>
+        row.gateway &&
+        row.charge_currency &&
+        !row.crypto &&
+        (digistoreOn || row.code !== DIGISTORE24) &&
+        (freemiusOn || row.code !== FREEMIUS),
+    ) ?? [];
   return cards.find((row) => row.code === "whop_card") ?? cards[0] ?? null;
 }
 
 /** **صفُّ Digistore24 في طرق السوق** (`0188`) */
 export const DIGISTORE24 = "digistore24_card";
+
+/** **صفُّ Freemius في طرق السوق** (`0194`) — البوّابةُ الاحتياطيّة، لنسخة الموقع وحدَها */
+export const FREEMIUS = "freemius_card";
+
+/** **طريقةٌ تُخصم بالدولار وتُعرض بالدينار وحدَه** (قرارُ المالك) — Digistore24 وFreemius بسطرٍ خفيفٍ واحد وحارسِ السعر نفسِه */
+export function isUsdPass(method: PayMethod | null | undefined): boolean {
+  return method?.code === DIGISTORE24 || method?.code === FREEMIUS;
+}
 
 /** **قناةُ هذه النسخة** — الغلافُ نسخةُ Play (وحزمةُ الموقع موقَّعةٌ من Play نفسِها)، والمتصفّحُ نسخةُ الموقع */
 export function payChannel(): "web" | "play" {
@@ -62,6 +80,11 @@ export function payChannel(): "web" | "play" {
 export function digistoreOnHere(features: Record<string, boolean> | null | undefined): boolean {
   if (!features) return false;
   return payChannel() === "play" ? features.digistore24_card_play_enabled === true : features.digistore24_card_enabled === true;
+}
+
+/** **أيُشعَل Freemius في هذه النسخة؟** — نسخةُ الموقع ومفتاحُها وحدَهما (أمرُ المالك ٢٠٢٦-١١-٢٦: «never in the Play build») */
+export function freemiusOnHere(features: Record<string, boolean> | null | undefined): boolean {
+  return payChannel() === "web" && features?.freemius_card_enabled === true;
 }
 
 /** **حارسُ السعر** (قرارُ المالك ٢٠٢٦-١١-٢٣) — طريقةٌ بمبالغَ ثابتةٍ تُدفع بها الخطّةُ التي يساويها ما يدفعه الكبتنُ الآن وحدَها؛
@@ -105,7 +128,11 @@ export function CardPayT2Screen() {
       .then((body) => {
         if (!alive) return;
         setCurrency(body.currency);
-        setMethod(handoff.crypto ? cryptoMethod(body.methods) : bankCardMethod(body.methods, digistoreOnHere(features)));
+        setMethod(
+          handoff.crypto
+            ? cryptoMethod(body.methods)
+            : bankCardMethod(body.methods, digistoreOnHere(features), freemiusOnHere(features)),
+        );
       })
       .catch((caught: unknown) => {
         if (!alive) return;
@@ -127,7 +154,7 @@ export function CardPayT2Screen() {
         purpose: handoff.purpose,
         amount: handoff.amount,
         planId: handoff.purpose === "subscription" ? handoff.planId : undefined,
-        channel: method.code === DIGISTORE24 ? payChannel() : undefined,
+        channel: isUsdPass(method) ? payChannel() : undefined,
       });
       goToCheckout(opened.request.id, opened.checkout_url);
     } catch (caught) {
@@ -142,7 +169,11 @@ export function CardPayT2Screen() {
   const belowFloor = handoff !== null && floor !== null && Number(handoff.amount) < Number(floor);
   // **Digistore24**: الدينارُ وحدَه على شاشات TAXO وسطرٌ خفيفٌ في الأسفل (قرارُ المالك ٢٠٢٦-١١-٢٣) — لا سعرَ دولار ولا سطرُ بنك
   const digistore = method?.code === DIGISTORE24;
-  const offPrice = digistore && handoff !== null && !cardFits(method, handoff.amount);
+  // **وFreemius مثلُه** (أمرُ المالك ٢٠٢٦-١١-٢٦): الدينارُ وحدَه، وسطرُ الدولار، وحارسُ السعر — **وسطرُ البريد بدل سطر الرمز البريديّ**
+  const freemius = method?.code === FREEMIUS;
+  const usdPass = digistore || freemius;
+  const offPrice = usdPass && handoff !== null && !cardFits(method, handoff.amount);
+  const termsUrl = legalPages(profile?.user?.country_code, language).find((page) => page.key === "terms")?.url ?? null;
 
   return (
     <div className="t2 t2-cardpay scr">
@@ -236,7 +267,7 @@ export function CardPayT2Screen() {
             </ul>
           ) : (
           <ul className="t2-cardpay-facts">
-            {digistore ? null : method.charge_rate ? (
+            {usdPass ? null : method.charge_rate ? (
               <li>
                 <Icon name="credit_card" />
                 <span>
@@ -259,7 +290,7 @@ export function CardPayT2Screen() {
                 </span>
               </li>
             ) : null}
-            {method.charge_rate && !digistore ? (
+            {method.charge_rate && !usdPass ? (
               <li>
                 <Icon name="account_balance" />
                 <span>{tr("وقد يضيف بنكُك رسمَ تحويل العملة، فيختلف ما في كشف حسابك قليلاً.")}</span>
@@ -301,12 +332,23 @@ export function CardPayT2Screen() {
           {method.down ? (
             <p className="t2-note">{tr("صفحة البطاقة متوقّفة الآن — حاول بعد قليل أو ادفع بكليك.")}</p>
           ) : null}
-          {digistore ? <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p> : null}
+          {usdPass ? <p className="t2-cardpay-fine">{tr("سيتم خصم القيمة من البطاقة بما يعادلها بالدولار")}</p> : null}
+          {/* **Freemius يُربط بالبريد** (صفحتُه لا تحمل مرجعَنا) — فيُقال قبل فتحها أن يبقى البريدُ كما هو */}
+          {freemius ? <p className="t2-cardpay-fine">{tr("أبقِ بريدك في صفحة الدفع كما هو — به يُفعَّل اشتراكك")}</p> : null}
           {/* **الرمزُ البريديُّ يكتبه الكبتن** (قرارُ المالك ٢٠٢٦-١١-٢٤): صفحةُ Digistore24 تشترطه للأردن ولا مدينةَ في الحساب — فيُقال قبل فتحها */}
           {digistore ? <p className="t2-cardpay-fine">{tr("ستُسأل عن الرمز البريدي لمدينتك، واختر «شخص خاص»")}</p> : null}
           <button type="button" className="t2-link" onClick={() => navigate(-1)}>
             {tr("تراجع")}
           </button>
+          {/* **رابطٌ صغيرٌ عاديٌّ إلى شروط الكابتن وحدَه** (قرارُ المالك ٢٠٢٦-١١-٢٧): بندُ الاسترداد في الشروط بين بنودها، **ولا نصَّ
+              استردادٍ على هذه الشاشة** — لا شريطَ ولا تمييزَ ولا نافذة */}
+          {termsUrl ? (
+            <p className="t2-cardpay-fine">
+              <button type="button" className="t2-cardpay-terms" onClick={() => openLegal(termsUrl)}>
+                {tr("الشروط والسياسات")}
+              </button>
+            </p>
+          ) : null}
         </>
       )}
     </div>

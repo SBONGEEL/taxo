@@ -594,6 +594,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "الدفع بالبطاقة (Digistore24) في نسخة الموقع",
     hint: "يدفع الكابتنُ اشتراكَه ببطاقته البنكيّة في صفحة Digistore24 الآمنة من نسخة الموقع (driver.tajora.ly)، ويُفعَّل الاشتراكُ فورَ إشعار Digistore24 الموقَّع وحدَه. يرى الكابتنُ الدينارَ وحدَه، وتُخصم البطاقةُ ما يعادله بالدولار، ورسمُ Digistore24 على TAXO. لا يظهر الزرُّ إلا لخطّةٍ يدفع فيها الكابتنُ الآن 3 أو 17 أو 45 ديناراً بالضبط — فإن انتهى عرضٌ أو تغيّر سعرٌ اختفى الزرُّ لتلك الخطّة وحدَها. والاسترداد يُلغي الاشتراكَ ويعيد المحفظةَ كما كانت. لا يظهر قبل عقد «Digistore24». الأردنُ وحدَه.",
   },
+  freemius_card_enabled: {
+    title: "الدفع بالبطاقة (Freemius) في نسخة الموقع",
+    hint: "البوّابةُ الاحتياطيّة: يدفع الكابتنُ اشتراكَه ببطاقته في صفحة Freemius الآمنة من نسخة الموقع وحدَها، ويُفعَّل الاشتراكُ فورَ إشعار Freemius الموقَّع. تُختار في «بوابة الدفع بالبطاقة» لا هنا.",
+  },
   digistore24_card_play_enabled: {
     title: "الدفع بالبطاقة في نسخة Play",
     hint: "المفتاحُ نفسُه لنسخة Google Play وحدَها — مستقلٌّ لتُطفئه فوراً دون أن يتأثّر الموقع. لا يُشعَل قبل موافقة Google على إنتاج تطبيق الكابتن ونشره للجميع. مطفأً لا يرى كابتنُ Play زرَّ البطاقة ولا يُفتح له دفعٌ ولو طلبه.",
@@ -702,6 +706,7 @@ const FLAGS: FeatureKey[] = [
   "launch_captain_bears_discounts",
   // **واشتراكُ الكبتن بالبطاقة عبر Digistore24** (٢٠٢٦-١١-٢٣) — الموقعُ ونسخةُ Play، الأردنُ وحدَه
   "digistore24_card_enabled",
+  "freemius_card_enabled",
   "digistore24_card_play_enabled",
   // **Dpay** (٢٠٢٦-١١-١٧) — ثلاثةُ استعمالات، مطفأةٌ حتى الرخصة وقبول Dpay
   "dpay_topup_enabled",
@@ -861,6 +866,18 @@ const GUARD_NOTE: Record<GuardedFlag, ReactNode> = {
   ),
 };
 
+/** **«بوابة الدفع بالبطاقة»** (أمرُ المالك ٢٠٢٦-١١-٢٦) — ما يراه الكابتنُ في نسخة الموقع لاشتراكه: واحدةٌ أو لا شيء */
+type CardGateway = "off" | "digistore24" | "freemius";
+const CARD_GATEWAY_OPTIONS: readonly (readonly [CardGateway, string])[] = [
+  ["off", "مطفأة"],
+  ["digistore24", "Digistore24"],
+  ["freemius", "Freemius"],
+];
+const CARD_GATEWAY_LABEL = {
+  title: "بوابة الدفع بالبطاقة",
+  hint: "تختار البوّابةَ التي يدفع بها الكابتنُ اشتراكَه ببطاقته في نسخة الموقع (driver.tajora.ly): مطفأة، أو Digistore24، أو Freemius — واحدةٌ وحدَها، ويُطفئ الخادمُ الأخرى فلا يرى الكابتنُ إلا المختارة. يرى الدينارَ وحدَه وتُخصم بطاقتُه ما يعادله بالدولار، ورسمُ البوّابة على TAXO، ولا يُفتح الدفعُ إلا لخطّةٍ يساوي ما يدفعه فيها مبلغَ إحدى خططها الأربع بالضبط. كلُّ تغييرٍ يُسجَّل في سجلّ التدقيق. لا تظهر البوّابةُ قبل عقدها في «العقود»، وFreemius لا يظهر في نسخة Play أبداً. الأردنُ وحدَه.",
+};
+
 export function SettingsScreen() {
   const { country } = useCountry();
   const { isAdmin } = useSession();
@@ -999,6 +1016,43 @@ export function SettingsScreen() {
                       <Link to="/markets" className="ad-btn ad-btn-sm ad-btn-secondary">
                         {on ? "مفتوحة" : "مغلقة"} — «الدول»
                       </Link>
+                    </li>
+                  );
+                }
+                // **«بوابة الدفع بالبطاقة»** (أمرُ المالك ٢٠٢٦-١١-٢٦) — اختيارٌ واحدٌ من ثلاثة لنسخة الموقع في هذه الدولة: مطفأة · Digistore24 ·
+                // Freemius. **والخادمُ يُطفئ الأخرى حين تُشعَل واحدة** (`set_flag`) بقيد تدقيقٍ لكلٍّ منهما؛ فمفتاحُ Freemius يُرسم هنا لا وحدَه
+                if (key === "freemius_card_enabled") return null;
+                if (key === "digistore24_card_enabled") {
+                  const gate = current?.flags["freemius_card_enabled"] === true ? "freemius" : on ? "digistore24" : "off";
+                  const choose = async (next: CardGateway) => {
+                    if (next === gate) return;
+                    if (next === "off") {
+                      await flip(gate === "freemius" ? "freemius_card_enabled" : "digistore24_card_enabled", false);
+                    } else {
+                      await flip(next === "freemius" ? "freemius_card_enabled" : "digistore24_card_enabled", true);
+                    }
+                  };
+                  return (
+                    <li key={key} className="flex flex-col gap-8" data-card-gateway={gate}>
+                      <span>
+                        <span className="block text-13 font-semibold text-ink">{CARD_GATEWAY_LABEL.title}</span>
+                        <span className="block text-11 leading-snug text-muted">{CARD_GATEWAY_LABEL.hint}</span>
+                      </span>
+                      <span className="flex flex-wrap gap-6" role="radiogroup" aria-label={CARD_GATEWAY_LABEL.title}>
+                        {CARD_GATEWAY_OPTIONS.map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            role="radio"
+                            aria-checked={gate === value}
+                            disabled={!isAdmin}
+                            className={gate === value ? "ad-btn ad-btn-sm ad-btn-primary" : "ad-btn ad-btn-sm ad-btn-secondary"}
+                            onClick={() => void choose(value)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </span>
                     </li>
                   );
                 }

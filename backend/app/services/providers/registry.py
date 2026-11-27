@@ -683,6 +683,43 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         ),
         per_country=True,
     ),
+    # **Freemius — بوّابةُ بطاقةٍ احتياطيّةٌ لاشتراك الكبتن** (أمرُ المالك ٢٠٢٦-١١-٢٦) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا
+    # `feature_key`**: «بوابة الدفع بالبطاقة» في اللوحة تختار. **والقيمُ من لوحة Freemius**: المنتج ← Settings ← API & Keys، والخططُ ← Plans
+    ProviderKey.FREEMIUS: ProviderSpec(
+        key=ProviderKey.FREEMIUS,
+        label="Freemius — اشتراكُ الكابتن بالبطاقة المصرفية، بوّابةٌ احتياطيّة (3 · 17 · 45 · 60 د.أ)",
+        fields=(
+            ProviderField(key="product_id", label="معرّفُ المنتج (Product ID) — من Freemius: Settings ← API & Keys", secret=False),
+            ProviderField(key="public_key", label="المفتاحُ العامّ (Public Key) — من Freemius: Settings ← API & Keys", secret=False),
+            ProviderField(
+                key="secret_key",
+                label="المفتاحُ السرّيّ (Secret Key) — يوقّع الإشعار؛ وعنوانُ الإشعار …/payment-requests/webhook/freemius",
+            ),
+            ProviderField(key="api_token", label="رمزُ الواجهة (API Bearer Token) — من Freemius: Settings ← API & Keys"),
+            ProviderField(key="plan_daily", label="معرّفُ خطّة اليوميّ X1 (3 د.أ = 4.25$)", secret=False, required=False),
+            ProviderField(key="plan_weekly", label="معرّفُ خطّة الأسبوعيّ X7 (17 د.أ = 24.00$)", secret=False, required=False),
+            ProviderField(key="plan_monthly", label="معرّفُ خطّة الشهريّ بعرض «TAXO MAN 45» X30 (45 د.أ = 63.50$)", secret=False, required=False),
+            ProviderField(key="plan_monthly_full", label="معرّفُ خطّة الشهريّ بسعره الكامل X30-FULL (60 د.أ = 84.50$)", secret=False, required=False),
+            ProviderField(
+                kind="toggle", key="test_mode", label="وضع التجربة (Sandbox) — مالٌ غيرُ حقيقيّ، لحسابات التجربة وحدَها",
+                secret=False, required=False,
+            ),
+            ProviderField(
+                key="daily_cap",
+                label="سقفُ مجموع اليوم بالدينار لكلِّ الكباتن معاً — فارغ = بلا سقف",
+                secret=False,
+                required=False,
+            ),
+            ProviderField(
+                key="allowlist",
+                label="قائمةُ السماح — أرقامُ هواتفٍ دوليّة مفصولةٌ بفواصل (فارغ = لكلّ الكباتن)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+        per_country=True,
+    ),
     # **«الدفع بالعملات الرقميّة» عبر MoonPay Commerce** (أمرُ المالك ٢٠٢٦-١١-١٤) — لكلِّ دولة (الأردنُ وحدَه بالشيفرة)، **ولا
     # `feature_key`**: مفتاحاه قرارُ المالك من اللوحة. **والمفاتيحُ من لوحة MoonPay Commerce** (Developer)، ولا تُكتب في شيفرةٍ ولا سجلّ
     ProviderKey.MOONPAY: ProviderSpec(

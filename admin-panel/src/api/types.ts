@@ -664,6 +664,8 @@ export type FeatureKey =
   // **اشتراكُ الكبتن بالبطاقة عبر Digistore24** (أمرا المالك ٢٠٢٦-١١-٢٣) — الموقعُ ونسخةُ Play بمفتاحين مستقلّين، الأردنُ وحدَه
   | "digistore24_card_enabled"
   | "digistore24_card_play_enabled"
+  // **بوّابةُ Freemius الاحتياطيّة** (أمرُ المالك ٢٠٢٦-١١-٢٦) — نسخةُ الموقع وحدَها، وتُختار في «بوابة الدفع بالبطاقة»
+  | "freemius_card_enabled"
   // **Dpay** (أمرُ المالك ٢٠٢٦-١١-١٧) — مفتاحٌ لكلِّ استعمال، مطفأةٌ حتى الرخصة وقبول Dpay
   | "dpay_topup_enabled"
   | "dpay_trip_enabled"

@@ -743,3 +743,46 @@ async def test_0193_country_limits_and_every_open_round_trip() -> None:
         await engine.dispose()
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+
+async def test_0194_freemius_method_and_switch_round_trip() -> None:
+    """**`0194` تضيف طريقةَ Freemius للأردن (اشتراكٌ وحدَه، رسمُها على TAXO) ومفتاحَها مطفأً، ونزولُها يُطفئ ولا يحذف** — مقيسٌ قبلها
+    لا مقروء. **ولا جدولَ مالٍ هنا.**"""
+    config = alembic_config()
+    method = (
+        "SELECT enabled, for_subscription, for_topup, integration, fee_bearer FROM payment_providers "
+        "WHERE country_code = 'JO' AND code = 'freemius_card'"
+    )
+    switch = "SELECT enabled FROM feature_flags WHERE country_code = 'JO' AND feature_key = 'freemius_card_enabled'"
+    clean = (
+        "DELETE FROM payment_providers WHERE code = 'freemius_card'",
+        "DELETE FROM feature_flags WHERE feature_key = 'freemius_card_enabled'",
+    )
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0193")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            for statement in clean:
+                await conn.execute(text(statement))
+        await engine.dispose()
+        await asyncio.to_thread(command.upgrade, config, "0194")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            row = (await conn.execute(text(method))).one()
+            on = await conn.scalar(text(switch))
+        assert tuple(row) == (True, True, False, "freemius", "taxo")
+        assert on is False
+        await asyncio.to_thread(command.downgrade, config, "0193")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            row = (await conn.execute(text(method))).one()
+            on = await conn.scalar(text(switch))
+        assert row[0] is False and on is False
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+        async with engine.begin() as conn:
+            for statement in clean:
+                await conn.execute(text(statement))
+        await engine.dispose()

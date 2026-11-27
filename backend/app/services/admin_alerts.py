@@ -129,6 +129,9 @@ _KINDS: tuple[AlertKind, ...] = (
     AlertKind("payment_method_hidden", "money", "problem", "طريقةُ دفعٍ أُخفيت آليّاً", "طرقُ دفعٍ أُخفيت آليّاً", window=0),
     AlertKind("reconciliation_mismatch", "money", "problem", "افتراقٌ في المطابقة اليوميّة", "افتراقاتٌ في المطابقة", window=0),
     AlertKind("payment_extra", "money", "money_out", "دفعٌ مكرَّر — الزائدُ في المحفظة", "دفعات مكرَّرة"),
+    # **دفعةٌ وصلت الوسيطَ ولا طلبَ عندنا يطابقها** (Freemius: بريدٌ بُدّل في صفحته، أو خطّةٌ لا تطابق مبلغاً) — خطأٌ تقنيٌّ لا استرداد:
+    # **يُعالجه المالكُ يدويّاً**، ولا يُردّ مالٌ ولا يُنقل آليّاً (قرارُ المالك ٢٠٢٦-١١-٢٧)
+    AlertKind("payment_unmatched", "money", "problem", "دفعةٌ وصلت ولا طلبَ يطابقها — تُعالَج يدويّاً", "دفعات بلا طلب"),
     AlertKind("transfer_duplicate", "money", "problem", "رقمُ تحويلٍ مكرَّر", "أرقامُ تحويلٍ مكرَّرة"),
     AlertKind("transfer_approved", "money", "money_in", "تحويلٌ اعتُمد", "تحويلات اعتُمدت"),
     AlertKind("transfer_rejected", "money", "money_out", "تحويلٌ رُفض", "تحويلات رُفضت"),
