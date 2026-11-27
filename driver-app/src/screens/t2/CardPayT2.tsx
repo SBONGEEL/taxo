@@ -21,6 +21,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { legalPages, openLegal } from "@/lib/legal";
 import { goToCheckout, openedRequest } from "@/lib/pay-return";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits, formatAmount } from "@/lib/utils";
@@ -29,7 +30,7 @@ import { Icon, Wordmark } from "@/taxo2";
 import "./fields.css";
 import "./money.css";
 import "./cardpay.css";
-import { tr } from "@/lib/i18n";
+import { language, tr } from "@/lib/i18n";
 
 /** **ما تحمله الشاشةُ التي فتحتها** — الغرضُ والمبلغُ كما حسبته الخلفية، والخطّةُ للاشتراك */
 export interface CardPayHandoff {
@@ -172,6 +173,7 @@ export function CardPayT2Screen() {
   const freemius = method?.code === FREEMIUS;
   const usdPass = digistore || freemius;
   const offPrice = usdPass && handoff !== null && !cardFits(method, handoff.amount);
+  const termsUrl = legalPages(profile?.user?.country_code, language).find((page) => page.key === "terms")?.url ?? null;
 
   return (
     <div className="t2 t2-cardpay scr">
@@ -338,6 +340,15 @@ export function CardPayT2Screen() {
           <button type="button" className="t2-link" onClick={() => navigate(-1)}>
             {tr("تراجع")}
           </button>
+          {/* **رابطٌ صغيرٌ عاديٌّ إلى شروط الكابتن وحدَه** (قرارُ المالك ٢٠٢٦-١١-٢٧): بندُ الاسترداد في الشروط بين بنودها، **ولا نصَّ
+              استردادٍ على هذه الشاشة** — لا شريطَ ولا تمييزَ ولا نافذة */}
+          {termsUrl ? (
+            <p className="t2-cardpay-fine">
+              <button type="button" className="t2-cardpay-terms" onClick={() => openLegal(termsUrl)}>
+                {tr("الشروط والسياسات")}
+              </button>
+            </p>
+          ) : null}
         </>
       )}
     </div>

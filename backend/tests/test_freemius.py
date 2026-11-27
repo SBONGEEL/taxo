@@ -27,7 +27,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 from app.models.audit import AdminAuditLog
-from app.models.enums import CountryCode, PaymentProviderKind
+from app.models.enums import CountryCode, PaymentProviderKind, PaymentRequestStatus
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.user import User
 from app.models.wallet import WalletTransaction
@@ -295,6 +295,43 @@ async def test_a_payment_for_another_mode_product_plan_or_email_is_not_credited(
     row = await _row(session_factory, request_id)
     assert row.status.value == "pending" and not (row.external_id or "").startswith("fs:")
     assert await _count(session_factory, f"payment_request:{request_id}") == 0
+
+
+async def test_a_double_charge_or_an_unmatched_payment_is_flagged_in_the_panel_and_moves_nothing(
+    client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**الدفعُ المكرَّرُ والدفعةُ التي لا طلبَ لها خطأٌ تقنيٌّ لا استرداد** (قرارُ المالك ٢٠٢٦-١١-٢٧): تنبيهٌ في اللوحة يعالجه المالكُ
+    يدويّاً، **ولا قيدَ ولا اشتراكَ ثانٍ ولا ردَّ مال** — وكان قبله سطرَ سجلٍّ لا يراه أحد."""
+    from app.core.redis_client import get_redis_client
+    from app.services import alert_capture
+
+    async def queued() -> list[dict]:
+        await alert_capture.settle()
+        redis = get_redis_client()
+        raw = await redis.lrange(alert_capture.QUEUE_KEY, 0, -1)
+        await redis.delete(alert_capture.QUEUE_KEY)
+        return [json.loads(item) for item in raw]
+
+    monkeypatch.setattr(payment_requests, "DOUBLE_TAP_SECONDS", 0)
+    method_id = await _jordan(session_factory)
+    captain = await _captain(client, session_factory)
+    request_id = (await _open(client, session_factory, captain["headers"], method_id)).json()["request"]["id"]
+    assert await _deliver(client, _event(_pid(), email=captain["email"])) == 200
+    assert (await _row(session_factory, request_id)).status.value == "approved"
+    await queued()
+
+    # **دفعةٌ ثانيةٌ على الصفحة نفسِها** (الأولى أخذت الطلب)، **وبريدٌ بُدّل في الصفحة** — كلٌّ تنبيهٌ في اللوحة ولا يُقيَّد شيء
+    assert await _deliver(client, _event(_pid(), email=captain["email"])) == 200
+    assert await _deliver(client, _event(_pid(), email="someone-else@example.com")) == 200
+    flagged = [event for event in await queued() if event["k"] == "payment_unmatched"]
+    assert len(flagged) == 2
+    assert await _count(session_factory, f"payment_request:{request_id}") == 1
+    assert await _count(session_factory, f"payreq_sub:{request_id}") == 1
+    async with session_factory() as session:
+        approved = await session.scalar(
+            select(func.count()).select_from(PaymentRequest).where(PaymentRequest.status == PaymentRequestStatus.APPROVED)
+        )
+    assert approved == 1
 
 
 # ------------------------------------------------------------------ حارسُ السعر

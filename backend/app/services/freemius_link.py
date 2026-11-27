@@ -11,19 +11,20 @@
 فإشعاران للدفعة نفسِها في اللحظة نفسِها لا يربطانها بطلبين (`READ COMMITTED`: السؤالُ الثاني يرى ما التُزم قبله). **ولا قفلَ جديد**:
 صفُّ الطلب في موضعه من ترتيب الأقفال («الطلب/الدفعة» بعد الرحلة)، وهذا البابُ أوّلُ ما يقفل في معاملته.
 
-**ودفعةٌ لا طلبَ يطابقها** (بريدٌ بُدّل في الصفحة، أو خطّةٌ لا تطابق المبلغ) **لا تُربط بأقرب طلب**: تُسجَّل خطأً يراه المالك، ويُجاب
+**ودفعةٌ لا طلبَ يطابقها** (بريدٌ بُدّل في الصفحة، أو خطّةٌ لا تطابق المبلغ) **لا تُربط بأقرب طلب**: تُسجَّل خطأً يراه المالكُ في تنبيهات اللوحة ()، ويُجاب
 Freemius بنجاح — والمالُ عنده يُعاد أو يُعتمد يدويّاً بقرار. الربطُ الخاطئُ أسوأُ من غيابه: يفعّل اشتراكَ غير الدافع.
 """
 
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import PaymentRequestStatus
+from app.models.enums import CountryCode, PaymentRequestStatus
 from app.models.payment_request import PayMethod, PaymentRequest
 from app.models.user import User
 from app.services import payment_requests
@@ -46,10 +47,12 @@ async def bind(session: AsyncSession, gateway: object, external_id: str, *, now:
     if binding is None:
         # **استردادٌ لدفعةٍ لا طلبَ لها عندنا، أو إشعارٌ نُسي** — لا شيءَ يُربط
         logger.error("Freemius: إشعارٌ لدفعةٍ لا طلبَ لها عندنا (%s)", external_id)
+        _unmatched(external_id, "إشعارٌ لدفعةٍ لا طلبَ لها")
         return None
     email, amount = binding.get("email") or "", binding.get("amount")
     if not email or amount is None:
         logger.error("Freemius: دفعةٌ بلا بريدٍ أو بخطّةٍ لا تطابق مبلغاً عندنا (%s) — لم تُربط", external_id)
+        _unmatched(external_id, "بلا بريدٍ أو بخطّةٍ لا تطابق مبلغاً")
         return None
     since = (now or datetime.now(UTC)) - timedelta(hours=BIND_WINDOW_HOURS)
     candidate = await session.scalar(
@@ -69,6 +72,8 @@ async def bind(session: AsyncSession, gateway: object, external_id: str, *, now:
     )
     if candidate is None:
         logger.error("Freemius: دفعةٌ لا طلبَ يطابقها (%s، المبلغ %s) — لم تُربط؛ راجعها في لوحة Freemius", external_id, amount)
+        # **ومنها الدفعُ المكرَّرُ على صفحةٍ واحدة**: الأولى أخذت الطلب، والثانيةُ لا طلبَ لها — فتُرى في اللوحة وتُعالَج يدويّاً
+        _unmatched(external_id, f"لا طلبَ بهذا البريد والمبلغ {amount} — ربّما دفعٌ مكرَّر")
         return None
     locked = await payment_requests.get_request(session, candidate, for_update=True)
     # **السؤالُ الثاني بعد القفل** — إشعارٌ متزامنٌ للدفعة نفسِها ربطها والتزم بين السؤالين: يُعاد طلبُه هو ولا يُربط هذا
@@ -78,7 +83,22 @@ async def bind(session: AsyncSession, gateway: object, external_id: str, *, now:
     if locked.external_id and locked.external_id.startswith(EXTERNAL_PREFIX):
         # **دفعةٌ أخرى أخذت هذا الطلبَ بين السؤالين** — لا يُربط طلبٌ بدفعتين
         logger.error("Freemius: الطلبُ %s رُبط بدفعةٍ أخرى قبل %s — لم تُربط", locked.id, external_id)
+        _unmatched(external_id, "طلبُها أخذته دفعةٌ أخرى — دفعٌ مكرَّر")
         return None
     locked.external_id = external_id
     await session.flush()
     return locked
+
+
+def _unmatched(external_id: str, cause: str) -> None:
+    """**دفعةٌ وصلت Freemius ولم تُربط بطلب ⇐ تنبيهٌ في اللوحة يعالجه المالكُ يدويّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧: الدفعُ المكرَّر أو
+    الاشتراكُ الذي لم يُفعَّل خطأٌ تقنيٌّ لا استرداد) — **لا يُردّ مالٌ ولا يُنقل هنا**، وكان قبله سطرَ سجلٍّ لا يراه أحد.
+
+    **ويُسلَّم في الحال لا بعد الالتزام**: البابُ الذي لم يربط شيئاً لا يكتب ما يُلتزم، فتنبيهٌ ينتظر الالتزامَ لا يصل. ومعرّفُ الدفعة
+    ليس سرّاً (يظهر في لوحة Freemius نفسِها) — به يجدها المالكُ هناك."""
+    from app.services import alert_capture
+
+    alert_capture.ship_after_commit(
+        None, "payment_unmatched", "signal", uuid.uuid4(),
+        country=CountryCode.JO.value, provider="Freemius", target=f"{external_id} · {cause}"[:200],
+    )
